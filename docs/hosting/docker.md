@@ -336,3 +336,16 @@ For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings �
 
 - Never manually retry `SimplefinConnectionUpdateJob` — it consumes a single-use setup token, and a retry permanently breaks that connection attempt.
 - Deleting or retrying jobs does **not** update the corresponding Sure record (a deleted `ImportJob` leaves its import stuck in `importing`) — use Settings → Background jobs for record-level recovery.
+
+## Reverse-proxy authentication
+
+Sure can be configured to trust a request header set by an upstream reverse proxy and use it to log a user in automatically (passwordless). This is intended to be used in conjunction with separate authorization software running in front of Sure.
+
+For more information and examples, see https://doc.traefik.io/traefik/middlewares/http/forwardauth/ or similar documentation for your HTTP proxy and authentication software.
+
+Configure the Sure environment with the name of the header that carries the authenticated user's email:
+```
+REMOTE_USER_HEADER_EMAIL="Remote-Email"
+```
+
+ !! NOTE!! this allows unchallenged (passwordless) login via simple HTTP headers. Only use this method if you have a proxy in front of Sure that is applying the authentication challenge, *AND THE SURE HTTP SERVER IS NOT ACCESSIBLE DIRECTLY*.
