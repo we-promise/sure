@@ -57,7 +57,7 @@ class Provider::TwelveData < Provider
       request_body = {}
       date = start_date
       while date <= end_date
-        request_body[date.to_s] = { url: "/exchange_rate?symbol=#{from}/#{to}&date=#{date.to_s}" }
+        request_body[date.to_s] = { url: "/exchange_rate?symbol=#{from}/#{to}&date=#{date}" }
         date += 1.day
       end
 
@@ -143,7 +143,7 @@ class Provider::TwelveData < Provider
       request_body = {}
       date = start_date
       while date <= end_date
-        request_body[date.to_s] = { url: "/eod?symbol=#{symbol}&mic_code=#{exchange_operating_mic}&date=#{date.to_s}" }
+        request_body[date.to_s] = { url: "/eod?symbol=#{symbol}&mic_code=#{exchange_operating_mic}&date=#{date}" }
         date += 1.day
       end
 

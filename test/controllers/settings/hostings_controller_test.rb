@@ -9,6 +9,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:synth).returns(@provider)
+    Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
     @usage_response = provider_success_response(
       OpenStruct.new(
         used: 10,
@@ -30,6 +31,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get edit when self hosting is enabled" do
+    @provider.expects(:usage).returns(@usage_response)
     @provider.expects(:usage).returns(@usage_response)
 
     with_self_hosting do
