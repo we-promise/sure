@@ -28,6 +28,13 @@ en:
         placeholder: Enter your API key here
         plan: "%{plan} plan"
         title: Synth Settings
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
+        description: Input the API key provided by Twelve Data
+        label: API Key
+        placeholder: Enter your API key here
+        plan: "%{plan} plan"
+        title: Twelve Data Settings
       update:
         failure: Invalid setting value
         success: Settings updated

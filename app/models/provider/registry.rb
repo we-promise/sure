@@ -40,6 +40,14 @@ class Provider::Registry
         Provider::Synth.new(api_key)
       end
 
+      def twelve_data
+        api_key = ENV.fetch("TWELVE_DATA_API_KEY", Setting.twelve_data_api_key)
+
+        return nil unless api_key.present?
+
+        Provider::TwelveData.new(api_key)
+      end
+
       def plaid_us
         config = Rails.application.config.plaid
 
@@ -92,9 +100,9 @@ class Provider::Registry
     def available_providers
       case concept
       when :exchange_rates
-        %i[synth]
+        %i[synth twelve_data]
       when :securities
-        %i[synth]
+        %i[synth twelve_data]
       when :llm
         %i[openai]
       else
