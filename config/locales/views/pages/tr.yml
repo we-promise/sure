@@ -10,4 +10,4 @@ tr:
       no_account_empty_state:
         new_account: Yeni hesap
         no_account_subtitle: Henüz hiç hesap eklenmediği için gösterilecek veri yok. İlk hesaplarınızı ekleyerek gösterge paneli verilerini görmeye başlayın.
-        no_account_title: Henüz hesap yok 
+        no_account_title: Henüz hesap yok

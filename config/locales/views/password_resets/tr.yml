@@ -9,4 +9,4 @@ tr:
       title: Şifreyi sıfırla
     update:
       invalid_token: Geçersiz token.
-      success: Şifreniz başarıyla sıfırlandı. 
+      success: Şifreniz başarıyla sıfırlandı.

@@ -72,4 +72,4 @@ tr:
       title: Yeni CSV İçe Aktarma
     ready:
       description: Bu içe aktarmayı yayınladığınızda hesabınıza eklenecek yeni öğelerin özeti aşağıdadır.
-      title: İçe aktarma verilerinizi onaylayın 
+      title: İçe aktarma verilerinizi onaylayın
