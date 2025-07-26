@@ -569,7 +569,7 @@ GEM
     tailwindcss-ruby (4.1.8-x86_64-linux-musl)
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
-    thor (1.3.2)
+    thor (1.4.0)
     timeout (0.4.3)
     turbo-rails (2.0.16)
       actionpack (>= 7.1.0)
