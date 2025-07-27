@@ -20,7 +20,7 @@
           <%= content_tag :div, class: ["flex items-center gap-2"] do %>
             <% if transaction.merchant&.logo_url.present? %>
               <%= image_tag transaction.merchant.logo_url,
-                  class: "w-6 h-6 rounded-full",
+                  class: "w-6 h-6 rounded-sm",
                   loading: "lazy" %>
             <% else %>
               <%= render DS::FilledIcon.new(

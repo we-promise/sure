@@ -3,8 +3,8 @@
 <div class="flex justify-between items-center p-4 bg-container">
   <div class="flex w-full items-center gap-2.5">
     <% if family_merchant.logo_url %>
-      <div class="w-8 h-8 rounded-full flex justify-center items-center">
-        <%= image_tag family_merchant.logo_url, class: "w-8 h-8 rounded-full" %>
+      <div class="w-8 h-8 rounded-sm flex justify-center items-center">
+        <%= image_tag family_merchant.logo_url, class: "w-8 h-8 rounded-sm" %>
       </div>
     <% else %>
       <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>

@@ -82,7 +82,7 @@ class DS::FilledIcon < DesignSystemComponent
     end
 
     def radius_classes
-      rounded ? "rounded-full" : SIZES[size][:container_radius]
+      rounded ? "rounded-sm" : SIZES[size][:container_radius]
     end
 
     def custom_fg_color
