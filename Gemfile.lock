@@ -1,8 +1,8 @@
 GIT
-  remote: https://github.com/maybe-finance/lucide-rails.git
-  revision: 272e5fb8418ea458da3995d6abe0ba0ceee9c9f0
+  remote: https://github.com/heyvito/lucide-rails.git
+  revision: b56d0ffee924450dabc5a857b12af654921ba906
   specs:
-    lucide-rails (0.2.0)
+    lucide-rails (0.7.1)
       railties (>= 4.1.0)
 
 GEM
