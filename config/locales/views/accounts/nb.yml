@@ -10,7 +10,7 @@ nb:
     destroy:
       success: "%{type} konto planlagt for sletting"
     empty:
-      empty_message: Legg til en konto enten via tilkobling, importering eller med manuell inntasting.
+      empty_message: Legg til en konto enten via tilkobling, importering eller manuell inntasting.
       new_account: Ny konto
       no_accounts: Ingen kontoer enda
     form:
