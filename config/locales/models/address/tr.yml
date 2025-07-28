@@ -8,4 +8,4 @@ tr:
       locality: İlçe/Semt
       postal_code: Posta Kodu
       region: Bölge/İl
-    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}" 
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

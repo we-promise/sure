@@ -32,4 +32,4 @@ tr:
       ticker_label: Sembol
       trade_history_entry: "%{qty} adet %{security} %{price} fiyatından"
       total_return_label: Toplam Getiri
-      unknown: Bilinmiyor 
+      unknown: Bilinmiyor

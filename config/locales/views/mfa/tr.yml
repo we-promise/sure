@@ -31,4 +31,4 @@ tr:
       title: İki Faktörlü Kimlik Doğrulama
       verify_button: Doğrula
     verify_code:
-      invalid_code: Geçersiz kimlik doğrulama kodu. Lütfen tekrar deneyin. 
+      invalid_code: Geçersiz kimlik doğrulama kodu. Lütfen tekrar deneyin.

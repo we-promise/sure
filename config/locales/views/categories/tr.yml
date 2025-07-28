@@ -31,4 +31,4 @@ tr:
     dropdowns:
       show:
         bootstrap: Varsayılan kategorileri oluştur
-        empty: Hiç kategori bulunamadı 
+        empty: Hiç kategori bulunamadı

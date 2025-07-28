@@ -20,4 +20,4 @@ tr:
       status: Son senkronizasyon %{timestamp} önce
       status_never: Veri senkronizasyonu gerekli
       syncing: Senkronize ediliyor...
-      update: Bağlantıyı güncelle 
+      update: Bağlantıyı güncelle

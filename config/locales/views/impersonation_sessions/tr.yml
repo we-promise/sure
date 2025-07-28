@@ -12,4 +12,4 @@ tr:
     leave:
       success: Oturumdan ayrıldınız
     reject:
-      success: İstek reddedildi 
+      success: İstek reddedildi
