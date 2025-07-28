@@ -12,7 +12,8 @@ nb:
     empty:
       empty_message: Legg til en konto enten via tilkobling, importering eller manuell inntasting.
       new_account: Ny konto
-      no_accounts: Ingen kontoer ennå
+      no_accounts: Ingen kontoer enda
+
     form:
       balance: Nåværende balanse
       name_label: Kontonavn
