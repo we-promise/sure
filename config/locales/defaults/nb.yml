@@ -3,7 +3,7 @@ nb:
   activerecord:
     errors:
       messages:
-        record_invalid: 'Det oppstod feil: %{errors}'
+        record_invalid: 'Det oppstod en feil: %{errors}'
         restrict_dependent_destroy:
           has_many: Kan ikke slette registreringen, fordi %{record} avhenger av denne.
           has_one: Kan ikke slette registreringen, fordi %{record} avhenger av denne.
