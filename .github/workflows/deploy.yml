@@ -1,0 +1,58 @@
+name: Build and push Docker image to ECR
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+env:
+  ECR_REGISTRY: 568619624687.dkr.ecr.af-south-1.amazonaws.com
+  ECR_REPOSITORY: sure
+  DOCKER_IMAGE_TAG: ${{ github.ref_name }}
+  AWS_REGION: "af-south-1"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  docker-build-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::568619624687:role/github-oidc-sure
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push client docker image to Amazon ECR
+      run: |
+        docker buildx create --use
+        docker buildx build --platform linux/arm64,linux/amd64 --push -t $ECR_REGISTRY/$ECR_REPOSITORY:$DOCKER_IMAGE_TAG .
+
+    - uses: alexellis/arkade-get@master
+      with:
+        yq: latest
+
+    - uses: actions/checkout@v4
+      with:
+        repository: chancenhq/platform-eks-production
+        token: ${{ secrets.GH_PAT }}
+        path: platform-eks-production
+
+    - name: Update Deployment
+      run: |
+        yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
+        cd platform-eks-production
+        git config --global user.email "platform@chancen.international"
+        git config --global user.name "platform-chancen"
+        git config --global credential.helper cache
+        git add . && git commit -m "Updating ${{ env.ECR_REPOSITORY}} image tag" && git push
