@@ -18,7 +18,8 @@ nb:
     overview:
       amount_owed: Skyldig beløp
       annual_fee: Årsgebyr
-      apr: Effektiv rente
+      apr: Eff. rente
+
       available_credit: Tilgjengelig kreditt
       expiration_date: Utløpsdato
       minimum_payment: Minimumsbetaling
