@@ -7,7 +7,7 @@ class ApplicationController < ActionController::Base
 
   # Only for development in devcontainer
   skip_before_action :verify_authenticity_token if Rails.env.development?
-  
+
   before_action :detect_os
   before_action :set_default_chat
   before_action :set_active_storage_url_options

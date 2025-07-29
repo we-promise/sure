@@ -44,4 +44,4 @@ class ChoiceWebhookProcessor
       Rails.logger.info("Processing test-hook-2 webhook: #{webhook_id}")
       Rails.logger.info("Webhook data: #{webhook_data}")
     end
-end 
+end
