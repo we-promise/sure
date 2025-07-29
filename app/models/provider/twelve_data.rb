@@ -89,12 +89,14 @@ class Provider::TwelveData < Provider
       parsed = JSON.parse(response.body)
 
       parsed.dig("data").map do |security|
+        country = ISO3166::Country.find_country_by_any_name(security.dig("country"))
+
         Security.new(
           symbol: security.dig("symbol"),
           name: security.dig("instrument_name"),
           logo_url: "https://placehold.co/40?text=#{security.dig("symbol")}", # TODO: Twelve Data does not provide logo URLs
           exchange_operating_mic: security.dig("mic_code"),
-          country_code: "US" # TODO: country_code is not provided by Twelve Data, so we default to US
+          country_code: country ? country.alpha2 : nil
         )
       end
     end
@@ -122,7 +124,7 @@ class Provider::TwelveData < Provider
         links: profile.dig("website"),
         logo_url: logo.dig("url"),
         description: profile.dig("description"),
-        kind: profile.dig("type"), # TODO: is this right?
+        kind: profile.dig("type"),
         exchange_operating_mic: exchange_operating_mic
       )
     end
