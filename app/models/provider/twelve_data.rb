@@ -94,7 +94,7 @@ class Provider::TwelveData < Provider
         Security.new(
           symbol: security.dig("symbol"),
           name: security.dig("instrument_name"),
-          logo_url: "https://placehold.co/40?text=#{security.dig("symbol")}", # TODO: Twelve Data does not provide logo URLs
+          logo_url: nil,
           exchange_operating_mic: security.dig("mic_code"),
           country_code: country ? country.alpha2 : nil
         )
