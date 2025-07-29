@@ -20,7 +20,7 @@ involved: [Discord](https://discord.gg/36ZGBsxYEK) • [(archived) Website](http
 
 > [!IMPORTANT]
 > This repository is a community fork of the official (now abandoned) Maybe Finance one.  
-> You can read more about this in their [final release](https://github.com/maybe-finance/maybe/releases/tag/v0.6.0) doc.
+> You can read more about this in their [final release](https://github.com/we-promise/sure/releases/tag/v0.6.0) doc.
 
 ## Backstory
 
@@ -55,7 +55,7 @@ This repo is a community fork of the no longer maintained Maybe Finance one.
 You’re free to fork it under the AGPLv3 but we prefer if you stay here and contribute.
 To stay compliant and avoid trademark issues:
 
-- Be sure to include the original [AGPLv3 license](https://github.com/maybe-finance/maybe/blob/main/LICENSE) and clearly state in your README that your fork is based on Maybe Finance but is **not affiliated with or endorsed by** Maybe Finance Inc.
+- Be sure to include the original [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE) and clearly state in your README that your fork is based on Maybe Finance but is **not affiliated with or endorsed by** Maybe Finance Inc.
 - "Maybe" is a trademark of Maybe Finance Inc. and therefore, use of it is NOT allowed in forked repositories (or the logo)
 
 ## Local Development Setup
@@ -92,14 +92,14 @@ For further instructions, see guides below.
 
 ### Setup Guides
 
-- [Mac dev setup guide](https://github.com/maybe-finance/maybe/wiki/Mac-Dev-Setup-Guide)
-- [Linux dev setup guide](https://github.com/maybe-finance/maybe/wiki/Linux-Dev-Setup-Guide)
-- [Windows dev setup guide](https://github.com/maybe-finance/maybe/wiki/Windows-Dev-Setup-Guide)
+- [Mac dev setup guide](https://github.com/we-promise/sure/wiki/Mac-Dev-Setup-Guide)
+- [Linux dev setup guide](https://github.com/we-promise/sure/wiki/Linux-Dev-Setup-Guide)
+- [Windows dev setup guide](https://github.com/we-promise/sure/wiki/Windows-Dev-Setup-Guide)
 - Dev containers - visit [this guide](https://code.visualstudio.com/docs/devcontainers/containers) to learn more
 
 ## Copyright & license
 
 Maybe/Sure are distributed under
-an [AGPLv3 license](https://github.com/maybe-finance/maybe/blob/main/LICENSE).
+an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 Remember that "Maybe" is a trademark of Maybe Finance, Inc.
 "Sure" is not.
