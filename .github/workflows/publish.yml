@@ -81,5 +81,5 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: false
           # https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#adding-a-description-to-multi-arch-images
-          outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=A multi-arch Docker image for the Maybe Rails app
+          outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app
           build-args: BUILD_COMMIT_SHA=${{ github.sha }}
