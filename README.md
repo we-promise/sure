@@ -20,7 +20,7 @@ involved: [Discord](https://discord.gg/36ZGBsxYEK) • [(archived) Website](http
 
 > [!IMPORTANT]
 > This repository is a community fork of the official (now abandoned) Maybe Finance one.  
-> You can read more about this in their [final release](https://github.com/we-promise/sure/releases/tag/v0.6.0) doc.
+> You can read more about this in their [final release](https://github.com/maybe-finance/maybe/releases/tag/v0.6.0) doc.
 
 ## Backstory
 
