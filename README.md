@@ -55,7 +55,7 @@ This repo is a community fork of the no longer maintained Maybe Finance one.
 You’re free to fork it under the AGPLv3 but we prefer if you stay here and contribute.
 To stay compliant and avoid trademark issues:
 
-- Be sure to include the original [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE) and clearly state in your README that your fork is based on Maybe Finance but is **not affiliated with or endorsed by** Maybe Finance Inc.
+- Be sure to include the original [AGPLv3 license](https://github.com/maybe-finance/maybe/blob/main/LICENSE) and clearly state in your README that your fork is based on Maybe Finance but is **not affiliated with or endorsed by** Maybe Finance Inc.
 - "Maybe" is a trademark of Maybe Finance Inc. and therefore, use of it is NOT allowed in forked repositories (or the logo)
 
 ## Local Development Setup
