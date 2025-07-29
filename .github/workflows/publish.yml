@@ -8,6 +8,11 @@ on:
         required: true
         type: string 
         default: 'main'
+      push:
+        description: 'Whether to push the image to container registry'
+        required: false
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
@@ -73,7 +78,7 @@ jobs:
         id: build
         with:
           context: .
-          push: true
+          push: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: 'linux/amd64,linux/arm64'
