@@ -54,4 +54,33 @@ class WebhooksController < ApplicationController
       head :bad_request
     end
   end
+
+  def choice
+    webhook_body = request.body.read
+    signature_header = request.headers["X-Choice-Signature"]
+
+    begin
+      # Parse the webhook body to extract the signature
+      parsed_body = JSON.parse(webhook_body)
+      received_signature = parsed_body["signature"]
+
+      # Validate the signature
+      # TODO?
+      # validator = SignatureValidator.new(choice_webhook_secret)
+      # validator.validate_webhook!(parsed_body, received_signature)
+
+      # Process the webhook
+      ChoiceWebhookProcessor.new(webhook_body).process
+
+      render json: { received: true }, status: :ok
+    rescue JSON::ParserError => error
+      Sentry.capture_exception(error)
+      Rails.logger.error "JSON parser error: #{error.message}"
+      render json: { error: "Invalid JSON" }, status: :bad_request
+    rescue => error
+      Sentry.capture_exception(error)
+      Rails.logger.error "Choice webhook error: #{error.message}"
+      render json: { error: "Webhook processing failed" }, status: :internal_server_error
+    end
+  end
 end
