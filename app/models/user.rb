@@ -15,6 +15,7 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
+  validates :default_order, inclusion: { in: MenuOrder::ORDERS.keys }
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
 
@@ -161,6 +162,10 @@ class User < ApplicationRecord
 
   def needs_onboarding?
     !onboarded?
+  end
+
+  def menu_order
+    MenuOrder.find(default_order) || MenuOrder.default
   end
 
   private

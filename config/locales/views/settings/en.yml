@@ -14,6 +14,7 @@ en:
         general_subtitle: Configure your preferences
         general_title: General
         default_period: Default Period
+        default_order: Menu Order
         language: Language
         page_title: Preferences
         theme_dark: Dark
