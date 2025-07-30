@@ -19,6 +19,10 @@ class Settings::HostingsController < ApplicationController
       Setting.require_email_confirmation = hosting_params[:require_email_confirmation]
     end
 
+    if hosting_params.key?(:brand_fetch_client_id)
+      Setting.brand_fetch_client_id = hosting_params[:brand_fetch_client_id]
+    end
+
     if hosting_params.key?(:twelve_data_api_key)
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
     end
@@ -36,7 +40,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :twelve_data_api_key)
+      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key)
     end
 
     def ensure_admin

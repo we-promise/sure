@@ -8,6 +8,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
     @llm_provider = mock
     Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
+    Setting.stubs(:brand_fetch_client_id).returns("123")
   end
 
   test "auto detects transaction merchants" do
@@ -29,8 +30,8 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
 
     assert_equal "McDonalds", txn1.reload.merchant.name
     assert_equal "Chipotle", txn2.reload.merchant.name
-    assert_nil txn1.reload.merchant.logo_url
-    assert_nil txn2.reload.merchant.logo_url
+    assert_equal "https://cdn.brandfetch.io/mcdonalds.com/icon/fallback/lettermark/w/40/h/40?c=123", txn1.reload.merchant.logo_url
+    assert_equal "https://cdn.brandfetch.io/chipotle.com/icon/fallback/lettermark/w/40/h/40?c=123", txn2.reload.merchant.logo_url
     assert_nil txn3.reload.merchant
 
     # After auto-detection, all transactions are locked and no longer enrichable
