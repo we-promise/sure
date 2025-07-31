@@ -255,6 +255,7 @@ Rails.application.routes.draw do
     post "plaid"
     post "plaid_eu"
     post "stripe"
+    post "choice"
   end
 
   get "redis-configuration-error", to: "pages#redis_configuration_error"
