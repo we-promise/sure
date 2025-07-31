@@ -92,14 +92,14 @@ For further instructions, see guides below.
 
 ### Setup Guides
 
-- [Mac dev setup guide](https://github.com/maybe-finance/maybe/wiki/Mac-Dev-Setup-Guide)
-- [Linux dev setup guide](https://github.com/maybe-finance/maybe/wiki/Linux-Dev-Setup-Guide)
-- [Windows dev setup guide](https://github.com/maybe-finance/maybe/wiki/Windows-Dev-Setup-Guide)
+- [Mac dev setup guide](https://github.com/we-promise/sure/wiki/Mac-Dev-Setup-Guide)
+- [Linux dev setup guide](https://github.com/we-promise/sure/wiki/Linux-Dev-Setup-Guide)
+- [Windows dev setup guide](https://github.com/we-promise/sure/wiki/Windows-Dev-Setup-Guide)
 - Dev containers - visit [this guide](https://code.visualstudio.com/docs/devcontainers/containers) to learn more
 
 ## Copyright & license
 
 Maybe/Sure are distributed under
-an [AGPLv3 license](https://github.com/maybe-finance/maybe/blob/main/LICENSE).
+an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 Remember that "Maybe" is a trademark of Maybe Finance, Inc.
 "Sure" is not.
