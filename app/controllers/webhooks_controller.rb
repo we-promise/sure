@@ -65,9 +65,8 @@ class WebhooksController < ApplicationController
       received_signature = parsed_body["signature"]
 
       # Validate the signature
-      # TODO?
-      # validator = SignatureValidator.new(choice_webhook_secret)
-      # validator.validate_webhook!(parsed_body, received_signature)
+      validator = SignatureValidator.new(choice_webhook_secret)
+      validator.validate_webhook!(parsed_body, received_signature)
 
       # Process the webhook
       ChoiceWebhookProcessor.new(webhook_body).process
@@ -83,4 +82,9 @@ class WebhooksController < ApplicationController
       render json: { error: "Webhook processing failed" }, status: :internal_server_error
     end
   end
+
+  private
+    def choice_webhook_secret
+      ENV["CHOICE_WEBHOOK_SECRET"] || Rails.application.credentials.choice_webhook_secret
+    end
 end
