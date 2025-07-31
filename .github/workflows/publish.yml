@@ -120,6 +120,8 @@ jobs:
         with:
           name: digest-${{ matrix.platform }}
           path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
   
   merge:
     name: Merge multi-arch manifest
