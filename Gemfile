@@ -68,7 +68,6 @@ gem "tzinfo-data", platforms: %i[windows jruby]
 gem "csv"
 gem "redcarpet"
 gem "stripe"
-gem "intercom-rails"
 gem "plaid"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"

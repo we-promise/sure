@@ -35,10 +35,8 @@
 
     <% if self_hosted? %>
       <% menu.with_item(variant: "link", text: "Feedback", icon: "megaphone", href: feedback_path) %>
-      <% menu.with_item(variant: "link", text: "Contact", icon: "message-square-more", href: "https://link.maybe.co/discord") %>
-    <% else %>
-      <% menu.with_item(variant: "button", text: "Contact", icon: "message-square-more", data: { action: "intercom#show" }) %>
     <% end %>
+    <% menu.with_item(variant: "link", text: "Contact", icon: "message-square-more", href: "https://link.maybe.co/discord") %>
 
     <% menu.with_item(variant: "divider") %>
 

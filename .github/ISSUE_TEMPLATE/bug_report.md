@@ -18,7 +18,6 @@ assignees: ''
 ### How are you using Maybe?
 
 - [ ] I am a paying Maybe customer (hosted version)
-  - Paying Maybe users can also open requests in Intercom (if there is sensitive info involved)
 - [ ] I am a self-hosted user
 
 ### Self hoster checklist

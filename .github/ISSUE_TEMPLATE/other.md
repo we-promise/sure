@@ -15,7 +15,6 @@ A bug is _broken functionality_ of the app (i.e. it prevents you from using the 
 
 ### Is this a bug with _sensitive info_?
 
-If you are a _paying_ Maybe user, you can open a support request in Intercom.
 
 ### Is this a feature request?
 
