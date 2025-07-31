@@ -42,7 +42,8 @@ class Provider::TwelveData < Provider
 
   def fetch_exchange_rate(from:, to:, date:)
     with_provider_response do
-      response = client.get("#{base_url}/exchange_rate?symbol=#{from}/#{to}") do |req|
+      response = client.get("#{base_url}/exchange_rate") do |req|
+        req.params["symbol"] = "#{from}/#{to}"
         req.params["date"] = date.to_s
       end
 
@@ -54,17 +55,17 @@ class Provider::TwelveData < Provider
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
     with_provider_response do
-      request_body = {}
-      date = start_date
-      while date <= end_date
-        request_body[date.to_s] = { url: "/exchange_rate?symbol=#{from}/#{to}&date=#{date}" }
-        date += 1.day
+      response = client.get("#{base_url}/time_series") do |req|
+        req.params["symbol"] = "#{from}/#{to}"
+        req.params["start_date"] = start_date.to_s
+        req.params["end_date"] = end_date.to_s
+        req.params["interval"] = "1day"
       end
 
-      response = client.post("#{base_url}/batch", request_body)
-      data = JSON.parse(response.body).dig("data")
-      data.map do |date, resp|
-        rate = resp.dig("response", "rate")
+      data = JSON.parse(response.body).dig("values")
+      data.map do |resp|
+        rate = resp.dig("close")
+        date = resp.dig("datetime")
         if rate.nil?
           Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} on: #{date}.  Rate data: #{rate.inspect}")
           next
@@ -142,19 +143,18 @@ class Provider::TwelveData < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
-      request_body = {}
-      date = start_date
-      while date <= end_date
-        request_body[date.to_s] = { url: "/eod?symbol=#{symbol}&mic_code=#{exchange_operating_mic}&date=#{date}" }
-        date += 1.day
+      response = client.get("#{base_url}/time_series") do |req|
+        req.params["symbol"] = symbol
+        req.params["mic_code"] = exchange_operating_mic
+        req.params["start_date"] = start_date.to_s
+        req.params["end_date"] = end_date.to_s
+        req.params["interval"] = "1day"
       end
 
-      response = client.post("#{base_url}/batch", request_body)
-      data = JSON.parse(response.body).dig("data")
-      data.map do |date, resp|
-        price = resp.dig("response", "close")
-        currency = resp.dig("response", "currency")
-        exchange_operating_mic = resp.dig("response", "mic_code")
+      parsed = JSON.parse(response.body)
+      parsed.dig("values").map do |resp|
+        price = resp.dig("close")
+        date = resp.dig("datetime")
         if price.nil?
           Rails.logger.warn("#{self.class.name} returned invalid price data for security #{symbol} on: #{date}.  Price data: #{price.inspect}")
           next
@@ -164,7 +164,7 @@ class Provider::TwelveData < Provider
           symbol: symbol,
           date: date.to_date,
           price: price,
-          currency: currency,
+          currency: parsed.dig("currency"),
           exchange_operating_mic: exchange_operating_mic
         )
       end.compact
