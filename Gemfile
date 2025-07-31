@@ -52,6 +52,7 @@ gem "ostruct"
 gem "bcrypt", "~> 3.1"
 gem "jwt"
 gem "jbuilder"
+gem "countries"
 
 # OAuth & API Security
 gem "doorkeeper"
