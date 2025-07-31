@@ -1,4 +1,4 @@
-class MenuOrder
+class AccountOrder
   include ActiveModel::Model
   include ActiveModel::Attributes
 
