@@ -18,6 +18,8 @@ on:
       - 'v*'
     branches:
       - main
+  schedule:
+    - cron: '30 1 * * *'
 
 env:
   REGISTRY: ghcr.io
