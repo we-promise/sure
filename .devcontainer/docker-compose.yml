@@ -22,7 +22,7 @@ services:
       - bundle_cache:/bundle
 
     ports:
-      - "3000:3000"
+      - "3001:3000"
 
     command: sleep infinity
 
