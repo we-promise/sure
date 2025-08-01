@@ -2,7 +2,6 @@ class TransactionsController < ApplicationController
   include EntryableResource
 
   before_action :store_params!, only: :index
-  before_action :set_tags, only: [:new, :show]
 
   def new
     super
@@ -110,10 +109,6 @@ class TransactionsController < ApplicationController
   end
 
   private
-    def set_tags
-      @tags = Current.family.tags.to_a.sort_by { |tag| [tag.name[/\D+/], tag.name[/\d+/].to_i] }
-    end
-
     def per_page
       params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
     end

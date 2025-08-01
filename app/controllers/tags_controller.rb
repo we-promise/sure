@@ -2,7 +2,7 @@ class TagsController < ApplicationController
   before_action :set_tag, only: %i[edit update destroy]
 
   def index
-    @tags = Current.family.tags.to_a.sort_by { |tag| [tag.name[/\D+/], tag.name[/\d+/].to_i] }
+    @tags = Current.family.tags.sorted_naturally
     render layout: "settings"
   end
 
