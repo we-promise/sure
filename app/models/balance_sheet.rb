@@ -63,7 +63,7 @@ class BalanceSheet
     end
 
     def sorted(accounts)
-      account_order = family.users.first.account_order
+      account_order = Current.user.account_order
       case account_order.key
       when "name_asc"
         accounts.sort_by(&:name)
