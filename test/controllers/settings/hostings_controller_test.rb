@@ -8,7 +8,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
 
     @provider = mock
-    Provider::Registry.stubs(:get_provider).with(:synth).returns(@provider)
+    Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
     @usage_response = provider_success_response(
       OpenStruct.new(
         used: 10,

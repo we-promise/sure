@@ -140,6 +140,8 @@ GEM
     climate_control (1.2.0)
     concurrent-ruby (1.3.5)
     connection_pool (2.5.3)
+    countries (8.0.3)
+      unaccent (~> 0.3)
     crack (1.0.0)
       bigdecimal
       rexml
@@ -576,6 +578,7 @@ GEM
       railties (>= 7.1.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
+    unaccent (0.4.0)
     unicode (0.4.4.5)
     unicode-display_width (3.1.4)
       unicode-emoji (~> 4.0, >= 4.0.4)
@@ -629,6 +632,7 @@ DEPENDENCIES
   brakeman
   capybara
   climate_control
+  countries
   csv
   debug
   derailed_benchmarks

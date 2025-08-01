@@ -5,7 +5,9 @@ module Security::Provided
 
   class_methods do
     def provider
-      nil
+      provider = ENV["SECURITIES_PROVIDER"] || "twelve_data"
+      registry = Provider::Registry.for_concept(:securities)
+      registry.get_provider(provider.to_sym)
     end
 
     def search_provider(symbol, country_code: nil, exchange_operating_mic: nil)
