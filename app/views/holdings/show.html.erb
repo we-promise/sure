@@ -61,7 +61,7 @@
                   <div>
                     <p class="text-secondary text-xs uppercase"><%= l(trade_entry.date, format: :long) %></p>
 
-                    <p><%= t(
+                    <p class="text-primary"><%= t(
                       ".trade_history_entry",
                       qty: trade_entry.trade.qty,
                       security: trade_entry.trade.security.ticker,
