@@ -26,7 +26,7 @@ tr:
         rows_label: Satırlar
         unassigned_account: Atanmamış satırlar için yeni bir hesap oluşturmak ister misiniz?
       show:
-        account_mapping_description: İçe aktardığınız dosyadaki tüm hesapları Maybe'deki mevcut hesaplara eşleyin. Ayrıca yeni hesaplar ekleyebilir veya kategorize etmeden bırakabilirsiniz.
+        account_mapping_description: İçe aktardığınız dosyadaki tüm hesapları Sure'deki mevcut hesaplara eşleyin. Ayrıca yeni hesaplar ekleyebilir veya kategorize etmeden bırakabilirsiniz.
         account_mapping_title: Hesaplarınızı eşleyin
         account_type_mapping_description: İçe aktardığınız dosyadaki tüm hesap türlerini Maybe'deki hesap türlerine eşleyin.
         account_type_mapping_title: Hesap türlerinizi eşleyin
