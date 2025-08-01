@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 namespace :securities do
-
   desc "De-duplicate securities based on ticker + exchange_operating_mic"
   task :deduplicate, [ :dry_run ] => :environment do |_t, args|
     dry_run = args[:dry_run].present?
