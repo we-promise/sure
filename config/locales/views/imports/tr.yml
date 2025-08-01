@@ -28,7 +28,7 @@ tr:
       show:
         account_mapping_description: İçe aktardığınız dosyadaki tüm hesapları Sure'deki mevcut hesaplara eşleyin. Ayrıca yeni hesaplar ekleyebilir veya kategorize etmeden bırakabilirsiniz.
         account_mapping_title: Hesaplarınızı eşleyin
-        account_type_mapping_description: İçe aktardığınız dosyadaki tüm hesap türlerini Maybe'deki hesap türlerine eşleyin.
+        account_type_mapping_description: İçe aktardığınız dosyadaki tüm hesap türlerini Sure'deki hesap türlerine eşleyin.
         account_type_mapping_title: Hesap türlerinizi eşleyin
         category_mapping_description: İçe aktardığınız dosyadaki tüm kategorileri Maybe'deki mevcut kategorilere eşleyin. Ayrıca yeni kategoriler ekleyebilir veya kategorize etmeden bırakabilirsiniz.
         category_mapping_title: Kategorilerinizi eşleyin
