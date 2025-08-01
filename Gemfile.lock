@@ -262,9 +262,6 @@ GEM
     inline_svg (1.10.0)
       activesupport (>= 3.0)
       nokogiri (>= 1.6)
-    intercom-rails (1.0.6)
-      activesupport (> 4.0)
-      jwt (~> 2.0)
     io-console (0.8.0)
     irb (1.15.2)
       pp (>= 0.6.0)
@@ -650,7 +647,6 @@ DEPENDENCIES
   image_processing (>= 1.2)
   importmap-rails
   inline_svg
-  intercom-rails
   jbuilder
   jwt
   letter_opener
