@@ -8,6 +8,9 @@ class Settings::HostingsController < ApplicationController
   def show
     synth_provider = Provider::Registry.get_provider(:synth)
     @synth_usage = synth_provider&.usage
+
+    twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
+    @twelve_data_usage = twelve_data_provider&.usage
   end
 
   def update
@@ -23,6 +26,10 @@ class Settings::HostingsController < ApplicationController
       Setting.synth_api_key = hosting_params[:synth_api_key]
     end
 
+    if hosting_params.key?(:twelve_data_api_key)
+      Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
+    end
+
     redirect_to settings_hosting_path, notice: t(".success")
   rescue ActiveRecord::RecordInvalid => error
     flash.now[:alert] = t(".failure")
@@ -36,7 +43,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :synth_api_key)
+      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :synth_api_key, :twelve_data_api_key)
     end
 
     def ensure_admin
