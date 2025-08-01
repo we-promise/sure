@@ -77,7 +77,7 @@
                     "data-auto-submit-form-target": "auto" %>
 
               <%= ef.select :tag_ids,
-                    Current.family.tags.alphabetically.pluck(:name, :id),
+                    @tags.map { |tag| [tag.name, tag.id] },
                     {
                       include_blank: t(".none"),
                       multiple: true,
