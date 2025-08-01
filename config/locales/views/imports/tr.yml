@@ -21,7 +21,7 @@ tr:
       mappings:
         create_account: Hesap oluştur
         csv_mapping_label: CSV'de %{mapping}
-        maybe_mapping_label: Maybe'de %{mapping}
+        maybe_mapping_label: Sure'de %{mapping}
         no_accounts: Henüz hiç hesabınız yok. Lütfen CSV'nizdeki (atanmamış) satırlar için kullanabileceğimiz bir hesap oluşturun veya Temizle adımına geri dönüp kullanabileceğimiz bir hesap adı girin.
         rows_label: Satırlar
         unassigned_account: Atanmamış satırlar için yeni bir hesap oluşturmak ister misiniz?
