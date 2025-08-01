@@ -15,6 +15,7 @@ A bug is _broken functionality_ of the app (i.e. it prevents you from using the 
 
 ### Is this a bug with _sensitive info_?
 
+Make sure you feel comfortable with what you share.
 
 ### Is this a feature request?
 
