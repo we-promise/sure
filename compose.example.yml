@@ -65,6 +65,8 @@ services:
   worker:
     image: ghcr.io/we-promise/sure:latest
     command: bundle exec sidekiq
+    volumes:
+      - app-storage:/rails/storage
     restart: unless-stopped
     depends_on:
       redis:
