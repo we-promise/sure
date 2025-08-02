@@ -21,6 +21,9 @@ class UsersController < ApplicationController
       @user.update!(user_params.except(:redirect_to, :delete_profile_image))
       @user.profile_image.purge if should_purge_profile_image?
 
+      # Reload the user to ensure Current.user reflects the changes
+      @user.reload
+
       # Add a special notice if AI was just enabled
       notice = if !was_ai_enabled && @user.ai_enabled
         "AI Assistant has been enabled successfully."
