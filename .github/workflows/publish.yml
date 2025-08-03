@@ -108,7 +108,7 @@ jobs:
           flavor: latest=false
           tags: ${{ env.TAGS_SPEC }}
           labels: |
-            org.opencontainers.image.version=
+            org.opencontainers.image.version=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
             org.opencontainers.image.ref.name=${{ github.ref_name }}
             org.opencontainers.image.vendor=we-promise
