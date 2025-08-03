@@ -84,6 +84,7 @@ jobs:
           BASE_CONFIG="type=sha,format=long"
           if [[ $GITHUB_EVENT_NAME == "schedule" ]]; then
             BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly"
+            BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly-{{date 'ddd'}}"
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             BASE_CONFIG="type=semver,pattern={{version}}"
             BASE_CONFIG+=$'\n'"type=raw,value=stable"
