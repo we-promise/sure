@@ -26,6 +26,30 @@ export default class extends Controller {
 
     if (!nodes.length || !links.length) return;
 
+    // Constants
+    const HOVER_OPACITY = 0.5;
+    const HOVER_FILTER = "saturate(1.3) brightness(1.1)";
+
+    // Hover utility functions
+    const applyHoverEffect = (targetLinks, allLinks, allNodes) => {
+      allLinks
+        .style("opacity", (linkData) => targetLinks.includes(linkData) ? 1 : HOVER_OPACITY)
+        .style("filter", (linkData) => targetLinks.includes(linkData) ? HOVER_FILTER : "none");
+      
+      const connectedNodes = new Set();
+      targetLinks.forEach(link => {
+        connectedNodes.add(link.source);
+        connectedNodes.add(link.target);
+      });
+      
+      allNodes.style("opacity", (nodeData) => connectedNodes.has(nodeData) ? 1 : HOVER_OPACITY);
+    };
+
+    const resetHoverEffect = (allLinks, allNodes) => {
+      allLinks.style("opacity", 1).style("filter", "none");
+      allNodes.style("opacity", 1);
+    };
+
     // Clear previous SVG
     d3.select(this.element).selectAll("svg").remove();
 
@@ -91,12 +115,13 @@ export default class extends Controller {
     });
 
     // Draw links
-    svg
-      .append("g")
-      .attr("fill", "none")
+    const linksContainer = svg.append("g").attr("fill", "none");
+    
+    const linkPaths = linksContainer
       .selectAll("path")
       .data(sankeyData.links)
       .join("path")
+      .attr("class", "sankey-link")
       .attr("d", (d) => {
         const sourceX = d.source.x1;
         const targetX = d.target.x0;
@@ -108,19 +133,19 @@ export default class extends Controller {
       })
       .attr("stroke", (d, i) => `url(#link-gradient-${d.source.index}-${d.target.index}-${i})`)
       .attr("stroke-width", (d) => Math.max(1, d.width))
-      .append("title")
-      .text((d) => `${nodes[d.source.index].name} → ${nodes[d.target.index].name}: ${this.currencySymbolValue}${Number.parseFloat(d.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${d.percentage}%)`);
+      .style("transition", "opacity 0.3s ease");
 
     // Draw nodes
-    const node = svg
+    const nodeGroups = svg
       .append("g")
       .selectAll("g")
       .data(sankeyData.nodes)
-      .join("g");
+      .join("g")
+      .style("transition", "opacity 0.3s ease");
 
     const cornerRadius = 8;
 
-    node.append("path")
+    nodeGroups.append("path")
       .attr("d", (d) => {
         const x0 = d.x0;
         const y0 = d.y0;
@@ -174,14 +199,39 @@ export default class extends Controller {
         return "var(--color-gray-500)"; // Fallback, likely unused with current data
       });
 
+    // Add hover events to links after creating nodes
+    linkPaths
+      .on("mouseenter", (event, d) => {
+        applyHoverEffect([d], linkPaths, nodeGroups);
+      })
+      .on("mouseleave", () => {
+        resetHoverEffect(linkPaths, nodeGroups);
+      });
+
     const stimulusControllerInstance = this;
-    node
+    nodeGroups
       .append("text")
       .attr("x", (d) => (d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6))
       .attr("y", (d) => (d.y1 + d.y0) / 2)
       .attr("dy", "-0.2em")
       .attr("text-anchor", (d) => (d.x0 < width / 2 ? "start" : "end"))
       .attr("class", "text-xs font-medium text-primary fill-current")
+      .style("user-select", "none")
+      .style("-webkit-user-select", "none")
+      .style("-moz-user-select", "none")
+      .style("-ms-user-select", "none")
+      .style("cursor", "default")
+      .on("mouseenter", (event, d) => {
+        // Find all links connected to this node
+        const connectedLinks = sankeyData.links.filter(link => 
+          link.source === d || link.target === d
+        );
+        
+        applyHoverEffect(connectedLinks, linkPaths, nodeGroups);
+      })
+      .on("mouseleave", () => {
+        resetHoverEffect(linkPaths, nodeGroups);
+      })
       .each(function (d) {
         const textElement = d3.select(this);
         textElement.selectAll("tspan").remove();
