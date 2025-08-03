@@ -9,6 +9,7 @@ export default class extends Controller {
     strokeWidth: { type: Number, default: 2 },
     useLabels: { type: Boolean, default: true },
     useTooltip: { type: Boolean, default: true },
+    curveIntensity: { type: Number, default: 0.3 },
   };
 
   _d3SvgMemo = null;
@@ -258,7 +259,8 @@ export default class extends Controller {
           .area()
           .x((d) => this._d3XScale(d.date))
           .y0(this._d3ContainerHeight)
-          .y1((d) => this._d3YScale(this._getDatumValue(d))),
+          .y1((d) => this._d3YScale(this._getDatumValue(d)))
+          .curve(d3.curveCatmullRom.alpha(this.curveIntensityValue)),
       );
 
     // Apply the gradient + clip path
@@ -497,7 +499,8 @@ export default class extends Controller {
     return d3
       .line()
       .x((d) => this._d3XScale(d.date))
-      .y((d) => this._d3YScale(this._getDatumValue(d)));
+      .y((d) => this._d3YScale(this._getDatumValue(d)))
+      .curve(d3.curveCatmullRom.alpha(this.curveIntensityValue));
   }
 
   get _d3XScale() {
