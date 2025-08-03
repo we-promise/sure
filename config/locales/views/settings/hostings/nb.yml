@@ -20,13 +20,6 @@ nb:
         confirm_clear_cache:
           title: Tøm cache?
           body: Er du sikker på at du vil tømme cache? Dette vil fjerne alle valutakurser, verdipapirpriser, kontobalanser og andre data. Denne handlingen kan ikke angres.
-      synth_settings:
-        api_calls_used: "%{used} / %{limit} API-kall brukt (%{percentage})"
-        description: Angi API-nøkkelen som er gitt av Synth
-        label: API-nøkkel
-        placeholder: Angi API-nøkkelen din her
-        plan: "%{plan} plan"
-        title: Synth-innstillinger
       update:
         failure: Ugyldig innstillingsverdi
         success: Innstillinger oppdatert
