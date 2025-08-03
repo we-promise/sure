@@ -27,7 +27,7 @@ export default class extends Controller {
     if (!nodes.length || !links.length) return;
 
     // Constants
-    const HOVER_OPACITY = 0.5;
+    const HOVER_OPACITY = 0.4;
     const HOVER_FILTER = "saturate(1.3) brightness(1.1)";
 
     // Hover utility functions
