@@ -94,6 +94,10 @@ jobs:
             echo EOF
           } >> $GITHUB_ENV
 
+      - name: Get current date (RFC 3339 format)
+        id: date
+        run: echo "::set-output name=date::$(date -Iseconds)"
+
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5.6.0
@@ -101,6 +105,13 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: latest=false
           tags: ${{ env.TAGS_SPEC }}
+          labels: |
+            org.opencontainers.image.version=
+            org.opencontainers.image.created=${{ steps.date.outputs.date }}
+            org.opencontainers.image.ref.name=${{ github.ref_name }}
+            org.opencontainers.image.vendor=we-promise
+            org.opencontainers.image.title=Sure
+            org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app
 
       - name: Publish 'linux/${{ matrix.platform }}' image by digest
         uses: docker/build-push-action@v6.16.0
@@ -182,10 +193,29 @@ jobs:
             image_args+=("${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:$(<"${DIGESTS_DIR}/digest-${PLATFORM}")")
           done
 
+          annotations=(
+            "index:org.opencontainers.image.created=$(date -Iseconds)"
+            'index:org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}'
+            'index:org.opencontainers.image.revision=${{ github.sha }}'
+            'index:org.opencontainers.image.ref.name=${{ github.ref_name }}'
+            'index:org.opencontainers.image.vendor=we-promise'
+            'index:org.opencontainers.image.licenses=AGPL-3.0'
+            'index:org.opencontainers.image.title=Sure'
+            'index:org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app'
+          )
+          annotation_args=()
+          for annotation in "${annotations[@]}"; do
+            annotation_args+=("--annotation=${annotation}")
+          done
+          if [[ $GITHUB_REF_TYPE == "tag" ]]; then
+            annotation_args+=("--annotation='index:org.opencontainers.image.version=$GITHUB_REF_NAME'")
+          fi
+
           attempts=0
           until docker buildx imagetools create \
-            --annotation "index:org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app" \
-            "${tag_args[@]}" "${image_args[@]}" \
+            "${annotation_args[@]}" \
+            "${tag_args[@]}" \
+            "${image_args[@]}" \
           ; do
             attempts=$((attempts + 1))
             if [[ $attempts -ge 3 ]]; then
