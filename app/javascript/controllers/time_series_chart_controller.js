@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 
 const parseLocalDate = d3.timeParse("%Y-%m-%d");
+const curve = d3.curveCatmullRom.alpha(this.curveIntensityValue);
 
 export default class extends Controller {
   static values = {
@@ -260,7 +261,7 @@ export default class extends Controller {
           .x((d) => this._d3XScale(d.date))
           .y0(this._d3ContainerHeight)
           .y1((d) => this._d3YScale(this._getDatumValue(d)))
-          .curve(d3.curveCatmullRom.alpha(this.curveIntensityValue)),
+          .curve(curve),
       );
 
     // Apply the gradient + clip path
@@ -500,7 +501,7 @@ export default class extends Controller {
       .line()
       .x((d) => this._d3XScale(d.date))
       .y((d) => this._d3YScale(this._getDatumValue(d)))
-      .curve(d3.curveCatmullRom.alpha(this.curveIntensityValue));
+      .curve(curve);
   }
 
   get _d3XScale() {
