@@ -215,11 +215,8 @@ export default class extends Controller {
       .attr("y", (d) => (d.y1 + d.y0) / 2)
       .attr("dy", "-0.2em")
       .attr("text-anchor", (d) => (d.x0 < width / 2 ? "start" : "end"))
-      .attr("class", "text-xs font-medium text-primary fill-current")
-      .style("user-select", "none")
-      .style("-webkit-user-select", "none")
-      .style("-moz-user-select", "none")
-      .style("-ms-user-select", "none")
+      .attr("class", "text-xs font-medium text-primary fill-current select-none")
+      .style("cursor", "default")
       .style("cursor", "default")
       .on("mouseenter", (event, d) => {
         // Find all links connected to this node
