@@ -32,9 +32,10 @@ export default class extends Controller {
 
     // Hover utility functions
     const applyHoverEffect = (targetLinks, allLinks, allNodes) => {
+      const targetLinksSet = new Set(targetLinks);
       allLinks
-        .style("opacity", (linkData) => targetLinks.includes(linkData) ? 1 : HOVER_OPACITY)
-        .style("filter", (linkData) => targetLinks.includes(linkData) ? HOVER_FILTER : "none");
+        .style("opacity", (linkData) => targetLinksSet.has(linkData) ? 1 : HOVER_OPACITY)
+        .style("filter", (linkData) => targetLinksSet.has(linkData) ? HOVER_FILTER : "none");
       
       const connectedNodes = new Set();
       targetLinks.forEach(link => {
