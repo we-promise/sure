@@ -2,6 +2,13 @@
   <h1 class="text-primary text-xl font-medium">Rules</h1>
   <div class="flex items-center gap-2">
     <% if @rules.any? %>
+      <%= render DS::Link.new(
+        text: "Apply all",
+        variant: "secondary",
+        href: confirm_all_rules_path,
+        icon: "refresh-cw",
+        frame: :modal
+      ) %>
       <%= render DS::Menu.new do |menu| %>
         <% menu.with_item(
           variant: "button",
