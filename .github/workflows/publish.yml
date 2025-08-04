@@ -210,7 +210,7 @@ jobs:
             annotation_args+=("--annotation=${annotation}")
           done
           if [[ $GITHUB_REF_TYPE == "tag" ]]; then
-            annotation_args+=("--annotation='index:org.opencontainers.image.version=$GITHUB_REF_NAME'")
+            annotation_args+=("--annotation=index:org.opencontainers.image.version=$GITHUB_REF_NAME")
           fi
 
           attempts=0
