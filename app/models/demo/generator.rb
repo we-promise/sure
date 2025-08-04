@@ -83,6 +83,31 @@ class Demo::Generator
     end
   end
 
+  # Generate demo data reflecting an average Kenyan household
+  def generate_kenya_data!(skip_clear: false, email: "user@maybe.local")
+    if skip_clear
+      puts "⏭️  Skipping data clearing (appending new family)..."
+    else
+      puts "🧹 Clearing existing data..."
+      clear_all_data!
+    end
+
+    with_timing(__method__, max_seconds: 1000) do
+      puts "👥 Creating Kenyan demo family..."
+      family = create_family_and_users!("Nairobi Family", email, onboarded: true, subscribed: true)
+
+      puts "📊 Creating Kenyan financial data..."
+      create_kenyan_categories!(family)
+      create_kenyan_accounts!(family)
+      create_kenyan_transactions!(family)
+
+      # Auto-fill current-month budget based on recent spending averages
+      generate_budget_auto_fill!(family, currency: "KES")
+
+      puts "✅ Kenyan demo data loaded successfully!"
+    end
+  end
+
   private
 
     # Simple timing helper. Pass a descriptive label and a block; the runtime
@@ -291,7 +316,7 @@ class Demo::Generator
     end
 
     # Auto-fill current-month budget based on recent spending averages
-    def generate_budget_auto_fill!(family)
+    def generate_budget_auto_fill!(family, currency: "USD")
       current_month   = Date.current.beginning_of_month
       analysis_start  = (current_month - 3.months).beginning_of_month
       analysis_period = analysis_start..(current_month - 1.day)
@@ -307,7 +332,7 @@ class Demo::Generator
       budget = family.budgets.where(start_date: current_month).first_or_initialize
       budget.update!(
         end_date: current_month.end_of_month,
-        currency: "USD",
+        currency: currency,
         budgeted_spending: spend_per_cat.values.sum / 3.0, # placeholder, refine below
         expected_income: 0 # Could compute similarly if desired
       )
@@ -318,7 +343,7 @@ class Demo::Generator
         category = Category.find(cat_id)
         budget.budget_categories.find_or_create_by!(category: category) do |bc|
           bc.budgeted_spending = rounded
-          bc.currency = "USD"
+          bc.currency = currency
         end
       end
 
@@ -851,6 +876,88 @@ class Demo::Generator
 
     def random_expense_category
       [ @food_cat, @entertainment_cat, @shopping_cat, @travel_cat, @transportation_cat ].sample
+    end
+
+    # ---------------------------------------------------------------------------
+    # Kenyan dataset helpers
+    # ---------------------------------------------------------------------------
+
+    def create_kenyan_categories!(family)
+      # Income
+      @salary_cat      = family.categories.create!(name: "Salary", color: "#10b981", classification: "income")
+      @side_hustle_cat = family.categories.create!(name: "Side Hustle", color: "#059669", classification: "income")
+
+      # Expenses
+      @housing_cat   = family.categories.create!(name: "Housing", color: "#dc2626", classification: "expense")
+      @rent_cat      = family.categories.create!(name: "Rent", parent: @housing_cat, color: "#b91c1c", classification: "expense")
+      @utilities_cat = family.categories.create!(name: "Utilities", parent: @housing_cat, color: "#991b1b", classification: "expense")
+
+      @food_cat      = family.categories.create!(name: "Food", color: "#ea580c", classification: "expense")
+      @groceries_cat = family.categories.create!(name: "Groceries", parent: @food_cat, color: "#c2410c", classification: "expense")
+      @eating_out_cat = family.categories.create!(name: "Eating Out", parent: @food_cat, color: "#9a3412", classification: "expense")
+
+      @transport_cat = family.categories.create!(name: "Transport", color: "#2563eb", classification: "expense")
+      @matatu_cat    = family.categories.create!(name: "Matatu & Boda", parent: @transport_cat, color: "#1d4ed8", classification: "expense")
+
+      @airtime_cat   = family.categories.create!(name: "Airtime & Data", color: "#7c3aed", classification: "expense")
+      @education_cat = family.categories.create!(name: "Education", color: "#0891b2", classification: "expense")
+      @healthcare_cat = family.categories.create!(name: "Healthcare", color: "#db2777", classification: "expense")
+      @savings_cat   = family.categories.create!(name: "Savings", color: "#059669", classification: "expense")
+      @misc_cat      = family.categories.create!(name: "Miscellaneous", color: "#6b7280", classification: "expense")
+    end
+
+    def create_kenyan_accounts!(family)
+      @equity_checking = family.accounts.create!(accountable: Depository.new, name: "Equity Bank Checking", balance: 0, currency: "KES")
+      @mpesa_wallet    = family.accounts.create!(accountable: Cash.new, name: "M-Pesa Mobile Money", balance: 0, currency: "KES")
+      @sacco_savings   = family.accounts.create!(accountable: Depository.new, name: "SACCO Savings", balance: 0, currency: "KES")
+      @microloan       = family.accounts.create!(accountable: Loan.new, name: "Microfinance Loan", balance: 0, currency: "KES")
+    end
+
+    def create_kenyan_transactions!(family)
+      puts "   📈 Generating salary history (12 years)..."
+      start_date = 12.years.ago.beginning_of_month
+      current_month = Date.current.beginning_of_month
+      month_cursor = start_date
+      base_salary = 40_000
+
+      while month_cursor <= current_month
+        year_increase = ((month_cursor.year - start_date.year) * 2_000)
+        salary = -(base_salary + year_increase)
+        create_transaction!(@equity_checking, salary, "Payroll", @salary_cat, month_cursor.end_of_month)
+        month_cursor = month_cursor.next_month
+      end
+
+      puts "   🍚 Generating regular expenses..."
+      month_cursor = start_date
+      while month_cursor <= current_month
+        create_transaction!(@equity_checking, 15_000, "Apartment Rent", @rent_cat, month_cursor.beginning_of_month)
+        create_transaction!(@equity_checking, 3_000, "Kenya Power", @utilities_cat, month_cursor.beginning_of_month + 5.days)
+        create_transaction!(@equity_checking, 10_000, "Naivas Supermarket", @groceries_cat, month_cursor.beginning_of_month + 14.days)
+        create_transaction!(@mpesa_wallet, 2_000, "Street Food", @eating_out_cat, month_cursor.beginning_of_month + 20.days)
+        create_transaction!(@mpesa_wallet, 4_000, "Matatu & Boda", @matatu_cat, month_cursor.beginning_of_month + 10.days)
+        create_transaction!(@mpesa_wallet, 1_500, "Safaricom Airtime", @airtime_cat, month_cursor.beginning_of_month + 15.days)
+
+        if [ 1, 5, 9 ].include?(month_cursor.month)
+          create_transaction!(@equity_checking, 20_000, "School Fees", @education_cat, month_cursor.beginning_of_month + 7.days)
+        end
+
+        if (month_cursor.month % 6).zero?
+          create_transaction!(@equity_checking, 5_000, "Clinic Visit", @healthcare_cat, month_cursor.beginning_of_month + 25.days)
+        end
+
+        create_transfer!(@equity_checking, @sacco_savings, 5_000, "SACCO Contribution", month_cursor.beginning_of_month + 2.days)
+        month_cursor = month_cursor.next_month
+      end
+
+      puts "   💳 Generating loan payments..."
+      loan_start = 2.years.ago.beginning_of_month
+      month_cursor = loan_start
+      while month_cursor <= current_month
+        create_transfer!(@equity_checking, @microloan, 3_000, "Microloan Repayment", month_cursor.beginning_of_month + 7.days)
+        month_cursor = month_cursor.next_month
+      end
+
+      sync_family_accounts!(family)
     end
 
     def create_transaction!(account, amount, name, category, date)

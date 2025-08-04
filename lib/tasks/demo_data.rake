@@ -34,6 +34,19 @@ namespace :demo_data do
     puts "🎉 Demo data ready in #{elapsed.round(2)}s"
   end
 
+  desc "Load Kenyan demo dataset"
+  task kenya: :environment do
+    start    = Time.now
+    seed     = ENV.fetch("SEED", Random.new_seed)
+    puts "🚀 Loading KENYA demo data (seed=#{seed})…"
+
+    generator = Demo::Generator.new(seed: seed)
+    generator.generate_kenya_data!
+
+    elapsed = Time.now - start
+    puts "🎉 Kenyan demo data ready in #{elapsed.round(2)}s"
+  end
+
   # ---------------------------------------------------------------------------
   # Validation helpers
   # ---------------------------------------------------------------------------

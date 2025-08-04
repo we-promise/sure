@@ -78,8 +78,9 @@ cp .env.local.example .env.local
 bin/setup
 bin/dev
 
-# Optionally, load demo data
+# Optionally, load demo data (USA or Kenya)
 rake demo_data:default
+rake demo_data:kenya
 ```
 
 And visit http://localhost:3000 to see the app. You can use the following
