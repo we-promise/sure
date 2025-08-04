@@ -98,7 +98,7 @@ jobs:
 
       - name: Get current date (RFC 3339 format)
         id: date
-        run: echo "::set-output name=date::$(date -Iseconds)"
+        run: echo "date=$(date -Iseconds)" >> $GITHUB_OUTPUT
 
       - name: Extract metadata for Docker
         id: meta
