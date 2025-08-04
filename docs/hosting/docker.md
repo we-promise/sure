@@ -137,13 +137,13 @@ If you find bugs or have a feature request, be sure to read through our [contrib
 
 ## How to update your app
 
-The mechanism that updates your self-hosted Maybe app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
+The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
 
 ```yml
 image: ghcr.io/we-promise/sure:latest
 ```
 
-We recommend using one of the following images, but you can pin your app to whatever version you'd like (see [packages](https://github.com/we-promise/sure/pkgs/container/maybe)):
+We recommend using one of the following images, but you can pin your app to whatever version you'd like (see [packages](https://github.com/we-promise/sure/pkgs/container/sure)):
 
 - `ghcr.io/we-promise/sure:latest` (latest commit)
 - `ghcr.io/we-promise/sure:stable` (latest release)
@@ -189,5 +189,5 @@ By running the commands below, you will delete your existing Sure database and "
 docker compose down
 docker volume rm sure_postgres-data # this is the name of the volume the DB is mounted to
 docker compose up
-docker exec -it sure-postgres-1 psql -U maybe -d maybe_production -c "SELECT 1;" # This will verify that the issue is fixed
+docker exec -it sure-postgres-1 psql -U maybe_user -d maybe_production -c "SELECT 1;" # This will verify that the issue is fixed
 ```
