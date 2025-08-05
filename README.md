@@ -1,5 +1,5 @@
 
-<img width="1190" alt="maybe_hero" src="https://github.com/user-attachments/assets/5ed08763-a9ee-42b2-a436-e05038fcf573" />
+<img width="1190" alt="sure_hero" src="https://github.com/user-attachments/assets/959f6e9f-2d8a-4f8c-893e-cd3e6eeb4ff2" />
 
 <p align="center">
   <!-- Keep these links. Translations will automatically update with the README. -->
