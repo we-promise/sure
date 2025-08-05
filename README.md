@@ -43,7 +43,7 @@ Sure is a fully working personal finance app that can be [self hosted with Docke
 ## Forking and Attribution
 
 This repo is a community fork of the archived Maybe Finance repo.
-You’re free to fork it under the AGPLv3 license — but we’d love it if you stuck around and contributed here instead. 
+You’re free to fork it under the AGPLv3 license — but we’d love it if you stuck around and contributed here instead.
 
 To stay compliant and avoid trademark issues:
 
