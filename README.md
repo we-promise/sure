@@ -30,11 +30,11 @@ The business end of things didn't work out, and so they stopped developing the a
 
 After spending nearly $1 million on development (employees, contractors, data providers, infra, etc.), the team open-sourced the app. Their goal was to let users self-host it for free — and eventually launch a hosted version for a small fee.
 
-They actually did launch that hosted version… briefly.
+They actually did launch that hosted version … briefly.
 
 That also didn’t work out — at least not as a sustainable B2C business — so now here we are: hosting a community-maintained fork to keep the codebase alive and see where this can go next.
 
-Wanna join us?
+Join us!
 
 ## Hosting ~Maybe~Sure
 
@@ -48,7 +48,7 @@ You’re free to fork it under the AGPLv3 license — but we’d love it if you 
 To stay compliant and avoid trademark issues:
 
 - Be sure to include the original [AGPLv3 license](https://github.com/maybe-finance/maybe/blob/main/LICENSE) and clearly state in your README that your fork is based on Maybe Finance but is **not affiliated with or endorsed by** Maybe Finance Inc.
-- Don’t use the word “Maybe” in your project name or logo — it’s a trademark of Maybe Finance Inc.
+- "Maybe" is a trademark of Maybe Finance Inc. and therefore, use of it is NOT allowed in forked repositories (or the logo)
 
 ## Local Development Setup
 
