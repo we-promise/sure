@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="56" height="20" viewBox="0 0 48 20" fill="none"
+<svg width="56" height="20" viewBox="0 0 54 20" fill="none"
      xmlns="http://www.w3.org/2000/svg">
 
   <style>
     .word{
       fill:#242629;                                  /* brand colour            */
-      font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
+      font-family:'Geist',Arial,sans-serif;
       font-weight:900;                               /* black / heaviest weight */
       font-size:19px;                                /* cap-height ≈ 19 px      */
       letter-spacing:0.15px;                         /* optical match           */
