@@ -16,6 +16,7 @@ require "fast_mcp"
 
 FastMcp.mount_in_rails(
   Rails.application,
+  allowed_origins: Rails.application.config.hosts.to_a,
   name: Rails.application.class.module_parent_name.underscore.dasherize,
   version: "1.0.0",
   path_prefix: "/mcp", # This is the default path prefix
