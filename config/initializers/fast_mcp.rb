@@ -12,15 +12,15 @@
 
 # Mount the MCP middleware in your Rails application
 # You can customize the options below to fit your needs.
-require 'fast_mcp'
+require "fast_mcp"
 
 FastMcp.mount_in_rails(
   Rails.application,
   name: Rails.application.class.module_parent_name.underscore.dasherize,
-  version: '1.0.0',
-  path_prefix: '/mcp', # This is the default path prefix
-  messages_route: 'messages', # This is the default route for the messages endpoint
-  sse_route: 'sse' # This is the default route for the SSE endpoint
+  version: "1.0.0",
+  path_prefix: "/mcp", # This is the default path prefix
+  messages_route: "messages", # This is the default route for the messages endpoint
+  sse_route: "sse" # This is the default route for the SSE endpoint
   # Add allowed origins below, it defaults to Rails.application.config.hosts
   # allowed_origins: ['localhost', '127.0.0.1', '[::1]', 'example.com', /.*\.example\.com/],
   # localhost_only: true, # Set to false to allow connections from other hosts
