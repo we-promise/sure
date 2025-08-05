@@ -33,7 +33,7 @@ class OauthMobileTest < ActionDispatch::IntegrationTest
   test "mobile oauth detects custom scheme in redirect_uri" do
     get "/oauth/authorize", params: {
       client_id: @oauth_app.uid,
-      redirect_uri: "maybeapp://oauth/callback",
+      redirect_uri: "sureapp://oauth/callback",
       response_type: "code",
       scope: "read"
     }
