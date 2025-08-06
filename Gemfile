@@ -115,3 +115,5 @@ group :test do
   gem "climate_control"
   gem "simplecov", require: false
 end
+
+gem "langfuse-ruby", "~> 0.1.4"
