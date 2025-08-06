@@ -1,6 +1,8 @@
 # Langfuse
 
-This app can send traces of all LLM interactions to [Langfuse](https://langfuse.com) for debugging and usage analytics.
+This app can send traces of all LLM interactions to [Langfuse](https://langfuse.com) for debugging and usage analytics.  Find them here [on
+GitHub](https://github.com/langfuse/langfuse) and look at their [Open
+Source statement](https://langfuse.com/open-source).
 
 ## Prerequisites
 
