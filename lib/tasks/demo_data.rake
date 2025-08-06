@@ -34,14 +34,20 @@ namespace :demo_data do
     puts "🎉 Demo data ready in #{elapsed.round(2)}s"
   end
 
-  desc "Load Kenyan demo dataset"
+  desc "Load Kenyan demo dataset (use APPEND=true to keep existing data)"
   task kenya: :environment do
     start    = Time.now
     seed     = ENV.fetch("SEED", Random.new_seed)
-    puts "🚀 Loading KENYA demo data (seed=#{seed})…"
+    append   = ENV.fetch("APPEND", "false").downcase == "true"
+    
+    if append
+      puts "🚀 Loading KENYA demo data in APPEND mode (keeping existing data, seed=#{seed})…"
+    else
+      puts "🚀 Loading KENYA demo data (seed=#{seed})…"
+    end
 
     generator = Demo::Generator.new(seed: seed)
-    generator.generate_kenya_data!
+    generator.generate_kenya_data!(skip_clear: append)
 
     validate_demo_data
 

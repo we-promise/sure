@@ -80,7 +80,10 @@ bin/dev
 
 # Optionally, load demo data (USA or Kenya, only one!)
 rake demo_data:default
+# or
 rake demo_data:kenya
+# use APPEND=true if you want both
+APPEND=true rake demo_data:kenya
 ```
 
 And visit http://localhost:3000 to see the app. You can use the following

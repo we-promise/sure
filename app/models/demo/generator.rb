@@ -84,7 +84,7 @@ class Demo::Generator
   end
 
   # Generate demo data reflecting an average Kenyan household
-  def generate_kenya_data!(skip_clear: false, email: "user@maybe.local")
+  def generate_kenya_data!(skip_clear: false, email: "kenya@maybe.local")
     if skip_clear
       puts "⏭️  Skipping data clearing (appending new family)..."
     else
@@ -917,7 +917,7 @@ class Demo::Generator
 
     def create_kenyan_accounts!(family)
       @equity_checking = family.accounts.create!(accountable: Depository.new, name: "Equity Bank Checking", balance: 0, currency: "KES")
-      @mpesa_wallet    = family.accounts.create!(accountable: Cash.new, name: "M-Pesa Mobile Money", balance: 0, currency: "KES")
+      @mpesa_wallet    = family.accounts.create!(accountable: Depository.new, name: "M-Pesa Mobile Money", balance: 0, currency: "KES")
       @sacco_savings   = family.accounts.create!(accountable: Depository.new, name: "SACCO Savings", balance: 0, currency: "KES")
       @microloan       = family.accounts.create!(accountable: Loan.new, name: "Microfinance Loan", balance: 0, currency: "KES")
     end
