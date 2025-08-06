@@ -122,7 +122,7 @@ class Provider::Openai < Provider
     def langfuse_client
       return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
 
-      @langfuse_client ||= Langfuse.new
+      @langfuse_client = Langfuse.new
     end
 
     def log_langfuse_generation(name:, model:, input:, output:, usage: nil)
