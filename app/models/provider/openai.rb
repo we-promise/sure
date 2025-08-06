@@ -14,19 +14,20 @@ class Provider::Openai < Provider
     MODELS.include?(model)
   end
 
-  def auto_categorize(transactions: [], user_categories: [])
+  def auto_categorize(transactions: [], user_categories: [], model: "gpt-4.1-mini")
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
 
       result = AutoCategorizer.new(
         client,
+        model: model,
         transactions: transactions,
         user_categories: user_categories
       ).auto_categorize
 
       log_langfuse_generation(
         name: "auto_categorize",
-        model: "gpt-4.1-mini",
+        model: model,
         input: { transactions: transactions, user_categories: user_categories },
         output: result.map(&:to_h)
       )
@@ -35,19 +36,20 @@ class Provider::Openai < Provider
     end
   end
 
-  def auto_detect_merchants(transactions: [], user_merchants: [])
+  def auto_detect_merchants(transactions: [], user_merchants: [], model: "gpt-4.1-mini")
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
 
       result = AutoMerchantDetector.new(
         client,
+        model: model,
         transactions: transactions,
         user_merchants: user_merchants
       ).auto_detect_merchants
 
       log_langfuse_generation(
         name: "auto_detect_merchants",
-        model: "gpt-4.1-mini",
+        model: model,
         input: { transactions: transactions, user_merchants: user_merchants },
         output: result.map(&:to_h)
       )
