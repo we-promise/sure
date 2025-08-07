@@ -7,19 +7,20 @@ class SimplefinAccount < ApplicationRecord
   validate :has_balance
 
   def upsert_simplefin_snapshot!(account_snapshot)
+    # Convert to symbol keys or handle both string and symbol keys
+    snapshot = account_snapshot.with_indifferent_access
+
     # Map SimpleFin field names to our field names
-    assign_attributes(
-      current_balance: parse_balance(account_snapshot[:balance]),
-      available_balance: parse_balance(account_snapshot[:"available-balance"]),
-      currency: parse_currency(account_snapshot[:currency]),
-      account_type: account_snapshot[:type] || "unknown",
-      account_subtype: account_snapshot[:subtype],
-      name: account_snapshot[:name],
-      account_id: account_snapshot[:id],
+    update!(
+      current_balance: parse_balance(snapshot[:balance]),
+      available_balance: parse_balance(snapshot[:"available-balance"]),
+      currency: parse_currency(snapshot[:currency]),
+      account_type: snapshot[:type] || "unknown",
+      account_subtype: snapshot[:subtype],
+      name: snapshot[:name],
+      account_id: snapshot[:id],
       raw_payload: account_snapshot
     )
-
-    save!
   end
 
   def upsert_simplefin_transactions_snapshot!(transactions_snapshot)

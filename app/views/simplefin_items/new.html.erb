@@ -8,16 +8,16 @@
     <% end %>
     <%= styled_form_with model: @simplefin_item, local: true, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
       <div class="grow space-y-2">
-        <%= form.text_area :setup_token, 
+        <%= form.text_area :setup_token,
               label: "SimpleFin Setup Token",
               placeholder: "Paste your SimpleFin setup token here...",
               rows: 4,
               required: true %>
-        
+
         <p class="text-xs text-secondary">
-          Get your setup token from 
-          <%= link_to "SimpleFin Bridge", "https://bridge.simplefin.org/simplefin/create", 
-              target: "_blank", 
+          Get your setup token from
+          <%= link_to "SimpleFin Bridge", "https://bridge.simplefin.org/simplefin/create",
+              target: "_blank",
               class: "text-link underline" %>
         </p>
 

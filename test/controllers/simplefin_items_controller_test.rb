@@ -2,7 +2,7 @@ require "test_helper"
 
 class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    sign_in users(:dylan)
+    sign_in users(:family_admin)
     @family = families(:dylan_family)
     @simplefin_item = SimplefinItem.create!(
       family: @family,

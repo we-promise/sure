@@ -118,37 +118,37 @@ class Account < ApplicationRecord
     end
 
     def map_simplefin_type_to_accountable_type(simplefin_type, account_name: nil)
-        # First try to map by explicit type if provided
-        case simplefin_type&.downcase
-        when "checking", "savings"
+      # First try to map by explicit type if provided
+      case simplefin_type&.downcase
+      when "checking", "savings"
+        return "Depository"
+      when "credit", "credit card"
+        return "CreditCard"
+      when "investment", "brokerage"
+        return "Investment"
+      when "loan", "mortgage"
+        return "Loan"
+      end
+
+      # If type is unknown, try to infer from account name
+      if account_name.present?
+        name_lower = account_name.downcase
+        case name_lower
+        when /checking|chk/
           return "Depository"
-        when "credit", "credit card"
+        when /savings|save/
+          return "Depository"
+        when /credit|card/
           return "CreditCard"
-        when "investment", "brokerage"
+        when /investment|invest|brokerage|401k|ira/
           return "Investment"
-        when "loan", "mortgage"
+        when /loan|mortgage|auto|personal/
           return "Loan"
         end
+      end
 
-        # If type is unknown, try to infer from account name
-        if account_name.present?
-          name_lower = account_name.downcase
-          case name_lower
-          when /checking|chk/
-            return "Depository"
-          when /savings|save/
-            return "Depository"
-          when /credit|card/
-            return "CreditCard"
-          when /investment|invest|brokerage|401k|ira/
-            return "Investment"
-          when /loan|mortgage|auto|personal/
-            return "Loan"
-          end
-        end
-
-        # Default to OtherAsset if we can't determine type
-        "OtherAsset"
+      # Default to OtherAsset if we can't determine type
+      "OtherAsset"
       end
 
     private
@@ -164,11 +164,11 @@ class Account < ApplicationRecord
 
       def build_accountable_attributes_with_subtype(simplefin_account, account_type, subtype)
         base_attributes = build_accountable_attributes(simplefin_account, account_type)
-        
+
         if subtype.present?
           base_attributes[:subtype] = subtype
         end
-        
+
         base_attributes
       end
   end
