@@ -1,7 +1,7 @@
 class Provider::Simplefin
   include HTTParty
 
-  headers "User-Agent" => "Maybe Finance SimpleFin Client"
+  headers "User-Agent" => "Sure Finance SimpleFin Client"
 
   def initialize
     self.class.default_options.merge!(verify: true, ssl_verify_mode: :peer)
@@ -13,7 +13,7 @@ class Provider::Simplefin
 
     response = HTTParty.post(claim_url, {
       headers: {
-        "User-Agent" => "Maybe Finance SimpleFin Client"
+        "User-Agent" => "Sure Finance SimpleFin Client"
       },
       verify: true,
       ssl_verify_mode: :peer
@@ -43,7 +43,7 @@ class Provider::Simplefin
     # The access URL already contains HTTP Basic Auth credentials
     response = HTTParty.get(accounts_url, {
       headers: {
-        "User-Agent" => "Maybe Finance SimpleFin Client"
+        "User-Agent" => "Sure Finance SimpleFin Client"
       },
       verify: true,
       ssl_verify_mode: :peer
@@ -64,7 +64,7 @@ class Provider::Simplefin
   def get_info(base_url)
     response = HTTParty.get("#{base_url}/info", {
       headers: {
-        "User-Agent" => "Maybe Finance SimpleFin Client"
+        "User-Agent" => "Sure Finance SimpleFin Client"
       },
       verify: true,
       ssl_verify_mode: :peer
