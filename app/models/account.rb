@@ -22,7 +22,7 @@ class Account < ApplicationRecord
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
-  scope :manual, -> { where(plaid_account_id: nil) }
+  scope :manual, -> { where(plaid_account_id: nil, simplefin_account_id: nil) }
 
   has_one_attached :logo
 
@@ -71,6 +71,81 @@ class Account < ApplicationRecord
       account.sync_later
       account
     end
+
+    def create_from_simplefin_account(simplefin_account)
+      account_type = map_simplefin_type_to_accountable_type(simplefin_account.account_type, account_name: simplefin_account.name)
+
+      attributes = {
+        family: simplefin_account.simplefin_item.family,
+        name: simplefin_account.name,
+        balance: simplefin_account.current_balance || simplefin_account.available_balance || 0,
+        currency: simplefin_account.currency,
+        accountable_type: account_type,
+        accountable_attributes: build_accountable_attributes(simplefin_account, account_type),
+        simplefin_account_id: simplefin_account.id
+      }
+
+      create_and_sync(attributes)
+    end
+
+    def create_from_simplefin_account_with_type(simplefin_account, account_type)
+      attributes = {
+        family: simplefin_account.simplefin_item.family,
+        name: simplefin_account.name,
+        balance: simplefin_account.current_balance || simplefin_account.available_balance || 0,
+        currency: simplefin_account.currency,
+        accountable_type: account_type,
+        accountable_attributes: build_accountable_attributes(simplefin_account, account_type),
+        simplefin_account_id: simplefin_account.id
+      }
+
+      create_and_sync(attributes)
+    end
+
+    def map_simplefin_type_to_accountable_type(simplefin_type, account_name: nil)
+        # First try to map by explicit type if provided
+        case simplefin_type&.downcase
+        when "checking", "savings"
+          return "Depository"
+        when "credit", "credit card"
+          return "CreditCard"
+        when "investment", "brokerage"
+          return "Investment"
+        when "loan", "mortgage"
+          return "Loan"
+        end
+
+        # If type is unknown, try to infer from account name
+        if account_name.present?
+          name_lower = account_name.downcase
+          case name_lower
+          when /checking|chk/
+            return "Depository"
+          when /savings|save/
+            return "Depository"
+          when /credit|card/
+            return "CreditCard"
+          when /investment|invest|brokerage|401k|ira/
+            return "Investment"
+          when /loan|mortgage|auto|personal/
+            return "Loan"
+          end
+        end
+
+        # Default to OtherAsset if we can't determine type
+        "OtherAsset"
+      end
+
+    private
+
+      def build_accountable_attributes(simplefin_account, account_type)
+        case account_type
+        when "CreditCard", "Loan"
+          { balance: simplefin_account.current_balance }
+        else
+          {}
+        end
+      end
   end
 
   def institution_domain
