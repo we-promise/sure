@@ -58,7 +58,8 @@ class SimplefinItemsController < ApplicationController
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
       [ "Loan or Mortgage", "Loan" ],
-      [ "Other Asset", "OtherAsset" ]
+      [ "Other Asset", "OtherAsset" ],
+      [ "Skip - don't add", "Skip" ]
     ]
 
     # Subtype options for each account type

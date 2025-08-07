@@ -26,6 +26,11 @@ export default class extends Controller {
       }
     })
     
+   // Don't show any subtype select for Skip option
+   if (selectedType === 'Skip') {
+    return
+  }
+
     // Show the relevant subtype select
     const relevantSubtype = container.querySelector(`[data-type="${selectedType}"]`)
     if (relevantSubtype) {
