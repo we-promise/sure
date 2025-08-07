@@ -48,7 +48,7 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
       name: "User updated name",
       balance: 2000 # User cannot override balance.  This will be overridden by the processor on next processing
     )
-    
+
     @plaid_account.account.accountable.update!(subtype: "savings")
 
     @plaid_account.account.lock_attr!(:name)

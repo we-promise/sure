@@ -48,7 +48,7 @@ class PlaidAccount::Processor
           },
           source: "plaid"
         )
-        
+
         # Enrich subtype on the accountable, respecting locks
         account.accountable.enrich_attributes(
           {
@@ -56,7 +56,7 @@ class PlaidAccount::Processor
           },
           source: "plaid"
         )
-        
+
         account.assign_attributes(
           balance: balance_calculator.balance,
           currency: plaid_account.currency,
