@@ -15,8 +15,9 @@ class SimplefinAccount::Processor
     def ensure_account_exists
       return if simplefin_account.account.present?
 
-      account = Account.create_from_simplefin_account(simplefin_account)
-      simplefin_account.update!(account: account)
+      # This should not happen in normal flow since accounts are created manually
+      # during setup, but keeping as safety check
+      Rails.logger.error("SimpleFin account #{simplefin_account.id} has no associated Account - this should not happen after manual setup")
     end
 
     def process_transactions
