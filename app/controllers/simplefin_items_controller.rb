@@ -42,7 +42,7 @@ class SimplefinItemsController < ApplicationController
         # Immediately sync to get account and institution data
         @simplefin_item.sync_later
 
-        redirect_back_or_to root_path, notice: "SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background."
+        redirect_to simplefin_items_path, notice: "SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background."
       else
         @error_message = @simplefin_item.errors.full_messages.join(", ")
         render :new, status: :unprocessable_entity
@@ -87,16 +87,28 @@ class SimplefinItemsController < ApplicationController
       ['Loan or Mortgage', 'Loan'],
       ['Other Asset', 'OtherAsset']
     ]
+    
+    # Subtype options for each account type
+    @depository_subtypes = Depository::SUBTYPES.map { |k, v| [v[:long], k] }
+    @credit_card_subtypes = CreditCard::SUBTYPES.map { |k, v| [v[:long], k] }
+    @investment_subtypes = Investment::SUBTYPES.map { |k, v| [v[:long], k] }
+    @loan_subtypes = Loan::SUBTYPES.map { |k, v| [v[:long], k] }
   end
 
   def complete_account_setup
     account_types = params[:account_types] || {}
+    account_subtypes = params[:account_subtypes] || {}
     
     account_types.each do |simplefin_account_id, selected_type|
       simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
+      selected_subtype = account_subtypes[simplefin_account_id]
       
-      # Create account with user-selected type
-      account = Account.create_from_simplefin_account_with_type(simplefin_account, selected_type)
+      # Create account with user-selected type and subtype
+      account = Account.create_from_simplefin_account_with_type_and_subtype(
+        simplefin_account, 
+        selected_type, 
+        selected_subtype
+      )
       simplefin_account.update!(account: account)
     end
 

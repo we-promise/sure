@@ -27,6 +27,7 @@ class Account < ApplicationRecord
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
+  delegate :subtype, to: :accountable, allow_nil: true
 
   accepts_nested_attributes_for :accountable, update_only: true
 
@@ -102,6 +103,20 @@ class Account < ApplicationRecord
       create_and_sync(attributes)
     end
 
+    def create_from_simplefin_account_with_type_and_subtype(simplefin_account, account_type, subtype)
+      attributes = {
+        family: simplefin_account.simplefin_item.family,
+        name: simplefin_account.name,
+        balance: simplefin_account.current_balance || simplefin_account.available_balance || 0,
+        currency: simplefin_account.currency,
+        accountable_type: account_type,
+        accountable_attributes: build_accountable_attributes_with_subtype(simplefin_account, account_type, subtype),
+        simplefin_account_id: simplefin_account.id
+      }
+
+      create_and_sync(attributes)
+    end
+
     def map_simplefin_type_to_accountable_type(simplefin_type, account_name: nil)
         # First try to map by explicit type if provided
         case simplefin_type&.downcase
@@ -145,6 +160,16 @@ class Account < ApplicationRecord
         else
           {}
         end
+      end
+
+      def build_accountable_attributes_with_subtype(simplefin_account, account_type, subtype)
+        base_attributes = build_accountable_attributes(simplefin_account, account_type)
+        
+        if subtype.present?
+          base_attributes[:subtype] = subtype
+        end
+        
+        base_attributes
       end
   end
 

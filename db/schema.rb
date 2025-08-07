@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_07_170943) do
   create_schema "sure_dev_schema"
 
   # These are extensions that must be enabled in order to support this database
@@ -195,12 +195,14 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
     t.date "expiration_date"
     t.decimal "annual_fee", precision: 10, scale: 2
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "cryptos", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "data_enrichments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -220,6 +222,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -391,6 +394,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -425,6 +429,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
     t.integer "term_months"
     t.decimal "initial_balance", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "merchants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -523,12 +528,14 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "other_liabilities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "plaid_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -580,6 +587,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
     t.integer "area_value"
     t.string "area_unit"
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   create_table "rejected_transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -863,6 +871,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_163541) do
     t.string "make"
     t.string "model"
     t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
   end
 
   add_foreign_key "accounts", "families"
