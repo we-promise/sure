@@ -25,28 +25,12 @@ class SimplefinItemsController < ApplicationController
     end
 
     begin
-      # Test if it's valid base64
-      decoded = Base64.decode64(setup_token)
-      unless decoded.valid_encoding? && decoded.start_with?("http")
-        raise ArgumentError, "Invalid setup token format"
-      end
-
-      access_url = simplefin_provider.claim_access_url(setup_token)
-
-      @simplefin_item = Current.family.simplefin_items.build(
-        access_url: access_url,
-        name: "SimpleFin Connection"
+      @simplefin_item = Current.family.create_simplefin_item!(
+        setup_token: setup_token,
+        item_name: "SimpleFin Connection"
       )
 
-      if @simplefin_item.save
-        # Immediately sync to get account and institution data
-        @simplefin_item.sync_later
-
-        redirect_to simplefin_items_path, notice: "SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background."
-      else
-        @error_message = @simplefin_item.errors.full_messages.join(", ")
-        render :new, status: :unprocessable_entity
-      end
+      redirect_to simplefin_items_path, notice: "SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background."
     rescue ArgumentError, URI::InvalidURIError => e
       @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
       @error_message = "Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge."
@@ -131,7 +115,4 @@ class SimplefinItemsController < ApplicationController
       params.require(:simplefin_item).permit(:setup_token)
     end
 
-    def simplefin_provider
-      @simplefin_provider ||= Provider::Simplefin.new
-    end
 end
