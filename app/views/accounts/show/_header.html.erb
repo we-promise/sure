@@ -32,7 +32,9 @@
             "refresh-cw",
             as_button: true,
             size: "sm",
-            href: account.linked? ? sync_plaid_item_path(account.plaid_account.plaid_item) : sync_account_path(account),
+            href: account.plaid_account_id.present? ? sync_plaid_item_path(account.plaid_account.plaid_item) : 
+                  account.simplefin_account_id.present? ? sync_simplefin_item_path(account.simplefin_account.simplefin_item) :
+                  sync_account_path(account),
             disabled: account.syncing?,
             frame: :_top
           ) %>
