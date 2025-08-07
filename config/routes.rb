@@ -251,6 +251,14 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :simplefin_items, only: %i[index new create destroy] do
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   namespace :webhooks do
     post "plaid"
     post "plaid_eu"
