@@ -274,6 +274,11 @@ GEM
     json (2.12.2)
     jwt (2.10.2)
       base64
+    langfuse-ruby (0.1.4)
+      concurrent-ruby (~> 1.0)
+      faraday (>= 1.8, < 3.0)
+      faraday-net_http (>= 1.0, < 4.0)
+      json (~> 2.0)
     language_server-protocol (3.17.0.5)
     launchy (3.1.1)
       addressable (~> 2.8)
@@ -649,6 +654,7 @@ DEPENDENCIES
   inline_svg
   jbuilder
   jwt
+  langfuse-ruby (~> 0.1.4)
   letter_opener
   logtail-rails
   lookbook (= 2.3.11)
@@ -697,4 +703,4 @@ RUBY VERSION
    ruby 3.4.4p34
 
 BUNDLED WITH
-   2.6.9
+   2.6.7
