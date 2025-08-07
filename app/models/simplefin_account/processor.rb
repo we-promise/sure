@@ -77,9 +77,11 @@ class SimplefinAccount::Processor
         # Unix timestamp
         Time.at(date_value).to_date
       else
-        Date.current
+        Rails.logger.error("SimpleFin transaction has invalid date value: #{date_value.inspect}")
+        raise ArgumentError, "Invalid date format: #{date_value.inspect}"
       end
-    rescue ArgumentError, TypeError
-      Date.current
+    rescue ArgumentError, TypeError => e
+      Rails.logger.error("Failed to parse SimpleFin transaction date '#{date_value}': #{e.message}")
+      raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
     end
 end
