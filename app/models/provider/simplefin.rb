@@ -2,22 +2,16 @@ class Provider::Simplefin
   include HTTParty
 
   headers "User-Agent" => "Sure Finance SimpleFin Client"
+  default_options.merge!(verify: true, ssl_verify_mode: :peer)
 
   def initialize
-    self.class.default_options.merge!(verify: true, ssl_verify_mode: :peer)
   end
 
   def claim_access_url(setup_token)
     # Decode the base64 setup token to get the claim URL
     claim_url = Base64.decode64(setup_token)
 
-    response = HTTParty.post(claim_url, {
-      headers: {
-        "User-Agent" => "Sure Finance SimpleFin Client"
-      },
-      verify: true,
-      ssl_verify_mode: :peer
-    })
+    response = HTTParty.post(claim_url)
 
     case response.code
     when 200
@@ -41,13 +35,7 @@ class Provider::Simplefin
     accounts_url += "?#{URI.encode_www_form(query_params)}" unless query_params.empty?
 
     # The access URL already contains HTTP Basic Auth credentials
-    response = HTTParty.get(accounts_url, {
-      headers: {
-        "User-Agent" => "Sure Finance SimpleFin Client"
-      },
-      verify: true,
-      ssl_verify_mode: :peer
-    })
+    response = HTTParty.get(accounts_url)
 
     case response.code
     when 200
@@ -62,13 +50,7 @@ class Provider::Simplefin
   end
 
   def get_info(base_url)
-    response = HTTParty.get("#{base_url}/info", {
-      headers: {
-        "User-Agent" => "Sure Finance SimpleFin Client"
-      },
-      verify: true,
-      ssl_verify_mode: :peer
-    })
+    response = HTTParty.get("#{base_url}/info")
 
     case response.code
     when 200

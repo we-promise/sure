@@ -74,28 +74,14 @@ class Account < ApplicationRecord
     end
 
 
-    def create_from_simplefin_account_with_type(simplefin_account, account_type)
+    def create_from_simplefin_account(simplefin_account, account_type, subtype = nil)
       attributes = {
         family: simplefin_account.simplefin_item.family,
         name: simplefin_account.name,
         balance: simplefin_account.current_balance || simplefin_account.available_balance || 0,
         currency: simplefin_account.currency,
         accountable_type: account_type,
-        accountable_attributes: build_accountable_attributes(simplefin_account, account_type),
-        simplefin_account_id: simplefin_account.id
-      }
-
-      create_and_sync(attributes)
-    end
-
-    def create_from_simplefin_account_with_type_and_subtype(simplefin_account, account_type, subtype)
-      attributes = {
-        family: simplefin_account.simplefin_item.family,
-        name: simplefin_account.name,
-        balance: simplefin_account.current_balance || simplefin_account.available_balance || 0,
-        currency: simplefin_account.currency,
-        accountable_type: account_type,
-        accountable_attributes: build_accountable_attributes_with_subtype(simplefin_account, account_type, subtype),
+        accountable_attributes: build_simplefin_accountable_attributes(simplefin_account, account_type, subtype),
         simplefin_account_id: simplefin_account.id
       }
 
@@ -105,23 +91,11 @@ class Account < ApplicationRecord
 
     private
 
-      def build_accountable_attributes(simplefin_account, account_type)
-        case account_type
-        when "CreditCard", "Loan"
-          { balance: simplefin_account.current_balance }
-        else
-          {}
-        end
-      end
-
-      def build_accountable_attributes_with_subtype(simplefin_account, account_type, subtype)
-        base_attributes = build_accountable_attributes(simplefin_account, account_type)
-
-        if subtype.present?
-          base_attributes[:subtype] = subtype
-        end
-
-        base_attributes
+      def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
+        attributes = {}
+        attributes[:balance] = simplefin_account.current_balance if %w[CreditCard Loan].include?(account_type)
+        attributes[:subtype] = subtype if subtype.present?
+        attributes
       end
   end
 

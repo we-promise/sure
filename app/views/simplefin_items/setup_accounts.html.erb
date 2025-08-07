@@ -59,44 +59,9 @@
 
               <!-- Subtype dropdowns (shown/hidden based on account type) -->
               <div data-account-type-selector-target="subtypeContainer">
-                <div class="subtype-select" data-type="Depository" style="display: none;">
-                  <%= label_tag "account_subtypes[#{simplefin_account.id}]", "Account Subtype:",
-                               class: "block text-sm font-medium text-primary mb-2" %>
-                  <%= select_tag "account_subtypes[#{simplefin_account.id}]",
-                                options_for_select([["Select subtype", ""]] + @depository_subtypes,
-                                  simplefin_account.name.downcase.include?("checking") ? "checking" :
-                                  simplefin_account.name.downcase.include?("savings") ? "savings" : ""),
-                                { class: "w-full px-3 py-2 border border-primary rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" } %>
-                </div>
-
-                <div class="subtype-select" data-type="CreditCard" style="display: none;">
-                  <%= label_tag "account_subtypes[#{simplefin_account.id}]", "Credit Card Type:",
-                               class: "block text-sm font-medium text-primary mb-2" %>
-                  <%= select_tag "account_subtypes[#{simplefin_account.id}]",
-                                options_for_select([["Select type", ""]] + @credit_card_subtypes),
-                                { class: "w-full px-3 py-2 border border-primary rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" } %>
-                </div>
-
-                <div class="subtype-select" data-type="Investment" style="display: none;">
-                  <%= label_tag "account_subtypes[#{simplefin_account.id}]", "Investment Type:",
-                               class: "block text-sm font-medium text-primary mb-2" %>
-                  <%= select_tag "account_subtypes[#{simplefin_account.id}]",
-                                options_for_select([["Select type", ""]] + @investment_subtypes),
-                                { class: "w-full px-3 py-2 border border-primary rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" } %>
-                </div>
-
-                <div class="subtype-select" data-type="Loan" style="display: none;">
-                  <%= label_tag "account_subtypes[#{simplefin_account.id}]", "Loan Type:",
-                               class: "block text-sm font-medium text-primary mb-2" %>
-                  <%= select_tag "account_subtypes[#{simplefin_account.id}]",
-                                options_for_select([["Select type", ""]] + @loan_subtypes),
-                                { class: "w-full px-3 py-2 border border-primary rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" } %>
-                </div>
-
-                <!-- OtherAsset doesn't need subtype selection -->
-                <div class="subtype-select" data-type="OtherAsset" style="display: none;">
-                  <p class="text-sm text-secondary">No additional options needed for Other Assets.</p>
-                </div>
+                <% @subtype_options.each do |account_type, subtype_config| %>
+                  <%= render "subtype_select", account_type: account_type, subtype_config: subtype_config, simplefin_account: simplefin_account %>
+                <% end %>
               </div>
             </div>
           </div>

@@ -55,7 +55,12 @@ class SimplefinAccount < ApplicationRecord
       if currency_value.start_with?("http")
         # For custom currency URLs, we'll just use the last part as currency code
         # This is a simplification - in production you might want to fetch the currency info
-        URI.parse(currency_value).path.split("/").last.upcase rescue "USD"
+        begin
+          URI.parse(currency_value).path.split("/").last.upcase
+        rescue URI::InvalidURIError => e
+          Rails.logger.warn("Invalid currency URI for SimpleFin account: #{currency_value}, error: #{e.message}")
+          "USD"
+        end
       else
         currency_value.upcase
       end

@@ -5,7 +5,6 @@ export default class extends Controller {
   static values = { accountId: String }
 
   connect() {
-    console.log('Account type selector connected for account:', this.accountIdValue)
     // Show initial subtype dropdown based on current selection
     this.updateSubtype()
   }
@@ -15,8 +14,6 @@ export default class extends Controller {
     const selectedType = selectElement ? selectElement.value : ''
     const container = this.subtypeContainerTarget
     const accountId = this.accountIdValue
-    
-    console.log('Updating subtype for account:', accountId, 'Selected type:', selectedType)
     
     // Hide all subtype selects
     const subtypeSelects = container.querySelectorAll('.subtype-select')

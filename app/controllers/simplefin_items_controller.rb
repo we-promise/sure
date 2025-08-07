@@ -16,13 +16,7 @@ class SimplefinItemsController < ApplicationController
   def create
     setup_token = simplefin_params[:setup_token]
 
-    # Validate the token format first
-    if setup_token.blank?
-      @simplefin_item = Current.family.simplefin_items.build
-      @error_message = "Please enter a SimpleFin setup token."
-      render :new, status: :unprocessable_entity
-      return
-    end
+    return render_error("Please enter a SimpleFin setup token.") if setup_token.blank?
 
     begin
       @simplefin_item = Current.family.create_simplefin_item!(
@@ -31,24 +25,19 @@ class SimplefinItemsController < ApplicationController
       )
 
       redirect_to simplefin_items_path, notice: "SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background."
-    rescue ArgumentError, URI::InvalidURIError => e
-      @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
-      @error_message = "Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge."
-      render :new, status: :unprocessable_entity
+    rescue ArgumentError, URI::InvalidURIError
+      render_error("Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge.", setup_token)
     rescue Provider::Simplefin::SimplefinError => e
-      @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
-      case e.error_type
+      error_message = case e.error_type
       when :token_compromised
-        @error_message = "The setup token may be compromised, expired, or already used. Please create a new one."
+        "The setup token may be compromised, expired, or already used. Please create a new one."
       else
-        @error_message = "Failed to connect: #{e.message}"
+        "Failed to connect: #{e.message}"
       end
-      render :new, status: :unprocessable_entity
+      render_error(error_message, setup_token)
     rescue => e
       Rails.logger.error("SimpleFin connection error: #{e.message}")
-      @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
-      @error_message = "An unexpected error occurred. Please try again or contact support."
-      render :new, status: :unprocessable_entity
+      render_error("An unexpected error occurred. Please try again or contact support.", setup_token)
     end
   end
 
@@ -73,10 +62,29 @@ class SimplefinItemsController < ApplicationController
     ]
 
     # Subtype options for each account type
-    @depository_subtypes = Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
-    @credit_card_subtypes = CreditCard::SUBTYPES.map { |k, v| [ v[:long], k ] }
-    @investment_subtypes = Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
-    @loan_subtypes = Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+    @subtype_options = {
+      "Depository" => {
+        label: "Account Subtype:",
+        options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "CreditCard" => {
+        label: "Credit Card Type:",
+        options: CreditCard::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "Investment" => {
+        label: "Investment Type:",
+        options: Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "Loan" => {
+        label: "Loan Type:",
+        options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "OtherAsset" => {
+        label: nil,
+        options: [],
+        message: "No additional options needed for Other Assets."
+      }
+    }
   end
 
   def complete_account_setup
@@ -88,7 +96,7 @@ class SimplefinItemsController < ApplicationController
       selected_subtype = account_subtypes[simplefin_account_id]
 
       # Create account with user-selected type and subtype
-      account = Account.create_from_simplefin_account_with_type_and_subtype(
+      account = Account.create_from_simplefin_account(
         simplefin_account,
         selected_type,
         selected_subtype
@@ -115,4 +123,9 @@ class SimplefinItemsController < ApplicationController
       params.require(:simplefin_item).permit(:setup_token)
     end
 
+    def render_error(message, setup_token = nil)
+      @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
+      @error_message = message
+      render :new, status: :unprocessable_entity
+    end
 end
