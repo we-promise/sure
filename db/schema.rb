@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_07_170943) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_08_141424) do
   create_schema "sure_dev_schema"
 
   # These are extensions that must be enabled in order to support this database
@@ -697,6 +697,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_07_170943) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "balance_date"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
   end

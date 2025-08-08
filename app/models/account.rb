@@ -94,6 +94,20 @@ class Account < ApplicationRecord
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
         attributes = {}
         attributes[:subtype] = subtype if subtype.present?
+
+        # Set account-type-specific attributes from SimpleFin data
+        case account_type
+        when "CreditCard"
+          # For credit cards, available_balance often represents available credit
+          if simplefin_account.available_balance.present? && simplefin_account.available_balance > 0
+            attributes[:available_credit] = simplefin_account.available_balance
+          end
+        when "Loan"
+          # For loans, we might get additional data from the raw_payload
+          # This is where loan-specific information could be extracted if available
+          # Currently we don't have specific loan fields from SimpleFin protocol
+        end
+
         attributes
       end
   end

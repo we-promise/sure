@@ -19,6 +19,7 @@ class SimplefinAccount < ApplicationRecord
       account_subtype: snapshot["subtype"],
       name: snapshot[:name],
       account_id: snapshot[:id],
+      balance_date: parse_balance_date(snapshot[:"balance-date"]),
       raw_payload: account_snapshot
     )
   end
@@ -64,6 +65,24 @@ class SimplefinAccount < ApplicationRecord
       else
         currency_value.upcase
       end
+    end
+
+    def parse_balance_date(balance_date_value)
+      return nil if balance_date_value.nil?
+
+      case balance_date_value
+      when String
+        Time.parse(balance_date_value)
+      when Numeric
+        Time.at(balance_date_value)
+      when Time, DateTime
+        balance_date_value
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      Rails.logger.warn("Invalid balance date for SimpleFin account: #{balance_date_value}")
+      nil
     end
     def has_balance
       return if current_balance.present? || available_balance.present?
