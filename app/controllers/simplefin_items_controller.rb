@@ -93,6 +93,9 @@ class SimplefinItemsController < ApplicationController
     account_subtypes = params[:account_subtypes] || {}
 
     account_types.each do |simplefin_account_id, selected_type|
+      # Skip accounts that the user chose not to add
+      next if selected_type == "Skip"
+
       simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
       selected_subtype = account_subtypes[simplefin_account_id]
 
