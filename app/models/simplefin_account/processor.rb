@@ -32,41 +32,54 @@ class SimplefinAccount::Processor
     end
 
     def process_transaction(account, transaction_data)
+      # Handle both string and symbol keys
+      data = transaction_data.with_indifferent_access
+
+
       # Convert SimpleFin transaction to internal Transaction format
-      amount_cents = parse_amount(transaction_data[:amount], account.currency)
-      posted_date = parse_date(transaction_data[:posted])
+      amount = parse_amount(data[:amount], account.currency)
+      posted_date = parse_date(data[:posted])
 
-      transaction_attributes = {
-        account: account,
-        name: transaction_data[:description] || "Unknown transaction",
-        amount: Money.new(amount_cents, account.currency),
-        date: posted_date,
-        currency: account.currency,
-        raw_data: transaction_data
-      }
+      # Use plaid_id field for external ID (works for both Plaid and SimpleFin)
+      external_id = "simplefin_#{data[:id]}"
 
-      # Use external ID to prevent duplicates
-      external_id = "simplefin_#{transaction_data[:id]}"
+      # Check if entry already exists
+      existing_entry = Entry.find_by(plaid_id: external_id)
 
-      Transaction.find_or_create_by(external_id: external_id) do |transaction|
-        transaction.assign_attributes(transaction_attributes)
+      unless existing_entry
+        # Create the transaction (entryable)
+        transaction = Transaction.new(
+          external_id: external_id
+        )
+
+        # Create the entry with the transaction
+        Entry.create!(
+          account: account,
+          name: data[:description] || "Unknown transaction",
+          amount: amount,
+          date: posted_date,
+          currency: account.currency,
+          entryable: transaction,
+          plaid_id: external_id
+        )
       end
     rescue => e
-      Rails.logger.error("Failed to process SimpleFin transaction #{transaction_data[:id]}: #{e.message}")
+      Rails.logger.error("Failed to process SimpleFin transaction #{data[:id]}: #{e.message}")
       # Don't fail the entire sync for one bad transaction
     end
 
     def parse_amount(amount_value, currency)
       case amount_value
       when String
-        (BigDecimal(amount_value) * 100).to_i
+        BigDecimal(amount_value)
       when Numeric
-        (amount_value * 100).to_i
+        BigDecimal(amount_value.to_s)
       else
-        0
+        BigDecimal("0")
       end
-    rescue ArgumentError
-      0
+    rescue ArgumentError => e
+      Rails.logger.error "Failed to parse SimpleFin transaction amount: #{amount_value.inspect} - #{e.message}"
+      BigDecimal("0")
     end
 
     def parse_date(date_value)
