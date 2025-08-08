@@ -9,8 +9,9 @@ class SimplefinItem::Syncer
     # Loads item metadata, accounts, transactions from SimpleFin API
     simplefin_item.import_latest_simplefin_data
 
-    # Check if this is the first sync and we have new accounts to set up
-    if simplefin_item.accounts.empty? && simplefin_item.simplefin_accounts.any?
+    # Check if we have new SimpleFin accounts that need setup
+    unlinked_accounts = simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
+    if unlinked_accounts.any?
       # Mark as pending account setup so user can choose account types
       simplefin_item.update!(pending_account_setup: true)
       return

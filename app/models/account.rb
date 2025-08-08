@@ -93,7 +93,6 @@ class Account < ApplicationRecord
 
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
         attributes = {}
-        attributes[:balance] = simplefin_account.current_balance if %w[CreditCard Loan].include?(account_type)
         attributes[:subtype] = subtype if subtype.present?
         attributes
       end

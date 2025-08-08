@@ -15,8 +15,8 @@ class SimplefinAccount < ApplicationRecord
       current_balance: parse_balance(snapshot[:balance]),
       available_balance: parse_balance(snapshot[:"available-balance"]),
       currency: parse_currency(snapshot[:currency]),
-      account_type: snapshot[:type] || "unknown",
-      account_subtype: snapshot[:subtype],
+      account_type: snapshot["type"] || "unknown",
+      account_subtype: snapshot["subtype"],
       name: snapshot[:name],
       account_id: snapshot[:id],
       raw_payload: account_snapshot

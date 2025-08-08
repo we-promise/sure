@@ -72,18 +72,20 @@
       <div class="space-y-4 mt-4">
         <% if simplefin_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
-        <% elsif simplefin_item.pending_account_setup? %>
+        <% end %>
+        
+        <% if simplefin_item.pending_account_setup? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm">Accounts ready to set up</p>
-            <p class="text-secondary text-sm">Choose account types for your imported SimpleFin accounts.</p>
+            <p class="text-primary font-medium text-sm">New accounts ready to set up</p>
+            <p class="text-secondary text-sm">Choose account types for your newly imported SimpleFin accounts.</p>
             <%= render DS::Link.new(
-              text: "Set Up Accounts",
+              text: "Set Up New Accounts",
               icon: "settings",
               variant: "primary",
               href: setup_accounts_simplefin_item_path(simplefin_item)
             ) %>
           </div>
-        <% else %>
+        <% elsif simplefin_item.accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm">No accounts found</p>
             <p class="text-secondary text-sm">This connection doesn't have any synchronized accounts yet.</p>

@@ -52,7 +52,7 @@ class SimplefinItemsController < ApplicationController
   end
 
   def setup_accounts
-    @simplefin_accounts = @simplefin_item.simplefin_accounts
+    @simplefin_accounts = @simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
     @account_type_options = [
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
@@ -69,8 +69,9 @@ class SimplefinItemsController < ApplicationController
         options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
       },
       "CreditCard" => {
-        label: "Credit Card Type:",
-        options: CreditCard::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: "",
+        options: [],
+        message: "Credit cards will be automatically set up as credit card accounts."
       },
       "Investment" => {
         label: "Investment Type:",
@@ -98,6 +99,9 @@ class SimplefinItemsController < ApplicationController
 
       simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
       selected_subtype = account_subtypes[simplefin_account_id]
+      
+      # Default subtype for CreditCard since it only has one option
+      selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
 
       # Create account with user-selected type and subtype
       account = Account.create_from_simplefin_account(

@@ -1,7 +1,7 @@
 <% content_for :title, @simplefin_item.name %>
 
 <div class="mb-8">
-  <%= link_to simplefin_items_path, class: "text-gray-700 hover:text-gray-900" do %>
+  <%= link_to simplefin_items_path, class: "text-secondary hover:text-primary" do %>
     ← Back to SimpleFin Connections
   <% end %>
   <h1 class="text-2xl font-bold mt-2"><%= @simplefin_item.name %></h1>
@@ -18,26 +18,32 @@
 
 <div class="space-y-6">
   <% if @simplefin_item.syncing? %>
-    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <div class="p-4 bg-surface border border-primary rounded-lg">
       <div class="flex items-center">
-        <%= icon "loader-2", class: "w-5 h-5 text-blue-600 animate-spin mr-2" %>
-        <p class="text-blue-700">Syncing accounts...</p>
+        <%= icon "loader-2", class: "w-5 h-5 text-primary animate-spin mr-2" %>
+        <p class="text-primary">Syncing accounts...</p>
       </div>
     </div>
   <% end %>
 
   <% if @simplefin_item.simplefin_accounts.any? %>
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium">Connected Accounts</h3>
+    <div class="bg-container shadow-border-xs rounded-lg">
+      <div class="px-6 py-4 border-b border-primary">
+        <h3 class="text-lg font-medium text-primary">Connected Accounts</h3>
       </div>
-      <ul class="divide-y divide-gray-200">
+      <ul class="divide-y divide-secondary">
         <% @simplefin_item.simplefin_accounts.each do |simplefin_account| %>
           <li class="p-6 flex justify-between items-center">
             <div>
-              <h4 class="font-medium text-gray-900"><%= simplefin_account.name %></h4>
-              <p class="text-sm text-gray-500"><%= simplefin_account.account_type.humanize %></p>
-              <p class="text-sm text-gray-500">
+              <h4 class="font-medium text-primary"><%= simplefin_account.name %></h4>
+              <p class="text-sm text-secondary">
+                <% if simplefin_account.account %>
+                  <%= simplefin_account.account.accountable_type.humanize %>
+                <% else %>
+                  <%= simplefin_account.account_type.humanize %>
+                <% end %>
+              </p>
+              <p class="text-sm text-secondary">
                 Balance: <%= number_to_currency(simplefin_account.current_balance || 0) %>
                 <% if simplefin_account.currency != "USD" %>
                   <%= simplefin_account.currency %>
@@ -47,9 +53,9 @@
             <div class="text-right">
               <% if simplefin_account.account %>
                 <%= link_to "View Account", account_path(simplefin_account.account),
-                    class: "text-blue-600 hover:text-blue-800" %>
+                    class: "text-primary hover:text-primary-hover" %>
               <% else %>
-                <span class="text-gray-400">Setting up...</span>
+                <span class="text-secondary">Setting up...</span>
               <% end %>
             </div>
           </li>
@@ -58,7 +64,7 @@
     </div>
   <% else %>
     <div class="text-center py-12">
-      <p class="text-gray-500">No accounts found. Try syncing again.</p>
+      <p class="text-secondary">No accounts found. Try syncing again.</p>
       <%= button_to "Sync Now", sync_simplefin_item_path(@simplefin_item),
           method: :post,
           class: "mt-4 btn btn--secondary" %>
