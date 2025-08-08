@@ -99,7 +99,7 @@ class SimplefinItemsController < ApplicationController
 
       simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
       selected_subtype = account_subtypes[simplefin_account_id]
-      
+
       # Default subtype for CreditCard since it only has one option
       selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
 

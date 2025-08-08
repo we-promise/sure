@@ -73,7 +73,7 @@
         <% if simplefin_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
         <% end %>
-        
+
         <% if simplefin_item.pending_account_setup? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm">New accounts ready to set up</p>
