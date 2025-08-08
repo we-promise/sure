@@ -1,0 +1,46 @@
+<% content_for :title, "Add SimpleFin Connection" %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "Add SimpleFin Connection") %>
+  <% dialog.with_body do %>
+    <% if @error_message.present? %>
+      <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+    <% end %>
+    <%= styled_form_with model: @simplefin_item, local: true, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+      <div class="grow space-y-2">
+        <%= form.text_area :setup_token,
+              label: "SimpleFin Setup Token",
+              placeholder: "Paste your SimpleFin setup token here...",
+              rows: 4,
+              required: true %>
+
+        <p class="text-xs text-secondary">
+          Get your setup token from
+          <%= link_to "SimpleFin Bridge", "https://bridge.simplefin.org/simplefin/create",
+              target: "_blank",
+              class: "text-link underline" %>
+        </p>
+
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+            <div>
+              <h3 class="text-sm font-medium text-primary mb-1">How to get your setup token:</h3>
+              <ol class="text-xs text-secondary space-y-1 list-decimal list-inside">
+                <li>Visit <%= link_to "SimpleFin Bridge", "https://bridge.simplefin.org/simplefin/create", target: "_blank", class: "text-link underline" %></li>
+                <li>Connect your bank account using your online banking credentials</li>
+                <li>Copy the SimpleFin setup token that appears (it will be a long Base64-encoded string)</li>
+                <li>Paste it above and click "Add Connection"</li>
+              </ol>
+              <p class="text-xs text-secondary mt-2">
+                <strong>Note:</strong> Setup tokens can only be used once. If the connection fails, you'll need to create a new token.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%= form.submit "Add Connection" %>
+    <% end %>
+  <% end %>
+<% end %>

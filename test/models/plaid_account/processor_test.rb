@@ -46,12 +46,13 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
 
     @plaid_account.account.update!(
       name: "User updated name",
-      subtype: "savings",
       balance: 2000 # User cannot override balance.  This will be overridden by the processor on next processing
     )
 
+    @plaid_account.account.accountable.update!(subtype: "savings")
+
     @plaid_account.account.lock_attr!(:name)
-    @plaid_account.account.lock_attr!(:subtype)
+    @plaid_account.account.accountable.lock_attr!(:subtype)
     @plaid_account.account.lock_attr!(:balance) # Even if balance somehow becomes locked, Plaid ignores it and overrides it
 
     assert_no_difference "Account.count" do
