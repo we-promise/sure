@@ -45,11 +45,16 @@ class SimplefinItem::Importer
     end
 
     def import_organization(org_data)
-      simplefin_item.upsert_simplefin_institution_snapshot!({
+      # Create normalized institution data for compatibility
+      normalized_data = {
         id: org_data[:domain] || org_data[:"sfin-url"],
         name: org_data[:name] || extract_domain_name(org_data[:domain]),
-        url: org_data[:domain] || org_data[:"sfin-url"]
-      })
+        url: org_data[:domain] || org_data[:"sfin-url"],
+        # Store the complete raw organization data
+        raw_org_data: org_data
+      }
+
+      simplefin_item.upsert_simplefin_institution_snapshot!(normalized_data)
     end
 
     def extract_domain_name(domain)

@@ -54,7 +54,9 @@ class SimplefinAccountTest < ActiveSupport::TestCase
       "type" => "savings",
       "subtype" => "savings",
       "name" => "Updated Savings Account",
-      "id" => "updated_123"
+      "id" => "updated_123",
+      "extra" => { "account_number_last_4" => "1234" },
+      "org" => { "domain" => "testbank.com", "name" => "Test Bank" }
     }
 
     @simplefin_account.upsert_simplefin_snapshot!(snapshot)
@@ -64,6 +66,8 @@ class SimplefinAccountTest < ActiveSupport::TestCase
     assert_equal Time.parse(balance_date), @simplefin_account.balance_date
     assert_equal "savings", @simplefin_account.account_type
     assert_equal "Updated Savings Account", @simplefin_account.name
+    assert_equal({ "account_number_last_4" => "1234" }, @simplefin_account.extra)
+    assert_equal({ "domain" => "testbank.com", "name" => "Test Bank" }, @simplefin_account.org_data)
     assert_equal snapshot, @simplefin_account.raw_payload
   end
 

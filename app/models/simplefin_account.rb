@@ -20,6 +20,8 @@ class SimplefinAccount < ApplicationRecord
       name: snapshot[:name],
       account_id: snapshot[:id],
       balance_date: parse_balance_date(snapshot[:"balance-date"]),
+      extra: snapshot[:extra],
+      org_data: snapshot[:org],
       raw_payload: account_snapshot
     )
   end
