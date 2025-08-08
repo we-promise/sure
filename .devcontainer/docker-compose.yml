@@ -18,6 +18,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
 
     volumes:
+      - ./.bashrc:/root/.bashrc:ro,cached
       - ..:/workspace:cached
       - bundle_cache:/bundle
 
