@@ -30,6 +30,11 @@
             { label: t(".default_period") },
             { data: { auto_submit_form_target: "auto" } } %>
 
+        <%= form.select :default_account_order,
+            AccountOrder.all.map { |order| [ order.label, order.key ] },
+            { label: t(".default_account_order") },
+            { data: { auto_submit_form_target: "auto" } } %>
+
         <%= family_form.select :country,
             country_options,
             { label: t(".country") },
