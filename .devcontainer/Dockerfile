@@ -23,6 +23,7 @@ RUN gem install bundler foreman
 
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get install -y nodejs
+  && apt-get install -y nodejs \
+  && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 WORKDIR /workspace
