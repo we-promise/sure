@@ -6,7 +6,7 @@
 
 function git_branch() {
     local branch
-    branch="$(git symbolic-ref --short HEAD 2> /dev/null)"
+    branch="$( { git symbolic-ref -q --short HEAD || git rev-parse -q --short --verify HEAD; } 2>&- )"
     if [[ -n "$branch" ]]; then
         echo -n "$branch"
         return 0
@@ -27,9 +27,49 @@ function git_has_diff() {
 }
 
 function git_status_marker() {
-  if in_git_dir; then
-    git_has_diff || echo -n ' *'
+  if ! in_git_dir; then
+    return 1
   fi
+
+  local git_dir
+  git_dir=$(git rev-parse --git-dir 2>/dev/null)
+
+  # Rebase states
+  if [[ -d "$git_dir/rebase-merge" ]]; then
+    echo -n " REBASE-i"
+    return 0
+  elif [[ -d "$git_dir/rebase-apply" ]]; then
+    if [[ -f "$git_dir/rebase-apply/rebasing" ]]; then
+      echo -n " REBASE"
+      return 0
+    elif [[ -f "$git_dir/rebase-apply/applying" ]]; then
+      echo -n " AM"
+      return 0
+    else
+      echo -n " REBASE"
+      return 0
+    fi
+  fi
+
+  # Merge state
+  if [[ -f "$git_dir/MERGE_HEAD" ]]; then
+    echo -n " MERGING"
+    return 0
+  fi
+
+  # Bisect state
+  if [[ -f "$git_dir/BISECT_LOG" ]]; then
+    echo -n " BISECTING"
+    return 0
+  fi
+
+  # Dirty state: unstaged or staged changes
+  if ! git_has_diff; then
+    echo -n " *"
+    return 0
+  fi
+
+  return 0
 }
 
 ########
@@ -56,12 +96,10 @@ function prompt_command() {
     P+="${RED_BOLD}\$(git_branch)"
     P+="${YELLOW_BOLD}\$(git_status_marker)"
     P+="${LIGHT_BLUE})"
-    P+="${COLOUR_OFF} "
-  else
-    P+="${COLOUR_OFF}"
   fi
+  P+="${COLOUR_OFF} "
 
-  P+='\$ '
+  P+='$ '
   export PS1="$P"
 }
 
