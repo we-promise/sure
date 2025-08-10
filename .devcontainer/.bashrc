@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ########
-# GitHub
+# Git
 ########
 
 function git_branch() {
@@ -22,7 +22,7 @@ function git_name() {
   git config user.name 2> /dev/null
 }
 
-function git_has_diff() {
+function git_has_no_diff() {
   git diff --quiet HEAD 2> /dev/null
 }
 
@@ -64,7 +64,7 @@ function git_status_marker() {
   fi
 
   # Dirty state: unstaged or staged changes
-  if ! git_has_diff; then
+  if ! git_has_no_diff; then
     echo -n " *"
     return 0
   fi
@@ -82,7 +82,7 @@ export LIGHT_BLUE='\[\033[0;94m\]'
 export LIGHT_BLUE_BOLD='\[\033[1;94m\]'
 export RED_BOLD='\[\033[1;31m\]'
 export YELLOW_BOLD='\[\033[1;33m\]'
-export COLOUR_OFF='\[\033[0m\]'
+export COLOR_OFF='\[\033[0m\]'
 
 function prompt_command() {
   local P=""
@@ -97,10 +97,20 @@ function prompt_command() {
     P+="${YELLOW_BOLD}\$(git_status_marker)"
     P+="${LIGHT_BLUE})"
   fi
-  P+="${COLOUR_OFF} "
+  P+="${COLOR_OFF} "
 
   P+='$ '
   export PS1="$P"
 }
 
 export PROMPT_COMMAND='prompt_command'
+
+########
+# Git autocompletion
+########
+
+if [[ -f /usr/share/bash-completion/completions/git ]]; then
+  . /usr/share/bash-completion/completions/git
+elif [[ -f /etc/bash_completion.d/git ]]; then
+  . /etc/bash_completion.d/git
+fi
