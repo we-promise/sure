@@ -25,6 +25,6 @@ class Tag < ApplicationRecord
   end
 
   def self.sorted_naturally
-    all.to_a.sort_by { |tag| [tag.name[/\D+/], tag.name[/\d+/].to_i] }
+    all.to_a.sort_by { |tag| [ tag.name[/\D+/], tag.name[/\d+/].to_i ] }
   end
 end
