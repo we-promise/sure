@@ -6,19 +6,26 @@
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
 
-        <div class="flex items-center justify-center h-8 w-8 bg-alpha-black-50 rounded-full">
-          <% if simplefin_item.logo.attached? %>
+        <% if simplefin_item.logo.attached? %>
+          <div class="flex items-center justify-center h-8 w-8 rounded-full overflow-hidden">
             <%= image_tag simplefin_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
-          <% else %>
-            <div class="flex items-center justify-center">
-              <%= tag.p simplefin_item.name.first.upcase, class: "text-primary text-xs font-medium" %>
-            </div>
-          <% end %>
-        </div>
+          </div>
+        <% else %>
+          <%= render DS::FilledIcon.new(
+            variant: :container,
+            text: simplefin_item.name.first.upcase,
+            size: "md"
+          ) %>
+        <% end %>
 
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
-            <%= tag.p simplefin_item.name, class: "font-medium text-primary" %>
+            <div>
+              <%= tag.p simplefin_item.name, class: "font-medium text-primary" %>
+              <% if simplefin_item.institution_name.present? %>
+                <p class="text-secondary text-xs"><%= simplefin_item.institution_name %></p>
+              <% end %>
+            </div>
             <% if simplefin_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse">(deletion in progress...)</p>
             <% end %>
