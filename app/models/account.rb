@@ -5,6 +5,7 @@ class Account < ApplicationRecord
 
   belongs_to :family
   belongs_to :import, optional: true
+  belongs_to :simplefin_account, optional: true
 
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
@@ -75,10 +76,19 @@ class Account < ApplicationRecord
 
 
     def create_from_simplefin_account(simplefin_account, account_type, subtype = nil)
+      # Get the balance from SimpleFin
+      balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
+
+      # SimpleFin returns negative balances for credit cards (liabilities)
+      # But Maybe expects positive balances for liabilities
+      if account_type == "CreditCard" || account_type == "Loan"
+        balance = balance.abs
+      end
+
       attributes = {
         family: simplefin_account.simplefin_item.family,
         name: simplefin_account.name,
-        balance: simplefin_account.current_balance || simplefin_account.available_balance || 0,
+        balance: balance,
         currency: simplefin_account.currency,
         accountable_type: account_type,
         accountable_attributes: build_simplefin_accountable_attributes(simplefin_account, account_type, subtype),
