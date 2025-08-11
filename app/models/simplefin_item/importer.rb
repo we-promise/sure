@@ -40,7 +40,7 @@ class SimplefinItem::Importer
       # For the first sync, get all available data by using a very wide date range
       # SimpleFin requires a start_date parameter - without it, only returns recent transactions
       unless simplefin_item.last_synced_at
-        return 100.years.ago  # Set to 100 years for first sync to get eveything just to be sure
+        return 100.years.ago  # Set to 100 years for first sync to get everything just to be sure
       end
 
       # For subsequent syncs, fetch from last sync date with a buffer
