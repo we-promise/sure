@@ -7,7 +7,7 @@
           simplefin_account.name.downcase.include?("savings") ? "savings" : "") : "" %>
     <%= select_tag "account_subtypes[#{simplefin_account.id}]",
                   options_for_select([["Select #{account_type == 'Depository' ? 'subtype' : 'type'}", ""]] + subtype_config[:options], selected_value),
-                  { class: "w-full px-3 py-2 border border-primary rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" } %>
+                  { class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" } %>
   <% else %>
     <p class="text-sm text-secondary"><%= subtype_config[:message] %></p>
   <% end %>
