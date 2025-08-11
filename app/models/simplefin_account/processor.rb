@@ -69,7 +69,7 @@ class SimplefinAccount::Processor
     end
 
     def parse_amount(amount_value, currency)
-      case amount_value
+      parsed_amount = case amount_value
       when String
         BigDecimal(amount_value)
       when Numeric
@@ -77,6 +77,11 @@ class SimplefinAccount::Processor
       else
         BigDecimal("0")
       end
+
+      # SimpleFin uses banking convention (expenses negative, income positive)
+      # Maybe expects opposite convention (expenses positive, income negative)
+      # So we negate the amount to convert from SimpleFin to Maybe format
+      -parsed_amount
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse SimpleFin transaction amount: #{amount_value.inspect} - #{e.message}"
       BigDecimal("0")
@@ -86,9 +91,13 @@ class SimplefinAccount::Processor
       case date_value
       when String
         Date.parse(date_value)
-      when Integer
+      when Integer, Float
         # Unix timestamp
         Time.at(date_value).to_date
+      when Time, DateTime
+        date_value.to_date
+      when Date
+        date_value
       else
         Rails.logger.error("SimpleFin transaction has invalid date value: #{date_value.inspect}")
         raise ArgumentError, "Invalid date format: #{date_value.inspect}"
