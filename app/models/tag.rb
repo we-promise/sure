@@ -25,6 +25,11 @@ class Tag < ApplicationRecord
   end
 
   def self.sorted_naturally
-    all.to_a.sort_by { |tag| [tag.name[/\D+/], tag.name[/\d+/].to_i] }
+    all.to_a.sort_by do |tag|
+      [
+        tag.name[/\D+/i].to_s.downcase,  # Case-insensitive text part
+        tag.name[/\d+/]&.to_i || 0       # Numeric part, defaults to 0
+      ]
+    end
   end
 end
