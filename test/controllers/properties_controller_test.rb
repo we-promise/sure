@@ -39,14 +39,17 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       patch property_path(@account), params: {
         account: {
           name: "Updated Property",
-          subtype: "condo"
+          accountable_attributes: {
+            id: @account.accountable.id,
+            subtype: "condominium"
+          }
         }
       }
     end
 
     @account.reload
     assert_equal "Updated Property", @account.name
-    assert_equal "condo", @account.subtype
+    assert_equal "condominium", @account.subtype
 
     # If account is active, it renders edit view; otherwise redirects to balances
     if @account.active?

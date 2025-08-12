@@ -13,7 +13,7 @@ class BalanceSheet
     @assets ||= ClassificationGroup.new(
       classification: "asset",
       currency: family.currency,
-      accounts: account_totals.asset_accounts.sort_by(&:name)
+      accounts: sorted(account_totals.asset_accounts)
     )
   end
 
@@ -21,7 +21,7 @@ class BalanceSheet
     @liabilities ||= ClassificationGroup.new(
       classification: "liability",
       currency: family.currency,
-      accounts: account_totals.liability_accounts.sort_by(&:name)
+      accounts: sorted(account_totals.liability_accounts)
     )
   end
 
@@ -60,5 +60,23 @@ class BalanceSheet
 
     def net_worth_series_builder
       @net_worth_series_builder ||= NetWorthSeriesBuilder.new(family)
+    end
+
+    def sorted(accounts)
+      account_order = Current.user&.account_order
+      order_key = account_order&.key || "name_asc"
+
+      case order_key
+      when "name_asc"
+        accounts.sort_by(&:name)
+      when "name_desc"
+        accounts.sort_by(&:name).reverse
+      when "balance_asc"
+        accounts.sort_by(&:balance)
+      when "balance_desc"
+        accounts.sort_by(&:balance).reverse
+      else
+        accounts
+      end
     end
 end

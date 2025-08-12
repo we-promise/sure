@@ -1,0 +1,26 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["BRAND_FETCH_CLIENT_ID"].present? %>
+      <p class="text-sm text-secondary">You have successfully configured your Brand Fetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.</p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.text_field :brand_fetch_client_id,
+                        label: t(".label"),
+                        type: "password",
+                        placeholder: t(".placeholder"),
+                        value: ENV.fetch("BRAND_FETCH_CLIENT_ID", Setting.brand_fetch_client_id),
+                        disabled: ENV["BRAND_FETCH_CLIENT_ID"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+</div>
