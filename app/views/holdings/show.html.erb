@@ -6,8 +6,12 @@
         <%= tag.p @holding.ticker, class: "text-sm text-secondary" %>
       </div>
 
-      <% if @holding.security.logo_url.present? %>
+      <% if Setting.brand_fetch_client_id.present? %>
+        <%= image_tag "https://cdn.brandfetch.io/#{@holding.ticker}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}", loading: "lazy", class: "w-9 h-9 rounded-full" %>
+      <% elsif @holding.security.logo_url.present? %>
         <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
+      <% else %>
+        <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
       <% end %>
     </div>
   <% end %>
