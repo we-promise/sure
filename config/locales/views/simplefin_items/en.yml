@@ -1,0 +1,28 @@
+---
+en:
+  simplefin_items:
+    create:
+      success: SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background.
+    destroy:
+      success: SimpleFin connection will be removed
+    update:
+      success: SimpleFin connection updated successfully! Your accounts are being reconnected.
+    complete_account_setup:
+      success: SimpleFin accounts have been set up successfully! Your transactions and holdings are being imported in the background.
+    simplefin_item:
+      add_new: Add new connection
+      confirm_accept: Delete connection
+      confirm_body: This will permanently delete all the accounts in this group and all associated data.
+      confirm_title: Delete SimpleFin connection?
+      delete: Delete
+      error: Error occurred while syncing data
+      no_accounts_description: This connection doesn't have any synchronized accounts yet.
+      no_accounts_title: No accounts found
+      requires_update: Requires re-authentication
+      setup_needed: New accounts ready to set up
+      setup_description: Choose account types for your newly imported SimpleFin accounts.
+      setup_action: Set Up New Accounts
+      status: Last synced %{timestamp} ago
+      status_never: Never synced
+      syncing: Syncing...
+      update: Update connection
