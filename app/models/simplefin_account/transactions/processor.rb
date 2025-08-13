@@ -56,10 +56,10 @@ class SimplefinAccount::Transactions::Processor
         plaid_id: external_id
       )
 
-      return :created
+      :created
     rescue => e
       Rails.logger.error "Failed to process SimpleFin transaction #{data[:id]}: #{e.message}"
-      return :error
+      :error
     end
 
     def parse_amount(amount_value, currency)

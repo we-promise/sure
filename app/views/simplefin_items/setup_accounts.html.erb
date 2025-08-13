@@ -12,7 +12,7 @@
     <%= form_with url: complete_account_setup_simplefin_item_path(@simplefin_item),
                   method: :post,
                   local: true,
-                  data: { 
+                  data: {
                     controller: "loading-button",
                     action: "submit->loading-button#showLoading",
                     turbo_frame: "_top"

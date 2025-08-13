@@ -33,7 +33,7 @@ class SimplefinAccount::Processor
       account = simplefin_account.account
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
-      # SimpleFin returns negative balances for credit cards (liabilities)  
+      # SimpleFin returns negative balances for credit cards (liabilities)
       # But Maybe expects positive balances for liabilities
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
         balance = balance.abs

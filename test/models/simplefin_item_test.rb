@@ -83,11 +83,11 @@ class SimplefinItemTest < ActiveSupport::TestCase
   test "institution display name fallback works" do
     # No institution data
     assert_equal @simplefin_item.name, @simplefin_item.institution_display_name
-    
+
     # With institution name
     @simplefin_item.update!(institution_name: "Chase Bank")
     assert_equal "Chase Bank", @simplefin_item.institution_display_name
-    
+
     # With domain fallback
     @simplefin_item.update!(institution_name: nil, institution_domain: "chase.com")
     assert_equal "chase.com", @simplefin_item.institution_display_name
@@ -103,9 +103,9 @@ class SimplefinItemTest < ActiveSupport::TestCase
       current_balance: 1000,
       org_data: { "name" => "Chase Bank", "domain" => "chase.com" }
     )
-    
+
     account2 = @simplefin_item.simplefin_accounts.create!(
-      name: "Savings", 
+      name: "Savings",
       account_id: "acc2",
       currency: "USD",
       account_type: "savings",
@@ -126,7 +126,7 @@ class SimplefinItemTest < ActiveSupport::TestCase
     # One institution
     @simplefin_item.simplefin_accounts.create!(
       name: "Checking",
-      account_id: "acc1", 
+      account_id: "acc1",
       currency: "USD",
       account_type: "checking",
       current_balance: 1000,
@@ -134,11 +134,11 @@ class SimplefinItemTest < ActiveSupport::TestCase
     )
     assert_equal "Chase Bank", @simplefin_item.institution_summary
 
-    # Multiple institutions  
+    # Multiple institutions
     @simplefin_item.simplefin_accounts.create!(
       name: "Savings",
       account_id: "acc2",
-      currency: "USD", 
+      currency: "USD",
       account_type: "savings",
       current_balance: 2000,
       org_data: { "name" => "Wells Fargo" }
