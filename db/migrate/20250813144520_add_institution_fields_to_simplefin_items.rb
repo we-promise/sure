@@ -5,6 +5,6 @@ class AddInstitutionFieldsToSimplefinItems < ActiveRecord::Migration[7.2]
     add_column :simplefin_items, :institution_domain, :string
     add_column :simplefin_items, :institution_url, :string
     add_column :simplefin_items, :institution_color, :string
-    add_column :simplefin_items, :raw_institution_payload, :json
+    add_column :simplefin_items, :raw_institution_payload, :jsonb
   end
 end
