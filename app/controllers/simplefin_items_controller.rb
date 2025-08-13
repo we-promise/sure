@@ -1,5 +1,5 @@
 class SimplefinItemsController < ApplicationController
-  before_action :set_simplefin_item, only: [ :show, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -7,6 +7,60 @@ class SimplefinItemsController < ApplicationController
   end
 
   def show
+  end
+
+  def edit
+    # For SimpleFin, editing means providing a new setup token to replace expired access
+    @simplefin_item.setup_token = nil # Clear any existing setup token
+  end
+
+  def update
+    setup_token = simplefin_params[:setup_token]
+
+    return render_error("Please enter a SimpleFin setup token.") if setup_token.blank?
+
+    begin
+      # Create new SimpleFin item data with updated token
+      updated_item = Current.family.create_simplefin_item!(
+        setup_token: setup_token,
+        item_name: @simplefin_item.name
+      )
+
+      # Transfer accounts from old item to new item
+      @simplefin_item.simplefin_accounts.each do |old_account|
+        if old_account.account.present?
+          # Find matching account in new item by account_id
+          new_account = updated_item.simplefin_accounts.find_by(account_id: old_account.account_id)
+          if new_account
+            # Transfer the Maybe account association
+            old_account.account.update!(simplefin_account_id: new_account.id)
+            # Remove old association
+            old_account.update!(account: nil)
+          end
+        end
+      end
+
+      # Mark old item for deletion
+      @simplefin_item.destroy_later
+
+      # Clear any requires_update status on new item
+      updated_item.update!(status: :good)
+
+      redirect_to accounts_path, notice: t(".success")
+    rescue ArgumentError, URI::InvalidURIError
+      render_error("Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge.", setup_token)
+    rescue Provider::Simplefin::SimplefinError => e
+      error_message = case e.error_type
+      when :token_compromised
+        "The setup token may be compromised, expired, or already used. Please create a new one."
+      else
+        "Failed to update connection: #{e.message}"
+      end
+      render_error(error_message, setup_token)
+    rescue => e
+      Rails.logger.error("SimpleFin connection update error: #{e.message}")
+      render_error("An unexpected error occurred. Please try again or contact support.", setup_token)
+    end
   end
 
   def new
@@ -24,7 +78,7 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFin Connection"
       )
 
-      redirect_to simplefin_items_path, notice: "SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background."
+      redirect_to accounts_path, notice: t(".success")
     rescue ArgumentError, URI::InvalidURIError
       render_error("Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge.", setup_token)
     rescue Provider::Simplefin::SimplefinError => e
@@ -43,12 +97,18 @@ class SimplefinItemsController < ApplicationController
 
   def destroy
     @simplefin_item.destroy_later
-    redirect_to simplefin_items_path, notice: "SimpleFin connection will be removed"
+    redirect_to accounts_path, notice: t(".success")
   end
 
   def sync
-    @simplefin_item.sync_later
-    redirect_to simplefin_item_path(@simplefin_item), notice: "Sync started"
+    unless @simplefin_item.syncing?
+      @simplefin_item.sync_later
+    end
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { head :ok }
+    end
   end
 
   def setup_accounts
@@ -58,8 +118,7 @@ class SimplefinItemsController < ApplicationController
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
       [ "Loan or Mortgage", "Loan" ],
-      [ "Other Asset", "OtherAsset" ],
-      [ "Skip - don't add", "Skip" ]
+      [ "Other Asset", "OtherAsset" ]
     ]
 
     # Subtype options for each account type
@@ -94,9 +153,6 @@ class SimplefinItemsController < ApplicationController
     account_subtypes = params[:account_subtypes] || {}
 
     account_types.each do |simplefin_account_id, selected_type|
-      # Skip accounts that the user chose not to add
-      next if selected_type == "Skip"
-
       simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
       selected_subtype = account_subtypes[simplefin_account_id]
 
@@ -115,10 +171,10 @@ class SimplefinItemsController < ApplicationController
     # Clear pending status and mark as complete
     @simplefin_item.update!(pending_account_setup: false)
 
-    # Schedule account syncs for the newly created accounts
-    @simplefin_item.schedule_account_syncs
+    # Trigger a sync to process the imported SimpleFin data (transactions and holdings)
+    @simplefin_item.sync_later
 
-    redirect_to simplefin_items_path, notice: "SimpleFin accounts have been set up successfully!"
+    redirect_to accounts_path, notice: t(".success")
   end
 
   private
