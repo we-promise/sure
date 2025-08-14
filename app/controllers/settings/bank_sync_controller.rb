@@ -6,7 +6,7 @@ class Settings::BankSyncController < ApplicationController
       {
         name: "Lunch Flow",
         description: "US, Canada, UK, EU, Brazil and Asia through multiple open banking providers.",
-        path: "https://lunchflow.app",
+        path: "https://lunchflow.app/features/sure-integration",
         target: "_blank",
         rel: "noopener noreferrer"
       },
