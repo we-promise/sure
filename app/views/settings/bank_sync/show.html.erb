@@ -1,0 +1,45 @@
+<%= content_for :page_title, "Bank Sync" %>
+
+<%= settings_section title: "Providers" do %>
+  <p class="text-secondary">Configure providers used to link your bank accounts.</p>
+
+  <div class="space-y-3">
+    <%= link_to settings_lunch_flow_path, class: "block bg-surface-inset-hover hover:bg-surface-hover rounded-xl p-4" do %>
+      <div class="flex items-center gap-4">
+        <%= icon("arrow-right", color: "current") %>
+        <div>
+          <div class="text-primary font-semibold">Lunch Flow</div>
+          <div class="text-secondary">
+            US, Canada, UK, EU, Brazil and Asia through multiple open banking providers.
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%= link_to "https://github.com/we-promise/sure/blob/main/docs/hosting/plaid.md", class: "block bg-surface-inset-hover hover:bg-surface-hover rounded-xl p-4", target: "_blank", rel: "noopener" do %>
+      <div class="flex items-center gap-4">
+        <%= icon("arrow-right", color: "current") %>
+        <div>
+          <div class="text-primary font-semibold">Plaid</div>
+          <div class="text-secondary">
+            US & Canada bank connections with transactions, investments, and liabilities.
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%= link_to simplefin_items_path, class: "block bg-surface-inset-hover hover:bg-surface-hover rounded-xl p-4" do %>
+      <div class="flex items-center gap-4">
+        <%= icon("arrow-right", color: "current") %>
+        <div>
+          <div class="text-primary font-semibold">SimpleFin</div>
+          <div class="text-secondary">
+            US & Canada connections via SimpleFin protocol.
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+
