@@ -18,13 +18,29 @@ This guide also covers the differences between **asset** and **liability** accou
 
 ## 1. Creating your Sure Account
 
-*(Steps here - to be added)*
+Once Sure is installed, open a browser and navigate to [localhost:3000](http://localhost:3000/sessions/new).<br />
+You will see the **login page** (pictured below). Since we do not have an account yet, click on **Sign Up** to begin. 
 
-The next sections of this guide go over how to manually add accounts and transactions to your account in Sure. If you would like to use one of Sure's integrations with a data provider you can reference one of the following guides here:
+<img width="2508" height="1314" alt="Landing page on a fresh install." src="https://github.com/user-attachments/assets/2319dc87-5615-4473-bebc-8360dd983367" />
+<br />
+<br />
 
-- Lunch Flow (WIP)
-- [Plaid](/docs/hosting/plaid.md)
-- SimpleFin (WIP)
+You’ll be guided through a short series of screens to set your **login details**, **personal information**, and **preferences**.<br />
+When you arrive at the main dashboard, showing **No accounts yet**, you’re all set up!
+
+<img width="2508" height="1314" alt="Blank screen of Sure, with no accounts yet." src="https://github.com/user-attachments/assets/f06ba8e2-f188-4bf9-98a7-fdef724e9b5a" />
+<br />
+<br />
+
+> [!Note]
+> The next sections of this guide cover how to **manually add accounts and transactions** in Sure.<br />
+> If you’d like to use an integration with a data provider instead, see:
+> 
+> - **Lunch Flow** (WIP)
+> - [**Plaid**](/docs/hosting/plaid.md)
+> - **SimpleFin** (WIP)
+>
+> Even if you use an integration, we still recommend reading through this guide to understand **account types** and how they work in Sure.
 
 
 ## 2. Accout Types in Sure
@@ -43,7 +59,7 @@ Sure supports several account types, which are grouped into **Assets** (things y
 
 ## 3. How Asset Accounts Work
 
-Cash, checking and savings accounts **increase** when you add money and **decrease** when you spend.
+Cash, checking and savings accounts **increase** when you add money and **decrease** when you spend money.
 
 Example:
 
@@ -54,7 +70,7 @@ Example:
 
 ## 4. How Debt Accounts Work (Liabilities)
 
-Liability accounts track how much you **owe**, so the math can feel *backwards* compared to an asset account.
+Liability accounts track how much money you **owe**, so the math can feel *backwards* compared to an asset account.
 
 **Key rule:**
 
