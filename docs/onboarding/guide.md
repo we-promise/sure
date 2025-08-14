@@ -9,11 +9,11 @@ This guide aims to assist new users through:
 This guide also covers the differences between **asset** and **liability** accounts, a key concept for using and understanding balances in Sure!
 
 > [!IMPORTANT]
-> Sure is evolving quickly. If you find something innacurate while following this guide, please:
+> Sure is evolving quickly. If you find something inacurate while following this guide, please:
 > 
 > - Ask in the [Discord](https://discord.gg/36ZGBsxYEK)
 > - Open an [issue](https://github.com/we-promise/sure/issues/new/choose)
-> - Or if you know the anser, open a [PR](https://github.com/we-promise/sure/compare)!
+> - Or if you know the answer, open a [PR](https://github.com/we-promise/sure/compare)!
 
 
 ## 1. Creating your Sure Account
@@ -28,7 +28,7 @@ You will see the **login page** (pictured below). Since we do not have an accoun
 You’ll be guided through a short series of screens to set your **login details**, **personal information**, and **preferences**.<br />
 When you arrive at the main dashboard, showing **No accounts yet**, you’re all set up!
 
-<img width="2508" height="1314" alt="Blank screen of Sure, with no accounts yet." src="https://github.com/user-attachments/assets/f06ba8e2-f188-4bf9-98a7-fdef724e9b5a" />
+<img width="2508" height="1314" alt="Blank home screen of Sure, with no accounts yet." src="https://github.com/user-attachments/assets/f06ba8e2-f188-4bf9-98a7-fdef724e9b5a" />
 <br />
 <br />
 
@@ -43,7 +43,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you’re all
 > Even if you use an integration, we still recommend reading through this guide to understand **account types** and how they work in Sure.
 
 
-## 2. Accout Types in Sure
+## 2. Account Types in Sure
 
 Sure supports several account types, which are grouped into **Assets** (things you own) and **Debts/Liabilities** (things you owe):
 
@@ -106,9 +106,57 @@ Overpayment Example:
 | Negative Balance | Overdraft                     | Bank owes *you* money                |
 
 
-## 6. Adding Transactions
+## 6. Adding Accounts
 
-*(To be added )*
+For this example we'll add a **Savings Account**.<br />
+
+>[!TIP]
+>If you’re adding a **credit card**, **loan**, or any other **debt**, be sure to select a **Credit Card** or **Liability** account type instead of **Cash**. This will ensure balances update correctly and match what your bank shows.
+
+Most bank accounts (checking, savings, money market) are **Cash Accounts**
+1. Click **+ Add Account** → **Cash** → **Enter Account Balance**
+2. Fill in details such as:
+   - Account name
+   - Current Balance
+   - Account Subtype (This is where you specify checking, savings, or other)
+3. Click **Create Account** when you are ready to proceed.
+
+<img width="500" height="303" alt="Cash Account creation menu" src="https://github.com/user-attachments/assets/e564a447-c85e-403e-979b-efe770ea2a61" />
+<br />
+<br />
+
+Once created, you'll return to the **Home** screen.<br />
+You'll now see:
+- Your new cash account in the **Accounts** list (left side)
+- An overview of your accounts in the center, under the net worth bar.
+
+To get this bar moving let's add some transactions!
+
+<img width="2508" height="1314" alt="Home screen of Sure, showing one account and no transactions." src="https://github.com/user-attachments/assets/7766a0cd-6b20-48f0-9ba2-87dfddd77236" />
+
+## 7. Adding Transactions
+
+To add a transaction:
+1. Go to the **Transactions** page (left sidebar, under **Home**, above **Budgets**)
+2. Click **+ New Transaction** (top right)
+3. Choose the transaction type:
+   - **Expense** → Spending money
+   - **Income** → Receiving money
+   - **Transfer** → Move money between accounts
+4. Enter the details, then click **Add transaction**
+You will now see the transaction you added in your **transaction history**, as well as the **net worth chart** updating accordingly.
+
+<img width="500" height="512" alt="Filled-out expense form" src="https://github.com/user-attachments/assets/7c1d38d1-edb8-4d12-8b3e-bbef4836cc92" />
+
+## 8. Next Steps
+
+Now that you have one account and your first transaction:
+- Explore the other account types that Sure offers, adding ones relevant to your finances.
+- **Categorize** and **Tag** transactions for better searching and reporting.
+- Experiment with **Budgets** to track your spending habits.
+- If you have many historical transactions, use **Bulk Import** to load them in.
+More detailed user guides for these features are coming soon™.
+
 
 
 
