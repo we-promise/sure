@@ -144,6 +144,7 @@ To add a transaction:
    - **Income** → Receiving money
    - **Transfer** → Move money between accounts
 4. Enter the details, then click **Add transaction**
+
 You will now see the transaction you added in your **transaction history**, as well as the **net worth chart** updating accordingly.
 
 <img width="500" height="512" alt="Filled-out expense form" src="https://github.com/user-attachments/assets/7c1d38d1-edb8-4d12-8b3e-bbef4836cc92" />
@@ -155,6 +156,7 @@ Now that you have one account and your first transaction:
 - **Categorize** and **Tag** transactions for better searching and reporting.
 - Experiment with **Budgets** to track your spending habits.
 - If you have many historical transactions, use **Bulk Import** to load them in.
+
 More detailed user guides for these features are coming soon™.
 
 
