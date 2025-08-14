@@ -79,8 +79,8 @@ Liability accounts track how much money you **owe**, so the math can feel *backw
 
 **Transactions behave like this:**
 
-- **Expenses** (negative amounts) => increase your debt (you owe more)
-- **Payments or refunds** (positive amounts) => decrease your debt (you owe less)
+- **Expenses** (e.g. purchases) => increase your debt (you owe more)
+- **Payments or refunds** => decrease your debt (you owe less)
 
 Credit Card example:
 
