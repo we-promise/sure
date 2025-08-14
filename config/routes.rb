@@ -63,8 +63,9 @@ Rails.application.routes.draw do
     resource :billing, only: :show
     resource :security, only: :show
     resource :api_key, only: [ :show, :new, :create, :destroy ]
-    resource :bank_sync, only: :show, controller: "bank_sync"
-    resource :lunch_flow, only: :show, controller: "lunch_flow"
+    resource :bank_sync, only: :show, controller: "bank_sync" do
+      resource :lunch_flow, only: :show, controller: "lunch_flow"
+    end
   end
 
   resource :subscription, only: %i[new show create] do
