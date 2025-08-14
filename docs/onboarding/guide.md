@@ -9,7 +9,7 @@ This guide aims to assist new users through:
 This guide also covers the differences between **asset** and **liability** accounts, a key concept for using and understanding balances in Sure!
 
 > [!IMPORTANT]
-> Sure is evolving quickly. If you find something inacurate while following this guide, please:
+> Sure is evolving quickly. If you find something inaccurate while following this guide, please:
 > 
 > - Ask in the [Discord](https://discord.gg/36ZGBsxYEK)
 > - Open an [issue](https://github.com/we-promise/sure/issues/new/choose)
