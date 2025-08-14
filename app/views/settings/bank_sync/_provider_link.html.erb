@@ -1,0 +1,13 @@
+<%= link_to provider[:path], class: "block bg-surface-inset-hover hover:bg-surface-hover rounded-xl p-4", target: provider[:target], rel: provider[:rel] do %>
+  <div class="flex items-center gap-4">
+    <%= icon("arrow-right", color: "current") %>
+    <div>
+      <div class="text-primary font-semibold"><%= provider[:name] %></div>
+      <div class="text-secondary">
+        <%= provider[:description] %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+
