@@ -11,7 +11,7 @@
 <%= link_to provider_link[:path], 
             target: provider_link[:target], 
             rel: provider_link[:rel],
-            class: "flex justify-between items-center p-4 bg-container hover:bg-surface-hover transition-colors" do %>
+            class: "flex justify-between items-center p-4 bg-container hover:bg-container-hover transition-colors" do %>
   <div class="flex w-full items-center gap-2.5">
     <%= render partial: "shared/color_avatar", locals: { name: provider_link[:name], color: provider_color } %>
 
