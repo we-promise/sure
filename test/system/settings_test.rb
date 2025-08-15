@@ -35,8 +35,8 @@ class SettingsTest < ApplicationSystemTestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     open_settings_from_sidebar
-    assert_selector "li", text: "Self hosting"
-    click_link "Self hosting"
+    assert_selector "li", text: "Self-Hosting"
+    click_link "Self-Hosting"
     assert_current_path settings_hosting_path
     assert_selector "h1", text: "Self-Hosting"
     check "setting[require_invite_for_signup]", allow_label_click: true

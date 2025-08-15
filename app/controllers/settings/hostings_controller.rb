@@ -6,6 +6,10 @@ class Settings::HostingsController < ApplicationController
   before_action :ensure_admin, only: :clear_cache
 
   def show
+    @breadcrumbs = [
+      [ "Home", root_path ],
+      [ "Self-Hosting", nil ]
+    ]
     twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
     @twelve_data_usage = twelve_data_provider&.usage
   end
