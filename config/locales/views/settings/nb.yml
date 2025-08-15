@@ -70,6 +70,7 @@ nb:
     settings_nav:
       accounts_label: Kontoer
       api_key_label: API-nøkkel
+      advanced_section_title: Avansert
       billing_label: Fakturering
       categories_label: Kategorier
       feedback_label: Tilbakemelding
