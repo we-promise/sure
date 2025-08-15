@@ -88,6 +88,7 @@ en:
       tags_label: Tags
       transactions_section_title: Transactions
       whats_new_label: What's new
+      api_keys_label: API Keys
       bank_sync_label: Bank Sync
     settings_nav_link_large:
       next: Next
