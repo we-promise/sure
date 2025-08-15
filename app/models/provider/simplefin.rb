@@ -2,7 +2,7 @@ class Provider::Simplefin
   include HTTParty
 
   headers "User-Agent" => "Sure Finance SimpleFin Client"
-  default_options.merge!(verify: true, ssl_verify_mode: :peer)
+  default_options.merge!(verify: true, ssl_verify_mode: :peer, timeout: 120)
 
   def initialize
   end
@@ -46,7 +46,14 @@ class Provider::Simplefin
 
 
     # The access URL already contains HTTP Basic Auth credentials
-    response = HTTParty.get(accounts_url)
+    begin
+      response = HTTParty.get(accounts_url) do |fragment|
+        Rails.logger.info "SimpleFin API response fragment: #{fragment}"
+      end
+    rescue => e
+      Rails.logger.error "SimpleFin API: Exception during GET request - #{e.message}"
+      raise SimplefinError.new("Exception during GET request: #{e.message}", :request_failed)
+    end
 
 
     case response.code
