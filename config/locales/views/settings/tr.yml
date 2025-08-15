@@ -68,6 +68,7 @@ tr:
     settings_nav:
       accounts_label: Hesaplar
       api_key_label: API Anahtarı
+      advanced_section_title: Gelişmiş
       billing_label: Faturalandırma
       categories_label: Kategoriler
       feedback_label: Geri Bildirim
