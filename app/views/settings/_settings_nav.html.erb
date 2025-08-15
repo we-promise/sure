@@ -10,7 +10,7 @@ nav_sections = [
       { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
       { label: t(".billing_label"), path: settings_billing_path, icon: "circle-dollar-sign", if: !self_hosted? },
       { label: t(".accounts_label"), path: accounts_path, icon: "layers" },
-      { label: "Bank Sync", path: settings_bank_sync_path, icon: "banknote" },
+      { label: t(".bank_sync_label"), path: settings_bank_sync_path, icon: "banknote" },
       { label: "SimpleFin", path: simplefin_items_path, icon: "building-2" },
       { label: t(".imports_label"), path: imports_path, icon: "download" }
     ]
