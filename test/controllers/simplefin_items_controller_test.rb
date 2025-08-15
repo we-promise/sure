@@ -32,7 +32,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       delete simplefin_item_url(@simplefin_item)
     end
 
-    assert_redirected_to simplefin_items_path
+    assert_redirected_to accounts_path
     @simplefin_item.reload
     assert @simplefin_item.scheduled_for_deletion?
   end
@@ -57,7 +57,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     Provider::Simplefin.expects(:new).returns(mock_provider)
 
     # Mock the new item creation
-    @family.expects(:create_simplefin_item!).with(
+    Family.any_instance.expects(:create_simplefin_item!).with(
       setup_token: "valid_token",
       item_name: @simplefin_item.name
     ).returns(@simplefin_item)

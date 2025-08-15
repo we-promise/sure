@@ -77,7 +77,7 @@ class SimplefinItemTest < ActiveSupport::TestCase
     assert_equal "Test Bank", @simplefin_item.institution_name
     assert_equal "testbank.com", @simplefin_item.institution_domain
     assert_equal "https://testbank.com", @simplefin_item.institution_url
-    assert_equal org_data, @simplefin_item.raw_institution_payload
+    assert_equal org_data.stringify_keys, @simplefin_item.raw_institution_payload
   end
 
   test "institution display name fallback works" do
