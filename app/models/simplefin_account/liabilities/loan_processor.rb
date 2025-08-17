@@ -22,11 +22,7 @@ class SimplefinAccount::Liabilities::LoanProcessor
       # I don't know if SimpleFin typically provide detailed loan metadata
       # like interest rates, terms, etc. but we can update what's available
 
-      # For now, just ensure the balance is properly set as positive for liabilities
-      current_balance = simplefin_account.current_balance
-      if current_balance && current_balance < 0
-        # Loan balances should be positive (amount owed)
-        account.update!(balance: current_balance.abs)
-      end
+      # Balance normalization is handled by SimplefinAccount::Processor.process_account!
+      # Any other loan-specific attribute updates would go here
     end
 end
