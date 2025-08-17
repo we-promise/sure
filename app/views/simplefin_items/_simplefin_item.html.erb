@@ -6,12 +6,12 @@
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
 
-        <div class="flex items-center justify-center h-8 w-8 bg-green-600/10 rounded-full">
+        <div class="flex items-center justify-center h-8 w-8 bg-success/10 rounded-full">
           <% if simplefin_item.logo.attached? %>
             <%= image_tag simplefin_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
           <% else %>
             <div class="flex items-center justify-center">
-              <%= tag.p simplefin_item.name.first.upcase, class: "text-green-600 text-xs font-medium" %>
+              <%= tag.p simplefin_item.name.first.upcase, class: "text-success text-xs font-medium" %>
             </div>
           <% end %>
         </div>
