@@ -27,21 +27,23 @@ class SimplefinItemsController < ApplicationController
       )
 
       # Transfer accounts from old item to new item
-      @simplefin_item.simplefin_accounts.each do |old_account|
-        if old_account.account.present?
-          # Find matching account in new item by account_id
-          new_account = updated_item.simplefin_accounts.find_by(account_id: old_account.account_id)
-          if new_account
-            # Transfer the Maybe account association
-            old_account.account.update!(simplefin_account_id: new_account.id)
-            # Remove old association
-            old_account.update!(account: nil)
+      ActiveRecord::Base.transaction do
+        @simplefin_item.simplefin_accounts.each do |old_account|
+          if old_account.account.present?
+            # Find matching account in new item by account_id
+            new_account = updated_item.simplefin_accounts.find_by(account_id: old_account.account_id)
+            if new_account
+              # Transfer the Maybe account association
+              old_account.account.update!(simplefin_account_id: new_account.id)
+              # Remove old association
+              old_account.update!(account: nil)
+            end
           end
         end
-      end
 
-      # Mark old item for deletion
-      @simplefin_item.destroy_later
+        # Mark old item for deletion
+        @simplefin_item.destroy_later
+      end
 
       # Clear any requires_update status on new item
       updated_item.update!(status: :good)
