@@ -16,7 +16,6 @@ class SettingsTest < ApplicationSystemTestCase
       [ "Merchants", family_merchants_path ],
       [ "AI Prompts", settings_ai_prompts_path ],
       [ "API Key", settings_api_key_path ],
-      [ "Self-Hosting", settings_hosting_path ],
       [ "Imports", imports_path ],
       [ "SimpleFIN", simplefin_items_path ],
       [ "Guides", settings_guides_path ],
