@@ -14,7 +14,7 @@ en:
       show:
         title: "API Key Management"
       no_api_key:
-        title: "Create Your API Key"
+        title: "API Key"
         description: "Get programmatic access to your Maybe data with a secure API key."
         what_you_can_do: "What you can do with the API:"
         feature_1: "Access your account data programmatically"

@@ -10,10 +10,9 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
   test "should show no API key state when user has no active keys" do
     visit settings_api_key_path
 
-    assert_text "Create Your API Key"
-    assert_text "Get programmatic access to your Maybe data"
+    assert_text "API Key"
+    assert_link "Create API Key", href: new_settings_api_key_path
     assert_text "Access your account data programmatically"
-    assert_link "Save API Key", href: new_settings_api_key_path
   end
 
   test "should navigate to create new API key form" do
@@ -133,8 +132,8 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     # Wait for redirect after revoke
     assert_no_selector "#confirm-dialog"
 
-    assert_text "Create Your API Key"
-    assert_text "Get programmatic access to your Maybe data"
+    assert_text "API Key"
+    assert_text "Access your account data programmatically"
 
     # Key should be revoked in the database
     api_key.reload
