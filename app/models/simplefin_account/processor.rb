@@ -60,6 +60,7 @@ class SimplefinAccount::Processor
     end
 
     def process_investments
+      return unless simplefin_account.account&.accountable_type == "Investment"
       SimplefinAccount::Investments::TransactionsProcessor.new(simplefin_account).process
       SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account).process
     rescue => e
