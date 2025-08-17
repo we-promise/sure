@@ -26,6 +26,9 @@ class SimplefinItemsController < ApplicationController
         item_name: @simplefin_item.name
       )
 
+      # Ensure new simplefin_accounts are created & have account_id set
+      updated_item.import_latest_simplefin_data
+
       # Transfer accounts from old item to new item
       ActiveRecord::Base.transaction do
         @simplefin_item.simplefin_accounts.each do |old_account|
