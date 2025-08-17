@@ -36,10 +36,9 @@ class SimplefinItemsController < ApplicationController
             # Find matching account in new item by account_id
             new_account = updated_item.simplefin_accounts.find_by(account_id: old_account.account_id)
             if new_account
-              # Transfer the Maybe account association
+              # Transfer the account directly to the new SimpleFin account
+              # This will automatically break the old association
               old_account.account.update!(simplefin_account_id: new_account.id)
-              # Remove old association
-              old_account.update!(account: nil)
             end
           end
         end

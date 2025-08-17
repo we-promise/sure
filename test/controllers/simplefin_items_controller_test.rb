@@ -51,13 +51,11 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   test "should update simplefin item with valid token" do
     @simplefin_item.update!(status: :requires_update)
 
-    # Mock the SimpleFin provider
+    # Mock the SimpleFin provider to prevent real API calls
     mock_provider = mock()
     mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
-    Provider::Simplefin.expects(:new).returns(mock_provider).at_least(1)
-
-    # Mock the SimpleFin provider to prevent real API calls
     mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     patch simplefin_item_url(@simplefin_item), params: {
       simplefin_item: { setup_token: "valid_token" }
@@ -121,41 +119,30 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     old_simplefin_account1.update!(account: maybe_account1)
     old_simplefin_account2.update!(account: maybe_account2)
 
-    # Create new SimpleFin item that will be returned
-    new_simplefin_item = SimplefinItem.create!(
-      family: @family,
-      name: "Updated Connection",
-      access_url: "https://example.com/new_access"
-    )
-
-    # Mock the provider and family methods
+    # Mock only the external API calls, let business logic run
     mock_provider = mock()
     mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
-    Provider::Simplefin.expects(:new).returns(mock_provider)
-
-    @family.expects(:create_simplefin_item!).with(
-      setup_token: "valid_token",
-      item_name: @simplefin_item.name
-    ).returns(new_simplefin_item)
-
-    # Mock the import to create matching SimpleFin accounts
-    new_simplefin_item.expects(:import_latest_simplefin_data).once.returns(nil).tap do
-      # Simulate what import_latest_simplefin_data would do - create matching accounts
-      new_simplefin_item.simplefin_accounts.create!(
-        name: "Test Checking",
-        account_id: "sf_account_123", # Same account_id for matching
-        currency: "USD",
-        current_balance: 1000,
-        account_type: "depository"
-      )
-      new_simplefin_item.simplefin_accounts.create!(
-        name: "Test Savings",
-        account_id: "sf_account_456", # Same account_id for matching  
-        currency: "USD", 
-        current_balance: 5000,
-        account_type: "depository"
-      )
-    end
+    mock_provider.expects(:get_accounts).returns({
+      accounts: [
+        {
+          id: "sf_account_123",
+          name: "Test Checking",
+          type: "depository",
+          currency: "USD",
+          balance: 1000,
+          transactions: []
+        },
+        {
+          id: "sf_account_456", 
+          name: "Test Savings",
+          type: "depository",
+          currency: "USD",
+          balance: 5000,
+          transactions: []
+        }
+      ]
+    }).at_least_once
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     # Perform the update
     patch simplefin_item_url(@simplefin_item), params: {
@@ -164,13 +151,23 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
     assert_match(/updated successfully/, flash[:notice])
-
+    
     # Verify accounts were transferred to new SimpleFin accounts
+    assert Account.exists?(maybe_account1.id), "maybe_account1 should still exist" 
+    assert Account.exists?(maybe_account2.id), "maybe_account2 should still exist"
+    
     maybe_account1.reload
     maybe_account2.reload
     
+    # Find the new SimpleFin item that was created
+    new_simplefin_item = @family.simplefin_items.where.not(id: @simplefin_item.id).first
+    assert_not_nil new_simplefin_item, "New SimpleFin item should have been created"
+    
     new_sf_account1 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_123")
     new_sf_account2 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_456")
+    
+    assert_not_nil new_sf_account1, "New SimpleFin account with ID sf_account_123 should exist"
+    assert_not_nil new_sf_account2, "New SimpleFin account with ID sf_account_456 should exist"
     
     assert_equal new_sf_account1.id, maybe_account1.simplefin_account_id
     assert_equal new_sf_account2.id, maybe_account2.simplefin_account_id
@@ -210,23 +207,12 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     )
     old_simplefin_account.update!(account: maybe_account)
 
-    # Create new SimpleFin item 
-    new_simplefin_item = SimplefinItem.create!(
-      family: @family,
-      name: "Updated Connection",
-      access_url: "https://example.com/new_access"
-    )
-
-    # Mock provider
+    # Mock only the external API calls, let business logic run
     mock_provider = mock()
     mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
-    Provider::Simplefin.expects(:new).returns(mock_provider)
-
-    @family.expects(:create_simplefin_item!).returns(new_simplefin_item)
-
-    # Mock import that creates NO matching accounts (account was removed from bank)
-    new_simplefin_item.expects(:import_latest_simplefin_data).once.returns(nil)
-    # Don't create any matching SimpleFin accounts to simulate account not found
+    # Return empty accounts list to simulate account was removed from bank
+    mock_provider.expects(:get_accounts).returns({accounts: []}).at_least_once
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     # Perform update
     patch simplefin_item_url(@simplefin_item), params: {
