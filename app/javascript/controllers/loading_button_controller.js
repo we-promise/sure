@@ -8,11 +8,13 @@ export default class extends Controller {
     // Don't prevent form submission, just show loading state
     if (this.hasButtonTarget) {
       this.buttonTarget.disabled = true
+      this.buttonTarget.setAttribute("aria-disabled", "true")
+      this.buttonTarget.setAttribute("aria-busy", "true")
       this.buttonTarget.innerHTML = `
-        <div class="flex items-center gap-2">
-          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-          ${this.loadingTextValue || 'Loading...'}
-        </div>
+        <span class="inline-flex items-center gap-2">
+          <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-current" aria-hidden="true"></span>
+          <span>${this.loadingTextValue || 'Loading...'}</span>
+        </span>
       `
     }
   }
