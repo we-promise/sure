@@ -88,7 +88,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       account_type: "depository"
     )
     old_simplefin_account2 = @simplefin_item.simplefin_accounts.create!(
-      name: "Test Savings", 
+      name: "Test Savings",
       account_id: "sf_account_456",
       currency: "USD",
       current_balance: 5000,
@@ -107,7 +107,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     )
     maybe_account2 = Account.create!(
       family: @family,
-      name: "Savings Account", 
+      name: "Savings Account",
       balance: 5000,
       currency: "USD",
       accountable_type: "Depository",
@@ -133,7 +133,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
           transactions: []
         },
         {
-          id: "sf_account_456", 
+          id: "sf_account_456",
           name: "Test Savings",
           type: "depository",
           currency: "USD",
@@ -151,24 +151,24 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
     assert_match(/updated successfully/, flash[:notice])
-    
+
     # Verify accounts were transferred to new SimpleFin accounts
-    assert Account.exists?(maybe_account1.id), "maybe_account1 should still exist" 
+    assert Account.exists?(maybe_account1.id), "maybe_account1 should still exist"
     assert Account.exists?(maybe_account2.id), "maybe_account2 should still exist"
-    
+
     maybe_account1.reload
     maybe_account2.reload
-    
+
     # Find the new SimpleFin item that was created
     new_simplefin_item = @family.simplefin_items.where.not(id: @simplefin_item.id).first
     assert_not_nil new_simplefin_item, "New SimpleFin item should have been created"
-    
+
     new_sf_account1 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_123")
     new_sf_account2 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_456")
-    
+
     assert_not_nil new_sf_account1, "New SimpleFin account with ID sf_account_123 should exist"
     assert_not_nil new_sf_account2, "New SimpleFin account with ID sf_account_456 should exist"
-    
+
     assert_equal new_sf_account1.id, maybe_account1.simplefin_account_id
     assert_equal new_sf_account2.id, maybe_account2.simplefin_account_id
 
@@ -189,7 +189,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     # Create old SimpleFin account
     old_simplefin_account = @simplefin_item.simplefin_accounts.create!(
       name: "Test Checking",
-      account_id: "sf_account_123", 
+      account_id: "sf_account_123",
       currency: "USD",
       current_balance: 1000,
       account_type: "depository"
@@ -200,7 +200,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       family: @family,
       name: "Checking Account",
       balance: 1000,
-      currency: "USD", 
+      currency: "USD",
       accountable_type: "Depository",
       accountable: Depository.create!(subtype: "checking"),
       simplefin_account_id: old_simplefin_account.id
@@ -211,7 +211,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     mock_provider = mock()
     mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
     # Return empty accounts list to simulate account was removed from bank
-    mock_provider.expects(:get_accounts).returns({accounts: []}).at_least_once
+    mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     # Perform update
@@ -228,7 +228,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal maybe_account, old_simplefin_account.account
 
     # Old item still scheduled for deletion
-    @simplefin_item.reload  
+    @simplefin_item.reload
     assert @simplefin_item.scheduled_for_deletion?
   end
 end
