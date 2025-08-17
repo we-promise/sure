@@ -47,11 +47,12 @@ class Provider::Simplefin
 
     # The access URL already contains HTTP Basic Auth credentials
     begin
-      response = HTTParty.get(accounts_url) do |fragment|
-        Rails.logger.info "SimpleFin API response fragment: #{fragment}"
-      end
+      response = HTTParty.get(accounts_url)
+    rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+      Rails.logger.error "SimpleFin API: GET /accounts failed: #{e.class}: #{e.message}"
+      raise SimplefinError.new("Exception during GET request: #{e.message}", :request_failed)
     rescue => e
-      Rails.logger.error "SimpleFin API: Exception during GET request - #{e.message}"
+      Rails.logger.error "SimpleFin API: Unexpected error during GET /accounts: #{e.class}: #{e.message}"
       raise SimplefinError.new("Exception during GET request: #{e.message}", :request_failed)
     end
 
