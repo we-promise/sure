@@ -5,6 +5,10 @@ class Settings::ProfilesController < ApplicationController
     @user = Current.user
     @users = Current.family.users.order(:created_at)
     @pending_invitations = Current.family.invitations.pending
+    @breadcrumbs = [
+      [ "Home", root_path ],
+      [ "Profile Info", nil ]
+    ]
   end
 
   def destroy

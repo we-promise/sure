@@ -71,8 +71,9 @@ en:
         page_title: Security
     settings_nav:
       accounts_label: Accounts
-      api_key_label: API Key
       advanced_section_title: Advanced
+      ai_prompts_label: AI Prompts
+      api_key_label: API Key
       billing_label: Billing
       categories_label: Categories
       feedback_label: Feedback
@@ -80,16 +81,17 @@ en:
       imports_label: Imports
       logout: Logout
       merchants_label: Merchants
+      guides_label: Guides
       other_section_title: More
       preferences_label: Preferences
-      profile_label: Account
+      profile_label: Profile Info
       rules_label: Rules
       security_label: Security
       self_hosting_label: Self-Hosting
       tags_label: Tags
       transactions_section_title: Transactions
       whats_new_label: What's new
-      api_keys_label: API Keys
+      api_keys_label: API Key
       bank_sync_label: Bank Sync
     settings_nav_link_large:
       next: Next
