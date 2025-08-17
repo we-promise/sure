@@ -17,7 +17,7 @@ class SimplefinItemsController < ApplicationController
   def update
     setup_token = simplefin_params[:setup_token]
 
-    return render_error("Please enter a SimpleFin setup token.") if setup_token.blank?
+    return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
       # Create new SimpleFin item data with updated token
@@ -53,18 +53,18 @@ class SimplefinItemsController < ApplicationController
 
       redirect_to accounts_path, notice: t(".success")
     rescue ArgumentError, URI::InvalidURIError
-      render_error("Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge.", setup_token)
+      render_error(t(".errors.invalid_token"), setup_token, context: :edit)
     rescue Provider::Simplefin::SimplefinError => e
       error_message = case e.error_type
       when :token_compromised
-        "The setup token may be compromised, expired, or already used. Please create a new one."
+        t(".errors.token_compromised")
       else
-        "Failed to update connection: #{e.message}"
+        t(".errors.update_failed", message: e.message)
       end
-      render_error(error_message, setup_token)
+      render_error(error_message, setup_token, context: :edit)
     rescue => e
       Rails.logger.error("SimpleFin connection update error: #{e.message}")
-      render_error("An unexpected error occurred. Please try again or contact support.", setup_token)
+      render_error(t(".errors.unexpected"), setup_token, context: :edit)
     end
   end
 
@@ -75,7 +75,7 @@ class SimplefinItemsController < ApplicationController
   def create
     setup_token = simplefin_params[:setup_token]
 
-    return render_error("Please enter a SimpleFin setup token.") if setup_token.blank?
+    return render_error(t(".errors.blank_token")) if setup_token.blank?
 
     begin
       @simplefin_item = Current.family.create_simplefin_item!(
@@ -85,18 +85,18 @@ class SimplefinItemsController < ApplicationController
 
       redirect_to accounts_path, notice: t(".success")
     rescue ArgumentError, URI::InvalidURIError
-      render_error("Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge.", setup_token)
+      render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
       error_message = case e.error_type
       when :token_compromised
-        "The setup token may be compromised, expired, or already used. Please create a new one."
+        t(".errors.token_compromised")
       else
-        "Failed to connect: #{e.message}"
+        t(".errors.create_failed", message: e.message)
       end
       render_error(error_message, setup_token)
     rescue => e
       Rails.logger.error("SimpleFin connection error: #{e.message}")
-      render_error("An unexpected error occurred. Please try again or contact support.", setup_token)
+      render_error(t(".errors.unexpected"), setup_token)
     end
   end
 
@@ -192,9 +192,9 @@ class SimplefinItemsController < ApplicationController
       params.require(:simplefin_item).permit(:setup_token)
     end
 
-    def render_error(message, setup_token = nil)
+    def render_error(message, setup_token = nil, context: :new)
       @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
       @error_message = message
-      render :new, status: :unprocessable_entity
+      render context, status: :unprocessable_entity
     end
 end
