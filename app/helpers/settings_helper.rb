@@ -17,7 +17,7 @@ module SettingsHelper
     { name: "API Key", path: :settings_api_key_path },
     { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted? },
     { name: "Imports", path: :imports_path },
-    { name: "SimpleFIN", path: :simplefin_items_path },
+    { name: "SimpleFin", path: :simplefin_items_path },
     # More section
     { name: "Guides", path: :settings_guides_path },
     { name: "What's new", path: :changelog_path },
