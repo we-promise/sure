@@ -5,6 +5,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
   def process
     return if holdings_data.empty?
+    return unless account&.accountable_type == "Investment"
 
     holdings_data.each do |simplefin_holding|
       begin
