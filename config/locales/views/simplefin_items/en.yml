@@ -19,6 +19,11 @@ en:
         token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
         update_failed: "Failed to update connection: %{message}"
         unexpected: An unexpected error occurred. Please try again or contact support.
+    edit:
+      setup_token:
+        label: "SimpleFin Setup Token:"
+        placeholder: "Paste your SimpleFin setup token here..."
+        help_text: "The token should be a long string starting with letters and numbers"
     complete_account_setup:
       success: SimpleFin accounts have been set up successfully! Your transactions and holdings are being imported in the background.
     simplefin_item:
