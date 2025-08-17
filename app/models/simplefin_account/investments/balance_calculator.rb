@@ -7,7 +7,7 @@ class SimplefinAccount::Investments::BalanceCalculator
 
   def balance
     # SimpleFin provides direct balance data
-    simplefin_account.current_balance || 0
+    simplefin_account.current_balance || BigDecimal("0")
   end
 
   def cash_balance
