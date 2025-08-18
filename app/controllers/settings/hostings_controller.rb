@@ -12,6 +12,9 @@ class Settings::HostingsController < ApplicationController
     ]
     twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
     @twelve_data_usage = twelve_data_provider&.usage
+
+    yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+    @yahoo_finance_usage = yahoo_finance_provider&.usage
   end
 
   def update
