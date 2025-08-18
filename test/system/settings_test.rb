@@ -18,7 +18,7 @@ class SettingsTest < ApplicationSystemTestCase
       [ "API Key", settings_api_key_path ],
       [ "Imports", imports_path ],
       [ "SimpleFin", simplefin_items_path ],
-      [ "Onboarding Guide", settings_guides_path ],
+      [ "Guides", settings_guides_path ],
       [ "What's new", changelog_path ],
       [ "Feedback", feedback_path ]
     ]
