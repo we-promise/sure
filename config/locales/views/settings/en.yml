@@ -6,6 +6,9 @@ en:
         page_title: AI Prompts
         openai_label: OpenAI
         prompt_instructions: Prompt Instructions
+        main_system_prompt:
+          title: Main System Prompt
+          subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
         transaction_categorizer:
           title: Transaction Categorizer
           subtitle: AI automatically categorizes your transactions based on your defined categories
