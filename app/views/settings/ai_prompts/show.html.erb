@@ -1,9 +1,9 @@
-<%= content_for :page_title, "AI Prompts" %>
+<%= content_for :page_title, t(".page_title") %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <div class="rounded-xl bg-container-inset space-y-1 p-1">
     <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary">
-      <p>OpenAI</p>
+      <p><%= t(".openai_label") %></p>
     </div>
 
     <div class="bg-container rounded-lg shadow-border-xs">
@@ -15,16 +15,21 @@
               <%= icon "brain" %>
             </div>
             <div>
-              <p class="text-sm font-medium text-primary">Transaction Categorizer</p>
-              <p class="text-xs text-secondary">AI automatically categorizes your transactions based on your defined categories</p>
+              <p class="text-sm font-medium text-primary"><%= t(".transaction_categorizer.title") %></p>
+              <p class="text-xs text-secondary"><%= t(".transaction_categorizer.subtitle") %></p>
             </div>
           </div>
           
           <div class="pl-12 space-y-2">
-            <label class="text-xs font-medium text-primary uppercase">Instructions</label>
-            <div class="px-3 py-2 bg-surface-default border border-primary rounded-lg">
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_categorizer]&.instructions || Provider::Openai::AutoCategorizer.new(nil).instructions %></pre>
-            </div>
+            <details class="group">
+              <summary class="flex items-center gap-2 cursor-pointer">
+                <label class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></label>
+                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+              </summary>
+              <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
+                <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_categorizer]&.instructions || Provider::Openai::AutoCategorizer.new(nil).instructions %></pre>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -37,16 +42,21 @@
               <%= icon "store" %>
             </div>
             <div>
-              <p class="text-sm font-medium text-primary">Merchant Detector</p>
-              <p class="text-xs text-secondary">AI identifies and enriches transaction data with merchant information</p>
+              <p class="text-sm font-medium text-primary"><%= t(".merchant_detector.title") %></p>
+              <p class="text-xs text-secondary"><%= t(".merchant_detector.subtitle") %></p>
             </div>
           </div>
           
           <div class="pl-12 space-y-2">
-            <label class="text-xs font-medium text-primary uppercase">Instructions</label>
-            <div class="px-3 py-2 bg-surface-default border border-primary rounded-lg">
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_merchant]&.instructions || Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions %></pre>
-            </div>
+            <details class="group">
+              <summary class="flex items-center gap-2 cursor-pointer">
+                <label class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></label>
+                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+              </summary>
+              <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
+                <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_merchant]&.instructions || Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions %></pre>
+              </div>
+            </details>
           </div>
         </div>
       </div>

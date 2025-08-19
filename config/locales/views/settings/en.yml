@@ -1,6 +1,17 @@
 ---
 en:
   settings:
+    ai_prompts:
+      show:
+        page_title: AI Prompts
+        openai_label: OpenAI
+        prompt_instructions: Prompt Instructions
+        transaction_categorizer:
+          title: Transaction Categorizer
+          subtitle: AI automatically categorizes your transactions based on your defined categories
+        merchant_detector:
+          title: Merchant Detector
+          subtitle: AI identifies and enriches transaction data with merchant information
     billings:
       show:
         page_title: Billing
