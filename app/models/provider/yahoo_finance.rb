@@ -272,9 +272,9 @@ class Provider::YahooFinance < Provider
     validate_date_params!(start_date, end_date)
 
     with_provider_response do
-      # Convert dates to Unix timestamps
-      period1 = start_date.to_time.to_i
-      period2 = end_date.end_of_day.to_time.to_i
+      # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
+      period1 = start_date.to_time.utc.to_i
+      period2 = end_date.end_of_day.to_time.utc.to_i
 
       Rails.logger.debug "[YahooFinance] Requesting chart data for security: #{symbol}"
       response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
@@ -454,8 +454,8 @@ class Provider::YahooFinance < Provider
     end
 
     def fetch_chart_data(symbol, start_date, end_date, &block)
-      period1 = start_date.to_time.to_i
-      period2 = end_date.end_of_day.to_time.to_i
+      period1 = start_date.to_time.utc.to_i
+      period2 = end_date.end_of_day.to_time.utc.to_i
 
       Rails.logger.debug "[YahooFinance] Requesting chart data for symbol: #{symbol}"
 
