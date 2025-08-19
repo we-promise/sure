@@ -72,7 +72,10 @@ en:
     index:
       imports: Imports
       new: New import
-      title: Imports
+      title: Import/Export
+      exports: Exports
+      new_export: New export
+      no_exports: No exports yet.
     new:
       description: You can manually import various types of data via CSV or use one
         of our import templates like Mint.

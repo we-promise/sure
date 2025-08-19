@@ -60,6 +60,37 @@ class SettingsTest < ApplicationSystemTestCase
     assert_no_selector "li", text: I18n.t("settings.settings_nav.billing_label")
   end
 
+  test "can delete export from UI" do
+    # Create a test export
+    export = @user.family.family_exports.create!(status: "completed")
+    export.export_file.attach(
+      io: StringIO.new("test content"),
+      filename: "test_export.zip",
+      content_type: "application/zip"
+    )
+
+    # Navigate to imports page (which shows exports)
+    visit imports_path
+    assert_selector "h1", text: "Exports"
+
+    # Verify the export is displayed
+    assert_selector "p", text: export.filename
+
+    # Find and click the delete button (trash icon)
+    delete_button = find('button[data-turbo-confirm*="delete this export"]')
+    assert_not_nil delete_button, "Delete button should be present"
+
+    # Click delete and confirm
+    delete_button.click
+    accept_confirm
+
+    # Should be redirected back to imports page
+    assert_current_path imports_path
+
+    # Export should be removed from the list
+    assert_no_selector "p", text: export.filename
+  end
+
   private
 
     def open_settings_from_sidebar

@@ -33,7 +33,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
       post family_exports_path
     end
 
-    assert_redirected_to settings_profile_path
+    assert_redirected_to imports_path
     assert_equal "Export started. You'll be able to download it shortly.", flash[:notice]
 
     export = @family.family_exports.last
@@ -67,7 +67,37 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     export = @family.family_exports.create!(status: "processing")
 
     get download_family_export_path(export)
-    assert_redirected_to settings_profile_path
+    assert_redirected_to imports_path
     assert_equal "Export not ready for download", flash[:alert]
+  end
+
+  test "admin can delete export" do
+    export = @family.family_exports.create!(status: "completed")
+    export.export_file.attach(
+      io: StringIO.new("test zip content"),
+      filename: "test.zip",
+      content_type: "application/zip"
+    )
+
+    # Store the export ID and filename before deletion
+    export_id = export.id
+    filename = export.filename
+
+    assert_enqueued_with(job: FamilyExportCleanupJob, args: [ export_id, filename ]) do
+      delete family_export_path(export)
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "Export has been deleted successfully.", flash[:notice]
+    assert_not FamilyExport.exists?(export_id)
+  end
+
+  test "non-admin cannot delete export" do
+    export = @family.family_exports.create!(status: "completed")
+    sign_in @non_admin
+
+    delete family_export_path(export)
+    assert_redirected_to root_path
+    assert FamilyExport.exists?(export.id)
   end
 end
