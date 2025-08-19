@@ -14,7 +14,7 @@ class Provider::Openai < Provider
     MODELS.include?(model)
   end
 
-  def auto_categorize(transactions: [], user_categories: [], model: "gpt-4.1-mini")
+  def auto_categorize(transactions: [], user_categories: [], model: "")
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
 
@@ -36,7 +36,7 @@ class Provider::Openai < Provider
     end
   end
 
-  def auto_detect_merchants(transactions: [], user_merchants: [], model: "gpt-4.1-mini")
+  def auto_detect_merchants(transactions: [], user_merchants: [], model: "")
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
 

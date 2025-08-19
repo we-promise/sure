@@ -1,4 +1,6 @@
 class Provider::Openai::AutoMerchantDetector
+  DEFAULT_MODEL = "gpt-4.1-mini"
+
   def initialize(client, model: "", transactions:, user_merchants:)
     @client = client
     @model = model
@@ -8,7 +10,7 @@ class Provider::Openai::AutoMerchantDetector
 
   def auto_detect_merchants
     response = client.responses.create(parameters: {
-      model: model,
+      model: model.presence || DEFAULT_MODEL,
       input: [ { role: "developer", content: developer_message } ],
       text: {
         format: {
