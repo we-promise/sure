@@ -16,7 +16,7 @@ class SettingsTest < ApplicationSystemTestCase
       [ "Merchants", family_merchants_path ],
       [ "AI Prompts", settings_ai_prompts_path ],
       [ "API Key", settings_api_key_path ],
-      [ "Imports", imports_path ],
+      [ "Import/Export", imports_path ],
       [ "SimpleFin", simplefin_items_path ],
       [ "Guides", settings_guides_path ],
       [ "What's new", changelog_path ],

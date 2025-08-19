@@ -33,7 +33,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
       post family_exports_path
     end
 
-    assert_redirected_to settings_profile_path
+    assert_redirected_to imports_path
     assert_equal "Export started. You'll be able to download it shortly.", flash[:notice]
 
     export = @family.family_exports.last
@@ -67,7 +67,29 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     export = @family.family_exports.create!(status: "processing")
 
     get download_family_export_path(export)
-    assert_redirected_to settings_profile_path
+    assert_redirected_to imports_path
     assert_equal "Export not ready for download", flash[:alert]
+  end
+
+  test "admin can delete export" do
+    export = @family.family_exports.create!(status: "completed")
+
+    assert_difference "@family.family_exports.count", -1 do
+      delete family_export_path(export)
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "Export deleted successfully", flash[:notice]
+  end
+
+  test "non-admin cannot delete export" do
+    export = @family.family_exports.create!(status: "completed")
+    sign_in @non_admin
+
+    assert_no_difference "@family.family_exports.count" do
+      delete family_export_path(export)
+    end
+
+    assert_redirected_to root_path
   end
 end
