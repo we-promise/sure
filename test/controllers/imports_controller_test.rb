@@ -55,4 +55,15 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to imports_path
   end
+
+  test "reverts import" do
+    import = imports(:transaction)
+
+    TransactionImport.any_instance.expects(:revert_later).once
+
+    put revert_import_url(import)
+
+    assert_equal "Import is reverting in the background.", flash[:notice]
+    assert_redirected_to imports_path
+  end
 end
