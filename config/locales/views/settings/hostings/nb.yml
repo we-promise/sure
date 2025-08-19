@@ -4,7 +4,7 @@ nb:
     hostings:
       invite_code_settings:
         description: Hver ny bruker som blir med i din instans av Sure kan bare bli med via en invitasjonskode
-        email_confirmation_description:
+        email_confirmation_description: >
           Når aktivert, må brukere bekrefte e-postadressen
           sin når de endrer den.
         email_confirmation_title: Krev e-postbekreftelse
@@ -27,7 +27,7 @@ nb:
         success: Innstillinger oppdatert
       clear_cache:
         cache_cleared: Cachen er tømt. Dette kan ta noen øyeblikk å fullføre.
-      not_authorized: Du er ikke autorisert til å utføre denne handlingen
+        not_authorized: Du er ikke autorisert til å utføre denne handlingen
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance gir gratis tilgang til aksjekurser, valutakurser og finansdata uten å kreve en API-nøkkel.

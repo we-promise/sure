@@ -11,9 +11,12 @@ class Provider::YahooFinance < Provider
   # Cache duration for repeated requests (5 minutes)
   CACHE_DURATION = 5.minutes
 
+  # Maximum lookback window for historical data (configurable)
+  MAX_LOOKBACK_WINDOW = 10.years
+
   def initialize
     # Yahoo Finance doesn't require an API key but we may want to add proxy support later
-    @cache = {}
+    @cache_prefix = "yahoo_finance_#{object_id}"
   end
 
   def healthy?
@@ -264,6 +267,10 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     Rails.logger.info "[YahooFinance] Fetching security prices for #{symbol} from #{start_date} to #{end_date}"
+
+    # Validate date parameters upfront
+    validate_date_params!(start_date, end_date)
+
     with_provider_response do
       # Convert dates to Unix timestamps
       period1 = start_date.to_time.to_i
@@ -337,7 +344,58 @@ class Provider::YahooFinance < Provider
 
     def validate_date_range!(start_date, end_date)
       raise Error, "Start date cannot be after end date" if start_date > end_date
-      raise Error, "Date range too large (max 5 years)" if (end_date - start_date).days > 5.years
+      raise Error, "Date range too large (max 5 years)" if end_date > start_date + 5.years
+    end
+
+    def validate_date_params!(start_date, end_date)
+      # Validate presence and coerce to dates
+      validated_start_date = validate_and_coerce_date!(start_date, "start_date")
+      validated_end_date = validate_and_coerce_date!(end_date, "end_date")
+
+      # Ensure start_date <= end_date
+      if validated_start_date > validated_end_date
+        error_msg = "Start date (#{validated_start_date}) cannot be after end date (#{validated_end_date})"
+        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
+        raise ArgumentError, error_msg
+      end
+
+      # Ensure end_date is not in the future
+      today = Date.current
+      if validated_end_date > today
+        error_msg = "End date (#{validated_end_date}) cannot be in the future"
+        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
+        raise ArgumentError, error_msg
+      end
+
+      # Optional: Enforce max lookback window (configurable via constant)
+      max_lookback = MAX_LOOKBACK_WINDOW.ago.to_date
+      if validated_start_date < max_lookback
+        error_msg = "Start date (#{validated_start_date}) exceeds maximum lookback window (#{max_lookback})"
+        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
+        raise ArgumentError, error_msg
+      end
+    end
+
+    def validate_and_coerce_date!(date_param, param_name)
+      # Check presence
+      if date_param.blank?
+        error_msg = "#{param_name} cannot be blank"
+        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
+        raise ArgumentError, error_msg
+      end
+
+      # Try to coerce to date
+      begin
+        if date_param.respond_to?(:to_date)
+          date_param.to_date
+        else
+          Date.parse(date_param.to_s)
+        end
+      rescue ArgumentError => e
+        error_msg = "Invalid #{param_name}: #{date_param} (#{e.message})"
+        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
+        raise ArgumentError, error_msg
+      end
     end
 
     # ================================
@@ -345,25 +403,18 @@ class Provider::YahooFinance < Provider
     # ================================
 
     def get_cached_result(key)
-      cached = @cache[key]
-      return nil unless cached
-      return nil if cached[:expires_at] < Time.current
-
-      Rails.logger.debug "[YahooFinance] Cache hit for #{key}"
-      cached[:data]
+      full_key = "#{@cache_prefix}_#{key}"
+      data = Rails.cache.read(full_key)
+      Rails.logger.debug "[YahooFinance] Cache hit for #{key}" if data
+      data
     end
 
     def cache_result(key, data)
-      @cache[key] = {
-        data: data,
-        expires_at: Time.current + CACHE_DURATION
-      }
-      clean_expired_cache
+      full_key = "#{@cache_prefix}_#{key}"
+      Rails.cache.write(full_key, data, expires_in: CACHE_DURATION)
     end
 
-    def clean_expired_cache
-      @cache.reject! { |_, cached| cached[:expires_at] < Time.current }
-    end
+
 
     # ================================
     #         Helper Methods

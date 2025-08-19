@@ -32,7 +32,7 @@ tr:
         success: Ayarlar güncellendi
       clear_cache:
         cache_cleared: Veri önbelleği temizlendi. Bu işlemin tamamlanması birkaç dakika sürebilir.
-      not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok
+        not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance, API anahtarı gerektirmeden hisse senedi fiyatları, döviz kurları ve finansal verilere ücretsiz erişim sağlar.
