@@ -89,3 +89,11 @@
 @utility bg-loader {
   @apply bg-surface-inset animate-pulse;
 }
+
+@utility bg-success {
+  background-color: var(--color-success);
+}
+
+@utility bg-error {
+  background-color: var(--color-destructive);
+}
