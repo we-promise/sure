@@ -46,6 +46,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update openai access token when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_access_token: "token" } }
+
+      assert_equal "token", Setting.openai_access_token
+    end
+  end
+
   test "can clear data cache when self hosting is enabled" do
     account = accounts(:investment)
     holding = account.holdings.first

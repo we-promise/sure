@@ -1,0 +1,26 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["OPENAI_ACCESS_TOKEN"].present? %>
+      <p class="text-sm text-secondary">You have successfully configured your OpenAI access token through the OPENAI_ACCESS_TOKEN environment variable.</p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.text_field :openai_access_token,
+                        label: t(".label"),
+                        type: "password",
+                        placeholder: t(".placeholder"),
+                        value: ENV.fetch("OPENAI_ACCESS_TOKEN", Setting.openai_access_token),
+                        disabled: ENV["OPENAI_ACCESS_TOKEN"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+</div>

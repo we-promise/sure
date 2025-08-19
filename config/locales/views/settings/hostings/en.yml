@@ -26,6 +26,11 @@ en:
         label: Client ID
         placeholder: Enter your Client ID here
         title: Brand Fetch Settings
+      openai_settings:
+        description: Input the access token provided by OpenAI
+        label: Access Token
+        placeholder: Enter your access token here
+        title: OpenAI Settings
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
         description: Input the API key provided by Twelve Data
