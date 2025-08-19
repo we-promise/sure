@@ -16,7 +16,7 @@ class Provider::YahooFinance < Provider
 
   def initialize
     # Yahoo Finance doesn't require an API key but we may want to add proxy support later
-    @cache_prefix = "yahoo_finance_#{object_id}"
+    @cache_prefix = "yahoo_finance"
   end
 
   def healthy?
@@ -61,10 +61,10 @@ class Provider::YahooFinance < Provider
   # ================================
 
   def fetch_exchange_rate(from:, to:, date:)
-    validate_currency_codes!(from, to)
     Rails.logger.info "[YahooFinance] Fetching exchange rate #{from}/#{to} for #{date}"
 
     with_provider_response do
+      validate_currency_codes!(from, to)
       # Return 1.0 if same currency
       if from == to
         Rate.new(date: date, from: from, to: to, rate: 1.0)
@@ -106,10 +106,10 @@ class Provider::YahooFinance < Provider
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
-    validate_currency_codes!(from, to)
-
     Rails.logger.info "[YahooFinance] Fetching exchange rates #{from}/#{to} from #{start_date} to #{end_date}"
+
     with_provider_response do
+      validate_currency_codes!(from, to)
       validate_date_range!(start_date, end_date)
       # Return 1.0 rates if same currency
       if from == to
@@ -141,10 +141,10 @@ class Provider::YahooFinance < Provider
   # ================================
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
-    validate_symbol!(symbol)
     Rails.logger.info "[YahooFinance] Searching securities for symbol: #{symbol}"
 
     with_provider_response do
+      validate_symbol!(symbol)
       cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
         return cached_result
@@ -228,10 +228,10 @@ class Provider::YahooFinance < Provider
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
-    validate_symbol!(symbol)
     Rails.logger.info "[YahooFinance] Fetching security price for #{symbol} on #{date}"
 
     with_provider_response do
+      validate_symbol!(symbol)
       cache_key = "security_price_#{symbol}_#{exchange_operating_mic}_#{date}"
       if cached_result = get_cached_result(cache_key)
         return cached_result
@@ -268,10 +268,8 @@ class Provider::YahooFinance < Provider
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     Rails.logger.info "[YahooFinance] Fetching security prices for #{symbol} from #{start_date} to #{end_date}"
 
-    # Validate date parameters upfront
-    validate_date_params!(start_date, end_date)
-
     with_provider_response do
+      validate_date_params!(start_date, end_date)
       # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
@@ -665,6 +663,10 @@ class Provider::YahooFinance < Provider
           error.message,
           details: error.response&.dig(:body)
         )
+      when Error
+        # Already a Yahoo Finance error, return as is
+        Rails.logger.error "[YahooFinance] Yahoo Finance error: #{error.message}"
+        error
       else
         Rails.logger.error "[YahooFinance] Generic error: #{error.message}"
         Error.new(error.message)
