@@ -18,7 +18,7 @@ class Provider::YahooFinance < Provider
 
   def healthy?
     Rails.logger.info "[YahooFinance] Performing health check"
-    with_provider_response do
+    begin
       # Test with a known stable ticker (Apple)
       response = client.get("#{base_url}/v8/finance/chart/AAPL") do |req|
         req.params["interval"] = "1d"
@@ -31,6 +31,9 @@ class Provider::YahooFinance < Provider
 
       Rails.logger.info "[YahooFinance] Health check #{health_status ? 'passed' : 'failed'}"
       health_status
+    rescue => e
+      Rails.logger.error "[YahooFinance] Health check failed: #{e.message}"
+      false
     end
   end
 
@@ -60,63 +63,70 @@ class Provider::YahooFinance < Provider
 
     with_provider_response do
       # Return 1.0 if same currency
-      return Rate.new(date: date, from: from, to: to, rate: 1.0) if from == to
+      if from == to
+        Rate.new(date: date, from: from, to: to, rate: 1.0)
+      else
+        cache_key = "exchange_rate_#{from}_#{to}_#{date}"
+        if cached_result = get_cached_result(cache_key)
+          cached_result
+        else
+          # For a single date, we'll fetch a range and find the closest match
+          end_date = date
+          start_date = date - 10.days # Extended range for better coverage
 
-      cache_key = "exchange_rate_#{from}_#{to}_#{date}"
-      if cached_result = get_cached_result(cache_key)
-        return cached_result
+          rates_response = fetch_exchange_rates(
+            from: from,
+            to: to,
+            start_date: start_date,
+            end_date: end_date
+          )
+
+          raise Error, "Failed to fetch exchange rates: #{rates_response.error.message}" unless rates_response.success?
+
+          rates = rates_response.data
+          if rates.length == 1
+            rates.first
+          else
+            # Find the exact date or the closest previous date
+            target_rate = rates.find { |r| r.date == date } ||
+                         rates.select { |r| r.date <= date }.max_by(&:date)
+
+            raise Error, "No exchange rate found for #{from}/#{to} on or before #{date}" unless target_rate
+
+            cache_result(cache_key, target_rate)
+            Rails.logger.info "[YahooFinance] Successfully fetched exchange rate #{from}/#{to}: #{target_rate.rate} on #{target_rate.date}"
+            target_rate
+          end
+        end
       end
-
-      # For a single date, we'll fetch a range and find the closest match
-      end_date = date
-      start_date = date - 10.days # Extended range for better coverage
-
-      rates = fetch_exchange_rates(
-        from: from,
-        to: to,
-        start_date: start_date,
-        end_date: end_date
-      )
-
-      return rates.first if rates.length == 1
-
-      # Find the exact date or the closest previous date
-      target_rate = rates.find { |r| r.date == date } ||
-                   rates.select { |r| r.date <= date }.max_by(&:date)
-
-      raise Error, "No exchange rate found for #{from}/#{to} on or before #{date}" unless target_rate
-
-      cache_result(cache_key, target_rate)
-      Rails.logger.info "[YahooFinance] Successfully fetched exchange rate #{from}/#{to}: #{target_rate.rate} on #{target_rate.date}"
-      target_rate
     end
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
     validate_currency_codes!(from, to)
-    validate_date_range!(start_date, end_date)
 
     Rails.logger.info "[YahooFinance] Fetching exchange rates #{from}/#{to} from #{start_date} to #{end_date}"
     with_provider_response do
+      validate_date_range!(start_date, end_date)
       # Return 1.0 rates if same currency
       if from == to
-        return generate_same_currency_rates(from, to, start_date, end_date)
+        generate_same_currency_rates(from, to, start_date, end_date)
+      else
+        cache_key = "exchange_rates_#{from}_#{to}_#{start_date}_#{end_date}"
+        if cached_result = get_cached_result(cache_key)
+          cached_result
+        else
+          # Try both direct and inverse currency pairs
+          rates = fetch_currency_pair_data(from, to, start_date, end_date) ||
+                  fetch_inverse_currency_pair_data(from, to, start_date, end_date)
+
+          raise Error, "No chart data found for currency pair #{from}/#{to}" unless rates&.any?
+
+          cache_result(cache_key, rates)
+          Rails.logger.info "[YahooFinance] Successfully fetched #{rates.length} exchange rates for #{from}/#{to}"
+          rates
+        end
       end
-
-      cache_key = "exchange_rates_#{from}_#{to}_#{start_date}_#{end_date}"
-      if cached_result = get_cached_result(cache_key)
-        return cached_result
-      end
-
-      # Try both direct and inverse currency pairs
-      rates = fetch_currency_pair_data(from, to, start_date, end_date) ||
-              fetch_inverse_currency_pair_data(from, to, start_date, end_date)
-
-      raise Error, "No chart data found for currency pair #{from}/#{to}" unless rates&.any?
-
-      cache_result(cache_key, rates)
-      Rails.logger.info "[YahooFinance] Successfully fetched #{rates.length} exchange rates for #{from}/#{to}"
-      rates
     rescue JSON::ParserError => e
       Rails.logger.error "[YahooFinance] JSON parsing error for #{from}/#{to}: #{e.message}"
       raise Error, "Invalid response format: #{e.message}"
@@ -228,13 +238,16 @@ class Provider::YahooFinance < Provider
       end_date = date
       start_date = date - 10.days # Extended range for better coverage
 
-      prices = fetch_security_prices(
+      prices_response = fetch_security_prices(
         symbol: symbol,
         exchange_operating_mic: exchange_operating_mic,
         start_date: start_date,
         end_date: end_date
       )
 
+      raise Error, "Failed to fetch security prices: #{prices_response.error.message}" unless prices_response.success?
+
+      prices = prices_response.data
       return prices.first if prices.length == 1
 
       # Find the exact date or the closest previous date
@@ -324,7 +337,7 @@ class Provider::YahooFinance < Provider
 
     def validate_date_range!(start_date, end_date)
       raise Error, "Start date cannot be after end date" if start_date > end_date
-      raise Error, "Date range too large (max 5 years)" if (end_date - start_date) > 5.years
+      raise Error, "Date range too large (max 5 years)" if (end_date - start_date).days > 5.years
     end
 
     # ================================
