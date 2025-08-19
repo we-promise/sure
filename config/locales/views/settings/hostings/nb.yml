@@ -27,7 +27,7 @@ nb:
         success: Innstillinger oppdatert
       clear_cache:
         cache_cleared: Cachen er tømt. Dette kan ta noen øyeblikk å fullføre.
-        not_authorized: Du er ikke autorisert til å utføre denne handlingen
+      not_authorized: Du er ikke autorisert til å utføre denne handlingen
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance gir gratis tilgang til aksjekurser, valutakurser og finansdata uten å kreve en API-nøkkel.
