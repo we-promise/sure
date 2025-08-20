@@ -40,6 +40,22 @@ class Provider::YahooFinance < Provider
     end
   end
 
+  def usage
+    Rails.logger.info "[YahooFinance] Fetching usage data (mock)"
+    # Yahoo Finance doesn't expose usage data, so we return a mock structure
+    with_provider_response do
+      usage_data = UsageData.new(
+        used: 0,
+        limit: 2000, # Estimated daily limit based on community knowledge
+        utilization: 0,
+        plan: "Free"
+      )
+
+      Rails.logger.info "[YahooFinance] Usage data: #{usage_data.plan} plan, #{usage_data.used}/#{usage_data.limit} requests"
+      usage_data
+    end
+  end
+
   # ================================
   #          Exchange Rates
   # ================================
