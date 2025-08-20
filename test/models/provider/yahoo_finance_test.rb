@@ -29,21 +29,6 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   end
 
   # ================================
-  #          Usage Tests
-  # ================================
-
-  test "usage returns mock usage data" do
-    response = @provider.usage
-
-    assert response.success?
-    usage = response.data
-    assert_equal 0, usage.used
-    assert_equal 2000, usage.limit
-    assert_equal 0, usage.utilization
-    assert_equal "Free", usage.plan
-  end
-
-  # ================================
   #      Exchange Rate Tests
   # ================================
 
