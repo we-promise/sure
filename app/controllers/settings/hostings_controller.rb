@@ -3,7 +3,7 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: :clear_cache
+  before_action :ensure_admin, only: [ :update, :clear_cache ]
 
   def show
     @breadcrumbs = [
@@ -33,6 +33,13 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:openai_access_token)
       Setting.openai_access_token = hosting_params[:openai_access_token]
+    end
+    if hosting_params.key?(:openai_access_token)
+      token_param = hosting_params[:openai_access_token].to_s.strip
+      # Ignore blanks and redaction placeholders to prevent accidental overwrite
+      unless token_param.blank? || token_param == "********"
+        Setting.openai_access_token = token_param
+      end
     end
 
     redirect_to settings_hosting_path, notice: t(".success")
