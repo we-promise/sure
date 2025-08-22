@@ -1,7 +1,7 @@
 class FamilyExport < ApplicationRecord
   belongs_to :family
 
-  has_one_attached :export_file
+  has_one_attached :export_file, dependent: :purge_later
 
   enum :status, {
     pending: "pending",

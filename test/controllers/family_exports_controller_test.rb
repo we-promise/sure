@@ -82,6 +82,64 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Export deleted successfully", flash[:notice]
   end
 
+  test "admin can delete export with attached file" do
+    export = @family.family_exports.create!(status: "completed")
+    export.export_file.attach(
+      io: StringIO.new("test zip content"),
+      filename: "test.zip",
+      content_type: "application/zip"
+    )
+
+    assert export.export_file.attached?
+    assert_difference "@family.family_exports.count", -1 do
+      delete family_export_path(export)
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "Export deleted successfully", flash[:notice]
+  end
+
+  test "admin can delete failed export with attached file" do
+    export = @family.family_exports.create!(status: "failed")
+    export.export_file.attach(
+      io: StringIO.new("failed export content"),
+      filename: "failed.zip",
+      content_type: "application/zip"
+    )
+
+    assert export.export_file.attached?
+    assert_difference "@family.family_exports.count", -1 do
+      delete family_export_path(export)
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "Export deleted successfully", flash[:notice]
+  end
+
+  test "export file is purged when export is deleted" do
+    export = @family.family_exports.create!(status: "completed")
+    export.export_file.attach(
+      io: StringIO.new("test zip content"),
+      filename: "test.zip",
+      content_type: "application/zip"
+    )
+
+    # Verify file is attached
+    assert export.export_file.attached?
+    file_id = export.export_file.id
+
+    # Delete the export
+    delete family_export_path(export)
+
+    # Verify the export record is gone
+    assert_not FamilyExport.exists?(export.id)
+
+    # Verify the Active Storage attachment is also gone
+    # Note: Active Storage purges files asynchronously with `dependent: :purge_later`
+    # In tests, we can check that the attachment record is gone
+    assert_not ActiveStorage::Attachment.exists?(file_id)
+  end
+
   test "non-admin cannot delete export" do
     export = @family.family_exports.create!(status: "completed")
     sign_in @non_admin
