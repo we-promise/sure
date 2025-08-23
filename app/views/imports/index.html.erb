@@ -1,25 +1,39 @@
-<div class="flex items-center justify-between">
-  <h1 class="text-xl font-medium text-primary"><%= t(".title") %></h1>
-
-  <%= render DS::Link.new(
-    text: "New import",
-    href: new_import_path,
-    icon: "plus",
-    variant: "primary",
-    frame: :modal
-  ) %>
-</div>
-
-<div class="bg-container shadow-border-xs rounded-xl p-4">
-  <% if @imports.empty? %>
-    <%= render partial: "imports/empty" %>
-  <% else %>
-    <div class="rounded-xl bg-container-inset p-1">
-      <h2 class="uppercase px-4 py-2 text-secondary text-xs"><%= t(".imports") %> · <%= @imports.size %></h2>
-
-      <div class="border border-alpha-black-100 rounded-lg bg-container shadow-xs">
-        <%= render partial: "imports/import", collection: @imports.ordered, spacer_template: "shared/ruler" %>
+<%= settings_section title: t(".imports") do %>
+  <div class="space-y-4">
+    <% if @imports.empty? %>
+      <%= render partial: "imports/empty" %>
+    <% else %>
+      <div class="bg-container rounded-lg shadow-border-xs">
+        <%= render partial: "imports/import", collection: @imports.ordered %>
       </div>
+    <% end %>
+    
+    <%= link_to new_import_path,
+        class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
+        data: { turbo_frame: :modal } do %>
+      <%= icon("plus") %>
+      <%= t(".new") %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if Current.user.admin? %>
+  <%= settings_section title: t(".exports") do %>
+    <div class="space-y-4">
+      <div class="bg-container rounded-lg shadow-border-xs">
+        <%= turbo_frame_tag "family_exports", src: family_exports_path, loading: :lazy do %>
+          <div class="mt-4 text-center text-secondary py-8">
+            <div class="animate-spin inline-block h-4 w-4 border-2 border-secondary border-t-transparent rounded-full"></div>
+          </div>
+        <% end %>
+      </div>
+      
+      <%= link_to new_family_export_path,
+          class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
+          data: { turbo_frame: :modal } do %>
+        <%= icon("plus") %>
+        <%= t(".new_export") %>
+      <% end %>
     </div>
   <% end %>
-</div>
+<% end %>

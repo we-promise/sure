@@ -1,4 +1,6 @@
 class Provider::Openai::AutoMerchantDetector
+  DEFAULT_MODEL = "gpt-4.1-mini"
+
   def initialize(client, model: "", transactions:, user_merchants:)
     @client = client
     @model = model
@@ -8,7 +10,7 @@ class Provider::Openai::AutoMerchantDetector
 
   def auto_detect_merchants
     response = client.responses.create(parameters: {
-      model: model,
+      model: model.presence || DEFAULT_MODEL,
       input: [ { role: "developer", content: developer_message } ],
       text: {
         format: {
@@ -24,6 +26,47 @@ class Provider::Openai::AutoMerchantDetector
     Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage").dig("total_tokens")}")
 
     build_response(extract_categorizations(response))
+  end
+
+  def instructions
+    <<~INSTRUCTIONS.strip_heredoc
+      You are an assistant to a consumer personal finance app.
+
+      Closely follow ALL the rules below while auto-detecting business names and website URLs:
+
+      - Return 1 result per transaction
+      - Correlate each transaction by ID (transaction_id)
+      - Do not include the subdomain in the business_url (i.e. "amazon.com" not "www.amazon.com")
+      - User merchants are considered "manual" user-generated merchants and should only be used in 100% clear cases
+      - Be slightly pessimistic.  We favor returning "null" over returning a false positive.
+      - NEVER return a name or URL for generic transaction names (e.g. "Paycheck", "Laundromat", "Grocery store", "Local diner")
+
+      Determining a value:
+
+      - First attempt to determine the name + URL from your knowledge of global businesses
+      - If no certain match, attempt to match one of the user-provided merchants
+      - If no match, return "null"
+
+      Example 1 (known business):
+
+      ```
+      Transaction name: "Some Amazon purchases"
+
+      Result:
+      - business_name: "Amazon"
+      - business_url: "amazon.com"
+      ```
+
+      Example 2 (generic business):
+
+      ```
+      Transaction name: "local diner"
+
+      Result:
+      - business_name: null
+      - business_url: null
+      ```
+    INSTRUCTIONS
   end
 
   private
@@ -102,46 +145,5 @@ class Provider::Openai::AutoMerchantDetector
 
         Return "null" if you are not 80%+ confident in your answer.
       MESSAGE
-    end
-
-    def instructions
-      <<~INSTRUCTIONS.strip_heredoc
-        You are an assistant to a consumer personal finance app.
-
-        Closely follow ALL the rules below while auto-detecting business names and website URLs:
-
-        - Return 1 result per transaction
-        - Correlate each transaction by ID (transaction_id)
-        - Do not include the subdomain in the business_url (i.e. "amazon.com" not "www.amazon.com")
-        - User merchants are considered "manual" user-generated merchants and should only be used in 100% clear cases
-        - Be slightly pessimistic.  We favor returning "null" over returning a false positive.
-        - NEVER return a name or URL for generic transaction names (e.g. "Paycheck", "Laundromat", "Grocery store", "Local diner")
-
-        Determining a value:
-
-        - First attempt to determine the name + URL from your knowledge of global businesses
-        - If no certain match, attempt to match one of the user-provided merchants
-        - If no match, return "null"
-
-        Example 1 (known business):
-
-        ```
-        Transaction name: "Some Amazon purchases"
-
-        Result:
-        - business_name: "Amazon"
-        - business_url: "amazon.com"
-        ```
-
-        Example 2 (generic business):
-
-        ```
-        Transaction name: "local diner"
-
-        Result:
-        - business_name: null
-        - business_url: null
-        ```
-      INSTRUCTIONS
     end
 end

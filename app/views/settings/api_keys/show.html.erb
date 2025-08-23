@@ -1,7 +1,9 @@
-<%= content_for :page_title, "API Key" %>
-
 <% if @newly_created && @plain_key %>
-  <%= settings_section title: "API Key Created Successfully", subtitle: "Your new API key has been generated successfully." do %>
+  <header class="flex items-center justify-between">
+    <h1 class="text-primary text-xl font-medium">API Key Created Successfully</h1>
+  </header>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">
       <div class="p-3 shadow-border-xs bg-container rounded-lg">
         <div class="flex items-start gap-3">
@@ -51,9 +53,18 @@
         ) %>
       </div>
     </div>
-  <% end %>
+  </div>
 <% elsif @current_api_key %>
-  <%= settings_section title: "Your API Key", subtitle: "Manage your API key for programmatic access to your Maybe data." do %>
+  <header class="flex items-center justify-between">
+    <h1 class="text-primary text-xl font-medium">Your API Key</h1>
+    <%= render DS::Link.new(
+      text: "Create New Key",
+      href: new_settings_api_key_path(regenerate: true),
+      variant: "secondary"
+    ) %>
+  </header>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">
       <div class="p-3 shadow-border-xs bg-container rounded-lg flex justify-between items-center">
         <div class="flex items-center gap-3">
@@ -122,13 +133,7 @@
         </div>
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-primary">
-        <%= render DS::Link.new(
-          text: "Create New Key",
-          href: new_settings_api_key_path(regenerate: true),
-          variant: "secondary"
-        ) %>
-
+      <div class="flex justify-end pt-4 border-t border-primary">
         <%= render DS::Button.new(
           text: "Revoke Key",
           href: settings_api_key_path,
@@ -140,9 +145,18 @@
         ) %>
       </div>
     </div>
-  <% end %>
+  </div>
 <% else %>
-  <%= settings_section title: "Create Your API Key", subtitle: "Get programmatic access to your Maybe data" do %>
+  <header class="flex items-center justify-between">
+    <h1 class="text-primary text-xl font-medium">API Key</h1>
+    <%= render DS::Link.new(
+      text: "Create API Key",
+      href: new_settings_api_key_path,
+      variant: "primary"
+    ) %>
+  </header>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">
       <div class="p-3 shadow-border-xs bg-container rounded-lg">
         <div class="flex items-start gap-3">
@@ -179,14 +193,6 @@
           </li>
         </ul>
       </div>
-
-      <div class="flex justify-start">
-        <%= render DS::Link.new(
-          text: "Create API Key",
-          href: new_settings_api_key_path,
-          variant: "primary"
-        ) %>
-      </div>
     </div>
-  <% end %>
+  </div>
 <% end %>

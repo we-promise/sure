@@ -5,13 +5,18 @@ class SettingsTest < ApplicationSystemTestCase
     sign_in @user = users(:family_admin)
 
     @settings_links = [
-      [ "Account", settings_profile_path ],
-      [ "Preferences", settings_preferences_path ],
       [ "Accounts", accounts_path ],
-      [ "Tags", tags_path ],
+      [ "Bank Sync", settings_bank_sync_path ],
+      [ "Preferences", settings_preferences_path ],
+      [ "Profile Info", settings_profile_path ],
+      [ "Security", settings_security_path ],
       [ "Categories", categories_path ],
+      [ "Tags", tags_path ],
+      [ "Rules", rules_path ],
       [ "Merchants", family_merchants_path ],
-      [ "Imports", imports_path ],
+      [ "AI Prompts", settings_ai_prompts_path ],
+      [ "API Key", settings_api_key_path ],
+      [ "Guides", settings_guides_path ],
       [ "What's new", changelog_path ],
       [ "Feedback", feedback_path ]
     ]
@@ -20,8 +25,8 @@ class SettingsTest < ApplicationSystemTestCase
   test "can access settings from sidebar" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       open_settings_from_sidebar
-      assert_selector "h1", text: "Account"
-      assert_current_path settings_profile_path, ignore_query: true
+      assert_selector "h1", text: "Accounts"
+      assert_current_path accounts_path, ignore_query: true
 
       @settings_links.each do |name, path|
         click_link name
@@ -35,8 +40,8 @@ class SettingsTest < ApplicationSystemTestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     open_settings_from_sidebar
-    assert_selector "li", text: "Self hosting"
-    click_link "Self hosting"
+    assert_selector "li", text: "Self-Hosting"
+    click_link "Self-Hosting"
     assert_current_path settings_hosting_path
     assert_selector "h1", text: "Self-Hosting"
     check "setting[require_invite_for_signup]", allow_label_click: true
