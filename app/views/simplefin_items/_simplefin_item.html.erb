@@ -40,7 +40,7 @@
             </div>
           <% elsif simplefin_item.sync_error.present? %>
             <div class="text-secondary flex items-center gap-1">
-              <%= icon "alert-circle", size: "sm", color: "destructive" %>
+              <%= render DS::Tooltip.new(text: simplefin_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
               <%= tag.span t(".error"), class: "text-destructive" %>
             </div>
           <% else %>
