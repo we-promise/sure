@@ -5,6 +5,7 @@ class Account < ApplicationRecord
 
   belongs_to :family
   belongs_to :import, optional: true
+  belongs_to :simplefin_account, optional: true
 
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
@@ -22,11 +23,12 @@ class Account < ApplicationRecord
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
-  scope :manual, -> { where(plaid_account_id: nil) }
+  scope :manual, -> { where(plaid_account_id: nil, simplefin_account_id: nil) }
 
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
+  delegate :subtype, to: :accountable, allow_nil: true
 
   accepts_nested_attributes_for :accountable, update_only: true
 
@@ -71,6 +73,53 @@ class Account < ApplicationRecord
       account.sync_later
       account
     end
+
+
+    def create_from_simplefin_account(simplefin_account, account_type, subtype = nil)
+      # Get the balance from SimpleFin
+      balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
+
+      # SimpleFin returns negative balances for credit cards (liabilities)
+      # But Maybe expects positive balances for liabilities
+      if account_type == "CreditCard" || account_type == "Loan"
+        balance = balance.abs
+      end
+
+      attributes = {
+        family: simplefin_account.simplefin_item.family,
+        name: simplefin_account.name,
+        balance: balance,
+        currency: simplefin_account.currency,
+        accountable_type: account_type,
+        accountable_attributes: build_simplefin_accountable_attributes(simplefin_account, account_type, subtype),
+        simplefin_account_id: simplefin_account.id
+      }
+
+      create_and_sync(attributes)
+    end
+
+
+    private
+
+      def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
+        attributes = {}
+        attributes[:subtype] = subtype if subtype.present?
+
+        # Set account-type-specific attributes from SimpleFin data
+        case account_type
+        when "CreditCard"
+          # For credit cards, available_balance often represents available credit
+          if simplefin_account.available_balance.present? && simplefin_account.available_balance > 0
+            attributes[:available_credit] = simplefin_account.available_balance
+          end
+        when "Loan"
+          # For loans, we might get additional data from the raw_payload
+          # This is where loan-specific information could be extracted if available
+          # Currently we don't have specific loan fields from SimpleFin protocol
+        end
+
+        attributes
+      end
   end
 
   def institution_domain

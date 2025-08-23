@@ -1,17 +1,25 @@
 module SettingsHelper
   SETTINGS_ORDER = [
-    { name: "Account", path: :settings_profile_path },
-    { name: "Preferences", path: :settings_preferences_path },
-    { name: "Security", path: :settings_security_path },
-    { name: "Self hosting", path: :settings_hosting_path, condition: :self_hosted? },
-    { name: "API Key", path: :settings_api_key_path },
-    { name: "Billing", path: :settings_billing_path, condition: :not_self_hosted? },
+    # General section
     { name: "Accounts", path: :accounts_path },
-    { name: "Imports", path: :imports_path },
-    { name: "Tags", path: :tags_path },
+    { name: "Bank Sync", path: :settings_bank_sync_path },
+    { name: "Preferences", path: :settings_preferences_path },
+    { name: "Profile Info", path: :settings_profile_path },
+    { name: "Security", path: :settings_security_path },
+    { name: "Billing", path: :settings_billing_path, condition: :not_self_hosted? },
+    # Transactions section
     { name: "Categories", path: :categories_path },
+    { name: "Tags", path: :tags_path },
     { name: "Rules", path: :rules_path },
     { name: "Merchants", path: :family_merchants_path },
+    # Advanced section
+    { name: "AI Prompts", path: :settings_ai_prompts_path },
+    { name: "API Key", path: :settings_api_key_path },
+    { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted? },
+    { name: "Imports", path: :imports_path },
+    { name: "SimpleFin", path: :simplefin_items_path },
+    # More section
+    { name: "Guides", path: :settings_guides_path },
     { name: "What's new", path: :changelog_path },
     { name: "Feedback", path: :feedback_path }
   ]

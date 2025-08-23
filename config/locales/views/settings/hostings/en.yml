@@ -21,6 +21,11 @@ en:
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+      brand_fetch_settings:
+        description: Input the Client ID provided by Brand Fetch
+        label: Client ID
+        placeholder: Enter your Client ID here
+        title: Brand Fetch Settings
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
         description: Input the API key provided by Twelve Data
