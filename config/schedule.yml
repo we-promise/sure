@@ -18,3 +18,9 @@ run_security_health_checks:
   class: "SecurityHealthCheckJob"
   queue: "scheduled"
   description: "Runs security health checks to detect issues with security data"
+
+sync_all_accounts:
+  cron: "*/30 * * * *" # every 30 minutes
+  class: "Accounts::SyncAllJob"
+  queue: "scheduled"
+  description: "Syncs all accounts for all families"
