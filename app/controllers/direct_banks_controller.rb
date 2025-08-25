@@ -19,7 +19,7 @@ class DirectBanksController < ApplicationController
 
   def create
     begin
-      @connection = Current.family.send("create_#{@provider_type}_connection!", connection_params)
+      @connection = create_connection_safely
       redirect_to direct_bank_path(@provider_type, @connection),
                   notice: "#{@provider_config[:name]} connection added successfully! Your accounts will appear shortly."
     rescue ArgumentError => e
@@ -53,9 +53,10 @@ class DirectBanksController < ApplicationController
   end
 
   def complete_account_setup
-    setup_params = params.require(:accounts).permit!.to_h
+    setup_params = params.require(:accounts).to_unsafe_h
 
     setup_params.each do |account_id, config|
+      config = config.slice(:account_type, :subtype, :balance)
       next if config[:account_type] == "Skip"
 
       bank_account = @connection.direct_bank_accounts.find(account_id)
@@ -99,7 +100,20 @@ class DirectBanksController < ApplicationController
   end
 
   def connection_class
-    @provider_config[:connection_class].constantize
+    # Use the safe registry lookup instead of constantize
+    DirectBankRegistry.connection_class(@provider_type) || raise("Invalid provider")
+  end
+
+  def create_connection_safely
+    # Use explicit method calls based on whitelisted provider types
+    case @provider_type
+    when "mercury"
+      Current.family.create_mercury_connection!(connection_params)
+    when "wise"
+      Current.family.create_wise_connection!(connection_params)
+    else
+      raise ArgumentError, "Unsupported provider type: #{@provider_type}"
+    end
   end
 
   def connection_params

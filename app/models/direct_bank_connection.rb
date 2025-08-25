@@ -27,7 +27,8 @@ class DirectBankConnection < ApplicationRecord
   end
 
   def provider_class
-    "Provider::DirectBank::#{provider_type}".constantize
+    # Safe class lookup based on connection type
+    DirectBankRegistry.provider_class(provider_type.downcase)
   end
 
   def provider

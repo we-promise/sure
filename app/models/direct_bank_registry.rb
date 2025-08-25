@@ -39,14 +39,30 @@ class DirectBankRegistry
       config = provider_config(provider_key)
       return nil unless config
 
-      config[:class_name].constantize
+      # Safe class lookup using predefined mapping
+      case provider_key.to_sym
+      when :mercury
+        Provider::DirectBank::Mercury
+      when :wise
+        Provider::DirectBank::Wise
+      else
+        nil
+      end
     end
 
     def connection_class(provider_key)
       config = provider_config(provider_key)
       return nil unless config
 
-      config[:connection_class].constantize
+      # Safe class lookup using predefined mapping
+      case provider_key.to_sym
+      when :mercury
+        MercuryConnection
+      when :wise
+        WiseConnection
+      else
+        nil
+      end
     end
 
     def auth_type(provider_key)
