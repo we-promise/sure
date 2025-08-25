@@ -9,7 +9,7 @@ class Settings::BankSyncController < ApplicationController
         path: wise_items_path
       }
     ]
-    
+
     @providers = [
       {
         name: "Lunch Flow",

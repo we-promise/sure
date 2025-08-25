@@ -78,20 +78,20 @@ class WiseItemsController < ApplicationController
       next if selected_type == "Skip"
 
       wise_account = @wise_item.wise_accounts.find(wise_account_id)
-      
+
       # Skip if account already exists
       next if wise_account.account.present?
 
       # Create account based on type
       subtype = account_subtypes[wise_account_id] || "checking"
-      
+
       # Use the custom Wise account creation that handles opening balance properly
       account = Account.create_from_wise_account(
         wise_account,
         selected_type,
         subtype
       )
-      
+
       unless account.persisted?
         Rails.logger.error("Failed to create account for Wise account #{wise_account_id}: #{account.errors.full_messages.join(', ')}")
       end

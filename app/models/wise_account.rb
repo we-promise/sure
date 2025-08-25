@@ -6,10 +6,10 @@ class WiseAccount < ApplicationRecord
 
   def upsert_wise_snapshot!(account_data)
     data = account_data.with_indifferent_access
-    
+
     # Extract balance information
     amount = data[:amount] || {}
-    
+
     assign_attributes(
       name: build_account_name(data),
       currency: amount[:currency] || data[:currency],
@@ -19,7 +19,7 @@ class WiseAccount < ApplicationRecord
       balance_date: Time.current,
       raw_payload: account_data
     )
-    
+
     save!
   end
 
@@ -28,7 +28,7 @@ class WiseAccount < ApplicationRecord
     def build_account_name(data)
       amount = data[:amount] || {}
       currency = amount[:currency] || data[:currency]
-      
+
       if data[:name].present?
         data[:name]
       elsif currency.present?

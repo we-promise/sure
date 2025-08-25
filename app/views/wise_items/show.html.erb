@@ -23,7 +23,7 @@
           <% end %>
         </p>
       </div>
-      
+
       <div class="flex gap-2">
         <% unless @wise_item.syncing? %>
           <%= link_to sync_wise_item_path(@wise_item), data: { turbo_method: :post }, class: "btn btn--secondary" do %>
@@ -31,8 +31,8 @@
             Sync Now
           <% end %>
         <% end %>
-        
-        <%= link_to @wise_item, 
+
+        <%= link_to @wise_item,
             data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to remove this Wise connection?" },
             class: "btn btn--secondary text-red-600 hover:bg-red-50" do %>
           <%= icon "trash-2", class: "w-4 h-4 mr-1" %>

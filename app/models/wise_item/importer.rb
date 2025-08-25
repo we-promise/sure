@@ -22,7 +22,7 @@ class WiseItem::Importer
 
     def import_profiles
       profiles_data = wise_provider.get_profiles
-      
+
       if profiles_data.empty?
         raise Provider::Wise::WiseError.new(
           "No profiles found for this Wise account",
@@ -35,10 +35,10 @@ class WiseItem::Importer
 
     def import_accounts_for_profile(profile_id)
       accounts_data = wise_provider.get_accounts(profile_id)
-      
+
       # Store raw payload
       wise_item.upsert_wise_snapshot!(accounts_data)
-      
+
       # Import each account (balance in Wise terminology)
       accounts_data.each do |account_data|
         import_account(profile_id, account_data)
@@ -49,13 +49,13 @@ class WiseItem::Importer
       wise_account = wise_item.wise_accounts.find_or_initialize_by(
         account_id: account_data[:id].to_s
       )
-      
+
       # Fetch full statement including transactions and opening balance
       statement = fetch_statement(profile_id, account_data[:id])
-      
+
       # Update account snapshot with balance info
       wise_account.upsert_wise_snapshot!(account_data)
-      
+
       # Save the full statement data (includes transactions and opening balance)
       if statement
         wise_account.update!(
@@ -76,14 +76,14 @@ class WiseItem::Importer
       begin
         # Determine start date based on sync history
         start_date = determine_sync_start_date
-        
+
         response = wise_provider.get_transactions(
           profile_id,
           balance_id,
           start_date: start_date,
           end_date: Date.current
         )
-        
+
         # Return the full statement response
         response
       rescue Provider::Wise::WiseError => e

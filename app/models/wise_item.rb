@@ -55,17 +55,17 @@ class WiseItem < ApplicationRecord
 
   def upsert_wise_profiles_snapshot!(profiles_data)
     assign_attributes(raw_profiles_payload: profiles_data)
-    
+
     # Store the first personal and business profile IDs for easy access
     personal_profile = profiles_data.find { |p| p[:type] == "personal" || p[:type] == "PERSONAL" }
     business_profile = profiles_data.find { |p| p[:type] == "business" || p[:type] == "BUSINESS" }
-    
+
     assign_attributes(
       personal_profile_id: personal_profile&.dig(:id),
       business_profile_id: business_profile&.dig(:id),
       profile_id: personal_profile&.dig(:id) || business_profile&.dig(:id)
     )
-    
+
     save!
   end
 

@@ -33,13 +33,13 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     Provider::Wise.any_instance.stubs(:get_profiles).returns([
       { id: 1, type: "personal", fullName: "John Doe" }
     ])
-    
+
     assert_difference("WiseItem.count", 1) do
       post wise_items_url, params: {
         wise_item: { api_key: "new_api_key_123" }
       }
     end
-    
+
     assert_redirected_to wise_items_url
     assert_equal "Wise connection added successfully! Your accounts will appear shortly as they sync in the background.", flash[:notice]
   end
@@ -50,7 +50,7 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
         wise_item: { api_key: "" }
       }
     end
-    
+
     assert_response :unprocessable_entity
     assert_equal "Please enter a Wise API key.", flash[:alert]
   end
@@ -59,13 +59,13 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     Provider::Wise.any_instance.stubs(:get_profiles).raises(
       Provider::Wise::WiseError.new("Invalid API key", :authentication_failed)
     )
-    
+
     assert_no_difference("WiseItem.count") do
       post wise_items_url, params: {
         wise_item: { api_key: "invalid_key" }
       }
     end
-    
+
     assert_response :unprocessable_entity
     assert_match /Invalid API key/, flash[:alert]
   end
@@ -74,16 +74,16 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_difference("WiseItem.count", -1) do
       delete wise_item_url(@wise_item)
     end
-    
+
     assert_redirected_to wise_items_url
     assert_equal "Wise connection will be removed", flash[:notice]
   end
 
   test "should trigger sync" do
     @wise_item.expects(:sync_later).once
-    
+
     post sync_wise_item_url(@wise_item)
-    
+
     assert_redirected_to wise_item_url(@wise_item)
     assert_equal "Sync started", flash[:notice]
   end
@@ -96,7 +96,7 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       current_balance: 1000
     )
-    
+
     get setup_accounts_wise_item_url(@wise_item)
     assert_response :success
     assert_select "h2", text: "Setup Your Wise Accounts"
@@ -106,24 +106,24 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     wise_account = WiseAccount.create!(
       wise_item: @wise_item,
       account_id: "acc_123",
-      name: "USD Account", 
+      name: "USD Account",
       currency: "USD",
       current_balance: 1000
     )
-    
+
     assert_difference("Account.count", 1) do
       post complete_account_setup_wise_item_url(@wise_item), params: {
         account_types: { wise_account.id => "Depository" },
         account_subtypes: { wise_account.id => "checking" }
       }
     end
-    
+
     assert_redirected_to wise_items_url
     assert_equal "Accounts have been set up successfully!", flash[:notice]
-    
+
     @wise_item.reload
     assert_not @wise_item.pending_account_setup?
-    
+
     account = Account.last
     assert_equal "USD Account", account.name
     assert_equal "USD", account.currency
@@ -138,13 +138,13 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
       name: "USD Account",
       currency: "USD"
     )
-    
+
     assert_no_difference("Account.count") do
       post complete_account_setup_wise_item_url(@wise_item), params: {
         account_types: { wise_account.id => "Skip" }
       }
     end
-    
+
     assert_redirected_to wise_items_url
   end
 end

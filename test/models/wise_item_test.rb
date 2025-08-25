@@ -44,7 +44,7 @@ class WiseItemTest < ActiveSupport::TestCase
       raw_value = WiseItem.connection.execute(
         "SELECT api_key FROM wise_items WHERE id = '#{@wise_item.id}'"
       ).first["api_key"]
-      
+
       assert_not_equal "test_api_key_123", raw_value
       assert_equal "test_api_key_123", @wise_item.api_key
     end
@@ -73,7 +73,7 @@ class WiseItemTest < ActiveSupport::TestCase
       name: "Test Account",
       currency: "USD"
     )
-    
+
     assert_difference "WiseAccount.count", -1 do
       @wise_item.destroy
     end

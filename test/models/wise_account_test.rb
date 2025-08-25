@@ -58,9 +58,9 @@ class WiseAccountTest < ActiveSupport::TestCase
       amount: { value: 1000.50, currency: "EUR" },
       name: "Euro Account"
     }
-    
+
     @wise_account.upsert_wise_snapshot!(snapshot)
-    
+
     assert_equal "Euro Account", @wise_account.name
     assert_equal "EUR", @wise_account.currency
     assert_equal 1000.50, @wise_account.current_balance
@@ -77,10 +77,10 @@ class WiseAccountTest < ActiveSupport::TestCase
       wise_account: @wise_account,
       accountable: Depository.new
     )
-    
+
     @wise_account.destroy
     account.reload
-    
+
     assert_nil account.wise_account_id
   end
 end
