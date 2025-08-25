@@ -50,19 +50,29 @@ class WiseItem::Importer
         account_id: account_data[:id].to_s
       )
       
-      # Fetch transactions for this account
-      transactions = fetch_transactions(profile_id, account_data[:id])
+      # Fetch full statement including transactions and opening balance
+      statement = fetch_statement(profile_id, account_data[:id])
       
-      # Update account snapshot
+      # Update account snapshot with balance info
       wise_account.upsert_wise_snapshot!(account_data)
       
-      # Save transactions separately
-      if transactions && transactions.any?
-        wise_account.update!(raw_transactions_payload: transactions)
+      # Save the full statement data (includes transactions and opening balance)
+      if statement
+        wise_account.update!(
+          raw_transactions_payload: statement[:transactions] || [],
+          raw_payload: wise_account.raw_payload.merge(
+            statement_data: {
+              opening_balance: statement[:startOfStatementBalance],
+              closing_balance: statement[:endOfStatementBalance],
+              statement_start_date: statement[:query][:intervalStart],
+              statement_end_date: statement[:query][:intervalEnd]
+            }
+          )
+        )
       end
     end
 
-    def fetch_transactions(profile_id, balance_id)
+    def fetch_statement(profile_id, balance_id)
       begin
         # Determine start date based on sync history
         start_date = determine_sync_start_date
@@ -74,22 +84,23 @@ class WiseItem::Importer
           end_date: Date.current
         )
         
-        # Extract transactions from statement response
-        response[:transactions] || []
+        # Return the full statement response
+        response
       rescue Provider::Wise::WiseError => e
         Rails.logger.error("Failed to fetch Wise transactions for balance #{balance_id}: #{e.message}")
         # Don't fail the entire sync for transaction fetch failure
-        []
+        nil
       end
     end
 
     def determine_sync_start_date
-      # For the first sync, get 90 days of history
+      # For the first sync, get up to 2 years of history to establish proper opening balance
       # For subsequent syncs, fetch from last sync date with a buffer
       if wise_item.last_synced_at
         wise_item.last_synced_at - 7.days
       else
-        90.days.ago
+        # Wise typically supports up to 3 years of history, but 2 years should be sufficient
+        2.years.ago
       end
     end
 end

@@ -85,17 +85,12 @@ class WiseItemsController < ApplicationController
       # Create account based on type
       subtype = account_subtypes[wise_account_id] || "checking"
       
-      account_attributes = {
-        family: Current.family,
-        name: wise_account.name,
-        balance: wise_account.current_balance || 0,
-        currency: wise_account.currency,
-        accountable_type: selected_type,
-        accountable_attributes: { subtype: subtype },
-        wise_account_id: wise_account.id
-      }
-
-      account = Account.create_and_sync(account_attributes)
+      # Use the custom Wise account creation that handles opening balance properly
+      account = Account.create_from_wise_account(
+        wise_account,
+        selected_type,
+        subtype
+      )
       
       unless account.persisted?
         Rails.logger.error("Failed to create account for Wise account #{wise_account_id}: #{account.errors.full_messages.join(', ')}")
