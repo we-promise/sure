@@ -2,6 +2,14 @@ class Settings::BankSyncController < ApplicationController
   layout "settings"
 
   def show
+    @banks = [
+      {
+        name: "Wise",
+        description: "Multi-currency accounts and international transfers via Wise API.",
+        path: wise_items_path
+      }
+    ]
+    
     @providers = [
       {
         name: "Lunch Flow",
@@ -21,11 +29,6 @@ class Settings::BankSyncController < ApplicationController
         name: "SimpleFin",
         description: "US & Canada connections via SimpleFin protocol.",
         path: simplefin_items_path
-      },
-      {
-        name: "Wise",
-        description: "Multi-currency accounts and international transfers via Wise API.",
-        path: wise_items_path
       }
     ]
   end
