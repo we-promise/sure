@@ -1,6 +1,6 @@
 class CreateDirectBankTables < ActiveRecord::Migration[7.2]
   def change
-    create_table :direct_bank_connections, id: :uuid do |t|
+    create_table :direct_bank_connections, id: :uuid, default: -> { "gen_random_uuid()" } do |t|
       t.string :type, null: false
       t.references :family, type: :uuid, null: false, foreign_key: true
       t.string :name, null: false
@@ -12,13 +12,13 @@ class CreateDirectBankTables < ActiveRecord::Migration[7.2]
       t.datetime :last_synced_at
 
       t.timestamps
-
-      t.index :type
-      t.index :status
-      t.index [ :family_id, :type ]
     end
 
-    create_table :direct_bank_accounts, id: :uuid do |t|
+    add_index :direct_bank_connections, :type
+    add_index :direct_bank_connections, :status
+    add_index :direct_bank_connections, [ :family_id, :type ]
+
+    create_table :direct_bank_accounts, id: :uuid, default: -> { "gen_random_uuid()" } do |t|
       t.string :type, null: false
       t.references :direct_bank_connection, type: :uuid, null: false, foreign_key: true
       t.string :external_id, null: false
@@ -32,10 +32,10 @@ class CreateDirectBankTables < ActiveRecord::Migration[7.2]
       t.datetime :balance_date
 
       t.timestamps
-
-      t.index :type
-      t.index :external_id
-      t.index [ :direct_bank_connection_id, :external_id ], unique: true, name: "idx_direct_bank_accounts_connection_external"
     end
+    
+    add_index :direct_bank_accounts, :type
+    add_index :direct_bank_accounts, :external_id
+    add_index :direct_bank_accounts, [ :direct_bank_connection_id, :external_id ], unique: true, name: "idx_direct_bank_accounts_connection_external"
   end
 end
