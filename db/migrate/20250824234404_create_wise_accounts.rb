@@ -1,4 +1,4 @@
-class CreateWiseAccounts < ActiveRecord::Migration[8.0]
+class CreateWiseAccounts < ActiveRecord::Migration[7.2]
   def change
     create_table :wise_accounts, id: :uuid do |t|
       t.references :wise_item, type: :uuid, null: false, foreign_key: true
