@@ -24,7 +24,7 @@
 
   <div class="flex items-center gap-2">
     <% unless wise_item.syncing? %>
-      <%= link_to wise_item_sync_path(wise_item), method: :post, class: "btn btn--xs btn--secondary" do %>
+      <%= link_to sync_wise_item_path(wise_item), method: :post, class: "btn btn--xs btn--secondary" do %>
         <%= icon "refresh-cw", class: "w-4 h-4" %>
         Sync
       <% end %>

@@ -82,7 +82,7 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
   test "should trigger sync" do
     @wise_item.expects(:sync_later).once
     
-    post wise_item_sync_url(@wise_item)
+    post sync_wise_item_url(@wise_item)
     
     assert_redirected_to wise_item_url(@wise_item)
     assert_equal "Sync started", flash[:notice]
