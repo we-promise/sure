@@ -1,0 +1,39 @@
+<%= content_for :page_title, "Connect #{@provider_config[:name]}" %>
+
+<div class="max-w-2xl mx-auto">
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <h1 class="text-xl font-semibold text-primary mb-2">Connect <%= @provider_config[:name] %></h1>
+    <p class="text-secondary mb-6"><%= @provider_config[:setup_instructions] %></p>
+
+    <%= form_with url: direct_banks_path(@provider_type), local: true do |form| %>
+      <% if flash[:alert] %>
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-red-700 text-sm"><%= flash[:alert] %></p>
+        </div>
+      <% end %>
+
+      <% case @provider_config[:auth_type] %>
+      <% when :api_key %>
+        <div class="mb-4">
+          <%= form.label :api_key, "API Key", class: "block text-sm font-medium text-primary mb-1" %>
+          <%= form.password_field :api_key, 
+              class: "w-full px-3 py-2 border border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500",
+              placeholder: "Enter your #{@provider_config[:name]} API key",
+              required: true %>
+        </div>
+      <% when :oauth %>
+        <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p class="text-blue-700 text-sm mb-3">
+            You'll be redirected to <%= @provider_config[:name] %> to authorize access to your account.
+          </p>
+          <input type="hidden" name="oauth_flow" value="true">
+        </div>
+      <% end %>
+
+      <div class="flex justify-between">
+        <%= link_to "Cancel", direct_banks_path(@provider_type), class: "btn btn-secondary" %>
+        <%= form.submit "Connect", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>
