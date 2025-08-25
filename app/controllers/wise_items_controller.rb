@@ -82,28 +82,24 @@ class WiseItemsController < ApplicationController
       # Skip if account already exists
       next if wise_account.account.present?
 
-      # Create account based on selected type
-      account_params = {
+      # Create account based on type
+      subtype = account_subtypes[wise_account_id] || "checking"
+      
+      account_attributes = {
+        family: Current.family,
         name: wise_account.name,
-        currency: wise_account.currency,
         balance: wise_account.current_balance || 0,
-        wise_account: wise_account,
-        family: Current.family
+        currency: wise_account.currency,
+        accountable_type: selected_type,
+        accountable_attributes: { subtype: subtype },
+        wise_account_id: wise_account.id
       }
 
-      # Create account based on type
-      account = case selected_type
-      when "Depository"
-        subtype = account_subtypes[wise_account_id] || "checking"
-        Account.create_depository!(account_params.merge(
-          accountable_attributes: { subtype: subtype }
-        ))
-      else
-        Rails.logger.error("Unknown account type selected: #{selected_type}")
-        next
+      account = Account.create_and_sync(account_attributes)
+      
+      unless account.persisted?
+        Rails.logger.error("Failed to create account for Wise account #{wise_account_id}: #{account.errors.full_messages.join(', ')}")
       end
-
-      account.sync_later if account
     end
 
     # Clear the pending setup flag
