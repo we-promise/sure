@@ -79,7 +79,7 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should trigger sync" do
-    @wise_item.expects(:sync_later).once
+    WiseItem.any_instance.expects(:sync_later).once
 
     post sync_wise_item_url(@wise_item)
 
@@ -123,7 +123,7 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     @wise_item.reload
     assert_not @wise_item.pending_account_setup?
 
-    account = Account.last
+    account = Account.where(wise_account_id: wise_account.id).first
     assert_equal "USD Account", account.name
     assert_equal "USD", account.currency
     assert_equal 1000, account.balance
