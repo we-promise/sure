@@ -71,10 +71,9 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should destroy wise_item" do
-    assert_difference("WiseItem.count", -1) do
-      delete wise_item_url(@wise_item)
-    end
+    delete wise_item_url(@wise_item)
 
+    assert_enqueued_with job: DestroyJob
     assert_redirected_to wise_items_url
     assert_equal "Wise connection will be removed", flash[:notice]
   end

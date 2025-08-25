@@ -47,6 +47,9 @@ class WiseItemTest < ActiveSupport::TestCase
 
       assert_not_equal "test_api_key_123", raw_value
       assert_equal "test_api_key_123", @wise_item.api_key
+    else
+      # When encryption is not configured, API key should be stored as plain text
+      assert_equal "test_api_key_123", @wise_item.api_key
     end
   end
 
