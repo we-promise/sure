@@ -16,14 +16,14 @@ class DirectBank::AccountProcessor
 
   private
 
-  def sync_balance
-    @bank_account.sync_balance
-  end
+    def sync_balance
+      @bank_account.sync_balance
+    end
 
-  def sync_transactions(start_date: nil, end_date: nil)
-    @bank_account.sync_transactions(
-      start_date: start_date || 30.days.ago,
-      end_date: end_date || Date.current
-    )
-  end
+    def sync_transactions(start_date: nil, end_date: nil)
+      @bank_account.sync_transactions(
+        start_date: start_date || 30.days.ago,
+        end_date: end_date || Date.current
+      )
+    end
 end

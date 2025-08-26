@@ -20,7 +20,7 @@ class DirectBanksController < ApplicationController
   def create
     begin
       @connection = create_connection_safely
-      redirect_to direct_bank_path(@provider_type, @connection),
+      redirect_to send("direct_bank_#{@provider_type}_path", @connection),
                   notice: "#{@provider_config[:name]} connection added successfully! Your accounts will appear shortly."
     rescue ArgumentError => e
       render_error(e.message)
@@ -34,12 +34,12 @@ class DirectBanksController < ApplicationController
 
   def destroy
     @connection.destroy_later
-    redirect_to direct_banks_path(@provider_type), notice: "#{@provider_config[:name]} connection will be removed"
+    redirect_to send("direct_bank_#{@provider_type}_index_path"), notice: "#{@provider_config[:name]} connection will be removed"
   end
 
   def sync
     @connection.sync_later
-    redirect_to direct_bank_path(@provider_type, @connection), notice: "Sync started"
+    redirect_to send("direct_bank_#{@provider_type}_path", @connection), notice: "Sync started"
   end
 
   def setup_accounts
@@ -67,7 +67,6 @@ class DirectBanksController < ApplicationController
         accountable: bank_account,
         balance: bank_account.current_balance || 0,
         currency: bank_account.currency,
-        account_type: config[:account_type],
         subtype: config[:subtype]
       )
 
@@ -84,73 +83,73 @@ class DirectBanksController < ApplicationController
 
   private
 
-  def set_provider_type
-    @provider_type = params[:provider_type]
-    @provider_config = DirectBankRegistry.provider_config(@provider_type)
+    def set_provider_type
+      @provider_type = params[:provider_type]
+      @provider_config = DirectBankRegistry.provider_config(@provider_type)
 
-    unless @provider_config
-      redirect_to settings_bank_sync_path, alert: "Invalid provider"
+      unless @provider_config
+        redirect_to settings_bank_sync_path, alert: "Invalid provider"
+      end
     end
-  end
 
-  def set_connection
-    @connection = Current.family.direct_bank_connections
-                         .where(type: connection_class.name)
-                         .find(params[:id])
-  end
-
-  def connection_class
-    # Use the safe registry lookup instead of constantize
-    DirectBankRegistry.connection_class(@provider_type) || raise("Invalid provider")
-  end
-
-  def create_connection_safely
-    # Use explicit method calls based on whitelisted provider types
-    case @provider_type
-    when "mercury"
-      Current.family.create_mercury_connection!(connection_params)
-    when "wise"
-      Current.family.create_wise_connection!(connection_params)
-    else
-      raise ArgumentError, "Unsupported provider type: #{@provider_type}"
+    def set_connection
+      @connection = Current.family.direct_bank_connections
+                           .where(type: connection_class.name)
+                           .find(params[:id])
     end
-  end
 
-  def connection_params
-    case @provider_config[:auth_type]
-    when :api_key
-      { credentials: { api_key: params[:api_key] } }
-    when :oauth
-      { credentials: oauth_credentials_from_params }
-    else
-      {}
+    def connection_class
+      # Use the safe registry lookup instead of constantize
+      DirectBankRegistry.connection_class(@provider_type) || raise("Invalid provider")
     end
-  end
 
-  def oauth_credentials_from_params
-    {
-      access_token: params[:access_token],
-      refresh_token: params[:refresh_token],
-      expires_at: params[:expires_at]
-    }
-  end
-
-  def render_error(message)
-    @connection = connection_class.new
-    flash.now[:alert] = message
-    render :new
-  end
-
-  def format_provider_error(error)
-    case error.error_type
-    when :authentication_failed
-      "Authentication failed. Please check your credentials."
-    when :access_forbidden
-      "Access forbidden. Please ensure you have the necessary permissions."
-    when :rate_limited
-      "Rate limit exceeded. Please try again later."
-    else
-      "Failed to connect: #{error.message}"
+    def create_connection_safely
+      # Use explicit method calls based on whitelisted provider types
+      case @provider_type.to_s
+      when "mercury"
+        Current.family.create_mercury_connection!(connection_params)
+      when "wise"
+        Current.family.create_wise_connection!(connection_params)
+      else
+        raise ArgumentError, "Unsupported provider type: #{@provider_type}"
+      end
     end
-  end
+
+    def connection_params
+      case @provider_config[:auth_type]
+      when :api_key
+        { api_key: params[:api_key] }
+      when :oauth
+        oauth_credentials_from_params
+      else
+        {}
+      end
+    end
+
+    def oauth_credentials_from_params
+      {
+        access_token: params[:access_token],
+        refresh_token: params[:refresh_token],
+        expires_at: params[:expires_at]
+      }
+    end
+
+    def render_error(message)
+      @connection = connection_class.new
+      flash.now[:alert] = message
+      render :new, status: :unprocessable_entity
+    end
+
+    def format_provider_error(error)
+      case error.error_type
+      when :authentication_failed
+        "Authentication failed. Please check your credentials."
+      when :access_forbidden
+        "Access forbidden. Please ensure you have the necessary permissions."
+      when :rate_limited
+        "Rate limit exceeded. Please try again later."
+      else
+        "Failed to connect: #{error.message}"
+      end
+    end
 end

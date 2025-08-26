@@ -3,7 +3,7 @@
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <div class="flex justify-between items-center mb-4">
     <h1 class="text-lg font-semibold text-primary"><%= @provider_config[:name] %> Connections</h1>
-    <%= link_to "Add Connection", new_direct_bank_path(@provider_type), class: "btn btn-primary" %>
+    <%= link_to "Add Connection", send("new_direct_bank_#{@provider_type}_path"), class: "btn btn-primary" %>
   </div>
 
   <% if @connections.any? %>
@@ -23,8 +23,8 @@
               <% end %>
             </div>
             <div class="flex gap-2">
-              <%= link_to "View", direct_bank_path(@provider_type, connection), class: "btn btn-secondary btn-sm" %>
-              <%= button_to "Sync", sync_direct_bank_path(@provider_type, connection), method: :post, class: "btn btn-primary btn-sm" %>
+              <%= link_to "View", send("direct_bank_#{@provider_type}_path", connection), class: "btn btn-secondary btn-sm" %>
+              <%= button_to "Sync", send("sync_direct_bank_#{@provider_type}_path", connection), method: :post, class: "btn btn-primary btn-sm" %>
             </div>
           </div>
         </div>
@@ -33,7 +33,7 @@
   <% else %>
     <div class="text-center py-12">
       <p class="text-secondary mb-4">No <%= @provider_config[:name] %> connections yet</p>
-      <%= link_to "Add your first connection", new_direct_bank_path(@provider_type), class: "btn btn-primary" %>
+      <%= link_to "Add your first connection", send("new_direct_bank_#{@provider_type}_path"), class: "btn btn-primary" %>
     </div>
   <% end %>
 </div>

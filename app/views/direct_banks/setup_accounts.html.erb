@@ -7,7 +7,7 @@
       Choose how to add each account to your Sure Finance dashboard.
     </p>
 
-    <%= form_with url: complete_account_setup_direct_bank_path(@provider_type, @connection), local: true do |form| %>
+    <%= form_with url: send("complete_account_setup_direct_bank_#{@provider_type}_path", @connection), local: true do |form| %>
       <div class="space-y-4">
         <% @bank_accounts.each do |bank_account| %>
           <div class="border border-primary rounded-lg p-4 bg-container-inset">
@@ -59,7 +59,7 @@
       </div>
 
       <div class="flex justify-between mt-6">
-        <%= link_to "Cancel", direct_bank_path(@provider_type, @connection), class: "btn btn-secondary" %>
+        <%= link_to "Cancel", send("direct_bank_#{@provider_type}_path", @connection), class: "btn btn-secondary" %>
         <%= form.submit "Complete Setup", class: "btn btn-primary" %>
       </div>
     <% end %>

@@ -1,6 +1,4 @@
 class DirectBankConnection < ApplicationRecord
-  self.abstract_class = true
-
   include Syncable, Provided
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good

@@ -1,8 +1,7 @@
 class DirectBankAccount < ApplicationRecord
-  self.abstract_class = true
+  include Accountable
 
   belongs_to :direct_bank_connection
-  has_one :account, as: :accountable, dependent: :destroy
   has_one :family, through: :direct_bank_connection
 
   validates :external_id, presence: true
@@ -12,8 +11,31 @@ class DirectBankAccount < ApplicationRecord
   scope :connected, -> { joins(:account) }
   scope :disconnected, -> { left_joins(:account).where(accounts: { id: nil }) }
 
+  class << self
+    def display_name
+      "Bank Account"
+    end
+
+    def color
+      "#059669"  # Green color for bank accounts
+    end
+
+    def icon
+      "building-2"  # Bank icon
+    end
+
+    def classification
+      "asset"  # Bank accounts are typically assets
+    end
+  end
+
   def connected?
     account.present?
+  end
+
+  # Map account_subtype to subtype for compatibility with Account delegation
+  def subtype
+    account_subtype
   end
 
   def sync_transactions(start_date: nil, end_date: nil)
@@ -22,7 +44,8 @@ class DirectBankAccount < ApplicationRecord
     transactions_data = direct_bank_connection.provider.get_transactions(
       external_id,
       start_date: start_date || 30.days.ago,
-      end_date: end_date || Date.current
+      end_date: end_date || Date.current,
+      currency: currency
     )
 
     process_transactions(transactions_data)
@@ -41,17 +64,17 @@ class DirectBankAccount < ApplicationRecord
 
   private
 
-  def process_transactions(transactions_data)
-    DirectBank::TransactionProcessor.new(self, transactions_data).process
-  end
+    def process_transactions(transactions_data)
+      DirectBank::TransactionProcessor.new(self, transactions_data).process
+    end
 
-  def update_balance(balance_data)
-    update!(
-      current_balance: balance_data[:current],
-      available_balance: balance_data[:available],
-      balance_date: balance_data[:as_of] || Time.current
-    )
+    def update_balance(balance_data)
+      update!(
+        current_balance: balance_data[:current],
+        available_balance: balance_data[:available],
+        balance_date: balance_data[:as_of] || Time.current
+      )
 
-    account&.update_balance!(current_balance)
-  end
+      account&.update!(balance: current_balance)
+    end
 end

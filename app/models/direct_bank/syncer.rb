@@ -25,7 +25,7 @@ class DirectBank::Syncer
 
   private
 
-  def broadcast_sync_complete
-    DirectBank::SyncCompleteEvent.new(@connection).publish
-  end
+    def broadcast_sync_complete
+      DirectBank::SyncCompleteEvent.new(@connection).publish
+    end
 end

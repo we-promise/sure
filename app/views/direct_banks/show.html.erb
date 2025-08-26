@@ -9,10 +9,10 @@
       </p>
     </div>
     <div class="flex gap-2">
-      <%= button_to "Sync Now", sync_direct_bank_path(@provider_type, @connection), 
+      <%= button_to "Sync Now", send("sync_direct_bank_#{@provider_type}_path", @connection), 
           method: :post, 
           class: "btn btn-primary btn-sm" %>
-      <%= button_to "Remove", direct_bank_path(@provider_type, @connection), 
+      <%= button_to "Remove", send("direct_bank_#{@provider_type}_path", @connection), 
           method: :delete,
           data: { confirm: "Are you sure you want to remove this connection?" },
           class: "btn btn-secondary btn-sm" %>
@@ -25,7 +25,7 @@
       <p class="text-yellow-700 text-sm mb-3">
         Some accounts need to be set up before they can sync.
       </p>
-      <%= link_to "Set Up Accounts", setup_accounts_direct_bank_path(@provider_type, @connection), 
+      <%= link_to "Set Up Accounts", send("setup_accounts_direct_bank_#{@provider_type}_path", @connection), 
           class: "btn btn-primary btn-sm" %>
     </div>
   <% end %>

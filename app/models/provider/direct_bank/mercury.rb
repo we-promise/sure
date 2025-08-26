@@ -8,7 +8,8 @@ class Provider::DirectBank::Mercury < Provider::DirectBank::Base
   end
 
   def validate_credentials
-    return false unless @credentials[:access_token].present?
+    access_token = @credentials["access_token"] || @credentials[:access_token]
+    return false unless access_token.present?
 
     response = self.class.get("/accounts", headers: auth_headers)
     response.code == 200
@@ -55,12 +56,13 @@ class Provider::DirectBank::Mercury < Provider::DirectBank::Base
   end
 
   def refresh_access_token
-    return unless @credentials[:refresh_token].present?
+    refresh_token = @credentials["refresh_token"] || @credentials[:refresh_token]
+    return unless refresh_token.present?
 
     response = self.class.post("/oauth/token",
       body: {
         grant_type: "refresh_token",
-        refresh_token: @credentials[:refresh_token],
+        refresh_token: refresh_token,
         client_id: ENV["MERCURY_CLIENT_ID"],
         client_secret: ENV["MERCURY_CLIENT_SECRET"]
       }.to_json,
@@ -71,7 +73,7 @@ class Provider::DirectBank::Mercury < Provider::DirectBank::Base
       data = parse_response(response)
       {
         access_token: data[:access_token],
-        refresh_token: data[:refresh_token] || @credentials[:refresh_token],
+        refresh_token: data[:refresh_token] || refresh_token,
         expires_at: Time.current + (data[:expires_in] || 3600).seconds
       }
     else
@@ -81,63 +83,63 @@ class Provider::DirectBank::Mercury < Provider::DirectBank::Base
 
   private
 
-  def auth_headers
-    {
-      "Authorization" => "Bearer #{@credentials[:access_token]}",
-      "Content-Type" => "application/json"
-    }
-  end
-
-  def normalize_account(raw_account)
-    {
-      external_id: raw_account[:id],
-      name: raw_account[:name] || raw_account[:nickname] || "Mercury Account",
-      currency: "USD",
-      account_type: map_mercury_account_type(raw_account[:kind]),
-      current_balance: raw_account[:currentBalance],
-      available_balance: raw_account[:availableBalance],
-      account_number_mask: raw_account[:accountNumber]&.last(4),
-      routing_number: raw_account[:routingNumber],
-      raw_data: raw_account
-    }
-  end
-
-  def normalize_transaction(raw_transaction)
-    {
-      external_id: raw_transaction[:id],
-      amount: parse_amount(raw_transaction[:amount]),
-      date: Date.parse(raw_transaction[:postedAt] || raw_transaction[:createdAt]),
-      description: build_description(raw_transaction),
-      pending: raw_transaction[:status] == "pending",
-      category: raw_transaction[:category],
-      merchant_name: raw_transaction[:counterpartyName],
-      raw_data: raw_transaction
-    }
-  end
-
-  def map_mercury_account_type(kind)
-    case kind&.downcase
-    when "checking"
-      "checking"
-    when "savings", "treasury"
-      "savings"
-    else
-      "checking"
+    def auth_headers
+      {
+        "Authorization" => "Bearer #{@credentials['access_token'] || @credentials[:access_token]}",
+        "Content-Type" => "application/json"
+      }
     end
-  end
 
-  def parse_amount(amount)
-    return 0 unless amount
-    amount.to_f.abs
-  end
-
-  def build_description(transaction)
-    if transaction[:note].present?
-      transaction[:note]
-    elsif transaction[:counterpartyName].present?
-      transaction[:counterpartyName]
-    else
-      transaction[:description] || "Mercury Transaction"
+    def normalize_account(raw_account)
+      {
+        external_id: raw_account[:id],
+        name: raw_account[:name] || raw_account[:nickname] || "Mercury Account",
+        currency: "USD",
+        account_type: map_mercury_account_type(raw_account[:kind]),
+        current_balance: raw_account[:currentBalance],
+        available_balance: raw_account[:availableBalance],
+        account_number_mask: raw_account[:accountNumber]&.last(4),
+        routing_number: raw_account[:routingNumber],
+        raw_data: raw_account
+      }
     end
-  end
+
+    def normalize_transaction(raw_transaction)
+      {
+        external_id: raw_transaction[:id],
+        amount: parse_amount(raw_transaction[:amount]),
+        date: Date.parse(raw_transaction[:postedAt] || raw_transaction[:createdAt]),
+        description: build_description(raw_transaction),
+        pending: raw_transaction[:status] == "pending",
+        category: raw_transaction[:category],
+        merchant_name: raw_transaction[:counterpartyName],
+        raw_data: raw_transaction
+      }
+    end
+
+    def map_mercury_account_type(kind)
+      case kind&.downcase
+      when "checking"
+        "checking"
+      when "savings", "treasury"
+        "savings"
+      else
+        "checking"
+      end
+    end
+
+    def parse_amount(amount)
+      return 0 unless amount
+      amount.to_f.abs
+    end
+
+    def build_description(transaction)
+      if transaction[:note].present?
+        transaction[:note]
+      elsif transaction[:counterpartyName].present?
+        transaction[:counterpartyName]
+      else
+        transaction[:description] || "Mercury Transaction"
+      end
+    end
 end

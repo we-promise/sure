@@ -33,7 +33,7 @@ class CreateDirectBankTables < ActiveRecord::Migration[7.2]
 
       t.timestamps
     end
-    
+
     add_index :direct_bank_accounts, :type
     add_index :direct_bank_accounts, :external_id
     add_index :direct_bank_accounts, [ :direct_bank_connection_id, :external_id ], unique: true, name: "idx_direct_bank_accounts_connection_external"

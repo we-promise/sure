@@ -178,6 +178,7 @@ Rails.application.routes.draw do
   end
 
   resources :depositories, only: %i[new create edit update]
+  resources :direct_bank_accounts, only: [] # No direct editing - managed through bank sync
   resources :investments, only: %i[new create edit update]
   resources :properties, only: %i[new create edit update] do
     member do

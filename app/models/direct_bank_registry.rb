@@ -85,18 +85,18 @@ class DirectBankRegistry
 
     private
 
-    def provider_enabled?(config)
-      return false unless config[:enabled]
+      def provider_enabled?(config)
+        return false unless config[:enabled]
 
-      if config[:supported_regions] != :global
-        config[:supported_regions]&.include?(current_region)
-      else
-        true
+        if config[:supported_regions] != :global
+          config[:supported_regions]&.include?(current_region)
+        else
+          true
+        end
       end
-    end
 
-    def current_region
-      ENV.fetch("APP_REGION", "us").to_sym
-    end
+      def current_region
+        ENV.fetch("APP_REGION", "us").to_sym
+      end
   end
 end
