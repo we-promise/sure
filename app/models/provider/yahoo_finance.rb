@@ -20,7 +20,6 @@ class Provider::YahooFinance < Provider
   end
 
   def healthy?
-    Rails.logger.info "[YahooFinance] Performing health check"
     begin
       # Test with a known stable ticker (Apple)
       response = client.get("#{base_url}/v8/finance/chart/AAPL") do |req|
@@ -32,16 +31,13 @@ class Provider::YahooFinance < Provider
       result = data.dig("chart", "result")
       health_status = result.present? && result.any?
 
-      Rails.logger.info "[YahooFinance] Health check #{health_status ? 'passed' : 'failed'}"
       health_status
     rescue => e
-      Rails.logger.error "[YahooFinance] Health check failed: #{e.message}"
       false
     end
   end
 
   def usage
-    Rails.logger.info "[YahooFinance] Fetching usage data (mock)"
     # Yahoo Finance doesn't expose usage data, so we return a mock structure
     with_provider_response do
       usage_data = UsageData.new(
@@ -51,7 +47,6 @@ class Provider::YahooFinance < Provider
         plan: "Free"
       )
 
-      Rails.logger.info "[YahooFinance] Usage data: #{usage_data.plan} plan, #{usage_data.used}/#{usage_data.limit} requests"
       usage_data
     end
   end
@@ -61,7 +56,6 @@ class Provider::YahooFinance < Provider
   # ================================
 
   def fetch_exchange_rate(from:, to:, date:)
-    Rails.logger.info "[YahooFinance] Fetching exchange rate #{from}/#{to} for #{date}"
 
     with_provider_response do
       # Return 1.0 if same currency
@@ -96,7 +90,6 @@ class Provider::YahooFinance < Provider
             raise Error, "No exchange rate found for #{from}/#{to} on or before #{date}" unless target_rate
 
             cache_result(cache_key, target_rate)
-            Rails.logger.info "[YahooFinance] Successfully fetched exchange rate #{from}/#{to}: #{target_rate.rate} on #{target_rate.date}"
             target_rate
           end
         end
@@ -105,7 +98,6 @@ class Provider::YahooFinance < Provider
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
-    Rails.logger.info "[YahooFinance] Fetching exchange rates #{from}/#{to} from #{start_date} to #{end_date}"
 
     with_provider_response do
       validate_date_range!(start_date, end_date)
@@ -124,12 +116,10 @@ class Provider::YahooFinance < Provider
           raise Error, "No chart data found for currency pair #{from}/#{to}" unless rates&.any?
 
           cache_result(cache_key, rates)
-          Rails.logger.info "[YahooFinance] Successfully fetched #{rates.length} exchange rates for #{from}/#{to}"
           rates
         end
       end
     rescue JSON::ParserError => e
-      Rails.logger.error "[YahooFinance] JSON parsing error for #{from}/#{to}: #{e.message}"
       raise Error, "Invalid response format: #{e.message}"
     end
   end
@@ -139,7 +129,6 @@ class Provider::YahooFinance < Provider
   # ================================
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
-    Rails.logger.info "[YahooFinance] Searching securities for symbol: #{symbol}"
 
     with_provider_response do
       cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
@@ -166,16 +155,13 @@ class Provider::YahooFinance < Provider
       end
 
       cache_result(cache_key, securities)
-      Rails.logger.info "[YahooFinance] Found #{securities.length} securities for symbol: #{symbol}"
       securities
     rescue JSON::ParserError => e
-      Rails.logger.error "[YahooFinance] JSON parsing error for search #{symbol}: #{e.message}"
       raise Error, "Invalid search response format: #{e.message}"
     end
   end
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
-    Rails.logger.info "[YahooFinance] Fetching security info for #{symbol} (MIC: #{exchange_operating_mic})"
     with_provider_response do
       # Use quoteSummary endpoint which is more reliable
       response = client.get("#{base_url}/v10/finance/quoteSummary/#{symbol}") do |req|
@@ -201,16 +187,13 @@ class Provider::YahooFinance < Provider
         exchange_operating_mic: exchange_operating_mic
       )
 
-      Rails.logger.info "[YahooFinance] Successfully fetched security info for #{symbol}: #{security_info.name}"
       security_info
     rescue JSON::ParserError => e
-      Rails.logger.error "[YahooFinance] JSON parsing error for security info #{symbol}: #{e.message}"
       raise Error, "Invalid response format: #{e.message}"
     end
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
-    Rails.logger.info "[YahooFinance] Fetching security price for #{symbol} on #{date}"
 
     with_provider_response do
       cache_key = "security_price_#{symbol}_#{exchange_operating_mic}_#{date}"
@@ -241,13 +224,11 @@ class Provider::YahooFinance < Provider
       raise Error, "No price found for #{symbol} on or before #{date}" unless target_price
 
       cache_result(cache_key, target_price)
-      Rails.logger.info "[YahooFinance] Successfully fetched security price for #{symbol}: #{target_price.price} on #{target_price.date}"
       target_price
     end
   end
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
-    Rails.logger.info "[YahooFinance] Fetching security prices for #{symbol} from #{start_date} to #{end_date}"
 
     with_provider_response do
       validate_date_params!(start_date, end_date)
@@ -255,7 +236,6 @@ class Provider::YahooFinance < Provider
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
-      Rails.logger.debug "[YahooFinance] Requesting chart data for security: #{symbol}"
       response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
         req.params["period1"] = period1
         req.params["period2"] = period2
@@ -290,10 +270,8 @@ class Provider::YahooFinance < Provider
       end
 
       sorted_prices = prices.sort_by(&:date)
-      Rails.logger.info "[YahooFinance] Successfully fetched #{sorted_prices.length} security prices for #{symbol} in #{currency}"
       sorted_prices
     rescue JSON::ParserError => e
-      Rails.logger.error "[YahooFinance] JSON parsing error for security prices #{symbol}: #{e.message}"
       raise Error, "Invalid response format: #{e.message}"
     end
   end
@@ -322,7 +300,6 @@ class Provider::YahooFinance < Provider
       # Ensure start_date <= end_date
       if validated_start_date > validated_end_date
         error_msg = "Start date (#{validated_start_date}) cannot be after end date (#{validated_end_date})"
-        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
         raise ArgumentError, error_msg
       end
 
@@ -330,7 +307,6 @@ class Provider::YahooFinance < Provider
       today = Date.current
       if validated_end_date > today
         error_msg = "End date (#{validated_end_date}) cannot be in the future"
-        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
         raise ArgumentError, error_msg
       end
 
@@ -338,7 +314,6 @@ class Provider::YahooFinance < Provider
       max_lookback = MAX_LOOKBACK_WINDOW.ago.to_date
       if validated_start_date < max_lookback
         error_msg = "Start date (#{validated_start_date}) exceeds maximum lookback window (#{max_lookback})"
-        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
         raise ArgumentError, error_msg
       end
     end
@@ -347,7 +322,6 @@ class Provider::YahooFinance < Provider
       # Check presence
       if date_param.blank?
         error_msg = "#{param_name} cannot be blank"
-        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
         raise ArgumentError, error_msg
       end
 
@@ -360,7 +334,6 @@ class Provider::YahooFinance < Provider
         end
       rescue ArgumentError => e
         error_msg = "Invalid #{param_name}: #{date_param} (#{e.message})"
-        Rails.logger.error "[YahooFinance] Date validation failed: #{error_msg}"
         raise ArgumentError, error_msg
       end
     end
@@ -372,7 +345,6 @@ class Provider::YahooFinance < Provider
     def get_cached_result(key)
       full_key = "#{@cache_prefix}_#{key}"
       data = Rails.cache.read(full_key)
-      Rails.logger.debug "[YahooFinance] Cache hit for #{key}" if data
       data
     end
 
@@ -416,7 +388,6 @@ class Provider::YahooFinance < Provider
         )
       end
 
-      Rails.logger.debug "[YahooFinance] Used inverse pair for #{from}/#{to}" if rates&.any?
       rates
     end
 
@@ -424,7 +395,6 @@ class Provider::YahooFinance < Provider
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
-      Rails.logger.debug "[YahooFinance] Requesting chart data for symbol: #{symbol}"
 
       begin
         response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
@@ -439,7 +409,6 @@ class Provider::YahooFinance < Provider
         # Check for Yahoo Finance errors
         if data.dig("chart", "error")
           error_msg = data.dig("chart", "error", "description") || "Unknown Yahoo Finance error"
-          Rails.logger.warn "[YahooFinance] API error for #{symbol}: #{error_msg}"
           return nil
         end
 
@@ -460,7 +429,6 @@ class Provider::YahooFinance < Provider
 
         results.sort_by(&:date)
       rescue Faraday::Error => e
-        Rails.logger.warn "[YahooFinance] Request failed for #{symbol}: #{e.message}"
         nil
       end
     end
@@ -624,20 +592,16 @@ class Provider::YahooFinance < Provider
     def default_error_transformer(error)
       case error
       when Faraday::TooManyRequestsError
-        Rails.logger.warn "[YahooFinance] Rate limit exceeded: #{error.message}"
         RateLimitError.new("Yahoo Finance rate limit exceeded", details: error.response&.dig(:body))
       when Faraday::Error
-        Rails.logger.error "[YahooFinance] Faraday error: #{error.message}"
         Error.new(
           error.message,
           details: error.response&.dig(:body)
         )
       when Error
         # Already a Yahoo Finance error, return as is
-        Rails.logger.error "[YahooFinance] Yahoo Finance error: #{error.message}"
         error
       else
-        Rails.logger.error "[YahooFinance] Generic error: #{error.message}"
         Error.new(error.message)
       end
     end
