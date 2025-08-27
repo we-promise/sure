@@ -265,7 +265,7 @@ end
 - **Use functional tokens** defined in design system:
   - `text-primary` instead of `text-white`
   - `bg-container` instead of `bg-white`
-  - `border border-primary` instead of `border border-gray-200`
+  - `border border-secondary` instead of `border border-gray-200`
 - **NEVER create new styles** in design system files without permission
 - **Always generate semantic HTML**
 
