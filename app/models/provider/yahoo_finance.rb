@@ -64,7 +64,6 @@ class Provider::YahooFinance < Provider
     Rails.logger.info "[YahooFinance] Fetching exchange rate #{from}/#{to} for #{date}"
 
     with_provider_response do
-      validate_currency_codes!(from, to)
       # Return 1.0 if same currency
       if from == to
         Rate.new(date: date, from: from, to: to, rate: 1.0)
@@ -109,7 +108,6 @@ class Provider::YahooFinance < Provider
     Rails.logger.info "[YahooFinance] Fetching exchange rates #{from}/#{to} from #{start_date} to #{end_date}"
 
     with_provider_response do
-      validate_currency_codes!(from, to)
       validate_date_range!(start_date, end_date)
       # Return 1.0 rates if same currency
       if from == to
@@ -144,7 +142,6 @@ class Provider::YahooFinance < Provider
     Rails.logger.info "[YahooFinance] Searching securities for symbol: #{symbol}"
 
     with_provider_response do
-      validate_symbol!(symbol)
       cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
         return cached_result
@@ -159,21 +156,6 @@ class Provider::YahooFinance < Provider
       quotes = data.dig("quotes") || []
 
       securities = quotes.filter_map do |quote|
-        # Support more security types
-        supported_types = %w[Equity ETF Index Cryptocurrency Currency]
-        next unless supported_types.include?(quote["typeDisp"])
-
-        # Apply filters if provided
-        if country_code.present?
-          country = map_country_code(quote["exchDisp"])
-          next unless country == country_code
-        end
-
-        if exchange_operating_mic.present?
-          mic = map_exchange_mic(quote["exchange"])
-          next unless mic == exchange_operating_mic
-        end
-
         Security.new(
           symbol: quote["symbol"],
           name: quote["longname"] || quote["shortname"] || quote["symbol"],
@@ -231,7 +213,6 @@ class Provider::YahooFinance < Provider
     Rails.logger.info "[YahooFinance] Fetching security price for #{symbol} on #{date}"
 
     with_provider_response do
-      validate_symbol!(symbol)
       cache_key = "security_price_#{symbol}_#{exchange_operating_mic}_#{date}"
       if cached_result = get_cached_result(cache_key)
         return cached_result
@@ -327,18 +308,6 @@ class Provider::YahooFinance < Provider
     #           Validation
     # ================================
 
-    def validate_currency_codes!(from, to)
-      valid_currencies = %w[USD EUR GBP JPY CHF CAD AUD NZD SEK NOK DKK PLN CZK HUF RUB CNY INR KRW SGD HKD MXN BRL ZAR]
-
-      raise InvalidSymbolError, "Invalid 'from' currency: #{from}" unless from.present? && valid_currencies.include?(from.upcase)
-      raise InvalidSymbolError, "Invalid 'to' currency: #{to}" unless to.present? && valid_currencies.include?(to.upcase)
-    end
-
-    def validate_symbol!(symbol)
-      raise InvalidSymbolError, "Symbol cannot be blank" if symbol.blank?
-      raise InvalidSymbolError, "Symbol too long (max 10 characters)" if symbol.length > 10
-      raise InvalidSymbolError, "Invalid symbol format" unless symbol.match?(/\A[A-Z0-9\.\-_]+\z/i)
-    end
 
     def validate_date_range!(start_date, end_date)
       raise Error, "Start date cannot be after end date" if start_date > end_date

@@ -44,20 +44,21 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal date, rate.date
   end
 
-  test "fetch_exchange_rate validates currency codes" do
+  test "fetch_exchange_rate handles invalid currency codes" do
     date = Date.parse("2024-01-15")
 
+    # With validation removed, invalid currencies will result in API errors
     response = @provider.fetch_exchange_rate(from: "INVALID", to: "USD", date: date)
     assert_not response.success?
-    assert_instance_of Provider::YahooFinance::InvalidSymbolError, response.error
+    assert_instance_of Provider::YahooFinance::Error, response.error
 
     response = @provider.fetch_exchange_rate(from: "USD", to: "INVALID", date: date)
     assert_not response.success?
-    assert_instance_of Provider::YahooFinance::InvalidSymbolError, response.error
+    assert_instance_of Provider::YahooFinance::Error, response.error
 
     response = @provider.fetch_exchange_rate(from: "", to: "USD", date: date)
     assert_not response.success?
-    assert_instance_of Provider::YahooFinance::InvalidSymbolError, response.error
+    assert_instance_of Provider::YahooFinance::Error, response.error
   end
 
   test "fetch_exchange_rates returns same currency rates" do
@@ -88,18 +89,19 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #       Security Search Tests
   # ================================
 
-  test "search_securities validates symbol" do
+  test "search_securities handles invalid symbols" do
+    # With validation removed, invalid symbols will result in API errors
     response = @provider.search_securities("")
     assert_not response.success?
-    assert_instance_of Provider::YahooFinance::InvalidSymbolError, response.error
+    assert_instance_of Provider::YahooFinance::Error, response.error
 
     response = @provider.search_securities("VERYLONGSYMBOLNAME")
     assert_not response.success?
-    assert_instance_of Provider::YahooFinance::InvalidSymbolError, response.error
+    assert_instance_of Provider::YahooFinance::Error, response.error
 
     response = @provider.search_securities("INVALID@SYMBOL")
     assert_not response.success?
-    assert_instance_of Provider::YahooFinance::InvalidSymbolError, response.error
+    assert_instance_of Provider::YahooFinance::Error, response.error
   end
 
   test "search_securities returns empty array for no results with short symbol" do
@@ -119,12 +121,13 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #     Security Price Tests
   # ================================
 
-  test "fetch_security_price validates symbol" do
+  test "fetch_security_price handles invalid symbol" do
     date = Date.parse("2024-01-15")
 
+    # With validation removed, invalid symbols will result in API errors
     response = @provider.fetch_security_price(symbol: "", exchange_operating_mic: "XNAS", date: date)
     assert_not response.success?
-    assert_instance_of Provider::YahooFinance::InvalidSymbolError, response.error
+    assert_instance_of Provider::YahooFinance::Error, response.error
   end
 
   # ================================
@@ -195,46 +198,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_nil @provider.send(:map_security_type, nil)
   end
 
-  test "validate_symbol! raises errors for invalid symbols" do
-    assert_raises(Provider::YahooFinance::InvalidSymbolError) do
-      @provider.send(:validate_symbol!, "")
-    end
 
-    assert_raises(Provider::YahooFinance::InvalidSymbolError) do
-      @provider.send(:validate_symbol!, "TOOLONGSYMBOL")
-    end
-
-    assert_raises(Provider::YahooFinance::InvalidSymbolError) do
-      @provider.send(:validate_symbol!, "INVALID@SYMBOL")
-    end
-
-    # Should not raise for valid symbols
-    assert_nothing_raised do
-      @provider.send(:validate_symbol!, "AAPL")
-      @provider.send(:validate_symbol!, "BRK.A")
-      @provider.send(:validate_symbol!, "SPY")
-    end
-  end
-
-  test "validate_currency_codes! raises errors for invalid currencies" do
-    assert_raises(Provider::YahooFinance::InvalidSymbolError) do
-      @provider.send(:validate_currency_codes!, "INVALID", "USD")
-    end
-
-    assert_raises(Provider::YahooFinance::InvalidSymbolError) do
-      @provider.send(:validate_currency_codes!, "USD", "INVALID")
-    end
-
-    assert_raises(Provider::YahooFinance::InvalidSymbolError) do
-      @provider.send(:validate_currency_codes!, "", "USD")
-    end
-
-    # Should not raise for valid currencies
-    assert_nothing_raised do
-      @provider.send(:validate_currency_codes!, "USD", "EUR")
-      @provider.send(:validate_currency_codes!, "GBP", "JPY")
-    end
-  end
 
   test "validate_date_range! raises errors for invalid ranges" do
     assert_raises(Provider::YahooFinance::Error) do
