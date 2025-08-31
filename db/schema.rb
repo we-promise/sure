@@ -29,7 +29,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_13_144520) do
     t.uuid "accountable_id"
     t.decimal "balance", precision: 19, scale: 4
     t.string "currency"
-    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY ((ARRAY['Loan'::character varying, 'CreditCard'::character varying, 'OtherLiability'::character varying])::text[])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
     t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
@@ -706,18 +706,18 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_13_144520) do
     t.uuid "family_id", null: false
     t.text "access_url"
     t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
     t.string "status", default: "good"
     t.boolean "scheduled_for_deletion", default: false
     t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "pending_account_setup", default: false, null: false
-    t.string "institution_id"
-    t.string "institution_name"
     t.string "institution_domain"
-    t.string "institution_url"
     t.string "institution_color"
-    t.json "raw_institution_payload"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
