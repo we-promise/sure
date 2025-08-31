@@ -18,30 +18,32 @@ class SimplefinAccount::Investments::BalanceCalculator
     cash = total_balance - holdings_value
 
     # Ensure non-negative cash balance
-    [ cash, 0 ].max
+    [ cash, BigDecimal("0") ].max
   end
 
   private
     attr_reader :simplefin_account
 
     def total_holdings_value
-      return 0 unless simplefin_account.raw_payload&.dig("holdings")
+      return BigDecimal("0") unless simplefin_account.raw_payload&.dig("holdings")
 
       holdings_data = simplefin_account.raw_payload["holdings"]
 
       holdings_data.sum do |holding|
         market_value = holding["market_value"]
-        case market_value
-        when String
-          BigDecimal(market_value)
-        when Numeric
-          BigDecimal(market_value.to_s)
-        else
+        begin
+          case market_value
+          when String
+            BigDecimal(market_value)
+          when Numeric
+            BigDecimal(market_value.to_s)
+          else
+            BigDecimal("0")
+          end
+        rescue ArgumentError => e
+          Rails.logger.warn "SimpleFin holdings market_value parse error for account #{simplefin_account.account_id || simplefin_account.id}: #{e.message} (value: #{market_value.inspect})"
           BigDecimal("0")
         end
       end
-    rescue ArgumentError => e
-      Rails.logger.error "Failed to calculate SimpleFin holdings value: #{e.message}"
-      0
     end
 end
