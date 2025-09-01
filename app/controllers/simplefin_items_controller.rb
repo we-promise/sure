@@ -155,7 +155,7 @@ class SimplefinItemsController < ApplicationController
   def complete_account_setup
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
-    
+
     # Update sync start date from form
     if params[:sync_start_date].present?
       @simplefin_item.update!(sync_start_date: params[:sync_start_date])

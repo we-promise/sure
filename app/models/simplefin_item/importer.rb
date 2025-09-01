@@ -10,7 +10,7 @@ class SimplefinItem::Importer
     Rails.logger.info "SimplefinItem::Importer - Starting import for item #{simplefin_item.id}"
     Rails.logger.info "SimplefinItem::Importer - last_synced_at: #{simplefin_item.last_synced_at.inspect}"
     Rails.logger.info "SimplefinItem::Importer - sync_start_date: #{simplefin_item.sync_start_date.inspect}"
-    
+
     if simplefin_item.last_synced_at.nil?
       # First sync - use chunked approach to get full history
       Rails.logger.info "SimplefinItem::Importer - Using chunked history import"
@@ -30,12 +30,12 @@ class SimplefinItem::Importer
       chunk_size_days = 60
       max_requests = 22
       current_end_date = Time.current
-      
+
       # Use user-selected sync_start_date if available, otherwise use default lookback
       user_start_date = simplefin_item.sync_start_date
       default_start_date = initial_sync_lookback_period.days.ago
       target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
-      
+
       # Enforce maximum 3-year lookback to respect SimpleFin's actual 60-day limit per request
       # With 22 requests max: 60 days × 22 = 1,320 days = 3.6 years, so 3 years is safe
       max_lookback_date = 3.years.ago.beginning_of_day
@@ -43,7 +43,7 @@ class SimplefinItem::Importer
         Rails.logger.info "SimpleFin: Limiting sync start date from #{target_start_date.strftime('%Y-%m-%d')} to #{max_lookback_date.strftime('%Y-%m-%d')} due to rate limits"
         target_start_date = max_lookback_date
       end
-      
+
       total_accounts_imported = 0
       chunk_count = 0
 
@@ -51,25 +51,25 @@ class SimplefinItem::Importer
 
       # Walk backwards from current_end_date in proper chunks
       chunk_end_date = current_end_date
-      
+
       while chunk_count < max_requests && chunk_end_date > target_start_date
         chunk_count += 1
-        
+
         # Calculate chunk start date - always use exactly chunk_size_days to stay within limits
         chunk_start_date = chunk_end_date - chunk_size_days.days
-        
+
         # Don't go back further than the target start date
         if chunk_start_date < target_start_date
           chunk_start_date = target_start_date
         end
-        
+
         # Verify we're within SimpleFin's limits
         actual_days = (chunk_end_date.to_date - chunk_start_date.to_date).to_i
         if actual_days > 365
           Rails.logger.error "SimpleFin: Chunk exceeds 365 days (#{actual_days} days). This should not happen."
           chunk_start_date = chunk_end_date - 365.days
         end
-        
+
         Rails.logger.info "SimpleFin chunked sync: fetching chunk #{chunk_count}/#{max_requests} (#{chunk_start_date.strftime('%Y-%m-%d')} to #{chunk_end_date.strftime('%Y-%m-%d')}) - #{actual_days} days"
         puts "DEBUG: About to call API with start_date=#{chunk_start_date} end_date=#{chunk_end_date} (#{actual_days} days)"
 
@@ -102,7 +102,7 @@ class SimplefinItem::Importer
 
     def import_regular_sync
       start_date = determine_sync_start_date
-      
+
       accounts_data = fetch_accounts_data(start_date: start_date)
       return if accounts_data.nil? # Error already handled
 
@@ -120,7 +120,7 @@ class SimplefinItem::Importer
       days_requested = end_date ? (end_date.to_date - start_date.to_date).to_i : "unknown"
       Rails.logger.info "SimplefinItem::Importer - API Request: #{start_date.strftime('%Y-%m-%d')} to #{end_date&.strftime('%Y-%m-%d') || 'current'} (#{days_requested} days)"
       puts "DEBUG: API call - start_date=#{start_date}, end_date=#{end_date}, days=#{days_requested}"
-      
+
       begin
         accounts_data = simplefin_provider.get_accounts(
           simplefin_item.access_url,
@@ -183,7 +183,7 @@ class SimplefinItem::Importer
         raw_payload: account_data,
         org_data: account_data[:org]
       }
-      
+
       # Only update transactions if present and non-empty to avoid wiping prior data
       # This prevents later chunks with no transactions from overwriting earlier chunks with transactions
       if transactions.present? && transactions.is_a?(Array) && transactions.any?

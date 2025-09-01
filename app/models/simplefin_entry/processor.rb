@@ -56,7 +56,7 @@ class SimplefinEntry::Processor
       # Use SimpleFin's rich, clean data to create informative transaction names
       payee = data[:payee]
       description = data[:description]
-      
+
       # Combine payee + description when both are present and different
       if payee.present? && description.present? && payee != description
         "#{payee} - #{description}"
