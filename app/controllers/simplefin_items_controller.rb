@@ -157,8 +157,8 @@ class SimplefinItemsController < ApplicationController
     account_subtypes = params[:account_subtypes] || {}
     
     # Update sync start date from form
-    if params[:simplefin_item][:sync_start_date].present?
-      @simplefin_item.update!(sync_start_date: params[:simplefin_item][:sync_start_date])
+    if params[:sync_start_date].present?
+      @simplefin_item.update!(sync_start_date: params[:sync_start_date])
     end
 
     account_types.each do |simplefin_account_id, selected_type|
