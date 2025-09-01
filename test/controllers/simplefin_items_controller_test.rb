@@ -57,12 +57,25 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
+    # Mock the new item creation to return a different record
+    new_item = SimplefinItem.create!(
+      family: @family,
+      name: "Replacement Connection",
+      access_url: "https://example.com/new_access"
+    )
+    @family.expects(:create_simplefin_item!).with(
+      setup_token: "valid_token",
+      item_name: @simplefin_item.name
+    ).returns(new_item)
+
     patch simplefin_item_url(@simplefin_item), params: {
       simplefin_item: { setup_token: "valid_token" }
     }
 
     assert_redirected_to accounts_path
     assert_match(/updated successfully/, flash[:notice])
+    @simplefin_item.reload
+    assert @simplefin_item.scheduled_for_deletion?
   end
 
   test "should handle update with invalid token" do
