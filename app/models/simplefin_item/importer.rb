@@ -136,8 +136,8 @@ class SimplefinItem::Importer
       # Store transactions separately from account data to avoid overwriting
       transactions = account_data[:transactions]
 
-      # Update all attributes including transactions
-      simplefin_account.assign_attributes(
+      # Update all attributes; only update transactions if present to avoid wiping prior data
+      attrs = {
         name: account_data[:name],
         account_type: account_data["type"] || account_data[:type] || "unknown",
         currency: account_data[:currency] || "USD",
@@ -145,9 +145,10 @@ class SimplefinItem::Importer
         available_balance: account_data[:"available-balance"],
         balance_date: account_data[:"balance-date"],
         raw_payload: account_data,
-        raw_transactions_payload: transactions || [],
         org_data: account_data[:org]
-      )
+      }
+      attrs[:raw_transactions_payload] = transactions unless transactions.nil?
+      simplefin_account.assign_attributes(attrs)
 
       # Final validation before save to prevent duplicates
       if simplefin_account.account_id.blank?
