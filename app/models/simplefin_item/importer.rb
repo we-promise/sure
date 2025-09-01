@@ -7,11 +7,17 @@ class SimplefinItem::Importer
   end
 
   def import
+    Rails.logger.info "SimplefinItem::Importer - Starting import for item #{simplefin_item.id}"
+    Rails.logger.info "SimplefinItem::Importer - last_synced_at: #{simplefin_item.last_synced_at.inspect}"
+    Rails.logger.info "SimplefinItem::Importer - sync_start_date: #{simplefin_item.sync_start_date.inspect}"
+    
     if simplefin_item.last_synced_at.nil?
       # First sync - use chunked approach to get full history
+      Rails.logger.info "SimplefinItem::Importer - Using chunked history import"
       import_with_chunked_history
     else
       # Regular sync - use single request with buffer
+      Rails.logger.info "SimplefinItem::Importer - Using regular sync"
       import_regular_sync
     end
   end
@@ -19,31 +25,55 @@ class SimplefinItem::Importer
   private
 
     def import_with_chunked_history
-      # For initial sync, use user-selected start date or default lookback
-      chunk_size_days = initial_sync_lookback_period
+      # SimpleFin's actual limit is 60 days (not 365 as documented)
+      # Use 60-day chunks to stay within limits
+      chunk_size_days = 60
+      max_requests = 22
       current_end_date = Time.current
       
       # Use user-selected sync_start_date if available, otherwise use default lookback
       user_start_date = simplefin_item.sync_start_date
-      target_start_date = user_start_date ? user_start_date.beginning_of_day : chunk_size_days.days.ago
+      default_start_date = initial_sync_lookback_period.days.ago
+      target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
+      
+      # Enforce maximum 3-year lookback to respect SimpleFin's actual 60-day limit per request
+      # With 22 requests max: 60 days × 22 = 1,320 days = 3.6 years, so 3 years is safe
+      max_lookback_date = 3.years.ago.beginning_of_day
+      if target_start_date < max_lookback_date
+        Rails.logger.info "SimpleFin: Limiting sync start date from #{target_start_date.strftime('%Y-%m-%d')} to #{max_lookback_date.strftime('%Y-%m-%d')} due to rate limits"
+        target_start_date = max_lookback_date
+      end
       
       total_accounts_imported = 0
       chunk_count = 0
 
       Rails.logger.info "SimpleFin chunked sync: syncing from #{target_start_date.strftime('%Y-%m-%d')} to #{current_end_date.strftime('%Y-%m-%d')}"
 
-      loop do
+      # Walk backwards from current_end_date in proper chunks
+      chunk_end_date = current_end_date
+      
+      while chunk_count < max_requests && chunk_end_date > target_start_date
         chunk_count += 1
-        start_date = current_end_date - chunk_size_days.days
+        
+        # Calculate chunk start date - always use exactly chunk_size_days to stay within limits
+        chunk_start_date = chunk_end_date - chunk_size_days.days
         
         # Don't go back further than the target start date
-        if start_date < target_start_date
-          start_date = target_start_date
+        if chunk_start_date < target_start_date
+          chunk_start_date = target_start_date
         end
         
-        Rails.logger.info "SimpleFin chunked sync: fetching chunk #{chunk_count} (#{start_date.strftime('%Y-%m-%d')} to #{current_end_date.strftime('%Y-%m-%d')})"
+        # Verify we're within SimpleFin's limits
+        actual_days = (chunk_end_date.to_date - chunk_start_date.to_date).to_i
+        if actual_days > 365
+          Rails.logger.error "SimpleFin: Chunk exceeds 365 days (#{actual_days} days). This should not happen."
+          chunk_start_date = chunk_end_date - 365.days
+        end
+        
+        Rails.logger.info "SimpleFin chunked sync: fetching chunk #{chunk_count}/#{max_requests} (#{chunk_start_date.strftime('%Y-%m-%d')} to #{chunk_end_date.strftime('%Y-%m-%d')}) - #{actual_days} days"
+        puts "DEBUG: About to call API with start_date=#{chunk_start_date} end_date=#{chunk_end_date} (#{actual_days} days)"
 
-        accounts_data = fetch_accounts_data(start_date: start_date, end_date: current_end_date)
+        accounts_data = fetch_accounts_data(start_date: chunk_start_date, end_date: chunk_end_date)
         return if accounts_data.nil? # Error already handled
 
         # Store raw payload on first chunk only
@@ -58,13 +88,13 @@ class SimplefinItem::Importer
         total_accounts_imported += accounts_data[:accounts]&.size || 0
 
         # Stop if we've reached our target start date
-        if start_date <= target_start_date
+        if chunk_start_date <= target_start_date
           Rails.logger.info "SimpleFin chunked sync: reached target start date, stopping"
           break
         end
 
-        # Continue to next chunk
-        current_end_date = start_date
+        # Continue to next chunk - move the end date backwards
+        chunk_end_date = chunk_start_date
       end
 
       Rails.logger.info "SimpleFin chunked sync completed: #{chunk_count} chunks processed, #{total_accounts_imported} account records imported"
@@ -86,6 +116,11 @@ class SimplefinItem::Importer
     end
 
     def fetch_accounts_data(start_date:, end_date: nil)
+      # Debug logging to track exactly what's being sent to SimpleFin API
+      days_requested = end_date ? (end_date.to_date - start_date.to_date).to_i : "unknown"
+      Rails.logger.info "SimplefinItem::Importer - API Request: #{start_date.strftime('%Y-%m-%d')} to #{end_date&.strftime('%Y-%m-%d') || 'current'} (#{days_requested} days)"
+      puts "DEBUG: API call - start_date=#{start_date}, end_date=#{end_date}, days=#{days_requested}"
+      
       begin
         accounts_data = simplefin_provider.get_accounts(
           simplefin_item.access_url,
@@ -133,8 +168,9 @@ class SimplefinItem::Importer
         account_id: account_id
       )
 
-      # Store transactions separately from account data to avoid overwriting
+      # Store transactions and holdings separately from account data to avoid overwriting
       transactions = account_data[:transactions]
+      holdings = account_data[:holdings]
 
       # Update all attributes; only update transactions if present to avoid wiping prior data
       attrs = {
@@ -147,7 +183,18 @@ class SimplefinItem::Importer
         raw_payload: account_data,
         org_data: account_data[:org]
       }
-      attrs[:raw_transactions_payload] = transactions unless transactions.nil?
+      
+      # Only update transactions if present and non-empty to avoid wiping prior data
+      # This prevents later chunks with no transactions from overwriting earlier chunks with transactions
+      if transactions.present? && transactions.is_a?(Array) && transactions.any?
+        attrs[:raw_transactions_payload] = transactions
+      end
+
+      # Only update holdings if present and non-empty to avoid wiping prior data
+      # Investment accounts may have holdings data that should be preserved
+      if holdings.present? && holdings.is_a?(Array) && holdings.any?
+        attrs[:raw_holdings_payload] = holdings
+      end
       simplefin_account.assign_attributes(attrs)
 
       # Final validation before save to prevent duplicates
@@ -184,13 +231,11 @@ class SimplefinItem::Importer
 
     def initial_sync_lookback_period
       # Default to 7 days for initial sync to avoid API limits
-      # Can be configured via Rails.application.config if needed
-      Rails.application.config.simplefin&.dig(:initial_sync_lookback_days) || 7
+      7
     end
 
     def sync_buffer_period
       # Default to 7 days buffer for subsequent syncs
-      # Can be configured via Rails.application.config if needed  
-      Rails.application.config.simplefin&.dig(:sync_buffer_days) || 7
+      7
     end
 end

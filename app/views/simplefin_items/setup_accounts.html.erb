@@ -49,10 +49,11 @@
               </p>
               <%= form.date_field :sync_start_date, 
                     label: "Start syncing transactions from:", 
-                    value: @simplefin_item.sync_start_date || 7.days.ago.to_date,
+                    value: @simplefin_item.sync_start_date || 1.year.ago.to_date,
+                    min: 3.years.ago.to_date,
                     max: Date.current,
                     class: "w-full max-w-xs",
-                    help_text: "Select how far back you want to sync transaction history. Recent is faster." %>
+                    help_text: "Select how far back you want to sync transaction history. Maximum 3 years of history available." %>
             </div>
           </div>
         </div>
