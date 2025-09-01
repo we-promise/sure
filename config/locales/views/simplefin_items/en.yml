@@ -32,6 +32,7 @@ en:
       confirm_body: This will permanently delete all the accounts in this group and all associated data.
       confirm_title: Delete SimpleFin connection?
       delete: Delete
+      deletion_in_progress: "(deletion in progress...)"
       error: Error occurred while syncing data
       no_accounts_description: This connection doesn't have any synchronized accounts yet.
       no_accounts_title: No accounts found

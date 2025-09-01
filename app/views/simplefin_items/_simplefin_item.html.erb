@@ -20,7 +20,7 @@
           <div class="flex items-center gap-2">
             <%= tag.p simplefin_item.name, class: "font-medium text-primary" %>
             <% if simplefin_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse">(deletion in progress...)</p>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
           <% if simplefin_item.accounts.any? %>
