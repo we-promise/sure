@@ -55,22 +55,23 @@ class SimplefinItem < ApplicationRecord
     )
 
     # Extract institution data from the first account if available
-    if accounts_snapshot[:accounts]&.any?
-      first_account = accounts_snapshot[:accounts].first
-      if first_account[:org].present?
-        upsert_institution_data!(first_account[:org])
-      end
+    snapshot = accounts_snapshot.to_h.with_indifferent_access
+    if snapshot[:accounts].present?
+      first_account = snapshot[:accounts].first
+      org = first_account[:org]
+      upsert_institution_data!(org) if org.present?
     end
 
     save!
   end
 
   def upsert_institution_data!(org_data)
+    org = org_data.to_h.with_indifferent_access
     assign_attributes(
-      institution_id: org_data[:id],
-      institution_name: org_data[:name],
-      institution_domain: org_data[:domain],
-      institution_url: org_data[:url] || org_data[:"sfin-url"],
+      institution_id: org[:id],
+      institution_name: org[:name],
+      institution_domain: org[:domain],
+      institution_url: org[:url] || org[:"sfin-url"],
       raw_institution_payload: org_data
     )
   end
