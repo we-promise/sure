@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_09_01_005519) do
+ActiveRecord::Schema[7.2].define(version: 2025_09_01_183328) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -293,6 +293,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_01_005519) do
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "external_id"
+    t.decimal "cost_basis"
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
@@ -698,6 +700,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_01_005519) do
     t.datetime "balance_date"
     t.jsonb "extra"
     t.jsonb "org_data"
+    t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
   end
