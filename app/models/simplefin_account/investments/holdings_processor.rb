@@ -10,44 +10,55 @@ class SimplefinAccount::Investments::HoldingsProcessor
     holdings_data.each do |simplefin_holding|
       begin
         symbol = simplefin_holding["symbol"]
-        next unless symbol.present?
+        holding_id = simplefin_holding["id"]
+
+        next unless symbol.present? && holding_id.present?
 
         security = resolve_security(symbol, simplefin_holding["description"])
         next unless security.present?
+
+        # Use external_id for precise matching
+        external_id = "simplefin_#{holding_id}"
 
         # Use the created timestamp as the holding date, fallback to current date
         holding_date = parse_holding_date(simplefin_holding["created"]) || Date.current
 
         holding = account.holdings.find_or_initialize_by(
-          security: security,
-          date: holding_date,
-          currency: simplefin_holding["currency"] || "USD"
-        )
+          external_id: external_id
+        ) do |h|
+          # Set required fields on initialization
+          h.security = security
+          h.date = holding_date
+          h.currency = simplefin_holding["currency"] || "USD"
+        end
 
-        # Parse shares quantity
+        # Parse all the data SimpleFin provides
         qty = parse_decimal(simplefin_holding["shares"])
-        # Use current market_value for price calculation if we have shares
-        price = if qty > 0
-          parse_decimal(simplefin_holding["market_value"]) / qty
+        market_value = parse_decimal(simplefin_holding["market_value"])
+        cost_basis = parse_decimal(simplefin_holding["cost_basis"])
+
+        # Calculate price from market_value if we have shares, fallback to purchase_price
+        price = if qty > 0 && market_value > 0
+          market_value / qty
         else
           parse_decimal(simplefin_holding["purchase_price"]) || 0
         end
 
         holding.assign_attributes(
+          security: security,
+          date: holding_date,
+          currency: simplefin_holding["currency"] || "USD",
           qty: qty,
           price: price,
-          amount: parse_decimal(simplefin_holding["market_value"]) || 0
+          amount: market_value,
+          cost_basis: cost_basis
         )
 
         ActiveRecord::Base.transaction do
           holding.save!
 
-          # Delete all holdings for this security after the holding date
-          # This ensures we don't have stale holdings data
-          account.holdings
-            .where(security: security)
-            .where("date > ?", holding_date)
-            .destroy_all
+          # With external_id matching, each holding is uniquely tracked
+          # No need to delete other holdings since each has its own lifecycle
         end
       rescue => e
         Rails.logger.error "Error processing SimpleFin holding #{symbol}: #{e.message}"
@@ -63,9 +74,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
 
     def holdings_data
-      # Holdings should be in the account's raw_payload, not the item's payload
-      return [] unless simplefin_account.raw_payload
-      simplefin_account.raw_payload["holdings"] || simplefin_account.raw_payload[:holdings] || []
+      # Use the dedicated raw_holdings_payload field
+      simplefin_account.raw_holdings_payload || []
     end
 
     def resolve_security(symbol, description)
