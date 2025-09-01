@@ -26,10 +26,6 @@ class SimplefinAccount::Investments::TransactionsProcessor
     def process_investment_transaction(transaction_data)
       data = transaction_data.with_indifferent_access
 
-      # For now, SimpleFin doesn't distinguish between cash and trade transactions
-      # in the same way Plaid does, so we process all as regular transactions
-      # This could be enhanced later to detect trade-specific patterns
-
       amount = parse_amount(data[:amount])
       posted_date = parse_date(data[:posted])
       external_id = "simplefin_#{data[:id]}"

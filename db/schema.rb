@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_13_144520) do
+ActiveRecord::Schema[7.2].define(version: 2025_09_01_004029) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -718,6 +718,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_13_144520) do
     t.boolean "pending_account_setup", default: false, null: false
     t.string "institution_domain"
     t.string "institution_color"
+    t.date "sync_start_date"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end

@@ -39,6 +39,24 @@
           </div>
         </div>
 
+        <!-- Sync Date Range Selection -->
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%= icon "calendar", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+            <div class="flex-1">
+              <p class="text-sm text-primary mb-3">
+                <strong>Historical Data Range:</strong>
+              </p>
+              <%= form.date_field :sync_start_date, 
+                    label: "Start syncing transactions from:", 
+                    value: @simplefin_item.sync_start_date || 7.days.ago.to_date,
+                    max: Date.current,
+                    class: "w-full max-w-xs",
+                    help_text: "Select how far back you want to sync transaction history. Recent is faster." %>
+            </div>
+          </div>
+        </div>
+
         <% @simplefin_accounts.each do |simplefin_account| %>
           <div class="border border-primary rounded-lg p-4">
             <div class="flex items-center justify-between mb-3">

@@ -155,6 +155,11 @@ class SimplefinItemsController < ApplicationController
   def complete_account_setup
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
+    
+    # Update sync start date from form
+    if params[:simplefin_item][:sync_start_date].present?
+      @simplefin_item.update!(sync_start_date: params[:simplefin_item][:sync_start_date])
+    end
 
     account_types.each do |simplefin_account_id, selected_type|
       simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
@@ -188,7 +193,7 @@ class SimplefinItemsController < ApplicationController
     end
 
     def simplefin_params
-      params.require(:simplefin_item).permit(:setup_token)
+      params.require(:simplefin_item).permit(:setup_token, :sync_start_date)
     end
 
     def render_error(message, setup_token = nil, context: :new)
