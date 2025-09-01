@@ -41,7 +41,7 @@ class SimplefinAccount::Transactions::Processor
       end
 
       # Create the transaction (entryable)
-      transaction = Transaction.new(
+      transaction = Transaction.create!(
         external_id: external_id
       )
 
