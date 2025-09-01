@@ -45,7 +45,15 @@
             </div>
           <% else %>
             <p class="text-secondary">
-              <%= simplefin_item.last_synced_at ? t(".status", timestamp: time_ago_in_words(simplefin_item.last_synced_at)) : t(".status_never") %>
+              <% if simplefin_item.last_synced_at %>
+                <% if simplefin_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(simplefin_item.last_synced_at), summary: simplefin_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(simplefin_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
             </p>
           <% end %>
         </div>

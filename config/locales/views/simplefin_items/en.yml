@@ -41,5 +41,6 @@ en:
       setup_action: Set Up New Accounts
       status: Last synced %{timestamp} ago
       status_never: Never synced
+      status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
       update: Update connection

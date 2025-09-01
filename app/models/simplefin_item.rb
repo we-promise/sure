@@ -81,6 +81,40 @@ class SimplefinItem < ApplicationRecord
     accounts.any?
   end
 
+  def sync_status_summary
+    latest = latest_sync
+    return nil unless latest
+
+    # If sync has statistics, use them
+    if latest.sync_stats.present?
+      stats = latest.sync_stats
+      total = stats["total_accounts"] || 0
+      linked = stats["linked_accounts"] || 0
+      unlinked = stats["unlinked_accounts"] || 0
+
+      if total == 0
+        "No accounts found"
+      elsif unlinked == 0
+        "#{linked} #{'account'.pluralize(linked)} synced"
+      else
+        "#{linked} synced, #{unlinked} need setup"
+      end
+    else
+      # Fallback to current account counts
+      total_accounts = simplefin_accounts.count
+      linked_count = accounts.count
+      unlinked_count = total_accounts - linked_count
+
+      if total_accounts == 0
+        "No accounts found"
+      elsif unlinked_count == 0
+        "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      else
+        "#{linked_count} synced, #{unlinked_count} need setup"
+      end
+    end
+  end
+
   def institution_display_name
     # Try to get institution name from stored metadata
     institution_name.presence || institution_domain.presence || name
