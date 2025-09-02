@@ -2,8 +2,12 @@ class EnableBankingItemsController < ApplicationController
   before_action :set_enable_banking_item, only: %i[edit destroy sync]
 
   def index
-    @breadcrumbs = [ [ "Home", root_path ], [ "Bank Sync", settings_bank_sync_path ], [ "Enable Banking", nil ] ]
     @enable_banking_items = Current.family.enable_banking_items.active.ordered
+    @breadcrumbs = [ 
+      [ "Home", root_path ], 
+      [ "Bank Sync", settings_bank_sync_path ], 
+      [ "Enable Banking", nil ] 
+    ]
     render layout: "settings"
   end
 
@@ -14,8 +18,7 @@ class EnableBankingItemsController < ApplicationController
       [aspsp["name"], aspsp["name"]]
     end
   rescue => error
-    Sentry.capture_exception(error)
-    render json: { error: "#{error.message}" }, status: :bad_request
+    @enable_banking_item.errors.add(:base, t(".aspsp_error"))
   end
 
   def edit
@@ -31,15 +34,14 @@ class EnableBankingItemsController < ApplicationController
     auth_url = enable_banking_provider.generate_authorization_url(aspsp_name)
     render json: { url: auth_url }
   rescue => error
-    Sentry.capture_exception(error)
-    render json: { error: "#{error.message}" }, status: :bad_request
+    @enable_banking_item.errors.add(:base, t(".authorization_error"))
   end
 
   def auth_callback
     code = params[:code]
     if code.nil?
       Rails.logger.error("Failed to retrieve code from authentication callback parameters")
-      redirect_to enable_banking_items_path, alert: "Authentication failed. Please try again."
+      redirect_to enable_banking_items_path, alert: t(".auth_failed")
     else
       session = enable_banking_provider.create_session(code)
       @enable_banking_item = Current.family.create_enable_banking_item!(
@@ -49,7 +51,7 @@ class EnableBankingItemsController < ApplicationController
         logo_url: "https://enablebanking.com/brands/#{session['aspsp']['country']}/#{session['aspsp']['name']}",
         raw_payload: session.to_json
       )
-      redirect_to enable_banking_items_path, notice: "Enable Banking connection added successfully! Your accounts will appear shortly as they sync in the background."
+      redirect_to enable_banking_items_path, notice: t(".success")
     end
   end
 
@@ -68,6 +70,7 @@ class EnableBankingItemsController < ApplicationController
     def enable_banking_provider
       @enable_banking_provider ||= Provider::Registry.get_provider(:enable_banking)
     end
+    
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
     end

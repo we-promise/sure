@@ -5,11 +5,12 @@
     <section class="space-y-4">
       <% if enable_banking_item.errors.any? %>
         <%= render "shared/form_errors", model: enable_banking_item %>
+      <% else %>
+        <div class="space-y-2">
+          <%= f.select :aspsps_name, @aspsps, include_blank: t(".select_aspsps") %>
+        </div>
       <% end %>
-      <div class="space-y-2">
-        <%= f.select :aspsps_name, @aspsps, include_blank: t(".select_aspsps") %>
-      </div>
-    </section>
+    
 
     <section>
       <%= f.submit(t(".link_account")) %>
