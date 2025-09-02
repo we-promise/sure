@@ -44,9 +44,9 @@ Purpose: provide short, actionable guidance so Copilot suggestions match project
 ## High-Level Architecture
 
 ### Application Modes
-The Maybe app runs in two distinct modes:
-- **Managed**: The Maybe team operates and manages servers for users (Rails.application.config.app_mode = "managed")
-- **Self Hosted**: Users host the Maybe app on their own infrastructure, typically through Docker Compose (Rails.application.config.app_mode = "self_hosted")
+The app runs in two modes:
+- **Managed** (Rails.application.config.app_mode = "managed")
+- **Self-hosted** (Rails.application.config.app_mode = "self_hosted")
 
 ### Core Domain Model
 The application is built around financial data management with these key relationships:
@@ -59,8 +59,8 @@ The application is built around financial data management with these key relatio
 The application provides both internal and external APIs:
 - Internal API: Controllers serve JSON via Turbo for SPA-like interactions
 - External API: `/api/v1/` namespace with Doorkeeper OAuth and API key authentication
-- API responses use Jbuilder templates for JSON rendering
-- Rate limiting via Rack Attack with configurable limits per API key
+- API responses use Jbuilder templates for JSON rendering.
+- Rate limiting via Rack::Attack with configurable limits per API key
 
 ### Sync & Import System
 Two primary data ingestion methods:
@@ -179,7 +179,7 @@ Stimulus & components
 ## Testing Philosophy
 
 ### General Testing Rules
-- **ALWAYS use Minitest + fixtures** (NEVER RSpec or factories)
+- **ALWAYS use Minitest + fixtures + Mocha** (NEVER RSpec or FactoryBot)
 - Keep fixtures minimal (2-3 per model for base cases)
 - Create edge cases on-the-fly within test context
 - Use Rails helpers for large fixture creation needs
@@ -280,6 +280,4 @@ Style for suggestions
 - Respect existing tests; add tests when changing critical logic.
 
 Notes from repository config
-- .gemini/config.yaml indicates code_review is disabled for automated reviews; still provide clear summary and fix suggestions in PRs.
-
-Apply these rules to all Copilot suggestions (applyTo: '**').
+- If .gemini/config.yaml disables automated code_review, still provide clear summaries and fix suggestions in PRs.
