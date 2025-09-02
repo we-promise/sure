@@ -1,0 +1,75 @@
+<%# locals: (enable_banking_item:) %>
+
+<%= tag.div id: dom_id(enable_banking_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex items-center gap-4">
+
+        <% if enable_banking_item.logo_url? %>
+          <div class="flex items-center justify-center w-16 overflow-hidden">
+            <%= image_tag enable_banking_item.logo_url, class: "shrink-0", loading: "lazy" %>
+          </div>
+        <% else %>
+          <%= render DS::FilledIcon.new(
+            variant: :container,
+            text: enable_banking_item.name.first.upcase,
+            size: "md"
+          ) %>
+        <% end %>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <div>
+              <%= tag.p enable_banking_item.name, class: "font-medium text-primary" %>
+              <p class="text-secondary text-xs mb-1">Current session will expire on <%= I18n.l(enable_banking_item.valid_until, format: :long) %></p>
+            </div>
+            <% if enable_banking_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse">(deletion in progress...)</p>
+            <% end %>
+          </div>
+          <% if enable_banking_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-pulse" %>
+              <%= tag.span "Syncing..." %>
+            </div>
+          <% elsif enable_banking_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span "Requires Update" %>
+            </div>
+          <% elsif enable_banking_item.sync_error.present? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "alert-circle", size: "sm", color: "destructive" %>
+              <%= tag.span "Error", class: "text-destructive" %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <%= enable_banking_item.last_synced_at ? "Last synced #{time_ago_in_words(enable_banking_item.last_synced_at)} ago" : "Never synced" %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if Rails.env.development? %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_enable_banking_item_path(enable_banking_item)
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+            variant: "button",
+            text: "Delete",
+            icon: "trash-2",
+            href: enable_banking_item_path(enable_banking_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(t(".this_connection"), high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+  </details>
+<% end %>
