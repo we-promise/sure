@@ -6,6 +6,8 @@ class Settings::AiController < ApplicationController
       [ "Home", root_path ],
       [ "AI Settings", nil ]
     ]
+    @family = Current.family
+    @assistant_config = Assistant.config_for(OpenStruct.new(user: Current.user))
   end
 
   def test_connection
