@@ -75,9 +75,9 @@ Two primary data ingestion methods:
 
 ### Background Processing
 Sidekiq handles asynchronous tasks:
-- Account syncing (`SyncAccountsJob`)
-- Import processing (`ImportDataJob`)
-- AI chat responses (`CreateChatResponseJob`)
+- Account syncing (`SyncJob`)
+- Import processing (`ImportJob`)
+- AI chat responses (`AssistantResponseJob`)
 - Scheduled maintenance via sidekiq-cron
 
 ### Frontend Architecture
