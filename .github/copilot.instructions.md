@@ -124,7 +124,7 @@ Frontend conventions
 Backend & architecture
 - Skinny controllers, fat models.
 - Prefer built-in Rails patterns; add dependencies only with strong justification.
-- Sidekiq for background jobs (e.g., SyncAccountsJob, ImportDataJob).
+- Sidekiq for background jobs (e.g., SyncJob, ImportJob, AssistantResponseJob).
 
 API & security
 - External API under /api/v1 with Doorkeeper / API keys; respect CSRF and strong params.
