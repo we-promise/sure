@@ -226,7 +226,7 @@ end
 - Feature branches merged to `main`
 - Docker support for consistent environments
 - Environment variables via `.env` files
-- Lookbook for component development (`/lookbook`)
+- Lookbook for component development (`/design-system`)
 - Letter Opener for email preview in development
 
 ## Project Conventions
