@@ -2,6 +2,7 @@ class EnableBankingItemsController < ApplicationController
   before_action :set_enable_banking_item, only: %i[edit destroy sync]
 
   def index
+    @breadcrumbs = [ [ "Home", root_path ], [ "Bank Sync", settings_bank_sync_path ], [ "Enable Banking", nil ] ]
     @enable_banking_items = Current.family.enable_banking_items.active.ordered
     render layout: "settings"
   end

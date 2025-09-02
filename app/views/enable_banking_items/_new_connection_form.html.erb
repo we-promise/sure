@@ -7,12 +7,12 @@
         <%= render "shared/form_errors", model: enable_banking_item %>
       <% end %>
       <div class="space-y-2">
-        <%= f.select :aspsps_name, @aspsps, include_blank: "Select ASPSPS" %>
+        <%= f.select :aspsps_name, @aspsps, include_blank: t(".select_aspsps") %>
       </div>
     </section>
 
     <section>
-      <%= f.submit("Link account") %>
+      <%= f.submit(t(".link_account")) %>
     </section>
   <% end %>
 </div>

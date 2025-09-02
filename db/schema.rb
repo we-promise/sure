@@ -244,7 +244,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
   create_table "enable_banking_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "session_id"
-    t.datetime "valid_until"
+    t.datetime "valid_until", precision: nil
     t.string "name"
     t.string "status", default: "good"
     t.string "logo_url"

@@ -3,7 +3,7 @@ class AddEnableBankingDomain < ActiveRecord::Migration[7.2]
     create_table :enable_banking_items, id: :uuid do |t|
       t.references :family, null: false, type: :uuid, foreign_key: true
       t.string :session_id
-      t.datetime :valid_until
+      t.timestamp :valid_until
       t.string :name
       t.string :status, default: "good"
       t.string :logo_url

@@ -21,30 +21,30 @@
           <div class="flex items-center gap-2">
             <div>
               <%= tag.p enable_banking_item.name, class: "font-medium text-primary" %>
-              <p class="text-secondary text-xs mb-1">Current session will expire on <%= I18n.l(enable_banking_item.valid_until, format: :long) %></p>
+              <p class="text-secondary text-xs mb-1"><%= t(".session_expiration", timestamp: distance_of_time_in_words(Time.now, enable_banking_item.valid_until)) %></p>
             </div>
             <% if enable_banking_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse">(deletion in progress...)</p>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
           <% if enable_banking_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
-              <%= icon "loader", size: "sm", class: "animate-pulse" %>
-              <%= tag.span "Syncing..." %>
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
             </div>
           <% elsif enable_banking_item.requires_update? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span "Requires Update" %>
+              <%= tag.span t(".requires_update") %>
             </div>
           <% elsif enable_banking_item.sync_error.present? %>
             <div class="text-secondary flex items-center gap-1">
-              <%= icon "alert-circle", size: "sm", color: "destructive" %>
-              <%= tag.span "Error", class: "text-destructive" %>
+              <%= render DS::Tooltip.new(text: enable_banking_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
+              <%= tag.span t(".error"), class: "text-destructive" %>
             </div>
           <% else %>
             <p class="text-secondary">
-              <%= enable_banking_item.last_synced_at ? "Last synced #{time_ago_in_words(enable_banking_item.last_synced_at)} ago" : "Never synced" %>
+              <%= enable_banking_item.last_synced_at ? t(".status", timestamp: time_ago_in_words(enable_banking_item.last_synced_at)) : t(".status_never") %>
             </p>
           <% end %>
         </div>
@@ -62,7 +62,7 @@
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
-            text: "Delete",
+            text: t(".delete"),
             icon: "trash-2",
             href: enable_banking_item_path(enable_banking_item),
             method: :delete,
