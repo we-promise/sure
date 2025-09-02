@@ -69,9 +69,9 @@ class Provider::Registry
       end
 
       def enable_banking
-        application_id = ENV["ENABLE_BANKING_APPLICATION_ID"]
-        certificate = ENV["ENABLE_BANKING_CERTIFICATE"]
-        country_code = ENV["ENABLE_BANKING_COUNTRY"]
+        application_id = ENV.fetch("ENABLE_BANKING_APPLICATION_ID", Setting.enable_banking_application_id)
+        country_code = ENV.fetch("ENABLE_BANKING_COUNTRY", Setting.enable_banking_country)
+        certificate = ENV.fetch("ENABLE_BANKING_CERTIFICATE", Setting.enable_banking_certificate)
         
         return nil unless application_id.present? && certificate.present? && country_code.present?
 
