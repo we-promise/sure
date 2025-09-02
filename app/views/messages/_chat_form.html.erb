@@ -7,8 +7,8 @@
                 class: "flex lg:flex-col gap-2 bg-container px-2 py-1.5 rounded-full lg:rounded-lg shadow-border-xs",
                 data: { chat_target: "form" } do |f| %>
 
-    <%# In the future, this will be a dropdown with different AI models %>
-    <%= f.hidden_field :ai_model, value: "gpt-4.1" %>
+    <%# Use the configured AI model from settings %>
+    <%= f.hidden_field :ai_model, value: Setting.ai_model || "openai/gpt-4o-mini" %>
 
     <%= f.text_area :content, placeholder: "Ask anything ...", value: message_hint,
                   class: "w-full border-0 focus:ring-0 text-sm resize-none px-1 bg-transparent",
