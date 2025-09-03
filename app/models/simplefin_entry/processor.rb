@@ -49,7 +49,9 @@ class SimplefinEntry::Processor
     end
 
     def external_id
-      "simplefin_#{data[:id]}"
+      id = data[:id].presence
+      raise ArgumentError, "SimpleFin transaction missing id: #{data.inspect}" unless id
+      "simplefin_#{id}"
     end
 
     def name
