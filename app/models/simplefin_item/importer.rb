@@ -184,15 +184,18 @@ class SimplefinItem::Importer
         org_data: account_data[:org]
       }
 
-      # Only update transactions if present and non-empty to avoid wiping prior data
-      # This prevents later chunks with no transactions from overwriting earlier chunks with transactions
-      if transactions.present? && transactions.is_a?(Array) && transactions.any?
-        attrs[:raw_transactions_payload] = transactions
+      # Merge transactions from chunked imports (accumulate historical data)
+      if transactions.is_a?(Array) && transactions.any?
+        existing_transactions = simplefin_account.raw_transactions_payload.to_a
+        merged_transactions = (existing_transactions + transactions).uniq do |tx|
+          tx = tx.with_indifferent_access
+          tx[:id] || tx[:fitid] || [tx[:posted], tx[:amount], tx[:description]]
+        end
+        attrs[:raw_transactions_payload] = merged_transactions
       end
 
-      # Only update holdings if present and non-empty to avoid wiping prior data
-      # Investment accounts may have holdings data that should be preserved
-      if holdings.present? && holdings.is_a?(Array) && holdings.any?
+      # Preserve most recent holdings (don't overwrite current positions with older data)
+      if holdings.is_a?(Array) && holdings.any? && simplefin_account.raw_holdings_payload.blank?
         attrs[:raw_holdings_payload] = holdings
       end
       simplefin_account.assign_attributes(attrs)
