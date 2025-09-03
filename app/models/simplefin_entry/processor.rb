@@ -87,7 +87,7 @@ class SimplefinEntry::Processor
       -parsed_amount
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse SimpleFin transaction amount: #{data[:amount].inspect} - #{e.message}"
-      BigDecimal("0")
+      raise
     end
 
     def currency
