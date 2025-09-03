@@ -45,7 +45,7 @@ class Provider::EnableBanking < Provider
       body = {
         access: { valid_until: valid_until.utc.iso8601 },
         aspsp: { name: aspsp_name, country: country_code },
-        state: "random",
+        state: SecureRandom.uuid,
         redirect_url: redirect_urls[0]
       }
       response = client.post("#{base_url}/auth", body.to_json)
