@@ -69,7 +69,7 @@ class SimplefinItem < ApplicationRecord
     org = org_data.to_h.with_indifferent_access
     url = org[:url] || org[:"sfin-url"]
     domain = org[:domain]
-    
+
     # Derive domain from URL if missing
     if domain.blank? && url.present?
       begin

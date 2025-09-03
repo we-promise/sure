@@ -187,7 +187,7 @@ class SimplefinItem::Importer
         existing_transactions = simplefin_account.raw_transactions_payload.to_a
         merged_transactions = (existing_transactions + transactions).uniq do |tx|
           tx = tx.with_indifferent_access
-          tx[:id] || tx[:fitid] || [tx[:posted], tx[:amount], tx[:description]]
+          tx[:id] || tx[:fitid] || [ tx[:posted], tx[:amount], tx[:description] ]
         end
         attrs[:raw_transactions_payload] = merged_transactions
       end
