@@ -67,11 +67,23 @@ class SimplefinItem < ApplicationRecord
 
   def upsert_institution_data!(org_data)
     org = org_data.to_h.with_indifferent_access
+    url = org[:url] || org[:"sfin-url"]
+    domain = org[:domain]
+    
+    # Derive domain from URL if missing
+    if domain.blank? && url.present?
+      begin
+        domain = URI.parse(url).host&.gsub(/^www\./, "")
+      rescue URI::InvalidURIError
+        Rails.logger.warn("Invalid SimpleFin institution URL: #{url.inspect}")
+      end
+    end
+
     assign_attributes(
       institution_id: org[:id],
       institution_name: org[:name],
-      institution_domain: org[:domain],
-      institution_url: org[:url] || org[:"sfin-url"],
+      institution_domain: domain,
+      institution_url: url,
       raw_institution_payload: org_data
     )
   end
