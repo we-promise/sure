@@ -66,7 +66,7 @@
             icon: "trash-2",
             href: enable_banking_item_path(enable_banking_item),
             method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(t(".this_connection"), high_severity: true)
+            confirm: CustomConfirm.for_resource_deletion(t(".connection"), high_severity: true)
           ) %>
         <% end %>
       </div>
