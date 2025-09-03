@@ -197,7 +197,12 @@ class SimplefinItemsController < ApplicationController
     end
 
     def render_error(message, setup_token = nil, context: :new)
-      @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
+      if context == :edit
+        # Keep the persisted record and assign the token for re-render
+        @simplefin_item.setup_token = setup_token if @simplefin_item
+      else
+        @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
+      end
       @error_message = message
       render context, status: :unprocessable_entity
     end
