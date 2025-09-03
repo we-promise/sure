@@ -26,7 +26,7 @@ class EnableBankingItem::Importer
         )
 
         account_details = enable_banking_provider.get_account_details(account_id)
-        transactions = enable_banking_provider.get_transactions(account_id, 30.days.ago.to_date.iso8601) # TODO: use different date
+        transactions = enable_banking_provider.get_transactions(account_id, enable_banking_account.new_record?)
 
         raw_account["name"] = extract_account_name(account_details)
         raw_account["account_type"] = account_details["cash_account_type"]

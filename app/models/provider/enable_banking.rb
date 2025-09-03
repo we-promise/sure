@@ -111,10 +111,14 @@ class Provider::EnableBanking < Provider
     }
   end
 
-  def get_account_transactions(account_id, date_from, continuation_key: nil)
+  def get_account_transactions(account_id, fetch_all, continuation_key: nil)
     result = with_provider_response do
       response = client.get("#{base_url}/accounts/#{account_id}/transactions") do |req|
-        req.params["date_from"] = date_from
+        if !fetch_all
+          req.params["date_from"] = 7.days.ago.to_date.iso8601
+        else
+          req.params["strategy"] = "longest"
+        end
         if continuation_key
           req.params["continuation_key"] = continuation_key
         end
@@ -129,11 +133,11 @@ class Provider::EnableBanking < Provider
     end
   end
 
-  def get_transactions(account_id, date_from)
+  def get_transactions(account_id, fetch_all)
     transactions = []
     continuation_key = nil
     loop do
-      transaction_data = get_account_transactions(account_id, date_from, continuation_key: continuation_key)
+      transaction_data = get_account_transactions(account_id, fetch_all, continuation_key: continuation_key)
       transactions += transaction_data.dig("transactions") || []
       break unless transaction_data.has_key?("continuation_key") and transaction_data["continuation_key"]
         continuation_key = transaction_data["continuation_key"]
