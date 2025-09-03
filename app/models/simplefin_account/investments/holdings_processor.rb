@@ -61,7 +61,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
           # No need to delete other holdings since each has its own lifecycle
         end
       rescue => e
-        Rails.logger.error "Error processing SimpleFin holding #{symbol}: #{e.message}"
+        ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
+        Rails.logger.error "Error processing SimpleFin holding#{ctx}: #{e.message}"
       end
     end
   end
