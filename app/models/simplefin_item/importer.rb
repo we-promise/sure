@@ -71,7 +71,6 @@ class SimplefinItem::Importer
         end
 
         Rails.logger.info "SimpleFin chunked sync: fetching chunk #{chunk_count}/#{max_requests} (#{chunk_start_date.strftime('%Y-%m-%d')} to #{chunk_end_date.strftime('%Y-%m-%d')}) - #{actual_days} days"
-        puts "DEBUG: About to call API with start_date=#{chunk_start_date} end_date=#{chunk_end_date} (#{actual_days} days)"
 
         accounts_data = fetch_accounts_data(start_date: chunk_start_date, end_date: chunk_end_date)
         return if accounts_data.nil? # Error already handled
@@ -119,7 +118,6 @@ class SimplefinItem::Importer
       # Debug logging to track exactly what's being sent to SimpleFin API
       days_requested = end_date ? (end_date.to_date - start_date.to_date).to_i : "unknown"
       Rails.logger.info "SimplefinItem::Importer - API Request: #{start_date.strftime('%Y-%m-%d')} to #{end_date&.strftime('%Y-%m-%d') || 'current'} (#{days_requested} days)"
-      puts "DEBUG: API call - start_date=#{start_date}, end_date=#{end_date}, days=#{days_requested}"
 
       begin
         accounts_data = simplefin_provider.get_accounts(
