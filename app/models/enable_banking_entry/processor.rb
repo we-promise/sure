@@ -39,7 +39,7 @@ class EnableBankingEntry::Processor
     end
 
     def name
-      enable_banking_transaction.dig("bank_transaction_code", "description")
+      enable_banking_transaction.dig("bank_transaction_code", "description") || enable_banking_transaction.dig("remittance_information")&.first
     end
 
     def notes
