@@ -21,7 +21,9 @@
           <div class="flex items-center gap-2">
             <div>
               <%= tag.p enable_banking_item.name, class: "font-medium text-primary" %>
-              <p class="text-secondary text-xs mb-1"><%= t(".session_expiration", timestamp: distance_of_time_in_words(Time.now, enable_banking_item.valid_until)) %></p>
+              <% if enable_banking_item.is_session_valid? %>
+                <p class="text-secondary text-xs mb-1"><%= t(".session_expiration", timestamp: distance_of_time_in_words(Time.now, enable_banking_item.valid_until)) %></p>
+              <% end %>
             </div>
             <% if enable_banking_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
@@ -32,7 +34,7 @@
               <%= icon "loader", size: "sm", class: "animate-spin" %>
               <%= tag.span t(".syncing") %>
             </div>
-          <% elsif enable_banking_item.requires_update? %>
+          <% elsif !enable_banking_item.is_session_valid? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
               <%= tag.span t(".requires_update") %>
@@ -51,7 +53,15 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <% if Rails.env.development? %>
+        <% if enable_banking_item.requires_update? %>
+          <%= render DS::Button.new(
+            text: t(".update"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: update_connection_enable_banking_item_path(enable_banking_item),
+            method: :post
+          ) %>
+        <% elsif Rails.env.development? %>
           <%= icon(
             "refresh-cw",
             as_button: true,

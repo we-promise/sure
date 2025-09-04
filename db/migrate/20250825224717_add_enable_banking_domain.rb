@@ -5,6 +5,8 @@ class AddEnableBankingDomain < ActiveRecord::Migration[7.2]
       t.string :session_id
       t.timestamp :valid_until
       t.string :name
+      t.string :aspsp_name
+      t.string :aspsp_country
       t.string :status, default: "good"
       t.string :logo_url
       t.boolean :scheduled_for_deletion, default: false

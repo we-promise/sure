@@ -5,11 +5,13 @@ module Family::EnableBankingConnectable
     has_many :enable_banking_items, dependent: :destroy
   end
 
-  def create_enable_banking_item!(session_id:, valid_until:, item_name: nil,logo_url: nil, raw_payload: {})
+  def create_enable_banking_item!(session_id:, valid_until:, aspsp_name:, aspsp_country:, logo_url: nil, raw_payload: {})
     enable_banking_item = enable_banking_items.create!(
       session_id: session_id,
       valid_until: valid_until,
-      name: item_name,
+      name: aspsp_name,
+      aspsp_name: aspsp_name,
+      aspsp_country: aspsp_country,
       logo_url: logo_url,
       raw_payload: raw_payload
     )

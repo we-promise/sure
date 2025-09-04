@@ -31,10 +31,18 @@ class EnableBankingItemsController < ApplicationController
 
   def authorization
     aspsp_name = params[:aspsps_name]
-    auth_url = enable_banking_provider.generate_authorization_url(aspsp_name)
-    render json: { url: auth_url }
+    auth_url = generate_authorization_url(aspsp_name)
+    redirect_to auth_url, allow_other_host: true, status: :see_other
   rescue => error
     @enable_banking_item.errors.add(:base, t(".authorization_error"))
+  end
+
+  def update_connection
+    enable_banking_item = EnableBankingItem.find_by(id: params[:id])
+    auth_url = generate_authorization_url(enable_banking_item.aspsp_name, enable_banking_item.aspsp_country, enable_banking_item.id)
+    redirect_to auth_url, allow_other_host: true, status: :see_other
+  rescue => error
+    redirect_to enable_banking_items_path, alert: t(".authorization_error")
   end
 
   def auth_callback
@@ -43,11 +51,15 @@ class EnableBankingItemsController < ApplicationController
       Rails.logger.error("Failed to retrieve code from authentication callback parameters")
       redirect_to enable_banking_items_path, alert: t(".auth_failed")
     else
+      enable_banking_id = params[:state]
+      @enable_banking_item = Current.family.enable_banking_items.find_or_create_by(id: enable_banking_id)
       session = enable_banking_provider.create_session(code)
-      @enable_banking_item = Current.family.create_enable_banking_item!(
+      @enable_banking_item.update!(
         session_id: session["session_id"],
         valid_until: session["access"]["valid_until"],
-        item_name: session["aspsp"]["name"],
+        status: "good",
+        aspsp_name: session["aspsp"]["name"],
+        aspsp_country: session["aspsp"]["country"],
         logo_url: "https://enablebanking.com/brands/#{session['aspsp']['country']}/#{session['aspsp']['name']}",
         raw_payload: session.to_json
       )
@@ -73,6 +85,10 @@ class EnableBankingItemsController < ApplicationController
     
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
+    end
+
+    def generate_authorization_url(aspsp_name, country_code = nil, enable_banking_id = nil)
+      enable_banking_provider.generate_authorization_url(aspsp_name, country_code, enable_banking_id)
     end
 
 end

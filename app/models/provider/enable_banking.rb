@@ -18,7 +18,7 @@ class Provider::EnableBanking < Provider
         result.data
       else
         Rails.logger.warn("Could not fetch redirect URLs. Provider error: #{result.error.message}")
-        Sentry.capture_exception(Error.new("Could not fetch redirect URLs"), level: :warning)
+        raise result.error
       end
   end
 
@@ -34,18 +34,19 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not fetch available ASPSPS for country #{country_code}. Provider error: #{result.error.message}")
-      Sentry.capture_exception(Error.new("Could not fetch available ASPSPS"), level: :warning)
+      raise result.error
     end
   end
 
-  def generate_authorization_url(aspsp_name, country_code: @country_code)
+  def generate_authorization_url(aspsp_name, country_code, enable_banking_id)
+    country_code ||= @country_code
     redirect_urls = get_redirect_urls
     valid_until = Time.now + 2*7*24*60*60 # 2 weeks
     result = with_provider_response do
       body = {
         access: { valid_until: valid_until.utc.iso8601 },
         aspsp: { name: aspsp_name, country: country_code },
-        state: SecureRandom.uuid,
+        state: enable_banking_id || SecureRandom.uuid,
         redirect_url: redirect_urls[0]
       }
       response = client.post("#{base_url}/auth", body.to_json)
@@ -55,7 +56,7 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not generate authorization URL. Provider error: #{result.error.message}")
-      Sentry.capture_exception(Error.new("Could not generate authorization URL"), level: :warning)
+      raise result.error
     end
   end
 
@@ -69,7 +70,7 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not create session. Provider error: #{result.error.message}")
-      Sentry.capture_exception(Error.new("Could not create session"), level: :warning)
+      raise result.error
     end
   end
 
@@ -79,11 +80,11 @@ class Provider::EnableBanking < Provider
       JSON.parse(response.body)
     end
     if result.success?
-        result.data
-      else
-        Rails.logger.warn("Could not fetch account details. Provider error: #{result.error.message}")
-        Sentry.capture_exception(Error.new("Could not fetch account details"), level: :warning)
-      end
+      result.data
+    else
+      Rails.logger.warn("Could not fetch account details. Provider error: #{result.error.message}")
+      raise result.error
+    end
   end
 
   def get_account_balances(account_id)
@@ -95,7 +96,7 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not fetch account balances. Provider error: #{result.error.message}")
-      Sentry.capture_exception(Error.new("Could not fetch account balances"), level: :warning)
+      raise result.error
     end
   end
 
@@ -129,7 +130,7 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not fetch account transactions. Provider error: #{result.error.message}")
-      Sentry.capture_exception(Error.new("Could not fetch account transactions"), level: :warning)
+      raise result.error
     end
   end
 
@@ -140,7 +141,7 @@ class Provider::EnableBanking < Provider
       transaction_data = get_account_transactions(account_id, fetch_all, continuation_key: continuation_key)
       transactions += transaction_data.dig("transactions") || []
       break unless transaction_data.has_key?("continuation_key") and transaction_data["continuation_key"]
-        continuation_key = transaction_data["continuation_key"]
+      continuation_key = transaction_data["continuation_key"]
     end
     transactions
   end

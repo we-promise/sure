@@ -1,5 +1,4 @@
 class EnableBankingItem::Importer
-  attr_reader :enable_banking_item, :enable_banking_provider
 
   def initialize(enable_banking_item, enable_banking_provider:)
     @enable_banking_item = enable_banking_item
@@ -8,9 +7,24 @@ class EnableBankingItem::Importer
 
   def import
     fetch_and_import_accounts_data
+  rescue Provider::EnableBanking::Error => e
+    handle_enable_banking_error(e)
   end
 
   private
+    attr_reader :enable_banking_item, :enable_banking_provider
+
+    # All errors that should halt the import should be re-raised after handling
+    # These errors will propagate up to the Sync record and mark it as failed.
+    def handle_enable_banking_error(error)
+      error_body = JSON.parse(error.details)
+      case error_body["code"]
+      when 401, 403
+        enable_banking_item.update!(status: :requires_update)
+      else
+        raise error
+      end
+    end
 
     def fetch_and_import_accounts_data
       accounts = JSON.parse(enable_banking_item.raw_payload).dig("accounts")

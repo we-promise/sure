@@ -246,6 +246,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
     t.string "session_id"
     t.datetime "valid_until", precision: nil
     t.string "name"
+    t.string "aspsp_name"
+    t.string "aspsp_country"
     t.string "status", default: "good"
     t.string "logo_url"
     t.boolean "scheduled_for_deletion", default: false

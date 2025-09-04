@@ -24,6 +24,8 @@ en:
       errors:
         update_failed: "Failed to update connection: %{message}"
         unexpected: An unexpected error occurred. Please try again or contact support.
+    update_connection:
+      authorization_error: "Failed to start authorization process. Please try again or contact support."
     enable_banking_item:
       confirm_accept: Delete connection
       confirm_body: This will permanently delete all the accounts in this group and all associated data.

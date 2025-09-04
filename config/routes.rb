@@ -262,9 +262,10 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :enable_banking_items, only: %i[index new create show destroy] do
+  resources :enable_banking_items, only: %i[index new create show edit update destroy] do
     member do
       post :sync
+      post :update_connection
     end
 
     collection do 
