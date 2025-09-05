@@ -77,7 +77,7 @@ class Provider::Openrouter < Provider
     end
   end
 
-  def chat_response(prompt, model:, instructions: nil, functions: [], function_results: [], streamer: nil, previous_response_id: nil)
+  def chat_response(prompt, model:, instructions: nil, functions: [], function_results: [], streamer: nil, previous_response_id: nil, context: {})
     with_provider_response do
       chat_config = Provider::Openrouter::ChatConfig.new(
         functions: functions,
@@ -115,22 +115,39 @@ class Provider::Openrouter < Provider
       # for the "response chunk" in the stream and return it (it is already parsed)
       if stream_proxy.present?
         response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
+        # Verification that response_chunk exists
+        if !response_chunk
+          raise Error, "No response chunk found in collected chunks"
+        end
+
         response = response_chunk.data
+
+        # Assurons-nous que input_payload et output sont des chaînes pour Langfuse
+        clean_input = input_payload.is_a?(Array) ? input_payload.map(&:to_h).to_json : input_payload.to_json
+        clean_output = response.messages.map(&:output_text).join("\n").presence || ""
+
         log_langfuse_generation(
           name: "chat_response",
           model: model,
-          input: input_payload,
-          output: response.messages.map(&:output_text).join("\n")
+          input: clean_input,
+          output: clean_output,
+          context: context
         )
         response
       else
         parsed = Provider::Openrouter::ChatParser.new(raw_response).parsed
+
+        # Assurons-nous que input_payload et output sont des chaînes pour Langfuse
+        clean_input = input_payload.is_a?(Array) ? input_payload.map(&:to_h).to_json : input_payload.to_json
+        clean_output = parsed.messages.map(&:output_text).join("\n").presence || ""
+
         log_langfuse_generation(
           name: "chat_response",
           model: model,
-          input: input_payload,
-          output: parsed.messages.map(&:output_text).join("\n"),
-          usage: raw_response["usage"]
+          input: clean_input,
+          output: clean_output,
+          usage: raw_response["usage"],
+          context: context
         )
         parsed
       end
@@ -146,19 +163,44 @@ class Provider::Openrouter < Provider
       @langfuse_client = Langfuse.new
     end
 
-    def log_langfuse_generation(name:, model:, input:, output:, usage: nil)
+    def log_langfuse_generation(name:, model:, input:, output:, usage: nil, context: {})
       return unless langfuse_client
 
-      trace = langfuse_client.trace(name: "openrouter.#{name}", input: input)
-      trace.generation(
-        name: name,
-        model: model,
-        input: input,
-        output: output,
-        usage: usage
-      )
-      trace.update(output: output)
-    rescue => e
-      Rails.logger.warn("Langfuse logging failed: #{e.message}")
+      begin
+        trace_id = context[:chat_id] ? "chat_#{context[:chat_id]}" : nil
+        user_id = context[:user_id]
+
+        safe_input = input.presence || ""
+        safe_output = output.presence || ""
+
+        safe_input = safe_input.to_s[0...10000] if safe_input.to_s.length > 10000
+        safe_output = safe_output.to_s[0...10000] if safe_output.to_s.length > 10000
+
+        trace = langfuse_client.trace(
+          name: "openrouter.#{name}",
+          input: safe_input,
+          trace_id: trace_id,
+          user_id: user_id
+        )
+
+        generation = trace.generation(
+          name: name,
+          model: model,
+          input: safe_input,
+          output: safe_output,
+          usage: usage
+        )
+
+        # Add additional metadata from context
+        if context.present?
+          generation.update(metadata: context.transform_values(&:to_s))
+        end
+
+        trace.update(output: safe_output)
+
+      rescue => e
+        Rails.logger.warn("Langfuse logging failed: #{e.message}")
+        Rails.logger.warn("Langfuse logging backtrace: #{e.backtrace.first(3).join('\n')}")
+      end
     end
 end
