@@ -12,6 +12,8 @@ en:
     new_connection_form:
       select_aspsps: Select your bank
       link_account: Link account
+    authorization:
+      authorization_error: "Failed to start authorization process. Please try again or contact support."
     auth_callback:
       success: Enable Banking connection added successfully! Your accounts will appear shortly as they sync in the background.
       errors:

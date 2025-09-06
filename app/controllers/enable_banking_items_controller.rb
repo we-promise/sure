@@ -34,7 +34,7 @@ class EnableBankingItemsController < ApplicationController
     auth_url = generate_authorization_url(aspsp_name)
     redirect_to auth_url, allow_other_host: true, status: :see_other
   rescue => error
-    @enable_banking_item.errors.add(:base, t(".authorization_error"))
+    redirect_to enable_banking_items_path, alert: t(".authorization_error")
   end
 
   def update_connection
