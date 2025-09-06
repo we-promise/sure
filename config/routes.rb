@@ -268,7 +268,7 @@ Rails.application.routes.draw do
       post :update_connection
     end
 
-    collection do 
+    collection do
       post :authorization
     end
   end
