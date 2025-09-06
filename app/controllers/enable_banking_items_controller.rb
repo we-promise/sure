@@ -3,10 +3,10 @@ class EnableBankingItemsController < ApplicationController
 
   def index
     @enable_banking_items = Current.family.enable_banking_items.active.ordered
-    @breadcrumbs = [ 
-      [ "Home", root_path ], 
-      [ "Bank Sync", settings_bank_sync_path ], 
-      [ "Enable Banking", nil ] 
+    @breadcrumbs = [
+      [ "Home", root_path ],
+      [ "Bank Sync", settings_bank_sync_path ],
+      [ "Enable Banking", nil ]
     ]
     render layout: "settings"
   end
@@ -15,7 +15,7 @@ class EnableBankingItemsController < ApplicationController
     @enable_banking_item = Current.family.enable_banking_items.build
     available_aspsps = enable_banking_provider.get_available_aspsps
     @aspsps = available_aspsps.map do |aspsp|
-      [aspsp["name"], aspsp["name"]]
+      [ aspsp["name"], aspsp["name"] ]
     end
   rescue => error
     @enable_banking_item.errors.add(:base, t(".aspsp_error"))
@@ -82,7 +82,7 @@ class EnableBankingItemsController < ApplicationController
     def enable_banking_provider
       @enable_banking_provider ||= Provider::Registry.get_provider(:enable_banking)
     end
-    
+
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
     end
