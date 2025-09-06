@@ -40,7 +40,7 @@ class Provider::EnableBanking < Provider
   def generate_authorization_url(aspsp_name, country_code, enable_banking_id)
     country_code ||= @country_code
     redirect_urls = get_redirect_urls
-    valid_until = Time.now + 15*7*24*60*60 # 90 days
+    valid_until = Time.now + 90*24*60*60 # 90 days
     result = with_provider_response do
       body = {
         access: { valid_until: valid_until.utc.iso8601 },
