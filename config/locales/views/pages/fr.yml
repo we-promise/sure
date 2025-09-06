@@ -1,0 +1,13 @@
+---
+fr:
+  pages:
+    changelog:
+      title: Nouveautés
+    dashboard:
+      net_worth_chart:
+        data_not_available: Données indisponibles pour la période sélectionnée
+        title: Richesse totale
+      no_account_empty_state:
+        new_account: Nouveau compte
+        no_account_subtitle: Comme aucun compte n'a été ajouté, il n'y a pas de données à afficher. Ajoutez vos premiers comptes pour commencer à consulter les données du tableau de bord.
+        no_account_title: Pas encore de comptes
