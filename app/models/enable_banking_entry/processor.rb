@@ -31,7 +31,6 @@ class EnableBankingEntry::Processor
           source: "enable_banking"
         )
       end
-
     end
   end
 

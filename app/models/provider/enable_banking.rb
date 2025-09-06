@@ -1,5 +1,4 @@
 class Provider::EnableBanking < Provider
-
   # Subclass so errors caught in this provider are raised as Provider::EnableBanking::Error
   Error = Class.new(Provider::Error)
 
@@ -15,11 +14,11 @@ class Provider::EnableBanking < Provider
       JSON.parse(response.body).dig("redirect_urls")
     end
     if result.success?
-        result.data
-      else
-        Rails.logger.warn("Could not fetch redirect URLs. Provider error: #{result.error.message}")
-        raise result.error
-      end
+      result.data
+    else
+      Rails.logger.warn("Could not fetch redirect URLs. Provider error: #{result.error.message}")
+      raise result.error
+    end
   end
 
   def get_available_aspsps(country_code: @country_code)
@@ -159,7 +158,7 @@ class Provider::EnableBanking < Provider
       iat = Time.now.to_i
       jwt_header = { typ: "JWT", alg: "RS256", kid: application_id }
       jwt_body = { iss: "enablebanking.com", aud: "api.enablebanking.com", iat: iat, exp: iat + 3600 }
-      JWT.encode(jwt_body, rsa_key, 'RS256', jwt_header)
+      JWT.encode(jwt_body, rsa_key, "RS256", jwt_header)
     end
 
     def jwt
@@ -181,5 +180,4 @@ class Provider::EnableBanking < Provider
         faraday.headers["Authorization"] = "Bearer #{jwt}"
       end
     end
-
 end

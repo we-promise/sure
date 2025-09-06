@@ -61,7 +61,6 @@ class EnableBankingItem::Importer
         return raw_account.dig("account_id", "iban")
       end
       identification = raw_account.dig("account_id", "other", "identification")
-      return identification
+      identification
     end
-
 end
