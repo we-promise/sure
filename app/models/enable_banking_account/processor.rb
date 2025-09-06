@@ -83,5 +83,4 @@ class EnableBankingAccount::Processor
         scope.set_tags(enable_banking_account_id: enable_banking_account.id)
       end
     end
-
 end

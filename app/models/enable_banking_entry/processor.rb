@@ -7,7 +7,7 @@ class EnableBankingEntry::Processor
 
   def process
     EnableBankingAccount.transaction do
-      entry = account.entries.find_or_initialize_by(plaid_id: enable_banking_id) do |e| #TODO change plaid_id to enable_banking_id?
+      entry = account.entries.find_or_initialize_by(plaid_id: enable_banking_id) do |e|
         e.entryable = Transaction.new
       end
 

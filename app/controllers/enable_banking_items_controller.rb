@@ -90,5 +90,4 @@ class EnableBankingItemsController < ApplicationController
     def generate_authorization_url(aspsp_name, country_code = nil, enable_banking_id = nil)
       enable_banking_provider.generate_authorization_url(aspsp_name, country_code, enable_banking_id)
     end
-
 end

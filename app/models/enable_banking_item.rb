@@ -51,5 +51,4 @@ class EnableBankingItem < ApplicationRecord
       )
     end
   end
-
 end

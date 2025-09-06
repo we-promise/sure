@@ -1,5 +1,4 @@
 class EnableBankingItem::Importer
-
   def initialize(enable_banking_item, enable_banking_provider:)
     @enable_banking_item = enable_banking_item
     @enable_banking_provider = enable_banking_provider
@@ -46,7 +45,7 @@ class EnableBankingItem::Importer
         raw_account["account_type"] = account_details["cash_account_type"]
         raw_account["balances"] = enable_banking_provider.get_current_available_balance(account_id)
         raw_account["transactions_data"] = transactions
-        
+
         EnableBankingAccount::Importer.new(
           enable_banking_account,
           account_snapshot: raw_account
