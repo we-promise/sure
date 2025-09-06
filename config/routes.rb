@@ -294,7 +294,7 @@ Rails.application.routes.draw do
   get "privacy", to: redirect("https://maybefinance.com/privacy")
   get "terms", to: redirect("https://maybefinance.com/tos")
 
-  get 'enable_banking_auth_callback', to: 'enable_banking_items#auth_callback'
+  get "enable_banking_auth_callback", to: "enable_banking_items#auth_callback"
 
   # Defines the root path route ("/")
   root "pages#dashboard"
