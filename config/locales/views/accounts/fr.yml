@@ -3,6 +3,16 @@ fr:
   accounts:
     account:
       troubleshoot: Dépannage
+    account_sidebar_tabs:
+      missing_historical: Manque les données historiques
+      describe_party_provider: Sure utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes.
+      configure_provider: Configurez vos fournisseurs ici.
+      label_all: Tout
+      label_asset: Comptes
+      label_liability: Dettes
+      new_asset: Nouvel actif
+      new_debt: Nouvelle dette
+      new_account: Nouveau compte
     chart:
       data_not_available: Données non disponibles pour le période sélectionnée
     create:
