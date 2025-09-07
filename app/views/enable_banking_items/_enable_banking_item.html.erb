@@ -61,12 +61,13 @@
             href: update_connection_enable_banking_item_path(enable_banking_item),
             method: :post
           ) %>
+        <% elsif Rails.env.development? %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_enable_banking_item_path(enable_banking_item)
+          ) %>
         <% end %>
-        <%= icon(
-          "refresh-cw",
-          as_button: true,
-          href: sync_enable_banking_item_path(enable_banking_item)
-        ) %>
 
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
