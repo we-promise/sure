@@ -22,7 +22,7 @@ module Transaction::Transferable
     end
 
     candidates_scope.map do |match|
-      Transfer.new(
+      Transfer.find_or_create_by!(
         inflow_transaction_id: match.inflow_transaction_id,
         outflow_transaction_id: match.outflow_transaction_id,
       )
