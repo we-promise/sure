@@ -40,13 +40,15 @@ class Provider::EnableBanking < Provider
   def generate_authorization_url(aspsp_name, country_code, enable_banking_id)
     country_code ||= @country_code
     redirect_urls = get_redirect_urls
-    valid_until = Time.now + 90*24*60*60 # 90 days
+    redirect_url = redirect_urls&.first
+    raise Error.new("No redirect URL configured") if redirect_url.blank?
+    valid_until = Time.current + 90.days
     result = with_provider_response do
       body = {
         access: { valid_until: valid_until.utc.iso8601 },
         aspsp: { name: aspsp_name, country: country_code },
         state: enable_banking_id || SecureRandom.uuid,
-        redirect_url: redirect_urls[0]
+        redirect_url: redirect_url
       }
       response = client.post("#{base_url}/auth", body.to_json)
       JSON.parse(response.body).dig("url")
@@ -183,7 +185,7 @@ class Provider::EnableBanking < Provider
         faraday.request :json
         faraday.response :raise_error
         faraday.headers["Content-Type"] = "application/json"
-        faraday.headers["Authorization"] = "Bearer #{jwt}"
+        faraday.request :authorization, "Bearer", -> { jwt }
       end
     end
 end
