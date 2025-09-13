@@ -1,5 +1,7 @@
 <%# locals: (enable_banking_item:) %>
-
+<% if params[:redirect_uri] %>
+  <meta name="turbo-visit-control" content="reload">
+<% end %>
 <%= tag.div id: dom_id(enable_banking_item) do %>
   <details open class="group bg-container p-4 shadow-border-xs">
     <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
@@ -59,7 +61,8 @@
             icon: "refresh-cw",
             variant: "secondary",
             href: update_connection_enable_banking_item_path(enable_banking_item),
-            method: :post
+            method: :post,
+            data: { turbo: false }
           ) %>
         <% elsif Rails.env.development? %>
           <%= icon(
