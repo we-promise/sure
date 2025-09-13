@@ -7,7 +7,7 @@ module Family::EnableBankingConnectable
 
   def create_enable_banking_item!(enable_banking_id:, session_id:)
     session = enable_banking_provider.create_session(session_id)
-    enable_banking_item = Current.family.enable_banking_items.find_or_create_by(id: enable_banking_id)
+    enable_banking_item = enable_banking_items.find_or_create_by(id: enable_banking_id)
 
     enable_banking_item.update!(
       session_id: session["session_id"],

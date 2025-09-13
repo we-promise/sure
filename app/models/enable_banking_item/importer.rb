@@ -16,8 +16,9 @@ class EnableBankingItem::Importer
     # All errors that should halt the import should be re-raised after handling
     # These errors will propagate up to the Sync record and mark it as failed.
     def handle_enable_banking_error(error)
-      error_body = JSON.parse(error.details)
-      case error_body["code"]
+      error_body = JSON.parse(error.details) rescue {}
+      code = (error_body["code"] || error_body.dig("error", "code")).to_i
+      case code
       when 401, 403
         enable_banking_item.update!(status: :requires_update)
       else
@@ -26,7 +27,12 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_import_accounts_data
-      accounts = JSON.parse(enable_banking_item.raw_payload).dig("accounts")
+      payload = JSON.parse(enable_banking_item.raw_payload) rescue nil
+      unless payload.is_a?(Hash)
+        Rails.logger.warn("EnableBankingItem::Importer: invalid JSON payload for item ID #{enable_banking_item.id}")
+        return
+      end
+      accounts = payload["accounts"]
       unless accounts.is_a?(Array)
         Rails.logger.warn("EnableBankingItem::Importer: 'accounts' is not an Array in payload for item ID #{enable_banking_item.id}")
         return

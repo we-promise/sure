@@ -31,10 +31,6 @@ class Settings::HostingsController < ApplicationController
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
     end
 
-    if hosting_params.key?(:openai_access_token)
-      Setting.openai_access_token = hosting_params[:openai_access_token]
-    end
-
     if hosting_params.key?(:enable_banking_country)
       Setting.enable_banking_country = hosting_params[:enable_banking_country]
     end

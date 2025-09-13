@@ -17,7 +17,7 @@ en:
     auth_callback:
       success: Enable Banking connection added successfully! Your accounts will appear shortly as they sync in the background.
       errors:
-        aut_failed: Authentication failed. Please try again.
+        auth_failed: Authentication failed. Please try again.
         unexpected: An unexpected error occurred. Please try again or contact support.
     destroy:
       success: Enable Banking connection will be removed
