@@ -124,6 +124,7 @@ class Provider::EnableBanking < Provider
         if continuation_key
           req.params["continuation_key"] = continuation_key
         end
+        req.params["transaction_status"] = "BOOK"
       end
       JSON.parse(response.body)
     end
