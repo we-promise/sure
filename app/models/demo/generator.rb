@@ -38,7 +38,7 @@ class Demo::Generator
       end
 
       puts "👥 Creating empty family..."
-      create_family_and_users!("Demo Family", "user@maybe.local", onboarded: true, subscribed: true)
+      create_family_and_users!("Demo Family", "user@example.com", onboarded: true, subscribed: true)
 
       puts "✅ Empty demo data loaded successfully!"
     end
@@ -53,14 +53,14 @@ class Demo::Generator
       end
 
       puts "👥 Creating new user family..."
-      create_family_and_users!("Demo Family", "user@maybe.local", onboarded: false, subscribed: false)
+      create_family_and_users!("Demo Family", "user@example.com", onboarded: false, subscribed: false)
 
       puts "✅ New user demo data loaded successfully!"
     end
   end
 
   # Generate comprehensive realistic demo data with multi-currency
-  def generate_default_data!(skip_clear: false, email: "user@maybe.local")
+  def generate_default_data!(skip_clear: false, email: "user@example.local")
     if skip_clear
       puts "⏭️  Skipping data clearing (appending new family)..."
     else
@@ -84,7 +84,7 @@ class Demo::Generator
   end
 
   # Generate demo data reflecting an average Kenyan household
-  def generate_kenya_data!(skip_clear: false, email: "kenya@maybe.local")
+  def generate_kenya_data!(skip_clear: false, email: "kenya@example.com")
     if skip_clear
       puts "⏭️  Skipping data clearing (appending new family)..."
     else
