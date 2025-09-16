@@ -3,28 +3,37 @@ nav_sections = [
   {
     header: t(".general_section_title"),
     items: [
-      { label: t(".profile_label"), path: settings_profile_path, icon: "circle-user" },
-      { label: t(".preferences_label"), path: settings_preferences_path, icon: "bolt" },
-      { label: t(".security_label"), path: settings_security_path, icon: "shield-check" },
-      { label: "API Key", path: settings_api_key_path, icon: "key" },
-      { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
-      { label: t(".billing_label"), path: settings_billing_path, icon: "circle-dollar-sign", if: !self_hosted? },
       { label: t(".accounts_label"), path: accounts_path, icon: "layers" },
-      { label: t(".imports_label"), path: imports_path, icon: "download" }
+      { label: t(".bank_sync_label"), path: settings_bank_sync_path, icon: "banknote" },
+      { label: t(".preferences_label"), path: settings_preferences_path, icon: "bolt" },
+      { label: t(".profile_label"), path: settings_profile_path, icon: "circle-user" },
+      { label: t(".security_label"), path: settings_security_path, icon: "shield-check" },
+      { label: t(".billing_label"), path: settings_billing_path, icon: "circle-dollar-sign", if: !self_hosted? }
     ]
   },
   {
     header: t(".transactions_section_title"),
     items: [
-      { label: t(".tags_label"), path: tags_path, icon: "tags" },
       { label: t(".categories_label"), path: categories_path, icon: "shapes" },
+      { label: t(".tags_label"), path: tags_path, icon: "tags" },
       { label: t(".rules_label"), path: rules_path, icon: "git-branch" },
       { label: t(".merchants_label"), path: family_merchants_path, icon: "store" }
     ]
   },
   {
+    header: t(".advanced_section_title"),
+    items: [
+      { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },
+      { label: t(".api_keys_label"), path: settings_api_key_path, icon: "key" },
+      { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
+      { label: t(".imports_label"), path: imports_path, icon: "download" },
+      { label: "SimpleFin", path: simplefin_items_path, icon: "building-2" }
+    ]
+  },
+  {
     header: t(".other_section_title"),
     items: [
+      { label: t(".guides_label"), path: settings_guides_path, icon: "book-open" },
       { label: t(".whats_new_label"), path: changelog_path, icon: "box" },
       { label: t(".feedback_label"), path: feedback_path, icon: "megaphone" }
     ]

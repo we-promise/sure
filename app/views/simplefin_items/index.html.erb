@@ -1,0 +1,42 @@
+<% content_for :title, "SimpleFin Connections" %>
+
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-primary">SimpleFin Connections</h1>
+      <p class="text-secondary mt-1">Manage your SimpleFin bank account connections</p>
+    </div>
+
+    <%= render DS::Link.new(
+      text: "Add Connection",
+      icon: "plus",
+      variant: "primary",
+      href: new_simplefin_item_path
+    ) %>
+  </div>
+
+  <% if @simplefin_items.any? %>
+    <div class="space-y-4">
+      <% @simplefin_items.each do |simplefin_item| %>
+        <%= render "simplefin_item", simplefin_item: simplefin_item %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="text-center py-12">
+      <div class="space-y-3 text-center flex flex-col items-center">
+        <%= render DS::FilledIcon.new(
+          variant: :container,
+          icon: "building-2",
+        ) %>
+
+        <p class="text-sm font-medium text-primary">No SimpleFin connections</p>
+        <p class="text-secondary text-sm">Connect your bank accounts through SimpleFin to automatically sync transactions.</p>
+        <%= render DS::Link.new(
+          text: "Add your first connection",
+          variant: "primary",
+          href: new_simplefin_item_path
+        ) %>
+      </div>
+    </div>
+  <% end %>
+</div>

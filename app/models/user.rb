@@ -15,6 +15,7 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
+  validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
 
@@ -87,7 +88,7 @@ class User < ApplicationRecord
   end
 
   def ai_available?
-    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present?
+    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
   end
 
   def ai_enabled?
@@ -161,6 +162,10 @@ class User < ApplicationRecord
 
   def needs_onboarding?
     !onboarded?
+  end
+
+  def account_order
+    AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
   private

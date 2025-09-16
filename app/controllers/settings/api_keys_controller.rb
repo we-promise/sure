@@ -6,6 +6,10 @@ class Settings::ApiKeysController < ApplicationController
   before_action :set_api_key, only: [ :show, :destroy ]
 
   def show
+    @breadcrumbs = [
+      [ "Home", root_path ],
+      [ "API Key", nil ]
+    ]
     @current_api_key = @api_key
   end
 

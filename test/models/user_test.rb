@@ -138,4 +138,18 @@ class UserTest < ActiveSupport::TestCase
     assert_match %r{secret=#{user.otp_secret}}, user.provisioning_uri
     assert_match %r{issuer=Maybe}, user.provisioning_uri
   end
+
+  test "ai_available? returns true when openai access token set in settings" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil do
+      Setting.openai_access_token = nil
+      assert_not @user.ai_available?
+
+      Setting.openai_access_token = "token"
+      assert @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+  end
 end

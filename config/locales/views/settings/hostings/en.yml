@@ -12,7 +12,7 @@ en:
         generated_tokens: Generated codes
         title: Require invite code for signup
       show:
-        general: General Settings
+        general: External Services
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
@@ -21,13 +21,25 @@ en:
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+      brand_fetch_settings:
+        description: Enter the Client ID provided by Brand Fetch
+        label: Client ID
+        placeholder: Enter your Client ID here
+        title: Brand Fetch
+      openai_settings:
+        description: Enter the access token provided by OpenAI
+        env_configured_message: Successfully configured through the OPENAI_ACCESS_TOKEN environment variable.
+        label: Access Token
+        placeholder: Enter your access token here
+        title: OpenAI
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
-        description: Input the API key provided by Twelve Data
+        description: Enter the API key provided by Twelve Data
+        env_configured_message: Successfully configured through the TWELVE_DATA_API_KEY environment variable.
         label: API Key
         placeholder: Enter your API key here
         plan: "%{plan} plan"
-        title: Twelve Data Settings
+        title: Twelve Data
       update:
         failure: Invalid setting value
         success: Settings updated

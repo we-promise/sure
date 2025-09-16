@@ -2,7 +2,7 @@
   <div>
     <h2 class="font-medium mb-1"><%= t(".title") %></h2>
     <% if ENV["TWELVE_DATA_API_KEY"].present? %>
-      <p class="text-sm text-secondary">You have successfully configured your Twelve Data API key through the TWELVE_DATA_API_KEY environment variable.</p>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
     <% else %>
       <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
     <% end %>

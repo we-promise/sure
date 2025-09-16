@@ -30,7 +30,7 @@
       <% end %>
     <% end %>
 
-    <% menu.with_item(variant: "link", text: "Settings", icon: "settings", href: settings_profile_path(return_to: request.fullpath)) %>
+    <% menu.with_item(variant: "link", text: "Settings", icon: "settings", href: accounts_path(return_to: request.fullpath)) %>
     <% menu.with_item(variant: "link", text: "Changelog", icon: "box", href: changelog_path) %>
 
     <% if self_hosted? %>

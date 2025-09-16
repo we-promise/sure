@@ -1,6 +1,20 @@
 ---
 en:
   settings:
+    ai_prompts:
+      show:
+        page_title: AI Prompts
+        openai_label: OpenAI
+        prompt_instructions: Prompt Instructions
+        main_system_prompt:
+          title: Main System Prompt
+          subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
+        transaction_categorizer:
+          title: Transaction Categorizer
+          subtitle: AI automatically categorizes your transactions based on your defined categories
+        merchant_detector:
+          title: Merchant Detector
+          subtitle: AI identifies and enriches transaction data with merchant information
     billings:
       show:
         page_title: Billing
@@ -14,6 +28,7 @@ en:
         general_subtitle: Configure your preferences
         general_title: General
         default_period: Default Period
+        default_account_order: Default Account Order
         language: Language
         page_title: Preferences
         theme_dark: Dark
@@ -58,10 +73,10 @@ en:
         invitation_link: Invitation link
         invite_member: Add member
         last_name: Last Name
-        page_title: Account
+        page_title: Profile Info
         pending: Pending
-        profile_subtitle: Customize how you appear on Maybe
-        profile_title: Profile
+        profile_subtitle: Customize how you appear on Sure
+        profile_title: Personal
         remove_invitation: Remove Invitation
         remove_member: Remove Member
         save: Save
@@ -70,23 +85,28 @@ en:
         page_title: Security
     settings_nav:
       accounts_label: Accounts
+      advanced_section_title: Advanced
+      ai_prompts_label: AI Prompts
       api_key_label: API Key
       billing_label: Billing
       categories_label: Categories
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Imports
+      imports_label: Import/Export
       logout: Logout
       merchants_label: Merchants
+      guides_label: Guides
       other_section_title: More
       preferences_label: Preferences
-      profile_label: Account
+      profile_label: Profile Info
       rules_label: Rules
       security_label: Security
-      self_hosting_label: Self hosting
+      self_hosting_label: Self-Hosting
       tags_label: Tags
       transactions_section_title: Transactions
       whats_new_label: What's new
+      api_keys_label: API Key
+      bank_sync_label: Bank Sync
     settings_nav_link_large:
       next: Next
       previous: Back

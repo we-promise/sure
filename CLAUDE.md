@@ -66,9 +66,9 @@ Only proceed with pull request creation if ALL checks pass.
 ## High-Level Architecture
 
 ### Application Modes
-The Maybe app runs in two distinct modes:
-- **Managed**: The Maybe team operates and manages servers for users (Rails.application.config.app_mode = "managed")
-- **Self Hosted**: Users host the Maybe app on their own infrastructure, typically through Docker Compose (Rails.application.config.app_mode = "self_hosted")
+The codebase runs in two distinct modes:
+- **Managed**: A team operates and manages servers for users (Rails.application.config.app_mode = "managed")
+- **Self Hosted**: Users host the codebase on their own infrastructure, typically through Docker Compose (Rails.application.config.app_mode = "self_hosted")
 
 ### Core Domain Model
 The application is built around financial data management with these key relationships:

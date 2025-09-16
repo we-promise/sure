@@ -1,0 +1,105 @@
+<% content_for :title, @simplefin_item.name %>
+
+<div class="mb-8">
+  <%= link_to simplefin_items_path, class: "text-secondary hover:text-primary" do %>
+    ← Back to SimpleFin Connections
+  <% end %>
+  <h1 class="text-2xl font-bold mt-2"><%= @simplefin_item.name %></h1>
+  <div class="flex gap-3 mt-4">
+    <%= button_to sync_simplefin_item_path(@simplefin_item), method: :post, class: "inline-flex items-center gap-2 px-4 py-2 bg-surface border border-primary rounded-lg text-primary font-medium hover:bg-surface-hover focus:ring-2 focus:ring-primary focus:ring-offset-2" do %>
+      <%= icon "refresh-cw", size: "sm" %>
+      Sync
+    <% end %>
+    <%= button_to simplefin_item_path(@simplefin_item), method: :delete, data: { confirm: "Are you sure?" }, class: "inline-flex items-center gap-2 px-4 py-2 bg-destructive border border-destructive rounded-lg text-white font-medium hover:bg-destructive-hover focus:ring-2 focus:ring-destructive focus:ring-offset-2" do %>
+      <%= icon "trash", size: "sm" %>
+      Delete
+    <% end %>
+  </div>
+</div>
+
+<div class="space-y-6">
+  <% if @simplefin_item.syncing? %>
+    <div class="p-4 bg-surface border border-primary rounded-lg">
+      <div class="flex items-center">
+        <%= icon "loader-2", class: "w-5 h-5 text-primary animate-spin mr-2" %>
+        <p class="text-primary">Syncing accounts...</p>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @simplefin_item.accounts.any? %>
+    <%= render "accounts/index/account_groups", accounts: @simplefin_item.accounts %>
+  <% elsif @simplefin_item.simplefin_accounts.any? %>
+    <div class="bg-container-inset p-1 rounded-xl">
+      <div class="flex items-center px-4 py-2 text-xs font-medium text-secondary">
+        <p>SimpleFin Accounts</p>
+        <span class="text-subdued mx-2">&middot;</span>
+        <p><%= @simplefin_item.simplefin_accounts.count %></p>
+      </div>
+      <div class="bg-container rounded-lg shadow-border-xs">
+        <% @simplefin_item.simplefin_accounts.each_with_index do |simplefin_account, index| %>
+          <div class="p-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <%= render DS::FilledIcon.new(
+                variant: :container,
+                text: simplefin_account.name.first.upcase,
+                size: "md"
+              ) %>
+              <div>
+                <p class="text-sm font-medium text-primary">
+                  <%= simplefin_account.name %>
+                  <% if simplefin_account.org_data.present? && simplefin_account.org_data['name'].present? %>
+                    <span class="text-secondary">• <%= simplefin_account.org_data["name"] %></span>
+                  <% elsif @simplefin_item.institution_name.present? %>
+                    <span class="text-secondary">• <%= @simplefin_item.institution_name %></span>
+                  <% end %>
+                </p>
+                <p class="text-sm text-secondary">
+                  <%= simplefin_account.account_type&.humanize || "Unknown Type" %>
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-8">
+              <p class="text-sm font-medium text-primary">
+                <%= number_to_currency(simplefin_account.current_balance || 0) %>
+              </p>
+              <% if simplefin_account.account %>
+                <%= render DS::Link.new(
+                  text: "View Account",
+                  href: account_path(simplefin_account.account),
+                  variant: :outline
+                ) %>
+              <% else %>
+                <%= render DS::Link.new(
+                  text: "Set Up Account",
+                  href: setup_accounts_simplefin_item_path(@simplefin_item),
+                  variant: :primary,
+                  icon: "settings"
+                ) %>
+              <% end %>
+            </div>
+          </div>
+          <% unless index == @simplefin_item.simplefin_accounts.count - 1 %>
+            <%= render "shared/ruler" %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="text-center py-12">
+      <div class="space-y-3 text-center flex flex-col items-center">
+        <%= render DS::FilledIcon.new(
+          variant: :container,
+          icon: "building-2",
+        ) %>
+
+        <p class="text-sm font-medium text-primary">No accounts found</p>
+        <p class="text-secondary text-sm">Try syncing again to import your accounts.</p>
+        <%= button_to sync_simplefin_item_path(@simplefin_item), method: :post, class: "inline-flex items-center gap-2 px-4 py-2 bg-primary border border-primary rounded-lg text-white font-medium hover:bg-primary-hover focus:ring-2 focus:ring-primary focus:ring-offset-2" do %>
+          <%= icon "refresh-cw", size: "sm" %>
+          Sync Now
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
