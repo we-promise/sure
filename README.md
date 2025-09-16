@@ -68,12 +68,11 @@ cp .env.local.example .env.local
 bin/setup
 bin/dev
 
-# Optionally, load demo data (USA or Kenya, only one!)
+# Optionally, load demo data (USA or Kenya)
 rake demo_data:default
-# or
-rake demo_data:kenya
-# use APPEND=true if you want both
-APPEND=true rake demo_data:kenya
+# Append an additional family. The Kenyan dataset mirrors 12 years of mobile-money,
+# SACCO, transport and school-fee flows for a Nairobi household.
+APPEND=true EMAIL=kenya@example.com rake demo_data:kenya
 ```
 
 Visit http://localhost:3000 to view the app. You can log in with these demo credentials (from the DB seed):

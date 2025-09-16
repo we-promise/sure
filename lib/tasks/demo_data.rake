@@ -23,10 +23,12 @@ namespace :demo_data do
   task default: :environment do
     start    = Time.now
     seed     = ENV.fetch("SEED", Random.new_seed)
+    append   = ActiveModel::Type::Boolean.new.cast(ENV["APPEND"])
+    email    = ENV.fetch("EMAIL", "user@example.com")
     puts "🚀 Loading FULL demo data (seed=#{seed})…"
 
     generator = Demo::Generator.new(seed: seed)
-    generator.generate_default_data!
+    generator.generate_default_data!(skip_clear: append, email: email)
 
     validate_demo_data
 
@@ -39,7 +41,7 @@ namespace :demo_data do
     start    = Time.now
     seed     = ENV.fetch("SEED", Random.new_seed)
     append   = ENV.fetch("APPEND", "false").downcase == "true"
-    
+
     if append
       puts "🚀 Loading KENYA demo data in APPEND mode (keeping existing data, seed=#{seed})…"
     else

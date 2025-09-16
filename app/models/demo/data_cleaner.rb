@@ -8,12 +8,14 @@ class Demo::DataCleaner
 
   # Main entry point for destroying all demo data
   def destroy_everything!
-    Family.destroy_all
-    Setting.destroy_all
-    InviteCode.destroy_all
-    ExchangeRate.destroy_all
-    Security.destroy_all
-    Security::Price.destroy_all
+    ApplicationRecord.no_touching do
+      Family.destroy_all
+      Setting.destroy_all
+      InviteCode.destroy_all
+      ExchangeRate.destroy_all
+      Security.destroy_all
+      Security::Price.destroy_all
+    end
 
     puts "Data cleared"
   end

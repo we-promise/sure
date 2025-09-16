@@ -4,6 +4,7 @@
 
 if Rails.env.development?
   puts 'Run one of the following commands to create demo data: `rake demo_data:default` or `rake demo_data:kenya`'
+  puts 'Use APPEND=true and a unique EMAIL to add multiple demo families.'
 end
 
 Dir[Rails.root.join('db', 'seeds', '*.rb')].sort.each do |file|
