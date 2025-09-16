@@ -38,7 +38,7 @@ class Demo::Generator
       end
 
       puts "👥 Creating empty family..."
-      create_family_and_users!("Demo Family", "user@sure.local", onboarded: true, subscribed: true)
+      create_family_and_users!("Demo Family", "user@example.com", onboarded: true, subscribed: true)
 
       puts "✅ Empty demo data loaded successfully!"
     end
@@ -53,14 +53,14 @@ class Demo::Generator
       end
 
       puts "👥 Creating new user family..."
-      create_family_and_users!("Demo Family", "user@sure.local", onboarded: false, subscribed: false)
+      create_family_and_users!("Demo Family", "user@example.com", onboarded: false, subscribed: false)
 
       puts "✅ New user demo data loaded successfully!"
     end
   end
 
   # Generate comprehensive realistic demo data with multi-currency
-  def generate_default_data!(skip_clear: false, email: "user@sure.local")
+  def generate_default_data!(skip_clear: false, email: "user@example.com")
     if skip_clear
       puts "⏭️  Skipping data clearing (appending new family)..."
     else
@@ -80,6 +80,40 @@ class Demo::Generator
       generate_budget_auto_fill!(family)
 
       puts "✅ Realistic demo data loaded successfully!"
+    end
+  end
+
+  # Generate demo data reflecting an average Kenyan household
+  def generate_kenya_data!(skip_clear: false, email: "kenya@example.com")
+    if skip_clear
+      puts "⏭️  Skipping data clearing (appending new family)..."
+    else
+      puts "🧹 Clearing existing data..."
+      clear_all_data!
+    end
+
+    with_timing(__method__, max_seconds: 1000) do
+      puts "👥 Creating Kenyan demo family..."
+      family = create_family_and_users!(
+        "Nairobi Family",
+        email,
+        onboarded: true,
+        subscribed: true,
+        currency: "KES",
+        country: "KE",
+        timezone: "Africa/Nairobi",
+        date_format: "%d-%m-%Y"
+      )
+
+      puts "📊 Creating Kenyan financial data..."
+      create_kenyan_categories!(family)
+      create_kenyan_accounts!(family)
+      create_kenyan_transactions!(family)
+
+      # Auto-fill current-month budget based on recent spending averages
+      generate_budget_auto_fill!(family, currency: "KES")
+
+      puts "✅ Kenyan demo data loaded successfully!"
     end
   end
 
@@ -118,14 +152,14 @@ class Demo::Generator
       Demo::DataCleaner.new.destroy_everything!
     end
 
-    def create_family_and_users!(family_name, email, onboarded:, subscribed:)
+    def create_family_and_users!(family_name, email, onboarded:, subscribed:, currency: "USD", locale: "en", country: "US", timezone: "America/New_York", date_format: "%m-%d-%Y")
       family = Family.create!(
         name: family_name,
-        currency: "USD",
-        locale: "en",
-        country: "US",
-        timezone: "America/New_York",
-        date_format: "%m-%d-%Y"
+        currency: currency,
+        locale: locale,
+        country: country,
+        timezone: timezone,
+        date_format: date_format
       )
 
       family.start_subscription!("sub_demo_123") if subscribed
@@ -291,7 +325,7 @@ class Demo::Generator
     end
 
     # Auto-fill current-month budget based on recent spending averages
-    def generate_budget_auto_fill!(family)
+    def generate_budget_auto_fill!(family, currency: "USD")
       current_month   = Date.current.beginning_of_month
       analysis_start  = (current_month - 3.months).beginning_of_month
       analysis_period = analysis_start..(current_month - 1.day)
@@ -307,7 +341,7 @@ class Demo::Generator
       budget = family.budgets.where(start_date: current_month).first_or_initialize
       budget.update!(
         end_date: current_month.end_of_month,
-        currency: "USD",
+        currency: currency,
         budgeted_spending: spend_per_cat.values.sum / 3.0, # placeholder, refine below
         expected_income: 0 # Could compute similarly if desired
       )
@@ -318,7 +352,7 @@ class Demo::Generator
         category = Category.find(cat_id)
         budget.budget_categories.find_or_create_by!(category: category) do |bc|
           bc.budgeted_spending = rounded
-          bc.currency = "USD"
+          bc.currency = currency
         end
       end
 
@@ -853,6 +887,236 @@ class Demo::Generator
       [ @food_cat, @entertainment_cat, @shopping_cat, @travel_cat, @transportation_cat ].sample
     end
 
+    # ---------------------------------------------------------------------------
+    # Kenyan dataset helpers
+    # ---------------------------------------------------------------------------
+
+    def create_kenyan_categories!(family)
+      # Income streams reflect the blend of formal salary, informal gigs, and
+      # periodic agricultural earnings that supplement many urban households.
+      @salary_cat          = family.categories.create!(name: "Salary", color: "#10b981", classification: "income")
+      @side_hustle_cat     = family.categories.create!(name: "Side Hustle", color: "#14b8a6", classification: "income")
+      @agribusiness_cat    = family.categories.create!(name: "Agriculture Income", color: "#0ea5e9", classification: "income")
+      @savings_income_cat  = family.categories.create!(name: "SACCO Dividend", color: "#0f766e", classification: "income")
+
+      # Housing and utilities – rent dominates Nairobi budgets and utilities have
+      # frequent tariff increases from Kenya Power and local councils.
+      @housing_cat   = family.categories.create!(name: "Housing", color: "#dc2626", classification: "expense")
+      @rent_cat      = family.categories.create!(name: "Rent", parent: @housing_cat, color: "#b91c1c", classification: "expense")
+      @utilities_cat = family.categories.create!(name: "Electricity", parent: @housing_cat, color: "#991b1b", classification: "expense")
+      @water_cat     = family.categories.create!(name: "Water & Garbage", parent: @housing_cat, color: "#7f1d1d", classification: "expense")
+      @repairs_cat   = family.categories.create!(name: "Repairs", parent: @housing_cat, color: "#ef4444", classification: "expense")
+
+      # Food split between supermarket staples, open-air market produce and
+      # occasional eating out.
+      @food_cat       = family.categories.create!(name: "Food", color: "#ea580c", classification: "expense")
+      @groceries_cat  = family.categories.create!(name: "Groceries", parent: @food_cat, color: "#c2410c", classification: "expense")
+      @market_cat     = family.categories.create!(name: "Open Air Market", parent: @food_cat, color: "#b45309", classification: "expense")
+      @eating_out_cat = family.categories.create!(name: "Eating Out", parent: @food_cat, color: "#9a3412", classification: "expense")
+
+      # Transport relies heavily on matatu/boda rides with occasional ride-hailing.
+      @transport_cat     = family.categories.create!(name: "Transport", color: "#2563eb", classification: "expense")
+      @matatu_cat        = family.categories.create!(name: "Matatu & Boda", parent: @transport_cat, color: "#1d4ed8", classification: "expense")
+      @ride_hailing_cat  = family.categories.create!(name: "Ride Hailing", parent: @transport_cat, color: "#1e3a8a", classification: "expense")
+
+      # Connectivity combines prepaid airtime with home fibre bundles.
+      @connectivity_cat   = family.categories.create!(name: "Connectivity", color: "#6366f1", classification: "expense")
+      @airtime_cat        = family.categories.create!(name: "Airtime", parent: @connectivity_cat, color: "#7c3aed", classification: "expense")
+      @home_internet_cat  = family.categories.create!(name: "Home Internet", parent: @connectivity_cat, color: "#5b21b6", classification: "expense")
+
+      @education_cat       = family.categories.create!(name: "Education", color: "#0891b2", classification: "expense")
+      @healthcare_cat      = family.categories.create!(name: "Healthcare", color: "#db2777", classification: "expense")
+      @nhif_cat            = family.categories.create!(name: "NHIF", parent: @healthcare_cat, color: "#be185d", classification: "expense")
+      @savings_cat         = family.categories.create!(name: "Savings & Investments", color: "#059669", classification: "expense")
+      @family_support_cat  = family.categories.create!(name: "Family Support", color: "#f97316", classification: "expense")
+      @giving_cat          = family.categories.create!(name: "Giving & Tithes", color: "#f59e0b", classification: "expense")
+      @clothing_cat        = family.categories.create!(name: "Clothing", color: "#ec4899", classification: "expense")
+      @business_expense_cat = family.categories.create!(name: "Business Supplies", color: "#65a30d", classification: "expense")
+      @loan_interest_cat   = family.categories.create!(name: "Loan Interest", color: "#475569", classification: "expense")
+      @leisure_cat         = family.categories.create!(name: "Leisure", color: "#22d3ee", classification: "expense")
+      @misc_cat            = family.categories.create!(name: "Miscellaneous", color: "#6b7280", classification: "expense")
+    end
+
+    def create_kenyan_accounts!(family)
+      @equity_checking = family.accounts.create!(accountable: Depository.new, name: "Equity Bank Current", balance: 0, currency: "KES")
+      @mpesa_wallet    = family.accounts.create!(accountable: Depository.new, name: "M-Pesa Mobile Money", balance: 0, currency: "KES")
+      @sacco_savings   = family.accounts.create!(accountable: Depository.new, name: "SACCO Savings", balance: 0, currency: "KES")
+      @chama_fund      = family.accounts.create!(accountable: OtherAsset.new, name: "Chama Investment Group", balance: 0, currency: "KES")
+      @microloan       = family.accounts.create!(accountable: Loan.new, name: "Microfinance Loan", balance: 0, currency: "KES")
+    end
+
+    def create_kenyan_transactions!(family)
+      puts "   📈 Generating Kenyan household history (12 years)..."
+      start_date    = 12.years.ago.beginning_of_month
+      current_month = Date.current.beginning_of_month
+      month_cursor  = start_date
+      annual_inflation = 0.055
+
+      loan_start_date = 2.years.ago.beginning_of_month
+      loan_amount     = 80_000
+      create_transfer!(@microloan, @equity_checking, loan_amount, "SME Loan Disbursement", loan_start_date)
+
+      while month_cursor <= current_month
+        months_since_start = ((month_cursor.year - start_date.year) * 12) + (month_cursor.month - start_date.month)
+
+        salary = -inflation_adjust(52_000, months_since_start, rate: 0.045, rounding: 100)
+        create_transaction!(@equity_checking, salary, "Payslip - Nairobi Tech", @salary_cat, month_cursor.end_of_month)
+
+        if month_cursor.month == 12
+          bonus = -inflation_adjust(35_000, months_since_start, rate: 0.05, rounding: 100)
+          create_transaction!(@equity_checking, bonus, "December Bonus", @salary_cat, month_cursor.end_of_month - 2.days)
+        end
+
+        nhif = inflation_adjust(1_200, months_since_start, rate: 0.03, rounding: 50)
+        create_transaction!(@equity_checking, nhif, "NHIF Contribution", @nhif_cat, month_cursor.beginning_of_month + 3.days)
+
+        nssf = inflation_adjust(1_080, months_since_start, rate: 0.02, rounding: 20)
+        create_transaction!(@equity_checking, nssf, "NSSF Tier I & II", @savings_cat, month_cursor.beginning_of_month + 4.days)
+
+        rent = inflation_adjust(19_500, months_since_start, rate: 0.05, rounding: 100)
+        create_transaction!(@equity_checking, rent, "Apartment Rent - Umoja", @rent_cat, month_cursor.beginning_of_month)
+
+        power = inflation_adjust(3_800, months_since_start, rate: annual_inflation, rounding: 50)
+        create_transaction!(@equity_checking, power, "Kenya Power & Lighting", @utilities_cat, month_cursor.beginning_of_month + 5.days)
+
+        water = inflation_adjust(1_200, months_since_start, rate: annual_inflation, rounding: 50)
+        create_transaction!(@equity_checking, water, "Nairobi Water Company", @water_cat, month_cursor.beginning_of_month + 7.days)
+
+        if (months_since_start % 8).zero?
+          repairs = inflation_adjust(4_500, months_since_start, rate: annual_inflation, rounding: 100)
+          create_transaction!(@equity_checking, repairs, "Estate Repairs & Paint", @repairs_cat, month_cursor.beginning_of_month + 12.days)
+        end
+
+        mpesa_top_up = inflation_adjust(23_000, months_since_start, rate: annual_inflation, rounding: 100)
+        create_transfer!(@equity_checking, @mpesa_wallet, mpesa_top_up, "M-Pesa Float Top-Up", month_cursor.beginning_of_month + 1.day)
+
+        internet = inflation_adjust(3_100, months_since_start, rate: 0.03, rounding: 50)
+        create_transaction!(@mpesa_wallet, internet, "Safaricom Home Fibre", @home_internet_cat, month_cursor.beginning_of_month + 9.days)
+
+        groceries = inflation_adjust(11_800, months_since_start, rate: 0.07, rounding: 100)
+        create_transaction!(@mpesa_wallet, groceries, "Naivas Supermarket", @groceries_cat, month_cursor.beginning_of_month + 8.days)
+
+        market = inflation_adjust(4_600, months_since_start, rate: 0.07, rounding: 50)
+        create_transaction!(@mpesa_wallet, market, "Marikiti Market Produce", @market_cat, month_cursor.beginning_of_month + 15.days)
+
+        eating_out = inflation_adjust(2_400, months_since_start, rate: 0.05, rounding: 50)
+        create_transaction!(@mpesa_wallet, eating_out, "Kienyeji Friday Treat", @eating_out_cat, month_cursor.beginning_of_month + 22.days)
+
+        commute = inflation_adjust(4_400, months_since_start, rate: annual_inflation, rounding: 50)
+        create_transaction!(@mpesa_wallet, commute, "Daily Matatu Commute", @matatu_cat, month_cursor.beginning_of_month + 3.days)
+
+        boda = inflation_adjust(1_500, months_since_start, rate: annual_inflation, rounding: 50)
+        create_transaction!(@mpesa_wallet, boda, "Last Mile Boda Rides", @matatu_cat, month_cursor.beginning_of_month + 12.days)
+
+        ride_hailing = inflation_adjust(1_200, months_since_start, rate: annual_inflation, rounding: 50)
+        create_transaction!(@mpesa_wallet, ride_hailing, "Bolt/Uber Trips", @ride_hailing_cat, month_cursor.beginning_of_month + 24.days)
+
+        airtime = inflation_adjust(1_300, months_since_start, rate: 0.04, rounding: 50)
+        create_transaction!(@mpesa_wallet, airtime, "Safaricom Airtime", @airtime_cat, month_cursor.beginning_of_month + 17.days)
+
+        mobile_data = inflation_adjust(1_500, months_since_start, rate: 0.05, rounding: 50)
+        create_transaction!(@mpesa_wallet, mobile_data, "Monthly Data Bundle", @airtime_cat, month_cursor.beginning_of_month + 18.days)
+
+        family_support = inflation_adjust(3_200, months_since_start, rate: annual_inflation, rounding: 50)
+        create_transaction!(@mpesa_wallet, family_support, "Support for Parents (M-Pesa)", @family_support_cat, month_cursor.beginning_of_month + 11.days)
+
+        giving = inflation_adjust(4_000, months_since_start, rate: 0.05, rounding: 50)
+        create_transaction!(@equity_checking, giving, "Church Tithe", @giving_cat, month_cursor.beginning_of_month + 6.days)
+
+        sacco_amount = inflation_adjust(6_000, months_since_start, rate: 0.04, rounding: 100)
+        create_transfer!(@equity_checking, @sacco_savings, sacco_amount, "SACCO Contribution", month_cursor.beginning_of_month + 2.days, from_category: @savings_cat)
+
+        chama_amount = inflation_adjust(2_500, months_since_start, rate: 0.04, rounding: 50)
+        create_transfer!(@mpesa_wallet, @chama_fund, chama_amount, "Chama Contribution", month_cursor.beginning_of_month + 14.days, from_category: @savings_cat)
+
+        if (months_since_start % 10).zero? && months_since_start.positive?
+          payout_amount = inflation_adjust(12_000, months_since_start, rate: 0.04, rounding: 100)
+          payout_date = month_cursor.beginning_of_month + 21.days
+          create_transfer!(@chama_fund, @mpesa_wallet, payout_amount, "Chama Payout", payout_date)
+        end
+
+        if [ 1, 5, 9 ].include?(month_cursor.month)
+          fees = inflation_adjust(18_000, months_since_start, rate: 0.06, rounding: 100)
+          create_transaction!(@equity_checking, fees, "School Fees", @education_cat, month_cursor.beginning_of_month + 7.days)
+        end
+
+        if [ 3, 9 ].include?(month_cursor.month)
+          farm_inputs = inflation_adjust(4_200, months_since_start, rate: 0.05, rounding: 100)
+          create_transaction!(@mpesa_wallet, farm_inputs, "Farm Inputs Upcountry", @business_expense_cat, month_cursor.beginning_of_month + 13.days)
+        end
+
+        if (months_since_start % 4).zero?
+          clinic = inflation_adjust(2_800, months_since_start, rate: 0.05, rounding: 50)
+          create_transaction!(@mpesa_wallet, clinic, "Clinic Visit", @healthcare_cat, month_cursor.beginning_of_month + 25.days)
+        end
+
+        if rand < 0.15
+          pharmacy = inflation_adjust(900, months_since_start, rate: 0.05, rounding: 50)
+          create_transaction!(@mpesa_wallet, pharmacy, "Pharmacy Purchase", @healthcare_cat, month_cursor.beginning_of_month + rand(5..26).days)
+        end
+
+        if [ 2, 8 ].include?(month_cursor.month)
+          clothing = inflation_adjust(6_500, months_since_start, rate: 0.05, rounding: 100)
+          create_transaction!(@mpesa_wallet, clothing, "Clothing & Shoes", @clothing_cat, month_cursor.beginning_of_month + 19.days)
+        end
+
+        if rand < 0.35
+          leisure = inflation_adjust(1_500, months_since_start, rate: 0.05, rounding: 50)
+          create_transaction!(@mpesa_wallet, leisure, pick([ "Movie Night", "Birthday Outing", "Family Picnic", "Kisumu Day Trip" ]), @leisure_cat, month_cursor.beginning_of_month + rand(6..27).days)
+        end
+
+        if rand < 0.2
+          misc = inflation_adjust(rand(700..1_400), months_since_start, rate: 0.05, rounding: 50)
+          create_transaction!(@mpesa_wallet, misc, pick([ "Household Items", "Salon Visit", "County Parking", "Appliance Repair" ]), @misc_cat, month_cursor.beginning_of_month + rand(4..28).days)
+        end
+
+        if [ 4, 10 ].include?(month_cursor.month)
+          harvest = -inflation_adjust(16_000, months_since_start, rate: 0.05, rounding: 100)
+          create_transaction!(@sacco_savings, harvest, "Harvest Sales from Upcountry", @agribusiness_cat, month_cursor.beginning_of_month + 20.days)
+        end
+
+        if month_cursor.month == 12
+          travel = inflation_adjust(12_000, months_since_start, rate: 0.05, rounding: 100)
+          create_transaction!(@mpesa_wallet, travel, "Holiday Travel to Shags", @leisure_cat, month_cursor.beginning_of_month + 26.days)
+
+          gifts = inflation_adjust(5_000, months_since_start, rate: 0.05, rounding: 100)
+          create_transaction!(@mpesa_wallet, gifts, "Christmas Contributions", @family_support_cat, month_cursor.beginning_of_month + 23.days)
+
+          dividend = -inflation_adjust(20_000, months_since_start, rate: 0.06, rounding: 100)
+          create_transaction!(@sacco_savings, dividend, "SACCO Dividend", @savings_income_cat, month_cursor.end_of_month - 3.days)
+        end
+
+        gigs = rand(1..3)
+        gigs.times do
+          gig_desc = pick([ "Weekend Boda Deliveries", "Graphic Design Gig", "Online Tutoring", "Market Stall Pop-Up" ])
+          gig_amount = -inflation_adjust(rand(3_000..5_500), months_since_start, rate: 0.03, rounding: 50)
+          gig_date = month_cursor.beginning_of_month + rand(5..25).days
+          create_transaction!(@mpesa_wallet, gig_amount, gig_desc, @side_hustle_cat, gig_date)
+
+          supplies = inflation_adjust(rand(400..900), months_since_start, rate: 0.03, rounding: 50)
+          create_transaction!(@mpesa_wallet, supplies, "Supplies for #{gig_desc.split.first}", @business_expense_cat, gig_date - 1.day)
+        end
+
+        if [ 4, 10 ].include?(month_cursor.month)
+          prep = inflation_adjust(2_200, months_since_start, rate: 0.05, rounding: 50)
+          create_transaction!(@mpesa_wallet, prep, "Transport to Rural Farm", @transport_cat, month_cursor.beginning_of_month + 6.days)
+        end
+
+        months_since_loan_start = ((month_cursor.year - loan_start_date.year) * 12) + (month_cursor.month - loan_start_date.month)
+        if months_since_loan_start >= 0 && months_since_loan_start < 24
+          interest = inflation_adjust(450, months_since_start, rate: 0.02, rounding: 50)
+          create_transaction!(@equity_checking, interest, "Microloan Interest", @loan_interest_cat, month_cursor.beginning_of_month + 6.days)
+
+          principal = inflation_adjust(2_800, months_since_start, rate: 0.0, rounding: 50)
+          create_transfer!(@equity_checking, @microloan, principal, "Microloan Repayment", month_cursor.beginning_of_month + 7.days)
+        end
+
+        month_cursor = month_cursor.next_month
+      end
+
+      sync_family_accounts!(family)
+    end
+
     def create_transaction!(account, amount, name, category, date)
       # For credit cards (liabilities), positive amounts = charges (increase debt)
       # For checking accounts (assets), positive amounts = expenses (decrease balance)
@@ -876,16 +1140,16 @@ class Demo::Generator
       )
     end
 
-    def create_transfer!(from_account, to_account, amount, name, date)
+    def create_transfer!(from_account, to_account, amount, name, date, from_category: nil, to_category: nil)
       outflow = from_account.entries.create!(
-        entryable: Transaction.new,
+        entryable: Transaction.new(category: from_category),
         amount: amount,
         name: name,
         currency: from_account.currency,
         date: date
       )
       inflow = to_account.entries.create!(
-        entryable: Transaction.new,
+        entryable: Transaction.new(category: to_category),
         amount: -amount,
         name: name,
         currency: to_account.currency,
@@ -934,6 +1198,15 @@ class Demo::Generator
     def jitter(num, pct = 0.03)
       variation = num * pct * (rand * 2 - 1) # rand(-pct..pct)
       (num + variation).round(2)
+    end
+
+    def inflation_adjust(base_amount, months_elapsed, rate:, rounding: 50)
+      growth_factor = (1 + rate) ** (months_elapsed / 12.0)
+      adjusted = base_amount * growth_factor
+
+      return adjusted.round if rounding.nil?
+
+      ((adjusted / rounding).round * rounding).to_i
     end
 
     # ---------------------------------------------------------------------------

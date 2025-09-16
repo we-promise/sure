@@ -68,13 +68,16 @@ cp .env.local.example .env.local
 bin/setup
 bin/dev
 
-# Optionally, load demo data
+# Optionally, load demo data (USA or Kenya)
 rake demo_data:default
+# Append an additional family. The Kenyan dataset mirrors 12 years of mobile-money,
+# SACCO, transport and school-fee flows for a Nairobi household.
+APPEND=true EMAIL=kenya@example.com rake demo_data:kenya
 ```
 
 Visit http://localhost:3000 to view the app. You can log in with these demo credentials (from the DB seed):
 
-- Email: `user@sure.local`
+- Email: `user@example.com`
 - Password: `password`
 
 For further instructions, see guides below.
