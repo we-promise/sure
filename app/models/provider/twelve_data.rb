@@ -55,22 +55,40 @@ class Provider::TwelveData < Provider
       Rate.new(date: date.to_date, from:, to:, rate: rate)
     end
   end
+  def fetch_exchange_cross_rates(from:, to:, start_date:, end_date:)
+    response = client.get("#{base_url}/time_series/cross") do |req|
+      req.params["base"] = "#{from}"
+      req.params["quote"] = "#{from}"
+      req.params["start_date"] = start_date.to_s
+      req.params["end_date"] = end_date.to_s
+      req.params["interval"] = "1day"
+    end
+    data = JSON.parse(response.body).dig("values")
+    if data.nil?
+      Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}")
+      raise InvalidExchangeRateError.new("Could not fetch exchange rates for #{from}/#{to} between #{start_date} and #{end_date}, response: #{response.body}")
+    end
+    data
+  end
+
+  def fetch_exchange_rates_internal(from:, to:, start_date:, end_date:)
+    response = client.get("#{base_url}/time_series") do |req|
+      req.params["symbol"] = "#{from}/#{to}"
+      req.params["start_date"] = start_date.to_s
+      req.params["end_date"] = end_date.to_s
+      req.params["interval"] = "1day"
+    end
+    data = JSON.parse(response.body).dig("values")
+    if data.nil?
+      Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}")
+      fetch_exchange_cross_rates(from:, to:, start_date:, end_date:)
+    end
+    data
+  end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
     with_provider_response do
-      response = client.get("#{base_url}/time_series/cross") do |req|
-        req.params["base"] = "#{to}"
-        req.params["quote"] = "#{from}"
-        req.params["start_date"] = start_date.to_s
-        req.params["end_date"] = end_date.to_s
-        req.params["interval"] = "1day"
-      end
-
-      data = JSON.parse(response.body).dig("values")
-      if data.nil?
-        Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}")
-        raise InvalidExchangeRateError.new("Could not fetch exchange rates for #{from}/#{to} between #{start_date} and #{end_date}, response: #{response.body}")
-      end
+      data = fetch_exchange_rates_internal(from:, to:, start_date:, end_date:)
       data.map do |resp|
         rate = resp.dig("close")
         date = resp.dig("datetime")
