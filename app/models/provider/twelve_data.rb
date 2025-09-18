@@ -56,6 +56,8 @@ class Provider::TwelveData < Provider
     end
   end
   def fetch_exchange_cross_rates(from:, to:, start_date:, end_date:)
+    # Add a random delay to avoid rate limiting
+    sleep(rand(60..300))
     response = client.get("#{base_url}/time_series/cross") do |req|
       req.params["base"] = "#{from}"
       req.params["quote"] = "#{to}"
