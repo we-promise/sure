@@ -16,5 +16,7 @@ if ENV["SENTRY_DSN"].present?
     config.profiles_sample_rate = 0.25
 
     config.profiler_class = Sentry::Vernier::Profiler
+    config.enable_logs = true
+    config.enabled_patches = [ :logger, :http, :redis, :puma ]
   end
 end
