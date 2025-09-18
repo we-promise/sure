@@ -49,8 +49,8 @@ class Provider::TwelveData < Provider
 
       rate = JSON.parse(response.body).dig("rate")
       if rate.nil?
-        Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} on: #{date}")
-        raise InvalidExchangeRateError.new("Could not fetch exchange rate for #{from}/#{to} on #{date}")
+        Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} on: #{date}, response: #{response.body}")
+        raise InvalidExchangeRateError.new("Could not fetch exchange rate for #{from}/#{to} on #{date}, response: #{response.body}")
       end
       Rate.new(date: date.to_date, from:, to:, rate: rate)
     end
@@ -68,8 +68,8 @@ class Provider::TwelveData < Provider
 
       data = JSON.parse(response.body).dig("values")
       if data.nil?
-        Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}")
-        raise InvalidExchangeRateError.new("Could not fetch exchange rates for #{from}/#{to} between #{start_date} and #{end_date}")
+        Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}")
+        raise InvalidExchangeRateError.new("Could not fetch exchange rates for #{from}/#{to} between #{start_date} and #{end_date}, response: #{response.body}")
       end
       data.map do |resp|
         rate = resp.dig("close")
