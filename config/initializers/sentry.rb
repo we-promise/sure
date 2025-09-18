@@ -16,6 +16,5 @@ if ENV["SENTRY_DSN"].present?
     config.profiles_sample_rate = 0.25
 
     config.profiler_class = Sentry::Vernier::Profiler
-    config.release = Maybe.version.to_s + "+" + Maybe.commit_sha
   end
 end
