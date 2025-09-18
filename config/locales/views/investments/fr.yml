@@ -11,7 +11,7 @@ fr:
     show:
       chart_title: Valeur totale
     value_tooltip:
-      cash: Espece
-      holdings: Positionnement
-      total: Équilibre du portefeuille
-      total_value_tooltip: Le solde total du portefeuille est la somme des liquidités de courtage (disponibles pour la négociation) et de la valeur marchande actuelle de vos avoirs.
+      cash: Liquidités
+      holdings: Titres
+      total: Valeur totale du portefeuille
+      total_value_tooltip: Le solde total du portefeuille correspond à la somme des liquidités (disponibles pour la négociation) et de la valeur marchande actuelle de vos titres.

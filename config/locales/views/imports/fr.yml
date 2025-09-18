@@ -4,8 +4,8 @@ fr:
     cleans:
       show:
         description: Editez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
-        errors_notice: Vous avez des erreurs dans vos données. Survoler l'erreur pour voir les détails.
-        errors_notice_mobile: Vous avez des erreurs dans vos données. Cliquez sur la bulle d'aide de l'erreur pour voir les détails.
+        errors_notice: Vous avez des erreurs dans vos données. Survolez l'erreur pour voir les détails.
+        errors_notice_mobile: Vous avez des erreurs dans vos données. Cliquez sur l'icône d'aide de l'erreur pour voir les détails.
         title: Nettoyez vos données
     configurations:
       mint_import:
@@ -74,5 +74,5 @@ fr:
       sources: Sources
       title: Nouvelle Importation CSV
     ready:
-      description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous publieriez cette importation.
+      description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
       title: Confirmez vos données d'importation

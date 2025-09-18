@@ -17,8 +17,8 @@ fr:
     index:
       bootstrap: Utiliser les valeurs par défaut (recommandé)
       categories: Catégories
-      categories_expenses: Catégories d'expenses
-      categories_incomes: Catégories d'entrées
+      categories_expenses: Catégories de dépenses
+      categories_incomes: Catégories de revenus
       empty: Aucune catégorie trouvée
       new: Nouvelle catégorie
     menu:

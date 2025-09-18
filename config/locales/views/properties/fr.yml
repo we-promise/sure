@@ -6,7 +6,7 @@ fr:
     form:
       address_line1: Adresse
       address_line1_placeholder: 123, rue de la Paix
-      area: Surface vivable
+      area: Surface habitable
       area_placeholder: '2000'
       area_unit: Unité de mesure
       country: pays
@@ -24,7 +24,7 @@ fr:
     new:
       title: Saisir les détails de la propriété
     overview:
-      living_area: Surface vivable
+      living_area: Surface habitable
       market_value: Valeur du marché
       purchase_price: Prix d'achat
       trend: Tendance

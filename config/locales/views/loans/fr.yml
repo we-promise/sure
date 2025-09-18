@@ -6,7 +6,7 @@ fr:
     form:
       interest_rate: Taux d'intérêt
       interest_rate_placeholder: '5.25'
-      initial_balance: Équilibre original du prêt
+      initial_balance: Solde initial du prêt
       rate_type: Type de taux
       term_months: Durée (mois)
       term_months_placeholder: '360'

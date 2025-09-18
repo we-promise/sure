@@ -30,7 +30,7 @@ fr:
       delete_subtitle: Cette action ne peut pas être annulée
       delete_title: Supprimer la transaction
       details: Détails
-      exclude_subtitle: Cette transaction n' sera pas incluse dans les rapports et les calculs
+      exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et les calculs
       exclude_title: Exclure des analyses
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...

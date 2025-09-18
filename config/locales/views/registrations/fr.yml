@@ -13,7 +13,7 @@ fr:
       invalid_invite_code: Code d'invitation invalide, veuillez essayer à nouveau.
       success: Vous avez été inscrit avec succès.
     new:
-      invitation_message: "%{inviter} vous a invité pour rejoindre en tant que %{role}"
+      invitation_message: "%{inviter} vous a invité à rejoindre en tant que %{role}"
       join_family_title: Rejoindre %{family}
       role_admin: administrateur
       role_member: membre

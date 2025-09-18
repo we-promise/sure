@@ -17,7 +17,7 @@ fr:
     merchant:
       confirm_accept: Supprimer le marchand
       confirm_body: Êtes-vous sûr de vouloir supprimer ce marchand ? La suppression de ce marchand
-        délierait tous les transactions associées et pourrait affecter votre rapport.
+        dissocierait toutes les transactions associées et pourrait affecter vos rapports.
       confirm_title: Supprimer le marchand ?
       delete: Supprimer le marchand
       edit: Modifier le marchand

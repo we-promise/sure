@@ -14,7 +14,7 @@ fr:
       connection_lost_description: Cette connexion n'est plus valide. Vous devrez supprimer cette connexion et y ajouter à nouveau pour pouvoir continuer la synchronisation des données.
       delete: Supprimer
       error: Une erreur s'est produite lors de la synchronisation des données
-      no_accounts_description: Nous ne pouvons pas charger aucun compte depuis cette institution financière.
+      no_accounts_description: Nous ne pouvons pas charger de compte depuis cette institution financière.
       no_accounts_title: Aucun compte trouvé
       requires_update: Re-authentification requise
       status: Dernière synchronisation il y a %{timestamp}
