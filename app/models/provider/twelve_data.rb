@@ -58,7 +58,7 @@ class Provider::TwelveData < Provider
   def fetch_exchange_cross_rates(from:, to:, start_date:, end_date:)
     response = client.get("#{base_url}/time_series/cross") do |req|
       req.params["base"] = "#{from}"
-      req.params["quote"] = "#{from}"
+      req.params["quote"] = "#{to}"
       req.params["start_date"] = start_date.to_s
       req.params["end_date"] = end_date.to_s
       req.params["interval"] = "1day"
