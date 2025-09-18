@@ -7,7 +7,7 @@ export BASH_ENV=""
 
 echo "Installing PostgreSQL and dependencies..."
 apt-get update -qq
-apt-get install -yqq wget unzip libyaml-dev build-essential curl git libssl-dev libreadline-dev zlib1g-dev xz-utils ca-certificates libpq-dev vim postgresql libvips libvips-dev ffmpeg
+apt-get install -yqq wget unzip libyaml-dev build-essential curl git libssl-dev libreadline-dev zlib1g-dev xz-utils ca-certificates libpq-dev vim redis-server postgresql libvips libvips-dev ffmpeg
 
 echo "Starting PostgreSQL cluster..."
 pg_ctlcluster --skip-systemctl-redirect 16 main start
