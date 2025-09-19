@@ -216,7 +216,13 @@ class Provider::TwelveData < Provider
           max: 2,
           interval: 0.05,
           interval_randomness: 0.5,
-          backoff_factor: 2
+          backoff_factor: 2,
+          exceptions: [ Faraday::TooManyRequestsError, Faraday::RetriableResponse ],
+          retry_statuses: [ 429 ],
+          retry_block: ->(env, _, retries, _) {
+            # Sleep between 1-10 minutes when retrying
+            sleep(60 + rand(540))
+          }
         })
 
         faraday.request :json
