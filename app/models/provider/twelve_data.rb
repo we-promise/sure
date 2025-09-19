@@ -80,12 +80,12 @@ class Provider::TwelveData < Provider
       req.params["end_date"] = end_date.to_s
       req.params["interval"] = "1day"
     end
-    data = JSON.parse(response.body).dig("values")
-    if data.nil?
+    parsed = JSON.parse(response.body)
+    if parsed.dig("code") == 404
       Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}")
       fetch_exchange_cross_rates(from:, to:, start_date:, end_date:)
     end
-    data
+    parsed.dig("values")
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
