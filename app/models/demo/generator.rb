@@ -133,7 +133,7 @@ class Demo::Generator
       # Admin user
       family.users.create!(
         email: email,
-        first_name: "Jack (admin)",
+        first_name: "Jack",
         last_name: "Bogle",
         role: "admin",
         password: "Password!1",
@@ -143,7 +143,7 @@ class Demo::Generator
       # Member user
       family.users.create!(
         email: "partner_#{email}",
-        first_name: "Eve (member)",
+        first_name: "Eve",
         last_name: "Bogle",
         role: "member",
         password: "Password!1",
