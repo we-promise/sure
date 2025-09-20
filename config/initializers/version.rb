@@ -1,4 +1,4 @@
-module Maybe
+module Sure
   class << self
     def version
       Semver.new(semver)

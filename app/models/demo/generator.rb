@@ -167,20 +167,20 @@ class Demo::Generator
       # Admin user
       family.users.create!(
         email: email,
-        first_name: "Demo (admin)",
-        last_name: "Maybe",
+        first_name: "Jack (admin)",
+        last_name: "Bogle",
         role: "admin",
-        password: "password",
+        password: "Password!",
         onboarded_at: onboarded ? Time.current : nil
       )
 
       # Member user
       family.users.create!(
         email: "partner_#{email}",
-        first_name: "Demo (member)",
-        last_name: "Maybe",
+        first_name: "Eve (member)",
+        last_name: "Bogle",
         role: "member",
-        password: "password",
+        password: "Password!1",
         onboarded_at: onboarded ? Time.current : nil
       )
 
