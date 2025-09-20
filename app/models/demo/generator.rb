@@ -136,7 +136,7 @@ class Demo::Generator
         first_name: "Jack (admin)",
         last_name: "Bogle",
         role: "admin",
-        password: "Password!",
+        password: "Password!1",
         onboarded_at: onboarded ? Time.current : nil
       )
 
