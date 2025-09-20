@@ -1,0 +1,17 @@
+---
+fr:
+  investments:
+    edit:
+      edit: Modifier %{account}
+    form:
+      none: Aucun
+      subtype_prompt: Sélectionnez le type d'investissement
+    new:
+      title: Saisir le solde du compte
+    show:
+      chart_title: Valeur totale
+    value_tooltip:
+      cash: Liquidités
+      holdings: Titres
+      total: Valeur totale du portefeuille
+      total_value_tooltip: Le solde total du portefeuille correspond à la somme des liquidités (disponibles pour la négociation) et de la valeur marchande actuelle de vos titres.
