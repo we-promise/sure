@@ -45,7 +45,7 @@ class Provider::Plaid
   def get_link_token(user_id:, webhooks_url:, redirect_url:, accountable_type: nil, access_token: nil)
     request_params = {
       user: { client_user_id: user_id },
-      client_name: "Maybe Finance",
+      client_name: "Sure Finances",
       country_codes: country_codes,
       language: "en",
       webhook: webhooks_url,
