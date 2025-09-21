@@ -119,3 +119,5 @@ group :test do
 end
 
 gem "rails_db", "~> 2.5"
+
+gem "seed_dump", "~> 3.3"
