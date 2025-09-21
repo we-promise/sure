@@ -1,0 +1,97 @@
+x-db-env: &db_env
+  POSTGRES_USER: ${POSTGRES_USER:-maybe_user}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maybe_password}
+  POSTGRES_DB: ${POSTGRES_DB:-maybe-development}
+
+x-rails-env: &rails_env
+  <<: *db_env
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13}
+  SELF_HOSTED: "true"
+  RAILS_FORCE_SSL: "false"
+  RAILS_ASSUME_SSL: "false"
+  DB_HOST: db
+  DB_PORT: 5432
+  REDIS_URL: redis://redis:6379/1
+# NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
+  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
+  RAILS_ENV: development
+
+services:
+  base: &base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        RAILS_ENV: 'development'
+    image: maybe:development
+    volumes:
+      - app-storage:/rails/storage
+    environment:
+      <<: *rails_env
+    env_file: .env
+    restart: unless-stopped
+    profiles:
+      - never
+
+  web:
+    <<: *base
+    image: maybe-web:development
+    ports:
+      - 3000:3000
+    command: ./bin/rails server -b 0.0.0.0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sure_net
+
+  worker:
+    <<: *base
+    image: maybe-worker:development
+    command: bundle exec sidekiq
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sure_net
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    volumes:
+      - maybe-dev-postgres-data:/var/lib/postgresql/data
+    environment:
+      <<: *db_env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sure_net
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sure_net
+
+volumes:
+  app-storage:
+  maybe-dev-postgres-data:
+  redis-data:
+
+networks:
+  sure_net:
+    driver: bridge
