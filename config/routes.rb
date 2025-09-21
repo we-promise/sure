@@ -197,7 +197,7 @@ Rails.application.routes.draw do
 
   resources :securities, only: :index
 
-  resources :invite_codes, only: %i[index create]
+  resources :invite_codes, only: %i[index create destroy]
 
   resources :invitations, only: [ :new, :create, :destroy ] do
     get :accept, on: :member
