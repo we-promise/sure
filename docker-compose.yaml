@@ -64,6 +64,8 @@ services:
     restart: unless-stopped
     volumes:
       - maybe-dev-postgres-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
     environment:
       <<: *db_env
     healthcheck:
@@ -77,6 +79,8 @@ services:
   redis:
     image: redis:latest
     restart: unless-stopped
+    ports:
+      - 6379:6379
     volumes:
       - redis-data:/data
     healthcheck:
