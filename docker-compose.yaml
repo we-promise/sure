@@ -17,35 +17,6 @@ x-rails-env: &rails_env
   RAILS_ENV: development
 
 services:
-  base: &base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        RAILS_ENV: 'development'
-    image: maybe:development
-    volumes:
-      - app-storage:/rails/storage
-    environment:
-      <<: *rails_env
-    env_file: .env
-    restart: unless-stopped
-    profiles:
-      - never
-
-  web:
-    <<: *base
-    image: maybe-web:development
-    ports:
-      - 3000:3000
-    command: ./bin/rails server -b 0.0.0.0
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - sure_net
 
   worker:
     <<: *base
