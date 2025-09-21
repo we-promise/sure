@@ -117,3 +117,5 @@ group :test do
   gem "climate_control"
   gem "simplecov", require: false
 end
+
+gem "rails_db", "~> 2.5"
