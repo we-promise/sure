@@ -1,6 +1,3 @@
-require "sidekiq/web"
-require "sidekiq/cron/web"
-
 Rails.application.routes.draw do
   use_doorkeeper
   # MFA routes
@@ -12,8 +9,6 @@ Rails.application.routes.draw do
 
   mount Lookbook::Engine, at: "/design-system"
 
-  # Uses basic auth - see config/initializers/sidekiq.rb
-  mount Sidekiq::Web => "/sidekiq"
   mount MissionControl::Jobs::Engine, at: "/jobs"
 
   # AI chats

@@ -29,20 +29,6 @@ services:
       - db
       - redis
 
-  worker:
-    build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
-    volumes:
-      - ..:/workspace:cached
-      - bundle_cache:/bundle
-    command: bundle exec sidekiq
-    restart: unless-stopped
-    environment:
-      <<: *rails_env
-    depends_on:
-      - redis
-
   redis:
     image: redis:latest
     volumes:
