@@ -9,7 +9,6 @@ x-rails-env: &rails_env
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
   BUNDLE_PATH: /bundle
-  REDIS_URL: redis://redis:6379/1
 
 services:
   app:
@@ -27,16 +26,6 @@ services:
       <<: *rails_env
     depends_on:
       - db
-      - redis
-
-  redis:
-    image: redis:latest
-    volumes:
-      - redis-data:/data
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-  
   db:
     image: postgres:latest
     volumes:
@@ -49,5 +38,4 @@ services:
 
 volumes:
   postgres-data:
-  redis-data:
   bundle_cache:

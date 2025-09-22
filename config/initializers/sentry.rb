@@ -17,6 +17,6 @@ if ENV["SENTRY_DSN"].present?
 
     config.profiler_class = Sentry::Vernier::Profiler
     config.enable_logs = true
-    config.enabled_patches = [ :logger, :http, :redis, :puma ]
+    config.enabled_patches = [ :logger, :http, :puma ]
   end
 end

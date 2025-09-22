@@ -16,10 +16,7 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
-  before_action :check_api_key_rate_limit
   before_action :log_api_access
-
-
 
   # Override Doorkeeper's default behavior to return JSON instead of redirecting
   def doorkeeper_unauthorized_render_options(error: nil)
@@ -98,53 +95,8 @@ class Api::V1::BaseController < ApplicationController
       @current_user = @api_key.user
       @api_key.update_last_used!
       @authentication_method = :api_key
-      @rate_limiter = ApiRateLimiter.limit(@api_key)
       setup_current_context_for_api
       true
-    end
-
-    # Check rate limits for API key authentication
-    def check_api_key_rate_limit
-      return unless @authentication_method == :api_key && @rate_limiter
-
-      if @rate_limiter.rate_limit_exceeded?
-        usage_info = @rate_limiter.usage_info
-        render_rate_limit_exceeded(usage_info)
-        return false
-      end
-
-      # Increment request count for successful API key requests
-      @rate_limiter.increment_request_count!
-
-      # Add rate limit headers to response
-      add_rate_limit_headers(@rate_limiter.usage_info)
-    end
-
-    # Render rate limit exceeded response
-    def render_rate_limit_exceeded(usage_info)
-      response.headers["X-RateLimit-Limit"] = usage_info[:rate_limit].to_s
-      response.headers["X-RateLimit-Remaining"] = "0"
-      response.headers["X-RateLimit-Reset"] = usage_info[:reset_time].to_s
-      response.headers["Retry-After"] = usage_info[:reset_time].to_s
-
-      Rails.logger.warn "API Rate Limit Exceeded: API Key #{@api_key.name} (User: #{@current_user.email}) - #{usage_info[:current_count]}/#{usage_info[:rate_limit]} requests"
-
-      render_json({
-        error: "rate_limit_exceeded",
-        message: "Rate limit exceeded. Try again in #{usage_info[:reset_time]} seconds.",
-        details: {
-          limit: usage_info[:rate_limit],
-          current: usage_info[:current_count],
-          reset_in_seconds: usage_info[:reset_time]
-        }
-      }, status: :too_many_requests)
-    end
-
-    # Add rate limit headers to successful responses
-    def add_rate_limit_headers(usage_info)
-      response.headers["X-RateLimit-Limit"] = usage_info[:rate_limit].to_s
-      response.headers["X-RateLimit-Remaining"] = usage_info[:remaining].to_s
-      response.headers["X-RateLimit-Reset"] = usage_info[:reset_time].to_s
     end
 
     # Render unauthorized response

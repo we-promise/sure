@@ -21,24 +21,8 @@ services:
     networks:
       - sure_net
 
-  redis:
-    image: redis:latest
-    restart: unless-stopped
-    ports:
-      - 6379:6379
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - sure_net
-
 volumes:
   maybe-dev-postgres-data:
-  redis-data:
 
 networks:
   sure_net:

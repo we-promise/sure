@@ -1,8 +1,6 @@
 class PagesController < ApplicationController
   include Periodable
 
-  skip_authentication only: :redis_configuration_error
-
   def dashboard
     @balance_sheet = Current.family.balance_sheet
     @accounts = Current.family.accounts.visible.with_attached_logo
@@ -46,10 +44,6 @@ class PagesController < ApplicationController
 
   def feedback
     render layout: "settings"
-  end
-
-  def redis_configuration_error
-    render layout: "blank"
   end
 
   private

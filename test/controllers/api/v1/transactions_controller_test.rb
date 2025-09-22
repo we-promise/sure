@@ -27,10 +27,6 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       display_key: "test_ro_#{SecureRandom.hex(8)}",
       source: "mobile"  # Use different source to allow multiple keys
     )
-
-    # Clear any existing rate limit data
-    Redis.new.del("api_rate_limit:#{@api_key.id}")
-    Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
   end
 
   # INDEX action tests
