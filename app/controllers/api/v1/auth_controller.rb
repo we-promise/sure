@@ -4,7 +4,6 @@ module Api
       include Invitable
 
       skip_before_action :authenticate_request!
-      skip_before_action :check_api_key_rate_limit
       skip_before_action :log_api_access
 
       def signup
