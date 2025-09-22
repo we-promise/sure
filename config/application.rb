@@ -41,5 +41,7 @@ module Maybe
 
     # Enable Rack::Attack middleware for API rate limiting
     config.middleware.use Rack::Attack
+    MissionControl::Jobs.http_basic_auth_user = "mission_control_jobs"
+    MissionControl::Jobs.http_basic_auth_password = ENV["MISSION_CONTROL_JOBS_PASSWORD"] || "mission_control_jobs"
   end
 end

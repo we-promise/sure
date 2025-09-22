@@ -14,6 +14,7 @@ Rails.application.routes.draw do
 
   # Uses basic auth - see config/initializers/sidekiq.rb
   mount Sidekiq::Web => "/sidekiq"
+  mount MissionControl::Jobs::Engine, at: "/jobs"
 
   # AI chats
   resources :chats do

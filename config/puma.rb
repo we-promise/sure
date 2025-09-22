@@ -47,6 +47,8 @@ environment rails_env
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
 
+plugin :solid_queue
+
 pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
 
 if rails_env == "development"

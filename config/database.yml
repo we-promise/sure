@@ -8,13 +8,39 @@ default: &default
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { nil } %>
 
 development:
-  <<: *default
-  database: <%= ENV.fetch("POSTGRES_DB") { "maybe_development" } %>
+  primary:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DB") { "maybe_development" } %>
+  cache:
+    adapter: sqlite3
+    database: storage/development_cache.sqlite3
+    migrations_paths: db/cache_migrate
+  queue:
+    adapter: sqlite3
+    database: storage/development_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    adapter: sqlite3
+    database: storage/development_cable.sqlite3
+    migrations_paths: db/cable_migrate
 
 test:
   <<: *default
   database: <%= ENV.fetch("POSTGRES_DB") { "maybe_test" } %>
 
 production:
-  <<: *default
-  database: <%= ENV.fetch("POSTGRES_DB") { "maybe_production" } %>
+  primary:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DB") { "maybe_production" } %>
+  cache:
+    adapter: sqlite3
+    database: storage/production_cache.sqlite3
+    migrations_paths: db/cache_migrate
+  queue:
+    adapter: sqlite3
+    database: storage/production_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    adapter: sqlite3
+    database: storage/production_cable.sqlite3
+    migrations_paths: db/cable_migrate

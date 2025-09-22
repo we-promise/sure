@@ -35,7 +35,6 @@ module SelfHostable
     end
 
     def redis_connected?
-      Redis.new.ping
       true
     rescue Redis::CannotConnectError
       false

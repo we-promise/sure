@@ -69,9 +69,7 @@ Rails.application.configure do
   # want to log everything, set the level to "debug".
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info")
 
-  if ENV["CACHE_REDIS_URL"].present?
-    config.cache_store = :redis_cache_store, { url: ENV["CACHE_REDIS_URL"] }
-  end
+  config.cache_store = :solid_cache_store
 
   config.action_mailer.perform_caching = false
   config.action_mailer.deliver_later_queue_name = :high_priority
@@ -108,5 +106,6 @@ Rails.application.configure do
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 
   # set REDIS_URL for Sidekiq to use Redis
-  config.active_job.queue_adapter = :sidekiq
+  config.active_job.queue_adapter = :solid_queue
+  config.solid_queue.connects_to = { database: { writing: :queue } }
 end
