@@ -221,7 +221,6 @@ Common error codes:
 - `forbidden` - Insufficient permissions or AI not enabled
 - `not_found` - Resource not found
 - `unprocessable_entity` - Invalid request data
-- `rate_limit_exceeded` - Too many requests
 
 ## Rate Limits
 
