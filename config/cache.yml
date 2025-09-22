@@ -14,4 +14,4 @@ test:
 
 production: &production
   <<: *default
-  databases: cache
+  database: cache
