@@ -173,3 +173,15 @@
     background: #a6a6a6;
   }
 }
+
+.invite_code [data-clipboard-target="iconDefault"],
+.invite_code [data-clipboard-target="iconSuccess"] {
+  transition: opacity 0.2s;
+  opacity: 1;
+}
+.invite_code .hidden {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
