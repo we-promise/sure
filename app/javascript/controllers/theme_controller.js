@@ -42,8 +42,10 @@ export default class extends Controller {
   // Sets or removes the data-theme attribute
   setTheme(isDark) {
     if (isDark) {
+      localStorage.theme = "dark";
       document.documentElement.setAttribute("data-theme", "dark");
     } else {
+      localStorage.theme = "light";
       document.documentElement.setAttribute("data-theme", "light");
     }
   }
