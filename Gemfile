@@ -121,3 +121,13 @@ end
 gem "rails_db", "~> 2.5"
 
 gem "seed_dump", "~> 3.3"
+
+gem "solid_cache", "~> 1.0"
+
+gem "sqlite3", "~> 2.7"
+
+gem "solid_queue", "~> 1.2"
+
+gem "solid_cable", "~> 3.0"
+
+gem "mission_control-jobs", "~> 1.1"
