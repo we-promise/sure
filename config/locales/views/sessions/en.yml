@@ -7,6 +7,8 @@ en:
       logout_successful: You have signed out successfully.
     openid_connect:
       failed: Could not authenticate via OpenID Connect.
+    failure:
+      failed: Could not authenticate.
     new:
       email: Email address
       email_placeholder: you@example.com
@@ -16,3 +18,4 @@ en:
       title: Sign in to your account
       password_placeholder: Enter your password
       openid_connect: Sign in with OpenID Connect
+      google_auth_connect: Sign in with Google Auth
