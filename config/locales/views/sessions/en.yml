@@ -18,4 +18,4 @@ en:
       title: Sign in to your account
       password_placeholder: Enter your password
       openid_connect: Sign in with OpenID Connect
-      google_auth_connect: Sign in with Google Auth
+      google_auth_connect: Sign in with Google
