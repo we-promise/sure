@@ -98,3 +98,4 @@ Use this rule to learn how to write ERB views, partials, and Stimulus controller
   - **Partials**: Use underscore prefix (e.g., `_trend_change.html.erb`, `_form_errors.html.erb`, `_sync_indicator.html.erb`)
   - **Shared partials**: Place in `app/views/shared/` directory for reusable content
   - **Context-specific partials**: Place in relevant controller view directory (e.g., `accounts/_account_sidebar_tabs.html.erb`)
+

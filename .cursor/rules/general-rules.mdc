@@ -12,6 +12,7 @@ alwaysApply: true
   - Read [project-conventions.mdc](mdc:.cursor/rules/project-conventions.mdc) to understand _how_ to write code for the codebase
   - Read [ui-ux-design-guidelines.mdc](mdc:.cursor/rules/ui-ux-design-guidelines.mdc) to understand how to implement frontend code specifically
 - Ignore i18n methods and files. Hardcode strings in English for now to optimize speed of development.
+- ActiveRecord migrations must inherit from `ActiveRecord::Migration[7.2]`. Do **not** use version 8.0 yet.
 
 ## Prohibited actions
 
