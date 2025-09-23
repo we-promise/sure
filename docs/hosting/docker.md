@@ -170,7 +170,7 @@ After doing this, make sure and restart the app:
 ```bash
 docker compose pull # This pulls the "latest" published image from GHCR
 docker compose build # This rebuilds the app with updates
-docker compose up --no-deps -d app # This restarts the app using the newest version
+docker compose up --no-deps -d web worker # This restarts the app using the newest version
 ```
 
 ## Troubleshooting

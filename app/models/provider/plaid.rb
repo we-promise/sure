@@ -1,7 +1,7 @@
 class Provider::Plaid
   attr_reader :client, :region
 
-  MAYBE_SUPPORTED_PLAID_PRODUCTS = %w[transactions investments liabilities].freeze
+  SUPPORTED_PLAID_PRODUCTS = %w[transactions investments liabilities].freeze
   MAX_HISTORY_DAYS = Rails.env.development? ? 90 : 730
 
   def initialize(config, region: :us)
@@ -195,7 +195,7 @@ class Provider::Plaid
     def get_additional_consented_products(accountable_type)
       return [] if eu?
 
-      MAYBE_SUPPORTED_PLAID_PRODUCTS - [ get_primary_product(accountable_type) ]
+      SUPPORTED_PLAID_PRODUCTS - [ get_primary_product(accountable_type) ]
     end
 
     def eu?

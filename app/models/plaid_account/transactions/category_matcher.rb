@@ -3,7 +3,7 @@
 # categories we cannot directly assign Plaid categories as this would overwrite
 # user data and create a confusing experience.
 #
-# Automated category matching in the Maybe app has a hierarchy:
+# Automated category matching in the Sure app has a hierarchy:
 # 1. Naive string matching via CategoryAliasMatcher
 # 2. Rules-based matching set by user
 # 3. AI-powered matching (also enabled by user via rules)
