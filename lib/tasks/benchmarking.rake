@@ -11,7 +11,7 @@ namespace :benchmarking do
     Benchmark.ips do |x|
       x.config(time: 30, warmup: 10)
 
-      family = User.find_by(email: "user@sure.local").family
+      family = User.find_by(email: "user@example.com").family
       scope = family.transactions.active
 
       # x.report("IncomeStatement::Totals") do
