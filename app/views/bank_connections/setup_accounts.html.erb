@@ -1,0 +1,30 @@
+<%= content_for :page_title, "Setup Accounts" %>
+
+<div class="space-y-4">
+  <h2 class="text-lg font-semibold text-primary">Setup Your Accounts</h2>
+  <p class="text-secondary">We found <%= pluralize(@external_accounts.count, 'account') %> that need setup.</p>
+
+  <%= form_with url: complete_account_setup_bank_connection_path(@bank_connection), method: :post, local: true do %>
+    <div class="space-y-3">
+      <% @external_accounts.each do |ea| %>
+        <div class="p-3 rounded bg-container-inset">
+          <div class="font-medium text-primary"><%= ea.name %> (<%= ea.currency %>)</div>
+          <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Account Type</label>
+              <%= select_tag "account_types[#{ea.id}]", options_for_select(@account_type_options), class: "input w-full" %>
+            </div>
+            <div>
+              <label class="label"><%= @subtype_options['Depository'][:label] %></label>
+              <%= select_tag "account_subtypes[#{ea.id}]", options_for_select(@subtype_options['Depository'][:options]), class: "input w-full" %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <div class="mt-4">
+      <%= submit_tag "Create Accounts", class: "btn btn--primary" %>
+    </div>
+  <% end %>
+</div>
+

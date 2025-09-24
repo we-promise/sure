@@ -29,6 +29,16 @@ class Settings::BankSyncController < ApplicationController
         name: "SimpleFin",
         description: "US & Canada connections via SimpleFin protocol.",
         path: simplefin_items_path
+      },
+      {
+        name: "Wise (Direct API)",
+        description: "Connect Wise via the new generalized direct API pipeline.",
+        path: new_bank_connection_path(provider: :wise)
+      },
+      {
+        name: "Mercury (Direct API)",
+        description: "US business banking via Mercury APIs.",
+        path: new_bank_connection_path(provider: :mercury)
       }
     ]
   end

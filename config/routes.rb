@@ -262,6 +262,14 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :bank_connections, only: %i[index new create show destroy] do
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :wise_items, only: %i[index new create show destroy] do
     member do
       post :sync
@@ -274,6 +282,7 @@ Rails.application.routes.draw do
     post "plaid"
     post "plaid_eu"
     post "stripe"
+    post "banks/:provider", to: "banks#receive"
   end
 
   get "redis-configuration-error", to: "pages#redis_configuration_error"

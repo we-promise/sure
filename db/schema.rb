@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_26_140200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -29,7 +29,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
     t.uuid "accountable_id"
     t.decimal "balance", precision: 19, scale: 4
     t.string "currency"
-    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY ((ARRAY['Loan'::character varying, 'CreditCard'::character varying, 'OtherLiability'::character varying])::text[])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
     t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
@@ -37,8 +37,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
     t.string "status", default: "active"
     t.uuid "simplefin_account_id"
     t.uuid "wise_account_id"
+    t.uuid "bank_external_account_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
+    t.index ["bank_external_account_id"], name: "index_accounts_on_bank_external_account_id"
     t.index ["currency"], name: "index_accounts_on_currency"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "id"], name: "index_accounts_on_family_id_and_id"
@@ -136,6 +138,38 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
     t.index ["account_id", "date", "currency"], name: "index_account_balances_on_account_id_date_currency_unique", unique: true
     t.index ["account_id", "date"], name: "index_balances_on_account_id_and_date", order: { date: :desc }
     t.index ["account_id"], name: "index_balances_on_account_id"
+  end
+
+  create_table "bank_connections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "provider", null: false
+    t.string "name", null: false
+    t.text "credentials"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_bank_connections_on_family_id"
+    t.index ["provider"], name: "index_bank_connections_on_provider"
+    t.index ["status"], name: "index_bank_connections_on_status"
+  end
+
+  create_table "bank_external_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "bank_connection_id", null: false
+    t.string "provider_account_id", null: false
+    t.string "name"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "balance_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bank_connection_id", "provider_account_id"], name: "index_bank_ext_accounts_on_conn_and_provider_id", unique: true
+    t.index ["bank_connection_id"], name: "index_bank_external_accounts_on_bank_connection_id"
   end
 
   create_table "budget_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -722,41 +756,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
 
-  create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "wise_item_id", null: false
-    t.string "name"
-    t.string "account_id"
-    t.string "currency"
-    t.decimal "current_balance", precision: 19, scale: 4
-    t.decimal "available_balance", precision: 19, scale: 4
-    t.string "account_type"
-    t.jsonb "raw_payload"
-    t.jsonb "raw_transactions_payload"
-    t.datetime "balance_date"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_wise_accounts_on_account_id"
-    t.index ["wise_item_id"], name: "index_wise_accounts_on_wise_item_id"
-  end
-
-  create_table "wise_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.text "api_key"
-    t.string "profile_id"
-    t.string "name"
-    t.string "personal_profile_id"
-    t.string "business_profile_id"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
-    t.boolean "pending_account_setup", default: false, null: false
-    t.jsonb "raw_payload"
-    t.jsonb "raw_profiles_payload"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["family_id"], name: "index_wise_items_on_family_id"
-    t.index ["status"], name: "index_wise_items_on_status"
-  end
-
   create_table "subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "status", null: false
@@ -913,14 +912,53 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
     t.string "subtype"
   end
 
+  create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "wise_item_id", null: false
+    t.string "name"
+    t.string "account_id"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.string "account_type"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "balance_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_wise_accounts_on_account_id"
+    t.index ["wise_item_id"], name: "index_wise_accounts_on_wise_item_id"
+  end
+
+  create_table "wise_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.text "api_key"
+    t.string "profile_id"
+    t.string "name"
+    t.string "personal_profile_id"
+    t.string "business_profile_id"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_payload"
+    t.jsonb "raw_profiles_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_wise_items_on_family_id"
+    t.index ["status"], name: "index_wise_items_on_status"
+  end
+
+  add_foreign_key "accounts", "bank_external_accounts"
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
   add_foreign_key "accounts", "simplefin_accounts"
+  add_foreign_key "accounts", "wise_accounts"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_keys", "users"
   add_foreign_key "balances", "accounts", on_delete: :cascade
+  add_foreign_key "bank_connections", "families"
+  add_foreign_key "bank_external_accounts", "bank_connections"
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"
@@ -957,8 +995,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
   add_foreign_key "simplefin_accounts", "simplefin_items"
   add_foreign_key "simplefin_items", "families"
   add_foreign_key "subscriptions", "families"
-  add_foreign_key "wise_accounts", "wise_items"
-  add_foreign_key "wise_items", "families"
   add_foreign_key "syncs", "syncs", column: "parent_id"
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
@@ -970,4 +1006,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_24_234405) do
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
+  add_foreign_key "wise_accounts", "wise_items"
+  add_foreign_key "wise_items", "families"
 end

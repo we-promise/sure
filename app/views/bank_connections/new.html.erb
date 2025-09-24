@@ -1,0 +1,38 @@
+<% provider_key = @provider_key %>
+<% provider_meta = @provider_meta %>
+
+<%= content_for :page_title, "Add Bank Connection" %>
+
+<div class="max-w-xl space-y-4">
+  <% if provider_key.blank? %>
+    <h2 class="text-lg font-semibold text-primary">Choose a Provider</h2>
+    <div class="grid grid-cols-1 gap-3">
+      <% Provider::Banks::Registry.providers.each do |p| %>
+        <%= link_to new_bank_connection_path(provider: p.key), class: "p-4 rounded-lg bg-container-inset hover:bg-container-hover-inset" do %>
+          <div class="font-medium text-primary"><%= p.display_name %></div>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <h2 class="text-lg font-semibold text-primary">Connect <%= provider_meta.display_name %></h2>
+    <%= form_with url: bank_connections_path, method: :post, local: true do |f| %>
+      <%= hidden_field_tag "bank_connection[provider]", provider_key %>
+      <div class="space-y-3">
+        <div>
+          <label class="label">Connection Name</label>
+          <%= text_field_tag :name, provider_meta.display_name, class: "input w-full" %>
+        </div>
+        <% provider_meta.credential_fields.each do |field| %>
+          <div>
+            <label class="label"><%= field[:label] %></label>
+            <%= send((field[:type] == :password ? :password_field_tag : :text_field_tag), "credentials[#{field[:key]}]", nil, class: "input w-full" ) %>
+          </div>
+        <% end %>
+      </div>
+      <div class="mt-4">
+        <%= f.submit "Connect", class: "btn btn--primary" %>
+      </div>
+    <% end %>
+  <% end %>
+</div>
+

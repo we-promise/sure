@@ -1,0 +1,54 @@
+<%= content_for :page_title, @bank_connection.name %>
+
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <div>
+      <div class="text-xl font-semibold text-primary"><%= @bank_connection.name %> (<%= @bank_connection.provider %>)</div>
+      <div class="text-secondary text-sm">
+        <% if @bank_connection.pending_account_setup? %>
+          Pending account setup
+        <% elsif @bank_connection.syncing? %>
+          Syncing now…
+        <% elsif @bank_connection.last_synced_at %>
+          Last synced <%= time_ago_in_words(@bank_connection.last_synced_at) %> ago
+        <% else %>
+          Never synced
+        <% end %>
+      </div>
+    </div>
+    <div class="space-x-2">
+      <% unless @bank_connection.syncing? %>
+        <%= link_to sync_bank_connection_path(@bank_connection), method: :post, class: "btn btn--sm btn--secondary" do %>
+          Sync
+        <% end %>
+      <% end %>
+      <%= link_to bank_connections_path, class: "btn btn--sm btn--secondary" do %>
+        Back
+      <% end %>
+    </div>
+  </div>
+
+  <% if @bank_connection.pending_account_setup? %>
+    <div class="p-4 bg-yellow-50 rounded-md border border-yellow-200">
+      Some accounts need setup. <%= link_to "Setup accounts", setup_accounts_bank_connection_path(@bank_connection), class: "underline" %>
+    </div>
+  <% end %>
+
+  <div>
+    <h3 class="font-medium text-primary mb-2">External Accounts</h3>
+    <div class="space-y-2">
+      <% @bank_connection.bank_external_accounts.each do |ea| %>
+        <div class="p-3 rounded bg-container-inset flex items-center justify-between">
+          <div>
+            <div class="font-medium"><%= ea.name %> (<%= ea.currency %>)</div>
+            <div class="text-sm text-secondary">Linked: <%= ea.account.present? %></div>
+          </div>
+          <div class="text-sm text-secondary">
+            Balance: <%= number_to_currency(ea.current_balance || 0, unit: ea.currency) %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
