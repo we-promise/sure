@@ -66,8 +66,8 @@ en:
           your data and cannot be undone.
         reset_account: Reset account
         reset_account_warning: Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.
-        reset_account_with_sample_data: Reset account and load sample data
-        reset_account_with_sample_data_warning: Resetting your account will delete all your existing data and then load fresh sample data so you can explore Sure with a pre-filled environment.
+        reset_account_with_sample_data: Reset and preload
+        reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
         email: Email
         first_name: First Name
         household_form_input_placeholder: Enter household name
