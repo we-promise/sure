@@ -43,6 +43,7 @@ Rails.application.routes.draw do
 
   resources :users, only: %i[update destroy] do
     delete :reset, on: :member
+    delete :reset_with_sample_data, on: :member
     patch :rule_prompt_settings, on: :member
   end
 

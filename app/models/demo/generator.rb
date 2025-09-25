@@ -1,3 +1,5 @@
+require "securerandom"
+
 class Demo::Generator
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
@@ -59,6 +61,26 @@ class Demo::Generator
     end
   end
 
+  def generate_new_user_data_for!(family, email:)
+    with_timing(__method__, max_seconds: 1000) do
+      family = family.reload
+      admin_user = ensure_admin_user!(family, email)
+      ensure_member_user!(family, admin_user)
+
+      puts "📊 Creating sample financial data for #{family.name}..."
+      ActiveRecord::Base.transaction do
+        create_realistic_categories!(family)
+        create_realistic_accounts!(family)
+        create_realistic_transactions!(family)
+        generate_budget_auto_fill!(family)
+      end
+
+      family.sync_later
+
+      puts "✅ Sample data loaded successfully!"
+    end
+  end
+
   # Generate comprehensive realistic demo data with multi-currency
   def generate_default_data!(skip_clear: false, email: "user@example.com")
     if skip_clear
@@ -116,6 +138,30 @@ class Demo::Generator
         raise "Too much data to clear efficiently (#{family_count} families). Run 'rails db:reset' instead."
       end
       Demo::DataCleaner.new.destroy_everything!
+    end
+
+    def ensure_admin_user!(family, email)
+      user = family.users.find_by(email: email)
+      return user if user&.admin? || user&.super_admin?
+
+      raise ActiveRecord::RecordNotFound, "No admin user with email #{email} found in family ##{family.id}"
+    end
+
+    def ensure_member_user!(family, admin_user)
+      return if family.users.where.not(id: admin_user.id).exists?
+
+      family.users.create!(
+        email: partner_email_for(admin_user.email),
+        first_name: "Eve",
+        last_name: "Bogle",
+        role: :member,
+        password: SecureRandom.base58(24),
+        onboarded_at: Time.current
+      )
+    end
+
+    def partner_email_for(email)
+      "partner_#{email}"
     end
 
     def create_family_and_users!(family_name, email, onboarded:, subscribed:)
