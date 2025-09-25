@@ -38,7 +38,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     # Should redirect to goals page
     assert_current_path goals_onboarding_path
-    assert_text "What brings you to Maybe?"
+    assert_text "What brings you to Sure?"
   end
 
   test "preferences page renders chart without errors" do
@@ -137,7 +137,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     visit goals_onboarding_path
 
-    assert_text "What brings you to Maybe?"
+    assert_text "What brings you to Sure?"
     assert_button "Next"
   end
 

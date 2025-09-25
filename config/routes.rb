@@ -43,6 +43,7 @@ Rails.application.routes.draw do
 
   resources :users, only: %i[update destroy] do
     delete :reset, on: :member
+    delete :reset_with_sample_data, on: :member
     patch :rule_prompt_settings, on: :member
   end
 
@@ -197,7 +198,7 @@ Rails.application.routes.draw do
 
   resources :securities, only: :index
 
-  resources :invite_codes, only: %i[index create]
+  resources :invite_codes, only: %i[index create destroy]
 
   resources :invitations, only: [ :new, :create, :destroy ] do
     get :accept, on: :member
@@ -291,8 +292,8 @@ Rails.application.routes.draw do
 
   get "imports/:import_id/upload/sample_csv", to: "import/uploads#sample_csv", as: :import_upload_sample_csv
 
-  get "privacy", to: redirect("https://maybefinance.com/privacy")
-  get "terms", to: redirect("https://maybefinance.com/tos")
+  get "privacy", to: redirect("about:blank")
+  get "terms", to: redirect("about:blank")
 
   get "enable_banking_auth_callback", to: "enable_banking_items#auth_callback"
 

@@ -17,6 +17,7 @@ The codebase uses TailwindCSS v4.x (the newest version) with a custom design sys
 - Always prefer using the functional "tokens" defined in @maybe-design-system.css when possible.
   - Example 1: use `text-primary` rather than `text-white`
   - Example 2: use `bg-container` rather than `bg-white`
-  - Example 3: use `border border-primary` rather than `border border-gray-200` 
+  - Example 3: use `border border-primary` rather than `border border-gray-200`
 - Never create new styles in [maybe-design-system.css](mdc:app/assets/tailwind/maybe-design-system.css) or [application.css](mdc:app/assets/tailwind/application.css) without explicitly receiving permission to do so
 - Always generate semantic HTML
+

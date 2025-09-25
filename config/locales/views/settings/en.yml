@@ -51,6 +51,9 @@ en:
         confirm_reset:
           body: Are you sure you want to reset your account? This will delete all your accounts, categories, merchants, tags, and other data. This action cannot be undone.
           title: Reset account?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
         confirm_remove_invitation:
           body: Are you sure you want to remove the invitation for %{email}?
           title: Remove Invitation
@@ -63,6 +66,8 @@ en:
           your data and cannot be undone.
         reset_account: Reset account
         reset_account_warning: Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.
+        reset_account_with_sample_data: Reset and preload
+        reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
         email: Email
         first_name: First Name
         household_form_input_placeholder: Enter household name

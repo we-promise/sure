@@ -79,8 +79,8 @@ class SimplefinAccount::Processor
       end
 
       # SimpleFin uses banking convention (expenses negative, income positive)
-      # Maybe expects opposite convention (expenses positive, income negative)
-      # So we negate the amount to convert from SimpleFin to Maybe format
+      # Sure expects opposite convention (expenses positive, income negative)
+      # So we negate the amount to convert from SimpleFin to Sure format
       -parsed_amount
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse SimpleFin transaction amount: #{amount_value.inspect} - #{e.message}"

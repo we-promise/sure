@@ -1,10 +1,9 @@
-Since #2419 will not be merged, I am moving this guide here in the discussions section of the repo.
-
 > [!WARNING]
 > Plaid integration currently only works for Western users. Plaid Production support is not available to European users.
 
 > [!NOTE]
 > For Plaid integration your Sure instance needs to be accessible by the internet behind a domain with working SSL.
+> See additional context in [maybe-finance/maybe#2419](https://github.com/maybe-finance/maybe/pull/2419).
 
 # Setting Up Plaid
 

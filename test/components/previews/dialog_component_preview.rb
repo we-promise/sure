@@ -5,7 +5,7 @@ class DialogComponentPreview < ViewComponent::Preview
       dialog.with_header(title: "Sample modal title")
 
       dialog.with_body do
-        "Welcome to Maybe!  This is some test modal content."
+        "Welcome to Sure!  This is some test modal content."
       end
 
       dialog.with_action(cancel_action: true, text: "Cancel", variant: "outline")
