@@ -1,0 +1,21 @@
+<%# locals: (enable_banking_item:) %>
+<% if params[:redirect_uri] %>
+  <meta name="turbo-visit-control" content="reload">
+<% end %>
+<div data-controller="enable-banking-connection">
+  <%= styled_form_with url: authorization_enable_banking_items_path, method: :post, data: { turbo: false }, local: true, class: "space-y-4" do |f| %>
+    <section class="space-y-4">
+      <% if enable_banking_item.errors.any? %>
+        <%= render "shared/form_errors", model: enable_banking_item %>
+      <% else %>
+        <div class="space-y-2">
+          <%= f.select :aspsp_name, @aspsps, include_blank: t(".select_aspsps") %>
+        </div>
+      <% end %>
+    
+
+    <section>
+      <%= f.submit(t(".link_account")) %>
+    </section>
+  <% end %>
+</div>
