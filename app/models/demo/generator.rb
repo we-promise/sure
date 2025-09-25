@@ -65,7 +65,6 @@ class Demo::Generator
     with_timing(__method__, max_seconds: 1000) do
       family = family.reload
       admin_user = ensure_admin_user!(family, email)
-      ensure_member_user!(family, admin_user)
 
       puts "📊 Creating sample financial data for #{family.name}..."
       ActiveRecord::Base.transaction do
@@ -145,19 +144,6 @@ class Demo::Generator
       return user if user&.admin? || user&.super_admin?
 
       raise ActiveRecord::RecordNotFound, "No admin user with email #{email} found in family ##{family.id}"
-    end
-
-    def ensure_member_user!(family, admin_user)
-      return if family.users.where.not(id: admin_user.id).exists?
-
-      family.users.create!(
-        email: partner_email_for(admin_user.email),
-        first_name: "Eve",
-        last_name: "Bogle",
-        role: :member,
-        password: SecureRandom.base58(24),
-        onboarded_at: Time.current
-      )
     end
 
     def partner_email_for(email)
