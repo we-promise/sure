@@ -1,7 +1,7 @@
 class PasswordMailer < ApplicationMailer
   def password_reset
     @user = params[:user]
-    @subject = t(".subject", brand: brand_name)
+    @subject = t(".subject", product: product_name)
     @cta = t(".cta")
 
     mail to: @user.email, subject: @subject

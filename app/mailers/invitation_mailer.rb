@@ -8,7 +8,7 @@ class InvitationMailer < ApplicationMailer
       subject: t(
         ".subject",
         inviter: @invitation.inviter.display_name,
-        brand: brand_name
+        product: product_name
       )
     )
   end

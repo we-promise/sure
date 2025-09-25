@@ -1,12 +1,12 @@
 module ApplicationHelper
   include Pagy::Frontend
 
-  def brand_name
-    Rails.configuration.x.brand_name
+  def product_name
+    Rails.configuration.x.product_name
   end
 
-  def brand_plus
-    Rails.configuration.x.brand_plus
+  def brand_name
+    Rails.configuration.x.brand_name
   end
 
   def styled_form_with(**options, &block)
