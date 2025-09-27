@@ -3,7 +3,7 @@ tr:
   settings:
     hostings:
       invite_code_settings:
-        description: Maybe uygulamanıza katılan her yeni kullanıcı yalnızca bir davet kodu ile katılabilir
+        description: Sure uygulamanıza katılan her yeni kullanıcı yalnızca bir davet kodu ile katılabilir
         email_confirmation_description: Etkinleştirildiğinde, kullanıcılar e-posta adreslerini değiştirirken e-posta onayı yapmak zorundadır.
         email_confirmation_title: E-posta onayı gerektir
         generate_tokens: Yeni kod oluştur

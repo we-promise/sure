@@ -36,7 +36,7 @@ nb:
         never_expires: "Utløper aldri"
         permissions: "Tillatelser"
         usage_instructions_title: "Hvordan bruke din API-nøkkel"
-        usage_instructions: "Inkluder din API-nøkkel i X-Api-Key-headeren når du gjør forespørsler til Maybe API-et:"
+        usage_instructions: "Inkluder din API-nøkkel i X-Api-Key-headeren når du gjør forespørsler til Sure API-et:"
         regenerate_key: "Opprett ny nøkkel"
         revoke_key: "Tilbakekall nøkkel"
         revoke_confirmation: "Er du sikker på at du vil tilbakekalle denne API-nøkkelen? Denne handlingen kan ikke angres og vil umiddelbart deaktivere alle applikasjoner som bruker denne nøkkelen."

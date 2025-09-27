@@ -3,6 +3,6 @@ tr:
   invitation_mailer:
     invite_email:
       accept_button: Daveti Kabul Et
-      body: "%{inviter}, sizi %{family} ailesine Maybe üzerinden katılmaya davet etti!"
+      body: "%{inviter}, sizi %{family} ailesine Sure üzerinden katılmaya davet etti!"
       expiry_notice: Bu davet %{days} gün içinde geçerliliğini yitirecek
-      greeting: Maybe'ye Hoş Geldiniz!
+      greeting: Sure'ye Hoş Geldiniz!
