@@ -90,7 +90,7 @@ jobs:
             TAG_NAME="${GITHUB_REF#refs/tags/}"
             if [[ "$TAG_NAME" == v* ]]; then
               BASE_CONFIG="type=semver,pattern={{version}}"
-              if [[ "$TAG_NAME" =~ ^v.*-alpha([0-9]+)?$ ]]; then
+              if [[ "$TAG_NAME" == v*-alpha* ]]; then
                 BASE_CONFIG+=$'\n'"type=raw,value=latest"
               else
                 BASE_CONFIG+=$'\n'"type=raw,value=stable"
