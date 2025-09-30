@@ -1,0 +1,44 @@
+<%= content_for :page_title, "Bank Connections" %>
+
+<div class="flex items-center justify-between mb-4">
+  <h2 class="text-xl font-semibold text-primary">Bank Connections</h2>
+  <div class="space-x-2">
+    <% Provider::Banks::Registry.keys.each do |key| %>
+      <%= link_to "Connect #{Provider::Banks::Registry.find(key).display_name}", new_bank_connection_path(provider: key), class: "btn btn--sm btn--primary" %>
+    <% end %>
+  </div>
+  </div>
+
+<div class="space-y-3">
+  <% @bank_connections.each do |c| %>
+    <div id="<%= dom_id(c) %>" class="flex items-center justify-between p-4 bg-container-inset rounded-lg">
+      <div>
+        <div class="font-medium text-primary"><%= c.name %> (<%= c.provider %>)</div>
+        <div class="text-secondary text-sm">
+          <% if c.syncing? %>
+            Syncing now…
+          <% elsif c.last_synced_at %>
+            Last synced <%= time_ago_in_words(c.last_synced_at) %> ago
+          <% else %>
+            Never synced
+          <% end %>
+        </div>
+      </div>
+
+      <div class="space-x-2">
+        <% unless c.syncing? %>
+          <%= link_to bank_connection_path(c), class: "btn btn--xs btn--secondary" do %>
+            Details
+          <% end %>
+          <%= link_to sync_bank_connection_path(c), method: :post, class: "btn btn--xs btn--secondary" do %>
+            Sync
+          <% end %>
+        <% end %>
+        <%= link_to bank_connection_path(c), method: :delete, data: { confirm: "Remove connection?" }, class: "btn btn--xs btn--danger" do %>
+          Remove
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
