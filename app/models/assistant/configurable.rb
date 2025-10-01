@@ -45,27 +45,14 @@ module Assistant::Configurable
         return unless langfuse_client
 
         prompt = langfuse_client.get_prompt("default_instructions")
-
-        compiled_prompt = prompt.compile(
-          preferred_currency_symbol: preferred_currency.symbol,
-          preferred_currency_iso_code: preferred_currency.iso_code,
-          preferred_currency_default_precision: preferred_currency.default_precision,
-          preferred_currency_default_format: preferred_currency.default_format,
-          preferred_currency_separator: preferred_currency.separator,
-          preferred_currency_delimiter: preferred_currency.delimiter,
-          preferred_date_format: preferred_date_format,
-          current_date: Date.current
+        return if prompt.nil?
+        compiled_prompt = compile_langfuse_prompt(
+          prompt,
+          preferred_currency: preferred_currency,
+          preferred_date_format: preferred_date_format
         )
 
-        content = case compiled_prompt
-                  when String
-                    compiled_prompt
-                  when Array
-                    compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
-                  else
-                    nil
-                  end
-
+        content = extract_prompt_content(compiled_prompt)
         return if content.blank?
 
         {
@@ -77,6 +64,34 @@ module Assistant::Configurable
       rescue => e
         Rails.logger.warn("Langfuse prompt retrieval failed: #{e.message}")
         nil
+      end
+
+      def compile_langfuse_prompt(prompt, preferred_currency:, preferred_date_format:)
+        variables = {
+          preferred_currency_symbol: preferred_currency&.symbol,
+          preferred_currency_iso_code: preferred_currency&.iso_code,
+          preferred_currency_default_precision: preferred_currency&.default_precision,
+          preferred_currency_default_format: preferred_currency&.default_format,
+          preferred_currency_separator: preferred_currency&.separator,
+          preferred_currency_delimiter: preferred_currency&.delimiter,
+          preferred_date_format: preferred_date_format,
+          current_date: Date.current
+        }.transform_values { |value| value.nil? ? "" : value.to_s }
+
+        prompt.compile(**variables)
+      end
+
+      def extract_prompt_content(compiled_prompt)
+        case compiled_prompt
+        when String
+          compiled_prompt
+        when Array
+          compiled_prompt.filter_map do |message|
+            message[:content] || message["content"]
+          end.join("\n\n")
+        else
+          nil
+        end
       end
 
       def fallback_default_instructions(preferred_currency, preferred_date_format)
