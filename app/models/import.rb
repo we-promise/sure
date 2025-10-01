@@ -35,6 +35,7 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validate :custom_column_import_requires_identifier
 
   has_many :rows, dependent: :destroy
   has_many :mappings, dependent: :destroy
@@ -286,5 +287,13 @@ class Import < ApplicationRecord
 
     def set_default_number_format
       self.number_format ||= "1,234.56" # Default to US/UK format
+    end
+
+    def custom_column_import_requires_identifier
+      return unless amount_type_strategy == "custom_column"
+
+      if amount_type_identifier_value.blank? && !amount_type_inflow_value.in?(%w[inflows_positive inflows_negative])
+        errors.add(:base, "Custom column imports require either an identifier value or must be legacy imports with valid inflow values")
+      end
     end
 end

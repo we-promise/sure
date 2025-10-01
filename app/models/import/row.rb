@@ -62,20 +62,10 @@ class Import::Row < ApplicationRecord
             "inflows_positive"
           end
 
-        if selected_identifier.blank?
-          # Legacy import: amount_type_inflow_value is the identifier, treat as inflow
-          if entity_type == inflow_treatment
-            value * -1
-          else
-            value
-          end
+        if entity_type == selected_identifier
+          value * (inflow_treatment == "inflows_positive" ? -1 : 1)
         else
-          # New import: use identifier/treatment split
-          if entity_type == selected_identifier
-            value * (inflow_treatment == "inflows_positive" ? -1 : 1)
-          else
-            value * (inflow_treatment == "inflows_positive" ? 1 : -1)
-          end
+          value * (inflow_treatment == "inflows_positive" ? 1 : -1)
         end
       else
         raise "Unknown amount type strategy for import: #{import.amount_type_strategy}"
