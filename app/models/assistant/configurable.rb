@@ -46,8 +46,13 @@ module Assistant::Configurable
 
         prompt = langfuse_client.get_prompt("default_instructions")
         return if prompt.nil?
+
+        # TODO: remove after we make the code resilient to chat vs. text types of prompts
+        Rails.logger.warn("Langfuse prompt retrieved: #{prompt.name} #{prompt.version}")
+        Rails.logger.warn("Langfuse prompt retrieved: #{prompt.prompt}")
+
         compiled_prompt = compile_langfuse_prompt(
-          prompt,
+          prompt.prompt.dig(0, "content"),
           preferred_currency: preferred_currency,
           preferred_date_format: preferred_date_format
         )
@@ -56,6 +61,7 @@ module Assistant::Configurable
         return if content.blank?
 
         {
+          id: prompt.respond_to?(:id) ? prompt.id : (prompt[:id] rescue nil),
           name: prompt.name,
           version: prompt.version,
           template: prompt.prompt,
@@ -78,7 +84,30 @@ module Assistant::Configurable
           current_date: Date.current
         }.transform_values { |value| value.nil? ? "" : value.to_s }
 
-        prompt.compile(**variables)
+        # If the prompt object supports compilation, use it. Otherwise, perform
+        # a lightweight local interpolation for String/Array/Hash templates.
+        if prompt.respond_to?(:compile)
+          prompt.compile(**variables)
+        else
+          interpolate_template(prompt, variables)
+        end
+      end
+
+      def interpolate_template(template, variables)
+        case template
+        when String
+          # Replace {{ variable }} placeholders with provided variables
+          template.gsub(/\{\{\s*(\w+)\s*\}\}/) do
+            key = Regexp.last_match(1)
+            variables[key] || ""
+          end
+        when Array
+          template.map { |item| interpolate_template(item, variables) }
+        when Hash
+          template.transform_values { |v| interpolate_template(v, variables) }
+        else
+          template
+        end
       end
 
       def extract_prompt_content(compiled_prompt)
