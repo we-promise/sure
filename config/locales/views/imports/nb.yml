@@ -23,7 +23,7 @@ nb:
       mappings:
         create_account: Opprett konto
         csv_mapping_label: "%{mapping} i CSV"
-        maybe_mapping_label: "%{mapping} i Sure"
+        sure_mapping_label: "%{mapping} i %{product_name}"
         no_accounts: Du har ingen kontoer ennå. Vennligst opprett en konto som
           vi kan bruke for (utilordnede) rader i CSV-filen din eller gå tilbake til Rengjør-trinnet
           og oppgi et kontonavn vi kan bruke.

@@ -3,6 +3,6 @@ nb:
   invitation_mailer:
     invite_email:
       accept_button: Godta invitasjon
-      body: "%{inviter} har invitert deg til å bli med i %{family}-familien på Sure!"
+      body: "%{inviter} har invitert deg til å bli med i %{family}-familien på %{product_name}!"
       expiry_notice: Denne invitasjonen vil utløpe om %{days} dager
-      greeting: Velkommen til Sure!
+      greeting: Velkommen til %{product_name}!

@@ -1,6 +1,6 @@
 <%= content_for :page_title, t(".page_title") %>
 
-<%= settings_section title: t(".profile_title"), subtitle: t(".profile_subtitle") do %>
+<%= settings_section title: t(".profile_title"), subtitle: t(".profile_subtitle", product: product_name) do %>
   <%= styled_form_with model: @user, url: user_path(@user), class: "space-y-4" do |form| %>
     <%= render "settings/user_avatar_field", form: form, user: @user %>
 

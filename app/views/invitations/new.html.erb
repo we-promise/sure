@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", product: product_name)) %>
 
   <% dialog.with_body do %>
     <%= styled_form_with model: @invitation, class: "space-y-4", data: { turbo: false } do |form| %>

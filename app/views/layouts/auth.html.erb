@@ -26,7 +26,7 @@
             <% end %>
             <% if controller_name == "sessions" %>
               <p class="text-sm text-center hidden md:block">
-                <%= tag.span t(".no_account"), class: "text-secondary" %> <%= link_to t(".sign_up"), new_registration_path, class: "font-medium text-primary hover:underline transition" %>
+                <%= tag.span t(".no_account", product: product_name), class: "text-secondary" %> <%= link_to t(".sign_up"), new_registration_path, class: "font-medium text-primary hover:underline transition" %>
               </p>
             <% elsif controller_name == "registrations" %>
               <p class="text-sm text-center text-gray-600 hidden md:block">
