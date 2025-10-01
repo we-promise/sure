@@ -291,9 +291,8 @@ class Import < ApplicationRecord
 
     def custom_column_import_requires_identifier
       return unless amount_type_strategy == "custom_column"
+      return if amount_type_identifier_value.present? || amount_type_inflow_value.present?
 
-      if amount_type_identifier_value.blank? && !amount_type_inflow_value.in?(%w[inflows_positive inflows_negative])
-        errors.add(:base, "Custom column imports require either an identifier value or must be legacy imports with valid inflow values")
-      end
+      errors.add(:base, "Custom column imports require either an identifier value or a legacy inflow indicator")
     end
 end
