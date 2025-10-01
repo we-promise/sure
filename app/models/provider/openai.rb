@@ -62,6 +62,7 @@ class Provider::Openai < Provider
     prompt,
     model:,
     instructions: nil,
+    instructions_prompt: nil,
     functions: [],
     function_results: [],
     streamer: nil,
@@ -112,6 +113,7 @@ class Provider::Openai < Provider
           model: model,
           input: input_payload,
           output: response.messages.map(&:output_text).join("\n"),
+          prompt: instructions_prompt,
           session_id: session_id,
           user_identifier: user_identifier
         )
@@ -123,6 +125,7 @@ class Provider::Openai < Provider
           model: model,
           input: input_payload,
           output: parsed.messages.map(&:output_text).join("\n"),
+          prompt: instructions_prompt,
           usage: raw_response["usage"],
           session_id: session_id,
           user_identifier: user_identifier
@@ -141,26 +144,41 @@ class Provider::Openai < Provider
       @langfuse_client = Langfuse.new
     end
 
-    def log_langfuse_generation(name:, model:, input:, output:, usage: nil, session_id: nil, user_identifier: nil)
-      return unless langfuse_client
+  def log_langfuse_generation(name:, model:, input:, output:, usage: nil, session_id: nil, user_identifier: nil, prompt: nil)
+    return unless langfuse_client
 
-      trace = langfuse_client.trace(
-        name: "openai.#{name}",
-        input: input,
-        session_id: session_id,
-        user_id: user_identifier
-      )
-      trace.generation(
-        name: name,
-        model: model,
-        input: input,
-        output: output,
-        usage: usage,
-        session_id: session_id,
-        user_id: user_identifier
-      )
-      trace.update(output: output)
-    rescue => e
-      Rails.logger.warn("Langfuse logging failed: #{e.message}")
+    trace = langfuse_client.trace(
+      name: "openai.#{name}",
+      input: input,
+      session_id: session_id,
+      user_id: user_identifier
+    )
+    generation_options = {
+      name: name,
+      model: model,
+      input: input,
+      output: output,
+      usage: usage,
+      session_id: session_id,
+      user_id: user_identifier
+    }
+
+    if prompt.present?
+      generation_options[:version] = prompt[:version] if prompt[:version]
+      metadata = {
+        prompt: {
+          name: prompt[:name],
+          version: prompt[:version],
+          content: prompt[:content],
+          template: prompt[:template]
+        }.compact
+      }
+      generation_options[:metadata] = metadata
     end
+
+    trace.generation(**generation_options)
+    trace.update(output: output)
+  rescue => e
+    Rails.logger.warn("Langfuse logging failed: #{e.message}")
+  end
 end

@@ -1,18 +1,24 @@
 class Assistant
   include Provided, Configurable, Broadcastable
 
-  attr_reader :chat, :instructions
+  attr_reader :chat, :instructions, :instructions_prompt
 
   class << self
     def for_chat(chat)
       config = config_for(chat)
-      new(chat, instructions: config[:instructions], functions: config[:functions])
+      new(
+        chat,
+        instructions: config[:instructions],
+        instructions_prompt: config[:instructions_prompt],
+        functions: config[:functions]
+      )
     end
   end
 
-  def initialize(chat, instructions: nil, functions: [])
+  def initialize(chat, instructions: nil, instructions_prompt: nil, functions: [])
     @chat = chat
     @instructions = instructions
+    @instructions_prompt = instructions_prompt
     @functions = functions
   end
 
@@ -26,6 +32,7 @@ class Assistant
     responder = Assistant::Responder.new(
       message: message,
       instructions: instructions,
+      instructions_prompt: instructions_prompt,
       function_tool_caller: function_tool_caller,
       llm: get_model_provider(message.ai_model)
     )

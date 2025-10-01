@@ -6,8 +6,11 @@ module Assistant::Configurable
       preferred_currency = Money::Currency.new(chat.user.family.currency)
       preferred_date_format = chat.user.family.date_format
 
+      instructions_config = default_instructions(preferred_currency, preferred_date_format)
+
       {
-        instructions: default_instructions(preferred_currency, preferred_date_format),
+        instructions: instructions_config[:content],
+        instructions_prompt: instructions_config[:prompt],
         functions: default_functions
       }
     end
@@ -23,6 +26,60 @@ module Assistant::Configurable
       end
 
       def default_instructions(preferred_currency, preferred_date_format)
+        langfuse_instructions = langfuse_default_instructions(preferred_currency, preferred_date_format)
+
+        if langfuse_instructions.present?
+          {
+            content: langfuse_instructions[:content],
+            prompt: langfuse_instructions
+          }
+        else
+          {
+            content: fallback_default_instructions(preferred_currency, preferred_date_format),
+            prompt: nil
+          }
+        end
+      end
+
+      def langfuse_default_instructions(preferred_currency, preferred_date_format)
+        return unless langfuse_client
+
+        prompt = langfuse_client.get_prompt("default_instructions")
+
+        compiled_prompt = prompt.compile(
+          preferred_currency_symbol: preferred_currency.symbol,
+          preferred_currency_iso_code: preferred_currency.iso_code,
+          preferred_currency_default_precision: preferred_currency.default_precision,
+          preferred_currency_default_format: preferred_currency.default_format,
+          preferred_currency_separator: preferred_currency.separator,
+          preferred_currency_delimiter: preferred_currency.delimiter,
+          preferred_date_format: preferred_date_format,
+          current_date: Date.current
+        )
+
+        content = case compiled_prompt
+                  when String
+                    compiled_prompt
+                  when Array
+                    compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
+                  else
+                    nil
+                  end
+
+        return if content.blank?
+
+        {
+          name: prompt.name,
+          version: prompt.version,
+          template: prompt.prompt,
+          content: content
+        }
+      rescue => e
+        Rails.logger.warn("Langfuse prompt retrieval failed: #{e.message}")
+        nil
+      end
+
+      def fallback_default_instructions(preferred_currency, preferred_date_format)
         <<~PROMPT
           ## Your identity
 
@@ -77,6 +134,15 @@ module Assistant::Configurable
           - If you suspect that you do not have enough data to 100% accurately answer, be transparent about it and state exactly what
             the data you're presenting represents and what context it is in (i.e. date range, account, etc.)
         PROMPT
+      end
+
+      def langfuse_client
+        return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
+
+        @langfuse_client ||= Langfuse.new
+      rescue => e
+        Rails.logger.warn("Langfuse client initialization failed: #{e.message}")
+        nil
       end
   end
 end

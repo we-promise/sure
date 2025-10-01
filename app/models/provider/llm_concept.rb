@@ -22,6 +22,7 @@ module Provider::LlmConcept
     prompt,
     model:,
     instructions: nil,
+    instructions_prompt: nil,
     functions: [],
     function_results: [],
     streamer: nil,
