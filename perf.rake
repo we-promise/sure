@@ -6,7 +6,7 @@ Bundler.setup
 require 'derailed_benchmarks'
 require 'derailed_benchmarks/tasks'
 
-# Custom auth helper for Maybe's session-based authentication
+# Custom auth helper for Sure's session-based authentication
 class CustomAuth < DerailedBenchmarks::AuthHelper
   def setup
     # No setup needed
