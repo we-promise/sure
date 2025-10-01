@@ -47,13 +47,35 @@ class Import::Row < ApplicationRecord
       if import.amount_type_strategy == "signed_amount"
         value * (import.signage_convention == "inflows_positive" ? -1 : 1)
       elsif import.amount_type_strategy == "custom_column"
-        selected_identifier = import.amount_type_identifier_value
-        inflow_treatment = import.amount_type_inflow_value
+        legacy_identifier = import.amount_type_inflow_value
+        selected_identifier =
+          if import.amount_type_identifier_value.present?
+            import.amount_type_identifier_value
+          else
+            legacy_identifier
+          end
 
-        if entity_type == selected_identifier
-          value * (inflow_treatment == "inflows_positive" ? -1 : 1)
+        inflow_treatment =
+          if import.amount_type_inflow_value.in?(%w[inflows_positive inflows_negative])
+            import.amount_type_inflow_value
+          else
+            "inflows_positive"
+          end
+
+        if selected_identifier.blank?
+          # Legacy import: amount_type_inflow_value is the identifier, treat as inflow
+          if entity_type == inflow_treatment
+            value * -1
+          else
+            value
+          end
         else
-          value * (inflow_treatment == "inflows_positive" ? 1 : -1)
+          # New import: use identifier/treatment split
+          if entity_type == selected_identifier
+            value * (inflow_treatment == "inflows_positive" ? -1 : 1)
+          else
+            value * (inflow_treatment == "inflows_positive" ? 1 : -1)
+          end
         end
       else
         raise "Unknown amount type strategy for import: #{import.amount_type_strategy}"

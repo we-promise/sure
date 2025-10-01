@@ -21,8 +21,7 @@ export default class extends Controller {
       this.amountTypeColumnKeyValue
     ) {
       this.#showAmountTypeValueTargets(this.amountTypeColumnKeyValue);
-      const identifierValueSelect = this.amountTypeValueTarget.querySelector("select");
-      if (identifierValueSelect && identifierValueSelect.value) {
+      if (this.amountTypeValueTarget.querySelector("select")?.value) {
         this.#showAmountTypeInflowValueTargets();
       }
     }
@@ -36,8 +35,7 @@ export default class extends Controller {
 
       if (this.amountTypeColumnKeyValue) {
         this.#showAmountTypeValueTargets(this.amountTypeColumnKeyValue);
-        const identifierValueSelect = this.amountTypeValueTarget.querySelector("select");
-        if (identifierValueSelect && identifierValueSelect.value) {
+        if (this.amountTypeValueTarget.querySelector("select")?.value) {
           this.#showAmountTypeInflowValueTargets();
         }
       }
@@ -85,9 +83,9 @@ export default class extends Controller {
     select.appendChild(fragment);
   }
 
-  #showAmountTypeInflowValueTargets(amountTypeColumnKey) {
-    // This should be called when amount_type_identifier_value changes
-    // We need to update the displayed identifier value in the UI text
+  #showAmountTypeInflowValueTargets() {
+    // Called when amount_type_identifier_value changes
+    // Updates the displayed identifier value in the UI text and shows/hides the inflow value dropdown
     const identifierValueSelect = this.amountTypeValueTarget.querySelector("select");
     const selectedValue = identifierValueSelect.value;
     
