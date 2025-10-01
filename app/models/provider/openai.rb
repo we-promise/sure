@@ -36,6 +36,13 @@ class Provider::Openai < Provider
     end
   end
 
+  ##
+  # Automatically detect merchant entities for a collection of transactions.
+  # @param [Array] transactions - Transactions to analyze for merchant detection (max 25).
+  # @param [Array] user_merchants - Optional user-provided merchants to guide detection.
+  # @param [String] model - Optional model identifier to use for detection.
+  # @raise [Error] If more than 25 transactions are provided ("Too many transactions to auto-detect merchants. Max is 25 per request.").
+  # @return [Array] An array of merchant-detection result objects; each element can be converted to a hash via `to_h`.
   def auto_detect_merchants(transactions: [], user_merchants: [], model: "")
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
@@ -58,6 +65,20 @@ class Provider::Openai < Provider
     end
   end
 
+  ##
+  # Generates a chat response for the given prompt using the configured OpenAI client and options.
+  # If a streamer is provided, parsed stream chunks are forwarded to it and the final response chunk is returned;
+  # otherwise the full parsed response is returned.
+  # @param [String] prompt - The user prompt or conversation input.
+  # @param [String] model - The model identifier to use (e.g., "gpt-4.1").
+  # @param [String, nil] instructions - Optional high-level instructions to guide the model's behavior.
+  # @param [Array<Hash>] functions - Optional tool/function definitions available to the model.
+  # @param [Array<Hash>] function_results - Optional results from previously executed functions to include in the context.
+  # @param [Proc, nil] streamer - Optional callable that receives parsed stream chunks as they arrive.
+  # @param [String, nil] previous_response_id - Optional id of a previous provider response to continue from.
+  # @param [String, nil] session_id - Optional session identifier to include in logging/telemetry.
+  # @param [String, nil] user_identifier - Optional user identifier to include in logging/telemetry.
+  # @return [Object] The parsed chat response (when streaming, the returned value is the final parsed response chunk; otherwise the parsed response object containing messages and usage metadata).
   def chat_response(
     prompt,
     model:,
@@ -135,12 +156,27 @@ class Provider::Openai < Provider
   private
     attr_reader :client
 
+    ##
+    # Provides a configured Langfuse client when Langfuse credentials are available.
+    # @return [Langfuse, nil] A Langfuse client stored in `@langfuse_client` when both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are present; `nil` otherwise.
     def langfuse_client
       return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
 
       @langfuse_client = Langfuse.new
     end
 
+    ##
+    # Send generation metadata to Langfuse when a Langfuse client is configured.
+    #
+    # @param [String] name - Logical name for the generation event (e.g., "chat_response").
+    # @param [String] model - Model identifier used to produce the generation.
+    # @param [Hash] input - The input payload sent to the model.
+    # @param [Object] output - The generation output to record (typically messages or text).
+    # @param [Hash, nil] usage - Optional usage details returned by the provider (e.g., token counts).
+    # @param [String, nil] session_id - Optional session identifier to associate with the trace.
+    # @param [String, nil] user_identifier - Optional user identifier to associate with the trace as `user_id`.
+    #
+    # If no Langfuse client is configured, the method returns immediately. Any errors raised while recording the trace are rescued and a warning is logged without propagating the error.
     def log_langfuse_generation(name:, model:, input:, output:, usage: nil, session_id: nil, user_identifier: nil)
       return unless langfuse_client
 

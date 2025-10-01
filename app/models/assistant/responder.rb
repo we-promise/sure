@@ -59,6 +59,13 @@ class Assistant::Responder
       )
     end
 
+    ##
+    # Requests a chat response from the configured LLM and returns the response data.
+    # @param [Object] streamer - An object that receives streaming events from the LLM.
+    # @param [Array<Hash>] function_results - Results produced by previously executed function calls to include in the LLM request.
+    # @param [String, nil] previous_response_id - ID of a prior response to continue the conversation, or `nil` to start a new one.
+    # @return [Object] The data payload from the LLM response.
+    # @raise [Exception] Raises the LLM response error when the response indicates failure.
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil)
       response = llm.chat_response(
         message.content,
@@ -83,20 +90,31 @@ class Assistant::Responder
       listeners[event_name.to_sym].each { |block| block.call(payload) }
     end
 
+    ##
+    # Provides the internal registry that maps event names to arrays of listener blocks.
+    # The hash is lazily initialized and memoized; accessing a missing key automatically creates and returns an empty array for that key.
+    # @return [Hash] A hash mapping event names to arrays of listener blocks.
     def listeners
       @listeners ||= Hash.new { |h, k| h[k] = [] }
     end
 
+    ##
+    # Current chat's id as a string, or nil if unavailable.
+    # @return [String, nil] The chat id converted to a String, or `nil` when no chat or id is present.
     def chat_session_id
       chat&.id&.to_s
     end
 
+    ##
+    # Compute a SHA256 hex identifier derived from the chat's user_id.
+    # @return [String, nil] The SHA256 hex digest of `chat.user_id`, or `nil` if no chat or no user_id is present.
     def chat_user_identifier
       return unless chat&.user_id
 
       ::Digest::SHA256.hexdigest(chat.user_id.to_s)
     end
 
+    # @return [Chat, nil] The chat associated with the message, or `nil` if none.
     def chat
       @chat ||= message.chat
     end
