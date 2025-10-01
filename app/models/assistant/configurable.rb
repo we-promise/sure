@@ -98,7 +98,7 @@ module Assistant::Configurable
         when String
           # Replace {{ variable }} placeholders with provided variables
           template.gsub(/\{\{\s*(\w+)\s*\}\}/) do
-            key = Regexp.last_match(1)
+            key = Regexp.last_match(1).to_sym
             variables[key] || ""
           end
         when Array
