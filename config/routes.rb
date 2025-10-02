@@ -263,6 +263,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :enable_banking_items, only: %i[index new create show edit update destroy] do
+    member do
+      post :sync
+      post :update_connection
+    end
+
+    collection do
+      post :authorization
+    end
+  end
+
   namespace :webhooks do
     post "plaid"
     post "plaid_eu"
@@ -283,6 +294,8 @@ Rails.application.routes.draw do
 
   get "privacy", to: redirect("about:blank")
   get "terms", to: redirect("about:blank")
+
+  get "enable_banking_auth_callback", to: "enable_banking_items#auth_callback"
 
   # Defines the root path route ("/")
   root "pages#dashboard"
