@@ -16,7 +16,12 @@
             </span>
           </p>
         <% else %>
-          <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
+          <div>
+            <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
+            <% if account.simplefin_account&.org_data&.dig('name') %>
+              <span class="text-secondary">• <%= account.simplefin_account.org_data["name"] %></span>
+            <% end %>
+          </div>
           <% if account.long_subtype_label %>
             <p class="text-sm text-secondary truncate"><%= account.long_subtype_label %></p>
           <% end %>

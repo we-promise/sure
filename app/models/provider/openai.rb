@@ -14,31 +14,61 @@ class Provider::Openai < Provider
     MODELS.include?(model)
   end
 
-  def auto_categorize(transactions: [], user_categories: [])
+  def auto_categorize(transactions: [], user_categories: [], model: "")
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
 
-      AutoCategorizer.new(
+      result = AutoCategorizer.new(
         client,
+        model: model,
         transactions: transactions,
         user_categories: user_categories
       ).auto_categorize
+
+      log_langfuse_generation(
+        name: "auto_categorize",
+        model: model,
+        input: { transactions: transactions, user_categories: user_categories },
+        output: result.map(&:to_h)
+      )
+
+      result
     end
   end
 
-  def auto_detect_merchants(transactions: [], user_merchants: [])
+  def auto_detect_merchants(transactions: [], user_merchants: [], model: "")
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
 
-      AutoMerchantDetector.new(
+      result = AutoMerchantDetector.new(
         client,
+        model: model,
         transactions: transactions,
         user_merchants: user_merchants
       ).auto_detect_merchants
+
+      log_langfuse_generation(
+        name: "auto_detect_merchants",
+        model: model,
+        input: { transactions: transactions, user_merchants: user_merchants },
+        output: result.map(&:to_h)
+      )
+
+      result
     end
   end
 
-  def chat_response(prompt, model:, instructions: nil, functions: [], function_results: [], streamer: nil, previous_response_id: nil)
+  def chat_response(
+    prompt,
+    model:,
+    instructions: nil,
+    functions: [],
+    function_results: [],
+    streamer: nil,
+    previous_response_id: nil,
+    session_id: nil,
+    user_identifier: nil
+  )
     with_provider_response do
       chat_config = ChatConfig.new(
         functions: functions,
@@ -61,9 +91,11 @@ class Provider::Openai < Provider
         nil
       end
 
+      input_payload = chat_config.build_input(prompt)
+
       raw_response = client.responses.create(parameters: {
         model: model,
-        input: chat_config.build_input(prompt),
+        input: input_payload,
         instructions: instructions,
         tools: chat_config.tools,
         previous_response_id: previous_response_id,
@@ -74,13 +106,61 @@ class Provider::Openai < Provider
       # for the "response chunk" in the stream and return it (it is already parsed)
       if stream_proxy.present?
         response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
-        response_chunk.data
+        response = response_chunk.data
+        log_langfuse_generation(
+          name: "chat_response",
+          model: model,
+          input: input_payload,
+          output: response.messages.map(&:output_text).join("\n"),
+          session_id: session_id,
+          user_identifier: user_identifier
+        )
+        response
       else
-        ChatParser.new(raw_response).parsed
+        parsed = ChatParser.new(raw_response).parsed
+        log_langfuse_generation(
+          name: "chat_response",
+          model: model,
+          input: input_payload,
+          output: parsed.messages.map(&:output_text).join("\n"),
+          usage: raw_response["usage"],
+          session_id: session_id,
+          user_identifier: user_identifier
+        )
+        parsed
       end
     end
   end
 
   private
     attr_reader :client
+
+    def langfuse_client
+      return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
+
+      @langfuse_client = Langfuse.new
+    end
+
+    def log_langfuse_generation(name:, model:, input:, output:, usage: nil, session_id: nil, user_identifier: nil)
+      return unless langfuse_client
+
+      trace = langfuse_client.trace(
+        name: "openai.#{name}",
+        input: input,
+        session_id: session_id,
+        user_id: user_identifier
+      )
+      trace.generation(
+        name: name,
+        model: model,
+        input: input,
+        output: output,
+        usage: usage,
+        session_id: session_id,
+        user_id: user_identifier
+      )
+      trace.update(output: output)
+    rescue => e
+      Rails.logger.warn("Langfuse logging failed: #{e.message}")
+    end
 end

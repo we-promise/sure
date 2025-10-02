@@ -6,7 +6,7 @@
 # --------
 #
 # This file is an example Docker Compose configuration for self hosting
-# Maybe on your local machine or on a cloud VPS.
+# Sure on your local machine or on a cloud VPS.
 #
 # The configuration below is a "standard" setup that works out of the box,
 # but if you're running this outside of a local network, it is recommended
@@ -24,13 +24,13 @@
 #
 # If you run into problems, you should open a Discussion here:
 #
-# https://github.com/maybe-finance/maybe/discussions/categories/general
+# https://github.com/we-promise/sure/discussions/categories/general
 #
 
 x-db-env: &db_env
-  POSTGRES_USER: ${POSTGRES_USER:-maybe_user}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maybe_password}
-  POSTGRES_DB: ${POSTGRES_DB:-maybe_production}
+  POSTGRES_USER: ${POSTGRES_USER:-sure_user}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure_password}
+  POSTGRES_DB: ${POSTGRES_DB:-sure_production}
 
 x-rails-env: &rails_env
   <<: *db_env

@@ -63,6 +63,12 @@ class Period
       label_short: "5Y",
       label: "Last 5 Years",
       comparison_label: "vs. 5 years ago"
+    },
+    "last_10_years" => {
+      date_range: -> { [ 10.years.ago.to_date, Date.current ] },
+      label_short: "10Y",
+      label: "Last 10 Years",
+      comparison_label: "vs. 10 years ago"
     }
   }
 

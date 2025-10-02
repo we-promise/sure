@@ -58,7 +58,7 @@ en:
   imports:
     empty:
       message: No imports yet.
-      new: New import
+      new: New Import
     import:
       complete: Complete
       delete: Delete
@@ -71,8 +71,11 @@ en:
       view: View
     index:
       imports: Imports
-      new: New import
-      title: Imports
+      new: New Import
+      title: Import/Export
+      exports: Exports
+      new_export: New Export
+      no_exports: No exports yet.
     new:
       description: You can manually import various types of data via CSV or use one
         of our import templates like Mint.

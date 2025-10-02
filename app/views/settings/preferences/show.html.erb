@@ -30,12 +30,17 @@
             { label: t(".default_period") },
             { data: { auto_submit_form_target: "auto" } } %>
 
+        <%= form.select :default_account_order,
+            AccountOrder.all.map { |order| [ order.label, order.key ] },
+            { label: t(".default_account_order") },
+            { data: { auto_submit_form_target: "auto" } } %>
+
         <%= family_form.select :country,
             country_options,
             { label: t(".country") },
             { data: { auto_submit_form_target: "auto" } } %>
 
-        <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.  Please see the <%= link_to "I18n issue", "https://github.com/maybe-finance/maybe/issues/1225", target: "_blank", class: "underline" %> for more information.</p>
+        <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.</p>
       <% end %>
     <% end %>
   </div>

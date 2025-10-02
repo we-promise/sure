@@ -42,7 +42,7 @@
   @apply text-gray-50;
 
   @variant theme-dark {
-    @apply text-gray-700;
+    @apply text-gray-400;
   }
 }
 
@@ -50,7 +50,7 @@
   @apply text-gray-100;
 
   @variant theme-dark {
-    @apply text-gray-600;
+    @apply text-gray-500;
   }
 }
 

@@ -31,12 +31,14 @@ class Family::AutoMerchantDetector
 
       merchant_id = user_merchants_input.find { |m| m[:name] == auto_detection&.business_name }&.dig(:id)
 
-      if merchant_id.nil? && auto_detection&.business_url.present? && auto_detection&.business_name.present?
+      if merchant_id.nil? && auto_detection&.business_url.present? && auto_detection&.business_name.present? && Setting.brand_fetch_client_id.present?
         ai_provider_merchant = ProviderMerchant.find_or_create_by!(
           source: "ai",
           name: auto_detection.business_name,
           website_url: auto_detection.business_url,
-        )
+        ) do |pm|
+          pm.logo_url = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+        end
       end
 
       merchant_id = merchant_id || ai_provider_merchant&.id
@@ -63,6 +65,9 @@ class Family::AutoMerchantDetector
       Provider::Registry.get_provider(:openai)
     end
 
+    def default_logo_provider_url
+      "https://cdn.brandfetch.io"
+    end
 
     def user_merchants_input
       family.merchants.map do |merchant|

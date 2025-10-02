@@ -1,6 +1,6 @@
 class UsersController < ApplicationController
   before_action :set_user
-  before_action :ensure_admin, only: :reset
+  before_action :ensure_admin, only: %i[reset reset_with_sample_data]
 
   def update
     @user = Current.user
@@ -37,6 +37,11 @@ class UsersController < ApplicationController
 
   def reset
     FamilyResetJob.perform_later(Current.family)
+    redirect_to settings_profile_path, notice: t(".success")
+  end
+
+  def reset_with_sample_data
+    FamilyResetJob.perform_later(Current.family, load_sample_data_for_email: @user.email)
     redirect_to settings_profile_path, notice: t(".success")
   end
 
@@ -88,7 +93,7 @@ class UsersController < ApplicationController
     def user_params
       params.require(:user).permit(
         :first_name, :last_name, :email, :profile_image, :redirect_to, :delete_profile_image, :onboarded_at,
-        :show_sidebar, :default_period, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at,
+        :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at,
         family_attributes: [ :name, :currency, :country, :locale, :date_format, :timezone, :id ],
         goals: []
       )

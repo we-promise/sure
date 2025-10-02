@@ -3,9 +3,13 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: :clear_cache
+  before_action :ensure_admin, only: [ :update, :clear_cache ]
 
   def show
+    @breadcrumbs = [
+      [ "Home", root_path ],
+      [ "Self-Hosting", nil ]
+    ]
     twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
     @twelve_data_usage = twelve_data_provider&.usage
   end
@@ -19,8 +23,23 @@ class Settings::HostingsController < ApplicationController
       Setting.require_email_confirmation = hosting_params[:require_email_confirmation]
     end
 
+    if hosting_params.key?(:brand_fetch_client_id)
+      Setting.brand_fetch_client_id = hosting_params[:brand_fetch_client_id]
+    end
+
     if hosting_params.key?(:twelve_data_api_key)
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
+    end
+
+    if hosting_params.key?(:openai_access_token)
+      Setting.openai_access_token = hosting_params[:openai_access_token]
+    end
+    if hosting_params.key?(:openai_access_token)
+      token_param = hosting_params[:openai_access_token].to_s.strip
+      # Ignore blanks and redaction placeholders to prevent accidental overwrite
+      unless token_param.blank? || token_param == "********"
+        Setting.openai_access_token = token_param
+      end
     end
 
     redirect_to settings_hosting_path, notice: t(".success")
@@ -36,7 +55,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :twelve_data_api_key)
+      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token)
     end
 
     def ensure_admin

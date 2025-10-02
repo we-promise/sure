@@ -20,17 +20,17 @@
         <div class="px-4 py-3 border-t border-tertiary">
           <p class="text-sm">
             <span class="font-medium text-primary">Version:</span>
-            <%= link_to Maybe.version.to_release_tag, "https://github.com/we-promise/sure/releases/tag/#{Maybe.version.to_release_tag}", target: "_blank", class: "hover:underline" %>
+            <%= link_to Sure.version.to_release_tag, "https://github.com/we-promise/sure/releases/tag/#{Sure.version.to_release_tag}", target: "_blank", class: "hover:underline" %>
 
-            <% if Maybe.commit_sha.present? %>
-              (<%= link_to Maybe.commit_sha.first(7), "https://github.com/we-promise/sure/commit/#{Maybe.commit_sha}", target: "_blank", class: "hover:underline" %>)
+            <% if Sure.commit_sha.present? %>
+              (<%= link_to Sure.commit_sha.first(7), "https://github.com/we-promise/sure/commit/#{Sure.commit_sha}", target: "_blank", class: "hover:underline" %>)
             <% end %>
           </p>
         </div>
       <% end %>
     <% end %>
 
-    <% menu.with_item(variant: "link", text: "Settings", icon: "settings", href: settings_profile_path(return_to: request.fullpath)) %>
+    <% menu.with_item(variant: "link", text: "Settings", icon: "settings", href: accounts_path(return_to: request.fullpath)) %>
     <% menu.with_item(variant: "link", text: "Changelog", icon: "box", href: changelog_path) %>
 
     <% if self_hosted? %>

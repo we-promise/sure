@@ -3,7 +3,7 @@ description:
 globs: test/**
 alwaysApply: false
 ---
-Use this rule to learn how to write tests for the Maybe codebase.
+Use this rule to learn how to write tests for the codebase.
 
 Due to the open-source nature of this project, we have chosen Minitest + Fixtures for testing to maximize familiarity and predictability.
 
@@ -80,8 +80,7 @@ Due to the open-source nature of this project, we have chosen Minitest + Fixture
   - Never test the implementation details of one class in another classes test suite
 
 - **Stubs and mocks**
-  - Use `mocha` gem 
+  - Use `mocha` gem
   - Always prefer `OpenStruct` when creating mock instances, or in complex cases, a mock class
   - Only mock what's necessary. If you're not testing return values, don't mock a return value.
-
 
