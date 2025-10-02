@@ -7,6 +7,7 @@ en:
       logout_successful: You have signed out successfully.
     openid_connect:
       failed: Could not authenticate via OpenID Connect.
+      signup_failed: Could not complete sign up with Google.
     failure:
       failed: Could not authenticate.
     new:
