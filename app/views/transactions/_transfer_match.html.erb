@@ -6,9 +6,10 @@
       <%= icon "link-2", size: "sm", class: "text-secondary" %>
     </span>
   <% elsif transaction.transfer.pending? %>
-    <span class="inline-flex items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
-      Auto-matched
-    </span>
+    <span class="inline-flex gap-2 items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
+      <span class="hidden sm:inline">Auto-matched</span>
+      <span class="inline sm:hidden">A/M</span>
+
 
     <%= button_to transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
                     method: :patch,
@@ -24,5 +25,6 @@
                     title: "Reject match" do %>
       <%= icon "x", size: "sm", class: "text-subdued hover:text-primary" %>
     <% end %>
+    </span>
   <% end %>
 </div>
