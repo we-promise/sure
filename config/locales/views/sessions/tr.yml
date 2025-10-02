@@ -7,6 +7,7 @@ tr:
       logout_successful: Başarıyla çıkış yaptınız.
     openid_connect:
       failed: OpenID Connect ile kimlik doğrulaması yapılamadı.
+      signup_failed: Google ile kayıt tamamlanamadı.
     new:
       email: E-posta adresi
       email_placeholder: ornek@eposta.com

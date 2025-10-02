@@ -3,6 +3,7 @@ class OnboardingsController < ApplicationController
 
   before_action :set_user
   before_action :load_invitation
+  before_action :skip_setup_step_if_complete, only: :show
 
   def show
   end
@@ -20,5 +21,14 @@ class OnboardingsController < ApplicationController
 
     def load_invitation
       @invitation = Current.family.invitations.accepted.find_by(email: Current.user.email)
+    end
+
+    def skip_setup_step_if_complete
+      return if performed?
+      return if @invitation.present?
+
+      if @user&.first_name.present? && @user&.last_name.present?
+        redirect_to preferences_onboarding_path
+      end
     end
 end

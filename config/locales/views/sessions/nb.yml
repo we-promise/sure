@@ -7,6 +7,7 @@ nb:
       logout_successful: Du har blitt logget ut.
     openid_connect:
       failed: Kunne ikke autentisere via OpenID Connect.
+      signup_failed: Klarte ikke å registrere deg med Google.
     new:
       email: E-postadresse
       email_placeholder: meg@example.com
