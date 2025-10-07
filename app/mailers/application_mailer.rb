@@ -5,7 +5,16 @@ class ApplicationMailer < ActionMailer::Base
   )
   layout "mailer"
 
+  before_action :assign_branding
+
+  helper_method :product_name, :brand_name
+
   private
+    def assign_branding
+      @product_name = product_name
+      @brand_name = brand_name
+    end
+
     def product_name
       Rails.configuration.x.product_name
     end
