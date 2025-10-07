@@ -15,7 +15,7 @@ tr:
         title: "API Anahtarı Yönetimi"
       no_api_key:
         title: "API Anahtarınızı Oluşturun"
-        description: "Maybe verilerinize güvenli bir API anahtarı ile programatik erişim sağlayın."
+        description: "Sure verilerinize güvenli bir API anahtarı ile programatik erişim sağlayın."
         what_you_can_do: "API ile yapabilecekleriniz:"
         feature_1: "Hesap verilerinize programatik olarak erişin"
         feature_2: "Özel entegrasyonlar ve uygulamalar oluşturun"
@@ -36,7 +36,7 @@ tr:
         never_expires: "Süresiz"
         permissions: "Yetkiler"
         usage_instructions_title: "API anahtarınızı nasıl kullanırsınız"
-        usage_instructions: "Maybe API'ye istek yaparken API anahtarınızı X-Api-Key başlığına ekleyin:"
+        usage_instructions: "Sure API'ye istek yaparken API anahtarınızı X-Api-Key başlığına ekleyin:"
         regenerate_key: "Yeni Anahtar Oluştur"
         revoke_key: "Anahtarı İptal Et"
         revoke_confirmation: "Bu API anahtarını iptal etmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve bu anahtarı kullanan tüm uygulamalar hemen devre dışı kalır."

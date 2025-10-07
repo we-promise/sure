@@ -31,18 +31,18 @@ nb:
         unassigned_account: Trenger å opprette en ny konto for utilordnede rader?
       show:
         account_mapping_description: Tilordne alle kontoene i den importerte filen din til
-          Maybes eksisterende kontoer. Du kan også legge til nye kontoer eller la dem
+          Sures eksisterende kontoer. Du kan også legge til nye kontoer eller la dem
           være ukategorisert.
         account_mapping_title: Tilordne kontoene dine
         account_type_mapping_description: Tilordne alle kontotypene i den importerte filen din til
-          Maybes
+          Sures
         account_type_mapping_title: Tilordne kontotypene dine
         category_mapping_description: Tilordne alle kategoriene i den importerte filen din til
-          Maybes eksisterende kategorier. Du kan også legge til nye kategorier eller la dem
+          Sures eksisterende kategorier. Du kan også legge til nye kategorier eller la dem
           være ukategorisert.
         category_mapping_title: Tilordne kategoriene dine
         tag_mapping_description: Tilordne alle tagene i den importerte filen din til
-          Maybes eksisterende tagger. Du kan også legge til nye tagger eller la dem
+          Sures eksisterende tagger. Du kan også legge til nye tagger eller la dem
           være ukategorisert.
         tag_mapping_title: Tilordne tagene dine
     uploads:
