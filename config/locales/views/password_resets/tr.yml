@@ -7,6 +7,7 @@ tr:
       requested: Lütfen şifrenizi sıfırlamak için e-postanızı kontrol edin.
       submit: Şifreyi sıfırla
       title: Şifreyi sıfırla
+      back: Geri
     update:
       invalid_token: Geçersiz token.
       success: Şifreniz başarıyla sıfırlandı.
