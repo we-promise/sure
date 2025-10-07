@@ -8,4 +8,14 @@
 
     <%= form.submit t(".submit") %>
   <% end %>
+
+  <div class="mt-4">
+    <%= render DS::Link.new(
+      text: t(".back"),
+      href: new_session_path,
+      variant: :secondary,
+      full_width: true,
+      class: "bg-white hover:bg-gray-100"
+    ) %>
+  </div>
 <% end %>
