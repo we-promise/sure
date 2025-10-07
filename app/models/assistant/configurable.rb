@@ -6,8 +6,11 @@ module Assistant::Configurable
       preferred_currency = Money::Currency.new(chat.user.family.currency)
       preferred_date_format = chat.user.family.date_format
 
+      instructions_config = default_instructions(preferred_currency, preferred_date_format)
+
       {
-        instructions: default_instructions(preferred_currency, preferred_date_format),
+        instructions: instructions_config[:content],
+        instructions_prompt: instructions_config[:prompt],
         functions: default_functions
       }
     end
@@ -23,6 +26,104 @@ module Assistant::Configurable
       end
 
       def default_instructions(preferred_currency, preferred_date_format)
+        langfuse_instructions = langfuse_default_instructions(preferred_currency, preferred_date_format)
+
+        if langfuse_instructions.present?
+          {
+            content: langfuse_instructions[:content],
+            prompt: langfuse_instructions
+          }
+        else
+          {
+            content: fallback_default_instructions(preferred_currency, preferred_date_format),
+            prompt: nil
+          }
+        end
+      end
+
+      def langfuse_default_instructions(preferred_currency, preferred_date_format)
+        return unless langfuse_client
+
+        prompt = langfuse_client.get_prompt("default_instructions")
+        return if prompt.nil?
+
+        # TODO: remove after we make the code resilient to chat vs. text types of prompts
+        Rails.logger.warn("Langfuse prompt retrieved: #{prompt.name} #{prompt.version}")
+        Rails.logger.warn("Langfuse prompt retrieved: #{prompt.prompt}")
+
+        compiled_prompt = compile_langfuse_prompt(
+          prompt.prompt.dig(0, "content"),
+          preferred_currency: preferred_currency,
+          preferred_date_format: preferred_date_format
+        )
+
+        content = extract_prompt_content(compiled_prompt)
+        return if content.blank?
+
+        {
+          id: prompt.respond_to?(:id) ? prompt.id : (prompt[:id] rescue nil),
+          name: prompt.name,
+          version: prompt.version,
+          template: prompt.prompt,
+          content: content
+        }
+      rescue => e
+        Rails.logger.warn("Langfuse prompt retrieval failed: #{e.message}")
+        nil
+      end
+
+      def compile_langfuse_prompt(prompt, preferred_currency:, preferred_date_format:)
+        variables = {
+          preferred_currency_symbol: preferred_currency&.symbol,
+          preferred_currency_iso_code: preferred_currency&.iso_code,
+          preferred_currency_default_precision: preferred_currency&.default_precision,
+          preferred_currency_default_format: preferred_currency&.default_format,
+          preferred_currency_separator: preferred_currency&.separator,
+          preferred_currency_delimiter: preferred_currency&.delimiter,
+          preferred_date_format: preferred_date_format,
+          current_date: Date.current
+        }.transform_values { |value| value.nil? ? "" : value.to_s }
+
+        # If the prompt object supports compilation, use it. Otherwise, perform
+        # a lightweight local interpolation for String/Array/Hash templates.
+        if prompt.respond_to?(:compile)
+          prompt.compile(**variables)
+        else
+          interpolate_template(prompt, variables)
+        end
+      end
+
+      def interpolate_template(template, variables)
+        case template
+        when String
+          # Replace {{ variable }} placeholders with provided variables
+          template.gsub(/\{\{\s*(\w+)\s*\}\}/) do
+            key = Regexp.last_match(1).to_sym
+            variables[key] || ""
+          end
+        when Array
+          template.map { |item| interpolate_template(item, variables) }
+        when Hash
+          template.transform_values { |v| interpolate_template(v, variables) }
+        else
+          template
+        end
+      end
+
+      def extract_prompt_content(compiled_prompt)
+        case compiled_prompt
+        when String
+          compiled_prompt
+        when Array
+          compiled_prompt.filter_map do |message|
+            message[:content] || message["content"]
+          end.join("\n\n")
+        else
+          nil
+        end
+      end
+
+      def fallback_default_instructions(preferred_currency, preferred_date_format)
         <<~PROMPT
           ## Your identity
 
@@ -77,6 +178,15 @@ module Assistant::Configurable
           - If you suspect that you do not have enough data to 100% accurately answer, be transparent about it and state exactly what
             the data you're presenting represents and what context it is in (i.e. date range, account, etc.)
         PROMPT
+      end
+
+      def langfuse_client
+        return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
+
+        @langfuse_client ||= Langfuse.new
+      rescue => e
+        Rails.logger.warn("Langfuse client initialization failed: #{e.message}")
+        nil
       end
   end
 end
