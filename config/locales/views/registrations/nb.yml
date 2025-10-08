@@ -21,5 +21,5 @@ nb:
       title: Opprett kontoen din
       welcome_body: For å komme i gang må du registrere deg for en ny konto. Du vil
         da kunne konfigurere flere innstillinger i appen.
-      welcome_title: Velkommen til Self Hosted Sure!
+      welcome_title: Velkommen til Self Hosted %{product_name}!
       password_placeholder: Angi passordet ditt

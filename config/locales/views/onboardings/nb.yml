@@ -25,4 +25,4 @@ nb:
       message: Vi er veldig glade for at du er her. I neste trinn vil vi stille deg noen
         spørsmål for å fullføre profilen din og deretter få deg i gang.
       setup: Sett opp konto
-      title: Møt Sure
+      title: Møt %{product_name}

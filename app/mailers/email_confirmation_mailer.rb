@@ -6,7 +6,7 @@ class EmailConfirmationMailer < ApplicationMailer
   #
   def confirmation_email
     @user = params[:user]
-    @subject = t(".subject")
+    @subject = t(".subject", product_name: product_name)
     @cta = t(".cta")
     @confirmation_url = new_email_confirmation_url(token: @user.generate_token_for(:email_confirmation))
 

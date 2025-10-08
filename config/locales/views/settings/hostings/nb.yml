@@ -3,7 +3,7 @@ nb:
   settings:
     hostings:
       invite_code_settings:
-        description: Hver ny bruker som blir med i din instans av Sure kan bare bli med via en invitasjonskode
+        description: Hver ny bruker som blir med i din instans av %{product_name} kan bare bli med via en invitasjonskode
         email_confirmation_description: Når aktivert, må brukere bekrefte e-postadressen
           sin når de endrer den.
         email_confirmation_title: Krev e-postbekreftelse

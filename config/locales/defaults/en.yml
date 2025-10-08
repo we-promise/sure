@@ -1,5 +1,8 @@
 ---
 en:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
   activerecord:
     errors:
       messages:

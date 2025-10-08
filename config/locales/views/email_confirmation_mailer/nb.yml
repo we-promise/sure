@@ -7,4 +7,4 @@ nb:
       cta: Bekreft endring av e-post
       expiry_notice: Denne lenken vil utløpe om %{hours} timer.
       greeting: Hei!
-      subject: 'Sure: Bekreft endring av e-posten din'
+      subject: '%{product_name}: Bekreft endring av e-posten din'
