@@ -1,0 +1,47 @@
+---
+en:
+  enable_banking_items:
+    index:
+      enable_banking_page_title: Enable Banking Connections
+      add_new: Add new connection
+      empty: No accounts.
+      connect_accounts_description: Connect your bank accounts through Enable Banking to automatically sync transactions.
+    new:
+      new_connection: New Enable Banking connection
+      aspsp_error: Unable to fetch list of banks. Please try again later.
+    new_connection_form:
+      select_aspsps: Select your bank
+      link_account: Link account
+    authorization:
+      authorization_error: "Failed to start authorization process. Please try again or contact support."
+    auth_callback:
+      success: Enable Banking connection added successfully! Your accounts will appear shortly as they sync in the background.
+      errors:
+        auth_failed: Authentication failed. Please try again.
+        unexpected: An unexpected error occurred. Please try again or contact support.
+    destroy:
+      success: Enable Banking connection will be removed
+    update:
+      success: Enable Banking connection updated successfully! Your accounts are being reconnected.
+      errors:
+        update_failed: "Failed to update connection: %{message}"
+        unexpected: An unexpected error occurred. Please try again or contact support.
+    update_connection:
+      authorization_error: "Failed to start authorization process. Please try again or contact support."
+    enable_banking_item:
+      confirm_accept: Delete connection
+      confirm_body: This will permanently delete all the accounts in this group and all associated data.
+      confirm_title: Delete Enable Banking connection?
+      delete: Delete
+      connection: "connection"
+      deletion_in_progress: "(deletion in progress...)"
+      error: Error occurred while syncing data
+      no_accounts_description: This connection doesn't have any synchronized accounts yet.
+      no_accounts_title: No accounts found
+      requires_update: Requires re-authentication
+      setup_description: Choose account types for your newly imported Enable Banking accounts.
+      status: Last synced %{timestamp} ago
+      status_never: Never synced
+      session_expiration: Current session will expire in %{timestamp}.
+      syncing: Syncing...
+      update: Update connection

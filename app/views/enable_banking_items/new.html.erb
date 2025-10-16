@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".new_connection")) %>
+  <% dialog.with_body do %>
+    <%= render "new_connection_form", enable_banking_item: @enable_banking_item %>
+  <% end %>
+<% end %>

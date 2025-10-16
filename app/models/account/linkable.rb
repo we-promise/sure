@@ -4,11 +4,12 @@ module Account::Linkable
   included do
     belongs_to :plaid_account, optional: true
     belongs_to :simplefin_account, optional: true
+    belongs_to :enable_banking_account, optional: true
   end
 
-  # A "linked" account gets transaction and balance data from a third party like Plaid or SimpleFin
+  # A "linked" account gets transaction and balance data from a third party
   def linked?
-    plaid_account_id.present? || simplefin_account_id.present?
+    plaid_account_id.present? || simplefin_account_id.present? || enable_banking_account_id.present?
   end
 
   # An "offline" or "unlinked" account is one where the user tracks values and

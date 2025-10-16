@@ -21,6 +21,11 @@ class Settings::BankSyncController < ApplicationController
         name: "SimpleFin",
         description: "US & Canada connections via SimpleFin protocol.",
         path: simplefin_items_path
+      },
+      {
+        name: "Enable Banking",
+        description: "Bank connections via Enable Banking APIs.",
+        path: enable_banking_items_path
       }
     ]
   end
