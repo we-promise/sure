@@ -41,7 +41,7 @@ class EnableBankingItemsController < ApplicationController
 
   def update_connection
     enable_banking_item = EnableBankingItem.find_by(id: params[:id])
-    auth_url = generate_authorization_url(@enable_banking_item.aspsp_name, @enable_banking_item.aspsp_country, @enable_banking_item.id)
+    auth_url = generate_authorization_url(@enable_banking_item.aspsp_name, @enable_banking_item.aspsp_country, enable_banking_item.id)
     redirect_to auth_url, allow_other_host: true, status: :see_other
   rescue => error
     redirect_to enable_banking_items_path, alert: t(".authorization_error")
