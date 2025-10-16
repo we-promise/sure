@@ -105,8 +105,8 @@ class Provider::EnableBanking < Provider
     balances = get_account_balances(account_id)
     balances = [] if balances.nil?
     balances_by_type = balances.group_by { |balance| balance["balance_type"] }
-    available_balance = balances_by_type["ITAV"]&.first
-    current_balance = balances_by_type["ITBD"]&.first
+    available_balance = balances_by_type["ITAV"]&.first || balances_by_type["CLAV"]&.first
+    current_balance = balances_by_type["ITBD"]&.first || balances_by_type["CLBD"]&.first
     {
       "available" => available_balance&.dig("balance_amount", "amount") || 0,
       "current" => current_balance&.dig("balance_amount", "amount") || 0
