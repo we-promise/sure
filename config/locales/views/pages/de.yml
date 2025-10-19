@@ -1,0 +1,13 @@
+---
+de:
+  pages:
+    changelog:
+      title: Was ist neu
+    dashboard:
+      net_worth_chart:
+        data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar
+        title: Nettovermögen
+      no_account_empty_state:
+        new_account: Neues Konto
+        no_account_subtitle: Da noch keine Konten hinzugefügt wurden gibt es keine Daten anzuzeigen Füge dein erstes Konto hinzu um Dashboard-Daten zu sehen
+        no_account_title: Noch keine Konten vorhanden

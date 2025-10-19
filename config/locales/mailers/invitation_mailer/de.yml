@@ -1,0 +1,5 @@
+---
+de:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} hat dich eingeladen, seinem Haushalt auf Sure beizutreten!"

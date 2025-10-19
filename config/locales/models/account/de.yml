@@ -1,0 +1,21 @@
+---
+de:
+  activerecord:
+    attributes:
+      account:
+        balance: Kontostand
+        currency: Währung
+        family: Familie
+        family_id: Familie
+        name: Name
+        subtype: Untertyp
+    models:
+      account: Konto
+      account/credit: Kreditkarte
+      account/depository: Bankkonto
+      account/investment: Investition
+      account/loan: Darlehen
+      account/other_asset: Sonstiges Vermögen
+      account/other_liability: Sonstige Verbindlichkeit
+      account/property: Immobilie
+      account/vehicle: Fahrzeug
