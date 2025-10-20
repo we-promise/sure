@@ -34,6 +34,17 @@
       </section>
     <% end %>
 
+    <% if @outflows_data[:categories].present? %>
+      <%= turbo_frame_tag "outflows_donut_section" do %>
+        <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+          <%= render partial: "pages/dashboard/outflows_donut", locals: {
+            outflows_data: @outflows_data,
+            period: @outflows_period
+          } %>
+        </section>
+      <% end %>
+    <% end %>
+
     <section class="bg-container py-4 rounded-xl shadow-border-xs">
       <%= render partial: "pages/dashboard/net_worth_chart", locals: {
         balance_sheet: @balance_sheet,
