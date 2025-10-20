@@ -1,0 +1,455 @@
+---
+openapi: 3.0.3
+info:
+  title: Sure API
+  version: v1
+  description: OpenAPI documentation generated from executable request specs.
+servers:
+- url: https://api.sure.app
+  description: Production
+- url: http://localhost:3000
+  description: Local development
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Pagination:
+      type: object
+      required:
+      - page
+      - per_page
+      - total_count
+      - total_pages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        per_page:
+          type: integer
+          minimum: 1
+        total_count:
+          type: integer
+          minimum: 0
+        total_pages:
+          type: integer
+          minimum: 0
+    ErrorResponse:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+          nullable: true
+        details:
+          oneOf:
+          - type: array
+            items:
+              type: string
+          - type: object
+          nullable: true
+    ToolCall:
+      type: object
+      required:
+      - id
+      - function_name
+      - function_arguments
+      - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        function_name:
+          type: string
+        function_arguments:
+          type: object
+          additionalProperties: true
+        function_result:
+          type: object
+          additionalProperties: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    Message:
+      type: object
+      required:
+      - id
+      - type
+      - role
+      - content
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - user_message
+          - assistant_message
+        role:
+          type: string
+          enum:
+          - user
+          - assistant
+        content:
+          type: string
+        model:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tool_calls:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ToolCall"
+          nullable: true
+    MessageResponse:
+      allOf:
+      - "$ref": "#/components/schemas/Message"
+      - type: object
+        required:
+        - chat_id
+        properties:
+          chat_id:
+            type: string
+            format: uuid
+          ai_response_status:
+            type: string
+            enum:
+            - pending
+            - complete
+            - failed
+            nullable: true
+          ai_response_message:
+            type: string
+            nullable: true
+    ChatResource:
+      type: object
+      required:
+      - id
+      - title
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ChatSummary:
+      allOf:
+      - "$ref": "#/components/schemas/ChatResource"
+      - type: object
+        required:
+        - message_count
+        properties:
+          message_count:
+            type: integer
+            minimum: 0
+          last_message_at:
+            type: string
+            format: date-time
+            nullable: true
+    ChatDetail:
+      allOf:
+      - "$ref": "#/components/schemas/ChatResource"
+      - type: object
+        required:
+        - messages
+        properties:
+          messages:
+            type: array
+            items:
+              "$ref": "#/components/schemas/Message"
+          pagination:
+            "$ref": "#/components/schemas/Pagination"
+            nullable: true
+    ChatCollection:
+      type: object
+      required:
+      - chats
+      - pagination
+      properties:
+        chats:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ChatSummary"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    RetryResponse:
+      type: object
+      required:
+      - message
+      - message_id
+      properties:
+        message:
+          type: string
+        message_id:
+          type: string
+          format: uuid
+paths:
+  "/api/v1/chats":
+    get:
+      summary: List chats
+      tags:
+      - Chats
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Bearer token with read scope
+      responses:
+        '200':
+          description: chats listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ChatCollection"
+        '403':
+          description: AI features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create chat
+      tags:
+      - Chats
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Bearer token with write scope
+      responses:
+        '201':
+          description: chat created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ChatDetail"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Monthly budget review
+                message:
+                  type: string
+                  description: Initial message in the chat
+                model:
+                  type: string
+                  description: Optional OpenAI model identifier
+              required:
+              - title
+              - message
+        required: true
+  "/api/v1/chats/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Bearer token with read scope
+    - name: id
+      in: path
+      required: true
+      description: Chat ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a chat
+      tags:
+      - Chats
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: chat retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ChatDetail"
+        '404':
+          description: chat not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a chat
+      tags:
+      - Chats
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: chat updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ChatDetail"
+        '404':
+          description: chat not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Updated chat title
+        required: true
+    delete:
+      summary: Delete a chat
+      tags:
+      - Chats
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: chat deleted
+        '404':
+          description: chat not found
+  "/api/v1/chats/{chat_id}/messages":
+    parameters:
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Bearer token with write scope
+    - name: chat_id
+      in: path
+      required: true
+      description: Chat ID
+      schema:
+        type: string
+    post:
+      summary: Create a message
+      tags:
+      - Chat Messages
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: message created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MessageResponse"
+        '404':
+          description: chat not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                model:
+                  type: string
+              required:
+              - content
+        required: true
+  "/api/v1/chats/{chat_id}/messages/retry":
+    parameters:
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Bearer token with write scope
+    - name: chat_id
+      in: path
+      required: true
+      description: Chat ID
+      schema:
+        type: string
+    post:
+      summary: Retry the last assistant response
+      tags:
+      - Chat Messages
+      security:
+      - bearerAuth: []
+      responses:
+        '202':
+          description: retry started
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RetryResponse"
+        '404':
+          description: chat not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: no assistant message available
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
