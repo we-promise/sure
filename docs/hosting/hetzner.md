@@ -217,7 +217,7 @@ crontab -e
 ```
 
 Add this line to crontab:
-```
+```bash
 0 2 * * * /opt/sure/backup.sh >> /var/log/sure-backup.log 2>&1
 ```
 
@@ -256,7 +256,7 @@ crontab -e
 ```
 
 Add this line:
-```
+```bash
 */5 * * * * /opt/sure/health-check.sh >> /var/log/sure-health.log 2>&1
 ```
 
@@ -361,7 +361,7 @@ df -h
 docker system prune -a
 
 # Clean up old backups
-find /opt/sure/backups -name "*.sql" -mtime +30 -delete
+find /opt/sure/backups -name "*.sql" -mtime +7 -delete
 ```
 
 **Application is slow:**
