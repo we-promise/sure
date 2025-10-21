@@ -39,6 +39,14 @@ class Settings::HostingsController < ApplicationController
       end
     end
 
+    # Validate OpenAI configuration before updating
+    if hosting_params.key?(:openai_uri_base) || hosting_params.key?(:openai_model)
+      Setting.validate_openai_config!(
+        uri_base: hosting_params[:openai_uri_base],
+        model: hosting_params[:openai_model]
+      )
+    end
+
     if hosting_params.key?(:openai_uri_base)
       Setting.openai_uri_base = hosting_params[:openai_uri_base]
     end
@@ -48,8 +56,8 @@ class Settings::HostingsController < ApplicationController
     end
 
     redirect_to settings_hosting_path, notice: t(".success")
-  rescue ActiveRecord::RecordInvalid => error
-    flash.now[:alert] = t(".failure")
+  rescue Setting::ValidationError => error
+    flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
 
