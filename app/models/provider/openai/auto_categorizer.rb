@@ -99,7 +99,12 @@ class Provider::Openai::AutoCategorizer
     end
 
     def extract_categorizations_native(response)
-      raw = response.dig("output", 0, "content", 0, "text")
+      # Find the message output (not reasoning output)
+      message_output = response["output"]&.find { |o| o["type"] == "message" }
+      raw = message_output&.dig("content", 0, "text")
+
+      raise Provider::Openai::Error, "No message content found in response" if raw.nil?
+
       JSON.parse(raw).dig("categorizations")
     rescue JSON::ParserError => e
       raise Provider::Openai::Error, "Invalid JSON in native categorization: #{e.message}"
