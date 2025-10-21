@@ -31,8 +31,7 @@ class Provider::Openai::AutoCategorizer
       },
       instructions: instructions
     })
-
-    Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage").dig("total_tokens")}")
+    Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
 
     build_response(extract_categorizations_native(response))
   end
@@ -80,79 +79,83 @@ class Provider::Openai::AutoCategorizer
     INSTRUCTIONS
   end
 
-    attr_reader :client, :model, :transactions, :user_categories, :custom_provider
+  attr_reader :client, :model, :transactions, :user_categories, :custom_provider
 
-    AutoCategorization = Provider::LlmConcept::AutoCategorization
+  AutoCategorization = Provider::LlmConcept::AutoCategorization
 
-    def build_response(categorizations)
-      categorizations.map do |categorization|
-        AutoCategorization.new(
-          transaction_id: categorization.dig("transaction_id"),
-          category_name: normalize_category_name(categorization.dig("category_name")),
-        )
-      end
+  def build_response(categorizations)
+    categorizations.map do |categorization|
+      AutoCategorization.new(
+        transaction_id: categorization.dig("transaction_id"),
+        category_name: normalize_category_name(categorization.dig("category_name")),
+      )
     end
+  end
 
-    def normalize_category_name(category_name)
-      return nil if category_name == "null"
+  def normalize_category_name(category_name)
+    return nil if category_name == "null"
 
-      category_name
-    end
+    category_name
+  end
 
-    def extract_categorizations_native(response)
-      response_json = JSON.parse(response.dig("output")[0].dig("content")[0].dig("text"))
-      response_json.dig("categorizations")
-    end
+  def extract_categorizations_native(response)
+    raw = response.dig("output", 0, "content", 0, "text")
+    JSON.parse(raw).dig("categorizations")
+  rescue JSON::ParserError => e
+    raise Provider::Openai::Error, "Invalid JSON in native categorization: #{e.message}"
+  end
 
-    def extract_categorizations_generic(response)
-      response_json = JSON.parse(response.dig("choices", 0, "message", "content"))
-      response_json.dig("categorizations")
-    end
+  def extract_categorizations_generic(response)
+    raw = response.dig("choices", 0, "message", "content")
+    JSON.parse(raw).dig("categorizations")
+  rescue JSON::ParserError => e
+    raise Provider::Openai::Error, "Invalid JSON in generic categorization: #{e.message}"
+  end
 
-    def json_schema
-      {
-        type: "object",
-        properties: {
-          categorizations: {
-            type: "array",
-            description: "An array of auto-categorizations for each transaction",
-            items: {
-              type: "object",
-              properties: {
-                transaction_id: {
-                  type: "string",
-                  description: "The internal ID of the original transaction",
-                  enum: transactions.map { |t| t[:id] }
-                },
-                category_name: {
-                  type: "string",
-                  description: "The matched category name of the transaction, or null if no match",
-                  enum: [ *user_categories.map { |c| c[:name] }, "null" ]
-                }
+  def json_schema
+    {
+      type: "object",
+      properties: {
+        categorizations: {
+          type: "array",
+          description: "An array of auto-categorizations for each transaction",
+          items: {
+            type: "object",
+            properties: {
+              transaction_id: {
+                type: "string",
+                description: "The internal ID of the original transaction",
+                enum: transactions.map { |t| t[:id] }
               },
-              required: [ "transaction_id", "category_name" ],
-              additionalProperties: false
-            }
+              category_name: {
+                type: "string",
+                description: "The matched category name of the transaction, or null if no match",
+                enum: [ *user_categories.map { |c| c[:name] }, "null" ]
+              }
+            },
+            required: [ "transaction_id", "category_name" ],
+            additionalProperties: false
           }
-        },
-        required: [ "categorizations" ],
-        additionalProperties: false
-      }
-    end
+        }
+      },
+      required: [ "categorizations" ],
+      additionalProperties: false
+    }
+  end
 
-    def developer_message
-      <<~MESSAGE.strip_heredoc
-        Here are the user's available categories in JSON format:
+  def developer_message
+    <<~MESSAGE.strip_heredoc
+      Here are the user's available categories in JSON format:
 
-        ```json
-        #{user_categories.to_json}
-        ```
+      ```json
+      #{user_categories.to_json}
+      ```
 
-        Use the available categories to auto-categorize the following transactions:
+      Use the available categories to auto-categorize the following transactions:
 
-        ```json
-        #{transactions.to_json}
-        ```
-      MESSAGE
-    end
+      ```json
+      #{transactions.to_json}
+      ```
+    MESSAGE
+  end
 end

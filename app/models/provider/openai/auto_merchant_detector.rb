@@ -100,85 +100,89 @@ class Provider::Openai::AutoMerchantDetector
     INSTRUCTIONS
   end
 
-    attr_reader :client, :model, :transactions, :user_merchants, :custom_provider
+  attr_reader :client, :model, :transactions, :user_merchants, :custom_provider
 
-    AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
+  AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
 
-    def build_response(categorizations)
-      categorizations.map do |categorization|
-        AutoDetectedMerchant.new(
-          transaction_id: categorization.dig("transaction_id"),
-          business_name: normalize_ai_value(categorization.dig("business_name")),
-          business_url: normalize_ai_value(categorization.dig("business_url")),
-        )
-      end
+  def build_response(categorizations)
+    categorizations.map do |categorization|
+      AutoDetectedMerchant.new(
+        transaction_id: categorization.dig("transaction_id"),
+        business_name: normalize_ai_value(categorization.dig("business_name")),
+        business_url: normalize_ai_value(categorization.dig("business_url")),
+      )
     end
+  end
 
-    def normalize_ai_value(ai_value)
-      return nil if ai_value == "null"
+  def normalize_ai_value(ai_value)
+    return nil if ai_value == "null"
 
-      ai_value
-    end
+    ai_value
+  end
 
-    def extract_merchants_native(response)
-      response_json = JSON.parse(response.dig("output")[0].dig("content")[0].dig("text"))
-      response_json.dig("merchants")
-    end
+  def extract_merchants_native(response)
+    raw = response.dig("output", 0, "content", 0, "text")
+    JSON.parse(raw).dig("merchants")
+  rescue JSON::ParserError => e
+    raise Provider::Openai::Error, "Invalid JSON in native merchant detection: #{e.message}"
+  end
 
-    def extract_merchants_generic(response)
-      response_json = JSON.parse(response.dig("choices", 0, "message", "content"))
-      response_json.dig("merchants")
-    end
+  def extract_merchants_generic(response)
+    raw = response.dig("choices", 0, "message", "content")
+    JSON.parse(raw).dig("merchants")
+  rescue JSON::ParserError => e
+    raise Provider::Openai::Error, "Invalid JSON in generic merchant detection: #{e.message}"
+  end
 
-    def json_schema
-      {
-        type: "object",
-        properties: {
-          merchants: {
-            type: "array",
-            description: "An array of auto-detected merchant businesses for each transaction",
-            items: {
-              type: "object",
-              properties: {
-                transaction_id: {
-                  type: "string",
-                  description: "The internal ID of the original transaction",
-                  enum: transactions.map { |t| t[:id] }
-                },
-                business_name: {
-                  type: [ "string", "null" ],
-                  description: "The detected business name of the transaction, or `null` if uncertain"
-                },
-                business_url: {
-                  type: [ "string", "null" ],
-                  description: "The URL of the detected business, or `null` if uncertain"
-                }
+  def json_schema
+    {
+      type: "object",
+      properties: {
+        merchants: {
+          type: "array",
+          description: "An array of auto-detected merchant businesses for each transaction",
+          items: {
+            type: "object",
+            properties: {
+              transaction_id: {
+                type: "string",
+                description: "The internal ID of the original transaction",
+                enum: transactions.map { |t| t[:id] }
               },
-              required: [ "transaction_id", "business_name", "business_url" ],
-              additionalProperties: false
-            }
+              business_name: {
+                type: [ "string", "null" ],
+                description: "The detected business name of the transaction, or `null` if uncertain"
+              },
+              business_url: {
+                type: [ "string", "null" ],
+                description: "The URL of the detected business, or `null` if uncertain"
+              }
+            },
+            required: [ "transaction_id", "business_name", "business_url" ],
+            additionalProperties: false
           }
-        },
-        required: [ "merchants" ],
-        additionalProperties: false
-      }
-    end
+        }
+      },
+      required: [ "merchants" ],
+      additionalProperties: false
+    }
+  end
 
-    def developer_message
-      <<~MESSAGE.strip_heredoc
-        Here are the user's available merchants in JSON format:
+  def developer_message
+    <<~MESSAGE.strip_heredoc
+      Here are the user's available merchants in JSON format:
 
-        ```json
-        #{user_merchants.to_json}
-        ```
+      ```json
+      #{user_merchants.to_json}
+      ```
 
-        Use BOTH your knowledge AND the user-generated merchants to auto-detect the following transactions:
+      Use BOTH your knowledge AND the user-generated merchants to auto-detect the following transactions:
 
-        ```json
-        #{transactions.to_json}
-        ```
+      ```json
+      #{transactions.to_json}
+      ```
 
-        Return "null" if you are not 80%+ confident in your answer.
-      MESSAGE
-    end
+      Return "null" if you are not 80%+ confident in your answer.
+    MESSAGE
+  end
 end

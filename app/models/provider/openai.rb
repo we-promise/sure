@@ -14,6 +14,9 @@ class Provider::Openai < Provider
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = uri_base
+    if custom_provider? && model.blank?
+      raise Error, "Model is required when using a custom OpenAI‑compatible provider"
+    end
     @default_model = model.presence || DEFAULT_MODEL
   end
 
