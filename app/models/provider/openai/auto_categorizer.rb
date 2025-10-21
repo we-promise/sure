@@ -79,9 +79,6 @@ class Provider::Openai::AutoCategorizer
       build_response(extract_categorizations_generic(response))
     end
 
-      INSTRUCTIONS
-    end
-
     attr_reader :client, :model, :transactions, :user_categories, :custom_provider
 
     AutoCategorization = Provider::LlmConcept::AutoCategorization
