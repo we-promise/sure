@@ -17,6 +17,63 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "includes runtime metadata in chat requests" do
+    provider = Provider::Openai.allocate
+
+    mock_client = mock
+    mock_responses = mock
+    provider.instance_variable_set(:@client, mock_client)
+
+    prompt = "Hello"
+    product_name = "custom-product"
+    hostname = "test-host"
+    expected_metadata = {
+      product_name: product_name,
+      environment: Rails.env,
+      hostname: hostname,
+      semver: Sure.version.to_s,
+      release_tag: Sure.version.to_release_tag
+    }
+    expected_parameters = {
+      model: @subject_model,
+      input: [ { role: "user", content: prompt } ],
+      instructions: nil,
+      tools: [],
+      previous_response_id: nil,
+      stream: nil,
+      metadata: expected_metadata
+    }
+
+    response_payload = {
+      "id" => "resp_123",
+      "model" => @subject_model,
+      "output" => [
+        {
+          "type" => "message",
+          "id" => "msg_1",
+          "content" => [ { "type" => "output_text", "text" => "Hi!" } ]
+        }
+      ],
+      "usage" => {}
+    }
+
+    original_product_name = ENV["PRODUCT_NAME"]
+
+    Socket.stubs(:gethostname).returns(hostname)
+    mock_client.expects(:responses).returns(mock_responses)
+    mock_responses.expects(:create).with(parameters: expected_parameters).returns(response_payload)
+
+    ENV["PRODUCT_NAME"] = product_name
+
+    response = provider.chat_response(prompt, model: @subject_model)
+
+    assert response.success?
+    assert_equal "resp_123", response.data.id
+  ensure
+    ENV["PRODUCT_NAME"] = original_product_name
+    Socket.unstub(:gethostname)
+  end
+
   test "auto categorizes transactions by various attributes" do
     VCR.use_cassette("openai/auto_categorize") do
       input_transactions = [

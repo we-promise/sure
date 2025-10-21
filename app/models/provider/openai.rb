@@ -1,3 +1,5 @@
+require "socket"
+
 class Provider::Openai < Provider
   include LlmConcept
 
@@ -93,14 +95,19 @@ class Provider::Openai < Provider
 
       input_payload = chat_config.build_input(prompt)
 
-      raw_response = client.responses.create(parameters: {
+      parameters = {
         model: model,
         input: input_payload,
         instructions: instructions,
         tools: chat_config.tools,
         previous_response_id: previous_response_id,
         stream: stream_proxy
-      })
+      }
+
+      metadata = build_metadata
+      parameters[:metadata] = metadata if metadata.present?
+
+      raw_response = client.responses.create(parameters: parameters)
 
       # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
       # for the "response chunk" in the stream and return it (it is already parsed)
@@ -134,6 +141,21 @@ class Provider::Openai < Provider
 
   private
     attr_reader :client
+
+    def build_metadata
+      product_name = ENV.fetch("PRODUCT_NAME", "sure")
+      rails_env = Rails.env
+      hostname = Socket.gethostname
+      version = Sure.version
+
+      {
+        product_name: product_name,
+        environment: rails_env,
+        hostname: hostname,
+        semver: version.to_s,
+        release_tag: version.to_release_tag
+      }
+    end
 
     def langfuse_client
       return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
