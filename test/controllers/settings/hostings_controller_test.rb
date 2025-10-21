@@ -20,6 +20,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "cannot edit when self hosting is disabled" do
+    @provider.stubs(:usage).returns(@usage_response)
+
     with_env_overrides SELF_HOSTED: "false" do
       get settings_hosting_url
       assert_response :forbidden
@@ -51,6 +53,22 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { openai_access_token: "token" } }
 
       assert_equal "token", Setting.openai_access_token
+    end
+  end
+
+  test "can update openai uri base when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
+
+      assert_equal "https://api.example.com/v1", Setting.openai_uri_base
+    end
+  end
+
+  test "can update openai model when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_model: "gpt-4" } }
+
+      assert_equal "gpt-4", Setting.openai_model
     end
   end
 
