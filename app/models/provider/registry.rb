@@ -65,7 +65,10 @@ class Provider::Registry
 
         return nil unless access_token.present?
 
-        Provider::Openai.new(access_token)
+        uri_base = ENV.fetch("OPENAI_URI_BASE", Setting.openai_uri_base)
+        model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
+
+        Provider::Openai.new(access_token, uri_base: uri_base, model: model)
       end
   end
 

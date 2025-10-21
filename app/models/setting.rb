@@ -4,6 +4,8 @@ class Setting < RailsSettings::Base
 
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
+  field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
+  field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
 
   field :require_invite_for_signup, type: :boolean, default: false

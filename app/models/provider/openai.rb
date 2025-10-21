@@ -4,30 +4,48 @@ class Provider::Openai < Provider
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
-  MODELS = %w[gpt-4.1]
+  # Default OpenAI models
+  DEFAULT_OPENAI_MODELS = %w[gpt-4.1 gpt-5-nano gpt-5-mini gpt-5]
+  DEFAULT_MODEL = "gpt-5-nano"
 
-  def initialize(access_token)
-    @client = ::OpenAI::Client.new(access_token: access_token)
+  def initialize(access_token, uri_base: nil, model: nil)
+    client_options = { access_token: access_token }
+    client_options[:uri_base] = uri_base if uri_base.present?
+
+    @client = ::OpenAI::Client.new(**client_options)
+    @uri_base = uri_base
+    @default_model = model.presence || DEFAULT_MODEL
   end
 
   def supports_model?(model)
-    MODELS.include?(model)
+    # If using custom uri_base, support any model
+    return true if custom_provider?
+
+    # Otherwise, only support default OpenAI models
+    DEFAULT_OPENAI_MODELS.include?(model)
+  end
+
+  def custom_provider?
+    @uri_base.present?
   end
 
   def auto_categorize(transactions: [], user_categories: [], model: "")
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
 
+      effective_model = model.presence || @default_model
+
       result = AutoCategorizer.new(
         client,
-        model: model,
+        model: effective_model,
         transactions: transactions,
-        user_categories: user_categories
+        user_categories: user_categories,
+        custom_provider: custom_provider?
       ).auto_categorize
 
       log_langfuse_generation(
         name: "auto_categorize",
-        model: model,
+        model: effective_model,
         input: { transactions: transactions, user_categories: user_categories },
         output: result.map(&:to_h)
       )
@@ -40,16 +58,19 @@ class Provider::Openai < Provider
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
 
+      effective_model = model.presence || @default_model
+
       result = AutoMerchantDetector.new(
         client,
-        model: model,
+        model: effective_model,
         transactions: transactions,
-        user_merchants: user_merchants
+        user_merchants: user_merchants,
+        custom_provider: custom_provider?
       ).auto_detect_merchants
 
       log_langfuse_generation(
         name: "auto_detect_merchants",
-        model: model,
+        model: effective_model,
         input: { transactions: transactions, user_merchants: user_merchants },
         output: result.map(&:to_h)
       )
