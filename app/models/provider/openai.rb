@@ -4,8 +4,8 @@ class Provider::Openai < Provider
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
-  # Default OpenAI models
-  DEFAULT_OPENAI_MODELS = %w[gpt-4.1 gpt-5-nano gpt-5-mini gpt-5]
+  # Supported OpenAI model prefixes (e.g., "gpt-4" matches "gpt-4", "gpt-4.1", "gpt-4-turbo", etc.)
+  DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
   DEFAULT_MODEL = "gpt-5-nano"
 
   def initialize(access_token, uri_base: nil, model: nil)
@@ -24,8 +24,8 @@ class Provider::Openai < Provider
     # If using custom uri_base, support any model
     return true if custom_provider?
 
-    # Otherwise, only support default OpenAI models
-    DEFAULT_OPENAI_MODELS.include?(model)
+    # Otherwise, check if model starts with any supported OpenAI prefix
+    DEFAULT_OPENAI_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
   end
 
   def custom_provider?
