@@ -93,71 +93,208 @@ class Provider::Openai < Provider
     session_id: nil,
     user_identifier: nil
   )
-    with_provider_response do
-      chat_config = ChatConfig.new(
-        functions: functions,
-        function_results: function_results
-      )
-
-      collected_chunks = []
-
-      # Proxy that converts raw stream to "LLM Provider concept" stream
-      stream_proxy = if streamer.present?
-        proc do |chunk|
-          parsed_chunk = ChatStreamParser.new(chunk).parsed
-
-          unless parsed_chunk.nil?
-            streamer.call(parsed_chunk)
-            collected_chunks << parsed_chunk
-          end
-        end
-      else
-        nil
-      end
-
-      input_payload = chat_config.build_input(prompt)
-
-      raw_response = client.responses.create(parameters: {
+    if custom_provider?
+      generic_chat_response(
+        prompt: prompt,
         model: model,
-        input: input_payload,
         instructions: instructions,
-        tools: chat_config.tools,
+        functions: functions,
+        function_results: function_results,
+        streamer: streamer,
+        session_id: session_id,
+        user_identifier: user_identifier
+      )
+    else
+      native_chat_response(
+        prompt: prompt,
+        model: model,
+        instructions: instructions,
+        functions: functions,
+        function_results: function_results,
+        streamer: streamer,
         previous_response_id: previous_response_id,
-        stream: stream_proxy
-      })
-
-      # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
-      # for the "response chunk" in the stream and return it (it is already parsed)
-      if stream_proxy.present?
-        response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
-        response = response_chunk.data
-        log_langfuse_generation(
-          name: "chat_response",
-          model: model,
-          input: input_payload,
-          output: response.messages.map(&:output_text).join("\n"),
-          session_id: session_id,
-          user_identifier: user_identifier
-        )
-        response
-      else
-        parsed = ChatParser.new(raw_response).parsed
-        log_langfuse_generation(
-          name: "chat_response",
-          model: model,
-          input: input_payload,
-          output: parsed.messages.map(&:output_text).join("\n"),
-          usage: raw_response["usage"],
-          session_id: session_id,
-          user_identifier: user_identifier
-        )
-        parsed
-      end
+        session_id: session_id,
+        user_identifier: user_identifier
+      )
     end
   end
 
   private
     attr_reader :client
+
+    def native_chat_response(
+      prompt:,
+      model:,
+      instructions: nil,
+      functions: [],
+      function_results: [],
+      streamer: nil,
+      previous_response_id: nil,
+      session_id: nil,
+      user_identifier: nil
+    )
+      with_provider_response do
+        chat_config = ChatConfig.new(
+          functions: functions,
+          function_results: function_results
+        )
+
+        collected_chunks = []
+
+        # Proxy that converts raw stream to "LLM Provider concept" stream
+        stream_proxy = if streamer.present?
+          proc do |chunk|
+            parsed_chunk = ChatStreamParser.new(chunk).parsed
+
+            unless parsed_chunk.nil?
+              streamer.call(parsed_chunk)
+              collected_chunks << parsed_chunk
+            end
+          end
+        else
+          nil
+        end
+
+        input_payload = chat_config.build_input(prompt)
+
+        raw_response = client.responses.create(parameters: {
+          model: model,
+          input: input_payload,
+          instructions: instructions,
+          tools: chat_config.tools,
+          previous_response_id: previous_response_id,
+          stream: stream_proxy
+        })
+
+        # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
+        # for the "response chunk" in the stream and return it (it is already parsed)
+        if stream_proxy.present?
+          response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
+          response = response_chunk.data
+          log_langfuse_generation(
+            name: "chat_response",
+            model: model,
+            input: input_payload,
+            output: response.messages.map(&:output_text).join("\n"),
+            session_id: session_id,
+            user_identifier: user_identifier
+          )
+          response
+        else
+          parsed = ChatParser.new(raw_response).parsed
+          log_langfuse_generation(
+            name: "chat_response",
+            model: model,
+            input: input_payload,
+            output: parsed.messages.map(&:output_text).join("\n"),
+            usage: raw_response["usage"],
+            session_id: session_id,
+            user_identifier: user_identifier
+          )
+          parsed
+        end
+      end
+    end
+
+    def generic_chat_response(
+      prompt:,
+      model:,
+      instructions: nil,
+      functions: [],
+      function_results: [],
+      streamer: nil,
+      session_id: nil,
+      user_identifier: nil
+    )
+      with_provider_response do
+        messages = build_generic_messages(
+          prompt: prompt,
+          instructions: instructions,
+          function_results: function_results
+        )
+
+        tools = build_generic_tools(functions)
+
+        # Force synchronous calls for generic chat (streaming not supported for custom providers)
+        params = {
+          model: model,
+          messages: messages
+        }
+        params[:tools] = tools if tools.present?
+
+        raw_response = client.chat(parameters: params)
+
+        parsed = GenericChatParser.new(raw_response).parsed
+        log_langfuse_generation(
+          name: "chat_response",
+          model: model,
+          input: messages,
+          output: parsed.messages.map(&:output_text).join("\n"),
+          usage: raw_response["usage"],
+          session_id: session_id,
+          user_identifier: user_identifier
+        )
+
+        # If a streamer was provided, manually call it with the parsed response
+        # to maintain the same contract as the streaming version
+        if streamer.present?
+          # Emit output_text chunks for each message
+          parsed.messages.each do |message|
+            if message.output_text.present?
+              streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: message.output_text))
+            end
+          end
+
+          # Emit response chunk
+          streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "response", data: parsed))
+        end
+
+        parsed
+      end
+    end
+
+    def build_generic_messages(prompt:, instructions: nil, function_results: [])
+      messages = []
+
+      # Add system message if instructions present
+      if instructions.present?
+        messages << { role: "system", content: instructions }
+      end
+
+      # Add user prompt
+      messages << { role: "user", content: prompt }
+
+      # Add function results as tool messages
+      function_results.each do |fn_result|
+        # Convert output to JSON string if it's not already a string
+        # OpenAI API requires content to be either a string or array of objects
+        content = fn_result[:output].is_a?(String) ? fn_result[:output] : fn_result[:output].to_json
+
+        messages << {
+          role: "tool",
+          tool_call_id: fn_result[:call_id],
+          content: content
+        }
+      end
+
+      messages
+    end
+
+    def build_generic_tools(functions)
+      return [] if functions.blank?
+
+      functions.map do |fn|
+        {
+          type: "function",
+          function: {
+            name: fn[:name],
+            description: fn[:description],
+            parameters: fn[:params_schema],
+            strict: fn[:strict]
+          }
+        }
+      end
+    end
 
     def langfuse_client
       return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
