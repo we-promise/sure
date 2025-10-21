@@ -1,4 +1,6 @@
 class ImportsController < ApplicationController
+  include SettingsHelper
+
   before_action :set_import, only: %i[show publish destroy revert apply_template]
 
   def publish
@@ -11,7 +13,11 @@ class ImportsController < ApplicationController
 
   def index
     @imports = Current.family.imports
-
+    @exports = Current.user.admin? ? Current.family.family_exports.ordered.limit(10) : nil
+    @breadcrumbs = [
+      [ "Home", root_path ],
+      [ "Import/Export", imports_path ]
+    ]
     render layout: "settings"
   end
 

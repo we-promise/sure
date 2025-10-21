@@ -1,6 +1,6 @@
 <%= content_for :page_title, "Create New API Key" %>
 
-<%= settings_section title: "Create New API Key", subtitle: "Generate a new API key to access your Maybe data programmatically." do %>
+<%= settings_section title: nil, subtitle: "Generate a new API key to access your Sure data programmatically." do %>
   <%= styled_form_with model: @api_key, url: settings_api_key_path, class: "space-y-4" do |form| %>
     <%= form.text_field :name,
         placeholder: "e.g., My Budget App, Portfolio Tracker",
@@ -51,7 +51,7 @@
       ) %>
 
       <%= render DS::Button.new(
-        text: "Create API Key",
+        text: "Save API Key",
         variant: "primary",
         type: "submit"
       ) %>

@@ -59,7 +59,7 @@ nb:
   imports:
     empty:
       message: Ingen importer ennå.
-      new: Ny import
+      new: Ny Import
     import:
       complete: Fullført
       delete: Slett
@@ -72,8 +72,11 @@ nb:
       view: Vis
     index:
       imports: Importer
-      new: Ny import
+      new: Ny Import
       title: Importer
+      exports: Eksporter
+      new_export: Ny Eksport
+      no_exports: Ingen eksporter ennå.
     new:
       description: Du kan manuelt importere ulike typer data via CSV eller bruke en av
         våre importmaler som Mint.

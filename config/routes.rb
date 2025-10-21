@@ -24,7 +24,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :family_exports, only: %i[new create index] do
+  resources :family_exports, only: %i[new create index destroy] do
     member do
       get :download
     end
@@ -43,6 +43,7 @@ Rails.application.routes.draw do
 
   resources :users, only: %i[update destroy] do
     delete :reset, on: :member
+    delete :reset_with_sample_data, on: :member
     patch :rule_prompt_settings, on: :member
   end
 
@@ -63,6 +64,9 @@ Rails.application.routes.draw do
     resource :billing, only: :show
     resource :security, only: :show
     resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resource :ai_prompts, only: :show
+    resource :guides, only: :show
+    resource :bank_sync, only: :show, controller: "bank_sync"
   end
 
   resource :subscription, only: %i[new show create] do
@@ -194,7 +198,7 @@ Rails.application.routes.draw do
 
   resources :securities, only: :index
 
-  resources :invite_codes, only: %i[index create]
+  resources :invite_codes, only: %i[index create destroy]
 
   resources :invitations, only: [ :new, :create, :destroy ] do
     get :accept, on: :member
@@ -277,8 +281,8 @@ Rails.application.routes.draw do
 
   get "imports/:import_id/upload/sample_csv", to: "import/uploads#sample_csv", as: :import_upload_sample_csv
 
-  get "privacy", to: redirect("https://maybefinance.com/privacy")
-  get "terms", to: redirect("https://maybefinance.com/tos")
+  get "privacy", to: redirect("about:blank")
+  get "terms", to: redirect("about:blank")
 
   # Defines the root path route ("/")
   root "pages#dashboard"

@@ -23,7 +23,7 @@ class MobileDevice < ApplicationRecord
 
     app = Doorkeeper::Application.create!(
       name: "Mobile App - #{device_id}",
-      redirect_uri: "maybe://oauth/callback", # Custom scheme for mobile
+      redirect_uri: "sureapp://oauth/callback", # Custom scheme for mobile
       scopes: "read_write", # Use the configured scope
       confidential: false # Public client for mobile
     )

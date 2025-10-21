@@ -74,8 +74,8 @@ rake demo_data:default
 
 Visit http://localhost:3000 to view the app. You can log in with these demo credentials (from the DB seed):
 
-- Email: `user@sure.local`
-- Password: `password`
+- Email: `user@example.com`
+- Password: `Password1!`
 
 For further instructions, see guides below.
 

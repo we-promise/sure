@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Disable profile loading to avoid environment errors
+export ENV=""
+export BASH_ENV=""
+
+echo "Installing PostgreSQL and dependencies..."
+apt-get update -qq
+apt-get install -yqq wget unzip libyaml-dev build-essential curl git libssl-dev libreadline-dev zlib1g-dev xz-utils ca-certificates libpq-dev vim redis-server postgresql libvips libvips-dev ffmpeg
+
+echo "Starting PostgreSQL cluster..."
+pg_ctlcluster --skip-systemctl-redirect 16 main start
+
+echo "Configuring PostgreSQL authentication..."
+# Configure pg_hba.conf to allow local connections without password
+PG_HBA_CONF="/etc/postgresql/16/main/pg_hba.conf"
+if [ -f "$PG_HBA_CONF" ]; then
+    # Backup original config
+    cp "$PG_HBA_CONF" "$PG_HBA_CONF.backup"
+    
+    # Update local connections to use 'trust' authentication for development
+    sed -i 's/^local   all             all                                     peer$/local   all             all                                     trust/' "$PG_HBA_CONF"
+    sed -i 's/^host    all             all             127.0.0.1\/32            scram-sha-256$/host    all             all             127.0.0.1\/32            trust/' "$PG_HBA_CONF"
+    sed -i 's/^host    all             all             ::1\/128                 scram-sha-256$/host    all             all             ::1\/128                 trust/' "$PG_HBA_CONF"
+    
+    echo "Updated PostgreSQL authentication configuration"
+fi
+
+echo "Reloading PostgreSQL configuration..."
+pg_ctlcluster --skip-systemctl-redirect 16 main reload
+
+echo "Creating database user for $(whoami)..."
+# Use runuser instead of su to avoid profile loading issues
+runuser -l postgres -c "createuser -s $(whoami)" 2>/dev/null || echo "User may already exist"
+
+echo "Starting Redis server..."
+service redis-server start
+
+echo "Environment setup completed successfully!"
+echo "PostgreSQL and Redis are now running."
+echo "You can now run 'bin/setup' to prepare your Rails application and database."

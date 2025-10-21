@@ -1,4 +1,4 @@
-# There are hundreds of thousands of market securities that Maybe must handle.
+# There are hundreds of thousands of market securities that Sure must handle.
 # Due to the always-changing nature of the market, the health checker is responsible
 # for periodically checking active securities to ensure we can still fetch prices for them.
 #

@@ -24,7 +24,7 @@ Rails.application.configure do
   }
 
   # Set default sender email for tests
-  ENV["EMAIL_SENDER"] = "hello@maybefinance.com"
+  ENV["EMAIL_SENDER"] = "hello@example.com"
 
   # Show full error reports and disable caching.
   config.consider_all_requests_local = true

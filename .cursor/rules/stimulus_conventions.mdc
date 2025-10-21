@@ -61,4 +61,3 @@ This rule describes how to write Stimulus controllers.
 
 - **Component controllers should not be used outside the component**
   - If a Stimulus controller is in the app/components directory, it should only be used in its component view. It should not be used anywhere in app/views.
-

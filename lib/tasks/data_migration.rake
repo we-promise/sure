@@ -10,7 +10,7 @@ namespace :data_migration do
     eu_items.find_each do |item|
       request = Plaid::ItemWebhookUpdateRequest.new(
         access_token: item.access_token,
-        webhook: "https://app.maybefinance.com/webhooks/plaid_eu"
+        webhook: "https://app.sure.am/webhooks/plaid_eu"
       )
 
       provider.client.item_webhook_update(request)

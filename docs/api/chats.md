@@ -1,6 +1,6 @@
 # Chat API Documentation
 
-The Chat API allows external applications to interact with Maybe's AI chat functionality.
+The Chat API allows external applications to interact with Sure's AI chat functionality.
 
 ## Authentication
 

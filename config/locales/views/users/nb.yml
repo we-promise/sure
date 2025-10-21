@@ -10,3 +10,6 @@ nb:
     reset:
       success: Kontoen din har blitt tilbakestilt. Data vil bli slettet i bakgrunnen om en stund.
       unauthorized: Du er ikke autorisert til å utføre denne handlingen.
+    reset_with_sample_data:
+      success: Kontoen din har blitt tilbakestilt og demodata forberedes. Du vil snart se eksempeldata.
+

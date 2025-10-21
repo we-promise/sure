@@ -88,7 +88,7 @@ class User < ApplicationRecord
   end
 
   def ai_available?
-    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present?
+    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
   end
 
   def ai_enabled?
@@ -193,7 +193,7 @@ class User < ApplicationRecord
     end
 
     def totp
-      ROTP::TOTP.new(otp_secret, issuer: "Maybe Finance")
+      ROTP::TOTP.new(otp_secret, issuer: "Sure Finances")
     end
 
     def verify_backup_code?(code)

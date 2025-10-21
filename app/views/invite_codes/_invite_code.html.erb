@@ -1,16 +1,21 @@
 <%# app/views/invite_codes/_invite_code.html.erb %>
 <div class="invite_code pt-2">
-  <div class="flex items-center justify-between p-2 w-1/2 bg-gray-25 rounded-md" data-controller="clipboard">
+  <div class="flex items-center justify-between p-2 w-1/2 bg-inverse rounded-md" data-controller="clipboard">
     <div>
-      <span data-clipboard-target="source" class="text-sm font-medium"><%= invite_code.token %></span>
+      <span data-clipboard-target="source" class="text-inverse text-sm font-medium"><%= invite_code.token %></span>
     </div>
-    <button data-action="clipboard#copy" class="shrink-0 z-10 inline-flex items-center px-1 text-sm text-secondary font-sm text-center" type="button">
-      <span data-clipboard-target="iconDefault">
-        <%= icon "copy" %>
-      </span>
-      <span class="hidden inline-flex items-center" data-clipboard-target="iconSuccess">
-        <%= icon "check" %>
-      </span>
-    </button>
+    <div class="flex items-center gap-2">
+      <button data-action="clipboard#copy" class="shrink-0 z-10 inline-flex items-center px-1 text-sm text-secondary font-sm text-center" type="button">
+        <span data-clipboard-target="iconDefault">
+          <%= icon "copy" %>
+        </span>
+        <span class="hidden inline-flex items-center" data-clipboard-target="iconSuccess">
+          <%= icon "check" %>
+        </span>
+      </button>
+      <%= button_to invite_code_path(invite_code), method: :delete, data: { confirm: "Are you sure?" }, class: "ml-2 text-red-600 text-xs" do %>
+        <%= icon("trash-2", size: "sm", class: "inline mr-1") %>
+      <% end %>
+    </div>
   </div>
 </div>

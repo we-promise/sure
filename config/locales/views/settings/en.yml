@@ -1,6 +1,20 @@
 ---
 en:
   settings:
+    ai_prompts:
+      show:
+        page_title: AI Prompts
+        openai_label: OpenAI
+        prompt_instructions: Prompt Instructions
+        main_system_prompt:
+          title: Main System Prompt
+          subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
+        transaction_categorizer:
+          title: Transaction Categorizer
+          subtitle: AI automatically categorizes your transactions based on your defined categories
+        merchant_detector:
+          title: Merchant Detector
+          subtitle: AI identifies and enriches transaction data with merchant information
     billings:
       show:
         page_title: Billing
@@ -37,6 +51,9 @@ en:
         confirm_reset:
           body: Are you sure you want to reset your account? This will delete all your accounts, categories, merchants, tags, and other data. This action cannot be undone.
           title: Reset account?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
         confirm_remove_invitation:
           body: Are you sure you want to remove the invitation for %{email}?
           title: Remove Invitation
@@ -49,6 +66,8 @@ en:
           your data and cannot be undone.
         reset_account: Reset account
         reset_account_warning: Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.
+        reset_account_with_sample_data: Reset and preload
+        reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
         email: Email
         first_name: First Name
         household_form_input_placeholder: Enter household name
@@ -59,10 +78,10 @@ en:
         invitation_link: Invitation link
         invite_member: Add member
         last_name: Last Name
-        page_title: Account
+        page_title: Profile Info
         pending: Pending
         profile_subtitle: Customize how you appear on Sure
-        profile_title: Profile
+        profile_title: Personal
         remove_invitation: Remove Invitation
         remove_member: Remove Member
         save: Save
@@ -71,23 +90,28 @@ en:
         page_title: Security
     settings_nav:
       accounts_label: Accounts
+      advanced_section_title: Advanced
+      ai_prompts_label: AI Prompts
       api_key_label: API Key
       billing_label: Billing
       categories_label: Categories
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Imports
+      imports_label: Import/Export
       logout: Logout
       merchants_label: Merchants
+      guides_label: Guides
       other_section_title: More
       preferences_label: Preferences
-      profile_label: Account
+      profile_label: Profile Info
       rules_label: Rules
       security_label: Security
-      self_hosting_label: Self hosting
+      self_hosting_label: Self-Hosting
       tags_label: Tags
       transactions_section_title: Transactions
       whats_new_label: What's new
+      api_keys_label: API Key
+      bank_sync_label: Bank Sync
     settings_nav_link_large:
       next: Next
       previous: Back
