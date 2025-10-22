@@ -38,20 +38,21 @@ class Provider::Openai < Provider
 
       effective_model = model.presence || @default_model
 
+      trace = create_langfuse_trace(
+        name: "openai.auto_categorize",
+        input: { transactions: transactions, user_categories: user_categories }
+      )
+
       result = AutoCategorizer.new(
         client,
         model: effective_model,
         transactions: transactions,
         user_categories: user_categories,
-        custom_provider: custom_provider?
+        custom_provider: custom_provider?,
+        langfuse_trace: trace
       ).auto_categorize
 
-      log_langfuse_generation(
-        name: "auto_categorize",
-        model: effective_model,
-        input: { transactions: transactions, user_categories: user_categories },
-        output: result.map(&:to_h)
-      )
+      trace&.update(output: result.map(&:to_h))
 
       result
     end
@@ -63,20 +64,21 @@ class Provider::Openai < Provider
 
       effective_model = model.presence || @default_model
 
+      trace = create_langfuse_trace(
+        name: "openai.auto_detect_merchants",
+        input: { transactions: transactions, user_merchants: user_merchants }
+      )
+
       result = AutoMerchantDetector.new(
         client,
         model: effective_model,
         transactions: transactions,
         user_merchants: user_merchants,
-        custom_provider: custom_provider?
+        custom_provider: custom_provider?,
+        langfuse_trace: trace
       ).auto_detect_merchants
 
-      log_langfuse_generation(
-        name: "auto_detect_merchants",
-        model: effective_model,
-        input: { transactions: transactions, user_merchants: user_merchants },
-        output: result.map(&:to_h)
-      )
+      trace&.update(output: result.map(&:to_h))
 
       result
     end
@@ -157,41 +159,55 @@ class Provider::Openai < Provider
 
         input_payload = chat_config.build_input(prompt)
 
-        raw_response = client.responses.create(parameters: {
-          model: model,
-          input: input_payload,
-          instructions: instructions,
-          tools: chat_config.tools,
-          previous_response_id: previous_response_id,
-          stream: stream_proxy
-        })
+        begin
+          raw_response = client.responses.create(parameters: {
+            model: model,
+            input: input_payload,
+            instructions: instructions,
+            tools: chat_config.tools,
+            previous_response_id: previous_response_id,
+            stream: stream_proxy
+          })
 
-        # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
-        # for the "response chunk" in the stream and return it (it is already parsed)
-        if stream_proxy.present?
-          response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
-          response = response_chunk.data
+          # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
+          # for the "response chunk" in the stream and return it (it is already parsed)
+          if stream_proxy.present?
+            response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
+            response = response_chunk.data
+            usage = response_chunk.usage
+            log_langfuse_generation(
+              name: "chat_response",
+              model: model,
+              input: input_payload,
+              output: response.messages.map(&:output_text).join("\n"),
+              usage: usage,
+              session_id: session_id,
+              user_identifier: user_identifier
+            )
+            response
+          else
+            parsed = ChatParser.new(raw_response).parsed
+            log_langfuse_generation(
+              name: "chat_response",
+              model: model,
+              input: input_payload,
+              output: response.messages.map(&:output_text).join("\n"),
+              usage: raw_response["usage"],
+              session_id: session_id,
+              user_identifier: user_identifier
+            )
+            parsed
+          end
+        rescue => e
           log_langfuse_generation(
             name: "chat_response",
             model: model,
             input: input_payload,
-            output: response.messages.map(&:output_text).join("\n"),
+            error: e,
             session_id: session_id,
             user_identifier: user_identifier
           )
-          response
-        else
-          parsed = ChatParser.new(raw_response).parsed
-          log_langfuse_generation(
-            name: "chat_response",
-            model: model,
-            input: input_payload,
-            output: parsed.messages.map(&:output_text).join("\n"),
-            usage: raw_response["usage"],
-            session_id: session_id,
-            user_identifier: user_identifier
-          )
-          parsed
+          raise
         end
       end
     end
@@ -222,34 +238,47 @@ class Provider::Openai < Provider
         }
         params[:tools] = tools if tools.present?
 
-        raw_response = client.chat(parameters: params)
+        begin
+          raw_response = client.chat(parameters: params)
 
-        parsed = GenericChatParser.new(raw_response).parsed
-        log_langfuse_generation(
-          name: "chat_response",
-          model: model,
-          input: messages,
-          output: parsed.messages.map(&:output_text).join("\n"),
-          usage: raw_response["usage"],
-          session_id: session_id,
-          user_identifier: user_identifier
-        )
+          parsed = GenericChatParser.new(raw_response).parsed
 
-        # If a streamer was provided, manually call it with the parsed response
-        # to maintain the same contract as the streaming version
-        if streamer.present?
-          # Emit output_text chunks for each message
-          parsed.messages.each do |message|
-            if message.output_text.present?
-              streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: message.output_text))
+          log_langfuse_generation(
+            name: "chat_response",
+            model: model,
+            input: messages,
+            output: parsed.messages.map(&:output_text).join("\n"),
+            usage: raw_response["usage"],
+            session_id: session_id,
+            user_identifier: user_identifier
+          )
+
+          # If a streamer was provided, manually call it with the parsed response
+          # to maintain the same contract as the streaming version
+          if streamer.present?
+            # Emit output_text chunks for each message
+            parsed.messages.each do |message|
+              if message.output_text.present?
+                streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: message.output_text, usage: nil))
+              end
             end
+
+            # Emit response chunk
+            streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "response", data: parsed, usage: raw_response["usage"]))
           end
 
-          # Emit response chunk
-          streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "response", data: parsed))
+          parsed
+        rescue => e
+          log_langfuse_generation(
+            name: "chat_response",
+            model: model,
+            input: messages,
+            error: e,
+            session_id: session_id,
+            user_identifier: user_identifier
+          )
+          raise
         end
-
-        parsed
       end
     end
 
@@ -302,25 +331,49 @@ class Provider::Openai < Provider
       @langfuse_client = Langfuse.new
     end
 
-    def log_langfuse_generation(name:, model:, input:, output:, usage: nil, session_id: nil, user_identifier: nil)
+    def create_langfuse_trace(name:, input:, session_id: nil, user_identifier: nil)
       return unless langfuse_client
 
-      trace = langfuse_client.trace(
+      langfuse_client.trace(
+        name: name,
+        input: input,
+        session_id: session_id,
+        user_id: user_identifier
+      )
+    rescue => e
+      Rails.logger.warn("Langfuse trace creation failed: #{e.message}")
+      nil
+    end
+
+    def log_langfuse_generation(name:, model:, input:, output: nil, usage: nil, error: nil, session_id: nil, user_identifier: nil)
+      return unless langfuse_client
+
+      trace = create_langfuse_trace(
         name: "openai.#{name}",
         input: input,
         session_id: session_id,
-        user_id: user_identifier
+        user_identifier: user_identifier
       )
-      trace.generation(
+
+      generation = trace&.generation(
         name: name,
         model: model,
-        input: input,
-        output: output,
-        usage: usage,
-        session_id: session_id,
-        user_id: user_identifier
+        input: input
       )
-      trace.update(output: output)
+
+      if error
+        generation&.end(
+          output: { error: error.message, details: error.respond_to?(:details) ? error.details : nil },
+          level: "ERROR"
+        )
+        trace&.update(
+          output: { error: error.message },
+          level: "ERROR"
+        )
+      else
+        generation&.end(output: output, usage: usage)
+        trace&.update(output: output)
+      end
     rescue => e
       Rails.logger.warn("Langfuse logging failed: #{e.message}")
     end

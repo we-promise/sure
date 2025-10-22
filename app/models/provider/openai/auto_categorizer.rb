@@ -1,10 +1,11 @@
 class Provider::Openai::AutoCategorizer
-  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false)
+  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil)
     @client = client
     @model = model
     @transactions = transactions
     @user_categories = user_categories
     @custom_provider = custom_provider
+    @langfuse_trace = langfuse_trace
   end
 
   def auto_categorize
@@ -39,6 +40,12 @@ class Provider::Openai::AutoCategorizer
   private
 
     def auto_categorize_openai_native
+      span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_categories: user_categories
+      })
+
       response = client.responses.create(parameters: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
@@ -54,10 +61,23 @@ class Provider::Openai::AutoCategorizer
       })
       Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
 
-      build_response(extract_categorizations_native(response))
+      categorizations = extract_categorizations_native(response)
+      result = build_response(categorizations)
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
     end
 
     def auto_categorize_openai_generic
+      span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_categories: user_categories
+      })
+
       response = client.chat(parameters: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         messages: [
@@ -76,10 +96,17 @@ class Provider::Openai::AutoCategorizer
 
       Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
 
-      build_response(extract_categorizations_generic(response))
+      categorizations = extract_categorizations_generic(response)
+      result = build_response(categorizations)
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
     end
 
-    attr_reader :client, :model, :transactions, :user_categories, :custom_provider
+    attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace
 
     AutoCategorization = Provider::LlmConcept::AutoCategorization
 

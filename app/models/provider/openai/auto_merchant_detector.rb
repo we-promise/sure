@@ -1,10 +1,11 @@
 class Provider::Openai::AutoMerchantDetector
-  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false)
+  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil)
     @client = client
     @model = model
     @transactions = transactions
     @user_merchants = user_merchants
     @custom_provider = custom_provider
+    @langfuse_trace = langfuse_trace
   end
 
   def auto_detect_merchants
@@ -59,6 +60,12 @@ class Provider::Openai::AutoMerchantDetector
   private
 
     def auto_detect_merchants_openai_native
+      span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_merchants: user_merchants
+      })
+
       response = client.responses.create(parameters: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
@@ -73,12 +80,25 @@ class Provider::Openai::AutoMerchantDetector
         instructions: instructions
       })
 
-      Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage").dig("total_tokens")}")
+      Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
 
-      build_response(extract_merchants_native(response))
+      merchants = extract_merchants_native(response)
+      result = build_response(merchants)
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
     end
 
     def auto_detect_merchants_openai_generic
+      span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_merchants: user_merchants
+      })
+
       response = client.chat(parameters: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         messages: [
@@ -97,10 +117,17 @@ class Provider::Openai::AutoMerchantDetector
 
       Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
 
-      build_response(extract_merchants_generic(response))
+      merchants = extract_merchants_generic(response)
+      result = build_response(merchants)
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
     end
 
-    attr_reader :client, :model, :transactions, :user_merchants, :custom_provider
+    attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace
 
     AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
 
