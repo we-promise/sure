@@ -18,10 +18,20 @@ class Provider::Openai::ChatConfig
 
   def build_input(prompt)
     results = function_results.map do |fn_result|
+      # Handle nil explicitly to avoid serializing to "null"
+      output = fn_result[:output]
+      serialized_output = if output.nil?
+        ""
+      elsif output.is_a?(String)
+        output
+      else
+        output.to_json
+      end
+
       {
         type: "function_call_output",
         call_id: fn_result[:call_id],
-        output: fn_result[:output].to_json
+        output: serialized_output
       }
     end
 
