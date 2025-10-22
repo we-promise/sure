@@ -179,8 +179,8 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     # Verify old SimpleFin accounts no longer reference Maybe accounts
     old_simplefin_account1.reload
     old_simplefin_account2.reload
-    assert_nil old_simplefin_account1.current_account
-    assert_nil old_simplefin_account2.current_account
+    assert_nil old_simplefin_account1.account
+    assert_nil old_simplefin_account2.account
 
     # Verify old SimpleFin item is scheduled for deletion
     @simplefin_item.reload
@@ -229,18 +229,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     maybe_account.reload
     old_simplefin_account.reload
     assert_equal old_simplefin_account.id, maybe_account.simplefin_account_id
-    assert_equal maybe_account, old_simplefin_account.current_account
+    assert_equal maybe_account, old_simplefin_account.account
 
     # Old item still scheduled for deletion
     @simplefin_item.reload
     assert @simplefin_item.scheduled_for_deletion?
-  end
-
-  test "select_existing_account redirects when no available simplefin accounts" do
-    account = accounts(:depository)
-
-    get select_existing_account_simplefin_items_url(account_id: account.id)
-    assert_redirected_to account_path(account)
-    assert_equal "No available SimpleFIN accounts to link. Please connect a new SimpleFIN account first.", flash[:alert]
   end
 end

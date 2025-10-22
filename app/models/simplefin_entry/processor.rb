@@ -1,7 +1,4 @@
-require "digest/md5"
-
 class SimplefinEntry::Processor
-  include CurrencyNormalizable
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   def initialize(simplefin_transaction, simplefin_account:)
     @simplefin_transaction = simplefin_transaction
@@ -9,26 +6,42 @@ class SimplefinEntry::Processor
   end
 
   def process
-    import_adapter.import_transaction(
-      external_id: external_id,
-      amount: amount,
-      currency: currency,
-      date: date,
-      name: name,
-      source: "simplefin",
-      merchant: merchant
-    )
+    SimplefinAccount.transaction do
+      entry = account.entries.find_or_initialize_by(plaid_id: external_id) do |e|
+        e.entryable = Transaction.new
+      end
+
+      entry.assign_attributes(
+        amount: amount,
+        currency: currency,
+        date: date
+      )
+
+      entry.enrich_attribute(
+        :name,
+        name,
+        source: "simplefin"
+      )
+
+      # SimpleFin provides no category data - categories will be set by AI or rules
+
+      if merchant
+        entry.transaction.enrich_attribute(
+          :merchant_id,
+          merchant.id,
+          source: "simplefin"
+        )
+      end
+
+      entry.save!
+    end
   end
 
   private
     attr_reader :simplefin_transaction, :simplefin_account
 
-    def import_adapter
-      @import_adapter ||= Account::ProviderImportAdapter.new(account)
-    end
-
     def account
-      simplefin_account.current_account
+      simplefin_account.account
     end
 
     def data
@@ -78,11 +91,7 @@ class SimplefinEntry::Processor
     end
 
     def currency
-      parse_currency(data[:currency]) || account.currency
-    end
-
-    def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency code '#{currency_value}' in SimpleFIN transaction #{external_id}, falling back to account currency")
+      data[:currency] || account.currency
     end
 
     def date
@@ -107,22 +116,6 @@ class SimplefinEntry::Processor
 
 
     def merchant
-      # Use SimpleFin's clean payee data for merchant detection
-      payee = data[:payee]&.strip
-      return nil unless payee.present?
-
-      @merchant ||= import_adapter.find_or_create_merchant(
-        provider_merchant_id: generate_merchant_id(payee),
-        name: payee,
-        source: "simplefin"
-      )
-    rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.error "SimplefinEntry::Processor - Failed to create merchant '#{payee}': #{e.message}"
-      nil
-    end
-
-    def generate_merchant_id(merchant_name)
-      # Generate a consistent ID for merchants without explicit IDs
-      "simplefin_#{Digest::MD5.hexdigest(merchant_name.downcase)}"
+      @merchant ||= SimplefinAccount::Transactions::MerchantDetector.new(data).detect_merchant
     end
 end

@@ -38,11 +38,6 @@
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
               <%= tag.span t(".requires_update") %>
             </div>
-          <% elsif simplefin_item.rate_limited_message.present? %>
-            <div class="text-warning flex items-center gap-1">
-              <%= icon "clock", size: "sm", color: "warning" %>
-              <%= tag.span simplefin_item.rate_limited_message %>
-            </div>
           <% elsif simplefin_item.sync_error.present? %>
             <div class="text-secondary flex items-center gap-1">
               <%= render DS::Tooltip.new(text: simplefin_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>

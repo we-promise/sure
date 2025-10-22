@@ -6,7 +6,7 @@ class SimplefinAccount::Investments::TransactionsProcessor
   end
 
   def process
-    return unless simplefin_account.current_account&.accountable_type == "Investment"
+    return unless simplefin_account.account&.accountable_type == "Investment"
     return unless simplefin_account.raw_transactions_payload.present?
 
     transactions_data = simplefin_account.raw_transactions_payload
@@ -20,7 +20,7 @@ class SimplefinAccount::Investments::TransactionsProcessor
     attr_reader :simplefin_account
 
     def account
-      simplefin_account.current_account
+      simplefin_account.account
     end
 
     def process_investment_transaction(transaction_data)
@@ -30,21 +30,26 @@ class SimplefinAccount::Investments::TransactionsProcessor
       posted_date = parse_date(data[:posted])
       external_id = "simplefin_#{data[:id]}"
 
-      # Use the unified import adapter for consistent handling
-      import_adapter.import_transaction(
-        external_id: external_id,
-        amount: amount,
-        currency: account.currency,
-        date: posted_date,
-        name: data[:description] || "Investment transaction",
-        source: "simplefin"
-      )
+      # Check if entry already exists
+      existing_entry = Entry.find_by(plaid_id: external_id)
+
+      unless existing_entry
+        # For investment accounts, create as regular transaction
+        # In the future, we could detect trade patterns and create Trade entries
+        transaction = Transaction.new(external_id: external_id)
+
+        Entry.create!(
+          account: account,
+          name: data[:description] || "Investment transaction",
+          amount: amount,
+          date: posted_date,
+          currency: account.currency,
+          entryable: transaction,
+          plaid_id: external_id
+        )
+      end
     rescue => e
       Rails.logger.error("Failed to process SimpleFin investment transaction #{data[:id]}: #{e.message}")
-    end
-
-    def import_adapter
-      @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
     def parse_amount(amount_value)

@@ -37,6 +37,6 @@ class SimplefinAccount::Transactions::Processor
     end
 
     def account
-      simplefin_account.current_account
+      simplefin_account.account
     end
 end
