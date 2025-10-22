@@ -10,7 +10,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
   test "user can disable ai assistant" do
     visit settings_ai_prompts_path
 
-    click_button "Disable Maybe AI"
+    click_button "Disable AI Assistant"
 
     assert_current_path settings_ai_prompts_path
     @user.reload
