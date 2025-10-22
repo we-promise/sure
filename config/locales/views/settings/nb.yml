@@ -64,7 +64,7 @@ nb:
         last_name: Etternavn
         page_title: Konto
         pending: Venter
-        profile_subtitle: Tilpass hvordan du vises på Sure
+        profile_subtitle: Tilpass hvordan du vises på %{product_name}
         profile_title: Profil
         remove_invitation: Fjern invitasjon
         remove_member: Fjern medlem

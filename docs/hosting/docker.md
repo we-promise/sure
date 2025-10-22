@@ -189,5 +189,5 @@ By running the commands below, you will delete your existing Sure database and "
 docker compose down
 docker volume rm sure_postgres-data # this is the name of the volume the DB is mounted to
 docker compose up
-docker exec -it sure-db-1 psql -U sure_user -d sure_production -c "SELECT 1;" # This will verify that the issue is fixed
+docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```

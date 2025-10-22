@@ -1,7 +1,7 @@
 class Provider::Simplefin
   include HTTParty
 
-  headers "User-Agent" => "Sure Finance SimpleFin Client"
+  headers "User-Agent" => "#{Rails.configuration.x.product_name} Finance SimpleFin Client"
   default_options.merge!(verify: true, ssl_verify_mode: :peer)
 
   def initialize
