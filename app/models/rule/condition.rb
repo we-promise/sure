@@ -6,7 +6,7 @@ class Rule::Condition < ApplicationRecord
 
   validates :condition_type, presence: true
   validates :operator, presence: true
-  validates :value, presence: true, unless: -> { compound? }
+  validates :value, presence: true, unless: -> { compound? || operator == "is_null" }
 
   accepts_nested_attributes_for :sub_conditions, allow_destroy: true
 

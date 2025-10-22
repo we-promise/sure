@@ -1,5 +1,18 @@
 <%= content_for :page_title, t(".page_title") %>
 
+<% if Current.user.ai_enabled? %>
+  <div class="mb-4 flex justify-end">
+    <%= render DS::Button.new(
+      text: t(".disable_ai"),
+      href: user_path(Current.user),
+      method: :patch,
+      params: { user: { ai_enabled: false, redirect_to: "ai_prompts" } },
+      data: { turbo: false },
+      variant: :destructive
+    ) %>
+  </div>
+<% end %>
+
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <div class="rounded-xl bg-container-inset space-y-1 p-1">
     <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary">
@@ -26,7 +39,7 @@
                 <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::MODELS.join(", ") %>]</pre>
+              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
               <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:instructions] %></pre>
               </div>
@@ -54,7 +67,7 @@
                 <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::AutoCategorizer::DEFAULT_MODEL %>]</pre>
+              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
               <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_categorizer]&.instructions || Provider::Openai::AutoCategorizer.new(nil).instructions %></pre>
               </div>
@@ -82,7 +95,7 @@
                 <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::AutoMerchantDetector::DEFAULT_MODEL %>]</pre>
+              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
               <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_merchant]&.instructions || Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions %></pre>
               </div>
