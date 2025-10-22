@@ -82,7 +82,7 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
   test "should get goals" do
     get goals_onboarding_url
     assert_response :success
-    assert_select "h1", text: /What brings you to Maybe/i
+    assert_select "h1", text: /What brings you here/i
   end
 
   test "should get trial" do

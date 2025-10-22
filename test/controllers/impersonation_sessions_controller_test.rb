@@ -2,7 +2,7 @@ require "test_helper"
 
 class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
   test "impersonation session logs all activity for auditing" do
-    sign_in impersonator = users(:maybe_support_staff)
+    sign_in impersonator = users(:sure_support_staff)
     impersonated = users(:family_member)
 
     impersonator_session = impersonation_sessions(:in_progress)
@@ -16,7 +16,7 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "super admin can request an impersonation session" do
-    sign_in users(:maybe_support_staff)
+    sign_in users(:sure_support_staff)
 
     post impersonation_sessions_path, params: { impersonation_session: { impersonated_id: users(:family_member).id } }
 
@@ -25,7 +25,7 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "super admin can join and leave an in progress impersonation session" do
-    sign_in super_admin = users(:maybe_support_staff)
+    sign_in super_admin = users(:sure_support_staff)
 
     impersonator_session = impersonation_sessions(:in_progress)
 
@@ -52,7 +52,7 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "super admin can complete an impersonation session" do
-    sign_in super_admin = users(:maybe_support_staff)
+    sign_in super_admin = users(:sure_support_staff)
 
     impersonator_session = impersonation_sessions(:in_progress)
 
@@ -77,7 +77,7 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "super admin cannot accept an impersonation session" do
-    sign_in super_admin = users(:maybe_support_staff)
+    sign_in super_admin = users(:sure_support_staff)
 
     impersonator_session = impersonation_sessions(:in_progress)
 

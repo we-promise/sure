@@ -40,7 +40,9 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     budget = budgets(:one)
     plaid_item = plaid_items(:one)
 
-    Provider::Plaid.any_instance.expects(:remove_item).with(plaid_item.access_token).once
+    provider = mock
+    provider.expects(:remove_item).with(plaid_item.access_token).once
+    PlaidItem.any_instance.stubs(:plaid_provider).returns(provider)
 
     perform_enqueued_jobs(only: FamilyResetJob) do
       delete reset_user_url(@user)
@@ -58,10 +60,50 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not PlaidItem.exists?(plaid_item.id)
   end
 
+  test "admin can reset family data and load sample data" do
+    account = accounts(:investment)
+    category = categories(:income)
+    tag = tags(:one)
+    merchant = merchants(:netflix)
+    import = imports(:transaction)
+    budget = budgets(:one)
+    plaid_item = plaid_items(:one)
+
+    provider = mock
+    provider.expects(:remove_item).with(plaid_item.access_token).once
+    PlaidItem.any_instance.stubs(:plaid_provider).returns(provider)
+    Demo::Generator.any_instance.expects(:generate_new_user_data_for!).with(@user.family, email: @user.email)
+
+    perform_enqueued_jobs(only: FamilyResetJob) do
+      delete reset_with_sample_data_user_url(@user)
+    end
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset_with_sample_data.success"), flash[:notice]
+
+    assert_not Account.exists?(account.id)
+    assert_not Category.exists?(category.id)
+    assert_not Tag.exists?(tag.id)
+    assert_not Merchant.exists?(merchant.id)
+    assert_not Import.exists?(import.id)
+    assert_not Budget.exists?(budget.id)
+    assert_not PlaidItem.exists?(plaid_item.id)
+  end
+
   test "non-admin cannot reset family data" do
     sign_in @member = users(:family_member)
 
     delete reset_user_url(@member)
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
+    assert_no_enqueued_jobs only: FamilyResetJob
+  end
+
+  test "non-admin cannot reset family data with sample data" do
+    sign_in @member = users(:family_member)
+
+    delete reset_with_sample_data_user_url(@member)
 
     assert_redirected_to settings_profile_url
     assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]

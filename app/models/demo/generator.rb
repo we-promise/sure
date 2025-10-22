@@ -1,3 +1,5 @@
+require "securerandom"
+
 class Demo::Generator
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
@@ -38,7 +40,7 @@ class Demo::Generator
       end
 
       puts "👥 Creating empty family..."
-      create_family_and_users!("Demo Family", "user@sure.local", onboarded: true, subscribed: true)
+      create_family_and_users!("Demo Family", "user@example.com", onboarded: true, subscribed: true)
 
       puts "✅ Empty demo data loaded successfully!"
     end
@@ -53,14 +55,33 @@ class Demo::Generator
       end
 
       puts "👥 Creating new user family..."
-      create_family_and_users!("Demo Family", "user@sure.local", onboarded: false, subscribed: false)
+      create_family_and_users!("Demo Family", "user@example.com", onboarded: false, subscribed: false)
 
       puts "✅ New user demo data loaded successfully!"
     end
   end
 
+  def generate_new_user_data_for!(family, email:)
+    with_timing(__method__, max_seconds: 1000) do
+      family = family.reload
+      admin_user = ensure_admin_user!(family, email)
+
+      puts "📊 Creating sample financial data for #{family.name}..."
+      ActiveRecord::Base.transaction do
+        create_realistic_categories!(family)
+        create_realistic_accounts!(family)
+        create_realistic_transactions!(family)
+        generate_budget_auto_fill!(family)
+      end
+
+      family.sync_later
+
+      puts "✅ Sample data loaded successfully!"
+    end
+  end
+
   # Generate comprehensive realistic demo data with multi-currency
-  def generate_default_data!(skip_clear: false, email: "user@sure.local")
+  def generate_default_data!(skip_clear: false, email: "user@example.com")
     if skip_clear
       puts "⏭️  Skipping data clearing (appending new family)..."
     else
@@ -118,6 +139,13 @@ class Demo::Generator
       Demo::DataCleaner.new.destroy_everything!
     end
 
+    def ensure_admin_user!(family, email)
+      user = family.users.find_by(email: email)
+      return user if user&.admin? || user&.super_admin?
+
+      raise ActiveRecord::RecordNotFound, "No admin user with email #{email} found in family ##{family.id}"
+    end
+
     def create_family_and_users!(family_name, email, onboarded:, subscribed:)
       family = Family.create!(
         name: family_name,
@@ -133,20 +161,20 @@ class Demo::Generator
       # Admin user
       family.users.create!(
         email: email,
-        first_name: "Demo (admin)",
-        last_name: "Maybe",
+        first_name: "Jack",
+        last_name: "Bogle",
         role: "admin",
-        password: "password",
+        password: "Password1!",
         onboarded_at: onboarded ? Time.current : nil
       )
 
       # Member user
       family.users.create!(
         email: "partner_#{email}",
-        first_name: "Demo (member)",
-        last_name: "Maybe",
+        first_name: "Eve",
+        last_name: "Bogle",
         role: "member",
-        password: "password",
+        password: "Password1!",
         onboarded_at: onboarded ? Time.current : nil
       )
 

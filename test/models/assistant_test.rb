@@ -12,6 +12,8 @@ class AssistantTest < ActiveSupport::TestCase
     )
     @assistant = Assistant.for_chat(@chat)
     @provider = mock
+    @expected_session_id = @chat.id.to_s
+    @expected_user_identifier = ::Digest::SHA256.hexdigest(@chat.user_id.to_s)
   end
 
   test "errors get added to chat" do
@@ -46,6 +48,8 @@ class AssistantTest < ActiveSupport::TestCase
     response = provider_success_response(response_chunk.data)
 
     @provider.expects(:chat_response).with do |message, **options|
+      assert_equal @expected_session_id, options[:session_id]
+      assert_equal @expected_user_identifier, options[:user_identifier]
       text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -98,6 +102,8 @@ class AssistantTest < ActiveSupport::TestCase
     sequence = sequence("provider_chat_response")
 
     @provider.expects(:chat_response).with do |message, **options|
+      assert_equal @expected_session_id, options[:session_id]
+      assert_equal @expected_user_identifier, options[:user_identifier]
       call2_text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -107,6 +113,8 @@ class AssistantTest < ActiveSupport::TestCase
     end.returns(call2_response).once.in_sequence(sequence)
 
     @provider.expects(:chat_response).with do |message, **options|
+      assert_equal @expected_session_id, options[:session_id]
+      assert_equal @expected_user_identifier, options[:user_identifier]
       options[:streamer].call(call1_response_chunk)
       true
     end.returns(call1_response).once.in_sequence(sequence)
@@ -133,10 +141,10 @@ class AssistantTest < ActiveSupport::TestCase
     end
 
     def provider_text_chunk(text)
-      Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text)
+      Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil)
     end
 
-    def provider_response_chunk(id:, model:, messages:, function_requests:)
+    def provider_response_chunk(id:, model:, messages:, function_requests:, usage: nil)
       Provider::LlmConcept::ChatStreamChunk.new(
         type: "response",
         data: Provider::LlmConcept::ChatResponse.new(
@@ -144,7 +152,8 @@ class AssistantTest < ActiveSupport::TestCase
           model: model,
           messages: messages,
           function_requests: function_requests
-        )
+        ),
+        usage: usage
       )
     end
 end

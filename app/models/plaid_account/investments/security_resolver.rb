@@ -63,7 +63,7 @@ class PlaidAccount::Investments::SecurityResolver
       end
     end
 
-    # Plaid treats "brokerage cash" differently than us.  Internally, Maybe treats "brokerage cash"
+    # Plaid treats "brokerage cash" differently than us.  Internally, Sure treats "brokerage cash"
     # as "uninvested cash" (i.e. cash that doesn't have a corresponding Security and can be withdrawn).
     #
     # Plaid treats everything as a "holding" with a corresponding Security.  For example, "brokerage cash" (USD)

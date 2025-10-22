@@ -9,13 +9,13 @@ class ImpersonationSessionTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) do
       ImpersonationSession.create!(
         impersonator: regular_user,
-        impersonated: users(:maybe_support_staff)
+        impersonated: users(:sure_support_staff)
       )
     end
   end
 
   test "super admin cannot be impersonated" do
-    super_admin = users(:maybe_support_staff)
+    super_admin = users(:sure_support_staff)
 
     assert super_admin.super_admin?
 
@@ -28,7 +28,7 @@ class ImpersonationSessionTest < ActiveSupport::TestCase
   end
 
   test "impersonation session must have different impersonator and impersonated" do
-    super_admin = users(:maybe_support_staff)
+    super_admin = users(:sure_support_staff)
 
     assert_raises(ActiveRecord::RecordInvalid) do
       ImpersonationSession.create!(

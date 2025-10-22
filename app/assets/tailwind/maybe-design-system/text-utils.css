@@ -18,7 +18,7 @@
   @apply text-gray-500;
 
   @variant theme-dark {
-    @apply text-gray-400;
+    @apply text-gray-300;
   }
 }
 
@@ -26,7 +26,7 @@
   @apply text-gray-400;
 
   @variant theme-dark {
-    @apply text-gray-600;
+    @apply text-gray-500;
   }
 }
 

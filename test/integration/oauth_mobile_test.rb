@@ -8,7 +8,7 @@ class OauthMobileTest < ActionDispatch::IntegrationTest
     sign_in(@user)
 
     @oauth_app = Doorkeeper::Application.create!(
-      name: "Maybe Mobile App",
+      name: "Sure Mobile App",
       redirect_uri: "sureapp://oauth/callback",
       scopes: "read"
     )

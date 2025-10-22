@@ -34,9 +34,6 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:openai_access_token)
-      Setting.openai_access_token = hosting_params[:openai_access_token]
-    end
-    if hosting_params.key?(:openai_access_token)
       token_param = hosting_params[:openai_access_token].to_s.strip
       # Ignore blanks and redaction placeholders to prevent accidental overwrite
       unless token_param.blank? || token_param == "********"
@@ -44,9 +41,25 @@ class Settings::HostingsController < ApplicationController
       end
     end
 
+    # Validate OpenAI configuration before updating
+    if hosting_params.key?(:openai_uri_base) || hosting_params.key?(:openai_model)
+      Setting.validate_openai_config!(
+        uri_base: hosting_params[:openai_uri_base],
+        model: hosting_params[:openai_model]
+      )
+    end
+
+    if hosting_params.key?(:openai_uri_base)
+      Setting.openai_uri_base = hosting_params[:openai_uri_base]
+    end
+
+    if hosting_params.key?(:openai_model)
+      Setting.openai_model = hosting_params[:openai_model]
+    end
+
     redirect_to settings_hosting_path, notice: t(".success")
-  rescue ActiveRecord::RecordInvalid => error
-    flash.now[:alert] = t(".failure")
+  rescue Setting::ValidationError => error
+    flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
 
@@ -57,7 +70,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token)
+      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model)
     end
 
     def ensure_admin
