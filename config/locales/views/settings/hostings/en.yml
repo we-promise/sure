@@ -34,7 +34,7 @@ en:
         uri_base_label: API Base URL (Optional)
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
-        model_placeholder: "gpt-5-nano (default)"
+        model_placeholder: "gpt-4.1 (default)"
         title: OpenAI
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"

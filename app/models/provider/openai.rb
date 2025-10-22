@@ -6,7 +6,7 @@ class Provider::Openai < Provider
 
   # Supported OpenAI model prefixes (e.g., "gpt-4" matches "gpt-4", "gpt-4.1", "gpt-4-turbo", etc.)
   DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
-  DEFAULT_MODEL = "gpt-5-nano"
+  DEFAULT_MODEL = "gpt-4.1"
 
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
