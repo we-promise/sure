@@ -293,25 +293,48 @@ class Provider::Openai < Provider
       # Add user prompt
       messages << { role: "user", content: prompt }
 
-      # Add function results as tool messages
-      function_results.each do |fn_result|
-        # Convert output to JSON string if it's not already a string
-        # OpenAI API requires content to be either a string or array of objects
-        # Handle nil explicitly to avoid serializing to "null"
-        output = fn_result[:output]
-        content = if output.nil?
-          ""
-        elsif output.is_a?(String)
-          output
-        else
-          output.to_json
+      # If there are function results, we need to add the assistant message that made the tool calls
+      # followed by the tool messages with the results
+      if function_results.any?
+        # Build assistant message with tool_calls
+        tool_calls = function_results.map do |fn_result|
+          {
+            id: fn_result[:call_id],
+            type: "function",
+            function: {
+              name: fn_result[:name],
+              arguments: fn_result[:arguments]
+            }
+          }
         end
 
         messages << {
-          role: "tool",
-          tool_call_id: fn_result[:call_id],
-          content: content
+          role: "assistant",
+          content: nil,
+          tool_calls: tool_calls
         }
+
+        # Add function results as tool messages
+        function_results.each do |fn_result|
+          # Convert output to JSON string if it's not already a string
+          # OpenAI API requires content to be either a string or array of objects
+          # Handle nil explicitly to avoid serializing to "null"
+          output = fn_result[:output]
+          content = if output.nil?
+            ""
+          elsif output.is_a?(String)
+            output
+          else
+            output.to_json
+          end
+
+          messages << {
+            role: "tool",
+            tool_call_id: fn_result[:call_id],
+            name: fn_result[:name],
+            content: content
+          }
+        end
       end
 
       messages
