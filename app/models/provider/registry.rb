@@ -65,7 +65,15 @@ class Provider::Registry
 
         return nil unless access_token.present?
 
-        Provider::Openai.new(access_token)
+        uri_base = ENV.fetch("OPENAI_URI_BASE", Setting.openai_uri_base)
+        model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
+
+        if uri_base.present? && model.blank?
+          Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
+          return nil
+        end
+
+        Provider::Openai.new(access_token, uri_base: uri_base, model: model)
       end
   end
 

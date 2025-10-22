@@ -16,8 +16,8 @@
                          "auto-submit-form-trigger-event-value": "blur"
                        } do |form| %>
   <%= form.password_field :openai_access_token,
-                          label: t(".label"),
-                          placeholder: t(".placeholder"),
+                          label: t(".access_token_label"),
+                          placeholder: t(".access_token_placeholder"),
                           value: (Setting.openai_access_token.present? ? "********" : nil),
                           autocomplete: "off",
                           autocapitalize: "none",
@@ -25,5 +25,27 @@
                           inputmode: "text",
                           disabled: ENV["OPENAI_ACCESS_TOKEN"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
+
+  <%= form.text_field :openai_uri_base,
+                      label: t(".uri_base_label"),
+                      placeholder: t(".uri_base_placeholder"),
+                      value: Setting.openai_uri_base,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "url",
+                      disabled: ENV["OPENAI_URI_BASE"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+
+  <%= form.text_field :openai_model,
+                      label: t(".model_label"),
+                      placeholder: t(".model_placeholder"),
+                      value: Setting.openai_model,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "text",
+                      disabled: ENV["OPENAI_MODEL"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
   <% end %>
 </div>
