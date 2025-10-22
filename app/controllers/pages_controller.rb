@@ -12,10 +12,10 @@ class PagesController < ApplicationController
       begin
         Period.from_key(period_param)
       rescue Period::InvalidKeyError
-        Period.last_30_days
+        Period.from_key(Current.user&.default_period || "last_30_days")
       end
     else
-      Period.last_30_days
+      Period.from_key(Current.user&.default_period || "last_30_days")
     end
 
     family_currency = Current.family.currency

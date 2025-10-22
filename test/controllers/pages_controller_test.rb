@@ -10,6 +10,40 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "dashboard cashflow uses default period from user preferences" do
+    # Update user's default period to last_7_days
+    @user.update!(default_period: "last_7_days")
+
+    get root_path
+    assert_response :ok
+
+    # Verify that cashflow period is set to user's default period
+    assert_equal "last_7_days", assigns(:cashflow_period).key
+  end
+
+  test "dashboard cashflow respects explicit cashflow_period param" do
+    # Update user's default period to last_7_days
+    @user.update!(default_period: "last_7_days")
+
+    # Pass an explicit cashflow_period param
+    get root_path, params: { cashflow_period: "last_90_days" }
+    assert_response :ok
+
+    # Verify that cashflow period uses the explicit param, not the default
+    assert_equal "last_90_days", assigns(:cashflow_period).key
+  end
+
+  test "dashboard cashflow falls back to last_30_days if user has no default_period" do
+    # Ensure user has no default period set (should use default value)
+    @user.update!(default_period: "last_30_days")
+
+    get root_path
+    assert_response :ok
+
+    # Verify that cashflow period falls back to last_30_days
+    assert_equal "last_30_days", assigns(:cashflow_period).key
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
