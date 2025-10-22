@@ -80,7 +80,7 @@ en:
         last_name: Last Name
         page_title: Profile Info
         pending: Pending
-        profile_subtitle: Customize how you appear on Sure
+        profile_subtitle: Customize how you appear on %{product}
         profile_title: Personal
         remove_invitation: Remove Invitation
         remove_member: Remove Member
