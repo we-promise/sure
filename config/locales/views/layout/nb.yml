@@ -3,7 +3,7 @@ nb:
   layouts:
     auth:
       existing_account: Har du allerede en konto?
-      no_account: Ny hos Sure?
+      no_account: Ny hos %{product_name}?
       sign_in: Logg inn
       sign_up: Opprett konto
       your_account: Din konto

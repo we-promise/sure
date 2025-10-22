@@ -15,5 +15,5 @@ nb:
       role_label: Rolle
       role_member: Medlem
       submit: Send invitasjon
-      subtitle: Send en invitasjon for å bli med i din familiekonto på Sure
+      subtitle: Send en invitasjon for å bli med i din familiekonto på %{product_name}
       title: Inviter noen
