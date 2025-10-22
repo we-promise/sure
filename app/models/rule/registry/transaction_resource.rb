@@ -7,7 +7,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
     [
       Rule::ConditionFilter::TransactionName.new(rule),
       Rule::ConditionFilter::TransactionAmount.new(rule),
-      Rule::ConditionFilter::TransactionMerchant.new(rule)
+      Rule::ConditionFilter::TransactionMerchant.new(rule),
+      Rule::ConditionFilter::TransactionCategory.new(rule)
     ]
   end
 
