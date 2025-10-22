@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
+ActiveRecord::Schema[7.2].define(version: 2025_09_03_015009) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -327,6 +327,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "external_id"
+    t.decimal "cost_basis", precision: 19, scale: 4
+    t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["account_id", "external_id"], name: "index_holdings_on_account_and_external_id", unique: true
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
@@ -732,6 +736,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
     t.datetime "balance_date"
     t.jsonb "extra"
     t.jsonb "org_data"
+    t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
   end
@@ -750,6 +755,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "pending_account_setup", default: false, null: false
+    t.string "institution_domain"
+    t.string "institution_color"
+    t.date "sync_start_date"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
@@ -783,6 +791,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
     t.datetime "failed_at"
     t.date "window_start_date"
     t.date "window_end_date"
+    t.text "sync_stats"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
