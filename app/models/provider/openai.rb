@@ -191,7 +191,7 @@ class Provider::Openai < Provider
               name: "chat_response",
               model: model,
               input: input_payload,
-              output: response.messages.map(&:output_text).join("\n"),
+              output: parsed.messages.map(&:output_text).join("\n"),
               usage: raw_response["usage"],
               session_id: session_id,
               user_identifier: user_identifier
