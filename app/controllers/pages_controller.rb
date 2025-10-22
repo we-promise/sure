@@ -8,14 +8,10 @@ class PagesController < ApplicationController
     @accounts = Current.family.accounts.visible.with_attached_logo
 
     period_param = params[:cashflow_period]
-    @cashflow_period = if period_param.present?
-      begin
-        Period.from_key(period_param)
-      rescue Period::InvalidKeyError
-        Period.from_key(Current.user&.default_period || "last_30_days")
-      end
-    else
-      Period.from_key(Current.user&.default_period || "last_30_days")
+    @cashflow_period = begin
+      Period.from_key(period_param || Current.user&.default_period || "last_30_days")
+    rescue Period::InvalidKeyError
+      Period.last_30_days
     end
 
     family_currency = Current.family.currency
