@@ -83,6 +83,10 @@ module ApplicationHelper
     cookies[:admin] == "true"
   end
 
+  def default_ai_model
+    ENV.fetch("OPENAI_MODEL", Setting.openai_model.presence || Provider::Openai::DEFAULT_MODEL)
+  end
+
   # Renders Markdown text using Redcarpet
   def markdown(text)
     return "" if text.blank?
