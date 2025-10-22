@@ -67,8 +67,8 @@ class Provider::Registry
 
         return nil unless access_token.present?
 
-        uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
-        model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
+        uri_base = ENV.fetch("OPENAI_URI_BASE", Setting.openai_uri_base)
+        model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
 
         if uri_base.present? && model.blank?
           Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
@@ -76,20 +76,6 @@ class Provider::Registry
         end
 
         Provider::Openai.new(access_token, uri_base: uri_base, model: model)
-      end
-
-      def yahoo_finance
-        Provider::YahooFinance.new
-      end
-
-      def enable_banking
-        application_id = ENV.fetch("ENABLE_BANKING_APPLICATION_ID", Setting.enable_banking_application_id)
-        country_code = ENV.fetch("ENABLE_BANKING_COUNTRY", Setting.enable_banking_country)
-        certificate = ENV.fetch("ENABLE_BANKING_CERTIFICATE", Setting.enable_banking_certificate)
-
-        return nil unless application_id.present? && certificate.present? && country_code.present?
-
-        Provider::EnableBanking.new(application_id:, certificate:, country_code:)
       end
   end
 

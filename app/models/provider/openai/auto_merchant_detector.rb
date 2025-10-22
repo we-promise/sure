@@ -1,16 +1,11 @@
 class Provider::Openai::AutoMerchantDetector
-  include Provider::Openai::Concerns::UsageRecorder
-
-  attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family
-
-  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil)
+  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil)
     @client = client
     @model = model
     @transactions = transactions
     @user_merchants = user_merchants
     @custom_provider = custom_provider
     @langfuse_trace = langfuse_trace
-    @family = family
   end
 
   def auto_detect_merchants
@@ -90,16 +85,6 @@ class Provider::Openai::AutoMerchantDetector
       merchants = extract_merchants_native(response)
       result = build_response(merchants)
 
-      record_usage(
-        model.presence || Provider::Openai::DEFAULT_MODEL,
-        response.dig("usage"),
-        operation: "auto_detect_merchants",
-        metadata: {
-          transaction_count: transactions.size,
-          merchant_count: user_merchants.size
-        }
-      )
-
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
     rescue => e
@@ -135,22 +120,14 @@ class Provider::Openai::AutoMerchantDetector
       merchants = extract_merchants_generic(response)
       result = build_response(merchants)
 
-      record_usage(
-        model.presence || Provider::Openai::DEFAULT_MODEL,
-        response.dig("usage"),
-        operation: "auto_detect_merchants",
-        metadata: {
-          transaction_count: transactions.size,
-          merchant_count: user_merchants.size
-        }
-      )
-
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
     rescue => e
       span&.end(output: { error: e.message }, level: "ERROR")
       raise
     end
+
+    attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace
 
     AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
 

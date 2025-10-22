@@ -46,21 +46,6 @@ class Settings::HostingsController < ApplicationController
       Setting.enable_banking_certificate = hosting_params[:enable_banking_certificate]
     end
     if hosting_params.key?(:openai_access_token)
-      Setting.openai_access_token = hosting_params[:openai_access_token]
-    end
-
-    if hosting_params.key?(:enable_banking_country)
-      Setting.enable_banking_country = hosting_params[:enable_banking_country]
-    end
-
-    if hosting_params.key?(:enable_banking_application_id)
-      Setting.enable_banking_application_id = hosting_params[:enable_banking_application_id]
-    end
-
-    if hosting_params.key?(:enable_banking_certificate)
-      Setting.enable_banking_certificate = hosting_params[:enable_banking_certificate]
-    end
-    if hosting_params.key?(:openai_access_token)
       token_param = hosting_params[:openai_access_token].to_s.strip
       # Ignore blanks and redaction placeholders to prevent accidental overwrite
       unless token_param.blank? || token_param == "********"
@@ -97,7 +82,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :enable_banking_country, :enable_banking_application_id, :enable_banking_certificate, :openai_uri_base, :openai_model)
+      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model)
     end
 
     def ensure_admin
