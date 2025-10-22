@@ -32,7 +32,7 @@ class Provider::Openai < Provider
     @uri_base.present?
   end
 
-  def auto_categorize(transactions: [], user_categories: [], model: "")
+  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil)
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
 
@@ -49,7 +49,8 @@ class Provider::Openai < Provider
         transactions: transactions,
         user_categories: user_categories,
         custom_provider: custom_provider?,
-        langfuse_trace: trace
+        langfuse_trace: trace,
+        family: family
       ).auto_categorize
 
       trace&.update(output: result.map(&:to_h))
@@ -58,7 +59,7 @@ class Provider::Openai < Provider
     end
   end
 
-  def auto_detect_merchants(transactions: [], user_merchants: [], model: "")
+  def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil)
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
 
@@ -75,7 +76,8 @@ class Provider::Openai < Provider
         transactions: transactions,
         user_merchants: user_merchants,
         custom_provider: custom_provider?,
-        langfuse_trace: trace
+        langfuse_trace: trace,
+        family: family
       ).auto_detect_merchants
 
       trace&.update(output: result.map(&:to_h))
@@ -93,7 +95,8 @@ class Provider::Openai < Provider
     streamer: nil,
     previous_response_id: nil,
     session_id: nil,
-    user_identifier: nil
+    user_identifier: nil,
+    family: nil
   )
     if custom_provider?
       generic_chat_response(
@@ -104,7 +107,8 @@ class Provider::Openai < Provider
         function_results: function_results,
         streamer: streamer,
         session_id: session_id,
-        user_identifier: user_identifier
+        user_identifier: user_identifier,
+        family: family
       )
     else
       native_chat_response(
@@ -116,7 +120,8 @@ class Provider::Openai < Provider
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: session_id,
-        user_identifier: user_identifier
+        user_identifier: user_identifier,
+        family: family
       )
     end
   end
@@ -133,7 +138,8 @@ class Provider::Openai < Provider
       streamer: nil,
       previous_response_id: nil,
       session_id: nil,
-      user_identifier: nil
+      user_identifier: nil,
+      family: nil
     )
       with_provider_response do
         chat_config = ChatConfig.new(
@@ -175,6 +181,7 @@ class Provider::Openai < Provider
             response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
             response = response_chunk.data
             usage = response_chunk.usage
+            Rails.logger.info("Stream response usage: #{usage.inspect}")
             log_langfuse_generation(
               name: "chat_response",
               model: model,
@@ -184,9 +191,11 @@ class Provider::Openai < Provider
               session_id: session_id,
               user_identifier: user_identifier
             )
+            record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
             response
           else
             parsed = ChatParser.new(raw_response).parsed
+            Rails.logger.info("Non-stream raw_response['usage']: #{raw_response['usage'].inspect}")
             log_langfuse_generation(
               name: "chat_response",
               model: model,
@@ -196,6 +205,7 @@ class Provider::Openai < Provider
               session_id: session_id,
               user_identifier: user_identifier
             )
+            record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
             parsed
           end
         rescue => e
@@ -220,7 +230,8 @@ class Provider::Openai < Provider
       function_results: [],
       streamer: nil,
       session_id: nil,
-      user_identifier: nil
+      user_identifier: nil,
+      family: nil
     )
       with_provider_response do
         messages = build_generic_messages(
@@ -252,6 +263,8 @@ class Provider::Openai < Provider
             session_id: session_id,
             user_identifier: user_identifier
           )
+
+          record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
 
           # If a streamer was provided, manually call it with the parsed response
           # to maintain the same contract as the streaming version
@@ -407,5 +420,47 @@ class Provider::Openai < Provider
       end
     rescue => e
       Rails.logger.warn("Langfuse logging failed: #{e.message}")
+    end
+
+    def record_llm_usage(family:, model:, operation:, usage:)
+      return unless family && usage
+
+      Rails.logger.info("Recording LLM usage - Raw usage data: #{usage.inspect}")
+
+      # Handle both old and new OpenAI API response formats
+      # Old format: prompt_tokens, completion_tokens, total_tokens
+      # New format: input_tokens, output_tokens, total_tokens
+      prompt_tokens = usage["prompt_tokens"] || usage["input_tokens"] || 0
+      completion_tokens = usage["completion_tokens"] || usage["output_tokens"] || 0
+      total_tokens = usage["total_tokens"] || 0
+
+      Rails.logger.info("Extracted tokens - prompt: #{prompt_tokens}, completion: #{completion_tokens}, total: #{total_tokens}")
+
+      estimated_cost = LlmUsage.calculate_cost(
+        provider: "openai",
+        model: model,
+        prompt_tokens: prompt_tokens,
+        completion_tokens: completion_tokens
+      )
+
+      # Log when we can't estimate the cost (e.g., custom/self-hosted models)
+      if estimated_cost.nil?
+        Rails.logger.info("Recording LLM usage without cost estimate for unknown model: #{model} (custom provider: #{custom_provider?})")
+      end
+
+      family.llm_usages.create!(
+        provider: "openai",
+        model: model,
+        operation: operation,
+        prompt_tokens: prompt_tokens,
+        completion_tokens: completion_tokens,
+        total_tokens: total_tokens,
+        estimated_cost: estimated_cost,
+        metadata: {}
+      )
+
+      Rails.logger.info("LLM usage recorded successfully - Cost: #{estimated_cost.inspect}")
+    rescue => e
+      Rails.logger.error("Failed to record LLM usage: #{e.message}")
     end
 end

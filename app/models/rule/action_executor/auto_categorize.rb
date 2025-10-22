@@ -1,9 +1,17 @@
 class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
   def label
+    base_label = "Auto-categorize transactions with AI"
+
     if rule.family.self_hoster?
-      "Auto-categorize transactions with AI ($$)"
+      # Estimate cost for typical batch of 20 transactions
+      estimated_cost = LlmUsage.estimate_auto_categorize_cost(
+        transaction_count: 20,
+        category_count: rule.family.categories.count,
+        model: Provider::Openai::DEFAULT_MODEL
+      )
+      "#{base_label} (~$#{sprintf('%.4f', estimated_cost)} per 20 transactions)"
     else
-      "Auto-categorize transactions"
+      base_label
     end
   end
 

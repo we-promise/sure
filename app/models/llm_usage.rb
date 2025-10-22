@@ -1,0 +1,122 @@
+class LlmUsage < ApplicationRecord
+  belongs_to :family
+
+  validates :provider, :model, :operation, presence: true
+  validates :prompt_tokens, :completion_tokens, :total_tokens, presence: true, numericality: { greater_than_or_equal_to: 0 }
+  validates :estimated_cost, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  scope :for_family, ->(family) { where(family: family) }
+  scope :for_operation, ->(operation) { where(operation: operation) }
+  scope :recent, -> { order(created_at: :desc) }
+  scope :for_date_range, ->(start_date, end_date) { where(created_at: start_date..end_date) }
+
+  # OpenAI pricing per 1M tokens (as of 2025)
+  # Source: https://openai.com/pricing
+  PRICING = {
+    "openai" => {
+      # GPT-4.1 and similar models
+      "gpt-4.1" => { prompt: 2.50, completion: 10.00 },
+      "gpt-4.1-preview" => { prompt: 2.50, completion: 10.00 },
+      "gpt-4" => { prompt: 30.00, completion: 60.00 },
+      "gpt-4-turbo" => { prompt: 10.00, completion: 30.00 },
+      "gpt-4-turbo-preview" => { prompt: 10.00, completion: 30.00 },
+      # GPT-5 models (estimated pricing)
+      "gpt-5" => { prompt: 5.00, completion: 15.00 },
+      # o1 models
+      "o1-preview" => { prompt: 15.00, completion: 60.00 },
+      "o1-mini" => { prompt: 3.00, completion: 12.00 },
+      "o1" => { prompt: 15.00, completion: 60.00 },
+      # o3 models (estimated pricing)
+      "o3-mini" => { prompt: 3.00, completion: 12.00 },
+      "o3" => { prompt: 20.00, completion: 80.00 },
+      # GPT-3.5 models
+      "gpt-3.5-turbo" => { prompt: 0.50, completion: 1.50 },
+      "gpt-3.5-turbo-16k" => { prompt: 3.00, completion: 4.00 }
+    }
+  }.freeze
+
+  # Calculate cost for a given provider, model, and token usage
+  # Returns nil if pricing is not available for the model (e.g., custom/self-hosted providers)
+  def self.calculate_cost(provider:, model:, prompt_tokens:, completion_tokens:)
+    pricing = find_pricing(provider, model)
+
+    unless pricing
+      Rails.logger.info("No pricing found for provider: #{provider}, model: #{model}")
+      return nil
+    end
+
+    # Pricing is per 1M tokens, so divide by 1_000_000
+    prompt_cost = (prompt_tokens * pricing[:prompt]) / 1_000_000.0
+    completion_cost = (completion_tokens * pricing[:completion]) / 1_000_000.0
+
+    cost = (prompt_cost + completion_cost).round(6)
+    Rails.logger.info("Calculated cost for #{provider}/#{model}: $#{cost} (#{prompt_tokens} prompt tokens, #{completion_tokens} completion tokens)")
+    cost
+  end
+
+  # Find pricing for a model, with prefix matching support
+  def self.find_pricing(provider, model)
+    return nil unless PRICING.key?(provider)
+
+    provider_pricing = PRICING[provider]
+
+    # Try exact match first
+    return provider_pricing[model] if provider_pricing.key?(model)
+
+    # Try prefix matching (e.g., "gpt-4.1-2024-08-06" matches "gpt-4.1")
+    provider_pricing.each do |model_prefix, pricing|
+      return pricing if model.start_with?(model_prefix)
+    end
+
+    nil
+  end
+
+  # Aggregate statistics for a family
+  def self.statistics_for_family(family, start_date: nil, end_date: nil)
+    scope = for_family(family)
+    scope = scope.for_date_range(start_date, end_date) if start_date && end_date
+
+    # Exclude records with nil cost from cost calculations
+    scope_with_cost = scope.where.not(estimated_cost: nil)
+
+    {
+      total_requests: scope.count,
+      total_prompt_tokens: scope.sum(:prompt_tokens),
+      total_completion_tokens: scope.sum(:completion_tokens),
+      total_tokens: scope.sum(:total_tokens),
+      total_cost: scope_with_cost.sum(:estimated_cost).to_f.round(2),
+      by_operation: scope_with_cost.group(:operation).sum(:estimated_cost).transform_values { |v| v.to_f.round(2) },
+      by_model: scope_with_cost.group(:model).sum(:estimated_cost).transform_values { |v| v.to_f.round(2) }
+    }
+  end
+
+  # Format cost as currency
+  def formatted_cost
+    estimated_cost.nil? ? "N/A" : "$#{estimated_cost.round(4)}"
+  end
+
+  # Estimate cost for auto-categorizing a batch of transactions
+  # Based on typical token usage patterns:
+  # - ~100 tokens per transaction in the prompt
+  # - ~50 tokens per category
+  # - ~50 tokens for completion per transaction
+  def self.estimate_auto_categorize_cost(transaction_count:, category_count:, model: "gpt-4.1", provider: "openai")
+    return 0.0 if transaction_count.zero?
+
+    # Estimate tokens
+    base_prompt_tokens = 150 # System message and instructions
+    transaction_tokens = transaction_count * 100
+    category_tokens = category_count * 50
+    estimated_prompt_tokens = base_prompt_tokens + transaction_tokens + category_tokens
+
+    # Completion tokens: roughly one category name per transaction
+    estimated_completion_tokens = transaction_count * 50
+
+    calculate_cost(
+      provider: provider,
+      model: model,
+      prompt_tokens: estimated_prompt_tokens,
+      completion_tokens: estimated_completion_tokens
+    )
+  end
+end
