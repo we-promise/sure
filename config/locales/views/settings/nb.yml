@@ -35,6 +35,9 @@ nb:
         confirm_reset:
           body: Er du sikker på at du vil tilbakestille kontoen din? Dette vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data. Denne handlingen kan ikke angres.
           title: Tilbakestill konto?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
         confirm_remove_invitation:
           body: Er du sikker på at du vil fjerne invitasjonen for %{email}?
           title: Fjern invitasjon
@@ -47,6 +50,8 @@ nb:
           dataene dine og kan ikke angres.
         reset_account: Tilbakestill konto
         reset_account_warning: Tilbakestilling av kontoen din vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data, men beholde brukerkontoen din intakt.
+        reset_account_with_sample_data: Reset account and load sample data
+        reset_account_with_sample_data_warning: Resetting your account will delete all your existing data and then load fresh sample data so you can explore Sure with a pre-filled environment.
         email: E-post
         first_name: Fornavn
         household_form_input_placeholder: Angi husholdningsnavn
@@ -59,7 +64,7 @@ nb:
         last_name: Etternavn
         page_title: Konto
         pending: Venter
-        profile_subtitle: Tilpass hvordan du vises på Sure
+        profile_subtitle: Tilpass hvordan du vises på %{product_name}
         profile_title: Profil
         remove_invitation: Fjern invitasjon
         remove_member: Fjern medlem
@@ -70,6 +75,7 @@ nb:
     settings_nav:
       accounts_label: Kontoer
       api_key_label: API-nøkkel
+      advanced_section_title: Avansert
       billing_label: Fakturering
       categories_label: Kategorier
       feedback_label: Tilbakemelding

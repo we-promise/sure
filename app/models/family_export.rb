@@ -1,7 +1,7 @@
 class FamilyExport < ApplicationRecord
   belongs_to :family
 
-  has_one_attached :export_file
+  has_one_attached :export_file, dependent: :purge_later
 
   enum :status, {
     pending: "pending",
@@ -13,7 +13,7 @@ class FamilyExport < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
 
   def filename
-    "maybe_export_#{created_at.strftime('%Y%m%d_%H%M%S')}.zip"
+    "sure_export_#{created_at.strftime('%Y%m%d_%H%M%S')}.zip"
   end
 
   def downloadable?

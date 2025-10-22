@@ -35,6 +35,9 @@ tr:
         confirm_reset:
           body: Hesabınızı sıfırlamak istediğinizden emin misiniz? Bu işlem tüm hesaplarınızı, kategorilerinizi, satıcılarınızı, etiketlerinizi ve diğer verilerinizi silecektir. Bu işlem geri alınamaz.
           title: Hesap sıfırlansın mı?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
         confirm_remove_invitation:
           body: "%{email} için daveti kaldırmak istediğinizden emin misiniz?"
           title: "Daveti Kaldır"
@@ -46,6 +49,8 @@ tr:
         delete_account_warning: Hesabınızı silmek tüm verilerinizi kalıcı olarak kaldırır ve geri alınamaz.
         reset_account: Hesabı sıfırla
         reset_account_warning: Hesabınızı sıfırlamak tüm hesaplarınızı, kategorilerinizi, satıcılarınızı, etiketlerinizi ve diğer verilerinizi silecek, ancak kullanıcı hesabınızı koruyacaktır.
+        reset_account_with_sample_data: Reset account and load sample data
+        reset_account_with_sample_data_warning: Resetting your account will delete all your existing data and then load fresh sample data so you can explore Sure with a pre-filled environment.
         email: E-posta
         first_name: Ad
         household_form_input_placeholder: Hane adı girin
@@ -57,7 +62,7 @@ tr:
         last_name: Soyad
         page_title: Hesap
         pending: Beklemede
-        profile_subtitle: Maybe'de nasıl göründüğünüzü özelleştirin
+        profile_subtitle: "%{product_name}'de nasıl göründüğünüzü özelleştirin"
         profile_title: Profil
         remove_invitation: Daveti Kaldır
         remove_member: Üyeyi Kaldır
@@ -68,6 +73,7 @@ tr:
     settings_nav:
       accounts_label: Hesaplar
       api_key_label: API Anahtarı
+      advanced_section_title: Gelişmiş
       billing_label: Faturalandırma
       categories_label: Kategoriler
       feedback_label: Geri Bildirim

@@ -5,7 +5,11 @@ class InvitationMailer < ApplicationMailer
 
     mail(
       to: @invitation.email,
-      subject: t(".subject", inviter: @invitation.inviter.display_name)
+      subject: t(
+        ".subject",
+        inviter: @invitation.inviter.display_name,
+        product: product_name
+      )
     )
   end
 end

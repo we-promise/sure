@@ -1,6 +1,6 @@
 class UsersController < ApplicationController
   before_action :set_user
-  before_action :ensure_admin, only: :reset
+  before_action :ensure_admin, only: %i[reset reset_with_sample_data]
 
   def update
     @user = Current.user
@@ -37,6 +37,11 @@ class UsersController < ApplicationController
 
   def reset
     FamilyResetJob.perform_later(Current.family)
+    redirect_to settings_profile_path, notice: t(".success")
+  end
+
+  def reset_with_sample_data
+    FamilyResetJob.perform_later(Current.family, load_sample_data_for_email: @user.email)
     redirect_to settings_profile_path, notice: t(".success")
   end
 

@@ -23,7 +23,7 @@ nb:
       mappings:
         create_account: Opprett konto
         csv_mapping_label: "%{mapping} i CSV"
-        maybe_mapping_label: "%{mapping} i Sure"
+        sure_mapping_label: "%{mapping} i %{product_name}"
         no_accounts: Du har ingen kontoer ennå. Vennligst opprett en konto som
           vi kan bruke for (utilordnede) rader i CSV-filen din eller gå tilbake til Rengjør-trinnet
           og oppgi et kontonavn vi kan bruke.
@@ -59,7 +59,7 @@ nb:
   imports:
     empty:
       message: Ingen importer ennå.
-      new: Ny import
+      new: Ny Import
     import:
       complete: Fullført
       delete: Slett
@@ -72,8 +72,11 @@ nb:
       view: Vis
     index:
       imports: Importer
-      new: Ny import
+      new: Ny Import
       title: Importer
+      exports: Eksporter
+      new_export: Ny Eksport
+      no_exports: Ingen eksporter ennå.
     new:
       description: Du kan manuelt importere ulike typer data via CSV eller bruke en av
         våre importmaler som Mint.

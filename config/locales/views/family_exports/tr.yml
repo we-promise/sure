@@ -1,0 +1,7 @@
+---
+tr:
+  family_exports:
+    list:
+      in_progress: Devam ediyor
+      complete: Tamamlandı
+      failed: Başarısız

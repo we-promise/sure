@@ -3,6 +3,6 @@ en:
   invitation_mailer:
     invite_email:
       accept_button: Accept Invitation
-      body: "%{inviter} has invited you to join the %{family} family on Sure!"
+      body: "%{inviter} has invited you to join the %{family} family on %{product_name}!"
       expiry_notice: This invitation will expire in %{days} days
-      greeting: Welcome to Sure!
+      greeting: Welcome to %{product_name}!

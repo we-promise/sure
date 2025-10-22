@@ -1,6 +1,6 @@
 <%= content_for :page_title, t(".page_title") %>
 
-<%= settings_section title: t(".profile_title"), subtitle: t(".profile_subtitle") do %>
+<%= settings_section title: t(".profile_title"), subtitle: t(".profile_subtitle", product: product_name) do %>
   <%= styled_form_with model: @user, url: user_path(@user), class: "space-y-4" do |form| %>
     <%= render "settings/user_avatar_field", form: form, user: @user %>
 
@@ -122,29 +122,6 @@
   </div>
 <% end %>
 
-<% if Current.user.admin? %>
-  <%= settings_section title: "Data Import/Export" do %>
-    <div class="space-y-4">
-      <div class="flex gap-4 items-center">
-        <%= render DS::Link.new(
-          text: "Export data",
-          icon: "database",
-          href: new_family_export_path,
-          variant: "secondary",
-          full_width: true,
-          data: { turbo_frame: :modal }
-        ) %>
-      </div>
-
-      <%= turbo_frame_tag "family_exports", src: family_exports_path, loading: :lazy do %>
-        <div class="mt-4 text-center text-secondary">
-          <div class="animate-spin inline-block h-4 w-4 border-2 border-secondary border-t-transparent rounded-full"></div>
-        </div>
-      <% end %>
-    </div>
-  <% end %>
-<% end %>
-
 <%= settings_section title: t(".danger_zone_title") do %>
   <div class="space-y-4">
     <% if Current.user.admin? %>
@@ -160,9 +137,30 @@
           href: reset_user_path(@user),
           method: :delete,
           confirm: CustomConfirm.new(
-            title: "Reset account?",
-            body: "This will delete all data associated with your account. Your user profile will remain active.",
-            btn_text: "Reset account",
+            title: t(".confirm_reset.title"),
+            body: t(".confirm_reset.body"),
+            btn_text: t(".reset_account"),
+            destructive: true,
+            high_severity: true
+          )
+        ) %>
+      </div>
+
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="w-full md:w-2/3">
+          <h3 class="font-medium text-primary"><%= t(".reset_account_with_sample_data") %></h3>
+          <p class="text-secondary text-sm"><%= t(".reset_account_with_sample_data_warning") %></p>
+        </div>
+
+        <%= render DS::Button.new(
+          text: t(".reset_account_with_sample_data"),
+          variant: "destructive",
+          href: reset_with_sample_data_user_path(@user),
+          method: :delete,
+          confirm: CustomConfirm.new(
+            title: t(".confirm_reset_with_sample_data.title"),
+            body: t(".confirm_reset_with_sample_data.body"),
+            btn_text: t(".reset_account_with_sample_data"),
             destructive: true,
             high_severity: true
           )

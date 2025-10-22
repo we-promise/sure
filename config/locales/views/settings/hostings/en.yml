@@ -3,7 +3,7 @@ en:
   settings:
     hostings:
       invite_code_settings:
-        description: Every new user that joins your instance of Maybe can only do
+        description: Every new user that joins your instance of %{product} can only do
           so via an invite code
         email_confirmation_description: When enabled, users must confirm their email
           address when changing it.
@@ -12,7 +12,7 @@ en:
         generated_tokens: Generated codes
         title: Require invite code for signup
       show:
-        general: General Settings
+        general: External Services
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
@@ -22,17 +22,28 @@ en:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
       brand_fetch_settings:
-        description: Input the Client ID provided by Brand Fetch
+        description: Enter the Client ID provided by Brand Fetch
         label: Client ID
         placeholder: Enter your Client ID here
-        title: Brand Fetch Settings
+        title: Brand Fetch
+      openai_settings:
+        description: Enter the access token and optionally configure a custom OpenAI-compatible provider
+        env_configured_message: Successfully configured through environment variables.
+        access_token_label: Access Token
+        access_token_placeholder: Enter your access token here
+        uri_base_label: API Base URL (Optional)
+        uri_base_placeholder: "https://api.openai.com/v1 (default)"
+        model_label: Model (Optional)
+        model_placeholder: "gpt-4.1 (default)"
+        title: OpenAI
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
-        description: Input the API key provided by Twelve Data
+        description: Enter the API key provided by Twelve Data
+        env_configured_message: Successfully configured through the TWELVE_DATA_API_KEY environment variable.
         label: API Key
         placeholder: Enter your API key here
         plan: "%{plan} plan"
-        title: Twelve Data Settings
+        title: Twelve Data
       update:
         failure: Invalid setting value
         success: Settings updated
