@@ -26,7 +26,7 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to root_path
-    assert_equal "Welcome to Maybe!", flash[:notice]
+    assert_equal "Welcome to Sure!", flash[:notice]
     assert_equal "trialing", @family.subscription.status
     assert_in_delta Subscription::TRIAL_DAYS.days.from_now, @family.subscription.trial_ends_at, 1.minute
   end
@@ -71,6 +71,6 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     get success_subscription_url(session_id: "test-session-id")
 
     assert @family.subscription.active?
-    assert_equal "Welcome to Maybe!  Your subscription has been created.", flash[:notice]
+    assert_equal "Welcome to Sure!  Your subscription has been created.", flash[:notice]
   end
 end

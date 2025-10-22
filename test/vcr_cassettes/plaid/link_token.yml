@@ -5,7 +5,7 @@ http_interactions:
     uri: https://sandbox.plaid.com/link/token/create
     body:
       encoding: UTF-8
-      string: '{"client_name":"Maybe Finance","language":"en","country_codes":["US","CA"],"user":{"client_user_id":"test-user-id"},"products":["transactions"],"additional_consented_products":["investments","liabilities"],"webhook":"https://example.com/webhooks","redirect_uri":"http://localhost:3000/accounts","transactions":{"days_requested":730}}'
+      string: '{"client_name":"Sure Finances","language":"en","country_codes":["US","CA"],"user":{"client_user_id":"test-user-id"},"products":["transactions"],"additional_consented_products":["investments","liabilities"],"webhook":"https://example.com/webhooks","redirect_uri":"http://localhost:3000/accounts","transactions":{"days_requested":730}}'
     headers:
       Content-Type:
       - application/json

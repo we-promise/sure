@@ -17,7 +17,7 @@
     <%= image_tag "logo-color.png", class: "w-16 mb-6" %>
 
     <p class="text-xl lg:text-3xl text-primary font-display font-medium">
-      Try Maybe for 14 days.
+      Try Sure for 14 days.
     </p>
 
     <h2 class="text-xl lg:text-3xl font-display text-secondary font-medium mb-2">
@@ -25,13 +25,13 @@
     </h2>
 
     <p class="text-sm text-secondary text-center mb-8">
-      Starting the trial activates your account for Maybe.  You won't need to enter payment details.
+      Starting the trial activates your account for Sure.  You won't need to enter payment details.
     </p>
 
     <div class="w-full">
       <% if Current.family.can_start_trial? %>
         <%= render DS::Button.new(
-        text: "Try Maybe for 14 days",
+        text: "Try Sure for 14 days",
         href: subscription_path,
         full_width: true,
         data: { turbo: false }
@@ -65,7 +65,7 @@
       <div class="space-y-12">
         <div class="space-y-1.5 text-sm">
           <p class="text-primary font-medium">Today</p>
-          <p class="text-secondary">You'll get free access to Maybe for 14 days</p>
+          <p class="text-secondary">You'll get free access to Sure for 14 days</p>
         </div>
 
         <div class="space-y-1.5 text-sm">
@@ -75,7 +75,7 @@
 
         <div class="space-y-1.5 text-sm">
           <p class="text-primary font-medium">In 14 days (<%= 14.days.from_now.strftime("%B %d") %>)</p>
-          <p class="text-secondary">Your trial ends &mdash; subscribe to continue using Maybe</p>
+          <p class="text-secondary">Your trial ends &mdash; subscribe to continue using Sure</p>
         </div>
       </div>
     </div>
@@ -107,7 +107,7 @@
 
       <div class="flex flex-col gap-4 items-center">
         <%= render "chats/ai_avatar" %>
-        <p class="text-sm text-primary text-center">Unlimited access and chats with Maybe AI</p>
+        <p class="text-sm text-primary text-center">Unlimited access and chats with Sure AI</p>
       </div>
 
       <div class="flex flex-col gap-4 items-center">

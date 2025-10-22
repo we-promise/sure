@@ -31,7 +31,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
 
   test "enables MFA with valid code" do
     @user.setup_mfa!
-    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Maybe")
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
     post mfa_path, params: { code: totp.now }
 
@@ -70,7 +70,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     sign_out
 
     post sessions_path, params: { email: @user.email, password: user_password_test }
-    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Maybe")
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
     post verify_mfa_path, params: { code: totp.now }
 

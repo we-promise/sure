@@ -1,5 +1,5 @@
 <head>
-  <title><%= content_for(:title) || "Sure" %></title>
+  <title><%= content_for(:title) || product_name %></title>
 
   <%= csrf_meta_tags %>
   <%= csp_meta_tag %>
@@ -10,6 +10,7 @@
   <%= combobox_style_tag %>
 
   <%= javascript_importmap_tags %>
+  <%= render "layouts/dark_mode_check" %>
   <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
 
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -17,7 +18,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sure">
+  <meta name="apple-mobile-web-app-title" content="<%= product_name %>">
 
   <meta name="msapplication-TileColor" content="#F9F9F9">
   <meta name="theme-color" content="#F9F9F9">

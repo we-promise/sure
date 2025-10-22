@@ -1,7 +1,7 @@
 <% header_title t(".title") %>
 
 <% if params[:step] == "pending" %>
-  <p class="text-sm text-secondary text-center"><%= t(".requested") %></p>
+  <p class="text-sm text-secondary text-center py-8"><%= t(".requested") %></p>
 <% else %>
   <%= styled_form_with url: password_reset_path, class: "space-y-4" do |form| %>
     <%= form.email_field :email, label: true, autofocus: false, autocomplete: "email", required: "required", placeholder: "you@example.com" %>
@@ -9,3 +9,13 @@
     <%= form.submit t(".submit") %>
   <% end %>
 <% end %>
+
+<div class="mt-4">
+  <%= render DS::Link.new(
+    text: t(".back"),
+    href: new_session_path,
+    variant: :secondary,
+    full_width: true,
+    class: "bg-white hover:bg-gray-100"
+  ) %>
+</div>

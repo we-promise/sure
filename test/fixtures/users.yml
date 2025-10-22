@@ -2,17 +2,17 @@ empty:
   family: empty
   first_name: User
   last_name: One
-  email: user1@email.com
+  email: user1@example.com
   password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla 
   onboarded_at: <%= 3.days.ago %>
   role: admin
   ai_enabled: true
 
-maybe_support_staff:
+sure_support_staff:
   family: empty
   first_name: Support
   last_name: Admin
-  email: support@maybefinance.com
+  email: support@sure.am
   password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla 
   role: super_admin
   onboarded_at: <%= 3.days.ago %>
