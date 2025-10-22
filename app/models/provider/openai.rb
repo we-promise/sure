@@ -297,7 +297,15 @@ class Provider::Openai < Provider
       function_results.each do |fn_result|
         # Convert output to JSON string if it's not already a string
         # OpenAI API requires content to be either a string or array of objects
-        content = fn_result[:output].is_a?(String) ? fn_result[:output] : fn_result[:output].to_json
+        # Handle nil explicitly to avoid serializing to "null"
+        output = fn_result[:output]
+        content = if output.nil?
+          ""
+        elsif output.is_a?(String)
+          output
+        else
+          output.to_json
+        end
 
         messages << {
           role: "tool",
