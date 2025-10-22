@@ -46,7 +46,7 @@ de:
         balance: Kontostand
         owed: Geschuldeter Betrag
       menu:
-        confirm_accept: "%{name}" löschen
+        confirm_accept: "%{name} löschen"
         confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden Du müsstest es als neues Konto hinzufügen</p>"
         confirm_title: Konto löschen
         edit: Bearbeiten
