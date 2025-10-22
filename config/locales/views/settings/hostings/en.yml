@@ -40,6 +40,16 @@ en:
         placeholder: Enter your API key here
         plan: "%{plan} plan"
         title: Twelve Data
+      enable_banking_settings:
+        env_configured_message: Successfully configured through ENABLE_BANKING_* environment variables.
+        enable_banking_country: Country
+        country_description: Select the country you wish to use to integrate Enable Banking.
+        enable_banking_application_id: Application ID
+        application_id_description: Enter the Application ID provided by Enable Banking
+        certificate_description: Paste the Enable Banking private key (PEM) here.
+        placeholder_application_id: Enter your Application ID here
+        placeholder_certificate: Paste the Enable Banking private key (PEM) here
+        title: Enable Banking
       update:
         failure: Invalid setting value
         success: Settings updated

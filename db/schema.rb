@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -29,16 +29,18 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.uuid "accountable_id"
     t.decimal "balance", precision: 19, scale: 4
     t.string "currency"
-    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY ((ARRAY['Loan'::character varying, 'CreditCard'::character varying, 'OtherLiability'::character varying])::text[])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
     t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.jsonb "locked_attributes", default: {}
     t.string "status", default: "active"
     t.uuid "simplefin_account_id"
+    t.uuid "enable_banking_account_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
+    t.index ["enable_banking_account_id"], name: "index_accounts_on_enable_banking_account_id"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "id"], name: "index_accounts_on_family_id_and_id"
     t.index ["family_id", "status"], name: "index_accounts_on_family_id_and_status"
@@ -221,6 +223,38 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "enable_banking_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "enable_banking_item_id", null: false
+    t.string "account_id"
+    t.string "account_type"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.string "currency"
+    t.string "name"
+    t.string "mask"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
+  end
+
+  create_table "enable_banking_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "session_id"
+    t.datetime "valid_until", precision: nil
+    t.string "name"
+    t.string "aspsp_name"
+    t.string "aspsp_country"
+    t.string "status", default: "good"
+    t.string "logo_url"
+    t.boolean "scheduled_for_deletion", default: false
+    t.jsonb "raw_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
   end
 
   create_table "entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -876,6 +910,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.string "subtype"
   end
 
+  add_foreign_key "accounts", "enable_banking_accounts"
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
@@ -889,6 +924,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
+  add_foreign_key "enable_banking_accounts", "enable_banking_items"
+  add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "accounts"
   add_foreign_key "entries", "imports"
   add_foreign_key "family_exports", "families"
