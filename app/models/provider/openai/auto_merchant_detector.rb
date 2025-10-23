@@ -1,6 +1,8 @@
 class Provider::Openai::AutoMerchantDetector
   include Provider::Openai::Concerns::UsageRecorder
 
+  attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family
+
   def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil)
     @client = client
     @model = model
@@ -149,8 +151,6 @@ class Provider::Openai::AutoMerchantDetector
       span&.end(output: { error: e.message }, level: "ERROR")
       raise
     end
-
-    attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family
 
     AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
 
