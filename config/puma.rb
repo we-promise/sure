@@ -36,6 +36,16 @@ if rails_env == "production"
   workers workers_count if workers_count > 1
 
   preload_app!
+
+  # Close database connections before forking workers
+  before_fork do
+    ActiveRecord::Base.connection_pool.disconnect! if defined?(ActiveRecord)
+  end
+
+  # Reconnect database connections after forking workers
+  on_worker_boot do
+    ActiveRecord::Base.establish_connection if defined?(ActiveRecord)
+  end
 end
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
