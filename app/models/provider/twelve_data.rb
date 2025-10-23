@@ -62,7 +62,15 @@ class Provider::TwelveData < Provider
         req.params["interval"] = "1day"
       end
 
-      data = JSON.parse(response.body).dig("values")
+      parsed = JSON.parse(response.body)
+      data = parsed.dig("values")
+      
+      if data.nil?
+        error_message = parsed.dig("message") || "No data returned"
+        error_code = parsed.dig("code") || "unknown"
+        raise InvalidExchangeRateError, "API error (code: #{error_code}): #{error_message}"
+      end
+
       data.map do |resp|
         rate = resp.dig("close")
         date = resp.dig("datetime")
@@ -152,7 +160,15 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
-      parsed.dig("values").map do |resp|
+      values = parsed.dig("values")
+      
+      if values.nil?
+        error_message = parsed.dig("message") || "No data returned"
+        error_code = parsed.dig("code") || "unknown"
+        raise InvalidSecurityPriceError, "API error (code: #{error_code}): #{error_message}"
+      end
+
+      values.map do |resp|
         price = resp.dig("close")
         date = resp.dig("datetime")
         if price.nil?
