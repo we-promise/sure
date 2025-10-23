@@ -1,4 +1,4 @@
-# AI and LLM Configuration Guide
+# LLM Configuration Guide
 
 This document explains how Sure uses Large Language Models (LLMs) for AI features and how to configure them for your deployment.
 
@@ -15,9 +15,9 @@ The easiest way to get started with AI features in Sure is to use OpenAI:
    ```bash
    OPENAI_ACCESS_TOKEN=sk-proj-...your-key-here...
    ```
-3. Start Sure and the AI assistant will be available immediately
+3. (Re-)Start Sure (both `web` and `worker` services!) and the AI assistant will be available to use after you agree/allow via UI option
 
-That's it! Sure will use OpenAI's default model (currently `gpt-4.1`) for all AI operations.
+That's it! Sure will use OpenAI's with a default model (currently `gpt-4.1`) for all AI operations.
 
 ## Local vs. Cloud Inference
 
@@ -25,23 +25,18 @@ That's it! Sure will use OpenAI's default model (currently `gpt-4.1`) for all AI
 
 **What it means:** The LLM runs on remote servers (like OpenAI's infrastructure), and your app sends requests over the internet.
 
-**Pros:**
-- Zero setup - works immediately
-- Always uses the latest models
-- No hardware requirements
-- Scales automatically
-- Regular updates and improvements
-
-**Cons:**
-- Requires internet connection
-- Data leaves your infrastructure (though transmitted securely)
-- Per-request costs
-- Dependent on provider availability
+| Pros                             | Cons |
+|------                            |------|
+| Zero setup - works immediately   | Requires internet connection |
+| Always uses the latest models    | Data leaves your infrastructure (though transmitted securely) |
+| No hardware requirements         | Per-request costs |
+| Scales automatically             | Dependent on provider availability |
+| Regular updates and improvements | |
 
 **When to use:**
 - You're new to LLMs
 - You want the best performance without setup
-- You don't have powerful hardware
+- You don't have powerful hardware (GPU with large VRAM)
 - You're okay with cloud-based processing
 - You're running a managed instance
 
@@ -49,19 +44,13 @@ That's it! Sure will use OpenAI's default model (currently `gpt-4.1`) for all AI
 
 **What it means:** The LLM runs on your own hardware using tools like Ollama, LM Studio, or LocalAI.
 
-**Pros:**
-- Complete data privacy - nothing leaves your network
-- No per-request costs after initial setup
-- Works offline
-- Full control over models and updates
-- Can be more cost-effective at scale
-
-**Cons:**
-- Requires significant hardware (see below)
-- Setup and maintenance overhead
-- Models may be less capable than latest cloud offerings
-- You manage updates and improvements
-- Performance depends on your hardware
+| Pros                                                | Cons |
+|------                                               |------|
+| Complete data privacy - nothing leaves your network | Requires significant hardware (see below) |
+| No per-request costs after initial setup            | Setup and maintenance overhead |
+| Works offline                                       | Models may be less capable than latest cloud offerings |
+| Full control over models and updates                | You manage updates and improvements |
+| Can be more cost-effective at scale                 | Performance depends on your hardware |
 
 **Hardware Requirements:**
 
@@ -608,4 +597,4 @@ For issues with AI features:
 
 ---
 
-**Last Updated:** January 2025
+**Last Updated:** October 2025
