@@ -18,3 +18,6 @@ test:
 production:
   <<: *default
   database: <%= ENV.fetch("POSTGRES_DB") { "sure_production" } %>
+  # For Heroku: limit connections per dyno to avoid connection limit issues
+  # Formula: (RAILS_MAX_THREADS * WEB_CONCURRENCY) + SIDEKIQ_CONCURRENCY should be < DB connection limit
+  pool: <%= ENV.fetch("DB_POOL") { ENV.fetch("RAILS_MAX_THREADS") { 3 } } %>
