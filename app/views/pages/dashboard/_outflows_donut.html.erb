@@ -1,0 +1,87 @@
+<%# locals: (outflows_data:, period:) %>
+<div id="outflows-donut-section">
+  <div class="flex justify-between items-center gap-4 px-4 mb-4">
+    <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
+      Outflows
+    </h2>
+
+    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "outflows_donut_section" } do |form| %>
+      <%= form.select :outflows_period,
+                Period.as_options,
+                { selected: period.key },
+                data: { "auto-submit-form-target": "auto" },
+                class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
+    <% end %>
+  </div>
+
+  <div class="px-4">
+    <div class="flex flex-col lg:flex-row gap-8 items-center">
+      <!-- Donut Chart -->
+      <div class="w-full lg:w-1/3 max-w-[300px]">
+        <div class="h-[300px] relative"
+          data-controller="donut-chart"
+          data-donut-chart-segments-value="<%= outflows_data[:categories].to_json %>"
+          data-donut-chart-segment-height-value="5"
+          data-donut-chart-segment-opacity-value="0.9"
+          data-donut-chart-extended-hover-value="true"
+          data-donut-chart-hover-extension-value="3"
+          data-donut-chart-enable-click-value="true"
+          data-donut-chart-start-date-value="<%= period.date_range.first %>"
+          data-donut-chart-end-date-value="<%= period.date_range.last %>">
+          <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
+
+          <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
+            <div data-donut-chart-target="defaultContent" class="flex flex-col items-center">
+              <div class="text-secondary text-sm mb-2">
+                <span>Total Outflows</span>
+              </div>
+
+              <div class="text-3xl font-medium text-primary">
+                <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(outflows_data[:total], delimiter: ',') %>
+              </div>
+            </div>
+
+            <% outflows_data[:categories].each do |category| %>
+              <div id="segment_<%= category[:id] %>" class="hidden">
+                <div class="flex flex-col gap-2 items-center">
+                  <p class="text-sm text-secondary"><%= category[:name] %></p>
+
+                  <p class="text-3xl font-medium text-primary">
+                    <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ',') %>
+                  </p>
+
+                  <p class="text-sm text-secondary"><%= category[:percentage] %>%</p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category List -->
+      <div class="w-full lg:w-2/3">
+        <div class="space-y-2">
+          <% outflows_data[:categories].each do |category| %>
+            <%= link_to transactions_path(q: { categories: [category[:name]], start_date: period.date_range.first, end_date: period.date_range.last }),
+                class: "flex items-center justify-between p-3 rounded-lg hover:bg-container-inset transition-colors cursor-pointer group",
+                data: {
+                  turbo_frame: "_top",
+                  category_id: category[:id],
+                  action: "mouseenter->donut-chart#highlightSegment mouseleave->donut-chart#unhighlightSegment"
+                } do %>
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: <%= category[:color] %>"></div>
+                <%= icon(category[:icon], class: "w-4 h-4 text-primary flex-shrink-0") %>
+                <span class="text-sm font-medium text-primary truncate"><%= category[:name] %></span>
+              </div>
+              <div class="flex items-center gap-4 flex-shrink-0">
+                <span class="text-sm font-medium text-primary whitespace-nowrap"><%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ',') %></span>
+                <span class="text-sm text-secondary whitespace-nowrap"><%= category[:percentage] %>%</span>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
