@@ -125,4 +125,61 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     filtered = parent_condition.apply(scope)
     assert_equal 2, filtered.count
   end
+
+  test "applies transaction_category condition" do
+    scope = @rule_scope
+
+    # Set category for one transaction
+    @account.transactions.first.update!(category: @grocery_category)
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_category",
+      operator: "=",
+      value: @grocery_category.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 1, filtered.count
+    assert_equal @grocery_category.id, filtered.first.category_id
+  end
+
+  test "applies is_null condition for transaction_category" do
+    scope = @rule_scope
+
+    # Set category for one transaction
+    @account.transactions.first.update!(category: @grocery_category)
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_category",
+      operator: "is_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 4, filtered.count
+    assert filtered.all? { |t| t.category_id.nil? }
+  end
+
+  test "applies is_null condition for transaction_merchant" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_merchant",
+      operator: "is_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 3, filtered.count
+    assert filtered.all? { |t| t.merchant_id.nil? }
+  end
 end

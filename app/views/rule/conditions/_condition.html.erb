@@ -20,7 +20,7 @@
       <%= form.select :condition_type, rule.condition_filters.map { |filter| [ filter.label, filter.key ] }, {}, data: { action: "rule--conditions#handleConditionTypeChange" } %>
     </div>
 
-    <%= form.select :operator, condition.operators, { container_class: "w-fit min-w-36" }, data: { rule__conditions_target: "operatorSelect" } %>
+    <%= form.select :operator, condition.operators, { container_class: "w-fit min-w-36" }, data: { rule__conditions_target: "operatorSelect", action: "rule--conditions#handleOperatorChange" } %>
 
     <div data-rule--conditions-target="filterValue" class="grow">
       <% if condition.filter.type == "select" %>

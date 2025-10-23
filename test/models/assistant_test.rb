@@ -141,10 +141,10 @@ class AssistantTest < ActiveSupport::TestCase
     end
 
     def provider_text_chunk(text)
-      Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text)
+      Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil)
     end
 
-    def provider_response_chunk(id:, model:, messages:, function_requests:)
+    def provider_response_chunk(id:, model:, messages:, function_requests:, usage: nil)
       Provider::LlmConcept::ChatStreamChunk.new(
         type: "response",
         data: Provider::LlmConcept::ChatResponse.new(
@@ -152,7 +152,8 @@ class AssistantTest < ActiveSupport::TestCase
           model: model,
           messages: messages,
           function_requests: function_requests
-        )
+        ),
+        usage: usage
       )
     end
 end

@@ -1,6 +1,14 @@
 module ApplicationHelper
   include Pagy::Frontend
 
+  def product_name
+    Rails.configuration.x.product_name
+  end
+
+  def brand_name
+    Rails.configuration.x.brand_name
+  end
+
   def styled_form_with(**options, &block)
     options[:builder] = StyledFormBuilder
     form_with(**options, &block)
@@ -81,6 +89,10 @@ module ApplicationHelper
     end
 
     cookies[:admin] == "true"
+  end
+
+  def default_ai_model
+    ENV.fetch("OPENAI_MODEL", Setting.openai_model.presence || Provider::Openai::DEFAULT_MODEL)
   end
 
   # Renders Markdown text using Redcarpet

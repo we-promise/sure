@@ -68,7 +68,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
   def params_schema
     build_schema(
-      required: [ "order", "page", "page_size" ],
+      required: [ "order", "page" ],
       properties: {
         page: {
           type: "integer",

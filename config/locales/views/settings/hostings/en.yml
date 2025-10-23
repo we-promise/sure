@@ -3,7 +3,7 @@ en:
   settings:
     hostings:
       invite_code_settings:
-        description: Every new user that joins your instance of Maybe can only do
+        description: Every new user that joins your instance of %{product} can only do
           so via an invite code
         email_confirmation_description: When enabled, users must confirm their email
           address when changing it.
@@ -27,10 +27,14 @@ en:
         placeholder: Enter your Client ID here
         title: Brand Fetch
       openai_settings:
-        description: Enter the access token provided by OpenAI
-        env_configured_message: Successfully configured through the OPENAI_ACCESS_TOKEN environment variable.
-        label: Access Token
-        placeholder: Enter your access token here
+        description: Enter the access token and optionally configure a custom OpenAI-compatible provider
+        env_configured_message: Successfully configured through environment variables.
+        access_token_label: Access Token
+        access_token_placeholder: Enter your access token here
+        uri_base_label: API Base URL (Optional)
+        uri_base_placeholder: "https://api.openai.com/v1 (default)"
+        model_label: Model (Optional)
+        model_placeholder: "gpt-4.1 (default)"
         title: OpenAI
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"

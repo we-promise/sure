@@ -1,31 +1,19 @@
 class Provider::Openai::AutoMerchantDetector
-  DEFAULT_MODEL = "gpt-4.1-mini"
-
-  def initialize(client, model: "", transactions:, user_merchants:)
+  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil)
     @client = client
     @model = model
     @transactions = transactions
     @user_merchants = user_merchants
+    @custom_provider = custom_provider
+    @langfuse_trace = langfuse_trace
   end
 
   def auto_detect_merchants
-    response = client.responses.create(parameters: {
-      model: model.presence || DEFAULT_MODEL,
-      input: [ { role: "developer", content: developer_message } ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "auto_detect_personal_finance_merchants",
-          strict: true,
-          schema: json_schema
-        }
-      },
-      instructions: instructions
-    })
-
-    Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage").dig("total_tokens")}")
-
-    build_response(extract_categorizations(response))
+    if custom_provider
+      auto_detect_merchants_openai_generic
+    else
+      auto_detect_merchants_openai_native
+    end
   end
 
   def instructions
@@ -70,7 +58,76 @@ class Provider::Openai::AutoMerchantDetector
   end
 
   private
-    attr_reader :client, :model, :transactions, :user_merchants
+
+    def auto_detect_merchants_openai_native
+      span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_merchants: user_merchants
+      })
+
+      response = client.responses.create(parameters: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        input: [ { role: "developer", content: developer_message } ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "auto_detect_personal_finance_merchants",
+            strict: true,
+            schema: json_schema
+          }
+        },
+        instructions: instructions
+      })
+
+      Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
+
+      merchants = extract_merchants_native(response)
+      result = build_response(merchants)
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
+    end
+
+    def auto_detect_merchants_openai_generic
+      span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_merchants: user_merchants
+      })
+
+      response = client.chat(parameters: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        messages: [
+          { role: "system", content: instructions },
+          { role: "user", content: developer_message }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "auto_detect_personal_finance_merchants",
+            strict: true,
+            schema: json_schema
+          }
+        }
+      })
+
+      Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
+
+      merchants = extract_merchants_generic(response)
+      result = build_response(merchants)
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
+    end
+
+    attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace
 
     AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
 
@@ -90,9 +147,18 @@ class Provider::Openai::AutoMerchantDetector
       ai_value
     end
 
-    def extract_categorizations(response)
-      response_json = JSON.parse(response.dig("output")[0].dig("content")[0].dig("text"))
-      response_json.dig("merchants")
+    def extract_merchants_native(response)
+      raw = response.dig("output", 0, "content", 0, "text")
+      JSON.parse(raw).dig("merchants")
+    rescue JSON::ParserError => e
+      raise Provider::Openai::Error, "Invalid JSON in native merchant detection: #{e.message}"
+    end
+
+    def extract_merchants_generic(response)
+      raw = response.dig("choices", 0, "message", "content")
+      JSON.parse(raw).dig("merchants")
+    rescue JSON::ParserError => e
+      raise Provider::Openai::Error, "Invalid JSON in generic merchant detection: #{e.message}"
     end
 
     def json_schema
