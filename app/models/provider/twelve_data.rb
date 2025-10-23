@@ -96,8 +96,15 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
+      data = parsed.dig("data")
+      
+      if data.nil?
+        error_message = parsed.dig("message") || "No data returned"
+        error_code = parsed.dig("code") || "unknown"
+        raise Error, "API error (code: #{error_code}): #{error_message}"
+      end
 
-      parsed.dig("data").map do |security|
+      data.map do |security|
         country = ISO3166::Country.find_country_by_any_name(security.dig("country"))
 
         Security.new(
