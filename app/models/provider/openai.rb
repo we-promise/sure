@@ -8,6 +8,13 @@ class Provider::Openai < Provider
   DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
   DEFAULT_MODEL = "gpt-4.1"
 
+  # Returns the effective model that would be used by the provider
+  # Uses the same logic as Provider::Registry and the initializer
+  def self.effective_model
+    configured_model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
+    configured_model.presence || DEFAULT_MODEL
+  end
+
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
@@ -437,7 +444,6 @@ class Provider::Openai < Provider
       Rails.logger.info("Extracted tokens - prompt: #{prompt_tokens}, completion: #{completion_tokens}, total: #{total_tokens}")
 
       estimated_cost = LlmUsage.calculate_cost(
-        provider: "openai",
         model: model,
         prompt_tokens: prompt_tokens,
         completion_tokens: completion_tokens
@@ -448,8 +454,9 @@ class Provider::Openai < Provider
         Rails.logger.info("Recording LLM usage without cost estimate for unknown model: #{model} (custom provider: #{custom_provider?})")
       end
 
+      inferred_provider = LlmUsage.infer_provider(model)
       family.llm_usages.create!(
-        provider: "openai",
+        provider: inferred_provider,
         model: model,
         operation: operation,
         prompt_tokens: prompt_tokens,

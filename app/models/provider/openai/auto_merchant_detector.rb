@@ -147,7 +147,6 @@ class Provider::Openai::AutoMerchantDetector
       total_tokens = usage_data["total_tokens"] || 0
 
       estimated_cost = LlmUsage.calculate_cost(
-        provider: "openai",
         model: model_name,
         prompt_tokens: prompt_tokens,
         completion_tokens: completion_tokens
@@ -158,8 +157,9 @@ class Provider::Openai::AutoMerchantDetector
         Rails.logger.info("Recording LLM usage without cost estimate for unknown model: #{model_name} (custom provider: #{custom_provider})")
       end
 
+      inferred_provider = LlmUsage.infer_provider(model_name)
       family.llm_usages.create!(
-        provider: "openai",
+        provider: inferred_provider,
         model: model_name,
         operation: "auto_detect_merchants",
         prompt_tokens: prompt_tokens,

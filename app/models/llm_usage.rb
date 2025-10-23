@@ -32,17 +32,23 @@ class LlmUsage < ApplicationRecord
       # o3 models (estimated pricing)
       "o3" => { prompt: 2.00, completion: 8.00 },
       "o3-mini" => { prompt: 1.10, completion: 4.40 },
-      "o3-pro" => { prompt: 20.00, completion: 80.00 },
+      "o3-pro" => { prompt: 20.00, completion: 80.00 }
+    },
+    "google" => {
+      "gemini-2.5-pro" => { prompt: 1.25, completion: 10.00 },
+      "gemini-2.5-flash" => { prompt: 0.3, completion: 2.50 }
     }
   }.freeze
 
-  # Calculate cost for a given provider, model, and token usage
+  # Calculate cost for a model and token usage
+  # Provider is automatically inferred from the model using the pricing map
   # Returns nil if pricing is not available for the model (e.g., custom/self-hosted providers)
-  def self.calculate_cost(provider:, model:, prompt_tokens:, completion_tokens:)
+  def self.calculate_cost(model:, prompt_tokens:, completion_tokens:)
+    provider = infer_provider(model)
     pricing = find_pricing(provider, model)
 
     unless pricing
-      Rails.logger.info("No pricing found for provider: #{provider}, model: #{model}")
+      Rails.logger.info("No pricing found for model: #{model} (inferred provider: #{provider})")
       return nil
     end
 
@@ -70,6 +76,26 @@ class LlmUsage < ApplicationRecord
     end
 
     nil
+  end
+
+  # Infer provider from model name by checking which provider has pricing for it
+  # Returns the provider name if found, or "openai" as default (for backward compatibility)
+  def self.infer_provider(model)
+    return "openai" if model.blank?
+
+    # Check each provider to see if they have pricing for this model
+    PRICING.each do |provider_name, provider_pricing|
+      # Try exact match first
+      return provider_name if provider_pricing.key?(model)
+
+      # Try prefix matching
+      provider_pricing.each_key do |model_prefix|
+        return provider_name if model.start_with?(model_prefix)
+      end
+    end
+
+    # Default to "openai" if no pricing found (for custom/self-hosted models)
+    "openai"
   end
 
   # Aggregate statistics for a family
@@ -101,7 +127,8 @@ class LlmUsage < ApplicationRecord
   # - ~100 tokens per transaction in the prompt
   # - ~50 tokens per category
   # - ~50 tokens for completion per transaction
-  def self.estimate_auto_categorize_cost(transaction_count:, category_count:, model: "gpt-4.1", provider: "openai")
+  # Returns nil if pricing is not available for the model
+  def self.estimate_auto_categorize_cost(transaction_count:, category_count:, model: "gpt-4.1")
     return 0.0 if transaction_count.zero?
 
     # Estimate tokens
@@ -113,8 +140,9 @@ class LlmUsage < ApplicationRecord
     # Completion tokens: roughly one category name per transaction
     estimated_completion_tokens = transaction_count * 50
 
+    # calculate_cost will automatically infer the provider from the model
+    # Returns nil if pricing is not available
     calculate_cost(
-      provider: provider,
       model: model,
       prompt_tokens: estimated_prompt_tokens,
       completion_tokens: estimated_completion_tokens
