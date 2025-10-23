@@ -46,6 +46,7 @@
 .vscode/*
 !.vscode/extensions.json
 !.vscode/*.code-snippets
+!.vscode/launch.json
 
 # Ignore macOS specific files
 */.DS_Store

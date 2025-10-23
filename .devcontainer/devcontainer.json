@@ -3,6 +3,7 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
+  "forwardPorts": [3000, 12345, 12346],
   "containerEnv": {
     "GIT_EDITOR": "code --wait",
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
@@ -19,7 +20,9 @@
       "extensions": [
         "biomejs.biome",
         "EditorConfig.EditorConfig",
-        "Shopify.ruby-extensions-pack"
+        "Shopify.ruby-extensions-pack",
+        "Shopify.ruby-lsp",
+        "sorbet.sorbet-vscode-extension"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
