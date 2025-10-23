@@ -1,4 +1,6 @@
 class Provider::Openai::AutoMerchantDetector
+  include Provider::Openai::Concerns::UsageRecorder
+
   def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil)
     @client = client
     @model = model
@@ -86,7 +88,15 @@ class Provider::Openai::AutoMerchantDetector
       merchants = extract_merchants_native(response)
       result = build_response(merchants)
 
-      record_usage(model.presence || Provider::Openai::DEFAULT_MODEL, response.dig("usage"))
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_detect_merchants",
+        metadata: {
+          transaction_count: transactions.size,
+          merchant_count: user_merchants.size
+        }
+      )
 
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
@@ -123,7 +133,15 @@ class Provider::Openai::AutoMerchantDetector
       merchants = extract_merchants_generic(response)
       result = build_response(merchants)
 
-      record_usage(model.presence || Provider::Openai::DEFAULT_MODEL, response.dig("usage"))
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_detect_merchants",
+        metadata: {
+          transaction_count: transactions.size,
+          merchant_count: user_merchants.size
+        }
+      )
 
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
@@ -135,45 +153,6 @@ class Provider::Openai::AutoMerchantDetector
     attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family
 
     AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
-
-    def record_usage(model_name, usage_data)
-      return unless family && usage_data
-
-      # Handle both old and new OpenAI API response formats
-      # Old format: prompt_tokens, completion_tokens, total_tokens
-      # New format: input_tokens, output_tokens, total_tokens
-      prompt_tokens = usage_data["prompt_tokens"] || usage_data["input_tokens"] || 0
-      completion_tokens = usage_data["completion_tokens"] || usage_data["output_tokens"] || 0
-      total_tokens = usage_data["total_tokens"] || 0
-
-      estimated_cost = LlmUsage.calculate_cost(
-        model: model_name,
-        prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens
-      )
-
-      # Log when we can't estimate the cost (e.g., custom/self-hosted models)
-      if estimated_cost.nil?
-        Rails.logger.info("Recording LLM usage without cost estimate for unknown model: #{model_name} (custom provider: #{custom_provider})")
-      end
-
-      inferred_provider = LlmUsage.infer_provider(model_name)
-      family.llm_usages.create!(
-        provider: inferred_provider,
-        model: model_name,
-        operation: "auto_detect_merchants",
-        prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens,
-        total_tokens: total_tokens,
-        estimated_cost: estimated_cost,
-        metadata: {
-          transaction_count: transactions.size,
-          merchant_count: user_merchants.size
-        }
-      )
-    rescue => e
-      Rails.logger.error("Failed to record LLM usage: #{e.message}")
-    end
 
     def build_response(categorizations)
       categorizations.map do |categorization|

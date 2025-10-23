@@ -188,7 +188,7 @@ class Provider::Openai < Provider
             response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
             response = response_chunk.data
             usage = response_chunk.usage
-            Rails.logger.info("Stream response usage: #{usage.inspect}")
+            Rails.logger.debug("Stream response usage: #{usage.inspect}")
             log_langfuse_generation(
               name: "chat_response",
               model: model,
@@ -202,7 +202,7 @@ class Provider::Openai < Provider
             response
           else
             parsed = ChatParser.new(raw_response).parsed
-            Rails.logger.info("Non-stream raw_response['usage']: #{raw_response['usage'].inspect}")
+            Rails.logger.debug("Non-stream raw_response['usage']: #{raw_response['usage'].inspect}")
             log_langfuse_generation(
               name: "chat_response",
               model: model,

@@ -1,4 +1,6 @@
 class Provider::Openai::AutoCategorizer
+  include Provider::Openai::Concerns::UsageRecorder
+
   attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family
 
   def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil)
@@ -67,7 +69,15 @@ class Provider::Openai::AutoCategorizer
       categorizations = extract_categorizations_native(response)
       result = build_response(categorizations)
 
-      record_usage(model.presence || Provider::Openai::DEFAULT_MODEL, response.dig("usage"))
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_categorize",
+        metadata: {
+          transaction_count: transactions.size,
+          category_count: user_categories.size
+        }
+      )
 
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
@@ -104,7 +114,15 @@ class Provider::Openai::AutoCategorizer
       categorizations = extract_categorizations_generic(response)
       result = build_response(categorizations)
 
-      record_usage(model.presence || Provider::Openai::DEFAULT_MODEL, response.dig("usage"))
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_categorize",
+        metadata: {
+          transaction_count: transactions.size,
+          category_count: user_categories.size
+        }
+      )
 
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
@@ -114,53 +132,6 @@ class Provider::Openai::AutoCategorizer
     end
 
     AutoCategorization = Provider::LlmConcept::AutoCategorization
-
-    def record_usage(model_name, usage_data)
-      return unless family && usage_data
-
-      Rails.logger.info("Auto-categorize: Raw usage_data: #{usage_data.inspect}")
-      Rails.logger.info("Auto-categorize: usage_data class: #{usage_data.class}")
-
-      # Handle both old and new OpenAI API response formats
-      # Old format: prompt_tokens, completion_tokens, total_tokens
-      # New format: input_tokens, output_tokens, total_tokens
-      prompt_tokens = usage_data["prompt_tokens"] || usage_data["input_tokens"] || 0
-      completion_tokens = usage_data["completion_tokens"] || usage_data["output_tokens"] || 0
-      total_tokens = usage_data["total_tokens"] || 0
-
-      Rails.logger.info("Auto-categorize: Extracted tokens - prompt: #{prompt_tokens}, completion: #{completion_tokens}, total: #{total_tokens}")
-
-      estimated_cost = LlmUsage.calculate_cost(
-        model: model_name,
-        prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens
-      )
-
-      # Log when we can't estimate the cost (e.g., custom/self-hosted models)
-      if estimated_cost.nil?
-        Rails.logger.info("Recording LLM usage without cost estimate for unknown model: #{model_name} (custom provider: #{custom_provider})")
-      end
-
-      inferred_provider = LlmUsage.infer_provider(model_name)
-      family.llm_usages.create!(
-        provider: inferred_provider,
-        model: model_name,
-        operation: "auto_categorize",
-        prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens,
-        total_tokens: total_tokens,
-        estimated_cost: estimated_cost,
-        metadata: {
-          transaction_count: transactions.size,
-          category_count: user_categories.size
-        }
-      )
-
-      Rails.logger.info("Auto-categorize: LLM usage recorded - Cost: #{estimated_cost.inspect}")
-    rescue => e
-      Rails.logger.error("Failed to record LLM usage: #{e.message}")
-      Rails.logger.error(e.backtrace.join("\n"))
-    end
 
     def build_response(categorizations)
       categorizations.map do |categorization|
