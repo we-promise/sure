@@ -3,13 +3,27 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     base_label = "Auto-categorize transactions with AI"
 
     if rule.family.self_hoster?
-      # Estimate cost for typical batch of 20 transactions
-      estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-        transaction_count: 20,
-        category_count: rule.family.categories.count,
-        model: Provider::Openai::DEFAULT_MODEL
-      )
-      "#{base_label} (~$#{sprintf('%.4f', estimated_cost)} per 20 transactions)"
+      # Use the same provider determination logic as Family::AutoCategorizer
+      llm_provider = Provider::Registry.get_provider(:openai)
+
+      if llm_provider
+        # Estimate cost for typical batch of 20 transactions
+        selected_model = Provider::Openai.effective_model
+        estimated_cost = LlmUsage.estimate_auto_categorize_cost(
+          transaction_count: 20,
+          category_count: rule.family.categories.count,
+          model: selected_model
+        )
+        suffix =
+          if estimated_cost.nil?
+            " (cost: N/A)"
+          else
+            " (~$#{sprintf('%.4f', estimated_cost)} per 20 transactions)"
+          end
+        "#{base_label}#{suffix}"
+      else
+        "#{base_label} (no LLM provider configured)"
+      end
     else
       base_label
     end

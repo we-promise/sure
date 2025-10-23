@@ -1,4 +1,7 @@
 class Provider::Openai::AutoCategorizer
+
+  attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family
+
   def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil)
     @client = client
     @model = model
@@ -110,8 +113,6 @@ class Provider::Openai::AutoCategorizer
       span&.end(output: { error: e.message }, level: "ERROR")
       raise
     end
-
-    attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family
 
     AutoCategorization = Provider::LlmConcept::AutoCategorization
 

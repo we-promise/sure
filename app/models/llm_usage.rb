@@ -106,12 +106,18 @@ class LlmUsage < ApplicationRecord
     # Exclude records with nil cost from cost calculations
     scope_with_cost = scope.where.not(estimated_cost: nil)
 
+    requests_with_cost = scope_with_cost.count
+    total_cost = scope_with_cost.sum(:estimated_cost).to_f.round(2)
+    avg_cost = requests_with_cost > 0 ? (total_cost / requests_with_cost).round(4) : 0.0
+
     {
       total_requests: scope.count,
+      requests_with_cost: requests_with_cost,
       total_prompt_tokens: scope.sum(:prompt_tokens),
       total_completion_tokens: scope.sum(:completion_tokens),
       total_tokens: scope.sum(:total_tokens),
-      total_cost: scope_with_cost.sum(:estimated_cost).to_f.round(2),
+      total_cost: total_cost,
+      avg_cost: avg_cost,
       by_operation: scope_with_cost.group(:operation).sum(:estimated_cost).transform_values { |v| v.to_f.round(2) },
       by_model: scope_with_cost.group(:model).sum(:estimated_cost).transform_values { |v| v.to_f.round(2) }
     }

@@ -55,8 +55,14 @@
         <p class="text-xs font-medium text-secondary uppercase">Avg Cost/Request</p>
       </div>
       <p class="text-2xl font-semibold text-primary">
-        $<%= @statistics[:total_requests] > 0 ? sprintf("%.4f", @statistics[:total_cost] / @statistics[:total_requests]) : "0.00" %>
+        $<%= sprintf("%.4f", @statistics[:avg_cost]) %>
       </p>
+      <% if @statistics[:requests_with_cost] < @statistics[:total_requests] %>
+        <p class="text-xs text-secondary mt-1">
+          Based on <%= number_with_delimiter(@statistics[:requests_with_cost]) %> of
+          <%= number_with_delimiter(@statistics[:total_requests]) %> requests with cost data
+        </p>
+      <% end %>
     </div>
   </div>
 
