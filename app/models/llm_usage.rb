@@ -16,8 +16,8 @@ class LlmUsage < ApplicationRecord
     "openai" => {
       # GPT-4.1 and similar models
       "gpt-4.1" => { prompt: 2.00, completion: 8.00 },
-      "gpt-4.1-mini	" => { prompt: 0.40, completion: 1.60 },
-      "gpt-4.1-nano	" => { prompt: 0.40, completion: 1.60 },
+      "gpt-4.1-mini" => { prompt: 0.40, completion: 1.60 },
+      "gpt-4.1-nano" => { prompt: 0.40, completion: 1.60 },
       # 4o
       "gpt-4o" => { prompt: 2.50, completion: 10.00 },
       "gpt-4o-mini" => { prompt: 0.15, completion: 0.60 },
