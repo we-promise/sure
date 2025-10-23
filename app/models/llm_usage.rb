@@ -10,28 +10,29 @@ class LlmUsage < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
   scope :for_date_range, ->(start_date, end_date) { where(created_at: start_date..end_date) }
 
-  # OpenAI pricing per 1M tokens (as of 2025)
-  # Source: https://openai.com/pricing
+  # OpenAI pricing per 1M tokens (as of Oct 2025)
+  # Source: https://platform.openai.com/docs/pricing
   PRICING = {
     "openai" => {
       # GPT-4.1 and similar models
-      "gpt-4.1" => { prompt: 2.50, completion: 10.00 },
-      "gpt-4.1-preview" => { prompt: 2.50, completion: 10.00 },
-      "gpt-4" => { prompt: 30.00, completion: 60.00 },
-      "gpt-4-turbo" => { prompt: 10.00, completion: 30.00 },
-      "gpt-4-turbo-preview" => { prompt: 10.00, completion: 30.00 },
+      "gpt-4.1" => { prompt: 2.00, completion: 8.00 },
+      "gpt-4.1-mini	" => { prompt: 0.40, completion: 1.60 },
+      "gpt-4.1-nano	" => { prompt: 0.40, completion: 1.60 },
+      # 4o
+      "gpt-4o" => { prompt: 2.50, completion: 10.00 },
+      "gpt-4o-mini" => { prompt: 0.15, completion: 0.60 },
       # GPT-5 models (estimated pricing)
-      "gpt-5" => { prompt: 5.00, completion: 15.00 },
+      "gpt-5" => { prompt: 1.25, completion: 10.00 },
+      "gpt-5-mini" => { prompt: 0.25, completion: 2.00 },
+      "gpt-5-nano" => { prompt: 0.05, completion: 0.40 },
+      "gpt-5-pro" => { prompt: 15.00, completion: 120.00 },
       # o1 models
-      "o1-preview" => { prompt: 15.00, completion: 60.00 },
-      "o1-mini" => { prompt: 3.00, completion: 12.00 },
+      "o1-mini" => { prompt: 1.10, completion: 4.40 },
       "o1" => { prompt: 15.00, completion: 60.00 },
       # o3 models (estimated pricing)
-      "o3-mini" => { prompt: 3.00, completion: 12.00 },
-      "o3" => { prompt: 20.00, completion: 80.00 },
-      # GPT-3.5 models
-      "gpt-3.5-turbo" => { prompt: 0.50, completion: 1.50 },
-      "gpt-3.5-turbo-16k" => { prompt: 3.00, completion: 4.00 }
+      "o3" => { prompt: 2.00, completion: 8.00 },
+      "o3-mini" => { prompt: 1.10, completion: 4.40 },
+      "o3-pro" => { prompt: 20.00, completion: 80.00 },
     }
   }.freeze
 
