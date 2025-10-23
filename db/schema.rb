@@ -29,7 +29,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
     t.uuid "accountable_id"
     t.decimal "balance", precision: 19, scale: 4
     t.string "currency"
-    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY ((ARRAY['Loan'::character varying, 'CreditCard'::character varying, 'OtherLiability'::character varying])::text[])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
     t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
@@ -293,6 +293,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "external_id"
+    t.decimal "cost_basis", precision: 19, scale: 4
+    t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["account_id", "external_id"], name: "index_holdings_on_account_and_external_id", unique: true
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
@@ -715,6 +719,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
     t.datetime "balance_date"
     t.jsonb "extra"
     t.jsonb "org_data"
+    t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
   end
@@ -733,6 +738,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "pending_account_setup", default: false, null: false
+    t.string "institution_domain"
+    t.string "institution_color"
+    t.date "sync_start_date"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
@@ -766,6 +774,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
     t.datetime "failed_at"
     t.date "window_start_date"
     t.date "window_end_date"
+    t.text "sync_stats"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
