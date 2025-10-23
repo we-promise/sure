@@ -15,6 +15,37 @@
       that meet the specified rule criteria.  Please confirm if you wish to proceed with this change.
     </p>
 
+    <% if @rule.actions.any? { |a| a.action_type == "auto_categorize" } %>
+      <% affected_count = @rule.affected_resource_count %>
+      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-start gap-2">
+          <%= icon "info", class: "w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" %>
+          <div class="text-xs">
+            <p class="font-medium text-blue-900 mb-1">AI Cost Estimation</p>
+            <% if @estimated_cost.present? %>
+              <p class="text-blue-700">
+                This will use AI to categorize <%= affected_count %> transaction<%= "s" if affected_count != 1 %>.
+                Estimated cost: <span class="font-semibold">~$<%= sprintf("%.4f", @estimated_cost) %></span>
+              </p>
+            <% else %>
+              <p class="text-blue-700">
+                This will use AI to categorize <%= affected_count %> transaction<%= "s" if affected_count != 1 %>.
+                <% if @selected_model.present? %>
+                  <span class="font-semibold">Cost estimation unavailable for model "<%= @selected_model %>".</span>
+                <% else %>
+                  <span class="font-semibold">Cost estimation unavailable (no LLM provider configured).</span>
+                <% end %>
+                You may incur costs, please check with the model provider for the most up-to-date prices.
+              </p>
+            <% end %>
+            <p class="text-blue-600 mt-1">
+              <%= link_to "View usage history", settings_llm_usage_path, class: "underline hover:text-blue-800" %>
+            </p>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
     <%= render DS::Button.new(
       text: "Confirm changes",
       href: apply_rule_path(@rule),

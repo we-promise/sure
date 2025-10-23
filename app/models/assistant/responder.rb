@@ -82,7 +82,8 @@ class Assistant::Responder
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: chat_session_id,
-        user_identifier: chat_user_identifier
+        user_identifier: chat_user_identifier,
+        family: message.chat&.user&.family
       )
 
       unless response.success?
