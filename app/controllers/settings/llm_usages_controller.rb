@@ -9,8 +9,19 @@ class Settings::LlmUsagesController < ApplicationController
     @family = Current.family
 
     # Get date range from params or default to last 30 days
-    @end_date = params[:end_date].present? ? Date.parse(params[:end_date]) : Date.today
-    @start_date = params[:start_date].present? ? Date.parse(params[:start_date]) : @end_date - 30.days
+    def safe_parse_date(s)
+      Date.iso8601(s)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    private
+
+    @end_date  = safe_parse_date(params[:end_date])  || Date.today
+    @start_date = safe_parse_date(params[:start_date]) || (@end_date - 30.days)
+    if @start_date > @end_date
+      @start_date, @end_date = @end_date - 30.days, @end_date
+    end
 
     # Get usage data
     @llm_usages = @family.llm_usages
