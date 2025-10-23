@@ -93,7 +93,8 @@ module ApplicationHelper
 
   def default_ai_model
     # Always return a valid model, never nil or empty
-    ENV["OPENAI_MODEL"].presence || Setting.openai_model.presence || Provider::Openai::DEFAULT_MODEL
+    # Delegates to Chat.default_model for consistency
+    Chat.default_model
   end
 
   # Renders Markdown text using Redcarpet

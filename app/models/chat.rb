@@ -25,11 +25,11 @@ class Chat < ApplicationRecord
       prompt.first(80)
     end
 
-    private
-      def default_model
-        # Get the configured model from ENV/Settings, or fall back to OpenAI default
-        ENV.fetch("OPENAI_MODEL", Setting.openai_model.presence || Provider::Openai::DEFAULT_MODEL)
-      end
+    # Returns the default AI model to use for chats
+    # Priority: ENV variable > Setting > OpenAI default
+    def default_model
+      ENV["OPENAI_MODEL"].presence || Setting.openai_model.presence || Provider::Openai::DEFAULT_MODEL
+    end
   end
 
   def needs_assistant_response?
