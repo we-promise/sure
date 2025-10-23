@@ -1,0 +1,165 @@
+<div class="bg-container rounded-xl shadow-border-xs p-4">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-primary">LLM Usage & Costs</h1>
+    <p class="text-sm text-secondary mt-1">Track your AI usage and estimated costs</p>
+  </div>
+
+  <!-- Date Range Filter -->
+  <div class="mb-6">
+    <%= form_with url: settings_llm_usage_path, method: :get, class: "flex gap-4 items-end" do |f| %>
+      <div>
+        <%= f.label :start_date, "Start Date", class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.date_field :start_date, value: @start_date, class: "rounded-lg border border-primary px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :end_date, "End Date", class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.date_field :end_date, value: @end_date, class: "rounded-lg border border-primary px-3 py-2 text-sm" %>
+      </div>
+      <%= f.submit "Filter", class: "rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800" %>
+    <% end %>
+  </div>
+
+  <!-- Statistics Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-container-inset rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon "activity", class: "w-5 h-5 text-secondary" %>
+        <p class="text-xs font-medium text-secondary uppercase">Total Requests</p>
+      </div>
+      <p class="text-2xl font-semibold text-primary"><%= number_with_delimiter(@statistics[:total_requests]) %></p>
+    </div>
+
+    <div class="bg-container-inset rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon "hash", class: "w-5 h-5 text-secondary" %>
+        <p class="text-xs font-medium text-secondary uppercase">Total Tokens</p>
+      </div>
+      <p class="text-2xl font-semibold text-primary"><%= number_with_delimiter(@statistics[:total_tokens]) %></p>
+      <p class="text-xs text-secondary mt-1">
+        <%= number_with_delimiter(@statistics[:total_prompt_tokens]) %> prompt /
+        <%= number_with_delimiter(@statistics[:total_completion_tokens]) %> completion
+      </p>
+    </div>
+
+    <div class="bg-container-inset rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon "dollar-sign", class: "w-5 h-5 text-secondary" %>
+        <p class="text-xs font-medium text-secondary uppercase">Total Cost</p>
+      </div>
+      <p class="text-2xl font-semibold text-primary">$<%= sprintf("%.2f", @statistics[:total_cost]) %></p>
+    </div>
+
+    <div class="bg-container-inset rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon "trending-up", class: "w-5 h-5 text-secondary" %>
+        <p class="text-xs font-medium text-secondary uppercase">Avg Cost/Request</p>
+      </div>
+      <p class="text-2xl font-semibold text-primary">
+        $<%= sprintf("%.4f", @statistics[:avg_cost]) %>
+      </p>
+      <% if @statistics[:requests_with_cost] < @statistics[:total_requests] %>
+        <p class="text-xs text-secondary mt-1">
+          Based on <%= number_with_delimiter(@statistics[:requests_with_cost]) %> of
+          <%= number_with_delimiter(@statistics[:total_requests]) %> requests with cost data
+        </p>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Cost by Operation -->
+  <% if @statistics[:by_operation].any? %>
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold text-primary mb-3">Cost by Operation</h2>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="space-y-2">
+          <% @statistics[:by_operation].each do |operation, cost| %>
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-primary"><%= operation.humanize %></span>
+              <span class="text-sm font-medium text-primary">$<%= sprintf("%.4f", cost) %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Cost by Model -->
+  <% if @statistics[:by_model].any? %>
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold text-primary mb-3">Cost by Model</h2>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="space-y-2">
+          <% @statistics[:by_model].each do |model, cost| %>
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-primary font-mono"><%= model %></span>
+              <span class="text-sm font-medium text-primary">$<%= sprintf("%.4f", cost) %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Recent Usage Table -->
+  <div>
+    <h2 class="text-lg font-semibold text-primary mb-3">Recent Usage</h2>
+    <div class="bg-container-inset rounded-lg overflow-hidden">
+      <% if @llm_usages.any? %>
+        <table class="w-full">
+          <thead class="bg-surface-default border-b border-primary">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase">Operation</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase">Model</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase">Tokens</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase">Cost</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <% @llm_usages.each do |usage| %>
+              <tr>
+                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
+                  <%= usage.created_at.strftime("%b %d, %Y %I:%M %p") %>
+                </td>
+                <td class="px-4 py-3 text-sm text-primary">
+                  <%= usage.operation.humanize %>
+                </td>
+                <td class="px-4 py-3 text-sm text-primary font-mono">
+                  <%= usage.model %>
+                </td>
+                <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
+                  <%= number_with_delimiter(usage.total_tokens) %>
+                  <span class="text-xs text-secondary">
+                    (<%= number_with_delimiter(usage.prompt_tokens) %>/<%= number_with_delimiter(usage.completion_tokens) %>)
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-sm font-medium text-primary text-right whitespace-nowrap">
+                  <%= usage.formatted_cost %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <div class="p-8 text-center">
+          <p class="text-secondary">No usage data found for the selected period</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Pricing Information -->
+  <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <div class="flex items-start gap-2">
+      <%= icon "info", class: "w-5 h-5 text-blue-600 mt-0.5" %>
+      <div>
+        <p class="text-sm font-medium text-blue-900">About Cost Estimates</p>
+        <p class="text-xs text-blue-700 mt-1">
+          Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary.
+          Pricing is per 1 million tokens and varies by model.
+          Custom or self-hosted models will show "N/A" and are not included in cost totals.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

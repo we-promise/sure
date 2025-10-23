@@ -65,6 +65,7 @@ Rails.application.routes.draw do
     resource :security, only: :show
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
+    resource :llm_usage, only: :show
     resource :guides, only: :show
     resource :bank_sync, only: :show, controller: "bank_sync"
   end
