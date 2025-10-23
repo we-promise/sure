@@ -1,5 +1,4 @@
 class Provider::Openai::AutoCategorizer
-
   attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family
 
   def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil)
