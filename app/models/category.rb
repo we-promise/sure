@@ -47,7 +47,20 @@ class Category < ApplicationRecord
 
   class << self
     def icon_codes
-      %w[bus circle-dollar-sign ambulance apple award baby battery lightbulb bed-single beer bluetooth book briefcase building credit-card camera utensils cooking-pot cookie dices drama dog drill drum dumbbell gamepad-2 graduation-cap house hand-helping ice-cream-cone phone piggy-bank pill pizza printer puzzle ribbon shopping-cart shield-plus ticket trees]
+      %w[
+        ambulance apple award baby banknote barcode bath battery bed-single beer bike
+        bluetooth bone book book-open briefcase building bus cake calculator camera
+        car cat circle-dollar-sign coffee coins compass cookie cooking-pot credit-card
+        dices dog drama drill droplet drum dumbbell film flame flower fuel gamepad-2
+        gift glasses globe graduation-cap hammer hand-helping headphones heart
+        heart-pulse home house ice-cream-cone key landmark laptop leaf lightbulb
+        luggage mail map-pin mic monitor moon music package palette paw-print pen
+        pencil phone piggy-bank pill pizza plane plug power printer puzzle receipt
+        ribbon scale scissors settings shield shield-plus shirt shopping-bag
+        shopping-cart smartphone sparkles sprout stethoscope store sun tag target
+        tent thermometer ticket train trees trophy truck tv umbrella users utensils
+        video wallet waves wifi wine wrench zap
+      ]
     end
 
     def bootstrap!
@@ -71,20 +84,27 @@ class Category < ApplicationRecord
     private
       def default_categories
         [
-          [ "Income", "#e99537", "circle-dollar-sign", "income" ],
-          [ "Loan Payments", "#6471eb", "credit-card", "expense" ],
-          [ "Fees", "#6471eb", "credit-card", "expense" ],
-          [ "Entertainment", "#df4e92", "drama", "expense" ],
-          [ "Food & Drink", "#eb5429", "utensils", "expense" ],
-          [ "Shopping", "#e99537", "shopping-cart", "expense" ],
-          [ "Home Improvement", "#6471eb", "house", "expense" ],
+          [ "Income", "#22c55e", "circle-dollar-sign", "income" ],
+          [ "Food & Drink", "#f97316", "utensils", "expense" ],
+          [ "Groceries", "#407706", "shopping-bag", "expense" ],
+          [ "Shopping", "#3b82f6", "shopping-cart", "expense" ],
+          [ "Transportation", "#0ea5e9", "bus", "expense" ],
+          [ "Travel", "#2563eb", "plane", "expense" ],
+          [ "Entertainment", "#a855f7", "drama", "expense" ],
           [ "Healthcare", "#4da568", "pill", "expense" ],
-          [ "Personal Care", "#4da568", "pill", "expense" ],
-          [ "Services", "#4da568", "briefcase", "expense" ],
+          [ "Personal Care", "#14b8a6", "scissors", "expense" ],
+          [ "Home Improvement", "#d97706", "house", "expense" ],
+          [ "Mortgage / Rent", "#b45309", "home", "expense" ],
+          [ "Utilities", "#f97316", "lightbulb", "expense" ],
+          [ "Subscriptions", "#6366f1", "wifi", "expense" ],
+          [ "Insurance", "#0ea5e9", "shield", "expense" ],
+          [ "Sports & Fitness", "#10b981", "dumbbell", "expense" ],
           [ "Gifts & Donations", "#61c9ea", "hand-helping", "expense" ],
-          [ "Transportation", "#df4e92", "bus", "expense" ],
-          [ "Travel", "#df4e92", "plane", "expense" ],
-          [ "Rent & Utilities", "#db5a54", "lightbulb", "expense" ]
+          [ "Taxes", "#dc2626", "landmark", "expense" ],
+          [ "Loan Payments", "#dc2626", "credit-card", "expense" ],
+          [ "Services", "#6366f1", "briefcase", "expense" ],
+          [ "Fees", "#6b7280", "receipt", "expense" ],
+          [ "Savings & Investments", "#10b981", "piggy-bank", "expense" ]
         ]
       end
   end
