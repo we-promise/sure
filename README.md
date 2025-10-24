@@ -86,11 +86,11 @@ For further instructions, see guides below.
 - [Windows dev setup](https://github.com/we-promise/sure/wiki/Windows-Dev-Setup-Guide)
 - Dev containers - visit [this guide](https://code.visualstudio.com/docs/devcontainers/containers)
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=bE8vHp&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
 ## License and Trademarks
 
 Maybe and Sure are both distributed under
 an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 - "Maybe" is a trademark of Maybe Finance, Inc.
 - "Sure" is not, and refers to this community fork.
-
-  [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=bE8vHp&utm_medium=integration&utm_source=template&utm_campaign=generic)
