@@ -29,11 +29,7 @@ class OidcAccountsController < ApplicationController
     if user
       # Create the OIDC identity link
       oidc_identity = OidcIdentity.create_from_omniauth(
-        OpenStruct.new(
-          provider: @pending_auth["provider"],
-          uid: @pending_auth["uid"],
-          info: OpenStruct.new(@pending_auth.slice("email", "name", "first_name", "last_name"))
-        ),
+        build_auth_hash(@pending_auth),
         user
       )
 
@@ -98,11 +94,7 @@ class OidcAccountsController < ApplicationController
     if @user.save
       # Create the OIDC identity
       OidcIdentity.create_from_omniauth(
-        OpenStruct.new(
-          provider: @pending_auth["provider"],
-          uid: @pending_auth["uid"],
-          info: OpenStruct.new(@pending_auth.slice("email", "name", "first_name", "last_name"))
-        ),
+        build_auth_hash(@pending_auth),
         @user
       )
 
@@ -115,5 +107,16 @@ class OidcAccountsController < ApplicationController
     else
       render :new_user, status: :unprocessable_entity
     end
+  end
+
+  private
+
+  # Convert pending auth hash to OmniAuth-like structure
+  def build_auth_hash(pending_auth)
+    OpenStruct.new(
+      provider: pending_auth["provider"],
+      uid: pending_auth["uid"],
+      info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name"))
+    )
   end
 end
