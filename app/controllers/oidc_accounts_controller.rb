@@ -111,12 +111,12 @@ class OidcAccountsController < ApplicationController
 
   private
 
-  # Convert pending auth hash to OmniAuth-like structure
-  def build_auth_hash(pending_auth)
-    OpenStruct.new(
-      provider: pending_auth["provider"],
-      uid: pending_auth["uid"],
-      info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name"))
-    )
-  end
+    # Convert pending auth hash to OmniAuth-like structure
+    def build_auth_hash(pending_auth)
+      OpenStruct.new(
+        provider: pending_auth["provider"],
+        uid: pending_auth["uid"],
+        info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name"))
+      )
+    end
 end
