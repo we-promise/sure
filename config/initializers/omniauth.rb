@@ -24,6 +24,5 @@ if missing.empty? || Rails.env.test?
   Rails.configuration.x.auth.oidc_enabled = true
 else
   Rails.logger.warn("OIDC not enabled: missing env vars: #{missing.join(', ')}")
-  raise "Missing required OIDC env vars: #{missing.join(', ')}" if Rails.env.production?
   Rails.configuration.x.auth.oidc_enabled = false
 end
