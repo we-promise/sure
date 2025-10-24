@@ -10,6 +10,6 @@ class CreateOidcIdentities < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :oidc_identities, [:provider, :uid], unique: true
+    add_index :oidc_identities, [ :provider, :uid ], unique: true
   end
 end

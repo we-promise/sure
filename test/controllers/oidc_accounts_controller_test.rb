@@ -123,7 +123,7 @@ class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create new user account via OIDC" do
-    assert_difference ["User.count", "OidcIdentity.count", "Family.count"], 1 do
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
       post create_user_oidc_account_path, session: { pending_oidc_auth: new_user_auth }
     end
 

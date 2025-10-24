@@ -1,5 +1,5 @@
 class OidcAccountsController < ApplicationController
-  skip_authentication only: [:link, :create_link, :new_user, :create_user]
+  skip_authentication only: [ :link, :create_link, :new_user, :create_user ]
   layout "auth"
 
   def link
