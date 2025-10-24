@@ -1,6 +1,6 @@
 require "test_helper"
 
-class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
+class OidcAccountsControllerTest < ActionController::TestCase
   setup do
     @user = users(:family_admin)
   end
@@ -16,46 +16,27 @@ class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
     }
   end
 
-  def set_pending_auth(auth_data)
-    # Set session data by making a request that stores it
-    post sessions_path, env: {
-      "rack.session" => { pending_oidc_auth: auth_data }
-    }, params: {}
-  end
-
   test "should show link page when pending auth exists" do
-    # Simulate OmniAuth callback via the sessions controller
-    get "/auth/openid_connect/callback", env: {
-      "omniauth.auth" => OmniAuth::AuthHash.new({
-        provider: pending_auth["provider"],
-        uid: pending_auth["uid"],
-        info: {
-          email: pending_auth["email"],
-          name: pending_auth["name"]
-        }
-      }),
-      "rack.session" => {},
-      "action_dispatch.show_exceptions" => :none
-    }
-
-    get link_oidc_account_path
+    session[:pending_oidc_auth] = pending_auth
+    get :link
     assert_response :success
   end
 
   test "should redirect to login when no pending auth" do
-    get link_oidc_account_path
+    get :link
     assert_redirected_to new_session_path
     assert_equal "No pending OIDC authentication found", flash[:alert]
   end
 
   test "should create OIDC identity with valid password" do
+    session[:pending_oidc_auth] = pending_auth
+
     assert_difference "OidcIdentity.count", 1 do
-      post create_link_oidc_account_path,
+      post :create_link,
         params: {
           email: @user.email,
           password: user_password_test
-        },
-        session: { pending_oidc_auth: pending_auth }
+        }
     end
 
     assert_redirected_to root_path
@@ -66,13 +47,14 @@ class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should reject linking with invalid password" do
+    session[:pending_oidc_auth] = pending_auth
+
     assert_no_difference "OidcIdentity.count" do
-      post create_link_oidc_account_path,
+      post :create_link,
         params: {
           email: @user.email,
           password: "wrongpassword"
-        },
-        session: { pending_oidc_auth: pending_auth }
+        }
     end
 
     assert_response :unprocessable_entity
@@ -83,18 +65,19 @@ class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
     @user.setup_mfa!
     @user.enable_mfa!
 
-    post create_link_oidc_account_path,
+    session[:pending_oidc_auth] = pending_auth
+
+    post :create_link,
       params: {
         email: @user.email,
         password: user_password_test
-      },
-      session: { pending_oidc_auth: pending_auth }
+      }
 
     assert_redirected_to verify_mfa_path
   end
 
   test "should reject create_link when no pending auth" do
-    post create_link_oidc_account_path, params: {
+    post :create_link, params: {
       email: @user.email,
       password: user_password_test
     }
@@ -116,15 +99,19 @@ class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should show create account option for new user" do
-    get link_oidc_account_path, session: { pending_oidc_auth: new_user_auth }
+    session[:pending_oidc_auth] = new_user_auth
+
+    get :link
     assert_response :success
     assert_select "h3", text: "Create New Account"
     assert_select "strong", text: new_user_auth["email"]
   end
 
   test "should create new user account via OIDC" do
+    session[:pending_oidc_auth] = new_user_auth
+
     assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
-      post create_user_oidc_account_path, session: { pending_oidc_auth: new_user_auth }
+      post :create_user
     end
 
     assert_redirected_to root_path
@@ -145,7 +132,9 @@ class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create session after OIDC registration" do
-    post create_user_oidc_account_path, session: { pending_oidc_auth: new_user_auth }
+    session[:pending_oidc_auth] = new_user_auth
+
+    post :create_user
 
     # Verify session was created
     new_user = User.find_by(email: new_user_auth["email"])
@@ -153,7 +142,7 @@ class OidcAccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should reject create_user when no pending auth" do
-    post create_user_oidc_account_path
+    post :create_user
 
     assert_redirected_to new_session_path
     assert_equal "No pending OIDC authentication found", flash[:alert]

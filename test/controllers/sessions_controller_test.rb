@@ -5,6 +5,24 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
   end
 
+  teardown do
+    # Clear OmniAuth mock auth after each test
+    OmniAuth.config.mock_auth[:openid_connect] = nil
+  end
+
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+    OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
+      provider: provider,
+      uid: uid,
+      info: {
+        email: email,
+        name: name,
+        first_name: first_name,
+        last_name: last_name
+      }.compact
+    })
+  end
+
   test "login page" do
     get new_session_url
     assert_response :success
@@ -53,19 +71,17 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   test "authenticates with existing OIDC identity" do
     oidc_identity = oidc_identities(:bob_google)
 
-    # Simulate OmniAuth callback by setting request.env
-    get "/auth/openid_connect/callback", env: {
-      "omniauth.auth" => OmniAuth::AuthHash.new({
-        provider: oidc_identity.provider,
-        uid: oidc_identity.uid,
-        info: {
-          email: @user.email,
-          name: "Bob Dylan",
-          first_name: "Bob",
-          last_name: "Dylan"
-        }
-      })
-    }
+    # Set up OmniAuth mock
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      first_name: "Bob",
+      last_name: "Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: @user.id)
@@ -77,16 +93,15 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     @user.sessions.destroy_all
     oidc_identity = oidc_identities(:bob_google)
 
-    get "/auth/openid_connect/callback", env: {
-      "omniauth.auth" => OmniAuth::AuthHash.new({
-        provider: oidc_identity.provider,
-        uid: oidc_identity.uid,
-        info: {
-          email: @user.email,
-          name: "Bob Dylan"
-        }
-      })
-    }
+    # Set up OmniAuth mock
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
 
     assert_redirected_to verify_mfa_path
     assert_equal @user.id, session[:mfa_user_id]
@@ -94,16 +109,18 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "redirects to account linking when no OIDC identity exists" do
-    get "/auth/openid_connect/callback", env: {
-      "omniauth.auth" => OmniAuth::AuthHash.new({
-        provider: "openid_connect",
-        uid: "new-uid-99999",
-        info: {
-          email: "newemail@example.com",
-          name: "New User"
-        }
-      })
-    }
+    # Use an existing user's email who doesn't have OIDC linked yet
+    user_without_oidc = users(:new_email)
+
+    # Set up OmniAuth mock
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "new-uid-99999",
+      email: user_without_oidc.email,
+      name: "New User"
+    )
+
+    get "/auth/openid_connect/callback"
 
     assert_redirected_to link_oidc_account_path
 
@@ -116,7 +133,12 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "handles missing auth data gracefully" do
-    # Don't set up auth data to simulate missing auth
+    # Set up mock with invalid/incomplete auth to simulate failure
+    OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
+      provider: nil,
+      uid: nil
+    })
+
     get "/auth/openid_connect/callback"
 
     assert_redirected_to new_session_path
@@ -129,15 +151,15 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     # This test verifies that we can't authenticate just by matching email
     # The user must have an existing OIDC identity with matching provider + uid
-    get "/auth/openid_connect/callback", env: {
-      "omniauth.auth" => OmniAuth::AuthHash.new({
-        provider: "openid_connect",
-        uid: "attacker-uid-12345", # Different UID than user's OIDC identity
-        info: {
-          email: @user.email # Same email as existing user
-        }
-      })
-    }
+    # Set up OmniAuth mock
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "attacker-uid-12345", # Different UID than user's OIDC identity
+      email: @user.email, # Same email as existing user
+      name: "Attacker"
+    )
+
+    get "/auth/openid_connect/callback"
 
     # Should NOT create a session, should redirect to account linking
     assert_redirected_to link_oidc_account_path

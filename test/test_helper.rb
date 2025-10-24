@@ -37,7 +37,7 @@ VCR.configure do |config|
 end
 
 # Configure OmniAuth for testing
-OmniAuth.config.test_mode = false
+OmniAuth.config.test_mode = true
 # Allow both GET and POST for OIDC callbacks in tests
 OmniAuth.config.allowed_request_methods = [ :get, :post ]
 
