@@ -29,6 +29,56 @@ class AssistantTest < ActiveSupport::TestCase
     end
   end
 
+  test "handles missing provider gracefully with helpful error message" do
+    # Simulate no provider configured (returns nil)
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(nil)
+
+    # Mock the registry to return empty providers
+    mock_registry = mock("registry")
+    mock_registry.stubs(:providers).returns([])
+    @assistant.stubs(:registry).returns(mock_registry)
+
+    @chat.expects(:add_error).with do |error|
+      assert_includes error.message, "No LLM provider configured that supports model 'gpt-4.1'"
+      assert_includes error.message, "Please configure an LLM provider (e.g., OpenAI) in settings."
+      true
+    end
+
+    assert_no_difference "AssistantMessage.count" do
+      @assistant.respond_to(@message)
+    end
+  end
+
+  test "shows available providers in error message when model not supported" do
+    # Simulate provider exists but doesn't support the model
+    @assistant.expects(:get_model_provider).with("claude-3").returns(nil)
+
+    # Create mock provider
+    mock_provider = mock("openai_provider")
+    mock_provider.stubs(:provider_name).returns("OpenAI")
+    mock_provider.stubs(:supported_models_description).returns("models starting with: gpt-4, gpt-5, o1, o3")
+
+    # Mock the registry to return the provider
+    mock_registry = mock("registry")
+    mock_registry.stubs(:providers).returns([ mock_provider ])
+    @assistant.stubs(:registry).returns(mock_registry)
+
+    # Update message to use unsupported model
+    @message.update!(ai_model: "claude-3")
+
+    @chat.expects(:add_error).with do |error|
+      assert_includes error.message, "No LLM provider configured that supports model 'claude-3'"
+      assert_includes error.message, "Available providers:"
+      assert_includes error.message, "OpenAI: models starting with: gpt-4, gpt-5, o1, o3"
+      assert_includes error.message, "Use a supported model from the list above"
+      true
+    end
+
+    assert_no_difference "AssistantMessage.count" do
+      @assistant.respond_to(@message)
+    end
+  end
+
   test "responds to basic prompt" do
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
 
