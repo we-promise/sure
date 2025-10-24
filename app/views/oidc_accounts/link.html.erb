@@ -53,7 +53,14 @@
       <% end %>
     </div>
 
-    <%= button_to "Create Account", create_user_oidc_account_path, method: :post, class: "w-full", data: { turbo: false } %>
+    <%= render DS::Button.new(
+      text: "Create Account",
+      href: create_user_oidc_account_path,
+      full_width: true,
+      variant: :primary,
+      method: :post,
+      data: { turbo: false }
+    ) %>
   </div>
 <% end %>
 
