@@ -88,7 +88,7 @@ For further instructions, see guides below.
 
 ### One click deploys
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 
 ## License and Trademarks
 
