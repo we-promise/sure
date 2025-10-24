@@ -21,7 +21,9 @@ if missing.empty? || Rails.env.test?
                redirect_uri: ENV["OIDC_REDIRECT_URI"] || "http://test.example.com/callback"
              }
   end
+  Rails.configuration.x.auth.oidc_enabled = true
 else
   Rails.logger.warn("OIDC not enabled: missing env vars: #{missing.join(', ')}")
   raise "Missing required OIDC env vars: #{missing.join(', ')}" if Rails.env.production?
+  Rails.configuration.x.auth.oidc_enabled = false
 end
