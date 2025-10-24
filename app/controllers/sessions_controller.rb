@@ -32,7 +32,7 @@ class SessionsController < ApplicationController
 
     # Nil safety: ensure auth and required fields are present
     unless auth&.provider && auth&.uid
-      redirect_to new_session_path, alert: t(".failed")
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
       return
     end
 
@@ -68,7 +68,7 @@ class SessionsController < ApplicationController
   end
 
   def failure
-    redirect_to new_session_path, alert: t(".failed")
+    redirect_to new_session_path, alert: t("sessions.failure.failed")
   end
 
   private

@@ -4,13 +4,15 @@ require "omniauth/rails_csrf_protection"
 
 # Configure OmniAuth for production or test environments
 # In test mode, OmniAuth will use mock data instead of real provider configuration
-if ENV["OIDC_ISSUER"].present? || Rails.env.test?
+required_env = %w[OIDC_ISSUER OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_REDIRECT_URI]
+missing = required_env.select { |k| ENV[k].blank? }
+if missing.empty? || Rails.env.test?
   Rails.application.config.middleware.use OmniAuth::Builder do
     provider :openid_connect,
              name: :openid_connect,
              scope: %i[openid email profile],
              response_type: :code,
-             issuer: ENV["OIDC_ISSUER"] || "https://test.example.com",
+             issuer: ENV["OIDC_ISSUER"].to_s.strip || "https://test.example.com",
              discovery: true,
              pkce: true,
              client_options: {
@@ -19,4 +21,7 @@ if ENV["OIDC_ISSUER"].present? || Rails.env.test?
                redirect_uri: ENV["OIDC_REDIRECT_URI"] || "http://test.example.com/callback"
              }
   end
+else
+  Rails.logger.warn("OIDC not enabled: missing env vars: #{missing.join(', ')}")
+  raise "Missing required OIDC env vars: #{missing.join(', ')}" if Rails.env.production?
 end
