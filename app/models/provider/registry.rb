@@ -33,7 +33,7 @@ class Provider::Registry
       end
 
       def twelve_data
-        api_key = ENV.fetch("TWELVE_DATA_API_KEY", Setting.twelve_data_api_key)
+        api_key = ENV["TWELVE_DATA_API_KEY"].presence || Setting.twelve_data_api_key
 
         return nil unless api_key.present?
 
@@ -61,12 +61,12 @@ class Provider::Registry
       end
 
       def openai
-        access_token = ENV.fetch("OPENAI_ACCESS_TOKEN", Setting.openai_access_token)
+        access_token = ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
 
         return nil unless access_token.present?
 
-        uri_base = ENV.fetch("OPENAI_URI_BASE", Setting.openai_uri_base)
-        model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
+        uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
+        model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
 
         if uri_base.present? && model.blank?
           Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
@@ -83,7 +83,7 @@ class Provider::Registry
   end
 
   def providers
-    available_providers.map { |p| self.class.send(p) }
+    available_providers.map { |p| self.class.send(p) }.compact
   end
 
   def get_provider(name)

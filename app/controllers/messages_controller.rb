@@ -7,7 +7,7 @@ class MessagesController < ApplicationController
     @message = UserMessage.create!(
       chat: @chat,
       content: message_params[:content],
-      ai_model: message_params[:ai_model]
+      ai_model: message_params[:ai_model].presence || Chat.default_model
     )
 
     redirect_to chat_path(@chat, thinking: true)
