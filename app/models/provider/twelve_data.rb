@@ -64,7 +64,7 @@ class Provider::TwelveData < Provider
 
       parsed = JSON.parse(response.body)
       data = parsed.dig("values")
-      
+
       if data.nil?
         error_message = parsed.dig("message") || "No data returned"
         error_code = parsed.dig("code") || "unknown"
@@ -97,7 +97,7 @@ class Provider::TwelveData < Provider
 
       parsed = JSON.parse(response.body)
       data = parsed.dig("data")
-      
+
       if data.nil?
         error_message = parsed.dig("message") || "No data returned"
         error_code = parsed.dig("code") || "unknown"
@@ -168,7 +168,7 @@ class Provider::TwelveData < Provider
 
       parsed = JSON.parse(response.body)
       values = parsed.dig("values")
-      
+
       if values.nil?
         error_message = parsed.dig("message") || "No data returned"
         error_code = parsed.dig("code") || "unknown"
