@@ -7,10 +7,23 @@ class PagesController < ApplicationController
     @balance_sheet = Current.family.balance_sheet
     @accounts = Current.family.accounts.visible.with_attached_logo
 
-    period_param = params[:cashflow_period]
-    @cashflow_period = if period_param.present?
+    # Handle cashflow period
+    cashflow_period_param = params[:cashflow_period]
+    @cashflow_period = if cashflow_period_param.present?
       begin
-        Period.from_key(period_param)
+        Period.from_key(cashflow_period_param)
+      rescue Period::InvalidKeyError
+        Period.last_30_days
+      end
+    else
+      Period.last_30_days
+    end
+
+    # Handle outflows period
+    outflows_period_param = params[:outflows_period]
+    @outflows_period = if outflows_period_param.present?
+      begin
+        Period.from_key(outflows_period_param)
       rescue Period::InvalidKeyError
         Period.last_30_days
       end
@@ -19,10 +32,15 @@ class PagesController < ApplicationController
     end
 
     family_currency = Current.family.currency
-    income_totals = Current.family.income_statement.income_totals(period: @cashflow_period)
-    expense_totals = Current.family.income_statement.expense_totals(period: @cashflow_period)
 
-    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
+    # Get data for cashflow section
+    income_totals = Current.family.income_statement.income_totals(period: @cashflow_period)
+    cashflow_expense_totals = Current.family.income_statement.expense_totals(period: @cashflow_period)
+    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, cashflow_expense_totals, family_currency)
+
+    # Get data for outflows section (using its own period)
+    outflows_expense_totals = Current.family.income_statement.expense_totals(period: @outflows_period)
+    @outflows_data = build_outflows_donut_data(outflows_expense_totals)
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
   end
@@ -151,5 +169,27 @@ class PagesController < ApplicationController
       # No primary income node anymore, percentages are on individual income cats relative to total_income_val
 
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency_symbol).symbol }
+    end
+
+    def build_outflows_donut_data(expense_totals)
+      currency_symbol = Money::Currency.new(expense_totals.currency).symbol
+      total = expense_totals.total
+
+      # Only include top-level categories with non-zero amounts
+      categories = expense_totals.category_totals
+        .reject { |ct| ct.category.parent_id.present? || ct.total.zero? }
+        .sort_by { |ct| -ct.total }
+        .map do |ct|
+          {
+            id: ct.category.id,
+            name: ct.category.name,
+            amount: ct.total.to_f.round(2),
+            percentage: ct.weight.round(1),
+            color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
+            icon: ct.category.lucide_icon
+          }
+        end
+
+      { categories: categories, total: total.to_f.round(2), currency_symbol: currency_symbol }
     end
 end

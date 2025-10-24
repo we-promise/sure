@@ -10,10 +10,17 @@ export default class extends Controller {
     overageSegmentId: { type: String, default: "overage" },
     segmentHeight: { type: Number, default: 3 },
     segmentOpacity: { type: Number, default: 1 },
+    extendedHover: { type: Boolean, default: false },
+    hoverExtension: { type: Number, default: 3 },
+    enableClick: { type: Boolean, default: false },
+    startDate: String,
+    endDate: String,
   };
 
   #viewBoxSize = 100;
-  #minSegmentAngle = this.segmentHeightValue * 0.01;
+  #minSegmentAngle = 0.02; // Minimum angle in radians (~1.15 degrees)
+  #padAngle = 0.005; // Spacing between segments (~0.29 degrees)
+  #visiblePaths = null;
 
   connect() {
     this.#draw();
@@ -40,7 +47,7 @@ export default class extends Controller {
         ...s,
         amount: Math.max(
           Number(s.amount),
-          totalPieValue * this.#minSegmentAngle,
+          totalPieValue * (this.#minSegmentAngle / (2 * Math.PI)),
         ),
       }))
       .sort((a, b) => {
@@ -58,10 +65,15 @@ export default class extends Controller {
   };
 
   #teardown() {
-    d3.select(this.chartContainerTarget).selectAll("*").remove();
+    if (this.hasChartContainerTarget) {
+      d3.select(this.chartContainerTarget).selectAll("*").remove();
+    }
+    this.#visiblePaths = null;
   }
 
   #draw() {
+    if (!this.hasChartContainerTarget) return;
+
     const svg = d3
       .select(this.chartContainerTarget)
       .append("svg")
@@ -79,37 +91,73 @@ export default class extends Controller {
       .innerRadius(this.#viewBoxSize / 2 - this.segmentHeightValue)
       .outerRadius(this.#viewBoxSize / 2)
       .cornerRadius(this.segmentHeightValue)
-      .padAngle(this.#minSegmentAngle);
+      .padAngle(this.#padAngle);
 
-    const segmentArcs = svg
+    const g = svg
       .append("g")
       .attr(
         "transform",
         `translate(${this.#viewBoxSize / 2}, ${this.#viewBoxSize / 2})`,
-      )
+      );
+
+    const segmentGroups = g
       .selectAll("arc")
       .data(pie(this.#data))
       .enter()
       .append("g")
-      .attr("class", "arc pointer-events-auto")
+      .attr("class", "arc pointer-events-auto");
+
+    // Add invisible hover paths with extended area if enabled
+    if (this.extendedHoverValue) {
+      const hoverArc = d3
+        .arc()
+        .innerRadius(this.#viewBoxSize / 2 - this.segmentHeightValue - this.hoverExtensionValue)
+        .outerRadius(this.#viewBoxSize / 2 + this.hoverExtensionValue)
+        .padAngle(this.#padAngle);
+
+      segmentGroups
+        .append("path")
+        .attr("class", "hover-path")
+        .attr("d", hoverArc)
+        .attr("fill", "transparent")
+        .attr("data-segment-id", (d) => d.data.id)
+        .style("pointer-events", "all");
+    }
+
+    // Add visible paths
+    const segmentArcs = segmentGroups
       .append("path")
+      .attr("class", "visible-path")
       .attr("data-segment-id", (d) => d.data.id)
       .attr("data-original-color", this.#transformRingColor)
       .attr("fill", this.#transformRingColor)
       .attr("d", mainArc);
 
+    // Disable pointer events on visible paths if extended hover is enabled
+    if (this.extendedHoverValue) {
+      segmentArcs.style("pointer-events", "none");
+    }
+
+    // Cache the visible paths selection for performance
+    this.#visiblePaths = d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+
     // Ensures that user can click on default content without triggering hover on a segment if that is their intent
     let hoverTimeout = null;
 
-    segmentArcs
+    segmentGroups
       .on("mouseover", (event) => {
         hoverTimeout = setTimeout(() => {
           this.#clearSegmentHover();
           this.#handleSegmentHover(event);
-        }, 150);
+        }, 10);
       })
       .on("mouseleave", () => {
         clearTimeout(hoverTimeout);
+      })
+      .on("click", (event, d) => {
+        if (this.enableClickValue) {
+          this.#handleClick(d.data);
+        }
       });
   }
 
@@ -131,19 +179,20 @@ export default class extends Controller {
 
     if (!template) return;
 
-    d3.select(this.chartContainerTarget)
-      .selectAll("path")
-      .attr("fill", function () {
-        if (this.dataset.segmentId === segmentId) {
-          if (this.dataset.segmentId === unusedSegmentId) {
-            return "var(--budget-unused-fill)";
-          }
+    // Use cached selection if available for better performance
+    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
-          return this.dataset.originalColor;
+    paths.attr("fill", function () {
+      if (this.dataset.segmentId === segmentId) {
+        if (this.dataset.segmentId === unusedSegmentId) {
+          return "var(--budget-unused-fill)";
         }
 
-        return "var(--budget-unallocated-fill)";
-      });
+        return this.dataset.originalColor;
+      }
+
+      return "var(--budget-unallocated-fill)";
+    });
 
     this.defaultContentTarget.classList.add("hidden");
     template.classList.remove("hidden");
@@ -153,11 +202,14 @@ export default class extends Controller {
   #clearSegmentHover = () => {
     this.defaultContentTarget.classList.remove("hidden");
 
-    d3.select(this.chartContainerTarget)
-      .selectAll("path")
+    // Use cached selection if available for better performance
+    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+
+    paths
       .attr("fill", function () {
         return this.dataset.originalColor;
-      });
+      })
+      .style("opacity", null); // Clear inline opacity style
 
     for (const child of this.contentContainerTarget.children) {
       if (child !== this.defaultContentTarget) {
@@ -165,4 +217,35 @@ export default class extends Controller {
       }
     }
   };
+
+  // Handles click on segment (optional, controlled by enableClick value)
+  #handleClick(segment) {
+    if (!segment.name || !this.startDateValue || !this.endDateValue) return;
+
+    const segmentName = encodeURIComponent(segment.name);
+    const startDate = this.startDateValue;
+    const endDate = this.endDateValue;
+
+    const url = `/transactions?q[categories][]=${segmentName}&q[start_date]=${startDate}&q[end_date]=${endDate}`;
+    window.location.href = url;
+  }
+
+  // Public methods for external highlighting (e.g., from category list hover)
+  highlightSegment(event) {
+    const segmentId = event.currentTarget.dataset.categoryId;
+
+    // Use cached selection if available for better performance
+    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+
+    paths.style("opacity", function() {
+      return this.dataset.segmentId === segmentId ? 1 : 0.3;
+    });
+  }
+
+  unhighlightSegment() {
+    // Use cached selection if available for better performance
+    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+
+    paths.style("opacity", null); // Clear inline opacity style
+  }
 }
