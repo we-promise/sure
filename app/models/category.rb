@@ -95,16 +95,16 @@ class Category < ApplicationRecord
           [ "Personal Care", "#14b8a6", "scissors", "expense" ],
           [ "Home Improvement", "#d97706", "house", "expense" ],
           [ "Mortgage / Rent", "#b45309", "home", "expense" ],
-          [ "Utilities", "#f97316", "lightbulb", "expense" ],
+          [ "Utilities", "#eab308", "lightbulb", "expense" ],
           [ "Subscriptions", "#6366f1", "wifi", "expense" ],
-          [ "Insurance", "#0ea5e9", "shield", "expense" ],
+          [ "Insurance", "#0284c7", "shield", "expense" ],
           [ "Sports & Fitness", "#10b981", "dumbbell", "expense" ],
           [ "Gifts & Donations", "#61c9ea", "hand-helping", "expense" ],
           [ "Taxes", "#dc2626", "landmark", "expense" ],
-          [ "Loan Payments", "#dc2626", "credit-card", "expense" ],
-          [ "Services", "#6366f1", "briefcase", "expense" ],
+          [ "Loan Payments", "#e11d48", "credit-card", "expense" ],
+          [ "Services", "#7c3aed", "briefcase", "expense" ],
           [ "Fees", "#6b7280", "receipt", "expense" ],
-          [ "Savings & Investments", "#10b981", "piggy-bank", "expense" ]
+          [ "Savings & Investments", "#059669", "piggy-bank", "expense" ]
         ]
       end
   end
