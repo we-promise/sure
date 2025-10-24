@@ -740,8 +740,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_24_083624) do
     t.uuid "family_id", null: false
     t.text "access_url"
     t.string "name"
-    t.string "institution_id", null: false
-    t.string "institution_name", null: false
+    t.string "institution_id"
+    t.string "institution_name"
     t.string "institution_url"
     t.string "status", default: "good"
     t.boolean "scheduled_for_deletion", default: false
@@ -754,9 +754,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_24_083624) do
     t.string "institution_color"
     t.date "sync_start_date"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
-    t.index ["institution_domain"], name: "index_simplefin_items_on_institution_domain"
-    t.index ["institution_id"], name: "index_simplefin_items_on_institution_id"
-    t.index ["institution_name"], name: "index_simplefin_items_on_institution_name"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
 
