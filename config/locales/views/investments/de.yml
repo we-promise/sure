@@ -1,0 +1,17 @@
+---
+de:
+  investments:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      none: Keine
+      subtype_prompt: Investmenttyp auswählen
+    new:
+      title: Kontostand eingeben
+    show:
+      chart_title: Gesamtwert
+    value_tooltip:
+      cash: Bargeld
+      holdings: Positionen
+      total: Portfoliostand
+      total_value_tooltip: Der gesamte Portfoliostand setzt sich aus dem verfügbaren Depotguthaben zum Handel und dem aktuellen Marktwert deiner Positionen zusammen

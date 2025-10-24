@@ -1,0 +1,14 @@
+---
+de:
+  shared:
+    confirm_modal:
+      accept: Bestätigen
+      body_html: "<p>Diese Entscheidung kann nicht rückgängig gemacht werden</p>"
+      cancel: Abbrechen
+      title: Bist du sicher
+    money_field:
+      label: Betrag
+    syncing_notice:
+      syncing: Kontodaten werden synchronisiert...
+    trend_change:
+      no_change: keine Änderung

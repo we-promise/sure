@@ -1,0 +1,7 @@
+---
+de:
+  cryptos:
+    edit:
+      edit: "%{account} bearbeiten"
+    new:
+      title: Kontostand eingeben
