@@ -35,6 +35,18 @@ class Provider::Openai < Provider
     DEFAULT_OPENAI_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
   end
 
+  def provider_name
+    custom_provider? ? "Custom OpenAI-compatible (#{@uri_base})" : "OpenAI"
+  end
+
+  def supported_models_description
+    if custom_provider?
+      @default_model.present? ? "configured model: #{@default_model}" : "any model"
+    else
+      "models starting with: #{DEFAULT_OPENAI_MODEL_PREFIXES.join(', ')}"
+    end
+  end
+
   def custom_provider?
     @uri_base.present?
   end

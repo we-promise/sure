@@ -24,7 +24,7 @@ class Api::V1::ChatsController < Api::V1::BaseController
         @message = @chat.messages.build(
           content: chat_params[:message],
           type: "UserMessage",
-          ai_model: chat_params[:model] || "gpt-4"
+          ai_model: chat_params[:model].presence || Chat.default_model
         )
 
         if @message.save
