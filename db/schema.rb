@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_24_083624) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_25_095800) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -754,6 +754,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_24_083624) do
     t.string "institution_color"
     t.date "sync_start_date"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
+    t.index ["institution_domain"], name: "index_simplefin_items_on_institution_domain"
+    t.index ["institution_id"], name: "index_simplefin_items_on_institution_id"
+    t.index ["institution_name"], name: "index_simplefin_items_on_institution_name"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
 

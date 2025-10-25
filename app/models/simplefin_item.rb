@@ -54,13 +54,8 @@ class SimplefinItem < ApplicationRecord
       raw_payload: accounts_snapshot,
     )
 
-    # Extract institution data from the first account if available
-    snapshot = accounts_snapshot.to_h.with_indifferent_access
-    if snapshot[:accounts].present?
-      first_account = snapshot[:accounts].first
-      org = first_account[:org]
-      upsert_institution_data!(org) if org.present?
-    end
+    # Do not populate item-level institution fields from account data.
+    # Institution metadata belongs to each simplefin_account (in org_data).
 
     save!
   end
