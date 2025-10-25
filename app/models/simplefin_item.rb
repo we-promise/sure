@@ -148,6 +148,26 @@ class SimplefinItem < ApplicationRecord
     end
   end
 
+  # Detect a recent rate-limited sync and return a friendly message, else nil
+  def rate_limited_message
+    latest = latest_sync
+    return nil unless latest
+
+    # Some Sync records may not have a status_text column; guard with respond_to?
+    parts = []
+    parts << latest.error if latest.respond_to?(:error)
+    parts << latest.status_text if latest.respond_to?(:status_text)
+    msg = parts.compact.join(" — ")
+    return nil if msg.blank?
+
+    down = msg.downcase
+    if down.include?("make fewer requests") || down.include?("only refreshed once every 24 hours") || down.include?("rate limit")
+      "You've hit SimpleFin's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+    else
+      nil
+    end
+  end
+
   private
     def remove_simplefin_item
       # SimpleFin doesn't require server-side cleanup like Plaid
