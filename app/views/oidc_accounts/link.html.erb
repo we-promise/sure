@@ -42,12 +42,12 @@
   </div>
 
   <div class="space-y-4">
-    <div class="p-4 bg-gray-50 border border-gray-200 rounded-md">
-      <p class="text-sm text-gray-700">
+    <div class="p-4 bg-container border border-secondary rounded-md">
+      <p class="text-sm text-primary">
         <strong>Email:</strong> <%= @pending_auth["email"] %>
       </p>
       <% if @pending_auth["name"].present? %>
-        <p class="text-sm text-gray-700 mt-2">
+        <p class="text-sm text-primary mt-2">
           <strong>Name:</strong> <%= @pending_auth["name"] %>
         </p>
       <% end %>
@@ -65,5 +65,10 @@
 <% end %>
 
 <div class="mt-6 text-center">
-  <%= link_to "Cancel", new_session_path, class: "font-medium text-sm text-primary hover:underline transition" %>
+  <%= render DS::Link.new(
+    text: "Cancel",
+    href: new_session_path,
+    variant: :default,
+    class: "font-medium text-sm text-primary hover:underline transition"
+  ) %>
 </div>
