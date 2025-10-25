@@ -1,0 +1,31 @@
+---
+ca:
+  valuations:
+    form:
+      amount: Import
+      submit: Afegeix actualització de saldo
+    header:
+      balance: Saldo
+    index:
+      change: canvi
+      date: data
+      new_entry: Nova entrada
+      no_valuations: Encara no hi ha valoracions per aquest compte
+      valuations: Valor
+      value: valor
+    new:
+      title: Nou saldo
+    show:
+      amount: Import
+      date_label: Data
+      delete: Elimina
+      delete_subtitle: Aquesta acció no es pot desfer
+      delete_title: Elimina entrada
+      details: Detalls
+      name_label: Nom
+      name_placeholder: Introdueix un nom per aquesta entrada
+      note_label: Notes
+      note_placeholder: Afegeix qualsevol detall addicional sobre aquesta entrada
+      overview: Resum
+      settings: Configuració
+
