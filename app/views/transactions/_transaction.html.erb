@@ -19,18 +19,24 @@
 
         <div class="min-w-0 w-full">
           <%= content_tag :div, class: ["flex items-center gap-2"] do %>
-            <% if transaction.merchant&.logo_url.present? %>
-              <%= image_tag transaction.merchant.logo_url,
-                  class: "w-6 h-6 rounded-full",
-                  loading: "lazy" %>
-            <% else %>
-              <%= render DS::FilledIcon.new(
-                variant: :text,
-                text: entry.name,
-                size: "md",
-                rounded: true
-              ) %>
-            <% end %>
+            <div class="hidden sm:block flex-shrink-0">
+              <% if transaction.merchant&.logo_url.present? %>
+                <%= image_tag transaction.merchant.logo_url,
+                    class: "w-6 h-6 rounded-full",
+                    loading: "lazy" %>
+              <% else %>
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  text: entry.name,
+                  size: "md",
+                  rounded: true
+                ) %>
+              <% end %>
+            </div>
+
+            <div class="sm:hidden flex-shrink-0">
+              <%= render "transactions/transaction_category", transaction: transaction %>
+            </div>
 
             <div class="truncate">
               <div class="space-y-0.5">
@@ -89,7 +95,7 @@
           <% end %>
         </div>
 
-        <div class="flex items-center justify-end flex-shrink-0">
+        <div class="hidden sm:block flex items-center justify-end flex-shrink-0">
           <%= render "transactions/transaction_category", transaction: transaction %>
         </div>
       </div>
