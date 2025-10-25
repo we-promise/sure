@@ -21,7 +21,8 @@ class OidcIdentity < ApplicationRecord
         name: auth.info&.name,
         first_name: auth.info&.first_name,
         last_name: auth.info&.last_name
-      }
+      },
+      last_authenticated_at: Time.current
     )
   end
 end
