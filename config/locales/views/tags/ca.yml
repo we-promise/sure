@@ -1,0 +1,24 @@
+---
+ca:
+  tags:
+    create:
+      created: Etiqueta creada
+      error: "Error en crear l'etiqueta: %{error}"
+    destroy:
+      deleted: Etiqueta eliminada
+    edit:
+      edit: Edita l'etiqueta
+    form:
+      placeholder: Nom de l'etiqueta
+    index:
+      empty: Encara no hi ha etiquetes
+      new: Nova etiqueta
+      tags: Etiquetes
+    new:
+      new: Nova etiqueta
+    tag:
+      delete: Elimina
+      edit: Edita
+    update:
+      updated: Etiqueta actualitzada
+

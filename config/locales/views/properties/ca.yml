@@ -1,0 +1,33 @@
+---
+ca:
+  properties:
+    edit:
+      edit: Edita %{account}
+    form:
+      address_line1: Adreça
+      address_line1_placeholder: Carrer Major 123
+      area: Superfície habitable
+      area_placeholder: '2000'
+      area_unit: Unitat de mesura
+      country: País
+      country_placeholder: ES
+      locality: Ciutat
+      locality_placeholder: Barcelona
+      none: Cap
+      postal_code: Codi postal
+      postal_code_placeholder: '08001'
+      region: Província/Comarca
+      region_placeholder: BCN
+      subtype_prompt: Selecciona el tipus d'immoble
+      year_built: Any de construcció
+      year_built_placeholder: '2000'
+    new:
+      title: Introdueix els detalls de l'immoble
+    overview:
+      living_area: Superfície habitable
+      market_value: Valor de mercat
+      purchase_price: Preu de compra
+      trend: Tendència
+      unknown: Desconegut
+      year_built: Any de construcció
+

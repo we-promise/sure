@@ -1,0 +1,35 @@
+---
+ca:
+  categories:
+    bootstrap:
+      success: Categories per defecte creades correctament
+    category:
+      delete: Elimina categoria
+      edit: Edita categoria
+    create:
+      success: Categoria creada correctament
+    destroy:
+      success: Categoria eliminada correctament
+    edit:
+      edit: Edita categoria
+    form:
+      placeholder: Nom de la categoria
+    index:
+      bootstrap: Utilitza les predeterminades (recomanat)
+      categories: Categories
+      categories_expenses: Categories de despesa
+      categories_incomes: Categories d'ingressos
+      empty: No s'han trobat categories
+      new: Nova categoria
+    menu:
+      loading: Carregant...
+    new:
+      new_category: Nova categoria
+    update:
+      success: Categoria actualitzada correctament
+  category:
+    dropdowns:
+      show:
+        bootstrap: Genera categories per defecte
+        empty: No s'han trobat categories
+

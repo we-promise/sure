@@ -1,0 +1,22 @@
+---
+ca:
+  sessions:
+    create:
+      invalid_credentials: Correu electrònic o contrasenya incorrectes.
+    destroy:
+      logout_successful: Has tancat la sessió correctament.
+    openid_connect:
+      failed: No s'ha pogut autenticar mitjançant OpenID Connect.
+    failure:
+      failed: No s'ha pogut autenticar.
+    new:
+      email: Correu electrònic
+      email_placeholder: tu@exemple.com
+      forgot_password: Has oblidat la contrasenya?
+      password: Contrasenya
+      submit: Inicia sessió
+      title: Inicia sessió al teu compte
+      password_placeholder: Introdueix la teva contrasenya
+      openid_connect: Inicia sessió amb OpenID Connect
+      google_auth_connect: Inicia sessió amb Google
+

@@ -1,0 +1,12 @@
+---
+ca:
+  address:
+    attributes:
+      country: País
+      line1: Adreça línia 1
+      line2: Adreça línia 2
+      locality: Localitat
+      postal_code: Codi postal
+      region: Regió
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"
+

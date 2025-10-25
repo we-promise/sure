@@ -1,0 +1,36 @@
+---
+ca:
+  holdings:
+    cash:
+      brokerage_cash: Efectiu de broker
+    destroy:
+      success: Posició eliminada
+    holding:
+      per_share: per acció
+      shares: "%{qty} accions"
+    index:
+      average_cost: Cost mitjà
+      holdings: Posicions
+      name: Nom
+      new_holding: Nova transacció
+      no_holdings: No hi ha posicions per mostrar.
+      return: Rendiment total
+      weight: Pes
+    missing_price_tooltip:
+      description: Aquesta inversió té valors que falten i no hem pogut calcular-ne el rendiment o el valor.
+      missing_data: Falten dades
+    show:
+      avg_cost_label: Cost mitjà
+      current_market_price_label: Preu de mercat actual
+      delete: Elimina
+      delete_subtitle: Això eliminarà la posició i totes les operacions associades d'aquest compte. Aquesta acció no es pot desfer.
+      delete_title: Elimina posició
+      history: Historial
+      overview: Resum
+      portfolio_weight_label: Pes al portafolis
+      settings: Configuració
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} accions de %{security} a %{price}"
+      total_return_label: Rendiment total
+      unknown: Desconegut
+

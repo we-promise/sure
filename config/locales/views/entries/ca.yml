@@ -1,0 +1,15 @@
+---
+ca:
+  entries:
+    create:
+      success: Entrada creada
+    destroy:
+      success: Entrada eliminada
+    empty:
+      description: Prova d'afegir una entrada, editar els filtres o afinar la cerca
+      title: No s'han trobat entrades
+    loading:
+      loading: Carregant entrades...
+    update:
+      success: Entrada actualitzada
+

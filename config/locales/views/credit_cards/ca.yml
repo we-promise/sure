@@ -1,0 +1,26 @@
+---
+ca:
+  credit_cards:
+    edit:
+      edit: Edita %{account}
+    form:
+      annual_fee: Quota anual
+      annual_fee_placeholder: '99'
+      apr: TAE
+      apr_placeholder: '15.99'
+      available_credit: Crèdit disponible
+      available_credit_placeholder: '10000'
+      expiration_date: Data de caducitat
+      minimum_payment: Pagament mínim
+      minimum_payment_placeholder: '100'
+    new:
+      title: Introdueix les dades de la targeta de crèdit
+    overview:
+      amount_owed: Import degut
+      annual_fee: Quota anual
+      apr: TAE
+      available_credit: Crèdit disponible
+      expiration_date: Data de caducitat
+      minimum_payment: Pagament mínim
+      unknown: Desconegut
+

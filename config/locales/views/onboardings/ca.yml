@@ -1,0 +1,28 @@
+---
+ca:
+  onboardings:
+    header:
+      sign_out: Tanca la sessió
+    preferences:
+      currency: Moneda
+      date_format: Format de data
+      example: Compte d'exemple
+      locale: Idioma
+      preview: Previsualitza com es mostren les dades segons les preferències.
+      submit: Completa
+      subtitle: Configurem les teves preferències.
+      title: Configura les teves preferències
+    profile:
+      country: País
+      first_name: Nom
+      household_name: Nom de la llar
+      last_name: Cognom
+      profile_image: Imatge de perfil
+      submit: Continua
+      subtitle: Completem el teu perfil.
+      title: Configurem el més bàsic
+    show:
+      message: Estem molt contents que siguis aquí. Al següent pas et farem unes preguntes per completar el teu perfil i deixar-ho tot a punt.
+      setup: Configura el compte
+      title: Benvingut/da a %{product_name}
+

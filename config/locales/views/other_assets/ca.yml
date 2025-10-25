@@ -1,0 +1,8 @@
+---
+ca:
+  other_assets:
+    edit:
+      edit: Edita %{account}
+    new:
+      title: Introdueix els detalls de l'actiu
+

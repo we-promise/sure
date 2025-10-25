@@ -1,0 +1,14 @@
+---
+ca:
+  pages:
+    changelog:
+      title: Novetats
+    dashboard:
+      net_worth_chart:
+        data_not_available: No hi ha dades disponibles per al període seleccionat
+        title: Patrimoni net
+      no_account_empty_state:
+        new_account: Nou compte
+        no_account_subtitle: Com que no s'ha afegit cap compte, no hi ha dades per mostrar. Afegeix els teus primers comptes per començar a veure dades al tauler.
+        no_account_title: Encara no hi ha cap compte
+

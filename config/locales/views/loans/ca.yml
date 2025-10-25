@@ -1,0 +1,24 @@
+---
+ca:
+  loans:
+    edit:
+      edit: Edita %{account}
+    form:
+      interest_rate: Tipus d'interès
+      interest_rate_placeholder: '5.25'
+      initial_balance: Saldo inicial del préstec
+      rate_type: Tipus d'interès
+      term_months: Termini (mesos)
+      term_months_placeholder: '360'
+    new:
+      title: Introdueix les dades del préstec
+    overview:
+      interest_rate: Tipus d'interès
+      monthly_payment: Quota mensual
+      not_applicable: N/A
+      original_principal: Principal original
+      remaining_principal: Principal pendent
+      term: Termini
+      type: Tipus
+      unknown: Desconegut
+

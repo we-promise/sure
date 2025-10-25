@@ -1,0 +1,39 @@
+---
+ca:
+  trades:
+    form:
+      account: Compte de transferència (opcional)
+      account_prompt: Cerca compte
+      amount: Import
+      holding: Símbol del valor
+      price: Preu per acció
+      qty: Quantitat
+      submit: Afegeix transacció
+      ticker_placeholder: AAPL
+      type: Tipus
+    header:
+      buy: Compra
+      current_market_price_label: Preu de mercat actual
+      overview: Resum
+      purchase_price_label: Preu de compra
+      purchase_qty_label: Quantitat comprada
+      sell: Venda
+      symbol_label: Símbol
+      total_return_label: Guany/pèrdua no realitzada
+    new:
+      title: Nova transacció
+    show:
+      additional: Addicional
+      cost_per_share_label: Cost per acció
+      date_label: Data
+      delete: Elimina
+      delete_subtitle: Aquesta acció no es pot desfer
+      delete_title: Elimina operació
+      details: Detalls
+      exclude_subtitle: Aquesta operació no s'inclourà en informes ni càlculs
+      exclude_title: Exclou de l'analítica
+      note_label: Nota
+      note_placeholder: Afegeix aquí qualsevol nota addicional...
+      quantity_label: Quantitat
+      settings: Configuració
+

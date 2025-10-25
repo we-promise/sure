@@ -1,0 +1,51 @@
+---
+ca:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Cada nou usuari que s'uneixi a la teva instància de %{product} només ho podrà fer mitjançant un codi d'invitació
+        email_confirmation_description: Quan està activat, els usuaris hauran de confirmar el seu correu electrònic quan el canviïn.
+        email_confirmation_title: Requereix confirmació de correu electrònic
+        generate_tokens: Genera nou codi
+        generated_tokens: Codis generats
+        title: Requereix codi d'invitació per registrar-se
+      show:
+        general: Serveis externs
+        invites: Codis d'invitació
+        title: Autoallotjament
+        danger_zone: Zona perillosa
+        clear_cache: Neteja la memòria cau de dades
+        clear_cache_warning: Netejar la memòria cau de dades eliminarà tots els tipus de canvi, preus de valors, saldos de comptes i altres dades. Això no eliminarà comptes, transaccions, categories ni altres dades de l'usuari.
+        confirm_clear_cache:
+          title: Neteja la memòria cau de dades?
+          body: Segur que vols netejar la memòria cau de dades? Això eliminarà tots els tipus de canvi, preus de valors, saldos de comptes i altres dades. Aquesta acció no es pot desfer.
+      brand_fetch_settings:
+        description: Introdueix el Client ID proporcionat per Brand Fetch
+        label: Client ID
+        placeholder: Introdueix aquí el teu Client ID
+        title: Brand Fetch
+      openai_settings:
+        description: Introdueix el token d'accés i, opcionalment, configura un proveïdor OpenAI compatible personalitzat
+        env_configured_message: Configurat correctament mitjançant variables d'entorn.
+        access_token_label: Token d'accés
+        access_token_placeholder: Introdueix aquí el teu token d'accés
+        uri_base_label: URL base de l'API (opcional)
+        uri_base_placeholder: "https://api.openai.com/v1 (per defecte)"
+        model_label: Model (opcional)
+        model_placeholder: "gpt-4.1 (per defecte)"
+        title: OpenAI
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} crides diàries a l'API utilitzades (%{percentage})"
+        description: Introdueix la clau API proporcionada per Twelve Data
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn TWELVE_DATA_API_KEY.
+        label: Clau API
+        placeholder: Introdueix aquí la teva clau API
+        plan: Pla %{plan}
+        title: Twelve Data
+      update:
+        failure: Valor de configuració invàlid
+        success: Configuració actualitzada
+      clear_cache:
+        cache_cleared: La memòria cau de dades s'ha netejat. Això pot trigar uns instants a completar-se.
+      not_authorized: No estàs autoritzat/da per realitzar aquesta acció
+

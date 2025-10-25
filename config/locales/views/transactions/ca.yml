@@ -1,0 +1,82 @@
+---
+ca:
+  transactions:
+    form:
+      account: Compte
+      account_prompt: Selecciona un compte
+      amount: Import
+      category: Categoria
+      category_prompt: Selecciona una categoria
+      date: Data
+      description: Descripció
+      description_placeholder: Descriu la transacció
+      expense: Despesa
+      income: Ingrés
+      none: (cap)
+      note_label: Notes
+      note_placeholder: Introdueix una nota
+      submit: Afegeix transacció
+      tags_label: Etiquetes
+      transfer: Transferència
+    new:
+      new_transaction: Nova transacció
+    show:
+      account_label: Compte
+      amount: Import
+      category_label: Categoria
+      date_label: Data
+      delete: Elimina
+      delete_subtitle: Això eliminarà permanentment la transacció, afectarà els teus saldos històrics i no es podrà desfer.
+      delete_title: Eliminar transacció
+      details: Detalls
+      merchant_label: Comerciant
+      name_label: Nom
+      nature: Tipus
+      none: "(cap)"
+      note_label: Notes
+      note_placeholder: Introdueix una nota
+      overview: Resum
+      settings: Configuració
+      tags_label: Etiquetes
+      uncategorized: "(sense categoritzar)"
+    header:
+      edit_categories: Edita categories
+      edit_imports: Edita importacions
+      edit_merchants: Edita comerciants
+      edit_tags: Edita etiquetes
+      import: Importa
+    index:
+      transaction: transacció
+      transactions: transaccions
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Igual a
+          greater_than: Major que
+          less_than: Menor que
+          placeholder: '0'
+        badge:
+          expense: Despesa
+          income: Ingrés
+          on_or_after: el %{date} o després
+          on_or_before: el %{date} o abans
+          transfer: Transferència
+        type_filter:
+          expense: Despesa
+          income: Ingrés
+          transfer: Transferència
+      menu:
+        account_filter: Compte
+        amount_filter: Import
+        apply: Aplica
+        cancel: Cancel·la
+        category_filter: Categoria
+        clear_filters: Neteja filtres
+        date_filter: Data
+        merchant_filter: Comerciant
+        tag_filter: Etiqueta
+        type_filter: Tipus
+      search:
+        equal_to: igual a
+        greater_than: major que
+        less_than: menor que

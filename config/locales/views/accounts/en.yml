@@ -42,7 +42,9 @@ en:
         new_balance: New balance
         new_transaction: New transaction
         no_entries: No entries found
-        title: Activity
+        search:
+          placeholder: Search entries by name
+        title: Activity2
       chart:
         balance: Balance
         owed: Amount owed

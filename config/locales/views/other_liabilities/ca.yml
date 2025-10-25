@@ -1,0 +1,8 @@
+---
+ca:
+  other_liabilities:
+    edit:
+      edit: Edita %{account}
+    new:
+      title: Introdueix els detalls del passiu
+
