@@ -56,7 +56,6 @@ class Provider::YahooFinance < Provider
   # ================================
 
   def fetch_exchange_rate(from:, to:, date:)
-
     with_provider_response do
       # Return 1.0 if same currency
       if from == to
@@ -98,7 +97,6 @@ class Provider::YahooFinance < Provider
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
-
     with_provider_response do
       validate_date_range!(start_date, end_date)
       # Return 1.0 rates if same currency
@@ -129,7 +127,6 @@ class Provider::YahooFinance < Provider
   # ================================
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
-
     with_provider_response do
       cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
@@ -194,7 +191,6 @@ class Provider::YahooFinance < Provider
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
-
     with_provider_response do
       cache_key = "security_price_#{symbol}_#{exchange_operating_mic}_#{date}"
       if cached_result = get_cached_result(cache_key)
@@ -229,7 +225,6 @@ class Provider::YahooFinance < Provider
   end
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
-
     with_provider_response do
       validate_date_params!(start_date, end_date)
       # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
