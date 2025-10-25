@@ -77,5 +77,6 @@ class OidcIdentityTest < ActiveSupport::TestCase
     assert_equal "test@example.com", identity.info["email"]
     assert_equal "Test User", identity.info["name"]
     assert_equal @user, identity.user
+    assert_not_nil identity.last_authenticated_at
   end
 end
