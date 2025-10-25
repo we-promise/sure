@@ -24,9 +24,9 @@ class Assistant::Responder
         response_handled = true
 
         if response.function_requests.any?
-          handle_follow_up_response(response)
+          handle_follow_up_response(response, usage: chunk.usage)
         else
-          emit(:response, { id: response.id })
+          emit(:response, { id: response.id, usage: chunk.usage })
         end
       end
     end
@@ -46,14 +46,14 @@ class Assistant::Responder
   private
     attr_reader :message, :instructions, :function_tool_caller, :llm
 
-    def handle_follow_up_response(response)
+    def handle_follow_up_response(response, usage: nil)
       streamer = proc do |chunk|
         case chunk.type
         when "output_text"
           emit(:output_text, chunk.data)
         when "response"
           # We do not currently support function executions for a follow-up response (avoid recursive LLM calls that could lead to high spend)
-          emit(:response, { id: chunk.data.id })
+          emit(:response, { id: chunk.data.id, usage: chunk.usage })
         end
       end
 
@@ -61,6 +61,7 @@ class Assistant::Responder
 
       emit(:response, {
         id: response.id,
+        usage: usage,
         function_tool_calls: function_tool_calls
       })
 
@@ -70,7 +71,7 @@ class Assistant::Responder
         function_results: function_tool_calls.map(&:to_result),
         previous_response_id: response.id
       )
-    end
+      end
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil)
       response = llm.chat_response(

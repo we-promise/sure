@@ -8,7 +8,7 @@
 
   <div class="mt-2">
     <% message.tool_calls.each do |tool_call| %>
-      <div class="bg-blue-50 border-blue-200 px-3 py-2 rounded-lg border mb-2">
+      <div class="bg-container border border-tertiary px-3 py-2 rounded-lg mb-2">
         <p class="text-secondary text-xs">Function:</p>
         <p class="text-primary text-sm font-mono"><%= tool_call.function_name %></p>
         <p class="text-secondary text-xs mt-2">Arguments:</p>

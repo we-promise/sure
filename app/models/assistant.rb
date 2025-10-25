@@ -55,6 +55,37 @@ class Assistant
     responder.on(:response) do |data|
       update_thinking("Analyzing your data...")
 
+      # Persist the provider's response identifier on the assistant message so
+      # future renders reflect the exact metadata used for this conversation
+      assistant_message.update!(provider_id: data[:id]) if data[:id].present?
+
+      # Persist the endpoint used for this provider (if applicable)
+      if assistant_message.endpoint.blank? && llm_provider.respond_to?(:endpoint_base)
+        assistant_message.update!(endpoint: llm_provider.endpoint_base)
+      end
+
+      # Persist usage metrics and estimated cost when provided by the LLM provider
+      if data[:usage].present?
+        usage = data[:usage]
+
+        prompt_tokens = usage["prompt_tokens"] || usage["input_tokens"] || 0
+        completion_tokens = usage["completion_tokens"] || usage["output_tokens"] || 0
+        total_tokens = usage["total_tokens"] || (prompt_tokens + completion_tokens)
+
+        estimated_cost = LlmUsage.calculate_cost(
+          model: message.ai_model,
+          prompt_tokens: prompt_tokens,
+          completion_tokens: completion_tokens
+        )
+
+        assistant_message.update!(
+          prompt_tokens: prompt_tokens,
+          completion_tokens: completion_tokens,
+          total_tokens: total_tokens,
+          estimated_cost: estimated_cost
+        )
+      end
+
       if data[:function_tool_calls].present?
         assistant_message.tool_calls = data[:function_tool_calls]
         latest_response_id = data[:id]

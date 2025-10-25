@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_24_083624) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -479,6 +479,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_24_083624) do
     t.boolean "debug", default: false
     t.string "provider_id"
     t.boolean "reasoning", default: false
+    t.string "endpoint"
+    t.integer "prompt_tokens", default: 0, null: false
+    t.integer "completion_tokens", default: 0, null: false
+    t.integer "total_tokens", default: 0, null: false
+    t.decimal "estimated_cost", precision: 10, scale: 6
     t.index ["chat_id"], name: "index_messages_on_chat_id"
   end
 

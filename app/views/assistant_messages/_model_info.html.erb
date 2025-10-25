@@ -1,0 +1,60 @@
+<%# locals: (message:) %>
+
+<details class="my-2 group mb-2">
+  <summary class="text-secondary text-xs cursor-pointer flex items-center gap-2">
+    <%= icon("chevron-right", class: "group-open:transform group-open:rotate-90") %>
+    <p>Model Info</p>
+  </summary>
+
+  <% model_name = message.ai_model %>
+  <% registry = Provider::Registry.for_concept(:llm) %>
+  <% provider = registry.providers.find { |p| p.supports_model?(model_name) } %>
+  <% in_sidebar = request.headers["Turbo-Frame"] == "sidebar_chat" %>
+  <% grid_classes = in_sidebar ? "grid grid-cols-1 gap-2" : "grid grid-cols-1 md:grid-cols-2 gap-2" %>
+
+  <div class="mt-2 bg-container border border-tertiary px-3 py-2 rounded-lg">
+    <div class="<%= grid_classes %>">
+      <div>
+        <p class="text-secondary text-xs">Model</p>
+        <p class="text-primary text-sm font-mono"><%= model_name %></p>
+      </div>
+
+      <div>
+        <p class="text-secondary text-xs">Provider</p>
+        <p class="text-primary text-sm"><%= provider&.provider_name || "Unknown" %></p>
+      </div>
+
+      <% if message.provider_id.present? %>
+        <div>
+          <p class="text-secondary text-xs">Response ID</p>
+          <p class="text-primary text-sm font-mono"><%= message.provider_id %></p>
+        </div>
+      <% end %>
+
+      <% if message.endpoint.present? %>
+        <div>
+          <p class="text-secondary text-xs">Endpoint</p>
+          <p class="text-primary text-sm font-mono"><%= message.endpoint %></p>
+        </div>
+      <% end %>
+
+      <% if message.prompt_tokens.to_i > 0 || message.completion_tokens.to_i > 0 || message.total_tokens.to_i > 0 %>
+        <div>
+          <p class="text-secondary text-xs">Tokens (this response)</p>
+          <p class="text-primary text-sm font-mono">
+            prompt=<%= message.prompt_tokens %>, completion=<%= message.completion_tokens %>, total=<%= message.total_tokens %>
+          </p>
+        </div>
+      <% end %>
+
+      <% if message.estimated_cost.present? %>
+        <div>
+          <p class="text-secondary text-xs">Estimated Cost (this response)</p>
+          <p class="text-primary text-sm font-mono">$<%= message.estimated_cost.to_f.round(4) %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</details>
+
+

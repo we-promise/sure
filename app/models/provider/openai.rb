@@ -39,6 +39,12 @@ class Provider::Openai < Provider
     custom_provider? ? "Custom OpenAI-compatible (#{@uri_base})" : "OpenAI"
   end
 
+  # Returns the HTTP base endpoint used by this provider, or nil when using
+  # the default OpenAI endpoint configured by the SDK.
+  def endpoint_base
+    @uri_base.presence
+  end
+
   def supported_models_description
     if custom_provider?
       @default_model.present? ? "configured model: #{@default_model}" : "any model"
