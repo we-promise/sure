@@ -1,12 +1,12 @@
 <%# locals: (date:, entries:, content:, totals: false) %>
 
 <div id="entry-group-<%= date %>" class="bg-container-inset rounded-xl p-1 w-full" data-bulk-select-target="group">
-  <div class="py-2 px-4 flex items-center justify-between font-medium text-xs text-secondary">
+  <div class="py-3 px-2 flex items-center justify-between font-medium text-xs text-secondary">
     <div class="flex pl-0.5 items-center gap-4">
-        <%= check_box_tag "#{date}_entries_selection",
-                          class: ["checkbox checkbox--light", "hidden": entries.size == 0],
-                          id: "selection_entry_#{date}",
-                          data: { action: "bulk-select#toggleGroupSelection" } %>
+      <%= check_box_tag "#{date}_entries_selection",
+                        class: ["checkbox checkbox--light", "hidden": entries.size == 0],
+                        id: "selection_entry_#{date}",
+                        data: { action: "bulk-select#toggleGroupSelection" } %>
 
       <p class="uppercase space-x-1.5">
         <%= tag.span I18n.l(date, format: :long) %>
@@ -21,7 +21,7 @@
       </div>
     <% end %>
   </div>
-  <div class="bg-container shadow-border-xs rounded-lg">
+  <div class="rounded-lg grid grid-cols-[minmax(0,1fr)_auto_auto] bg-container shadow-border-xs">
     <%= content %>
   </div>
 </div>

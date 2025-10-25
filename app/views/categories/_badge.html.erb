@@ -1,15 +1,16 @@
-<%# locals: (category:) %>
+<%# locals: (category:, icon_only: false) %>
 <% category ||= Category.uncategorized %>
 
 <div>
-  <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border truncate focus-visible:outline-none focus-visible:ring-0"
-        style="
-          background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-          border-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-          color: <%= category.color %>;">
+  <span
+    class="inline-flex items-center gap-1 text-sm font-medium rounded-full px-2 py-1 border truncate focus-visible:outline-none focus-visible:ring-0 <%= 'min-w-[2.5rem] justify-center' if icon_only %>"
+    style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
+           border-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
+           color: <%= category.color %>;"
+  >
     <% if category.lucide_icon.present? %>
       <%= icon category.lucide_icon, size: "sm", color: "current" %>
     <% end %>
-    <%= category.name %>
+    <span class="<%= icon_only ? 'hidden sm:inline' : '' %>"><%= category.name %></span>
   </span>
 </div>
