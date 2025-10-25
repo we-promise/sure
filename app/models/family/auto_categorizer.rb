@@ -18,7 +18,8 @@ class Family::AutoCategorizer
 
     result = llm_provider.auto_categorize(
       transactions: transactions_input,
-      user_categories: user_categories_input
+      user_categories: user_categories_input,
+      family: family
     )
 
     unless result.success?

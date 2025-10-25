@@ -12,14 +12,23 @@ class Chat < ApplicationRecord
 
   class << self
     def start!(prompt, model:)
+      # Ensure we have a valid model by using the default if none provided
+      effective_model = model.presence || default_model
+
       create!(
         title: generate_title(prompt),
-        messages: [ UserMessage.new(content: prompt, ai_model: model) ]
+        messages: [ UserMessage.new(content: prompt, ai_model: effective_model) ]
       )
     end
 
     def generate_title(prompt)
       prompt.first(80)
+    end
+
+    # Returns the default AI model to use for chats
+    # Priority: ENV variable > Setting > OpenAI default
+    def default_model
+      ENV["OPENAI_MODEL"].presence || Setting.openai_model.presence || Provider::Openai::DEFAULT_MODEL
     end
   end
 

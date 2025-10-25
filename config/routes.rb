@@ -37,6 +37,14 @@ Rails.application.routes.draw do
 
   resource :registration, only: %i[new create]
   resources :sessions, only: %i[new create destroy]
+  match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
+  match "/auth/failure", to: "sessions#failure", via: %i[get post]
+  resource :oidc_account, only: [] do
+    get :link, on: :collection
+    post :create_link, on: :collection
+    get :new_user, on: :collection
+    post :create_user, on: :collection
+  end
   resource :password_reset, only: %i[new create edit update]
   resource :password, only: %i[edit update]
   resource :email_confirmation, only: :new
@@ -65,6 +73,7 @@ Rails.application.routes.draw do
     resource :security, only: :show
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
+    resource :llm_usage, only: :show
     resource :guides, only: :show
     resource :bank_sync, only: :show, controller: "bank_sync"
   end
