@@ -64,13 +64,8 @@ class SimplefinItem < ApplicationRecord
       raw_payload: accounts_snapshot,
     )
 
-    # Extract institution data from the first account if available
-    snapshot = accounts_snapshot.to_h.with_indifferent_access
-    if snapshot[:accounts].present?
-      first_account = snapshot[:accounts].first
-      org = first_account[:org]
-      upsert_institution_data!(org) if org.present?
-    end
+    # Do not populate item-level institution fields from account data.
+    # Institution metadata belongs to each simplefin_account (in org_data).
 
     save!
   end
@@ -160,6 +155,26 @@ class SimplefinItem < ApplicationRecord
       institutions.first["name"] || institutions.first["domain"] || "1 institution"
     else
       "#{institutions.count} institutions"
+    end
+  end
+
+  # Detect a recent rate-limited sync and return a friendly message, else nil
+  def rate_limited_message
+    latest = latest_sync
+    return nil unless latest
+
+    # Some Sync records may not have a status_text column; guard with respond_to?
+    parts = []
+    parts << latest.error if latest.respond_to?(:error)
+    parts << latest.status_text if latest.respond_to?(:status_text)
+    msg = parts.compact.join(" — ")
+    return nil if msg.blank?
+
+    down = msg.downcase
+    if down.include?("make fewer requests") || down.include?("only refreshed once every 24 hours") || down.include?("rate limit")
+      "You've hit SimpleFin's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+    else
+      nil
     end
   end
 

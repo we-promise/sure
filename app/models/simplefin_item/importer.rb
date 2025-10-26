@@ -45,6 +45,10 @@ class SimplefinItem::Importer
         target_start_date = max_lookback_date
       end
 
+      # Pre-step: Unbounded discovery to ensure we see all accounts even if the
+      # chunked window would otherwise filter out newly added, inactive accounts.
+      perform_account_discovery
+
       total_accounts_imported = 0
       chunk_count = 0
 
@@ -101,30 +105,75 @@ class SimplefinItem::Importer
     end
 
     def import_regular_sync
-      start_date = determine_sync_start_date
+      perform_account_discovery
 
+      # Step 2: Fetch transactions/holdings using the regular window.
+      start_date = determine_sync_start_date
       accounts_data = fetch_accounts_data(start_date: start_date)
       return if accounts_data.nil? # Error already handled
 
       # Store raw payload
       simplefin_item.upsert_simplefin_snapshot!(accounts_data)
 
-      # Import accounts
+      # Import accounts (merges transactions/holdings into existing rows)
       accounts_data[:accounts]&.each do |account_data|
         import_account(account_data)
       end
     end
 
-    def fetch_accounts_data(start_date:, end_date: nil)
+    #
+    # Performs discovery of accounts in an unbounded way so providers that
+    # filter by date windows cannot hide newly created upstream accounts.
+    #
+    # Steps:
+    # - Request `/accounts` without dates; count results
+    # - If zero, retry with `pending: true` (some bridges only reveal new/pending)
+    # - If any accounts are returned, upsert a snapshot and import each account
+    #
+    # Returns nothing; side-effects are snapshot + account upserts.
+    def perform_account_discovery
+      discovery_data = fetch_accounts_data(start_date: nil)
+      discovered_count = discovery_data&.dig(:accounts)&.size.to_i
+      Rails.logger.info "SimpleFin discovery (no params) returned #{discovered_count} accounts"
+
+      if discovered_count.zero?
+        discovery_data = fetch_accounts_data(start_date: nil, pending: true)
+        discovered_count = discovery_data&.dig(:accounts)&.size.to_i
+        Rails.logger.info "SimpleFin discovery (pending=1) returned #{discovered_count} accounts"
+      end
+
+      if discovery_data && discovered_count > 0
+        simplefin_item.upsert_simplefin_snapshot!(discovery_data)
+        discovery_data[:accounts]&.each { |account_data| import_account(account_data) }
+      end
+    end
+
+    # Fetches accounts (and optionally transactions/holdings) from SimpleFin.
+    #
+    # Params:
+    # - start_date: Date or nil — when provided, provider may filter by date window
+    # - end_date:   Date or nil — optional end of window
+    # - pending:    Boolean or nil — when true, ask provider to include pending/new
+    #
+    # Returns a Hash payload with keys like :accounts, or nil when an error is
+    # handled internally via `handle_errors`.
+    def fetch_accounts_data(start_date:, end_date: nil, pending: nil)
       # Debug logging to track exactly what's being sent to SimpleFin API
-      days_requested = end_date ? (end_date.to_date - start_date.to_date).to_i : "unknown"
-      Rails.logger.info "SimplefinItem::Importer - API Request: #{start_date.strftime('%Y-%m-%d')} to #{end_date&.strftime('%Y-%m-%d') || 'current'} (#{days_requested} days)"
+      start_str = start_date.respond_to?(:strftime) ? start_date.strftime("%Y-%m-%d") : "none"
+      end_str = end_date.respond_to?(:strftime) ? end_date.strftime("%Y-%m-%d") : "current"
+      days_requested = if start_date && end_date
+        (end_date.to_date - start_date.to_date).to_i
+      else
+        "unknown"
+      end
+      Rails.logger.info "SimplefinItem::Importer - API Request: #{start_str} to #{end_str} (#{days_requested} days)"
 
       begin
         accounts_data = simplefin_provider.get_accounts(
           simplefin_item.access_url,
           start_date: start_date,
-          end_date: end_date
+          end_date: end_date,
+          pending: pending
         )
       rescue Provider::Simplefin::SimplefinError => e
         # Handle authentication errors by marking item as requiring update
@@ -139,6 +188,12 @@ class SimplefinItem::Importer
       # Handle errors if present in response
       if accounts_data[:errors] && accounts_data[:errors].any?
         handle_errors(accounts_data[:errors])
+        return nil
+      end
+
+      # Some servers return a top-level message/string rather than an errors array
+      if accounts_data[:error].present?
+        handle_errors([ accounts_data[:error] ])
         return nil
       end
 
