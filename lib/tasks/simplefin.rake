@@ -3,9 +3,9 @@
 namespace :sure do
   namespace :simplefin do
     desc "Print debug info for a SimpleFin item: latest sync, snapshot accounts, simplefin_accounts, and unlinked list"
-    task :debug, [:item_id] => :environment do |_, args|
+    task :debug, [ :item_id ] => :environment do |_, args|
       unless args[:item_id].present?
-        puts({ error: 'usage', example: 'bin/rails sure:simplefin:debug[ITEM_ID]' }.to_json)
+        puts({ error: "usage", example: "bin/rails sure:simplefin:debug[ITEM_ID]" }.to_json)
         exit 1
       end
 
@@ -19,7 +19,7 @@ namespace :sure do
         item_id: item.id,
         name: item.name,
         last_synced_at: item.last_synced_at,
-        latest_sync: latest_sync&.attributes&.slice('id','status','error','status_text','created_at','completed_at'),
+        latest_sync: latest_sync&.attributes&.slice("id", "status", "error", "status_text", "created_at", "completed_at"),
         snapshot_accounts: snapshot_accounts,
         simplefin_accounts_count: item.simplefin_accounts.count,
         unlinked_count: unlinked.count,

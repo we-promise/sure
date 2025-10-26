@@ -158,12 +158,12 @@ class SimplefinItem::Importer
 
     def fetch_accounts_data(start_date:, end_date: nil, pending: nil)
       # Debug logging to track exactly what's being sent to SimpleFin API
-      start_str = start_date.respond_to?(:strftime) ? start_date.strftime('%Y-%m-%d') : 'none'
-      end_str = end_date.respond_to?(:strftime) ? end_date.strftime('%Y-%m-%d') : 'current'
+      start_str = start_date.respond_to?(:strftime) ? start_date.strftime("%Y-%m-%d") : "none"
+      end_str = end_date.respond_to?(:strftime) ? end_date.strftime("%Y-%m-%d") : "current"
       days_requested = if start_date && end_date
         (end_date.to_date - start_date.to_date).to_i
       else
-        'unknown'
+        "unknown"
       end
       Rails.logger.info "SimplefinItem::Importer - API Request: #{start_str} to #{end_str} (#{days_requested} days)"
 
@@ -192,7 +192,7 @@ class SimplefinItem::Importer
 
       # Some servers return a top-level message/string rather than an errors array
       if accounts_data[:error].present?
-        handle_errors([accounts_data[:error]])
+        handle_errors([ accounts_data[:error] ])
         return nil
       end
 
