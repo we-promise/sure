@@ -47,19 +47,7 @@ class SimplefinItem::Importer
 
       # Pre-step: Unbounded discovery to ensure we see all accounts even if the
       # chunked window would otherwise filter out newly added, inactive accounts.
-      # Pre-step: unbounded discovery (with fallback) to ensure we see all accounts
-      discovery_data = fetch_accounts_data(start_date: nil)
-      discovered_count = discovery_data&.dig(:accounts)&.size.to_i
-      Rails.logger.info "SimpleFin discovery (no params) returned #{discovered_count} accounts"
-      if discovered_count.zero?
-        discovery_data = fetch_accounts_data(start_date: nil, pending: true)
-        discovered_count = discovery_data&.dig(:accounts)&.size.to_i
-        Rails.logger.info "SimpleFin discovery (pending=1) returned #{discovered_count} accounts"
-      end
-      if discovery_data && discovered_count > 0
-        simplefin_item.upsert_simplefin_snapshot!(discovery_data)
-        discovery_data[:accounts]&.each { |account_data| import_account(account_data) }
-      end
+      perform_account_discovery
 
       total_accounts_imported = 0
       chunk_count = 0
@@ -117,30 +105,7 @@ class SimplefinItem::Importer
     end
 
     def import_regular_sync
-      # Step 1: Always perform an unbounded account discovery fetch first.
-      # Rationale: Some SimpleFin servers filter accounts by transaction window
-      # when a start-date is supplied. Newly added upstream accounts with no
-      # recent transactions may be omitted from windowed requests. A discovery
-      # fetch without date params ensures we always see the full account list.
-      # First attempt: discovery without dates/flags
-      discovery_data = fetch_accounts_data(start_date: nil)
-      discovered_count = discovery_data&.dig(:accounts)&.size.to_i
-      Rails.logger.info "SimpleFin discovery (no params) returned #{discovered_count} accounts"
-
-      # Fallback: some servers only return "pending/new" accounts when pending=1
-      if discovered_count.zero?
-        discovery_data = fetch_accounts_data(start_date: nil, pending: true)
-        discovered_count = discovery_data&.dig(:accounts)&.size.to_i
-        Rails.logger.info "SimpleFin discovery (pending=1) returned #{discovered_count} accounts"
-      end
-
-      if discovery_data && discovered_count > 0
-        # Store latest snapshot and upsert any newly discovered accounts
-        simplefin_item.upsert_simplefin_snapshot!(discovery_data)
-        discovery_data[:accounts]&.each do |account_data|
-          import_account(account_data)
-        end
-      end
+      perform_account_discovery
 
       # Step 2: Fetch transactions/holdings using the regular window.
       start_date = determine_sync_start_date
@@ -156,6 +121,42 @@ class SimplefinItem::Importer
       end
     end
 
+    #
+    # Performs discovery of accounts in an unbounded way so providers that
+    # filter by date windows cannot hide newly created upstream accounts.
+    #
+    # Steps:
+    # - Request `/accounts` without dates; count results
+    # - If zero, retry with `pending: true` (some bridges only reveal new/pending)
+    # - If any accounts are returned, upsert a snapshot and import each account
+    #
+    # Returns nothing; side-effects are snapshot + account upserts.
+    def perform_account_discovery
+      discovery_data = fetch_accounts_data(start_date: nil)
+      discovered_count = discovery_data&.dig(:accounts)&.size.to_i
+      Rails.logger.info "SimpleFin discovery (no params) returned #{discovered_count} accounts"
+
+      if discovered_count.zero?
+        discovery_data = fetch_accounts_data(start_date: nil, pending: true)
+        discovered_count = discovery_data&.dig(:accounts)&.size.to_i
+        Rails.logger.info "SimpleFin discovery (pending=1) returned #{discovered_count} accounts"
+      end
+
+      if discovery_data && discovered_count > 0
+        simplefin_item.upsert_simplefin_snapshot!(discovery_data)
+        discovery_data[:accounts]&.each { |account_data| import_account(account_data) }
+      end
+    end
+
+    # Fetches accounts (and optionally transactions/holdings) from SimpleFin.
+    #
+    # Params:
+    # - start_date: Date or nil — when provided, provider may filter by date window
+    # - end_date:   Date or nil — optional end of window
+    # - pending:    Boolean or nil — when true, ask provider to include pending/new
+    #
+    # Returns a Hash payload with keys like :accounts, or nil when an error is
+    # handled internally via `handle_errors`.
     def fetch_accounts_data(start_date:, end_date: nil, pending: nil)
       # Debug logging to track exactly what's being sent to SimpleFin API
       start_str = start_date.respond_to?(:strftime) ? start_date.strftime("%Y-%m-%d") : "none"

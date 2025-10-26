@@ -16,7 +16,7 @@ class Family::SyncCompleteEvent
         locals: { balance_sheet: family.balance_sheet }
       )
     rescue => e
-      Rails.logger.error("Family::SyncCompleteEvent balance_sheet broadcast failed: #{e.message}")
+      Rails.logger.error("Family::SyncCompleteEvent balance_sheet broadcast failed: #{e.message}\n#{e.backtrace&.join("\n")}")
     end
 
     begin
@@ -26,7 +26,7 @@ class Family::SyncCompleteEvent
         locals: { balance_sheet: family.balance_sheet, period: Period.last_30_days }
       )
     rescue => e
-      Rails.logger.error("Family::SyncCompleteEvent net_worth_chart broadcast failed: #{e.message}")
+      Rails.logger.error("Family::SyncCompleteEvent net_worth_chart broadcast failed: #{e.message}\n#{e.backtrace&.join("\n")}")
     end
   end
 end
