@@ -1,7 +1,7 @@
 class ApplicationController < ActionController::Base
   include RestoreLayoutPreferences, Onboardable, Localize, AutoSync, Authentication, Invitable,
           SelfHostable, StoreLocation, Impersonatable, Breadcrumbable,
-          FeatureGuardable, Notifiable
+          FeatureGuardable, Notifiable, TurboNative::Controller
 
   include Pagy::Backend
 

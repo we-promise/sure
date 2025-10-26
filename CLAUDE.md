@@ -63,6 +63,13 @@ Only proceed with pull request creation if ALL checks pass.
 - Do not run `rails credentials`
 - Do not automatically run migrations
 
+### Hotwire Native Prototype Process
+- Review `docs/hotwire_native_prototype_plan.md` before beginning any native wrapper work.
+- Cut a fresh branch named `feature/hotwire-native-prototype` from `main` for all prototype changes; keep it focused on the Turbo Native spike.
+- Ensure features continue to function for both Turbo Native wrappers and the existing PWA before submitting a PR.
+- Controllers automatically detect native requests via `TurboNative::Controller`; lean on the `turbo_native_app?` helper instead of inspecting headers manually.
+- Keep navigation data centralized in `ApplicationHelper#primary_navigation_items` so the `turbo_native_bridge` controller can mirror updates inside the native shells.
+
 ## High-Level Architecture
 
 ### Application Modes

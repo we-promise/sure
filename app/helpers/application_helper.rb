@@ -57,6 +57,28 @@ module ApplicationHelper
     current_page?(path) || (request.path.start_with?(path) && path != "/")
   end
 
+  def primary_navigation_items
+    [
+      nav_item("Home", root_path, "pie-chart"),
+      nav_item("Transactions", transactions_path, "credit-card"),
+      nav_item("Budgets", budgets_path, "map"),
+      nav_item("Assistant", chats_path, "icon-assistant", icon_custom: true, mobile_only: true)
+    ]
+  end
+
+  def turbo_native_navigation_payload
+    primary_navigation_items.map do |item|
+      {
+        title: item[:name],
+        url: item[:path],
+        icon: item[:icon],
+        icon_custom: item[:icon_custom],
+        mobile_only: item[:mobile_only],
+        active: item[:active]
+      }
+    end
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date
@@ -123,6 +145,17 @@ module ApplicationHelper
   end
 
   private
+    def nav_item(name, path, icon, icon_custom: false, mobile_only: false)
+      {
+        name: name,
+        path: path,
+        icon: icon,
+        icon_custom: icon_custom,
+        mobile_only: mobile_only,
+        active: page_active?(path)
+      }
+    end
+
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
       # Only Entry objects have entryable transactions, Account objects don't
