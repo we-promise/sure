@@ -64,7 +64,7 @@ gem "inline_svg"
 gem "octokit"
 gem "pagy"
 gem "rails-settings-cached"
-gem "tzinfo-data", platforms: %i[windows jruby]
+gem "tzinfo-data", platforms: %i[mswin mswin64 mingw x64_mingw jruby]
 gem "csv"
 gem "redcarpet"
 gem "stripe"
