@@ -44,7 +44,7 @@ en:
         no_entries: No entries found
         search:
           placeholder: Search entries by name
-        title: Activity2
+        title: Activity
       chart:
         balance: Balance
         owed: Amount owed
