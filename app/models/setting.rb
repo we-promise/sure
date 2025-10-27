@@ -11,8 +11,12 @@ class Setting < RailsSettings::Base
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
 
   ONBOARDING_STATES = %w[open closed invite_only].freeze
+  DEFAULT_ONBOARDING_STATE = begin
+    env_value = ENV["ONBOARDING_STATE"].to_s.presence || "open"
+    ONBOARDING_STATES.include?(env_value) ? env_value : "open"
+  end
 
-  field :onboarding_state, type: :string, default: "open"
+  field :onboarding_state, type: :string, default: DEFAULT_ONBOARDING_STATE
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
 
@@ -30,7 +34,7 @@ class Setting < RailsSettings::Base
       value = raw_onboarding_state
       return "invite_only" if value.blank? && require_invite_for_signup
 
-      value.presence || "open"
+      value.presence || DEFAULT_ONBOARDING_STATE
     end
 
     def onboarding_state=(state)
