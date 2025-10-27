@@ -17,21 +17,6 @@ class SimplefinAccount::Investments::HoldingsProcessor
         security = resolve_security(symbol, simplefin_holding["description"])
         next unless security.present?
 
-        # Use external_id for precise matching
-        external_id = "simplefin_#{holding_id}"
-
-        # Use the created timestamp as the holding date, fallback to current date
-        holding_date = parse_holding_date(simplefin_holding["created"]) || Date.current
-
-        holding = account.holdings.find_or_initialize_by(
-          external_id: external_id
-        ) do |h|
-          # Set required fields on initialization
-          h.security = security
-          h.date = holding_date
-          h.currency = simplefin_holding["currency"] || "USD"
-        end
-
         # Parse all the data SimpleFin provides
         qty = parse_decimal(simplefin_holding["shares"])
         market_value = parse_decimal(simplefin_holding["market_value"])
@@ -44,22 +29,21 @@ class SimplefinAccount::Investments::HoldingsProcessor
           parse_decimal(simplefin_holding["purchase_price"]) || 0
         end
 
-        holding.assign_attributes(
+        # Use the created timestamp as the holding date, fallback to current date
+        holding_date = parse_holding_date(simplefin_holding["created"]) || Date.current
+
+        import_adapter.import_holding(
           security: security,
-          date: holding_date,
-          currency: simplefin_holding["currency"] || "USD",
-          qty: qty,
-          price: price,
+          quantity: qty,
           amount: market_value,
-          cost_basis: cost_basis
+          currency: simplefin_holding["currency"] || "USD",
+          date: holding_date,
+          price: price,
+          cost_basis: cost_basis,
+          external_id: "simplefin_#{holding_id}",
+          source: "simplefin",
+          delete_future_holdings: false  # SimpleFin tracks each holding uniquely
         )
-
-        ActiveRecord::Base.transaction do
-          holding.save!
-
-          # With external_id matching, each holding is uniquely tracked
-          # No need to delete other holdings since each has its own lifecycle
-        end
       rescue => e
         ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
         Rails.logger.error "Error processing SimpleFin holding#{ctx}: #{e.message}"
@@ -69,6 +53,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
   private
     attr_reader :simplefin_account
+
+    def import_adapter
+      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
 
     def account
       simplefin_account.account

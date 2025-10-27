@@ -81,7 +81,7 @@ class Account::ProviderImportAdapter
     )
   end
 
-  # Imports a holding (investment position) from a provider
+  # Imports or updates a holding (investment position) from a provider
   #
   # @param security [Security] The security object
   # @param quantity [BigDecimal, Numeric] Number of shares/units
@@ -89,22 +89,55 @@ class Account::ProviderImportAdapter
   # @param currency [String] Currency code
   # @param date [Date, String] Holding date
   # @param price [BigDecimal, Numeric, nil] Price per share (optional)
+  # @param cost_basis [BigDecimal, Numeric, nil] Cost basis (optional)
+  # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
-  # @return [Holding] The created holding
-  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, source:)
+  # @param delete_future_holdings [Boolean] Whether to delete holdings after this date (default: false)
+  # @return [Holding] The created or updated holding
+  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, delete_future_holdings: false)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
-    holding = account.holdings.create!(
-      security: security,
-      qty: quantity,
-      amount: amount,
-      currency: currency,
-      date: date,
-      price: price
-    )
+    Account.transaction do
+      # Two strategies for finding/creating holdings:
+      # 1. By external_id (SimpleFin approach) - tracks each holding uniquely
+      # 2. By security+date+currency (Plaid approach) - overwrites holdings for same security/date
+      holding = if external_id.present?
+        account.holdings.find_or_initialize_by(external_id: external_id) do |h|
+          h.security = security
+          h.date = date
+          h.currency = currency
+        end
+      else
+        account.holdings.find_or_initialize_by(
+          security: security,
+          date: date,
+          currency: currency
+        )
+      end
 
-    holding
+      holding.assign_attributes(
+        security: security,
+        date: date,
+        currency: currency,
+        qty: quantity,
+        price: price,
+        amount: amount,
+        cost_basis: cost_basis
+      )
+
+      holding.save!
+
+      # Optionally delete future holdings for this security (Plaid behavior)
+      if delete_future_holdings
+        account.holdings
+          .where(security: security)
+          .where("date > ?", date)
+          .destroy_all
+      end
+
+      holding
+    end
   end
 
   # Imports a trade (investment transaction) from a provider
@@ -148,5 +181,28 @@ class Account::ProviderImportAdapter
 
       entry
     end
+  end
+
+  # Updates accountable-specific attributes (e.g., credit card details, loan details)
+  #
+  # @param attributes [Hash] Hash of attributes to update on the accountable
+  # @param source [String] Provider name (for logging/debugging)
+  # @return [Boolean] Whether the update was successful
+  def update_accountable_attributes(attributes:, source:)
+    return false unless account.accountable.present?
+    return false if attributes.blank?
+
+    # Filter out nil values and only update attributes that exist on the accountable
+    valid_attributes = attributes.compact.select do |key, _|
+      account.accountable.respond_to?("#{key}=")
+    end
+
+    return false if valid_attributes.empty?
+
+    account.accountable.update!(valid_attributes)
+    true
+  rescue => e
+    Rails.logger.error("Failed to update #{account.accountable_type} attributes from #{source}: #{e.message}")
+    false
   end
 end

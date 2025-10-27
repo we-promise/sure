@@ -14,6 +14,10 @@ class SimplefinAccount::Liabilities::CreditProcessor
   private
     attr_reader :simplefin_account
 
+    def import_adapter
+      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
+
     def account
       simplefin_account.account
     end
@@ -22,10 +26,14 @@ class SimplefinAccount::Liabilities::CreditProcessor
       # SimpleFin provides available_balance which could be credit limit for cards
       available_balance = simplefin_account.raw_payload&.dig("available-balance")
 
-      if available_balance.present? && account.accountable.respond_to?(:available_credit=)
+      if available_balance.present?
         credit_limit = parse_decimal(available_balance)
-        account.accountable.available_credit = credit_limit if credit_limit > 0
-        account.accountable.save!
+        if credit_limit > 0
+          import_adapter.update_accountable_attributes(
+            attributes: { available_credit: credit_limit },
+            source: "simplefin"
+          )
+        end
       end
     end
 

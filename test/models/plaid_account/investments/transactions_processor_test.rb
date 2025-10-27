@@ -47,7 +47,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     test_investments_payload = {
       transactions: [
         {
-          "transaction_id" => "123",
+          "investment_transaction_id" => "cash_123",
           "type" => "cash",
           "subtype" => "withdrawal",
           "amount" => 100, # Positive, so moving money OUT of the account
@@ -80,7 +80,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     test_investments_payload = {
       transactions: [
         {
-          "transaction_id" => "123",
+          "investment_transaction_id" => "fee_123",
           "type" => "fee",
           "subtype" => "miscellaneous fee",
           "amount" => 10.25,

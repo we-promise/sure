@@ -12,33 +12,28 @@ class PlaidAccount::Investments::HoldingsProcessor
 
       security = resolved_security_result.security
       holding_date = plaid_holding["institution_price_as_of"] || Date.current
+      quantity = plaid_holding["quantity"]
+      price = plaid_holding["institution_price"]
 
-      holding = account.holdings.find_or_initialize_by(
+      import_adapter.import_holding(
         security: security,
+        quantity: quantity,
+        amount: quantity * price,
+        currency: plaid_holding["iso_currency_code"],
         date: holding_date,
-        currency: plaid_holding["iso_currency_code"]
+        price: price,
+        source: "plaid",
+        delete_future_holdings: true  # Plaid deletes future holdings
       )
-
-      holding.assign_attributes(
-        qty: plaid_holding["quantity"],
-        price: plaid_holding["institution_price"],
-        amount: plaid_holding["quantity"] * plaid_holding["institution_price"]
-      )
-
-      ActiveRecord::Base.transaction do
-        holding.save!
-
-        # Delete all holdings for this security after the institution price date
-        account.holdings
-          .where(security: security)
-          .where("date > ?", holding_date)
-          .destroy_all
-      end
     end
   end
 
   private
     attr_reader :plaid_account, :security_resolver
+
+    def import_adapter
+      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
 
     def account
       plaid_account.account
