@@ -222,7 +222,13 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       processor.process
     end
 
-    holding = Holding.last
+    holding = @plaid_account.account.holdings.find_by(
+      security: securities(:aapl),
+      date: Date.parse("2025-01-15"),
+      currency: "USD"
+    )
+
+    assert_not_nil holding, "Expected to find holding for AAPL on 2025-01-15"
     assert_equal BigDecimal("10.5"), holding.qty
     assert_equal BigDecimal("150.75"), holding.price
     assert_equal BigDecimal("1582.875"), holding.amount  # 10.5 * 150.75 using BigDecimal

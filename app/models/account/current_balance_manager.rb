@@ -107,7 +107,7 @@ class Account::CurrentBalanceManager
     end
 
     def create_current_anchor(balance)
-      account.entries.create!(
+      entry = account.entries.create!(
         date: Date.current,
         name: Valuation.build_current_anchor_name(account.accountable_type),
         amount: balance,
@@ -115,7 +115,8 @@ class Account::CurrentBalanceManager
         entryable: Valuation.new(kind: "current_anchor")
       )
 
-      # Clear memoized value so it gets reloaded with the new anchor
+      # Reload associations and clear memoized value so it gets the new anchor
+      account.valuations.reload
       @current_anchor_valuation = nil
     end
 
