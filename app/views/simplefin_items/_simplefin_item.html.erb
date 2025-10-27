@@ -39,14 +39,20 @@
               <%= tag.span t(".requires_update") %>
             </div>
           <% elsif simplefin_item.rate_limited_message.present? %>
-            <div class="text-warning flex items-center gap-1">
+            <div class="text-warning flex items-center gap-1 max-w-[22rem] md:max-w-[28rem] truncate">
               <%= icon "clock", size: "sm", color: "warning" %>
-              <%= tag.span simplefin_item.rate_limited_message %>
+              <%= tag.span t(".rate_limited_short"), class: "truncate" %>
+              <%= render DS::Tooltip.new(text: simplefin_item.rate_limited_message, icon: "help-circle", size: "sm", color: "warning") %>
             </div>
           <% elsif simplefin_item.sync_error.present? %>
-            <div class="text-secondary flex items-center gap-1">
-              <%= render DS::Tooltip.new(text: simplefin_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
-              <%= tag.span t(".error"), class: "text-destructive" %>
+            <div class="text-destructive flex items-center gap-1">
+              <%= icon "alert-circle", size: "sm", color: "destructive" %>
+              <%= tag.span t(".sync_failed") %>
+            </div>
+          <% elsif simplefin_item.skipped_accounts_count > 0 %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".skipped_accounts", count: simplefin_item.skipped_accounts_count) %>
             </div>
           <% else %>
             <p class="text-secondary">

@@ -25,6 +25,9 @@ namespace :sure do
         exit 2
       end
 
+      # Allow reading legacy plaintext values during this backfill only
+      Rails.application.config.active_record.encryption.support_unencrypted_data = true
+
       dry_run    = ENV["DRY_RUN"].to_s == "1"
       batch_size = (ENV["BATCH_SIZE"] || 500).to_i
       hard_limit = (ENV["LIMIT"] || 0).to_i
@@ -56,14 +59,25 @@ namespace :sure do
               next
             end
 
-            # Re-assign to trigger AR Encryption on write.
-            item.access_url = original
-
-            # Only save if AR marked it changed; otherwise, skip write.
-            if item.will_save_change_to_attribute?(:access_url)
-              item.save!(touch: false)
-              updated += 1
+            # If value is already encrypted, skip; otherwise encrypt and write directly.
+            already_encrypted = false
+            begin
+              # Try to decrypt the raw value; if it works, it's already encrypted
+              ActiveRecord::Encryption.encryptor.decrypt(original)
+              already_encrypted = true
+            rescue StandardError
+              already_encrypted = false
             end
+
+            if already_encrypted
+              processed += 1
+              next
+            end
+
+            # Manually encrypt and write ciphertext to avoid decryption during change tracking
+            ciphertext = ActiveRecord::Encryption.encryptor.encrypt(original)
+            item.update_columns(access_url: ciphertext)
+            updated += 1
             processed += 1
           end
         end

@@ -56,6 +56,13 @@
                             class: "hover:underline"
                           ) %>
                     <% end %>
+
+                    <% if entry.notes.to_s.include?("Merged pending transaction into posted") %>
+                      <span class="text-warning inline-flex items-center gap-1 text-[11px] ml-2" title="Pending transaction merged into posted">
+                        <%= icon "git-merge", size: "xs", color: "warning" %>
+                        <span>merged</span>
+                      </span>
+                    <% end %>
                   </div>
 
                   <div class="flex items-center gap-1 flex-shrink-0">

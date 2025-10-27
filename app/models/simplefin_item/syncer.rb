@@ -8,7 +8,8 @@ class SimplefinItem::Syncer
   def perform_sync(sync)
     # Phase 1: Import data from SimpleFin API
     sync.update!(status_text: "Importing accounts from SimpleFin...") if sync.respond_to?(:status_text)
-    simplefin_item.import_latest_simplefin_data
+    importer = SimplefinItem::Importer.new(simplefin_item, simplefin_provider: simplefin_item.simplefin_provider)
+    importer.import
 
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
@@ -47,6 +48,10 @@ class SimplefinItem::Syncer
 
     # Store sync statistics in the sync record for status display
     if sync.respond_to?(:sync_stats)
+      # If importer was used above, include skipped account count when available
+      if defined?(importer) && importer.respond_to?(:skipped_accounts)
+        sync_stats[:skipped_accounts] = importer.skipped_accounts.count
+      end
       sync.update!(sync_stats: sync_stats)
     end
   end

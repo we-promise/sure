@@ -1,10 +1,11 @@
 class SimplefinItem::Importer
   class RateLimitedError < StandardError; end
-  attr_reader :simplefin_item, :simplefin_provider
+  attr_reader :simplefin_item, :simplefin_provider, :skipped_accounts
 
   def initialize(simplefin_item, simplefin_provider:)
     @simplefin_item = simplefin_item
     @simplefin_provider = simplefin_provider
+    @skipped_accounts = []
   end
 
   def import
@@ -87,6 +88,13 @@ class SimplefinItem::Importer
 
         # Import accounts and transactions for this chunk
         accounts_data[:accounts]&.each do |account_data|
+          # Skip accounts that carry an error from the provider without failing whole sync
+          if account_data.is_a?(Hash) && (account_data[:error].present? || account_data["error"].present?)
+            reason = account_data[:error] || account_data["error"]
+            @skipped_accounts << { id: account_data[:id], reason: reason }
+            Rails.logger.warn "SimpleFin: skipping account #{account_data[:id]} — #{reason}"
+            next
+          end
           import_account(account_data)
         end
         total_accounts_imported += accounts_data[:accounts]&.size || 0
@@ -117,6 +125,13 @@ class SimplefinItem::Importer
 
       # Import accounts (merges transactions/holdings into existing rows)
       accounts_data[:accounts]&.each do |account_data|
+        # Skip accounts that carry an error from the provider without failing whole sync
+        if account_data.is_a?(Hash) && (account_data[:error].present? || account_data["error"].present?)
+          reason = account_data[:error] || account_data["error"]
+          @skipped_accounts << { id: account_data[:id], reason: reason }
+          Rails.logger.warn "SimpleFin: skipping account #{account_data[:id]} — #{reason}"
+          next
+        end
         import_account(account_data)
       end
     end

@@ -45,3 +45,8 @@ en:
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
       update: Update connection
+      sync_failed: Sync failed
+      rate_limited_short: Rate limited — try again later
+      skipped_accounts:
+        one: "Skipped 1 account — bridge error"
+        other: "Skipped %{count} accounts — bridge errors"

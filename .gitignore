@@ -35,6 +35,10 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+# Ignore development credentials key
+/config/credentials/development.key
+# Ignore any local backup of global credentials
+/config/credentials.yml.enc.upstream
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
@@ -109,3 +113,5 @@ scripts/
 
 # Local Junie helpers
 .junie/
+
+/config/credentials/development.key

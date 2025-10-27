@@ -135,7 +135,7 @@ class SimplefinItem < ApplicationRecord
                      .map { |acc| acc.org_data }
                      .uniq { |org| org["domain"] || org["name"] }
   end
-
+  
   def institution_summary
     institutions = connected_institutions
     case institutions.count
@@ -146,6 +146,13 @@ class SimplefinItem < ApplicationRecord
     else
       "#{institutions.count} institutions"
     end
+  end
+
+  # Number of accounts skipped on the most recent sync due to provider errors
+  def skipped_accounts_count
+    latest = latest_sync
+    return 0 unless latest && latest.respond_to?(:sync_stats) && latest.sync_stats.present?
+    latest.sync_stats["skipped_accounts"].to_i
   end
 
   # Detect a recent rate-limited sync and return a friendly message, else nil
