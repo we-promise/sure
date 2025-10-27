@@ -6,4 +6,4 @@ fr:
       cta: Confirmer la modification de l'e-mail
       expiry_notice: Ce lien expirera dans %{hours} heures.
       greeting: Salut!
-      subject: 'Sure : Confirmez le changement de votre adresse mail'
+      subject: '%{product_name} : Confirmez le changement de votre adresse mail'

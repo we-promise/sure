@@ -15,5 +15,5 @@ fr:
       role_label: Rôle
       role_member: Membre
       submit: Envoyer l'invitation
-      subtitle: Envoyez une invitation pour rejoindre votre compte familial sur Sure
+      subtitle: Envoyez une invitation pour rejoindre votre compte familial sur %{product_name}
       title: Inviter quelqu'un

@@ -3,7 +3,7 @@ fr:
   layouts:
     auth:
       existing_account: Déjà un compte ?
-      no_account: Nouveau sur Sure ?
+      no_account: Nouveau sur %{product_name} ?
       sign_in: Se connecter
       sign_up: Créer un compte
       your_account: Votre compte

@@ -3,7 +3,7 @@ fr:
   settings:
     hostings:
       invite_code_settings:
-        description: Chaque nouvel utilisateur qui rejoint votre instance de Sure ne peut le faire qu'avec un code d'invitation
+        description: Chaque nouvel utilisateur qui rejoint votre instance de %{product_name} ne peut le faire qu'avec un code d'invitation
         email_confirmation_description: Lorsqu'il est activé, les utilisateurs doivent confirmer leur adresse e-mail lors du changement.
         email_confirmation_title: Exiger la confirmation de l'e-mail
         generate_tokens: Générer un nouveau code

@@ -15,7 +15,7 @@ fr:
         title: "Gestion des clés API"
       no_api_key:
         title: "Clé API"
-        description: "Accédez de manière programmée à vos données Sure avec une clé API sécurisée."
+        description: "Accédez de manière programmée à vos données %{product_name} avec une clé API sécurisée."
         what_you_can_do: "Ce que vous pouvez faire avec l'API :"
         feature_1: "Accéder à vos données de compte de manière programmée"
         feature_2: "Construire des intégrations et applications personnalisées"
@@ -36,7 +36,7 @@ fr:
         never_expires: "N'expire jamais"
         permissions: "Autorisations"
         usage_instructions_title: "Comment utiliser votre clé API"
-        usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes à l'API Sure :"
+        usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes à l'API %{product_name} :"
         regenerate_key: "Créer une nouvelle clé"
         revoke_key: "Révoquer la clé"
         revoke_confirmation: "Êtes-vous sûr de vouloir révoquer cette clé API ? Cette action ne peut pas être annulée et désactivera immédiatement toutes les applications utilisant cette clé."

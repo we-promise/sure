@@ -72,7 +72,7 @@ fr:
         last_name: Nom de famille
         page_title: Informations du profil
         pending: En attente
-        profile_subtitle: Personnalisez l'apparence de votre profil sur Sure
+        profile_subtitle: Personnalisez l'apparence de votre profil sur %{product_name}
         profile_title: Personnel
         remove_invitation: Supprimer l'invitation
         remove_member: Supprimer le membre

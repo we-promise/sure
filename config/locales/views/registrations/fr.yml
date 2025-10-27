@@ -20,5 +20,5 @@ fr:
       submit: Créer un compte
       title: Créez votre compte
       welcome_body: Pour commencer, vous devez créer un nouveau compte. Vous pourrez ensuite configurer des paramètres supplémentaires à l'intérieur de l'application.
-      welcome_title: Bienvenue sur Sure auto-hébergé !
+      welcome_title: Bienvenue sur %{product_name} !
       password_placeholder: Entrez votre mot de passe
