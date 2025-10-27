@@ -2,8 +2,7 @@ class PlaidAccount < ApplicationRecord
   belongs_to :plaid_item
 
   # Legacy association via foreign key (will be removed after migration)
-  has_one :account, dependent: :destroy, foreign_key: :plaid_account_id
-
+  has_one :account, dependent: :nullify, foreign_key: :plaid_account_id
   # New association through account_providers
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :linked_account, through: :account_provider, source: :account
