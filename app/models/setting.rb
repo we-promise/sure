@@ -10,8 +10,35 @@ class Setting < RailsSettings::Base
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
 
+  ONBOARDING_STATES = %w[open closed invite_only].freeze
+
+  field :onboarding_state, type: :string, default: "open"
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
+
+  def self.validate_onboarding_state!(state)
+    return if ONBOARDING_STATES.include?(state)
+
+    raise ValidationError, I18n.t("settings.hostings.update.invalid_onboarding_state")
+  end
+
+  class << self
+    alias_method :raw_onboarding_state, :onboarding_state
+    alias_method :raw_onboarding_state=, :onboarding_state=
+
+    def onboarding_state
+      value = raw_onboarding_state
+      return "invite_only" if value.blank? && require_invite_for_signup
+
+      value.presence || "open"
+    end
+
+    def onboarding_state=(state)
+      validate_onboarding_state!(state)
+      self.require_invite_for_signup = state == "invite_only"
+      self.raw_onboarding_state = state
+    end
+  end
 
   # Validates OpenAI configuration requires model when custom URI base is set
   def self.validate_openai_config!(uri_base: nil, model: nil)
