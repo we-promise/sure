@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_25_095800) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -543,6 +543,18 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
+  create_table "oidc_identities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.jsonb "info", default: {}
+    t.datetime "last_authenticated_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "uid"], name: "index_oidc_identities_on_provider_and_uid", unique: true
+    t.index ["user_id"], name: "index_oidc_identities_on_user_id"
+  end
+
   create_table "other_assets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -742,6 +754,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
     t.string "institution_color"
     t.date "sync_start_date"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
+    t.index ["institution_domain"], name: "index_simplefin_items_on_institution_domain"
+    t.index ["institution_id"], name: "index_simplefin_items_on_institution_id"
+    t.index ["institution_name"], name: "index_simplefin_items_on_institution_name"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
 
@@ -933,6 +948,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_22_151319) do
   add_foreign_key "mobile_devices", "users"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
+  add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
