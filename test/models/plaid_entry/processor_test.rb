@@ -62,7 +62,8 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
 
     # Create an existing entry
     @plaid_account.account.entries.create!(
-      plaid_id: existing_plaid_id,
+      external_id: existing_plaid_id,
+      source: "plaid",
       amount: 100,
       currency: "USD",
       date: Date.current,
