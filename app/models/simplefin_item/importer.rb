@@ -159,7 +159,15 @@ class SimplefinItem::Importer
 
       if discovery_data && discovered_count > 0
         simplefin_item.upsert_simplefin_snapshot!(discovery_data)
-        discovery_data[:accounts]&.each { |account_data| import_account(account_data) }
+        discovery_data[:accounts]&.each do |account_data|
+          if account_data.is_a?(Hash) && (account_data[:error].present? || account_data["error"].present?)
+            reason = account_data[:error] || account_data["error"]
+            @skipped_accounts << { id: account_data[:id], reason: reason }
+            Rails.logger.warn "SimpleFin: skipping account #{account_data[:id]} — #{reason} (discovery)"
+            next
+          end
+          import_account(account_data)
+        end
       end
     end
 

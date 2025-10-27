@@ -35,13 +35,13 @@ class SimplefinImporterTest < ActiveSupport::TestCase
   test "initial sync uses 60-day chunks, respects lookback cap, and snapshots first chunk" do
     travel_to Time.zone.parse("2025-10-26 12:00:00") do
       # User requested 6 months lookback
-      @item.update!(last_synced_at: nil, sync_start_date: 6.months.ago.beginning_of_day)
+      @item.update!(sync_start_date: 6.months.ago.beginning_of_day)
 
       # Prepare responses for: discovery (no dates), then first/second chunks.
       responses = [
-        { accounts: [], tag: "discovery" },
-        { accounts: [], tag: "chunk-1" },
-        { accounts: [], tag: "chunk-2" }
+        { accounts: [ { id: "acc_discovery", name: "Discovery", currency: "USD", balance: 0 } ], tag: "discovery" },
+        { accounts: [ { id: "acc1", name: "A1", currency: "USD", balance: 0 } ], tag: "chunk-1" },
+        { accounts: [ { id: "acc2", name: "A2", currency: "USD", balance: 0 } ], tag: "chunk-2" }
       ]
       fake = FakeSimplefinProvider.new(responses: responses.dup)
 
@@ -68,7 +68,7 @@ class SimplefinImporterTest < ActiveSupport::TestCase
       {
         accounts: [
           { id: "acct_error", error: "Apple Card blocked" },
-          { id: "acct_ok", name: "OK Account", currency: "USD" }
+          { id: "acct_ok", name: "OK Account", currency: "USD", balance: 0 }
         ]
       }
     ]

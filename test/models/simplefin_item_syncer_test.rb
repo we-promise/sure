@@ -4,10 +4,16 @@ class SimplefinItemSyncerTest < ActiveSupport::TestCase
   class FakeSimplefinProvider
     def initialize(payload)
       @payload = payload
+      @served = false
     end
 
     def get_accounts(_access_url, start_date: nil, end_date: nil, pending: nil)
-      @payload.deep_symbolize_keys
+      if @served
+        { accounts: [] }.deep_symbolize_keys
+      else
+        @served = true
+        @payload.deep_symbolize_keys
+      end
     end
   end
 
@@ -23,7 +29,8 @@ class SimplefinItemSyncerTest < ActiveSupport::TestCase
   test "syncer includes skipped_accounts in sync_stats when importer skips" do
     payload = {
       accounts: [
-        { id: "acct_err", error: "Bridge error" }
+        { id: "acct_err", error: "Bridge error" },
+        { id: "acct_ok", name: "OK", currency: "USD", balance: 0 }
       ]
     }
     fake = FakeSimplefinProvider.new(payload)
