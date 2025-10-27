@@ -6,11 +6,22 @@
     <% else %>
       <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
         <ol class="text-sm text-secondary mb-4 list-decimal ml-6 space-y-2">
-            <li>
-              Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer">brandfetch.com</a> and create a free Brand Fetch Developer account.
-            </li>
-            <li>Go to the <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer">Logo API</a> page.</li>
-            <li>Tap the eye icon under the "Your Client ID" section to reveal your <strong>Client ID</strong> and paste it below.</li>
+            <details class="mb-4">
+              <summary class="cursor-pointer font-medium text-primary flex items-center">
+                <span class="mr-1"></span>How to obtain your Client ID
+              </summary>
+              <ol class="text-sm text-secondary mt-2 list-decimal ml-6 space-y-2">
+                <li>
+                  Visit <u><a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer">brandfetch.com</a></u> and create a free Brand Fetch Developer account.
+                </li>
+                <li>
+                  Go to the <u><a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer">Logo API</a></u> page.
+                </li>
+                <li>
+                  Tap the eye icon under the "Your Client ID" section to reveal your <strong>Client ID</strong> and paste it below.
+                </li>
+              </ol>
+            </details>
           </ol>
     <% end %>
   </div>
