@@ -23,8 +23,6 @@ Rails.application.configure do
     "Cache-Control" => "public, max-age=#{1.hour.to_i}"
   }
 
-  config.assets.unknown_asset_fallback = true
-
   # Set default sender email for tests
   ENV["EMAIL_SENDER"] = "hello@example.com"
 
