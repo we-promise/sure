@@ -194,4 +194,90 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     # Should have created the successful holding
     assert @plaid_account.account.holdings.exists?(security: securities(:aapl), qty: 200)
   end
+
+  test "handles string values and computes amount using BigDecimal arithmetic" do
+    test_investments_payload = {
+      securities: [],
+      holdings: [
+        {
+          "security_id" => "string_values",
+          "quantity" => "10.5",
+          "institution_price" => "150.75",
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => "2025-01-15"
+        }
+      ],
+      transactions: []
+    }
+
+    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "string_values")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference "Holding.count", 1 do
+      processor.process
+    end
+
+    holding = Holding.last
+    assert_equal BigDecimal("10.5"), holding.qty
+    assert_equal BigDecimal("150.75"), holding.price
+    assert_equal BigDecimal("1582.875"), holding.amount  # 10.5 * 150.75 using BigDecimal
+    assert_equal Date.parse("2025-01-15"), holding.date
+  end
+
+  test "skips holdings with nil quantity or price" do
+    test_investments_payload = {
+      securities: [],
+      holdings: [
+        {
+          "security_id" => "missing_quantity",
+          "quantity" => nil,
+          "institution_price" => 100,
+          "iso_currency_code" => "USD"
+        },
+        {
+          "security_id" => "missing_price",
+          "quantity" => 100,
+          "institution_price" => nil,
+          "iso_currency_code" => "USD"
+        },
+        {
+          "security_id" => "valid",
+          "quantity" => 50,
+          "institution_price" => 50,
+          "iso_currency_code" => "USD"
+        }
+      ],
+      transactions: []
+    }
+
+    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "missing_quantity")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "missing_price")
+                      .returns(OpenStruct.new(security: securities(:msft)))
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "valid")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    # Should create only 1 holding (the valid one)
+    assert_difference "Holding.count", 1 do
+      processor.process
+    end
+
+    # Should have created only the valid holding
+    assert @plaid_account.account.holdings.exists?(security: securities(:aapl), qty: 50, price: 50)
+    assert_not @plaid_account.account.holdings.exists?(security: securities(:msft))
+  end
 end
