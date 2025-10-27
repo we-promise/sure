@@ -22,7 +22,18 @@ class Provider::Factory
 
     private
 
-    def adapter_for(provider_type)
+  private
+
+  def adapter_for(provider_type)
+    case provider_type
+    when "PlaidAccount"
+      Provider::PlaidAdapter
+    when "SimplefinAccount"
+      Provider::SimplefinAdapter
+    else
+      raise ArgumentError, "Unknown provider type: #{provider_type}"
+    end
+  end
       case provider_type
       when "PlaidAccount"
         Provider::PlaidAdapter
