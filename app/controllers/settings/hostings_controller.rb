@@ -15,8 +15,9 @@ class Settings::HostingsController < ApplicationController
   end
 
   def update
-    if hosting_params.key?(:require_invite_for_signup)
-      Setting.require_invite_for_signup = hosting_params[:require_invite_for_signup]
+    if hosting_params.key?(:onboarding_state)
+      onboarding_state = hosting_params[:onboarding_state].to_s
+      Setting.onboarding_state = onboarding_state
     end
 
     if hosting_params.key?(:require_email_confirmation)
@@ -79,7 +80,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :enable_banking_country, :enable_banking_application_id, :enable_banking_certificate, :openai_uri_base, :openai_model)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :enable_banking_country, :enable_banking_application_id, :enable_banking_certificate, :openai_uri_base, :openai_model)
     end
 
     def ensure_admin

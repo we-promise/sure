@@ -8,6 +8,7 @@ nb:
       user:
         create: Fortsett
   registrations:
+    closed: Registrering er midlertidig stengt.
     create:
       failure: Det oppsto et problem med registreringen.
       invalid_invite_code: Ugyldig invitasjonskode, vennligst prøv igjen.

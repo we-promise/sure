@@ -3,16 +3,20 @@ nb:
   settings:
     hostings:
       invite_code_settings:
-        description: Hver ny bruker som blir med i din instans av %{product_name} kan bare bli med via en invitasjonskode
+        description: Kontroller hvordan nye personer registrerer seg for din instans av %{product}.
         email_confirmation_description: Når aktivert, må brukere bekrefte e-postadressen
           sin når de endrer den.
         email_confirmation_title: Krev e-postbekreftelse
         generate_tokens: Generer ny kode
         generated_tokens: Genererte koder
-        title: Krev invitasjonskode for registrering
+        title: Onboarding
+        states:
+          open: Åpen
+          closed: Stengt
+          invite_only: Kun invitasjon
       show:
         general: Generelle innstillinger
-        invites: Invitasjonskoder
+        invites: Onboarding
         title: Selvhosting
         danger_zone: Fareområde
         clear_cache: Tøm cache
@@ -23,6 +27,7 @@ nb:
       update:
         failure: Ugyldig innstillingsverdi
         success: Innstillinger oppdatert
+        invalid_onboarding_state: Ugyldig onboarding-modus
       clear_cache:
         cache_cleared: Cachen er tømt. Dette kan ta noen øyeblikk å fullføre.
       not_authorized: Du er ikke autorisert til å utføre denne handlingen
