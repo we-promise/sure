@@ -15,9 +15,8 @@ en:
           closed: Closed
           invite_only: Invite-only
       show:
-        general: General Settings
-        financial_data_providers: Financial Data Providers
-        invites: Invite Codes
+        general: External Services
+        invites: Onboarding
         title: Self-Hosting
         danger_zone: Danger Zone
         clear_cache: Clear data cache

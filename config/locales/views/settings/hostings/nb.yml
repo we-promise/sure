@@ -16,8 +16,7 @@ nb:
           invite_only: Kun invitasjon
       show:
         general: Generelle innstillinger
-        financial_data_providers: Finansdata-leverandører
-        invites: Invitasjonskoder
+        invites: Onboarding
         title: Selvhosting
         danger_zone: Fareområde
         clear_cache: Tøm cache
@@ -32,11 +31,3 @@ nb:
       clear_cache:
         cache_cleared: Cachen er tømt. Dette kan ta noen øyeblikk å fullføre.
       not_authorized: Du er ikke autorisert til å utføre denne handlingen
-      yahoo_finance_settings:
-        title: Yahoo Finance
-        description: Yahoo Finance gir gratis tilgang til aksjekurser, valutakurser og finansdata uten å kreve en API-nøkkel.
-        status_active: Yahoo Finance er aktiv og fungerer
-        status_inactive: Yahoo Finance-tilkobling feilet
-        connection_failed: Kunne ikke koble til Yahoo Finance
-        troubleshooting: Sjekk internettilkoblingen og brannmurinnstillingene. Yahoo Finance kan være midlertidig utilgjengelig.
-

@@ -14,10 +14,6 @@ class Setting < RailsSettings::Base
   field :enable_banking_application_id, type: :string, default: ENV["ENABLE_BANKING_APPLICATION_ID"]
   field :enable_banking_certificate, type: :text, default: ENV["ENABLE_BANKING_CERTIFICATE"]
 
-  # Dynamic fields are now stored as individual entries with "dynamic:" prefix
-  # This prevents race conditions and ensures each field is independently managed
-
-  # Onboarding and app settings
   ONBOARDING_STATES = %w[open closed invite_only].freeze
   DEFAULT_ONBOARDING_STATE = begin
     env_value = ENV["ONBOARDING_STATE"].to_s.presence || "open"
@@ -27,6 +23,30 @@ class Setting < RailsSettings::Base
   field :onboarding_state, type: :string, default: DEFAULT_ONBOARDING_STATE
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
+
+  def self.validate_onboarding_state!(state)
+    return if ONBOARDING_STATES.include?(state)
+
+    raise ValidationError, I18n.t("settings.hostings.update.invalid_onboarding_state")
+  end
+
+  class << self
+    alias_method :raw_onboarding_state, :onboarding_state
+    alias_method :raw_onboarding_state=, :onboarding_state=
+
+    def onboarding_state
+      value = raw_onboarding_state
+      return "invite_only" if value.blank? && require_invite_for_signup
+
+      value.presence || DEFAULT_ONBOARDING_STATE
+    end
+
+    def onboarding_state=(state)
+      validate_onboarding_state!(state)
+      self.require_invite_for_signup = state == "invite_only"
+      self.raw_onboarding_state = state
+    end
+  end
 
   # Validates OpenAI configuration requires model when custom URI base is set
   def self.validate_openai_config!(uri_base: nil, model: nil)
