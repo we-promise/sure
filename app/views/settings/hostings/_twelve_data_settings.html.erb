@@ -5,13 +5,22 @@
       <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
     <% else %>
       <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
-        <ol class="text-sm text-secondary mb-4 list-decimal ml-6 space-y-2">
-            <li>
-            Visit <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer">twelvedata.com</a> and create a free Twelve Data Developer account.
-          </li>
-          <li>Go to the <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer">API Keys</a> page.</li>
-          <li>Reveal your <strong>Secret Key</strong> and paste it below.</li>
-        </ol>
+            <details class="mb-4">
+              <summary class="cursor-pointer font-medium text-primary flex items-center">
+                How to obtain your Twelve Data Secret Key
+              </summary>
+              <ol class="text-sm text-secondary mt-2 list-decimal ml-6 space-y-2">
+                <li>
+                  Visit <u><a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer">twelvedata.com</a></u> and create a free Twelve Data Developer account.
+                </li>
+                <li>
+                  Go to the <u><a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer">API Keys</a></u> page.
+                </li>
+                <li>
+                  Reveal your <strong>Secret Key</strong> and paste it below.
+                </li>
+              </ol>
+            </details>
     <% end %>
   </div>
 
