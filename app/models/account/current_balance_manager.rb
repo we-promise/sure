@@ -114,6 +114,9 @@ class Account::CurrentBalanceManager
         currency: account.currency,
         entryable: Valuation.new(kind: "current_anchor")
       )
+
+      # Clear memoized value so it gets reloaded with the new anchor
+      @current_anchor_valuation = nil
     end
 
     def update_current_anchor(balance)
