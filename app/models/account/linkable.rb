@@ -50,4 +50,13 @@ module Account::Linkable
   def linked_to?(provider_type)
     account_providers.exists?(provider_type: provider_type)
   end
+
+  # Check if holdings can be deleted
+  # If account has multiple providers, returns true only if ALL providers allow deletion
+  # This prevents deleting holdings that would be recreated on next sync
+  def can_delete_holdings?
+    return true if unlinked?
+
+    providers.all?(&:can_delete_holdings?)
+  end
 end

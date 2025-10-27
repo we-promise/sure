@@ -5,10 +5,7 @@ module AccountsHelper
   end
 
   def sync_path_for(account)
-    if account.linked? && account.provider
-      account.provider.sync_path
-    else
-      sync_account_path(account)
-    end
+    # Always use the account sync path, which handles syncing all providers
+    sync_account_path(account)
   end
 end
