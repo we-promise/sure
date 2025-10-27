@@ -115,7 +115,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   end
 
   test "raises error when external_id is missing" do
-    assert_raises(ArgumentError, "external_id is required") do
+    exception = assert_raises(ArgumentError) do
       @adapter.import_transaction(
         external_id: "",
         amount: 100.00,
@@ -125,10 +125,12 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid"
       )
     end
+
+    assert_equal "external_id is required", exception.message
   end
 
   test "raises error when source is missing" do
-    assert_raises(ArgumentError, "source is required") do
+    exception = assert_raises(ArgumentError) do
       @adapter.import_transaction(
         external_id: "test_123",
         amount: 100.00,
@@ -138,6 +140,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: ""
       )
     end
+
+    assert_equal "source is required", exception.message
   end
 
   test "finds or creates merchant with all data" do
@@ -237,7 +241,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   end
 
   test "raises error when security is missing for holding import" do
-    assert_raises(ArgumentError, "security is required") do
+    exception = assert_raises(ArgumentError) do
       @adapter.import_holding(
         security: nil,
         quantity: 10,
@@ -247,6 +251,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid"
       )
     end
+
+    assert_equal "security is required", exception.message
   end
 
   test "imports trade with all parameters" do
@@ -274,7 +280,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   end
 
   test "raises error when security is missing for trade import" do
-    assert_raises(ArgumentError, "security is required") do
+    exception = assert_raises(ArgumentError) do
       @adapter.import_trade(
         security: nil,
         quantity: 5,
@@ -285,5 +291,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid"
       )
     end
+
+    assert_equal "security is required", exception.message
   end
 end
