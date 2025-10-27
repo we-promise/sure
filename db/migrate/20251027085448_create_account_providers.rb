@@ -7,9 +7,9 @@ class CreateAccountProviders < ActiveRecord::Migration[7.2]
     end
 
     # Ensure an account can only have one provider of each type
-    add_index :account_providers, [:account_id, :provider_type], unique: true
+    add_index :account_providers, [ :account_id, :provider_type ], unique: true
 
     # Ensure a provider can only be linked to one account
-    add_index :account_providers, [:provider_type, :provider_id], unique: true
+    add_index :account_providers, [ :provider_type, :provider_id ], unique: true
   end
 end
