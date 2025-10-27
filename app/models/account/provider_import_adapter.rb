@@ -21,7 +21,7 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "source is required" if source.blank?
 
     Account.transaction do
-      entry = account.entries.find_or_initialize_by(plaid_id: external_id) do |e|
+      entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
         e.entryable = Transaction.new
       end
 
@@ -60,10 +60,10 @@ class Account::ProviderImportAdapter
     return nil unless provider_merchant_id.present? && name.present?
 
     ProviderMerchant.find_or_create_by!(
-      source: source,
-      name: name
+      provider_merchant_id: provider_merchant_id,
+      source: source
     ) do |m|
-      m.provider_merchant_id = provider_merchant_id
+      m.name = name
       m.website_url = website_url
       m.logo_url = logo_url
     end
@@ -149,20 +149,14 @@ class Account::ProviderImportAdapter
   # @param currency [String] Currency code
   # @param date [Date, String] Trade date
   # @param name [String, nil] Optional custom name for the trade
+  # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, source:)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
     Account.transaction do
-      trade = Trade.new(
-        security: security,
-        qty: quantity,
-        price: price,
-        currency: currency
-      )
-
       # Generate name if not provided
       trade_name = if name.present?
         name
@@ -171,14 +165,35 @@ class Account::ProviderImportAdapter
         Trade.build_name(trade_type, quantity, security.ticker)
       end
 
-      entry = account.entries.create!(
+      # Use find_or_initialize_by with external_id if provided, otherwise create new
+      entry = if external_id.present?
+        account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
+          e.entryable = Trade.new(
+            security: security,
+            qty: quantity,
+            price: price,
+            currency: currency
+          )
+        end
+      else
+        account.entries.new(
+          entryable: Trade.new(
+            security: security,
+            qty: quantity,
+            price: price,
+            currency: currency
+          )
+        )
+      end
+
+      entry.assign_attributes(
         date: date,
         amount: amount,
         currency: currency,
-        name: trade_name,
-        entryable: trade
+        name: trade_name
       )
 
+      entry.save!
       entry
     end
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_27_085614) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_27_110609) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -25,8 +25,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_27_085614) do
     t.uuid "provider_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "provider_type"], name: "index_account_providers_on_account_id_and_provider_type", unique: true
-    t.index ["account_id"], name: "index_account_providers_on_account_id"
+    t.index ["account_id"], name: "index_account_providers_on_account_id", unique: true
     t.index ["provider_type", "provider_id"], name: "index_account_providers_on_provider"
     t.index ["provider_type", "provider_id"], name: "index_account_providers_on_provider_type_and_provider_id", unique: true
   end
@@ -250,11 +249,14 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_27_085614) do
     t.boolean "excluded", default: false
     t.string "plaid_id"
     t.jsonb "locked_attributes", default: {}
+    t.string "external_id"
+    t.string "source"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["date"], name: "index_entries_on_date"
     t.index ["entryable_type"], name: "index_entries_on_entryable_type"
+    t.index ["external_id", "source"], name: "index_entries_on_external_id_and_source", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["import_id"], name: "index_entries_on_import_id"
   end
 
@@ -476,6 +478,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_27_085614) do
     t.string "provider_merchant_id"
     t.index ["family_id", "name"], name: "index_merchants_on_family_id_and_name", unique: true, where: "((type)::text = 'FamilyMerchant'::text)"
     t.index ["family_id"], name: "index_merchants_on_family_id"
+    t.index ["provider_merchant_id", "source"], name: "index_merchants_on_provider_merchant_id_and_source", unique: true, where: "((provider_merchant_id IS NOT NULL) AND ((type)::text = 'ProviderMerchant'::text))"
     t.index ["source", "name"], name: "index_merchants_on_source_and_name", unique: true, where: "((type)::text = 'ProviderMerchant'::text)"
     t.index ["type"], name: "index_merchants_on_type"
   end

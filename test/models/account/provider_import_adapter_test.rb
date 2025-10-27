@@ -48,7 +48,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       )
 
       assert_equal 50.00, entry.amount
-      assert_equal "simplefin_abc", entry.plaid_id
+      assert_equal "simplefin_abc", entry.external_id
+      assert_equal "simplefin", entry.source
       assert_nil entry.transaction.category_id
       assert_nil entry.transaction.merchant_id
     end
@@ -79,6 +80,37 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal entry.id, updated_entry.id
       assert_equal 200.00, updated_entry.amount
       assert_equal "Updated Name", updated_entry.name
+    end
+  end
+
+  test "allows same external_id from different sources without collision" do
+    # Create transaction from SimpleFin with ID "transaction_123"
+    simplefin_entry = @adapter.import_transaction(
+      external_id: "transaction_123",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.today,
+      name: "SimpleFin Transaction",
+      source: "simplefin"
+    )
+
+    # Create transaction from Plaid with same ID "transaction_123" - should not collide
+    assert_difference "@account.entries.count", 1 do
+      plaid_entry = @adapter.import_transaction(
+        external_id: "transaction_123",
+        amount: 200.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Plaid Transaction",
+        source: "plaid"
+      )
+
+      # Should be different entries
+      assert_not_equal simplefin_entry.id, plaid_entry.id
+      assert_equal "simplefin", simplefin_entry.source
+      assert_equal "plaid", plaid_entry.source
+      assert_equal "transaction_123", simplefin_entry.external_id
+      assert_equal "transaction_123", plaid_entry.external_id
     end
   end
 
