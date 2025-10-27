@@ -92,9 +92,10 @@ class Account::ProviderImportAdapter
   # @param cost_basis [BigDecimal, Numeric, nil] Cost basis (optional)
   # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
+  # @param account_provider_id [String, nil] The AccountProvider ID that owns this holding (optional)
   # @param delete_future_holdings [Boolean] Whether to delete holdings after this date (default: false)
   # @return [Holding] The created or updated holding
-  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, delete_future_holdings: false)
+  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, account_provider_id: nil, delete_future_holdings: false)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -123,17 +124,35 @@ class Account::ProviderImportAdapter
         qty: quantity,
         price: price,
         amount: amount,
-        cost_basis: cost_basis
+        cost_basis: cost_basis,
+        account_provider_id: account_provider_id
       )
 
       holding.save!
 
       # Optionally delete future holdings for this security (Plaid behavior)
+      # Only delete if ALL providers allow deletion (cross-provider check)
       if delete_future_holdings
-        account.holdings
+        unless account.can_delete_holdings?
+          Rails.logger.warn(
+            "Skipping future holdings deletion for account #{account.id} " \
+            "because not all providers allow deletion"
+          )
+          return holding
+        end
+
+        # Build base query for future holdings
+        future_holdings_query = account.holdings
           .where(security: security)
           .where("date > ?", date)
-          .destroy_all
+
+        # If account_provider_id is provided, only delete holdings from this provider
+        # This prevents deleting positions imported by other providers
+        if account_provider_id.present?
+          future_holdings_query = future_holdings_query.where(account_provider_id: account_provider_id)
+        end
+
+        future_holdings_query.destroy_all
       end
 
       holding

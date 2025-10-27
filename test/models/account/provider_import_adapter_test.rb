@@ -294,4 +294,169 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     assert_equal "security is required", exception.message
   end
+
+  test "stores account_provider_id when importing holding" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+    account_provider = AccountProvider.create!(
+      account: investment_account,
+      provider: plaid_accounts(:one)
+    )
+
+    holding = adapter.import_holding(
+      security: security,
+      quantity: 10,
+      amount: 1500,
+      currency: "USD",
+      date: Date.today,
+      price: 150,
+      source: "plaid",
+      account_provider_id: account_provider.id
+    )
+
+    assert_equal account_provider.id, holding.account_provider_id
+  end
+
+  test "does not delete future holdings when can_delete_holdings? returns false" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    # Create a future holding
+    future_holding = investment_account.holdings.create!(
+      security: security,
+      qty: 5,
+      amount: 750,
+      currency: "USD",
+      date: Date.today + 1.day,
+      price: 150
+    )
+
+    # Mock can_delete_holdings? to return false
+    investment_account.expects(:can_delete_holdings?).returns(false)
+
+    # Import a holding with delete_future_holdings flag
+    adapter.import_holding(
+      security: security,
+      quantity: 10,
+      amount: 1500,
+      currency: "USD",
+      date: Date.today,
+      price: 150,
+      source: "plaid",
+      delete_future_holdings: true
+    )
+
+    # Future holding should still exist
+    assert Holding.exists?(future_holding.id)
+  end
+
+  test "deletes only holdings from same provider when account_provider_id is provided" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    # Create an account provider
+    plaid_account = PlaidAccount.create!(
+      current_balance: 1000,
+      available_balance: 1000,
+      currency: "USD",
+      name: "Test Plaid Account",
+      plaid_item: plaid_items(:one),
+      plaid_id: "acc_mock_test_1",
+      plaid_type: "investment",
+      plaid_subtype: "brokerage"
+    )
+
+    provider = AccountProvider.create!(
+      account: investment_account,
+      provider: plaid_account
+    )
+
+    # Create future holdings - one from the provider, one without a provider
+    future_holding_with_provider = investment_account.holdings.create!(
+      security: security,
+      qty: 5,
+      amount: 750,
+      currency: "USD",
+      date: Date.today + 1.day,
+      price: 150,
+      account_provider_id: provider.id
+    )
+
+    future_holding_without_provider = investment_account.holdings.create!(
+      security: security,
+      qty: 3,
+      amount: 450,
+      currency: "USD",
+      date: Date.today + 2.days,
+      price: 150,
+      account_provider_id: nil
+    )
+
+    # Mock can_delete_holdings? to return true
+    investment_account.expects(:can_delete_holdings?).returns(true)
+
+    # Import a holding with provider ID and delete_future_holdings flag
+    adapter.import_holding(
+      security: security,
+      quantity: 10,
+      amount: 1500,
+      currency: "USD",
+      date: Date.today,
+      price: 150,
+      source: "plaid",
+      account_provider_id: provider.id,
+      delete_future_holdings: true
+    )
+
+    # Only the holding from the same provider should be deleted
+    assert_not Holding.exists?(future_holding_with_provider.id)
+    assert Holding.exists?(future_holding_without_provider.id)
+  end
+
+  test "deletes all future holdings when account_provider_id is not provided and can_delete_holdings? returns true" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    # Create two future holdings
+    future_holding_1 = investment_account.holdings.create!(
+      security: security,
+      qty: 5,
+      amount: 750,
+      currency: "USD",
+      date: Date.today + 1.day,
+      price: 150
+    )
+
+    future_holding_2 = investment_account.holdings.create!(
+      security: security,
+      qty: 3,
+      amount: 450,
+      currency: "USD",
+      date: Date.today + 2.days,
+      price: 150
+    )
+
+    # Mock can_delete_holdings? to return true
+    investment_account.expects(:can_delete_holdings?).returns(true)
+
+    # Import a holding without account_provider_id
+    adapter.import_holding(
+      security: security,
+      quantity: 10,
+      amount: 1500,
+      currency: "USD",
+      date: Date.today,
+      price: 150,
+      source: "plaid",
+      delete_future_holdings: true
+    )
+
+    # All future holdings should be deleted
+    assert_not Holding.exists?(future_holding_1.id)
+    assert_not Holding.exists?(future_holding_2.id)
+  end
 end
