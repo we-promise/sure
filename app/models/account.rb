@@ -5,7 +5,6 @@ class Account < ApplicationRecord
 
   belongs_to :family
   belongs_to :import, optional: true
-  belongs_to :simplefin_account, optional: true
 
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
@@ -23,7 +22,7 @@ class Account < ApplicationRecord
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
-  scope :manual, -> { where(plaid_account_id: nil, simplefin_account_id: nil) }
+  scope :manual, -> { left_joins(:account_providers).where(account_providers: { id: nil }) }
 
   has_one_attached :logo
 
@@ -141,18 +140,7 @@ class Account < ApplicationRecord
   end
 
   def institution_domain
-    url_string = plaid_account&.plaid_item&.institution_url
-    return nil unless url_string.present?
-
-    begin
-      uri = URI.parse(url_string)
-      # Use safe navigation on .host before calling gsub
-      uri.host&.gsub(/^www\./, "")
-    rescue URI::InvalidURIError
-      # Log a warning if the URL is invalid and return nil
-      Rails.logger.warn("Invalid institution URL encountered for account #{id}: #{url_string}")
-      nil
-    end
+    provider&.institution_domain
   end
 
   def destroy_later

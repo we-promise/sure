@@ -9,7 +9,7 @@ class HoldingsController < ApplicationController
   end
 
   def destroy
-    if @holding.account.plaid_account_id.present?
+    if @holding.account.linked? && !@holding.account.provider&.can_delete_holdings?
       flash[:alert] = "You cannot delete this holding"
     else
       @holding.destroy_holding_and_entries!

@@ -5,10 +5,8 @@ module AccountsHelper
   end
 
   def sync_path_for(account)
-    if account.plaid_account_id.present?
-      sync_plaid_item_path(account.plaid_account.plaid_item)
-    elsif account.simplefin_account_id.present?
-      sync_simplefin_item_path(account.simplefin_account.simplefin_item)
+    if account.linked? && account.provider
+      account.provider.sync_path
     else
       sync_account_path(account)
     end

@@ -29,13 +29,18 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
 
     account = Account.order(created_at: :desc).first
     assert_equal "Test Plaid Account", account.name
-    assert_equal @plaid_account.id, account.plaid_account_id
     assert_equal "checking", account.subtype
     assert_equal 1000, account.balance
     assert_equal 1000, account.cash_balance
     assert_equal "USD", account.currency
     assert_equal "Depository", account.accountable_type
     assert_equal "checking", account.subtype
+
+    # Verify AccountProvider was created
+    assert account.linked?
+    assert_equal 1, account.account_providers.count
+    assert_equal @plaid_account.id, account.account_providers.first.provider_id
+    assert_equal "PlaidAccount", account.account_providers.first.provider_type
   end
 
   test "processing is idempotent with updates and enrichments" do
