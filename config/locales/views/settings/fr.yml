@@ -23,7 +23,7 @@ fr:
     preferences:
       show:
         country: Pays
-        currency: devise
+        currency: Devise
         date_format: Format de date
         general_subtitle: Configurez vos préférences
         general_title: Général
@@ -36,7 +36,7 @@ fr:
         theme_subtitle: Choisissez un thème préféré pour l'application
         theme_system: Système
         theme_title: Thème
-        timezone: fuseau horaire
+        timezone: Fuseau horaire
     profiles:
       destroy:
         cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.

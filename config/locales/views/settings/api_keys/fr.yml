@@ -46,7 +46,7 @@ fr:
         description: "Configurez votre nouvelle clé API avec un nom descriptif et des autorisations appropriées."
         name_label: "Nom de la clé API"
         name_placeholder: "Application de production, Tableau de bord analytique"
-        name_help: "Choisissez un nom déscriptif pour vous aider à identifier l'objectif de cette clé."
+        name_help: "Choisissez un nom descriptif pour vous aider à identifier l'objectif de cette clé."
         permissions_label: "Autorisations"
         permissions_help: "Sélectionnez les autorisations nécessaires pour votre clé API. Vous pouvez toujours créer une nouvelle clé avec des autorisations différentes."
         scope_details:
