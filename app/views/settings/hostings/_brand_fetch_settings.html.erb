@@ -4,7 +4,23 @@
     <% if ENV["BRAND_FETCH_CLIENT_ID"].present? %>
       <p class="text-sm text-secondary">You have successfully configured your Brand Fetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.</p>
     <% else %>
-      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+      <div class="text-secondary text-sm mb-4">
+        <span><%= t(".description") %></span>
+        <details class="inline">
+          <summary class="cursor-pointer font-medium text-secondary underline inline"> (show details)</summary>
+          <ol class="text-sm text-secondary mt-2 list-decimal ml-6 space-y-2">
+            <li>
+              Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brand Fetch Developer account.
+            </li>
+            <li>
+              Go to the <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> page.
+            </li>
+            <li>
+              Tap the eye icon under the "Your Client ID" section to reveal your <strong>Client ID</strong> and paste it below.
+            </li>
+          </ol>
+        </details>
+      </div>
     <% end %>
   </div>
 
