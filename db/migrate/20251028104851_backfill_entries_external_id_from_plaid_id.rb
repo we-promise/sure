@@ -3,11 +3,12 @@ class BackfillEntriesExternalIdFromPlaidId < ActiveRecord::Migration[7.2]
     # Backfill external_id from plaid_id for entries that have plaid_id but no external_id
     # Set source to 'plaid' for these entries as well
     execute <<-SQL
-      UPDATE entries
-      SET external_id = plaid_id,
-          source = 'plaid'
-      WHERE plaid_id IS NOT NULL
-        AND external_id IS NULL
+      UPDATE entries e
+      SET external_id = e.plaid_id,
+          source = COALESCE(e.source, 'plaid')
+      WHERE e.plaid_id IS NOT NULL
+        AND e.external_id IS NULL
+        AND (e.source IS NULL OR e.source = 'plaid')
     SQL
   end
 

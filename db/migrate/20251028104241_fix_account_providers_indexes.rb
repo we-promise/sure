@@ -7,7 +7,7 @@ class FixAccountProvidersIndexes < ActiveRecord::Migration[7.2]
     # Add proper composite unique index to match model validation
     # This allows an account to have multiple providers, but only one of each type
     # e.g., Account can have PlaidAccount + SimplefinAccount, but not two PlaidAccounts
-    add_index :account_providers, [:account_id, :provider_type],
+    add_index :account_providers, [ :account_id, :provider_type ],
               unique: true,
               name: "index_account_providers_on_account_and_provider_type"
 
