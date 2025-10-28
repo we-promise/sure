@@ -2,7 +2,7 @@
 <div id="outflows-donut-section">
   <div class="flex justify-between items-center gap-4 px-4 mb-4">
     <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
-      Outflows
+      <%= t("pages.dashboard.outflows_donut.title") %>
     </h2>
 
     <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "outflows_donut_section" } do |form| %>
@@ -33,7 +33,7 @@
           <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
             <div data-donut-chart-target="defaultContent" class="flex flex-col items-center">
               <div class="text-secondary text-sm mb-2">
-                <span>Total Outflows</span>
+                <span><%= t("pages.dashboard.outflows_donut.total_outflows") %></span>
               </div>
 
               <div class="text-3xl font-medium text-primary">

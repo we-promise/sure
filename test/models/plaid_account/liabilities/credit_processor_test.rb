@@ -8,7 +8,7 @@ class PlaidAccount::Liabilities::CreditProcessorTest < ActiveSupport::TestCase
       plaid_subtype: "credit_card"
     )
 
-    @plaid_account.account.update!(
+    @plaid_account.current_account.update!(
       accountable: CreditCard.new,
     )
   end
@@ -24,8 +24,8 @@ class PlaidAccount::Liabilities::CreditProcessorTest < ActiveSupport::TestCase
     processor = PlaidAccount::Liabilities::CreditProcessor.new(@plaid_account)
     processor.process
 
-    assert_equal 100, @plaid_account.account.credit_card.minimum_payment
-    assert_equal 15.0, @plaid_account.account.credit_card.apr
+    assert_equal 100, @plaid_account.current_account.credit_card.minimum_payment
+    assert_equal 15.0, @plaid_account.current_account.credit_card.apr
   end
 
   test "does nothing when liability data absent" do
@@ -33,7 +33,7 @@ class PlaidAccount::Liabilities::CreditProcessorTest < ActiveSupport::TestCase
     processor = PlaidAccount::Liabilities::CreditProcessor.new(@plaid_account)
     processor.process
 
-    assert_nil @plaid_account.account.credit_card.minimum_payment
-    assert_nil @plaid_account.account.credit_card.apr
+    assert_nil @plaid_account.current_account.credit_card.minimum_payment
+    assert_nil @plaid_account.current_account.credit_card.apr
   end
 end

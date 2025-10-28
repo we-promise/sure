@@ -9,7 +9,7 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     )
 
     # Change the underlying accountable to a Loan so the helper method `loan` is available
-    @plaid_account.account.update!(accountable: Loan.new)
+    @plaid_account.current_account.update!(accountable: Loan.new)
   end
 
   test "updates loan details including term months from Plaid data" do
@@ -25,7 +25,7 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     processor = PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account)
     processor.process
 
-    loan = @plaid_account.account.loan
+    loan = @plaid_account.current_account.loan
 
     assert_equal "fixed", loan.rate_type
     assert_equal 5.5, loan.interest_rate
@@ -46,7 +46,7 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     processor = PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account)
     processor.process
 
-    loan = @plaid_account.account.loan
+    loan = @plaid_account.current_account.loan
 
     assert_nil loan.term_months
     assert_equal 4.8, loan.interest_rate
@@ -59,7 +59,7 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     processor = PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account)
     processor.process
 
-    loan = @plaid_account.account.loan
+    loan = @plaid_account.current_account.loan
 
     assert_nil loan.interest_rate
     assert_nil loan.initial_balance

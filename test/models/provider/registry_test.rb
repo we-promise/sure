@@ -44,19 +44,22 @@ class Provider::RegistryTest < ActiveSupport::TestCase
   end
 
   test "openai provider falls back to Setting when ENV is empty string" do
-    # Simulate ENV being set to empty string (common in Docker/env files)
-    ENV.stubs(:[]).with("OPENAI_ACCESS_TOKEN").returns("")
-    ENV.stubs(:[]).with("OPENAI_URI_BASE").returns("")
-    ENV.stubs(:[]).with("OPENAI_MODEL").returns("")
+    # Mock ENV to return empty string (common in Docker/env files)
+    # Use stub_env helper which properly stubs ENV access
+    ClimateControl.modify(
+      "OPENAI_ACCESS_TOKEN" => "",
+      "OPENAI_URI_BASE" => "",
+      "OPENAI_MODEL" => ""
+    ) do
+      Setting.stubs(:openai_access_token).returns("test-token-from-setting")
+      Setting.stubs(:openai_uri_base).returns(nil)
+      Setting.stubs(:openai_model).returns(nil)
 
-    Setting.stubs(:openai_access_token).returns("test-token-from-setting")
-    Setting.stubs(:openai_uri_base).returns(nil)
-    Setting.stubs(:openai_model).returns(nil)
+      provider = Provider::Registry.get_provider(:openai)
 
-    provider = Provider::Registry.get_provider(:openai)
-
-    # Should successfully create provider using Setting value
-    assert_not_nil provider
-    assert_instance_of Provider::Openai, provider
+      # Should successfully create provider using Setting value
+      assert_not_nil provider
+      assert_instance_of Provider::Openai, provider
+    end
   end
 end

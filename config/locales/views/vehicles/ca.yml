@@ -1,0 +1,26 @@
+---
+ca:
+  vehicles:
+    edit:
+      edit: Edita %{account}
+    form:
+      make: Marca
+      make_placeholder: Toyota
+      mileage: Quilometratge
+      mileage_placeholder: '15000'
+      mileage_unit: Unitat
+      model: Model
+      model_placeholder: Camry
+      year: Any
+      year_placeholder: '2023'
+    new:
+      title: Introdueix els detalls del vehicle
+    overview:
+      current_price: Preu actual
+      make_model: Marca i model
+      mileage: Quilometratge
+      purchase_price: Preu de compra
+      trend: Tendència
+      unknown: Desconegut
+      year: Any
+
