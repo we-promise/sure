@@ -77,6 +77,10 @@ class Provider::Registry
 
         Provider::Openai.new(access_token, uri_base: uri_base, model: model)
       end
+
+      def yahoo_finance
+        Provider::YahooFinance.new
+      end
   end
 
   def initialize(concept)
