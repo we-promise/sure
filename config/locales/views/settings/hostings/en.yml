@@ -58,7 +58,6 @@ en:
       update:
         failure: Invalid setting value
         success: Settings updated
-      not_authorized: You are not authorized to perform this action
         invalid_onboarding_state: Invalid onboarding state
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
