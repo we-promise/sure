@@ -27,6 +27,11 @@ class Account::ProviderImportAdapter
         e.entryable = Transaction.new
       end
 
+      # Validate entryable type matches to prevent external_id collisions
+      if entry.persisted? && !entry.entryable.is_a?(Transaction)
+        raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
+      end
+
       entry.assign_attributes(
         amount: amount,
         currency: currency,
@@ -191,24 +196,27 @@ class Account::ProviderImportAdapter
         # Find or initialize by both external_id AND source
         # This allows multiple providers to sync same account with separate entries
         account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
-          e.entryable = Trade.new(
-            security: security,
-            qty: quantity,
-            price: price,
-            currency: currency
-          )
+          e.entryable = Trade.new
         end
       else
         account.entries.new(
-          entryable: Trade.new(
-            security: security,
-            qty: quantity,
-            price: price,
-            currency: currency
-          ),
+          entryable: Trade.new,
           source: source
         )
       end
+
+      # Validate entryable type matches to prevent external_id collisions
+      if entry.persisted? && !entry.entryable.is_a?(Trade)
+        raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
+      end
+
+      # Always update Trade attributes (works for both new and existing records)
+      entry.entryable.assign_attributes(
+        security: security,
+        qty: quantity,
+        price: price,
+        currency: currency
+      )
 
       entry.assign_attributes(
         date: date,

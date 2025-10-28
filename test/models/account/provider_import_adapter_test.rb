@@ -460,4 +460,110 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_not Holding.exists?(future_holding_1.id)
     assert_not Holding.exists?(future_holding_2.id)
   end
+
+  test "updates existing trade attributes instead of keeping stale data" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    aapl = securities(:aapl)
+    msft = securities(:msft)
+
+    # Create initial trade
+    entry = adapter.import_trade(
+      external_id: "plaid_trade_123",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 750.00,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    # Import again with updated attributes - should update Trade, not keep stale data
+    assert_no_difference "investment_account.entries.count" do
+      updated_entry = adapter.import_trade(
+        external_id: "plaid_trade_123",
+        security: msft,
+        quantity: 10,
+        price: 200.00,
+        amount: 2000.00,
+        currency: "USD",
+        date: Date.today,
+        source: "plaid"
+      )
+
+      assert_equal entry.id, updated_entry.id
+      # Trade attributes should be updated
+      assert_equal msft.id, updated_entry.entryable.security_id
+      assert_equal 10, updated_entry.entryable.qty
+      assert_equal 200.00, updated_entry.entryable.price
+      assert_equal "USD", updated_entry.entryable.currency
+      # Entry attributes should also be updated
+      assert_equal 2000.00, updated_entry.amount
+    end
+  end
+
+  test "raises error when external_id collision occurs across different entryable types for transaction" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    # Create a trade with external_id "collision_test"
+    adapter.import_trade(
+      external_id: "collision_test",
+      security: security,
+      quantity: 5,
+      price: 150.00,
+      amount: 750.00,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    # Try to create a transaction with the same external_id and source
+    exception = assert_raises(ArgumentError) do
+      adapter.import_transaction(
+        external_id: "collision_test",
+        amount: 100.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Test Transaction",
+        source: "plaid"
+      )
+    end
+
+    assert_match(/Entry with external_id.*already exists with different entryable type/i, exception.message)
+  end
+
+  test "raises error when external_id collision occurs across different entryable types for trade" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    # Create a transaction with external_id "collision_test_2"
+    adapter.import_transaction(
+      external_id: "collision_test_2",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Test Transaction",
+      source: "plaid"
+    )
+
+    # Try to create a trade with the same external_id and source
+    exception = assert_raises(ArgumentError) do
+      adapter.import_trade(
+        external_id: "collision_test_2",
+        security: security,
+        quantity: 5,
+        price: 150.00,
+        amount: 750.00,
+        currency: "USD",
+        date: Date.today,
+        source: "plaid"
+      )
+    end
+
+    assert_match(/Entry with external_id.*already exists with different entryable type/i, exception.message)
+  end
 end
