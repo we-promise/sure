@@ -50,7 +50,14 @@ jobs:
 
     - name: Update Deployment
       run: |
-        yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
+        if [[ "$TAG_NAME" == v*-alpha* ]]; then
+          yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
+          if [[ "$TAG_NAME" == v* ]]; then
+            yq -i '.sure.companion.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/companion-staging/values.yaml
+          else
+            echo "No need to deploy this tag to an environment."
+          fi
+        fi
         cd platform-eks-production
         git config --global user.email "platform@chancen.international"
         git config --global user.name "platform-chancen"
