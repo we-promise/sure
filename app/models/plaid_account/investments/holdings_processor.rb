@@ -32,6 +32,7 @@ class PlaidAccount::Investments::HoldingsProcessor
         currency: plaid_holding["iso_currency_code"],
         date: holding_date,
         price: price_bd,
+        account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
         delete_future_holdings: true  # Plaid deletes future holdings
       )
@@ -50,7 +51,7 @@ class PlaidAccount::Investments::HoldingsProcessor
     end
 
     def holdings
-      plaid_account.raw_investments_payload["holdings"] || []
+      plaid_account.raw_investments_payload&.[]("holdings") || []
     end
 
     def parse_decimal(value)

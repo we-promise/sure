@@ -41,6 +41,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
           price: price,
           cost_basis: cost_basis,
           external_id: "simplefin_#{holding_id}",
+          account_provider_id: simplefin_account.account_provider&.id,
           source: "simplefin",
           delete_future_holdings: false  # SimpleFin tracks each holding uniquely
         )
