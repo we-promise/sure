@@ -11,7 +11,7 @@
 
 <%= render "layouts/shared/htmldoc" do %>
   <div
-    class="flex flex-col lg:flex-row h-full bg-surface"
+    class="flex flex-col lg:flex-row h-full min-h-[100dvh] bg-surface"
     data-controller="app-layout"
     data-app-layout-expanded-sidebar-class="<%= expanded_sidebar_class %>"
     data-app-layout-collapsed-sidebar-class="<%= collapsed_sidebar_class %>"
@@ -32,7 +32,7 @@
     </div>
 
     <%# MOBILE - Top nav %>
-    <nav class="lg:hidden flex justify-between items-center p-3 touch-none">
+    <nav class="lg:hidden flex justify-between items-center p-3 touch-none pt-[calc(env(safe-area-inset-top)+0.75rem)]">
       <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
 
       <%= link_to root_path, class: "block" do %>
