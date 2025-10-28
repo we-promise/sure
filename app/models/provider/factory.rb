@@ -44,23 +44,23 @@ class Provider::Factory
       registry.keys
     end
 
+    # Ensures all provider adapters are loaded
+    # This is needed for Rails autoloading in development/test environments
+    def ensure_adapters_loaded
+      return if @adapters_loaded
+
+      # Require all adapter files to trigger registration
+      Dir[Rails.root.join("app/models/provider/*_adapter.rb")].each do |file|
+        require_dependency file
+      end
+
+      @adapters_loaded = true
+    end
+
     private
 
       def registry
         @registry ||= {}
-      end
-
-      # Ensures all provider adapters are loaded
-      # This is needed for Rails autoloading in development/test environments
-      def ensure_adapters_loaded
-        return if @adapters_loaded
-
-        # Require all adapter files to trigger registration
-        Dir[Rails.root.join("app/models/provider/*_adapter.rb")].each do |file|
-          require_dependency file
-        end
-
-        @adapters_loaded = true
       end
   end
 end

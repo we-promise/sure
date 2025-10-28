@@ -1,9 +1,20 @@
 class Provider::SimplefinAdapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
+  include Provider::Configurable
 
   # Register this adapter with the factory
   Provider::Factory.register("SimplefinAccount", self)
+
+  # Configuration for SimpleFIN
+  configure do
+    field :setup_token,
+          label: "Setup Token",
+          required: false,
+          secret: true,
+          env_key: "SIMPLEFIN_SETUP_TOKEN",
+          description: "Optional: SimpleFIN setup token from your SimpleFIN Bridge account (one-time use)"
+  end
 
   def provider_name
     "simplefin"

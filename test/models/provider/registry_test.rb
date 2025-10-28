@@ -3,13 +3,14 @@ require "test_helper"
 class Provider::RegistryTest < ActiveSupport::TestCase
   test "providers filters out nil values when provider is not configured" do
     # Ensure OpenAI is not configured
-    Setting.stubs(:openai_access_token).returns(nil)
-    ENV.stubs(:fetch).with("OPENAI_ACCESS_TOKEN", nil).returns(nil)
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil) do
+      Setting.stubs(:openai_access_token).returns(nil)
 
-    registry = Provider::Registry.for_concept(:llm)
+      registry = Provider::Registry.for_concept(:llm)
 
-    # Should return empty array instead of [nil]
-    assert_equal [], registry.providers
+      # Should return empty array instead of [nil]
+      assert_equal [], registry.providers
+    end
   end
 
   test "providers returns configured providers" do
@@ -34,13 +35,14 @@ class Provider::RegistryTest < ActiveSupport::TestCase
 
   test "get_provider returns nil when provider not configured" do
     # Ensure OpenAI is not configured
-    Setting.stubs(:openai_access_token).returns(nil)
-    ENV.stubs(:[]).with("OPENAI_ACCESS_TOKEN").returns(nil)
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil) do
+      Setting.stubs(:openai_access_token).returns(nil)
 
-    registry = Provider::Registry.for_concept(:llm)
+      registry = Provider::Registry.for_concept(:llm)
 
-    # Should return nil when provider method exists but returns nil
-    assert_nil registry.get_provider(:openai)
+      # Should return nil when provider method exists but returns nil
+      assert_nil registry.get_provider(:openai)
+    end
   end
 
   test "openai provider falls back to Setting when ENV is empty string" do

@@ -4,12 +4,14 @@ class Setting < RailsSettings::Base
 
   cache_prefix { "v1" }
 
+  # Third-party API keys
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
-
+  
+  # Onboarding and app settings
   ONBOARDING_STATES = %w[open closed invite_only].freeze
   DEFAULT_ONBOARDING_STATE = begin
     env_value = ENV["ONBOARDING_STATE"].to_s.presence || "open"
@@ -41,6 +43,24 @@ class Setting < RailsSettings::Base
       validate_onboarding_state!(state)
       self.require_invite_for_signup = state == "invite_only"
       self.raw_onboarding_state = state
+    end
+
+    # Support dynamic field access via bracket notation
+    # Allows Setting[:key] for provider credentials and other dynamic fields
+    # Returns nil for undeclared fields instead of raising NoMethodError
+    def [](key)
+      return nil unless respond_to?(key)
+      public_send(key)
+    rescue NoMethodError
+      nil
+    end
+
+    def []=(key, value)
+      # Dynamically declare the field if it doesn't exist
+      unless respond_to?("#{key}=")
+        field key, type: :string, default: nil
+      end
+      public_send("#{key}=", value)
     end
   end
 
