@@ -50,9 +50,9 @@ jobs:
 
     - name: Update Deployment
       run: |
-        if [[ "$TAG_NAME" == v*-alpha* ]]; then
+        if [[ "$DOCKER_IMAGE_TAG" == v*-alpha* ]]; then
           yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
-          if [[ "$TAG_NAME" == v* ]]; then
+          if [[ "$DOCKER_IMAGE_TAG" == v* ]]; then
             yq -i '.sure.companion.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/companion-staging/values.yaml
           else
             echo "No need to deploy this tag to an environment."
