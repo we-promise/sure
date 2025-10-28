@@ -86,7 +86,9 @@ For further instructions, see guides below.
 - [Windows dev setup](https://github.com/we-promise/sure/wiki/Windows-Dev-Setup-Guide)
 - Dev containers - visit [this guide](https://code.visualstudio.com/docs/devcontainers/containers)
 
-### One click deploys
+### One-click
+
+[![Run on PikaPods](https://www.pikapods.com/static/run-button.svg)](https://www.pikapods.com/pods?run=maybe)
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 

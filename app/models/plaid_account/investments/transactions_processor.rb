@@ -19,8 +19,12 @@ class PlaidAccount::Investments::TransactionsProcessor
   private
     attr_reader :plaid_account, :security_resolver
 
+    def import_adapter
+      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
+
     def account
-      plaid_account.account
+      plaid_account.current_account
     end
 
     def cash_transaction?(transaction)
@@ -38,50 +42,34 @@ class PlaidAccount::Investments::TransactionsProcessor
         return # We can't process a non-cash transaction without a security
       end
 
-      entry = account.entries.find_or_initialize_by(plaid_id: transaction["investment_transaction_id"]) do |e|
-        e.entryable = Trade.new
-      end
+      external_id = transaction["investment_transaction_id"]
+      return if external_id.blank?
 
-      entry.assign_attributes(
+      import_adapter.import_trade(
+        external_id: external_id,
+        security: resolved_security_result.security,
+        quantity: derived_qty(transaction),
+        price: transaction["price"],
         amount: derived_qty(transaction) * transaction["price"],
         currency: transaction["iso_currency_code"],
-        date: transaction["date"]
-      )
-
-      entry.trade.assign_attributes(
-        security: resolved_security_result.security,
-        qty: derived_qty(transaction),
-        price: transaction["price"],
-        currency: transaction["iso_currency_code"]
-      )
-
-      entry.enrich_attribute(
-        :name,
-        transaction["name"],
+        date: transaction["date"],
+        name: transaction["name"],
         source: "plaid"
       )
-
-      entry.save!
     end
 
     def find_or_create_cash_entry(transaction)
-      entry = account.entries.find_or_initialize_by(plaid_id: transaction["investment_transaction_id"]) do |e|
-        e.entryable = Transaction.new
-      end
+      external_id = transaction["investment_transaction_id"]
+      return if external_id.blank?
 
-      entry.assign_attributes(
+      import_adapter.import_transaction(
+        external_id: external_id,
         amount: transaction["amount"],
         currency: transaction["iso_currency_code"],
-        date: transaction["date"]
-      )
-
-      entry.enrich_attribute(
-        :name,
-        transaction["name"],
+        date: transaction["date"],
+        name: transaction["name"],
         source: "plaid"
       )
-
-      entry.save!
     end
 
     def transactions

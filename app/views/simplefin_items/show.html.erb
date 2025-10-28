@@ -63,10 +63,10 @@
               <p class="text-sm font-medium text-primary">
                 <%= number_to_currency(simplefin_account.current_balance || 0) %>
               </p>
-              <% if simplefin_account.account %>
+              <% if simplefin_account.current_account %>
                 <%= render DS::Link.new(
                   text: "View Account",
-                  href: account_path(simplefin_account.account),
+                  href: account_path(simplefin_account.current_account),
                   variant: :outline
                 ) %>
               <% else %>
