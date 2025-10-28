@@ -29,12 +29,12 @@ class PlaidAccount::Investments::HoldingsProcessor
         security: security,
         quantity: quantity_bd,
         amount: amount_bd,
-        currency: plaid_holding["iso_currency_code"],
+        currency: plaid_holding["iso_currency_code"] || account.currency,
         date: holding_date,
         price: price_bd,
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
-        delete_future_holdings: true  # Plaid deletes future holdings
+        delete_future_holdings: false  # Plaid doesn't allow holdings deletion
       )
     end
   end

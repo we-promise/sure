@@ -70,31 +70,36 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal Date.current, holdings.second.date
   end
 
-  # When Plaid provides holdings data, it includes an "institution_price_as_of" date
-  # which represents when the holdings were last updated. Any holdings in our database
-  # after this date are now stale and should be deleted, as the Plaid data is the
-  # authoritative source of truth for the current holdings.
-  test "deletes stale holdings per security based on institution price date" do
+  # Plaid does not delete future holdings because it doesn't support holdings deletion
+  # (PlaidAdapter#can_delete_holdings? returns false). This test verifies that future
+  # holdings are NOT deleted when processing Plaid holdings data.
+  test "does not delete future holdings when processing Plaid holdings" do
     account = @plaid_account.current_account
+
+    # Create account_provider
+    account_provider = AccountProvider.create!(
+      account: account,
+      provider: @plaid_account
+    )
 
     # Create a third security for testing
     third_security = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")
 
-    # Scenario 3: AAPL has a stale holding that should be deleted
-    stale_aapl_holding = account.holdings.create!(
+    # Create a future AAPL holding that should NOT be deleted
+    future_aapl_holding = account.holdings.create!(
       security: securities(:aapl),
       date: Date.current,
       qty: 80,
       price: 180,
       amount: 14400,
-      currency: "USD"
+      currency: "USD",
+      account_provider_id: account_provider.id
     )
 
-    # Plaid returns 3 holdings with different scenarios
+    # Plaid returns holdings from yesterday - future holdings should remain
     test_investments_payload = {
       securities: [],
       holdings: [
-        # Scenario 1: Current date holding (no deletions needed)
         {
           "security_id" => "current",
           "quantity" => 50,
@@ -102,7 +107,6 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
           "iso_currency_code" => "USD",
           "institution_price_as_of" => Date.current
         },
-        # Scenario 2: Yesterday's holding with no future holdings
         {
           "security_id" => "clean",
           "quantity" => 75,
@@ -110,9 +114,8 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
           "iso_currency_code" => "USD",
           "institution_price_as_of" => 1.day.ago.to_date
         },
-        # Scenario 3: Yesterday's holding with stale future holding
         {
-          "security_id" => "stale",
+          "security_id" => "past",
           "quantity" => 100,
           "institution_price" => 100,
           "iso_currency_code" => "USD",
@@ -134,17 +137,17 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
                       .returns(OpenStruct.new(security: third_security, cash_equivalent?: false, brokerage_cash?: false))
 
     @security_resolver.expects(:resolve)
-                      .with(plaid_security_id: "stale")
+                      .with(plaid_security_id: "past")
                       .returns(OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false))
 
     processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
     processor.process
 
-    # Should have created 3 new holdings
-    assert_equal 3, account.holdings.count
+    # Should have created 3 new holdings PLUS the existing future holding (total 4)
+    assert_equal 4, account.holdings.count
 
-    # Scenario 3: Should have deleted the stale AAPL holding
-    assert_not account.holdings.exists?(stale_aapl_holding.id)
+    # Future AAPL holding should still exist (NOT deleted)
+    assert account.holdings.exists?(future_aapl_holding.id)
 
     # Should have the correct holdings from Plaid
     assert account.holdings.exists?(security: securities(:msft), date: Date.current, qty: 50)
@@ -285,5 +288,41 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     # Should have created only the valid holding
     assert @plaid_account.current_account.holdings.exists?(security: securities(:aapl), qty: 50, price: 50)
     assert_not @plaid_account.current_account.holdings.exists?(security: securities(:msft))
+  end
+
+  test "uses account currency as fallback when Plaid omits iso_currency_code" do
+    account = @plaid_account.current_account
+
+    # Ensure the account has a currency
+    account.update!(currency: "EUR")
+
+    test_investments_payload = {
+      securities: [],
+      holdings: [
+        {
+          "security_id" => "no_currency",
+          "quantity" => 100,
+          "institution_price" => 100,
+          "iso_currency_code" => nil,  # Plaid omits currency
+          "institution_price_as_of" => Date.current
+        }
+      ],
+      transactions: []
+    }
+
+    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "no_currency")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference "Holding.count", 1 do
+      processor.process
+    end
+
+    holding = account.holdings.find_by(security: securities(:aapl))
+    assert_equal "EUR", holding.currency  # Should use account's currency
   end
 end
