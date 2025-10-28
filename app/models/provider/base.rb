@@ -1,3 +1,22 @@
+# Base class for all provider adapters
+# Provides common interface for working with different third-party data providers
+#
+# To create a new provider adapter:
+# 1. Inherit from Provider::Base
+# 2. Implement #provider_name
+# 3. Include optional modules (Provider::Syncable, Provider::InstitutionMetadata)
+# 4. Register with Provider::Factory in the class body
+#
+# Example:
+#   class Provider::AcmeAdapter < Provider::Base
+#     Provider::Factory.register("AcmeAccount", self)
+#     include Provider::Syncable
+#     include Provider::InstitutionMetadata
+#
+#     def provider_name
+#       "acme"
+#     end
+#   end
 class Provider::Base
   attr_reader :provider_account, :account
 
@@ -6,56 +25,45 @@ class Provider::Base
     @account = account || provider_account.account
   end
 
-  # Provider identification
+  # Provider identification - must be implemented by subclasses
+  # @return [String] The provider name (e.g., "plaid", "simplefin")
   def provider_name
     raise NotImplementedError, "#{self.class} must implement #provider_name"
   end
 
+  # Returns the provider type (class name)
+  # @return [String] The provider account class name
   def provider_type
     provider_account.class.name
   end
 
-  # Sync-related methods
-  def sync_path
-    raise NotImplementedError, "#{self.class} must implement #sync_path"
-  end
-
-  def item
-    raise NotImplementedError, "#{self.class} must implement #item"
-  end
-
-  def syncing?
-    item&.syncing? || false
-  end
-
-  # Account metadata
+  # Whether this provider allows deletion of holdings
+  # Override in subclass if provider supports holdings deletion
+  # @return [Boolean] True if holdings can be deleted, false otherwise
   def can_delete_holdings?
     false
   end
 
-  def institution_domain
-    nil
-  end
-
-  def institution_name
-    nil
-  end
-
-  def institution_url
-    nil
-  end
-
-  # Provider-specific data
+  # Provider-specific raw data payload
+  # @return [Hash, nil] The raw payload from the provider
   def raw_payload
     provider_account.raw_payload
   end
 
+  # Returns metadata about this provider and account
+  # Automatically includes institution metadata if the adapter includes Provider::InstitutionMetadata
+  # @return [Hash] Metadata hash
   def metadata
-    {
+    base_metadata = {
       provider_name: provider_name,
-      provider_type: provider_type,
-      institution_domain: institution_domain,
-      institution_name: institution_name
+      provider_type: provider_type
     }
+
+    # Include institution metadata if the module is included
+    if respond_to?(:institution_metadata)
+      base_metadata.merge!(institution: institution_metadata)
+    end
+
+    base_metadata
   end
 end

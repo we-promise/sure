@@ -1,4 +1,10 @@
 class Provider::PlaidAdapter < Provider::Base
+  include Provider::Syncable
+  include Provider::InstitutionMetadata
+
+  # Register this adapter with the factory
+  Provider::Factory.register("PlaidAccount", self)
+
   def provider_name
     "plaid"
   end
@@ -38,13 +44,5 @@ class Provider::PlaidAdapter < Provider::Base
 
   def institution_color
     item&.institution_color
-  end
-
-  def status
-    item&.status
-  end
-
-  def requires_update?
-    status == "requires_update"
   end
 end

@@ -7,18 +7,12 @@ class AccountProvider < ApplicationRecord
 
   # Returns the provider adapter for this connection
   def adapter
-    Provider::Factory.create_adapter(provider)
+    Provider::Factory.create_adapter(provider, account: account)
   end
 
   # Convenience method to get provider name
+  # Delegates to the adapter for consistency, falls back to underscored provider_type
   def provider_name
-    case provider_type
-    when "PlaidAccount"
-      "plaid"
-    when "SimplefinAccount"
-      "simplefin"
-    else
-      provider_type.underscore
-    end
+    adapter&.provider_name || provider_type.underscore
   end
 end

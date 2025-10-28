@@ -1,4 +1,10 @@
 class Provider::SimplefinAdapter < Provider::Base
+  include Provider::Syncable
+  include Provider::InstitutionMetadata
+
+  # Register this adapter with the factory
+  Provider::Factory.register("SimplefinAccount", self)
+
   def provider_name
     "simplefin"
   end
@@ -50,13 +56,5 @@ class Provider::SimplefinAdapter < Provider::Base
 
   def institution_color
     item&.institution_color
-  end
-
-  def status
-    item&.status
-  end
-
-  def requires_update?
-    status == "requires_update"
   end
 end
