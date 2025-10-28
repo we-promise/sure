@@ -179,8 +179,8 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     # Verify old SimpleFin accounts no longer reference Maybe accounts
     old_simplefin_account1.reload
     old_simplefin_account2.reload
-    assert_nil old_simplefin_account1.account
-    assert_nil old_simplefin_account2.account
+    assert_nil old_simplefin_account1.current_account
+    assert_nil old_simplefin_account2.current_account
 
     # Verify old SimpleFin item is scheduled for deletion
     @simplefin_item.reload
@@ -229,7 +229,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     maybe_account.reload
     old_simplefin_account.reload
     assert_equal old_simplefin_account.id, maybe_account.simplefin_account_id
-    assert_equal maybe_account, old_simplefin_account.account
+    assert_equal maybe_account, old_simplefin_account.current_account
 
     # Old item still scheduled for deletion
     @simplefin_item.reload

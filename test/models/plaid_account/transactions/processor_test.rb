@@ -37,7 +37,7 @@ class PlaidAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
 
   test "removes transactions no longer in plaid" do
     destroyable_transaction_id = "destroy_me"
-    @plaid_account.account.entries.create!(
+    @plaid_account.current_account.entries.create!(
       plaid_id: destroyable_transaction_id,
       date: Date.current,
       amount: 100,

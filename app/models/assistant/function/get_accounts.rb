@@ -12,7 +12,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
   def call(params = {})
     {
       as_of_date: Date.current,
-      accounts: family.accounts.includes(:balances).map do |account|
+      accounts: family.accounts.includes(:balances, :account_providers).map do |account|
         {
           name: account.name,
           balance: account.balance,
@@ -21,7 +21,8 @@ class Assistant::Function::GetAccounts < Assistant::Function
           classification: account.classification,
           type: account.accountable_type,
           start_date: account.start_date,
-          is_plaid_linked: account.plaid_account_id.present?,
+          is_linked: account.linked?,
+          provider: account.provider_name,
           status: account.status,
           historical_balances: historical_balances(account)
         }
