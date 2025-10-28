@@ -6,7 +6,12 @@ class SimplefinItem < ApplicationRecord
   # Virtual attribute for the setup token form field
   attr_accessor :setup_token
 
-  if Rails.application.credentials.active_record_encryption.present?
+  # Enable encryption when configured via credentials OR environment variables
+  if Rails.application.credentials.active_record_encryption.present? || (
+       ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+       ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+       ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+     )
     encrypts :access_url, deterministic: true
   end
 

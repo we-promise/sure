@@ -20,8 +20,12 @@ namespace :sure do
   namespace :simplefin do
     desc "Backfill encryption for SimplefinItem.access_url (batched, idempotent)"
     task encrypt_access_urls: :environment do
-      unless Rails.application.credentials.active_record_encryption.present?
-        puts({ error: "active_record_encryption not configured; nothing to do" }.to_json)
+      creds_present = Rails.application.credentials.active_record_encryption.present?
+      env_present = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+                    ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+                    ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+      unless creds_present || env_present
+        puts({ error: "active_record_encryption not configured via credentials or env; nothing to do" }.to_json)
         exit 2
       end
 
