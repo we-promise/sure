@@ -140,7 +140,7 @@ class SimplefinItem < ApplicationRecord
                      .map { |acc| acc.org_data }
                      .uniq { |org| org["domain"] || org["name"] }
   end
-  
+
   def institution_summary
     institutions = connected_institutions
     case institutions.count

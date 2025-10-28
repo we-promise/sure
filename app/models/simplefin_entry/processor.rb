@@ -173,7 +173,7 @@ class SimplefinEntry::Processor
           # We allow match when entry name contains either normalized description or payee/memo tokens
           # for a conservative match; or exact match when both are blank.
           desc_norm, memo_norm, payee_norm = normalized_target
-          [desc_norm, payee_norm, memo_norm].compact.any? { |tok| tok.present? && entry_name_norm.include?(tok) }
+          [ desc_norm, payee_norm, memo_norm ].compact.any? { |tok| tok.present? && entry_name_norm.include?(tok) }
         end
       end
     end
@@ -186,7 +186,7 @@ class SimplefinEntry::Processor
       return nil if str.blank?
       s = str.to_s.downcase
       # Remove common noise tokens that don’t help identity matching
-      noise = ["visa", "mastercard", "discover", "debit", "credit", "purchase", "pos", "auth", "card", "payment"]
+      noise = [ "visa", "mastercard", "discover", "debit", "credit", "purchase", "pos", "auth", "card", "payment" ]
       noise.each { |tok| s = s.gsub(/\b#{Regexp.escape(tok)}\b/, " ") }
       s.gsub(/\s+/, " ").strip
     end
