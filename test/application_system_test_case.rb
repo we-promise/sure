@@ -11,7 +11,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
     def sign_in(user)
       visit new_session_path
-      within "form" do
+      within %(form[action='#{sessions_path}']) do
         fill_in "Email", with: user.email
         fill_in "Password", with: user_password_test
         click_on "Log in"

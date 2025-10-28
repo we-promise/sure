@@ -1,0 +1,21 @@
+bob_google:
+  user: family_admin
+  provider: openid_connect
+  uid: google-uid-12345
+  info:
+    email: bob@bobdylan.com
+    name: Bob Dylan
+    first_name: Bob
+    last_name: Dylan
+  last_authenticated_at: <%= 1.day.ago %>
+
+jakob_google:
+  user: family_member
+  provider: openid_connect
+  uid: google-uid-67890
+  info:
+    email: jakobdylan@yahoo.com
+    name: Jakob Dylan
+    first_name: Jakob
+    last_name: Dylan
+  last_authenticated_at: <%= 2.days.ago %>

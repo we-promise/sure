@@ -18,7 +18,7 @@ class PlaidAccount::Liabilities::StudentLoanProcessor
     attr_reader :plaid_account
 
     def account
-      plaid_account.account
+      plaid_account.current_account
     end
 
     def term_months

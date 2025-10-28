@@ -61,8 +61,9 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     @category_matcher.expects(:match).with("Food").returns(categories(:food_and_drink))
 
     # Create an existing entry
-    @plaid_account.account.entries.create!(
-      plaid_id: existing_plaid_id,
+    @plaid_account.current_account.entries.create!(
+      external_id: existing_plaid_id,
+      source: "plaid",
       amount: 100,
       currency: "USD",
       date: Date.current,

@@ -32,4 +32,29 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with job: DestroyJob
     assert_equal "Account scheduled for deletion", flash[:notice]
   end
+
+  test "syncing linked account triggers sync for all provider items" do
+    plaid_account = plaid_accounts(:one)
+    plaid_item = plaid_account.plaid_item
+    AccountProvider.create!(account: @account, provider: plaid_account)
+
+    # Reload to ensure the account has the provider association loaded
+    @account.reload
+
+    # Mock at the class level since controller loads account from DB
+    Account.any_instance.expects(:syncing?).returns(false)
+    PlaidItem.any_instance.expects(:syncing?).returns(false)
+    PlaidItem.any_instance.expects(:sync_later).once
+
+    post sync_account_url(@account)
+    assert_redirected_to account_url(@account)
+  end
+
+  test "syncing unlinked account calls account sync_later" do
+    Account.any_instance.expects(:syncing?).returns(false)
+    Account.any_instance.expects(:sync_later).once
+
+    post sync_account_url(@account)
+    assert_redirected_to account_url(@account)
+  end
 end

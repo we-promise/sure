@@ -42,6 +42,8 @@ en:
         new_balance: New balance
         new_transaction: New transaction
         no_entries: No entries found
+        search:
+          placeholder: Search entries by name
         title: Activity
       chart:
         balance: Balance
