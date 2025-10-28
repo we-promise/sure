@@ -113,5 +113,3 @@ scripts/
 
 # Local Junie helpers
 .junie/
-
-/config/credentials/development.key
