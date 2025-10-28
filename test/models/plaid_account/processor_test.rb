@@ -29,31 +29,36 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
 
     account = Account.order(created_at: :desc).first
     assert_equal "Test Plaid Account", account.name
-    assert_equal @plaid_account.id, account.plaid_account_id
     assert_equal "checking", account.subtype
     assert_equal 1000, account.balance
     assert_equal 1000, account.cash_balance
     assert_equal "USD", account.currency
     assert_equal "Depository", account.accountable_type
     assert_equal "checking", account.subtype
+
+    # Verify AccountProvider was created
+    assert account.linked?
+    assert_equal 1, account.account_providers.count
+    assert_equal @plaid_account.id, account.account_providers.first.provider_id
+    assert_equal "PlaidAccount", account.account_providers.first.provider_type
   end
 
   test "processing is idempotent with updates and enrichments" do
     expect_default_subprocessor_calls
 
-    assert_equal "Plaid Depository Account", @plaid_account.account.name
-    assert_equal "checking", @plaid_account.account.subtype
+    assert_equal "Plaid Depository Account", @plaid_account.current_account.name
+    assert_equal "checking", @plaid_account.current_account.subtype
 
-    @plaid_account.account.update!(
+    @plaid_account.current_account.update!(
       name: "User updated name",
       balance: 2000 # User cannot override balance.  This will be overridden by the processor on next processing
     )
 
-    @plaid_account.account.accountable.update!(subtype: "savings")
+    @plaid_account.current_account.accountable.update!(subtype: "savings")
 
-    @plaid_account.account.lock_attr!(:name)
-    @plaid_account.account.accountable.lock_attr!(:subtype)
-    @plaid_account.account.lock_attr!(:balance) # Even if balance somehow becomes locked, Plaid ignores it and overrides it
+    @plaid_account.current_account.lock_attr!(:name)
+    @plaid_account.current_account.accountable.lock_attr!(:subtype)
+    @plaid_account.current_account.lock_attr!(:balance) # Even if balance somehow becomes locked, Plaid ignores it and overrides it
 
     assert_no_difference "Account.count" do
       PlaidAccount::Processor.new(@plaid_account).process
@@ -61,9 +66,9 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
 
     @plaid_account.reload
 
-    assert_equal "User updated name", @plaid_account.account.name
-    assert_equal "savings", @plaid_account.account.subtype
-    assert_equal @plaid_account.current_balance, @plaid_account.account.balance # Overriden by processor
+    assert_equal "User updated name", @plaid_account.current_account.name
+    assert_equal "savings", @plaid_account.current_account.subtype
+    assert_equal @plaid_account.current_balance, @plaid_account.current_account.balance # Overriden by processor
   end
 
   test "account processing failure halts further processing" do
@@ -102,7 +107,7 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     PlaidAccount::Processor.new(@plaid_account).process
 
     # Verify that the balance was set correctly
-    account = @plaid_account.account
+    account = @plaid_account.current_account
     assert_equal 1000, account.balance
     assert_equal 1000, account.cash_balance
 
@@ -196,7 +201,7 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     expect_default_subprocessor_calls
     PlaidAccount::Processor.new(@plaid_account).process
 
-    account = @plaid_account.account
+    account = @plaid_account.current_account
     original_anchor = account.valuations.current_anchor.first
     assert_not_nil original_anchor
     original_anchor_id = original_anchor.id

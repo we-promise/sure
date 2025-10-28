@@ -5,6 +5,7 @@ en:
       show:
         page_title: AI Prompts
         openai_label: OpenAI
+        disable_ai: Disable AI Assistant
         prompt_instructions: Prompt Instructions
         main_system_prompt:
           title: Main System Prompt

@@ -257,4 +257,33 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_includes response_chunks.first.data.messages.first.output_text, "$10,000"
     end
   end
+
+  test "provider_name returns OpenAI for standard provider" do
+    assert_equal "OpenAI", @subject.provider_name
+  end
+
+  test "provider_name returns custom info for custom provider" do
+    custom_provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://custom-api.example.com/v1",
+      model: "custom-model"
+    )
+
+    assert_equal "Custom OpenAI-compatible (https://custom-api.example.com/v1)", custom_provider.provider_name
+  end
+
+  test "supported_models_description returns model prefixes for standard provider" do
+    expected = "models starting with: gpt-4, gpt-5, o1, o3"
+    assert_equal expected, @subject.supported_models_description
+  end
+
+  test "supported_models_description returns configured model for custom provider" do
+    custom_provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://custom-api.example.com/v1",
+      model: "custom-model"
+    )
+
+    assert_equal "configured model: custom-model", custom_provider.supported_models_description
+  end
 end

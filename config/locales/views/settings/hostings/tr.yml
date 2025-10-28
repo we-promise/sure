@@ -3,12 +3,16 @@ tr:
   settings:
     hostings:
       invite_code_settings:
-        description: Maybe uygulamanıza katılan her yeni kullanıcı yalnızca bir davet kodu ile katılabilir
+        description: Yeni kullanıcıların %{product} örneğinize nasıl kaydolacağını kontrol edin.
         email_confirmation_description: Etkinleştirildiğinde, kullanıcılar e-posta adreslerini değiştirirken e-posta onayı yapmak zorundadır.
         email_confirmation_title: E-posta onayı gerektir
         generate_tokens: Yeni kod oluştur
         generated_tokens: Oluşturulan kodlar
-        title: Kayıt için davet kodu gerektir
+        title: Onboarding
+        states:
+          open: Açık
+          closed: Kapalı
+          invite_only: Davet ile
       show:
         general: Genel Ayarlar
         financial_data_providers: Finansal Veri Sağlayıcıları
@@ -30,6 +34,7 @@ tr:
       update:
         failure: Geçersiz ayar değeri
         success: Ayarlar güncellendi
+        invalid_onboarding_state: Geçersiz onboarding durumu
       clear_cache:
         cache_cleared: Veri önbelleği temizlendi. Bu işlemin tamamlanması birkaç dakika sürebilir.
       not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok

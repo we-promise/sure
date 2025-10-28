@@ -9,7 +9,7 @@ class SimplefinAccount::Processor
   # Processing the account is the first step and if it fails, we halt
   # Each subsequent step can fail independently, but we continue processing
   def process
-    unless simplefin_account.account.present?
+    unless simplefin_account.current_account.present?
       return
     end
 
@@ -24,13 +24,13 @@ class SimplefinAccount::Processor
     def process_account!
       # This should not happen in normal flow since accounts are created manually
       # during setup, but keeping as safety check
-      if simplefin_account.account.blank?
+      if simplefin_account.current_account.blank?
         Rails.logger.error("SimpleFin account #{simplefin_account.id} has no associated Account - this should not happen after manual setup")
         return
       end
 
       # Update account balance and cash balance from latest SimpleFin data
-      account = simplefin_account.account
+      account = simplefin_account.current_account
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
       # SimpleFin returns negative balances for credit cards (liabilities)
@@ -60,7 +60,7 @@ class SimplefinAccount::Processor
     end
 
     def process_investments
-      return unless simplefin_account.account&.accountable_type == "Investment"
+      return unless simplefin_account.current_account&.accountable_type == "Investment"
       SimplefinAccount::Investments::TransactionsProcessor.new(simplefin_account).process
       SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account).process
     rescue => e
@@ -68,7 +68,7 @@ class SimplefinAccount::Processor
     end
 
     def process_liabilities
-      case simplefin_account.account&.accountable_type
+      case simplefin_account.current_account&.accountable_type
       when "CreditCard"
         SimplefinAccount::Liabilities::CreditProcessor.new(simplefin_account).process
       when "Loan"

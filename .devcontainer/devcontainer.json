@@ -2,6 +2,10 @@
   "name": "Sure",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
+  "runServices": [
+    "db",
+    "redis"
+  ],
   "workspaceFolder": "/workspace",
   "containerEnv": {
     "GIT_EDITOR": "code --wait",

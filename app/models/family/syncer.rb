@@ -26,6 +26,6 @@ class Family::Syncer
 
   private
     def child_syncables
-      family.plaid_items + family.accounts.manual
+      family.plaid_items + family.simplefin_items.active + family.accounts.manual
     end
 end

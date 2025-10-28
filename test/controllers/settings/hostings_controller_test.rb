@@ -29,7 +29,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       get settings_hosting_url
       assert_response :forbidden
 
-      patch settings_hosting_url, params: { setting: { require_invite_for_signup: true } }
+      patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
       assert_response :forbidden
     end
   end
@@ -48,6 +48,20 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
       assert_equal "1234567890", Setting.twelve_data_api_key
+    end
+  end
+
+  test "can update onboarding state when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
+
+      assert_equal "invite_only", Setting.onboarding_state
+      assert Setting.require_invite_for_signup
+
+      patch settings_hosting_url, params: { setting: { onboarding_state: "closed" } }
+
+      assert_equal "closed", Setting.onboarding_state
+      refute Setting.require_invite_for_signup
     end
   end
 
