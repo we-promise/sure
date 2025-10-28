@@ -39,9 +39,9 @@ class SimplefinImporterTest < ActiveSupport::TestCase
 
       # Prepare responses for: discovery (no dates), then first/second chunks.
       responses = [
-        { accounts: [ { id: "acc_discovery", name: "Discovery", currency: "USD", balance: 0 } ], tag: "discovery" },
-        { accounts: [ { id: "acc1", name: "A1", currency: "USD", balance: 0 } ], tag: "chunk-1" },
-        { accounts: [ { id: "acc2", name: "A2", currency: "USD", balance: 0 } ], tag: "chunk-2" }
+        { accounts: [{ id: "acc_discovery", name: "Discovery", currency: "USD", balance: 0 }], tag: "discovery" },
+        { accounts: [{ id: "acc1", name: "A1", currency: "USD", balance: 0 }], tag: "chunk-1" },
+        { accounts: [{ id: "acc2", name: "A2", currency: "USD", balance: 0 }], tag: "chunk-2" }
       ]
       fake = FakeSimplefinProvider.new(responses: responses.dup)
 
