@@ -90,26 +90,6 @@ For further instructions, see guides below.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 
-## SimpleFin access URL encryption backfill
-
-Prerequisites:
-- Active Record Encryption keys configured in Rails credentials for the environment (or env vars).
-
-Commands:
-- Dry run (no writes):
-  `bin/rails sure:simplefin:encrypt_access_urls DRY_RUN=1`
-
-- Backfill in batches (default 500):
-  `bin/rails sure:simplefin:encrypt_access_urls`
-
-- Options:
-  - `LIMIT=1000` (only process first 1000 rows)
-  - `BATCH_SIZE=200` (use smaller batches)
-
-Verification:
-- The task prints JSON progress and a final summary.
-- In Rails console, reading `SimplefinItem.first.access_url` shows plaintext in app (ciphertext lives in DB).
-
 ## License and Trademarks
 
 Maybe and Sure are both distributed under
