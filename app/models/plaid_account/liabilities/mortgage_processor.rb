@@ -16,7 +16,7 @@ class PlaidAccount::Liabilities::MortgageProcessor
     attr_reader :plaid_account
 
     def account
-      plaid_account.account
+      plaid_account.current_account
     end
 
     def mortgage_data

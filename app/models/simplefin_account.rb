@@ -2,7 +2,7 @@ class SimplefinAccount < ApplicationRecord
   belongs_to :simplefin_item
 
   # Legacy association via foreign key (will be removed after migration)
-  has_one :account, dependent: :destroy, foreign_key: :simplefin_account_id
+  has_one :account, dependent: :nullify, foreign_key: :simplefin_account_id
 
   # New association through account_providers
   has_one :account_provider, as: :provider, dependent: :destroy

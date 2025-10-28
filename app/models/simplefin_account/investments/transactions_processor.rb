@@ -6,7 +6,7 @@ class SimplefinAccount::Investments::TransactionsProcessor
   end
 
   def process
-    return unless simplefin_account.account&.accountable_type == "Investment"
+    return unless simplefin_account.current_account&.accountable_type == "Investment"
     return unless simplefin_account.raw_transactions_payload.present?
 
     transactions_data = simplefin_account.raw_transactions_payload
@@ -20,7 +20,7 @@ class SimplefinAccount::Investments::TransactionsProcessor
     attr_reader :simplefin_account
 
     def account
-      simplefin_account.account
+      simplefin_account.current_account
     end
 
     def process_investment_transaction(transaction_data)

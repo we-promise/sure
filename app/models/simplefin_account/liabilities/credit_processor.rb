@@ -5,7 +5,7 @@ class SimplefinAccount::Liabilities::CreditProcessor
   end
 
   def process
-    return unless simplefin_account.account&.accountable_type == "CreditCard"
+    return unless simplefin_account.current_account&.accountable_type == "CreditCard"
 
     # Update credit card specific attributes if available
     update_credit_attributes
@@ -19,7 +19,7 @@ class SimplefinAccount::Liabilities::CreditProcessor
     end
 
     def account
-      simplefin_account.account
+      simplefin_account.current_account
     end
 
     def update_credit_attributes

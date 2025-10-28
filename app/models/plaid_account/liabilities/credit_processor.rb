@@ -23,7 +23,7 @@ class PlaidAccount::Liabilities::CreditProcessor
     end
 
     def account
-      plaid_account.account
+      plaid_account.current_account
     end
 
     def credit_data

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_27_110609) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_27_141735) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -309,10 +309,12 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_27_110609) do
     t.datetime "updated_at", null: false
     t.string "external_id"
     t.decimal "cost_basis", precision: 19, scale: 4
+    t.uuid "account_provider_id"
     t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["account_id", "external_id"], name: "index_holdings_on_account_and_external_id", unique: true
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
+    t.index ["account_provider_id"], name: "index_holdings_on_account_provider_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
   end
 
@@ -949,6 +951,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_27_110609) do
   add_foreign_key "entries", "accounts"
   add_foreign_key "entries", "imports"
   add_foreign_key "family_exports", "families"
+  add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts"
   add_foreign_key "holdings", "securities"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"

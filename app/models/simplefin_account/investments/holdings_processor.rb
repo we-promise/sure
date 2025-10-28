@@ -59,7 +59,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
 
     def account
-      simplefin_account.account
+      simplefin_account.current_account
     end
 
     def holdings_data
