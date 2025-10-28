@@ -27,7 +27,7 @@ class PlaidEntry::Processor
     end
 
     def account
-      plaid_account.account
+      plaid_account.current_account
     end
 
     def external_id

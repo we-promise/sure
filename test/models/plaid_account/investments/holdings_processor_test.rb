@@ -55,7 +55,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       processor.process
     end
 
-    holdings = Holding.where(account: @plaid_account.account).order(:date)
+    holdings = Holding.where(account: @plaid_account.current_account).order(:date)
 
     assert_equal 100, holdings.first.qty
     assert_equal 100, holdings.first.price
@@ -75,7 +75,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
   # after this date are now stale and should be deleted, as the Plaid data is the
   # authoritative source of truth for the current holdings.
   test "deletes stale holdings per security based on institution price date" do
-    account = @plaid_account.account
+    account = @plaid_account.current_account
 
     # Create a third security for testing
     third_security = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")
@@ -192,7 +192,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     end
 
     # Should have created the successful holding
-    assert @plaid_account.account.holdings.exists?(security: securities(:aapl), qty: 200)
+    assert @plaid_account.current_account.holdings.exists?(security: securities(:aapl), qty: 200)
   end
 
   test "handles string values and computes amount using BigDecimal arithmetic" do
@@ -222,7 +222,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       processor.process
     end
 
-    holding = @plaid_account.account.holdings.find_by(
+    holding = @plaid_account.current_account.holdings.find_by(
       security: securities(:aapl),
       date: Date.parse("2025-01-15"),
       currency: "USD"
@@ -283,7 +283,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     end
 
     # Should have created only the valid holding
-    assert @plaid_account.account.holdings.exists?(security: securities(:aapl), qty: 50, price: 50)
-    assert_not @plaid_account.account.holdings.exists?(security: securities(:msft))
+    assert @plaid_account.current_account.holdings.exists?(security: securities(:aapl), qty: 50, price: 50)
+    assert_not @plaid_account.current_account.holdings.exists?(security: securities(:msft))
   end
 end

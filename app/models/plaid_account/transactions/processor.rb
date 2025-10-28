@@ -39,7 +39,7 @@ class PlaidAccount::Transactions::Processor
     end
 
     def account
-      plaid_account.account
+      plaid_account.current_account
     end
 
     def remove_plaid_transaction(raw_transaction)
