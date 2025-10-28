@@ -5,14 +5,7 @@ module AccountsHelper
   end
 
   def sync_path_for(account)
-    if account.plaid_account_id.present?
-      sync_plaid_item_path(account.plaid_account.plaid_item)
-    elsif account.simplefin_account_id.present?
-      sync_simplefin_item_path(account.simplefin_account.simplefin_item)
-    elsif account.enable_banking_account_id.present?
-      sync_enable_banking_item_path(account.enable_banking_account.enable_banking_item)
-    else
-      sync_account_path(account)
-    end
+    # Always use the account sync path, which handles syncing all providers
+    sync_account_path(account)
   end
 end

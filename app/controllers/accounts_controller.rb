@@ -29,7 +29,17 @@ class AccountsController < ApplicationController
 
   def sync
     unless @account.syncing?
-      @account.sync_later
+      if @account.linked?
+        # Sync all provider items for this account
+        # Each provider item will trigger an account sync when complete
+        @account.account_providers.each do |account_provider|
+          item = account_provider.adapter&.item
+          item&.sync_later if item && !item.syncing?
+        end
+      else
+        # Manual accounts just need balance materialization
+        @account.sync_later
+      end
     end
 
     redirect_to account_path(@account)
