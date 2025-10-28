@@ -94,7 +94,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       source: "simplefin"
     )
 
-    # Create transaction from Plaid with same ID "transaction_123" - should not collide
+    # Create transaction from Plaid with same ID "transaction_123" - should NOT collide
+    # because external_id is unique per (account, source) combination
     assert_difference "@account.entries.count", 1 do
       plaid_entry = @adapter.import_transaction(
         external_id: "transaction_123",

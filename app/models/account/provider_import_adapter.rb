@@ -21,6 +21,8 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "source is required" if source.blank?
 
     Account.transaction do
+      # Find or initialize by both external_id AND source
+      # This allows multiple providers to sync same account with separate entries
       entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
         e.entryable = Transaction.new
       end
@@ -186,6 +188,8 @@ class Account::ProviderImportAdapter
 
       # Use find_or_initialize_by with external_id if provided, otherwise create new
       entry = if external_id.present?
+        # Find or initialize by both external_id AND source
+        # This allows multiple providers to sync same account with separate entries
         account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
           e.entryable = Trade.new(
             security: security,
@@ -201,7 +205,8 @@ class Account::ProviderImportAdapter
             qty: quantity,
             price: price,
             currency: currency
-          )
+          ),
+          source: source
         )
       end
 

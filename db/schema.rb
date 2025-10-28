@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_28_104241) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_28_104916) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -252,10 +252,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_28_104241) do
     t.string "source"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
+    t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["date"], name: "index_entries_on_date"
     t.index ["entryable_type"], name: "index_entries_on_entryable_type"
-    t.index ["external_id", "source"], name: "index_entries_on_external_id_and_source", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["import_id"], name: "index_entries_on_import_id"
   end
 

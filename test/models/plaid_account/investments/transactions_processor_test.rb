@@ -10,7 +10,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     test_investments_payload = {
       transactions: [
         {
-          "transaction_id" => "123",
+          "investment_transaction_id" => "123",
           "security_id" => "123",
           "type" => "buy",
           "quantity" => 1, # Positive, so "buy 1 share"
@@ -113,7 +113,8 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     test_investments_payload = {
       transactions: [
         {
-          "transaction_id" => "123",
+          "investment_transaction_id" => "123",
+          "security_id" => "123",
           "type" => "sell", # Correct type
           "subtype" => "sell", # Correct subtype
           "quantity" => 1, # ***Incorrect signage***, this should be negative
