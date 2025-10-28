@@ -13,7 +13,7 @@ module Account::Linkable
 
   # A "linked" account gets transaction and balance data from a third party
   def linked?
-    account_providers.any? || plaid_account.present? || simplefin_account.present? || enable_banking_account.present?
+    account_providers.any?
   end
 
   # An "offline" or "unlinked" account is one where the user tracks values and
@@ -44,14 +44,7 @@ module Account::Linkable
 
   # Convenience method to get the provider name
   def provider_name
-    # Try new system first
-    return provider&.provider_name if provider.present?
-
-    # Fall back to legacy system
-    return "plaid" if plaid_account.present?
-    return "simplefin" if simplefin_account.present?
-
-    nil
+    provider&.provider_name
   end
 
   # Check if account is linked to a specific provider
