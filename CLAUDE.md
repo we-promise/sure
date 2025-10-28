@@ -56,8 +56,7 @@ Only proceed with pull request creation if ALL checks pass.
 - Use `Current.family` for the current family. Do NOT use `current_family`.
 
 ### Development Guidelines
-- Prior to generating any code, carefully read the project conventions and guidelines
-- Ignore i18n methods and files. Hardcode strings in English for now to optimize speed of development
+- Carefully read project conventions and guidelines before generating any code.
 - Do not run `rails server` in your responses
 - Do not run `touch tmp/restart.txt`
 - Do not run `rails credentials`
@@ -112,6 +111,15 @@ Sidekiq handles asynchronous tasks:
   - Always use functional tokens (e.g., `text-primary` not `text-white`)
   - Prefer semantic HTML elements over JS components
   - Use `icon` helper for icons, never `lucide_icon` directly
+- **i18n**: All user-facing strings must use localization (i18n). Update locale files for each new or changed element.
+
+### Internationalization (i18n) Guidelines
+- **Key Organization**: Use hierarchical keys by feature: `accounts.index.title`, `transactions.form.amount_label`
+- **Translation Helper**: Always use `t()` helper for user-facing strings
+- **Interpolation**: Use for dynamic content: `t("users.greeting", name: user.name)`
+- **Pluralization**: Use Rails pluralization: `t("transactions.count", count: @transactions.count)`
+- **Locale Files**: Update `config/locales/en.yml` for new strings
+- **Missing Translations**: Configure to raise errors in development for missing keys
 
 ### Multi-Currency Support
 - All monetary values stored in base currency (user's primary currency)
@@ -220,10 +228,35 @@ Sidekiq handles asynchronous tasks:
 ```erb
 <!-- GOOD: Declarative - HTML declares what happens -->
 <div data-controller="toggle">
-  <button data-action="click->toggle#toggle" data-toggle-target="button">Show</button>
-  <div data-toggle-target="content" class="hidden">Hello World!</div>
+  <button data-action="click->toggle#toggle" data-toggle-target="button">
+    <%= t("components.transaction_details.show_details") %>
+  </button>
+  <div data-toggle-target="content" class="hidden">
+    <p><%= t("components.transaction_details.amount_label") %>: <%= @transaction.amount %></p>
+    <p><%= t("components.transaction_details.date_label") %>: <%= @transaction.date %></p>
+    <p><%= t("components.transaction_details.category_label") %>: <%= @transaction.category.name %></p>
+  </div>
 </div>
 ```
+
+**Example locale file structure (config/locales/en.yml):**
+```yaml
+en:
+  components:
+    transaction_details:
+      show_details: "Show Details"
+      hide_details: "Hide Details"
+      amount_label: "Amount"
+      date_label: "Date"
+      category_label: "Category"
+```
+
+**i18n Best Practices:**
+- Organize keys by feature/component: `components.transaction_details.show_details`
+- Use descriptive key names that indicate purpose: `show_details` not `button`
+- Group related translations together in the same namespace
+- Use interpolation for dynamic content: `t("users.welcome", name: user.name)`
+- Always update locale files when adding new user-facing strings
 
 **Controller Best Practices:**
 - Keep controllers lightweight and simple (< 7 targets)
