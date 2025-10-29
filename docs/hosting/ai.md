@@ -229,6 +229,11 @@ volumes:
 
 ## Model Recommendations
 
+> [!CAUTION]
+> **REMINDER:** Only `gpt-4.1` was ever supported prior to `v0.6.5-alpha*` builds!
+
+> 👉 Help us by taking a structured approach to your testing of the models mentioned below. 🙏
+
 ### For Chat Assistant
 
 The AI assistant needs to understand financial context and perform function calling:
