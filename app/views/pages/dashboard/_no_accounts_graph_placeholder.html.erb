@@ -5,10 +5,10 @@
       icon: "layers",
     ) %>
 
-    <p class="text-sm font-medium text-primary">No accounts yet</p>
-    <p class="text-secondary text-sm">Add accounts to display net worth data</p>
+    <p class="text-sm font-medium text-primary"><%= t("pages.dashboard.no_accounts.title") %></p>
+    <p class="text-secondary text-sm"><%= t("pages.dashboard.no_accounts.description") %></p>
     <%= render DS::Link.new(
-      text: "Add account",
+      text: t("pages.dashboard.no_accounts.add_account"),
       icon: "plus",
       href: new_account_path,
       frame: :modal

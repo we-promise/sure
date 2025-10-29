@@ -15,8 +15,9 @@ en:
           closed: Closed
           invite_only: Invite-only
       show:
-        general: External Services
-        invites: Onboarding
+        general: General Settings
+        financial_data_providers: Financial Data Providers
+        invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
         clear_cache: Clear data cache
@@ -28,7 +29,7 @@ en:
         description: Enter the Client ID provided by Brand Fetch
         label: Client ID
         placeholder: Enter your Client ID here
-        title: Brand Fetch
+        title: Brand Fetch Settings
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -39,6 +40,13 @@ en:
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
         title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance provides free access to stock prices, exchange rates, and financial data without requiring an API key.
+        status_active: Yahoo Finance is active and working
+        status_inactive: Yahoo Finance connection failed
+        connection_failed: Unable to connect to Yahoo Finance
+        troubleshooting: Check your internet connection and firewall settings. Yahoo Finance may be temporarily unavailable.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
         description: Enter the API key provided by Twelve Data

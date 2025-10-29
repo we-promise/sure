@@ -6,6 +6,11 @@ This document explains how Sure uses Large Language Models (LLMs) for AI feature
 
 Sure includes an AI assistant that can help users understand their financial data by answering questions about accounts, transactions, income, expenses, net worth, and more. The assistant uses LLMs to process natural language queries and provide insights based on the user's financial data.
 
+> [!CAUTION]
+> Only `gpt-4.1` was ever supported prior to `v0.6.5-alpha*` builds!
+
+> 👉 Help us by taking a structured approach to your issue reporting. 🙏
+
 ## Quickstart: OpenAI Token
 
 The easiest way to get started with AI features in Sure is to use OpenAI:
@@ -223,6 +228,11 @@ volumes:
 ```
 
 ## Model Recommendations
+
+> [!CAUTION]
+> **REMINDER:** Only `gpt-4.1` was ever supported prior to `v0.6.5-alpha*` builds!
+
+> 👉 Help us by taking a structured approach to your testing of the models mentioned below. 🙏
 
 ### For Chat Assistant
 
