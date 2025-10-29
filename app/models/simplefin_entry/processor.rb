@@ -6,42 +6,26 @@ class SimplefinEntry::Processor
   end
 
   def process
-    SimplefinAccount.transaction do
-      entry = account.entries.find_or_initialize_by(plaid_id: external_id) do |e|
-        e.entryable = Transaction.new
-      end
-
-      entry.assign_attributes(
-        amount: amount,
-        currency: currency,
-        date: date
-      )
-
-      entry.enrich_attribute(
-        :name,
-        name,
-        source: "simplefin"
-      )
-
-      # SimpleFin provides no category data - categories will be set by AI or rules
-
-      if merchant
-        entry.transaction.enrich_attribute(
-          :merchant_id,
-          merchant.id,
-          source: "simplefin"
-        )
-      end
-
-      entry.save!
-    end
+    import_adapter.import_transaction(
+      external_id: external_id,
+      amount: amount,
+      currency: currency,
+      date: date,
+      name: name,
+      source: "simplefin",
+      merchant: merchant
+    )
   end
 
   private
     attr_reader :simplefin_transaction, :simplefin_account
 
+    def import_adapter
+      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
+
     def account
-      simplefin_account.account
+      simplefin_account.current_account
     end
 
     def data

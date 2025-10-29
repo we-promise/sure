@@ -5,7 +5,7 @@ class SimplefinAccount::Liabilities::LoanProcessor
   end
 
   def process
-    return unless simplefin_account.account&.accountable_type == "Loan"
+    return unless simplefin_account.current_account&.accountable_type == "Loan"
 
     # Update loan specific attributes if available
     update_loan_attributes
@@ -15,7 +15,7 @@ class SimplefinAccount::Liabilities::LoanProcessor
     attr_reader :simplefin_account
 
     def account
-      simplefin_account.account
+      simplefin_account.current_account
     end
 
     def update_loan_attributes
