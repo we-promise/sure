@@ -9,7 +9,6 @@ class Provider::PlaidAdapter < Provider::Base
   # Configuration for Plaid US
   configure do
     description <<~DESC
-      Configuration can be set via environment variables or overridden below.
       Setup instructions:
       1. Visit the [Plaid Dashboard](https://dashboard.plaid.com/team/keys) to get your API credentials
       2. Your Client ID and Secret Key are required to enable Plaid bank sync

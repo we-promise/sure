@@ -10,7 +10,11 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
-  
+
+  # Single hash field for all dynamic provider credentials and other dynamic settings
+  # This allows unlimited dynamic fields without declaring them upfront
+  field :dynamic_fields, type: :hash, default: {}
+
   # Onboarding and app settings
   ONBOARDING_STATES = %w[open closed invite_only].freeze
   DEFAULT_ONBOARDING_STATE = begin
@@ -46,21 +50,53 @@ class Setting < RailsSettings::Base
     end
 
     # Support dynamic field access via bracket notation
-    # Allows Setting[:key] for provider credentials and other dynamic fields
-    # Returns nil for undeclared fields instead of raising NoMethodError
+    # First checks if it's a declared field, then falls back to dynamic_fields hash
     def [](key)
-      return nil unless respond_to?(key)
-      public_send(key)
-    rescue NoMethodError
-      nil
+      key_str = key.to_s
+
+      # Check if it's a declared field first
+      if respond_to?(key_str)
+        public_send(key_str)
+      else
+        # Fall back to dynamic_fields hash
+        dynamic_fields[key_str]
+      end
     end
 
     def []=(key, value)
-      # Dynamically declare the field if it doesn't exist
-      unless respond_to?("#{key}=")
-        field key, type: :string, default: nil
+      key_str = key.to_s
+
+      # If it's a declared field, use the setter
+      if respond_to?("#{key_str}=")
+        public_send("#{key_str}=", value)
+      else
+        # Otherwise, store in dynamic_fields hash
+        current_dynamic = dynamic_fields.dup
+        current_dynamic[key_str] = value
+        self.dynamic_fields = current_dynamic
       end
-      public_send("#{key}=", value)
+    end
+
+    # Check if a dynamic field exists (useful to distinguish nil value vs missing key)
+    def key?(key)
+      key_str = key.to_s
+      respond_to?(key_str) || dynamic_fields.key?(key_str)
+    end
+
+    # Delete a dynamic field
+    def delete(key)
+      key_str = key.to_s
+      return nil if respond_to?(key_str) # Can't delete declared fields
+
+      current_dynamic = dynamic_fields.dup
+      value = current_dynamic.delete(key_str)
+      self.dynamic_fields = current_dynamic
+      value
+    end
+
+    # List all dynamic field keys (excludes declared fields)
+    def dynamic_keys
+      dynamic_fields.keys
     end
   end
 
