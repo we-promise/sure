@@ -189,22 +189,63 @@ module Provider::Configurable
       # First try Setting using dynamic hash-style access
       # This works even without explicit field declarations in Setting model
       setting_value = Setting[setting_key]
-      return setting_value if setting_value.present?
+      return normalize_value(setting_value) if setting_value.present?
 
       # Then try ENV if env_key is specified
       if env_key.present?
         env_value = ENV[env_key]
-        return env_value if env_value.present?
+        return normalize_value(env_value) if env_value.present?
       end
 
       # Finally return default
-      default
+      normalize_value(default)
     end
 
     # Check if this field has a value
     def present?
       value.present?
     end
+
+    # Validate the current value
+    # Returns true if valid, false otherwise
+    def valid?
+      validate.empty?
+    end
+
+    # Get validation errors for the current value
+    # Returns an array of error messages
+    def validate
+      errors = []
+      current_value = value
+
+      # Required validation
+      if required && current_value.blank?
+        errors << "#{label} is required"
+      end
+
+      # Additional validations can be added here in the future:
+      # - Format validation (regex)
+      # - Length validation
+      # - Enum validation
+      # - Custom validation blocks
+
+      errors
+    end
+
+    # Validate and raise an error if invalid
+    def validate!
+      errors = validate
+      raise ArgumentError, "Invalid configuration for #{setting_key}: #{errors.join(", ")}" if errors.any?
+      true
+    end
+
+    private
+      # Normalize value by stripping whitespace and converting empty strings to nil
+      def normalize_value(val)
+        return nil if val.nil?
+        normalized = val.to_s.strip
+        normalized.empty? ? nil : normalized
+      end
   end
 end
 

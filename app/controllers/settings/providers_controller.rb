@@ -75,10 +75,15 @@ class Settings::ProvidersController < ApplicationController
       # Build a set of provider keys that had fields updated
       updated_provider_keys = Set.new
 
-      updated_fields.each do |field|
-        # Extract provider key from field name (e.g., "plaid_client_id" -> "plaid")
-        provider_key = field.to_s.split("_").first
-        updated_provider_keys.add(provider_key)
+      # Look up the provider key directly from the configuration registry
+      updated_fields.each do |field_key|
+        Provider::ConfigurationRegistry.all.each do |config|
+          field = config.fields.find { |f| f.setting_key.to_s == field_key.to_s }
+          if field
+            updated_provider_keys.add(field.provider_key)
+            break
+          end
+        end
       end
 
       # Reload configuration for each updated provider
