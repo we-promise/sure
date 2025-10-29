@@ -74,32 +74,17 @@ class Provider::Factory
       @registry ||= {}
     end
 
-    # Find adapter class, attempting autoload if not registered
+    # Find adapter class, attempting to load all adapters if not registered
     def find_adapter_class(provider_type)
       # Return if already registered
       return registry[provider_type] if registry[provider_type]
 
-      # Try to autoload the adapter by convention
-      adapter_name = derive_adapter_name(provider_type)
-      autoload_adapter(adapter_name)
+      # Load all adapters to ensure they're registered
+      # This triggers their self-registration calls
+      ensure_adapters_loaded
 
-      # Check registry again after autoload attempt
+      # Check registry again after loading
       registry[provider_type]
-    end
-
-    # Derive adapter class name from provider type
-    # Example: "PlaidAccount" -> "PlaidAdapter"
-    def derive_adapter_name(provider_type)
-      provider_type.to_s.sub(/Account$/, "") + "Adapter"
-    end
-
-    # Attempt to autoload an adapter by name
-    def autoload_adapter(adapter_name)
-      adapter_class_name = "Provider::#{adapter_name}"
-      adapter_class_name.constantize
-    rescue NameError
-      # Adapter doesn't exist, that's okay
-      nil
     end
 
     # Discover all adapter files in the provider directory
