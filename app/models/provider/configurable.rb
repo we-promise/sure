@@ -1,8 +1,8 @@
 # Module for providers to declare their configuration requirements
 #
 # Providers can declare their own configuration fields without needing to modify
-# the Setting model. Settings are stored dynamically as individual entries using
-# RailsSettings::Base's bracket-style access (Setting[:key] = value).
+# the Setting model. Settings are stored dynamically using RailsSettings::Base's
+# hash-style access (Setting[:key] = value).
 #
 # Configuration fields are automatically registered and displayed in the UI at
 # /settings/providers. The system checks Setting storage first, then ENV variables,
@@ -186,8 +186,8 @@ module Provider::Configurable
 
     # Get the value for this field (Setting -> ENV -> default)
     def value
-      # First try Setting using dynamic bracket-style access
-      # Each field is stored as an individual entry without explicit field declarations
+      # First try Setting using dynamic hash-style access
+      # This works even without explicit field declarations in Setting model
       setting_value = Setting[setting_key]
       return normalize_value(setting_value) if setting_value.present?
 
