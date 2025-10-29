@@ -5,6 +5,12 @@
 
 <div class="space-y-4">
   <div>
+    <% if configuration.provider_description.present? %>
+      <div class="text-sm text-secondary mb-4 prose prose-sm">
+        <%= markdown(configuration.provider_description).html_safe %>
+      </div>
+    <% end %>
+
     <% env_configured = configuration.fields.any? { |f| f.env_key && ENV[f.env_key].present? } %>
     <% if env_configured %>
       <p class="text-sm text-secondary">

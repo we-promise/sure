@@ -8,6 +8,12 @@ class Provider::SimplefinAdapter < Provider::Base
 
   # Configuration for SimpleFIN
   configure do
+    description <<~DESC
+      Setup instructions:
+      1. Visit [SimpleFIN Bridge](https://bridge.simplefin.org/simplefin/create) to get a setup token
+      2. This token is optional and only needed if you want to provide a default setup token for users
+    DESC
+
     field :setup_token,
           label: "Setup Token",
           required: false,

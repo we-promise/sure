@@ -13,6 +13,12 @@
 #     include Provider::Configurable
 #
 #     configure do
+#       description <<~DESC
+#         Setup instructions:
+#         1. Visit [Plaid Dashboard](https://dashboard.plaid.com) to get your API credentials
+#         2. Configure your Client ID and Secret Key below
+#       DESC
+#
 #       field :client_id,
 #             label: "Client ID",
 #             required: true,
@@ -101,11 +107,18 @@ module Provider::Configurable
 
   # Configuration DSL
   class Configuration
-    attr_reader :provider_key, :fields
+    attr_reader :provider_key, :fields, :provider_description
 
     def initialize(provider_key)
       @provider_key = provider_key
       @fields = []
+      @provider_description = nil
+    end
+
+    # Set the provider-level description (markdown supported)
+    # @param text [String] The description text for this provider
+    def description(text)
+      @provider_description = text
     end
 
     # Define a configuration field
