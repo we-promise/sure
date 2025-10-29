@@ -65,7 +65,7 @@
         <%= form.text_field field.setting_key,
                             label: field.label,
                             type: input_type,
-                            placeholder: field.default || "",
+                            placeholder: field.default || (field.required ? "" : "Optional"),
                             value: display_value,
                             disabled: disabled,
                             data: { "auto-submit-form-target": "auto" } %>
