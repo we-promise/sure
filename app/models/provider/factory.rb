@@ -70,32 +70,32 @@ class Provider::Factory
 
     private
 
-    def registry
-      @registry ||= {}
-    end
-
-    # Find adapter class, attempting to load all adapters if not registered
-    def find_adapter_class(provider_type)
-      # Return if already registered
-      return registry[provider_type] if registry[provider_type]
-
-      # Load all adapters to ensure they're registered
-      # This triggers their self-registration calls
-      ensure_adapters_loaded
-
-      # Check registry again after loading
-      registry[provider_type]
-    end
-
-    # Discover all adapter files in the provider directory
-    # Returns adapter class names (e.g., ["PlaidAdapter", "SimplefinAdapter"])
-    def adapter_files
-      return [] unless defined?(Rails)
-
-      pattern = Rails.root.join("app/models/provider/*_adapter.rb")
-      Dir[pattern].map do |file|
-        File.basename(file, ".rb").camelize
+      def registry
+        @registry ||= {}
       end
-    end
+
+      # Find adapter class, attempting to load all adapters if not registered
+      def find_adapter_class(provider_type)
+        # Return if already registered
+        return registry[provider_type] if registry[provider_type]
+
+        # Load all adapters to ensure they're registered
+        # This triggers their self-registration calls
+        ensure_adapters_loaded
+
+        # Check registry again after loading
+        registry[provider_type]
+      end
+
+      # Discover all adapter files in the provider directory
+      # Returns adapter class names (e.g., ["PlaidAdapter", "SimplefinAdapter"])
+      def adapter_files
+        return [] unless defined?(Rails)
+
+        pattern = Rails.root.join("app/models/provider/*_adapter.rb")
+        Dir[pattern].map do |file|
+          File.basename(file, ".rb").camelize
+        end
+      end
   end
 end

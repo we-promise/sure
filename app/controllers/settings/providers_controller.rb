@@ -3,7 +3,7 @@ class Settings::ProvidersController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update ]
+  before_action :ensure_admin, only: [ :show, :update ]
 
   def show
     @breadcrumbs = [
@@ -17,24 +17,37 @@ class Settings::ProvidersController < ApplicationController
   end
 
   def update
+    # Build index of valid configurable fields with their metadata
+    Provider::Factory.ensure_adapters_loaded
+    valid_fields = {}
+    Provider::ConfigurationRegistry.all.each do |config|
+      config.fields.each do |field|
+        valid_fields[field.setting_key.to_s] = field
+      end
+    end
+
     updated_fields = []
 
-    # Dynamically update all provider settings based on permitted params
-    provider_params.each do |param_key, param_value|
-      setting_key = param_key.to_sym
+    # Perform all updates within a transaction for consistency
+    Setting.transaction do
+      provider_params.each do |param_key, param_value|
+        # Only process keys that exist in the configuration registry
+        field = valid_fields[param_key.to_s]
+        next unless field
 
-      # Clean the value
-      value = param_value.to_s.strip
+        # Clean the value and convert blank/empty strings to nil
+        value = param_value.to_s.strip
+        value = nil if value.empty?
 
-      # For secret fields, ignore placeholder values to prevent accidental overwrite
-      if value == "********"
-        next
+        # For secret fields only, skip placeholder values to prevent accidental overwrite
+        if field.secret && value == "********"
+          next
+        end
+
+        # Set the value using dynamic hash-style access
+        Setting[field.setting_key] = value
+        updated_fields << param_key
       end
-
-      # Set the value using dynamic hash-style access
-      # This works without explicit field declarations in Setting model
-      Setting[setting_key] = value
-      updated_fields << param_key
     end
 
     if updated_fields.any?
