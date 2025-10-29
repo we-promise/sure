@@ -1,9 +1,20 @@
+# PlaidAdapter serves dual purposes:
+#
+# 1. Configuration Manager (class-level):
+#    - Manages Rails.application.config.plaid (US region)
+#    - Exposes 3 configurable fields in "Plaid" section of settings UI
+#    - PlaidEuAdapter separately manages EU region in "Plaid Eu" section
+#
+# 2. Instance Adapter (instance-level):
+#    - Wraps ALL PlaidAccount instances regardless of region (US or EU)
+#    - The PlaidAccount's plaid_item.plaid_region determines which config to use
+#    - Delegates to Provider::Registry.plaid_provider_for_region(region)
 class Provider::PlaidAdapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
   include Provider::Configurable
 
-  # Register this adapter with the factory
+  # Register this adapter with the factory for ALL PlaidAccount instances
   Provider::Factory.register("PlaidAccount", self)
 
   # Configuration for Plaid US
@@ -11,19 +22,19 @@ class Provider::PlaidAdapter < Provider::Base
     description <<~DESC
       Setup instructions:
       1. Visit the [Plaid Dashboard](https://dashboard.plaid.com/team/keys) to get your API credentials
-      2. Your Client ID and Secret Key are required to enable Plaid bank sync
+      2. Your Client ID and Secret Key are required to enable Plaid bank sync for US/CA banks
       3. For production use, set environment to 'production', for testing use 'sandbox'
     DESC
 
     field :client_id,
           label: "Client ID",
-          required: true,
+          required: false,
           env_key: "PLAID_CLIENT_ID",
           description: "Your Plaid Client ID from the Plaid Dashboard"
 
     field :secret,
           label: "Secret Key",
-          required: true,
+          required: false,
           secret: true,
           env_key: "PLAID_SECRET",
           description: "Your Plaid Secret from the Plaid Dashboard"
@@ -40,7 +51,7 @@ class Provider::PlaidAdapter < Provider::Base
     "plaid"
   end
 
-  # Reload Plaid configuration when settings are updated
+  # Reload Plaid US configuration when settings are updated
   def self.reload_configuration
     client_id = config_value(:client_id).presence || ENV["PLAID_CLIENT_ID"]
     secret = config_value(:secret).presence || ENV["PLAID_SECRET"]
