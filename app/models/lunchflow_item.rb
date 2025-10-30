@@ -21,23 +21,56 @@ class LunchflowItem < ApplicationRecord
   end
 
   def import_latest_lunchflow_data
-    LunchflowItem::Importer.new(self, lunchflow_provider: lunchflow_provider).import
+    provider = lunchflow_provider
+    unless provider
+      Rails.logger.error "LunchflowItem #{id} - Cannot import: Lunchflow provider is not configured (missing API key)"
+      raise StandardError.new("Lunchflow provider is not configured")
+    end
+
+    LunchflowItem::Importer.new(self, lunchflow_provider: provider).import
+  rescue => e
+    Rails.logger.error "LunchflowItem #{id} - Failed to import data: #{e.message}"
+    raise
   end
 
   def process_accounts
+    return [] if lunchflow_accounts.empty?
+
+    results = []
     lunchflow_accounts.joins(:account).each do |lunchflow_account|
-      LunchflowAccount::Processor.new(lunchflow_account).process
+      begin
+        result = LunchflowAccount::Processor.new(lunchflow_account).process
+        results << { lunchflow_account_id: lunchflow_account.id, success: true, result: result }
+      rescue => e
+        Rails.logger.error "LunchflowItem #{id} - Failed to process account #{lunchflow_account.id}: #{e.message}"
+        results << { lunchflow_account_id: lunchflow_account.id, success: false, error: e.message }
+        # Continue processing other accounts even if one fails
+      end
     end
+
+    results
   end
 
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    return [] if accounts.empty?
+
+    results = []
     accounts.each do |account|
-      account.sync_later(
-        parent_sync: parent_sync,
-        window_start_date: window_start_date,
-        window_end_date: window_end_date
-      )
+      begin
+        account.sync_later(
+          parent_sync: parent_sync,
+          window_start_date: window_start_date,
+          window_end_date: window_end_date
+        )
+        results << { account_id: account.id, success: true }
+      rescue => e
+        Rails.logger.error "LunchflowItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
+        results << { account_id: account.id, success: false, error: e.message }
+        # Continue scheduling other accounts even if one fails
+      end
     end
+
+    results
   end
 
   def upsert_lunchflow_snapshot!(accounts_snapshot)
@@ -114,12 +147,12 @@ class LunchflowItem < ApplicationRecord
 
   private
 
-  def lunchflow_provider
-    api_key = Provider::LunchflowAdapter.config_value(:api_key)
-    return nil unless api_key.present?
+    def lunchflow_provider
+      api_key = Provider::LunchflowAdapter.config_value(:api_key)
+      return nil unless api_key.present?
 
-    base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
+      base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
 
-    Provider::Lunchflow.new(api_key, base_url: base_url)
-  end
+      Provider::Lunchflow.new(api_key, base_url: base_url)
+    end
 end

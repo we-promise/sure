@@ -7,15 +7,37 @@ class LunchflowEntry::Processor
   end
 
   def process
-    import_adapter.import_transaction(
-      external_id: external_id,
-      amount: amount,
-      currency: currency,
-      date: date,
-      name: name,
-      source: "lunchflow",
-      merchant: merchant
-    )
+    # Validate that we have a linked account before processing
+    unless account.present?
+      Rails.logger.warn "LunchflowEntry::Processor - No linked account for lunchflow_account #{lunchflow_account.id}, skipping transaction #{external_id}"
+      return nil
+    end
+
+    # Wrap import in error handling to catch validation and save errors
+    begin
+      import_adapter.import_transaction(
+        external_id: external_id,
+        amount: amount,
+        currency: currency,
+        date: date,
+        name: name,
+        source: "lunchflow",
+        merchant: merchant
+      )
+    rescue ArgumentError => e
+      # Re-raise validation errors (missing required fields, invalid data)
+      Rails.logger.error "LunchflowEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
+      raise
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      # Handle database save errors
+      Rails.logger.error "LunchflowEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
+      raise StandardError.new("Failed to import transaction: #{e.message}")
+    rescue => e
+      # Catch unexpected errors with full context
+      Rails.logger.error "LunchflowEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      raise StandardError.new("Unexpected error importing transaction: #{e.message}")
+    end
   end
 
   private
@@ -26,7 +48,7 @@ class LunchflowEntry::Processor
     end
 
     def account
-      lunchflow_account.current_account
+      @account ||= lunchflow_account.current_account
     end
 
     def data
@@ -35,7 +57,7 @@ class LunchflowEntry::Processor
 
     def external_id
       id = data[:id].presence
-      raise ArgumentError, "Lunchflow transaction missing id: #{data.inspect}" unless id
+      raise ArgumentError, "Lunchflow transaction missing required field 'id'" unless id
       "lunchflow_#{id}"
     end
 
@@ -62,13 +84,20 @@ class LunchflowEntry::Processor
       # Create a stable merchant ID from the merchant name
       # Using digest to ensure uniqueness while keeping it deterministic
       merchant_name = data[:merchant].to_s.strip
+      return nil if merchant_name.blank?
+
       merchant_id = Digest::MD5.hexdigest(merchant_name.downcase)
 
-      @merchant ||= import_adapter.find_or_create_merchant(
-        provider_merchant_id: "lunchflow_merchant_#{merchant_id}",
-        name: merchant_name,
-        source: "lunchflow"
-      )
+      @merchant ||= begin
+        import_adapter.find_or_create_merchant(
+          provider_merchant_id: "lunchflow_merchant_#{merchant_id}",
+          name: merchant_name,
+          source: "lunchflow"
+        )
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.error "LunchflowEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"
+        nil
+      end
     end
 
     def amount
@@ -91,7 +120,7 @@ class LunchflowEntry::Processor
     end
 
     def currency
-      data[:currency] || account.currency
+      data[:currency].presence || account&.currency || "USD"
     end
 
     def date
