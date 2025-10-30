@@ -152,4 +152,20 @@ class UserTest < ActiveSupport::TestCase
   ensure
     Setting.openai_access_token = previous
   end
+
+  test "intro layout collapses sidebars and enables ai" do
+    user = User.new(
+      family: families(:empty),
+      email: "intro-new@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      ui_layout: :intro
+    )
+
+    assert user.save, user.errors.full_messages.to_sentence
+    assert user.ui_layout_intro?
+    assert_not user.show_sidebar?
+    assert_not user.show_ai_sidebar?
+    assert user.ai_enabled?
+  end
 end

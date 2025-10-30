@@ -4,6 +4,10 @@ class PagesController < ApplicationController
   skip_authentication only: :redis_configuration_error
 
   def dashboard
+    if Current.user&.ui_layout_intro?
+      redirect_to chats_path and return
+    end
+
     @balance_sheet = Current.family.balance_sheet
     @accounts = Current.family.accounts.visible.with_attached_logo
 
@@ -43,6 +47,10 @@ class PagesController < ApplicationController
     @outflows_data = build_outflows_donut_data(outflows_expense_totals)
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+  end
+
+  def intro
+    @breadcrumbs = [ [ "Home", chats_path ], [ "Intro", nil ] ]
   end
 
   def changelog
