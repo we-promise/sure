@@ -27,6 +27,48 @@
             <p class="text-xs text-secondary">
               <%= simplefin_item.institution_summary %>
             </p>
+            <%# Extra inline badges from latest sync stats %>
+            <% if (stats = simplefin_item.syncs.ordered.first&.sync_stats).present? %>
+              <div class="flex items-center gap-2 mt-1">
+                <% if stats["unlinked_accounts"].to_i > 0 %>
+                  <%= render DS::Tooltip.new(text: "Accounts need setup", icon: "link-2", size: "sm") %>
+                  <span class="text-xs text-secondary">Unlinked: <%= stats["unlinked_accounts"].to_i %></span>
+                <% end %>
+
+                <% if stats["accounts_skipped"].to_i > 0 %>
+                  <%= render DS::Tooltip.new(text: "Some accounts were skipped due to errors during sync", icon: "alert-triangle", size: "sm", color: "warning") %>
+                  <span class="text-xs text-warning">Skipped: <%= stats["accounts_skipped"].to_i %></span>
+                <% end %>
+
+                <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
+                  <% ts = stats["rate_limited_at"] %>
+                  <% ago = (ts.present? ? (time_ago_in_words(Time.parse(ts)) rescue nil) : nil) %>
+                  <%= render DS::Tooltip.new(
+                        text: (ago ? "Rate limited (" + ago + " ago)" : "Rate limited recently"),
+                        icon: "clock",
+                        size: "sm",
+                        color: "warning"
+                      ) %>
+                <% end %>
+
+                <% if stats["total_errors"].to_i > 0 || (stats["errors"].is_a?(Array) && stats["errors"].any?) %>
+                  <% sample = Array(stats["errors"]).map { |e| name = (e[:name] || e["name"]).to_s; msg = (e[:message] || e["message"]).to_s; name.present? ? "#{name}: #{msg}" : msg }.compact.first(2).join(" • ") %>
+                  <% buckets = stats["error_buckets"] || {} %>
+                  <% bucket_text = buckets.present? ? buckets.map { |k,v| "#{k}: #{v}" }.join(", ") : nil %>
+                  <% parts = ["Errors: ", (stats["total_errors"] || stats["accounts_skipped"]).to_i.to_s] %>
+                  <% parts << (" (" + bucket_text + ")") if bucket_text.present? %>
+                  <% parts << (" — " + sample) if sample.present? %>
+                  <% tooltip_text = parts.join %>
+                  <%= render DS::Tooltip.new(text: tooltip_text, icon: "alert-octagon", size: "sm", color: "warning") %>
+                  <%= render DS::Link.new(text: "View errors", icon: "alert-octagon", variant: "secondary", href: errors_simplefin_item_path(simplefin_item), frame: "modal") %>
+                  <%= render DS::Link.new(text: "Link existing accounts", icon: "link-2", variant: "secondary", href: relink_simplefin_item_path(simplefin_item), frame: "modal") %>
+                <% end %>
+
+                <% if stats["total_accounts"].to_i > 0 %>
+                  <span class="text-xs text-secondary">Total: <%= stats["total_accounts"].to_i %></span>
+                <% end %>
+              </div>
+            <% end %>
           <% end %>
           <% if simplefin_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
@@ -81,6 +123,17 @@
           ) %>
         <% end %>
 
+        <%# Show only when there are manual accounts to link %>
+        <% if simplefin_item.family.accounts.left_joins(:account_providers).where(account_providers: { id: nil }).exists? %>
+          <%= render DS::Link.new(
+            text: "Link existing accounts",
+            icon: "link-2",
+            variant: "secondary",
+            href: relink_simplefin_item_path(simplefin_item),
+            frame: "modal"
+          ) %>
+        <% end %>
+
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
@@ -98,6 +151,67 @@
       <div class="space-y-4 mt-4">
         <% if simplefin_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) %>
+        <% if (latest_sync = simplefin_item.syncs.ordered.first).present? %>
+          <% stats = latest_sync.sync_stats || {} %>
+          <details class="group bg-surface rounded-lg border border-surface-inset/50">
+            <summary class="flex items-center justify-between gap-2 p-3 cursor-pointer">
+              <div class="flex items-center gap-2">
+                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+                <span class="text-sm text-primary font-medium">Sync summary</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-secondary">
+                <% if simplefin_item.last_synced_at %>
+                  <span>Last sync: <%= time_ago_in_words(simplefin_item.last_synced_at) %> ago</span>
+                <% end %>
+              </div>
+            </summary>
+            <div class="p-3 text-sm text-secondary grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <h4 class="text-primary font-medium mb-1">Accounts</h4>
+                <div class="flex items-center gap-3">
+                  <span>Total: <%= stats["total_accounts"].to_i %></span>
+                  <span>Linked: <%= stats["linked_accounts"].to_i %></span>
+                  <span>Unlinked: <%= stats["unlinked_accounts"].to_i %></span>
+                  <% institutions = simplefin_item.simplefin_accounts.map { |sfa| (sfa.org_data || {})["name"].presence || (sfa.org_data || {})["domain"].presence }.compact.uniq %>
+                  <span>Institutions: <%= institutions.size %></span>
+                </div>
+              </div>
+              <div>
+                <h4 class="text-primary font-medium mb-1">Transactions</h4>
+                <div class="flex items-center gap-3">
+                  <span>Seen: <%= stats["tx_seen"].to_i %></span>
+                  <span>Imported: <%= stats["tx_imported"].to_i %></span>
+                  <span>Updated: <%= stats["tx_updated"].to_i %></span>
+                  <span>Skipped: <%= stats["tx_skipped"].to_i %></span>
+                </div>
+              </div>
+              <div>
+                <h4 class="text-primary font-medium mb-1">Holdings</h4>
+                <div class="flex items-center gap-3">
+                  <span>Processed: <%= stats["holdings_processed"].to_i %></span>
+                </div>
+              </div>
+              <div>
+                <h4 class="text-primary font-medium mb-1">Health</h4>
+                <div class="flex items-center gap-3">
+                  <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
+                    <% ts = stats["rate_limited_at"] %>
+                    <% ago = (ts.present? ? (time_ago_in_words(Time.parse(ts)) rescue nil) : nil) %>
+                    <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
+                  <% end %>
+                  <% total_errors = stats["total_errors"].to_i %>
+                  <% if total_errors > 0 %>
+                    <span class="text-destructive">Errors: <%= total_errors %></span>
+                  <% else %>
+                    <span>Errors: 0</span>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </details>
         <% end %>
 
         <% if simplefin_item.pending_account_setup? %>
