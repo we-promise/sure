@@ -34,6 +34,14 @@ class Provider::LunchflowAdapter < Provider::Base
     "lunchflow"
   end
 
+  # Reload Lunchflow configuration when settings are updated
+  def self.reload_configuration
+    # Lunchflow doesn't need to configure Rails.application.config like Plaid does
+    # The configuration is read dynamically via config_value(:api_key) and config_value(:base_url)
+    # This method exists to be called by the settings controller after updates
+    # No action needed here since values are fetched on-demand
+  end
+
   def sync_path
     Rails.application.routes.url_helpers.sync_lunchflow_item_path(item)
   end

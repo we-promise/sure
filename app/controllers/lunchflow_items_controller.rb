@@ -73,6 +73,7 @@ class LunchflowItemsController < ApplicationController
     accounts_data = lunchflow_provider.get_accounts
 
     created_accounts = []
+    already_linked_accounts = []
 
     selected_account_ids.each do |account_id|
       # Find the account data from API response
@@ -85,6 +86,12 @@ class LunchflowItemsController < ApplicationController
       )
       lunchflow_account.upsert_lunchflow_snapshot!(account_data)
       lunchflow_account.save!
+
+      # Check if this lunchflow_account is already linked
+      if lunchflow_account.account_provider.present?
+        already_linked_accounts << account_data[:name]
+        next
+      end
 
       # Create the internal Account with proper balance initialization
       account = Account.create_and_sync(
@@ -105,11 +112,24 @@ class LunchflowItemsController < ApplicationController
       created_accounts << account
     end
 
-    # Trigger sync to fetch transactions
-    lunchflow_item.sync_later
+    # Trigger sync to fetch transactions if any accounts were created
+    lunchflow_item.sync_later if created_accounts.any?
 
-    if created_accounts.any?
-      redirect_to return_to.presence || accounts_path, notice: t(".success", count: created_accounts.count)
+    # Build appropriate flash message
+    if created_accounts.any? && already_linked_accounts.any?
+      redirect_to return_to.presence || accounts_path,
+                  notice: t(".partial_success",
+                           created_count: created_accounts.count,
+                           already_linked_count: already_linked_accounts.count,
+                           already_linked_names: already_linked_accounts.join(", "))
+    elsif created_accounts.any?
+      redirect_to return_to.presence || accounts_path,
+                  notice: t(".success", count: created_accounts.count)
+    elsif already_linked_accounts.any?
+      redirect_to return_to.presence || accounts_path,
+                  alert: t(".all_already_linked",
+                          count: already_linked_accounts.count,
+                          names: already_linked_accounts.join(", "))
     else
       redirect_to new_account_path, alert: t(".link_failed")
     end
@@ -165,12 +185,11 @@ class LunchflowItemsController < ApplicationController
   end
 
   private
+    def set_lunchflow_item
+      @lunchflow_item = Current.family.lunchflow_items.find(params[:id])
+    end
 
-  def set_lunchflow_item
-    @lunchflow_item = Current.family.lunchflow_items.find(params[:id])
-  end
-
-  def lunchflow_params
-    params.require(:lunchflow_item).permit(:name, :sync_start_date)
-  end
+    def lunchflow_params
+      params.require(:lunchflow_item).permit(:name, :sync_start_date)
+    end
 end

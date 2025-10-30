@@ -8,7 +8,7 @@
           <%= t(".description") %>
         </p>
 
-        <form action="<%= link_accounts_lunchflow_items_path %>" method="post" class="space-y-4">
+        <form action="<%= link_accounts_lunchflow_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
           <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
           <%= hidden_field_tag :accountable_type, @accountable_type %>
           <%= hidden_field_tag :return_to, @return_to %>
@@ -30,7 +30,7 @@
           </div>
 
           <div class="flex gap-2 justify-end pt-4">
-            <%= link_to t(".cancel"), new_account_path,
+            <%= link_to t(".cancel"), @return_to.presence || new_account_path,
                 class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary bg-gray-50 theme-dark:bg-gray-700 hover:bg-gray-100 theme-dark:hover:bg-gray-600",
                 data: { turbo_frame: "_top" } %>
             <%= submit_tag t(".link_accounts"),
