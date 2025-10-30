@@ -165,22 +165,28 @@ class LunchflowItem::Importer
         # Store transactions in the account
         if transactions_data[:transactions].present?
           begin
-            # Merge with existing transactions to avoid duplicates
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
-            # Safely merge transactions with deduplication by ID
+            # Build set of existing transaction IDs for efficient lookup
+            existing_ids = existing_transactions.map do |tx|
+              tx.with_indifferent_access[:id]
+            end.to_set
+
+            # Filter to ONLY truly new transactions (skip duplicates)
+            # Transactions are immutable on the bank side, so we don't need to update them
             new_transactions = transactions_data[:transactions].select do |tx|
-              tx.is_a?(Hash) && (tx[:id].present? || tx["id"].present?)
+              next false unless tx.is_a?(Hash)
+
+              tx_id = tx.with_indifferent_access[:id]
+              tx_id.present? && !existing_ids.include?(tx_id)
             end
 
-            merged_transactions = (existing_transactions + new_transactions).uniq do |tx|
-              tx = tx.with_indifferent_access
-              tx[:id]
+            if new_transactions.any?
+              Rails.logger.info "LunchflowItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions_data[:transactions].count - new_transactions.count} duplicates skipped) for account #{lunchflow_account.account_id}"
+              lunchflow_account.upsert_lunchflow_transactions_snapshot!(existing_transactions + new_transactions)
+            else
+              Rails.logger.info "LunchflowItem::Importer - No new transactions to store (all #{transactions_data[:transactions].count} were duplicates) for account #{lunchflow_account.account_id}"
             end
-
-            Rails.logger.info "LunchflowItem::Importer - Storing #{merged_transactions.count} transactions (#{existing_transactions.count} existing + #{new_transactions.count} new) for account #{lunchflow_account.account_id}"
-
-            lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged_transactions)
           rescue => e
             Rails.logger.error "LunchflowItem::Importer - Failed to store transactions for account #{lunchflow_account.account_id}: #{e.message}"
             return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
