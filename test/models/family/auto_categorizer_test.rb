@@ -33,8 +33,9 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal test_category, txn2.reload.category
     assert_nil txn3.reload.category
 
-    # After auto-categorization, all transactions are locked and no longer enrichable
-    assert_equal 0, @account.transactions.reload.enrichable(:category_id).count
+    # After auto-categorization, only successfully categorized transactions are locked
+    # txn3 should still be enrichable since it wasn't categorized
+    assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
   end
 
   private

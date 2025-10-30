@@ -5,6 +5,13 @@
       <%= render DS::Menu.new do |menu| %>
         <% menu.with_item(
           variant: "button",
+          text: "Reset AI cache",
+          href: clear_ai_cache_rules_path,
+          icon: "refresh-cw",
+          method: :post,
+          confirm: "Are you sure you want to reset the AI cache? This will allow AI rules to re-process all transactions.") %>
+        <% menu.with_item(
+          variant: "button",
           text: "Delete all rules",
           href: destroy_all_rules_path,
           icon: "trash-2",

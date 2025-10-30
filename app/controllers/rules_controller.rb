@@ -78,6 +78,11 @@ class RulesController < ApplicationController
     redirect_to rules_path, notice: "All rules deleted"
   end
 
+  def clear_ai_cache
+    ClearAiCacheJob.perform_later
+    redirect_to rules_path, notice: "AI cache is being cleared. This may take a few moments."
+  end
+
   private
     def set_rule
       @rule = Current.family.rules.find(params[:id])

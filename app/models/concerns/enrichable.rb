@@ -15,11 +15,42 @@ module Enrichable
   InvalidAttributeError = Class.new(StandardError)
 
   included do
+    has_many :data_enrichments, as: :enrichable, dependent: :destroy
+
     scope :enrichable, ->(attrs) {
       attrs = Array(attrs).map(&:to_s)
       json_condition = attrs.each_with_object({}) { |attr, hash| hash[attr] = true }
       where.not(Arel.sql("#{table_name}.locked_attributes ?| array[:keys]"), keys: attrs)
     }
+  end
+
+  class_methods do
+    # Clear AI-sourced locked attributes for all records
+    def clear_ai_cache
+      transaction do
+        # Find all AI enrichments for this model
+        ai_enrichments = DataEnrichment.where(enrichable_type: name, source: "ai")
+
+        # Group by enrichable_id to batch update
+        enrichments_by_id = ai_enrichments.group_by(&:enrichable_id)
+
+        enrichments_by_id.each do |enrichable_id, enrichments|
+          record = find_by(id: enrichable_id)
+          next unless record
+
+          # Unlock all AI-locked attributes
+          new_locked_attributes = record.locked_attributes.dup
+          enrichments.each do |enrichment|
+            new_locked_attributes.delete(enrichment.attribute_name)
+          end
+
+          record.update_column(:locked_attributes, new_locked_attributes)
+        end
+
+        # Delete all AI enrichment records
+        ai_enrichments.delete_all
+      end
+    end
   end
 
   # Convenience method for a single attribute
@@ -69,6 +100,25 @@ module Enrichable
   def lock_saved_attributes!
     saved_changes.keys.reject { |attr| ignored_enrichable_attributes.include?(attr) }.each do |attr|
       lock_attr!(attr)
+    end
+  end
+
+  # Clear AI-sourced locked attributes for this record
+  def clear_ai_cache
+    self.class.transaction do
+      # Find all AI enrichments for this record
+      ai_enrichments = data_enrichments.where(source: "ai")
+
+      # Unlock all AI-locked attributes
+      new_locked_attributes = locked_attributes.dup
+      ai_enrichments.each do |enrichment|
+        new_locked_attributes.delete(enrichment.attribute_name)
+      end
+
+      update_column(:locked_attributes, new_locked_attributes)
+
+      # Delete all AI enrichment records
+      ai_enrichments.delete_all
     end
   end
 
