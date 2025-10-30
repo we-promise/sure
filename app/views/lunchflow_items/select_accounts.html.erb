@@ -31,10 +31,10 @@
 
           <div class="flex gap-2 justify-end pt-4">
             <%= link_to t(".cancel"), @return_to || new_account_path,
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary bg-gray-50 theme-dark:bg-gray-700 hover:bg-gray-100 theme-dark:hover:bg-gray-600",
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
                 data: { turbo_frame: "_top" } %>
             <%= submit_tag t(".link_accounts"),
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" %>
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
           </div>
         </form>
       </div>
