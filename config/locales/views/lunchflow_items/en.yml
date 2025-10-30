@@ -1,0 +1,41 @@
+---
+en:
+  lunchflow_items:
+    create:
+      success: Lunchflow connection created successfully
+    destroy:
+      success: Lunchflow connection removed
+    index:
+      title: Lunchflow Connections
+    loading:
+      loading_message: Loading Lunchflow accounts...
+      loading_title: Loading
+    link_accounts:
+      api_error: "API error: %{message}"
+      link_failed: Failed to link accounts
+      no_accounts_selected: Please select at least one account
+      success:
+        one: "Successfully linked %{count} account"
+        other: "Successfully linked %{count} accounts"
+    lunchflow_item:
+      delete: Delete connection
+      deletion_in_progress: deletion in progress...
+      error: Error
+      no_accounts_description: This connection has no linked accounts yet.
+      no_accounts_title: No accounts
+      status: "Synced %{timestamp} ago"
+      status_never: Never synced
+      syncing: Syncing...
+    select_accounts:
+      accounts_selected: accounts selected
+      api_error: "API error: %{message}"
+      cancel: Cancel
+      description: Select the accounts you want to link to your Maybe account.
+      link_accounts: Link selected accounts
+      no_accounts_found: No accounts found. Please check your API key configuration.
+      no_api_key: Lunchflow API key is not configured. Please configure it in Settings.
+      title: Select Lunchflow Accounts
+    sync:
+      success: Sync started
+    update:
+      success: Lunchflow connection updated

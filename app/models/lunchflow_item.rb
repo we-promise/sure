@@ -1,0 +1,125 @@
+class LunchflowItem < ApplicationRecord
+  include Syncable, Provided
+
+  enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+
+  validates :name, presence: true
+
+  belongs_to :family
+  has_one_attached :logo
+
+  has_many :lunchflow_accounts, dependent: :destroy
+  has_many :accounts, through: :lunchflow_accounts
+
+  scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :ordered, -> { order(created_at: :desc) }
+  scope :needs_update, -> { where(status: :requires_update) }
+
+  def destroy_later
+    update!(scheduled_for_deletion: true)
+    DestroyJob.perform_later(self)
+  end
+
+  def import_latest_lunchflow_data
+    LunchflowItem::Importer.new(self, lunchflow_provider: lunchflow_provider).import
+  end
+
+  def process_accounts
+    lunchflow_accounts.joins(:account).each do |lunchflow_account|
+      LunchflowAccount::Processor.new(lunchflow_account).process
+    end
+  end
+
+  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    accounts.each do |account|
+      account.sync_later(
+        parent_sync: parent_sync,
+        window_start_date: window_start_date,
+        window_end_date: window_end_date
+      )
+    end
+  end
+
+  def upsert_lunchflow_snapshot!(accounts_snapshot)
+    assign_attributes(
+      raw_payload: accounts_snapshot
+    )
+
+    save!
+  end
+
+  def has_completed_initial_setup?
+    # Setup is complete if we have any linked accounts
+    accounts.any?
+  end
+
+  def sync_status_summary
+    latest = latest_sync
+    return nil unless latest
+
+    # If sync has statistics, use them
+    if latest.sync_stats.present?
+      stats = latest.sync_stats
+      total = stats["total_accounts"] || 0
+      linked = stats["linked_accounts"] || 0
+      unlinked = stats["unlinked_accounts"] || 0
+
+      if total == 0
+        "No accounts found"
+      elsif unlinked == 0
+        "#{linked} #{'account'.pluralize(linked)} synced"
+      else
+        "#{linked} synced, #{unlinked} need setup"
+      end
+    else
+      # Fallback to current account counts
+      total_accounts = lunchflow_accounts.count
+      linked_count = accounts.count
+      unlinked_count = total_accounts - linked_count
+
+      if total_accounts == 0
+        "No accounts found"
+      elsif unlinked_count == 0
+        "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      else
+        "#{linked_count} synced, #{unlinked_count} need setup"
+      end
+    end
+  end
+
+  def institution_display_name
+    # Try to get institution name from stored metadata
+    institution_name.presence || institution_domain.presence || name
+  end
+
+  def connected_institutions
+    # Get unique institutions from all accounts
+    lunchflow_accounts.includes(:account)
+                      .where.not(institution_metadata: nil)
+                      .map { |acc| acc.institution_metadata }
+                      .uniq { |inst| inst["name"] || inst["institution_name"] }
+  end
+
+  def institution_summary
+    institutions = connected_institutions
+    case institutions.count
+    when 0
+      "No institutions connected"
+    when 1
+      institutions.first["name"] || institutions.first["institution_name"] || "1 institution"
+    else
+      "#{institutions.count} institutions"
+    end
+  end
+
+  private
+
+  def lunchflow_provider
+    api_key = Provider::LunchflowAdapter.config_value(:api_key)
+    return nil unless api_key.present?
+
+    base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
+
+    Provider::Lunchflow.new(api_key, base_url: base_url)
+  end
+end

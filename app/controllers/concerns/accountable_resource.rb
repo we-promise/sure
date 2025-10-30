@@ -68,6 +68,30 @@ module AccountableResource
     def set_link_options
       @show_us_link = Current.family.can_connect_plaid_us?
       @show_eu_link = Current.family.can_connect_plaid_eu?
+      @show_lunchflow_link = Current.family.can_connect_lunchflow?
+
+      # Preload Lunchflow accounts if available and cache them
+      if @show_lunchflow_link
+        cache_key = "lunchflow_accounts_#{Current.family.id}"
+
+        @lunchflow_accounts = Rails.cache.fetch(cache_key, expires_in: 5.minutes) do
+          begin
+            api_key = Provider::LunchflowAdapter.config_value(:api_key)
+            base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
+
+            if api_key.present?
+              lunchflow_provider = Provider::Lunchflow.new(api_key, base_url: base_url)
+              accounts_data = lunchflow_provider.get_accounts
+              accounts_data[:accounts] || []
+            else
+              []
+            end
+          rescue Provider::Lunchflow::LunchflowError => e
+            Rails.logger.error("Failed to preload Lunchflow accounts: #{e.message}")
+            []
+          end
+        end
+      end
     end
 
     def accountable_type
