@@ -96,7 +96,7 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 **Recommended models:**
 - `gpt-4.1` - Default, best balance of speed and quality
 - `gpt-5` - Latest model, highest quality (more expensive)
-- `gpt-4o-mini` - Cheaper, good quaity
+- `gpt-4o-mini` - Cheaper, good quality
 
 **Pricing:** See [OpenAI Pricing](https://openai.com/api/pricing/)
 
