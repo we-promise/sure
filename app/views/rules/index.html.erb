@@ -9,7 +9,11 @@
           href: clear_ai_cache_rules_path,
           icon: "refresh-cw",
           method: :post,
-          confirm: "Are you sure you want to reset the AI cache? This will allow AI rules to re-process all transactions.") %>
+          confirm: CustomConfirm.new(
+            title: "Reset AI cache?",
+            body: "Are you sure you want to reset the AI cache? This will allow AI rules to re-process all transactions.",
+            btn_text: "Reset Cache"
+          )) %>
         <% menu.with_item(
           variant: "button",
           text: "Delete all rules",
