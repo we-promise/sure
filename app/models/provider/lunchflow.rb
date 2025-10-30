@@ -9,14 +9,13 @@ class Provider::Lunchflow
   def initialize(api_key, base_url: "https://lunchflow.app/api/v1")
     @api_key = api_key
     @base_url = base_url
-    self.class.base_uri @base_url
   end
 
   # Get all accounts
   # Returns: { accounts: [...], total: N }
   def get_accounts
     response = self.class.get(
-      "/accounts",
+      "#{@base_url}/accounts",
       headers: auth_headers
     )
 
@@ -47,7 +46,7 @@ class Provider::Lunchflow
     path += "?#{URI.encode_www_form(query_params)}" unless query_params.empty?
 
     response = self.class.get(
-      path,
+      "#{@base_url}#{path}",
       headers: auth_headers
     )
 
@@ -66,7 +65,7 @@ class Provider::Lunchflow
     path = "/accounts/#{account_id}/balance"
 
     response = self.class.get(
-      path,
+      "#{@base_url}#{path}",
       headers: auth_headers
     )
 
