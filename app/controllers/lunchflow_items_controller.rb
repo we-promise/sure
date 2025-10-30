@@ -19,15 +19,13 @@ class LunchflowItemsController < ApplicationController
 
       # If not cached, fetch from API
       if @available_accounts.nil?
-        api_key = Provider::LunchflowAdapter.config_value(:api_key)
-        base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
+        lunchflow_provider = Provider::LunchflowAdapter.build_provider
 
-        unless api_key.present?
+        unless lunchflow_provider.present?
           redirect_to new_account_path, alert: t(".no_api_key")
           return
         end
 
-        lunchflow_provider = Provider::Lunchflow.new(api_key, base_url: base_url)
         accounts_data = lunchflow_provider.get_accounts
 
         @available_accounts = accounts_data[:accounts] || []
@@ -67,9 +65,12 @@ class LunchflowItemsController < ApplicationController
     )
 
     # Fetch account details from API
-    api_key = Provider::LunchflowAdapter.config_value(:api_key)
-    base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
-    lunchflow_provider = Provider::Lunchflow.new(api_key, base_url: base_url)
+    lunchflow_provider = Provider::LunchflowAdapter.build_provider
+    unless lunchflow_provider.present?
+      redirect_to new_account_path, alert: t(".no_api_key")
+      return
+    end
+
     accounts_data = lunchflow_provider.get_accounts
 
     created_accounts = []

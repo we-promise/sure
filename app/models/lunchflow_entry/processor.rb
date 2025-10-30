@@ -1,3 +1,5 @@
+require "digest/md5"
+
 class LunchflowEntry::Processor
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
   # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
