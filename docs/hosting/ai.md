@@ -96,8 +96,7 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 **Recommended models:**
 - `gpt-4.1` - Default, best balance of speed and quality
 - `gpt-5` - Latest model, highest quality (more expensive)
-- `o1` - Advanced reasoning, best for complex financial analysis
-- `o3` - Cutting-edge reasoning capabilities
+- `gpt-4o-mini` - Cheaper, good quality
 
 **Pricing:** See [OpenAI Pricing](https://openai.com/api/pricing/)
 
@@ -118,8 +117,8 @@ OPENAI_MODEL=google/gemini-2.0-flash-exp
 - Usage tracking
 
 **Recommended Gemini models via OpenRouter:**
-- `google/gemini-2.0-flash-exp` - Fast and capable
-- `google/gemini-pro-1.5` - High quality, good for complex queries
+- `google/gemini-2.5-flash` - Fast and capable
+- `google/gemini-2.5-pro` - High quality, good for complex queries
 
 ### Anthropic Claude (via OpenRouter)
 
@@ -130,8 +129,8 @@ OPENAI_MODEL=anthropic/claude-3.5-sonnet
 ```
 
 **Recommended Claude models:**
-- `anthropic/claude-3.5-sonnet` - Excellent reasoning, good with financial data
-- `anthropic/claude-3.7-haiku` - Fast and cost-effective
+- `anthropic/claude-sonnet-4.5` - Excellent reasoning, good with financial data
+- `anthropic/claude-haiku-4.5` - Fast and cost-effective
 
 ### Other Providers
 
@@ -240,13 +239,13 @@ The AI assistant needs to understand financial context and perform function call
 
 **Cloud:**
 - **Best:** `gpt-4.1` or `gpt-5` - Most reliable, best function calling
-- **Good:** `anthropic/claude-3.5-sonnet` - Excellent reasoning
-- **Budget:** `google/gemini-2.0-flash-exp` - Fast and affordable
+- **Good:** `anthropic/claude-4.5-sonnet` - Excellent reasoning
+- **Budget:** `google/gemini-2.5-flash` - Fast and affordable
 
 **Local:**
-- **Best:** `qwen2.5:32b` - Strong function calling and reasoning (24GB+ VRAM)
-- **Good:** `llama3.1:13b` - Solid performance (16GB VRAM)
-- **Budget:** `gemma2:7b` - Minimal hardware (8GB VRAM), reduced capabilities
+- **Best:** `qwen3-30b` - Strong function calling and reasoning (24GB+ VRAM, 14GB at 3bit quantised )
+- **Good:** `openai/gpt-oss-20b` - Solid performance (12GB VRAM)
+- **Budget:** `qwen3-8b` - Minimal hardware (8GB VRAM), still supports tool calling
 
 ### For Auto-Categorization
 
@@ -259,6 +258,7 @@ Transaction categorization doesn't require function calling:
 **Local:**
 - Any model that works for chat will work for categorization
 - This is less demanding than chat, so smaller models may suffice
+- Some models don't support structured outputs, please validate when using.
 
 ### For Merchant Detection
 
