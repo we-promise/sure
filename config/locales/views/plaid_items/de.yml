@@ -1,0 +1,23 @@
+---
+de:
+  plaid_items:
+    create:
+      success: Konto erfolgreich verknüpft Bitte warte bis die Konten synchronisiert sind
+    destroy:
+      success: Konten zur Löschung vorgemerkt
+    plaid_item:
+      add_new: Neue Verbindung hinzufügen
+      confirm_accept: Institut löschen
+      confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen Daten dauerhaft gelöscht
+      confirm_title: Institut löschen
+      connection_lost: Verbindung verloren
+      connection_lost_description: Diese Verbindung ist nicht mehr gültig Du musst sie löschen und erneut hinzufügen um die Datensynchronisierung fortzusetzen
+      delete: Löschen
+      error: Beim Synchronisieren der Daten ist ein Fehler aufgetreten
+      no_accounts_description: Es konnten keine Konten von diesem Finanzinstitut geladen werden
+      no_accounts_title: Keine Konten gefunden
+      requires_update: Erneute Authentifizierung erforderlich
+      status: Zuletzt vor %{timestamp} synchronisiert
+      status_never: Synchronisierung erforderlich
+      syncing: Wird synchronisiert...
+      update: Verbindung aktualisieren
