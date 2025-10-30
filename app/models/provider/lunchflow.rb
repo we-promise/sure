@@ -21,10 +21,10 @@ class Provider::Lunchflow
 
     handle_response(response)
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    Rails.logger.error "Lunch Flow API: GET /accounts failed: #{e.class}: #{e.message}"
+    Rails.logger.error "Lunchflow API: GET /accounts failed: #{e.class}: #{e.message}"
     raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
   rescue => e
-    Rails.logger.error "Lunch Flow API: Unexpected error during GET /accounts: #{e.class}: #{e.message}"
+    Rails.logger.error "Lunchflow API: Unexpected error during GET /accounts: #{e.class}: #{e.message}"
     raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
@@ -52,10 +52,10 @@ class Provider::Lunchflow
 
     handle_response(response)
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    Rails.logger.error "Lunch Flow API: GET #{path} failed: #{e.class}: #{e.message}"
+    Rails.logger.error "Lunchflow API: GET #{path} failed: #{e.class}: #{e.message}"
     raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
   rescue => e
-    Rails.logger.error "Lunch Flow API: Unexpected error during GET #{path}: #{e.class}: #{e.message}"
+    Rails.logger.error "Lunchflow API: Unexpected error during GET #{path}: #{e.class}: #{e.message}"
     raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
@@ -71,10 +71,10 @@ class Provider::Lunchflow
 
     handle_response(response)
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    Rails.logger.error "Lunch Flow API: GET #{path} failed: #{e.class}: #{e.message}"
+    Rails.logger.error "Lunchflow API: GET #{path} failed: #{e.class}: #{e.message}"
     raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
   rescue => e
-    Rails.logger.error "Lunch Flow API: Unexpected error during GET #{path}: #{e.class}: #{e.message}"
+    Rails.logger.error "Lunchflow API: Unexpected error during GET #{path}: #{e.class}: #{e.message}"
     raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
@@ -93,7 +93,7 @@ class Provider::Lunchflow
       when 200
         JSON.parse(response.body, symbolize_names: true)
       when 400
-        Rails.logger.error "Lunch Flow API: Bad request - #{response.body}"
+        Rails.logger.error "Lunchflow API: Bad request - #{response.body}"
         raise LunchflowError.new("Bad request to Lunchflow API: #{response.body}", :bad_request)
       when 401
         raise LunchflowError.new("Invalid API key", :unauthorized)
@@ -104,7 +104,7 @@ class Provider::Lunchflow
       when 429
         raise LunchflowError.new("Rate limit exceeded. Please try again later.", :rate_limited)
       else
-        Rails.logger.error "Lunch Flow API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
+        Rails.logger.error "Lunchflow API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
         raise LunchflowError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
       end
     end

@@ -1,6 +1,4 @@
 class LunchflowAccount::Processor
-  include CurrencyNormalizable
-
   attr_reader :lunchflow_account
 
   def initialize(lunchflow_account)
@@ -39,20 +37,14 @@ class LunchflowAccount::Processor
       account = lunchflow_account.current_account
       balance = lunchflow_account.current_balance || 0
 
-      # For liability accounts (credit cards and loans), ensure positive balances
-      # LunchFlow may return negative values for liabilities, but Sure expects positive
+      # For credit cards and loans, ensure positive balances
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
         balance = balance.abs
       end
 
-      # Normalize currency with fallback chain: parsed lunchflow currency -> existing account currency -> USD
-      currency = parse_currency(lunchflow_account.currency) || account.currency || "USD"
-
-      # Update account balance
       account.update!(
         balance: balance,
-        cash_balance: balance,
-        currency: currency
+        cash_balance: balance
       )
     end
 

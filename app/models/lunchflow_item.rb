@@ -37,8 +37,7 @@ class LunchflowItem < ApplicationRecord
     return [] if lunchflow_accounts.empty?
 
     results = []
-    # Only process accounts that are linked and have active status
-    lunchflow_accounts.joins(:account).merge(Account.visible).each do |lunchflow_account|
+    lunchflow_accounts.joins(:account).each do |lunchflow_account|
       begin
         result = LunchflowAccount::Processor.new(lunchflow_account).process
         results << { lunchflow_account_id: lunchflow_account.id, success: true, result: result }
@@ -56,8 +55,7 @@ class LunchflowItem < ApplicationRecord
     return [] if accounts.empty?
 
     results = []
-    # Only schedule syncs for active accounts
-    accounts.visible.each do |account|
+    accounts.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,

@@ -24,43 +24,31 @@ class LunchflowItem::Importer
       # Continue with import even if snapshot storage fails
     end
 
-    # Step 2: Update only previously selected accounts (don't create new ones)
-    accounts_updated = 0
+    # Step 2: Import accounts
+    accounts_imported = 0
     accounts_failed = 0
 
     if accounts_data[:accounts].present?
-      # Get only linked lunchflow account IDs (ones actually imported/used by the user)
-      # This prevents updating orphaned accounts from old behavior that saved everything
-      existing_account_ids = lunchflow_item.lunchflow_accounts
-                                           .joins(:account_provider)
-                                           .pluck(:account_id)
-                                           .map(&:to_s)
-
       accounts_data[:accounts].each do |account_data|
-        account_id = account_data[:id]&.to_s
-        next unless account_id.present?
-
-        # Only update if this account was previously selected (exists in our DB)
-        next unless existing_account_ids.include?(account_id)
-
         begin
           import_account(account_data)
-          accounts_updated += 1
+          accounts_imported += 1
         rescue => e
           accounts_failed += 1
-          Rails.logger.error "LunchflowItem::Importer - Failed to update account #{account_id}: #{e.message}"
-          # Continue updating other accounts even if one fails
+          account_id = account_data[:id] || "unknown"
+          Rails.logger.error "LunchflowItem::Importer - Failed to import account #{account_id}: #{e.message}"
+          # Continue importing other accounts even if one fails
         end
       end
     end
 
-    Rails.logger.info "LunchflowItem::Importer - Updated #{accounts_updated} accounts (#{accounts_failed} failed)"
+    Rails.logger.info "LunchflowItem::Importer - Imported #{accounts_imported} accounts (#{accounts_failed} failed)"
 
-    # Step 3: Fetch transactions only for linked accounts with active status
+    # Step 3: Fetch transactions for each account
     transactions_imported = 0
     transactions_failed = 0
 
-    lunchflow_item.lunchflow_accounts.joins(:account).merge(Account.visible).each do |lunchflow_account|
+    lunchflow_item.lunchflow_accounts.each do |lunchflow_account|
       begin
         result = fetch_and_store_transactions(lunchflow_account)
         if result[:success]
@@ -75,11 +63,11 @@ class LunchflowItem::Importer
       end
     end
 
-    Rails.logger.info "LunchflowItem::Importer - Completed import for item #{lunchflow_item.id}: #{accounts_updated} accounts updated, #{transactions_imported} transactions"
+    Rails.logger.info "LunchflowItem::Importer - Completed import for item #{lunchflow_item.id}: #{accounts_imported} accounts, #{transactions_imported} transactions"
 
     {
       success: accounts_failed == 0 && transactions_failed == 0,
-      accounts_updated: accounts_updated,
+      accounts_imported: accounts_imported,
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
@@ -135,22 +123,15 @@ class LunchflowItem::Importer
 
       account_id = account_data[:id]
 
-      # Validate required account_id
+      # Validate required account_id to prevent duplicate creation
       if account_id.blank?
         Rails.logger.warn "LunchflowItem::Importer - Skipping account with missing ID"
         raise ArgumentError, "Account ID is required"
       end
 
-      # Only find existing accounts, don't create new ones during sync
-      lunchflow_account = lunchflow_item.lunchflow_accounts.find_by(
+      lunchflow_account = lunchflow_item.lunchflow_accounts.find_or_initialize_by(
         account_id: account_id.to_s
       )
-
-      # Skip if account wasn't previously selected
-      unless lunchflow_account
-        Rails.logger.debug "LunchflowItem::Importer - Skipping unselected account #{account_id}"
-        return
-      end
 
       begin
         lunchflow_account.upsert_lunchflow_snapshot!(account_data)

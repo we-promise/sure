@@ -1,7 +1,6 @@
 require "digest/md5"
 
 class LunchflowEntry::Processor
-  include CurrencyNormalizable
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
   # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
   def initialize(lunchflow_transaction, lunchflow_account:)
@@ -123,11 +122,7 @@ class LunchflowEntry::Processor
     end
 
     def currency
-      parse_currency(data[:currency]) || account&.currency || "USD"
-    end
-
-    def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency code '#{currency_value}' in LunchFlow transaction #{external_id}, falling back to account currency")
+      data[:currency].presence || account&.currency || "USD"
     end
 
     def date

@@ -302,24 +302,10 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :enable_banking_items, only: %i[index new create show edit update destroy] do
-    member do
-      post :sync
-      post :update_connection
-    end
-
-    collection do
-      post :authorization
-    end
-  end
-
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
     collection do
-      get :preload_accounts
       get :select_accounts
       post :link_accounts
-      get :select_existing_account
-      post :link_existing_account
     end
 
     member do
