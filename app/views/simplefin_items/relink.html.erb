@@ -6,7 +6,9 @@
       <%= link_to "Close", "#", data: { action: "modal#close" }, class: "text-secondary text-sm" %>
     </div>
 
-    <% if @candidates.present? %>
+    <% if @candidates.blank? %>
+      <p class="text-secondary text-sm">No matching manual accounts were found. If duplicates remain under "Other accounts", you can relink them later after a full sync populates balances.</p>
+    <% else %>
       <%= form_with url: apply_relink_simplefin_item_path(@simplefin_item), method: :post, data: { turbo_frame: "modal" } do %>
         <div class="text-sm text-secondary mb-2">Select pairs to link. We matched by last4 (when available), then balance (±$0.01), then name.</div>
         <div class="divide-y divide-gray-200 rounded-md border border-gray-200">
