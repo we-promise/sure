@@ -144,15 +144,4 @@ class LunchflowItem < ApplicationRecord
       "#{institutions.count} institutions"
     end
   end
-
-  private
-
-    def lunchflow_provider
-      api_key = Provider::LunchflowAdapter.config_value(:api_key)
-      return nil unless api_key.present?
-
-      base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
-
-      Provider::Lunchflow.new(api_key, base_url: base_url)
-    end
 end

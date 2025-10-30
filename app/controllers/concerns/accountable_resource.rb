@@ -76,11 +76,9 @@ module AccountableResource
 
         @lunchflow_accounts = Rails.cache.fetch(cache_key, expires_in: 5.minutes) do
           begin
-            api_key = Provider::LunchflowAdapter.config_value(:api_key)
-            base_url = Provider::LunchflowAdapter.config_value(:base_url).presence || "https://lunchflow.app/api/v1"
+            lunchflow_provider = Provider::LunchflowAdapter.build_provider
 
-            if api_key.present?
-              lunchflow_provider = Provider::Lunchflow.new(api_key, base_url: base_url)
+            if lunchflow_provider.present?
               accounts_data = lunchflow_provider.get_accounts
               accounts_data[:accounts] || []
             else

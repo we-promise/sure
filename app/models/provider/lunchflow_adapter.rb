@@ -34,6 +34,16 @@ class Provider::LunchflowAdapter < Provider::Base
     "lunchflow"
   end
 
+  # Build a Lunchflow provider instance with configured credentials
+  # @return [Provider::Lunchflow, nil] Returns nil if API key is not configured
+  def self.build_provider
+    api_key = config_value(:api_key)
+    return nil unless api_key.present?
+
+    base_url = config_value(:base_url).presence || "https://lunchflow.app/api/v1"
+    Provider::Lunchflow.new(api_key, base_url: base_url)
+  end
+
   # Reload Lunchflow configuration when settings are updated
   def self.reload_configuration
     # Lunchflow doesn't need to configure Rails.application.config like Plaid does
