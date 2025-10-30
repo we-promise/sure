@@ -1,3 +1,5 @@
+require "digest/md5"
+
 class IncomeStatement
   include Monetizable
 
