@@ -27,7 +27,7 @@ class Provider::LunchflowAdapter < Provider::Base
           required: false,
           env_key: "LUNCHFLOW_BASE_URL",
           default: "https://lunchflow.app/api/v1",
-          description: "Base URL for Lunchflow API (production: https://lunchflow.app/api/v1, staging: https://staging.lunchflow.app/api/v1)"
+          description: "Base URL for Lunchflow API"
   end
 
   def provider_name
