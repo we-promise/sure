@@ -87,6 +87,10 @@ module AccountableResource
           rescue Provider::Lunchflow::LunchflowError => e
             Rails.logger.error("Failed to preload Lunchflow accounts: #{e.message}")
             []
+          rescue StandardError => e
+            Rails.logger.error("Unexpected error preloading Lunchflow accounts: #{e.class}: #{e.message}")
+            Rails.logger.error(e.backtrace.join("\n"))
+            []
           end
         end
       end
