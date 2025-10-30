@@ -17,6 +17,9 @@ class SimplefinEntry::Processor
       source: "simplefin",
       merchant: merchant,
       notes: notes,
+      posted_date: posted_date,
+      transacted_date: transacted_date,
+      pending: pending?,
       extra: extra_metadata
     )
   end
@@ -32,6 +35,8 @@ class SimplefinEntry::Processor
       sf["description"] = data[:description] if data.key?(:description)
       # Include provider-supplied extra hash if present
       sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
+
+      return nil if sf.empty?
       { "simplefin" => sf }
     end
 
