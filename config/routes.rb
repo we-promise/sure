@@ -284,6 +284,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :lunchflow_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+    end
+
+    member do
+      post :sync
+    end
+  end
+
   namespace :webhooks do
     post "plaid"
     post "plaid_eu"

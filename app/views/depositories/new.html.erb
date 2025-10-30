@@ -3,6 +3,7 @@
              path: new_depository_path(return_to: params[:return_to]),
              show_us_link: @show_us_link,
              show_eu_link: @show_eu_link,
+             show_lunchflow_link: @show_lunchflow_link,
              accountable_type: "Depository" %>
 <% else %>
   <%= render DS::Dialog.new do |dialog| %>
