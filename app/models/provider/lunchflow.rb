@@ -81,41 +81,41 @@ class Provider::Lunchflow
 
   private
 
-  def auth_headers
-    {
-      "x-api-key" => api_key,
-      "Content-Type" => "application/json",
-      "Accept" => "application/json"
-    }
-  end
-
-  def handle_response(response)
-    case response.code
-    when 200
-      JSON.parse(response.body, symbolize_names: true)
-    when 400
-      Rails.logger.error "Lunchflow API: Bad request - #{response.body}"
-      raise LunchflowError.new("Bad request to Lunchflow API: #{response.body}", :bad_request)
-    when 401
-      raise LunchflowError.new("Invalid API key", :unauthorized)
-    when 403
-      raise LunchflowError.new("Access forbidden - check your API key permissions", :access_forbidden)
-    when 404
-      raise LunchflowError.new("Resource not found", :not_found)
-    when 429
-      raise LunchflowError.new("Rate limit exceeded. Please try again later.", :rate_limited)
-    else
-      Rails.logger.error "Lunchflow API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-      raise LunchflowError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
+    def auth_headers
+      {
+        "x-api-key" => api_key,
+        "Content-Type" => "application/json",
+        "Accept" => "application/json"
+      }
     end
-  end
 
-  class LunchflowError < StandardError
-    attr_reader :error_type
-
-    def initialize(message, error_type = :unknown)
-      super(message)
-      @error_type = error_type
+    def handle_response(response)
+      case response.code
+      when 200
+        JSON.parse(response.body, symbolize_names: true)
+      when 400
+        Rails.logger.error "Lunchflow API: Bad request - #{response.body}"
+        raise LunchflowError.new("Bad request to Lunchflow API: #{response.body}", :bad_request)
+      when 401
+        raise LunchflowError.new("Invalid API key", :unauthorized)
+      when 403
+        raise LunchflowError.new("Access forbidden - check your API key permissions", :access_forbidden)
+      when 404
+        raise LunchflowError.new("Resource not found", :not_found)
+      when 429
+        raise LunchflowError.new("Rate limit exceeded. Please try again later.", :rate_limited)
+      else
+        Rails.logger.error "Lunchflow API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
+        raise LunchflowError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
+      end
     end
-  end
+
+    class LunchflowError < StandardError
+      attr_reader :error_type
+
+      def initialize(message, error_type = :unknown)
+        super(message)
+        @error_type = error_type
+      end
+    end
 end

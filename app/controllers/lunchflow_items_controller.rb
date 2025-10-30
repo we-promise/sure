@@ -37,7 +37,7 @@ class LunchflowItemsController < ApplicationController
       end
 
       @accountable_type = params[:accountable_type] || "Depository"
-      @return_to = params[:return_to]
+      @return_to = safe_return_to_path
 
       if @available_accounts.empty?
         redirect_to new_account_path, alert: t(".no_accounts_found")
@@ -54,7 +54,7 @@ class LunchflowItemsController < ApplicationController
   def link_accounts
     selected_account_ids = params[:account_ids] || []
     accountable_type = params[:accountable_type] || "Depository"
-    return_to = params[:return_to]
+    return_to = safe_return_to_path
 
     if selected_account_ids.empty?
       redirect_to new_account_path, alert: t(".no_accounts_selected")
@@ -117,16 +117,16 @@ class LunchflowItemsController < ApplicationController
 
     # Build appropriate flash message
     if created_accounts.any? && already_linked_accounts.any?
-      redirect_to return_to.presence || accounts_path,
+      redirect_to return_to || accounts_path,
                   notice: t(".partial_success",
                            created_count: created_accounts.count,
                            already_linked_count: already_linked_accounts.count,
                            already_linked_names: already_linked_accounts.join(", "))
     elsif created_accounts.any?
-      redirect_to return_to.presence || accounts_path,
+      redirect_to return_to || accounts_path,
                   notice: t(".success", count: created_accounts.count)
     elsif already_linked_accounts.any?
-      redirect_to return_to.presence || accounts_path,
+      redirect_to return_to || accounts_path,
                   alert: t(".all_already_linked",
                           count: already_linked_accounts.count,
                           names: already_linked_accounts.join(", "))
@@ -191,5 +191,30 @@ class LunchflowItemsController < ApplicationController
 
     def lunchflow_params
       params.require(:lunchflow_item).permit(:name, :sync_start_date)
+    end
+
+    # Sanitize return_to parameter to prevent XSS attacks
+    # Only allow internal paths, reject external URLs and javascript: URIs
+    def safe_return_to_path
+      return nil if params[:return_to].blank?
+
+      return_to = params[:return_to].to_s
+
+      # Parse the URL to check if it's external
+      begin
+        uri = URI.parse(return_to)
+
+        # Reject absolute URLs with schemes (http:, https:, javascript:, etc.)
+        # Only allow relative paths
+        return nil if uri.scheme.present?
+
+        # Ensure the path starts with / (is a relative path)
+        return nil unless return_to.start_with?("/")
+
+        return_to
+      rescue URI::InvalidURIError
+        # If the URI is invalid, reject it
+        nil
+      end
     end
 end
