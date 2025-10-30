@@ -143,7 +143,7 @@ class LunchflowItem::Importer
     end
 
     def fetch_and_store_transactions(lunchflow_account)
-      start_date = determine_sync_start_date
+      start_date = determine_sync_start_date(lunchflow_account)
       Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date}"
 
       begin
@@ -260,14 +260,29 @@ class LunchflowItem::Importer
       end
     end
 
-    def determine_sync_start_date
-      # For the first sync, get data from the past 90 days
-      unless lunchflow_item.last_synced_at
-        return 90.days.ago
-      end
+    def determine_sync_start_date(lunchflow_account)
+      # Check if this account has any stored transactions
+      # If not, treat it as a first sync for this account even if the item has been synced before
+      has_stored_transactions = lunchflow_account.raw_transactions_payload.to_a.any?
 
-      # For subsequent syncs, fetch from last sync date with a buffer
-      lunchflow_item.last_synced_at - 7.days
+      if has_stored_transactions
+        # Account has been synced before, use item-level logic with buffer
+        # For subsequent syncs, fetch from last sync date with a buffer
+        if lunchflow_item.last_synced_at
+          lunchflow_item.last_synced_at - 7.days
+        else
+          # Fallback if item hasn't been synced but account has transactions
+          90.days.ago
+        end
+      else
+        # Account has no stored transactions - this is a first sync for this account
+        # Use account creation date or a generous historical window
+        account_baseline = lunchflow_account.created_at || Time.current
+        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].min
+
+        # Use the earlier of: (account created - 7 days) or (90 days ago)
+        first_sync_window
+      end
     end
 
     def handle_error(error_message)
