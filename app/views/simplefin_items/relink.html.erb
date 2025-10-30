@@ -1,0 +1,35 @@
+<%# Modal to link existing manual accounts to SimpleFin upstream accounts %>
+<%= turbo_frame_tag "modal" do %>
+  <div class="p-4 space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-primary font-medium">Link existing accounts</h3>
+      <%= link_to "Close", "#", data: { action: "modal#close" }, class: "text-secondary text-sm" %>
+    </div>
+
+    <% if @candidates.blank? %>
+      <p class="text-secondary text-sm">No matching manual accounts were found. If duplicates remain under "Other accounts", you can relink them later after a full sync populates balances.</p>
+    <% else %>
+      <%= form_with url: apply_relink_simplefin_item_path(@simplefin_item), method: :post, data: { turbo_frame: "modal" } do %>
+        <div class="text-sm text-secondary mb-2">Select pairs to link. We matched by last4 (when available), then balance (±$0.01), then name.</div>
+        <div class="divide-y divide-gray-200 rounded-md border border-gray-200">
+          <% @candidates.each_with_index do |c, idx| %>
+            <div class="p-3 flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-primary font-medium truncate"><%= c[:sfa_name] %></div>
+                <div class="text-xs text-secondary truncate">Manual: <%= c[:manual_name] %></div>
+              </div>
+              <div class="shrink-0 flex items-center gap-2">
+                <input type="checkbox" name="pairs[][checked]" id="pair_<%= idx %>" value="1" class="checkbox checkbox--light" checked>
+                <input type="hidden" name="pairs[][sfa_id]" value="<%= c[:sfa_id] %>">
+                <input type="hidden" name="pairs[][manual_id]" value="<%= c[:manual_id] %>">
+              </div>
+            </div>
+          <% end %>
+        </div>
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <%= submit_tag "Link selected", class: "btn btn--primary" %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

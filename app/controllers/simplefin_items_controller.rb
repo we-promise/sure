@@ -1,5 +1,5 @@
 class SimplefinItemsController < ApplicationController
-  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :errors, :relink, :apply_relink ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -82,6 +82,37 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFin Connection"
       )
 
+      # Pre-prompt: run a quick balances-only discovery to populate minimal accounts
+      begin
+        SimplefinItem::Importer.new(@simplefin_item, simplefin_provider: @simplefin_item.simplefin_provider).import_balances_only
+        # De-dup any duplicate upstream accounts created previously
+        @simplefin_item.dedup_simplefin_accounts!
+        # Update freshness timestamp only if the column exists in this schema
+        if @simplefin_item.has_attribute?(:last_synced_at)
+          @simplefin_item.update!(last_synced_at: Time.current)
+        end
+      rescue => e
+        Rails.logger.warn("SimpleFin pre-prompt balances-only failed: #{e.class} - #{e.message}")
+      end
+
+      # If there are manual accounts that look like matches, present the relink modal immediately
+      @candidates = compute_relink_candidates
+      if @candidates.present?
+        respond_to do |format|
+          format.turbo_stream do
+            # Replace the global modal frame content with the relink UI (use the existing template to keep instance vars)
+            html = render_to_string(:relink, layout: false)
+            render turbo_stream: turbo_stream.update("modal", html)
+          end
+          format.html do
+            # Fallback: redirect with a flag so the page JS can open the modal
+            redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success")
+          end
+          format.json { render json: { ok: true, relink: true, simplefin_item_id: @simplefin_item.id, candidates: @candidates }, status: :created }
+        end
+        return
+      end
+
       redirect_to accounts_path, notice: t(".success")
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
@@ -112,6 +143,17 @@ class SimplefinItemsController < ApplicationController
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
       format.json { head :ok }
+    end
+  end
+
+  # Starts a balances-only sync for this SimpleFin item
+  def balances
+    sync = @simplefin_item.syncs.create!(status: :pending, sync_stats: { "balances_only" => true })
+    SimplefinItem::Syncer.new(@simplefin_item).perform_sync(sync)
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { render json: { ok: true, sync_id: sync.id } }
     end
   end
 
@@ -186,10 +228,187 @@ class SimplefinItemsController < ApplicationController
     redirect_to accounts_path, notice: t(".success")
   end
 
+  # Lists per-account errors from the latest sync in a modal-friendly view
+  def errors
+    latest_sync = @simplefin_item.syncs.ordered.first
+    @stats = latest_sync&.sync_stats || {}
+
+    @error_buckets = @stats["error_buckets"] || {}
+    @errors = Array(@stats["errors"]).map do |e|
+      {
+        account_id: e[:account_id] || e["account_id"],
+        name: e[:name] || e["name"],
+        category: e[:category] || e["category"],
+        message: e[:message] || e["message"]
+      }
+    end
+
+    render layout: false
+  end
+
+  # Presents candidate relinks between SimpleFin upstream accounts and existing manual accounts
+  def relink
+    @candidates = compute_relink_candidates
+    render layout: false
+  end
+
+  # Applies selected relinks by migrating data and moving provider links
+  def apply_relink
+    pairs = Array(params[:pairs]).map { |h| h.permit(:sfa_id, :manual_id, :checked).to_h.symbolize_keys }.select { |p| p[:checked].present? }
+    results = []
+
+    SimplefinItem.transaction do
+      pairs.each do |pair|
+        sfa = @simplefin_item.simplefin_accounts.find_by(id: pair[:sfa_id])
+        manual = Current.family.accounts.find_by(id: pair[:manual_id])
+        next unless sfa && manual
+
+        a_new = sfa.account
+        # If SimpleFin account already linked to the same manual account, skip
+        if a_new && a_new.id == manual.id
+          results << { sfa_id: sfa.id, manual_id: manual.id, status: "skipped_same" }
+          next
+        end
+
+        moved_entries = 0; deleted_entries = 0
+        moved_holdings = 0; deleted_holdings = 0
+
+        if a_new
+          # Move entries with duplicate guard on (external_id, source)
+          if a_new.respond_to?(:entries)
+            a_new.entries.find_each do |e|
+              if e.external_id.present? && e.source.present? && manual.entries.exists?(external_id: e.external_id, source: e.source)
+                e.destroy!
+                deleted_entries += 1
+              else
+                # Bypass validations when only reassigning ownership to avoid unrelated validation collisions
+                e.update_columns(account_id: manual.id, updated_at: Time.current)
+                moved_entries += 1
+              end
+            end
+          end
+          # Move holdings with duplicate guard (security,date,currency)
+          if a_new.respond_to?(:holdings)
+            a_new.holdings.find_each do |h|
+              if manual.holdings.exists?(security_id: h.security_id, date: h.date, currency: h.currency)
+                h.destroy!
+                deleted_holdings += 1
+              else
+                h.update_columns(account_id: manual.id, updated_at: Time.current)
+                moved_holdings += 1
+              end
+            end
+          end
+
+          # Move provider link to manual
+          AccountProvider.where(account: a_new, provider_type: "SimplefinAccount", provider_id: sfa.id).delete_all
+          AccountProvider.find_or_create_by!(account: manual, provider_type: "SimplefinAccount", provider_id: sfa.id)
+
+          # Link legacy fk
+          manual.update!(simplefin_account_id: sfa.id)
+
+          # Remove redundant provider-linked account
+          a_new.destroy!
+        else
+          # No provider-linked account yet, simply attach provider link to manual
+          AccountProvider.find_or_create_by!(account: manual, provider_type: "SimplefinAccount", provider_id: sfa.id)
+          manual.update!(simplefin_account_id: sfa.id)
+        end
+
+        results << {
+          sfa_id: sfa.id,
+          manual_id: manual.id,
+          moved_entries: moved_entries,
+          deleted_entries: deleted_entries,
+          moved_holdings: moved_holdings,
+          deleted_holdings: deleted_holdings,
+          status: "ok"
+        }
+      end
+    end
+
+    respond_to do |format|
+      # Close the modal and refresh the SimpleFin card so UI updates without a full page reload
+      format.turbo_stream do
+        render turbo_stream: [
+          turbo_stream.remove("modal"),
+          turbo_stream.replace(view_context.dom_id(@simplefin_item), partial: "simplefin_items/simplefin_item", locals: { simplefin_item: @simplefin_item })
+        ]
+      end
+      format.html { redirect_to accounts_path, notice: "Linked #{results.size} accounts" }
+      format.json { render json: { ok: true, results: results } }
+    end
+  end
+
+  private
+
+    def compute_relink_candidates
+      # Best-effort dedup before building candidates
+      @simplefin_item.dedup_simplefin_accounts! rescue nil
+
+      family = @simplefin_item.family
+      manuals = family.accounts.left_joins(:account_providers).where(account_providers: { id: nil }).to_a
+      norm = ->(s){ s.to_s.downcase.gsub(/\s+/, " ").strip }
+
+      # Evaluate only one SimpleFin account per upstream account_id (prefer linked, else newest)
+      grouped = @simplefin_item.simplefin_accounts.group_by(&:account_id)
+      sfas = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
+
+      sfas.filter_map do |sfa|
+        next if sfa.name.blank?
+        # Heuristics: last4 > balance ±0.01 > name
+        raw = (sfa.raw_payload || {}).with_indifferent_access
+        sfa_last4 = raw[:mask] || raw[:last4] || raw[:"last-4"] || raw[:"account_number_last4"]
+        sfa_last4 = sfa_last4.to_s.strip.presence
+        sfa_balance = (sfa.current_balance || sfa.available_balance).to_d rescue 0.to_d
+
+        cand = manuals.find do |a|
+          a_last4 = nil
+          %i[mask last4 number_last4 account_number_last4].each do |k|
+            if a.respond_to?(k)
+              val = a.public_send(k)
+              a_last4 = val.to_s.strip.presence if val.present?
+              break if a_last4
+            end
+          end
+          a_last4.present? && sfa_last4.present? && a_last4 == sfa_last4
+        end
+
+        if cand.nil? && sfa_balance.nonzero?
+          cand = manuals.find do |a|
+            begin
+              ab = (a.balance || a.cash_balance || 0).to_d
+              (ab - sfa_balance).abs <= BigDecimal("0.01")
+            rescue
+              false
+            end
+          end
+        end
+
+        cand ||= manuals.find { |a| norm.call(a.name) == norm.call(sfa.name) }
+
+        if cand
+          { sfa_id: sfa.id, sfa_name: sfa.name, manual_id: cand.id, manual_name: cand.name }
+        end
+      end
+    end
+
+    def set_simplefin_item
+      if defined?(Current) && Current.respond_to?(:family) && Current.family.present?
+        @simplefin_item = Current.family.simplefin_items.find(params[:id])
+      else
+        @simplefin_item = SimplefinItem.find(params[:id])
+      end
+    end
+
   private
 
     def set_simplefin_item
-      @simplefin_item = Current.family.simplefin_items.find(params[:id])
+      if defined?(Current) && Current.respond_to?(:family) && Current.family.present?
+        @simplefin_item = Current.family.simplefin_items.find(params[:id])
+      else
+        @simplefin_item = SimplefinItem.find(params[:id])
+      end
     end
 
     def simplefin_params

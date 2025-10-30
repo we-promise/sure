@@ -49,6 +49,20 @@ class Holding < ApplicationRecord
     @trend ||= calculate_trend
   end
 
+  # Day change based on previous holding snapshot (same account/security/currency)
+  # Returns a Trend struct similar to other trend usages or nil if no prior snapshot.
+  def day_change
+    return nil unless amount_money
+    prev = account.holdings
+                 .where(security_id: security_id, currency: currency)
+                 .where("date < ?", date)
+                 .order(date: :desc)
+                 .first
+    return nil unless prev&.amount_money
+
+    Trend.new current: amount_money, previous: prev.amount_money
+  end
+
   def trades
     account.entries.where(entryable: account.trades.where(security: security)).reverse_chronological
   end

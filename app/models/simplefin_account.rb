@@ -9,11 +9,28 @@ class SimplefinAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :account_type, :currency, presence: true
+  validates :account_id, uniqueness: { scope: :simplefin_item_id, allow_nil: true }
   validate :has_balance
 
   # Helper to get account using new system first, falling back to legacy
   def current_account
     linked_account || account
+  end
+
+  # Ensure there is an AccountProvider link for this SimpleFin account and its current Account.
+  # Safe and idempotent; returns the AccountProvider or nil if no account is associated yet.
+  def ensure_account_provider!
+    acct = current_account
+    return nil unless acct
+
+    AccountProvider.find_or_create_by!(
+      account: acct,
+      provider_type: "SimplefinAccount",
+      provider_id: id
+    )
+  rescue => e
+    Rails.logger.warn("SimplefinAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
+    nil
   end
 
   def upsert_simplefin_snapshot!(account_snapshot)
