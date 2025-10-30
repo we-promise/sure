@@ -12,7 +12,16 @@ class LunchflowAccount::Processor
     end
 
     Rails.logger.info "LunchflowAccount::Processor - Processing lunchflow_account #{lunchflow_account.id} (account #{lunchflow_account.account_id})"
-    process_account!
+
+    begin
+      process_account!
+    rescue StandardError => e
+      Rails.logger.error "LunchflowAccount::Processor - Failed to process account #{lunchflow_account.id}: #{e.message}"
+      Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
+      report_exception(e, "account")
+      raise
+    end
+
     process_transactions
   end
 
