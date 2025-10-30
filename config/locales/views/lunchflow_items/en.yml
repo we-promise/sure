@@ -34,7 +34,7 @@ en:
       accounts_selected: accounts selected
       api_error: "API error: %{message}"
       cancel: Cancel
-      description: Select the accounts you want to link to your Maybe account.
+      description: Select the accounts you want to link to your Sure account.
       link_accounts: Link selected accounts
       no_accounts_found: No accounts found. Please check your API key configuration.
       no_api_key: Lunchflow API key is not configured. Please configure it in Settings.

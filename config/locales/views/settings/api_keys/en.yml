@@ -15,7 +15,7 @@ en:
         title: "API Key Management"
       no_api_key:
         title: "API Key"
-        description: "Get programmatic access to your Maybe data with a secure API key."
+        description: "Get programmatic access to your Sure data with a secure API key."
         what_you_can_do: "What you can do with the API:"
         feature_1: "Access your account data programmatically"
         feature_2: "Build custom integrations and applications"
