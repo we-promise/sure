@@ -2,13 +2,13 @@
 en:
   lunchflow_items:
     create:
-      success: Lunchflow connection created successfully
+      success: Lunch Flow connection created successfully
     destroy:
-      success: Lunchflow connection removed
+      success: Lunch Flow connection removed
     index:
-      title: Lunchflow Connections
+      title: Lunch Flow Connections
     loading:
-      loading_message: Loading Lunchflow accounts...
+      loading_message: Loading Lunch Flow accounts...
       loading_title: Loading
     link_accounts:
       all_already_linked:
@@ -37,9 +37,9 @@ en:
       description: Select the accounts you want to link to your Sure account.
       link_accounts: Link selected accounts
       no_accounts_found: No accounts found. Please check your API key configuration.
-      no_api_key: Lunchflow API key is not configured. Please configure it in Settings.
-      title: Select Lunchflow Accounts
+      no_api_key: Lunch Flow API key is not configured. Please configure it in Settings.
+      title: Select Lunch Flow Accounts
     sync:
       success: Sync started
     update:
-      success: Lunchflow connection updated
+      success: Lunch Flow connection updated
