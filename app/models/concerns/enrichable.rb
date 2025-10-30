@@ -31,11 +31,13 @@ module Enrichable
         # Find all AI enrichments for this model
         ai_enrichments = DataEnrichment.where(enrichable_type: name, source: "ai")
 
-        # Group by enrichable_id to batch update
+        # Get all enrichable_ids and load records in one query
+        enrichable_ids = ai_enrichments.distinct.pluck(:enrichable_id)
+        records = where(id: enrichable_ids).index_by(&:id)
         enrichments_by_id = ai_enrichments.group_by(&:enrichable_id)
 
         enrichments_by_id.each do |enrichable_id, enrichments|
-          record = find_by(id: enrichable_id)
+          record = records[enrichable_id]
           next unless record
 
           # Unlock all AI-locked attributes
