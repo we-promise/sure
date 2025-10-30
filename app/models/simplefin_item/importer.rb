@@ -1,10 +1,11 @@
 class SimplefinItem::Importer
   class RateLimitedError < StandardError; end
-  attr_reader :simplefin_item, :simplefin_provider
+  attr_reader :simplefin_item, :simplefin_provider, :sync
 
-  def initialize(simplefin_item, simplefin_provider:)
+  def initialize(simplefin_item, simplefin_provider:, sync: nil)
     @simplefin_item = simplefin_item
     @simplefin_provider = simplefin_provider
+    @sync = sync
   end
 
   def import
@@ -12,18 +13,102 @@ class SimplefinItem::Importer
     Rails.logger.info "SimplefinItem::Importer - last_synced_at: #{simplefin_item.last_synced_at.inspect}"
     Rails.logger.info "SimplefinItem::Importer - sync_start_date: #{simplefin_item.sync_start_date.inspect}"
 
-    if simplefin_item.last_synced_at.nil?
-      # First sync - use chunked approach to get full history
-      Rails.logger.info "SimplefinItem::Importer - Using chunked history import"
-      import_with_chunked_history
-    else
-      # Regular sync - use single request with buffer
-      Rails.logger.info "SimplefinItem::Importer - Using regular sync"
-      import_regular_sync
+    begin
+      if simplefin_item.last_synced_at.nil?
+        # First sync - use chunked approach to get full history
+        Rails.logger.info "SimplefinItem::Importer - Using chunked history import"
+        import_with_chunked_history
+      else
+        # Regular sync - use single request with buffer
+        Rails.logger.info "SimplefinItem::Importer - Using regular sync"
+        import_regular_sync
+      end
+    rescue RateLimitedError => e
+      stats["rate_limited"] = true
+      stats["rate_limited_at"] = Time.current.iso8601
+      persist_stats!
+      raise e
+    end
+  end
+
+  # Balances-only import: discover accounts and update account balances without transactions/holdings
+  def import_balances_only
+    Rails.logger.info "SimplefinItem::Importer - Balances-only import for item #{simplefin_item.id}"
+    stats["balances_only"] = true
+
+    # Fetch accounts without date filters
+    accounts_data = fetch_accounts_data(start_date: nil)
+    return if accounts_data.nil?
+
+    # Store snapshot for observability
+    simplefin_item.upsert_simplefin_snapshot!(accounts_data)
+
+    # Update counts (set to discovered for this run rather than accumulating)
+    discovered = accounts_data[:accounts]&.size.to_i
+    stats["total_accounts"] = discovered
+    persist_stats!
+
+    # Upsert SimpleFin accounts minimal attributes and update linked Account balances
+    accounts_data[:accounts].to_a.each do |account_data|
+      begin
+        import_account_minimal_and_balance(account_data)
+      rescue => e
+        stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+        stats["errors"] ||= []
+        stats["total_errors"] = stats.fetch("total_errors", 0) + 1
+        cat = classify_error(e)
+        buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
+        buckets[cat] = buckets.fetch(cat, 0) + 1
+        stats["errors"] << { account_id: account_data[:id], name: account_data[:name], message: e.message.to_s, category: cat }
+        stats["errors"] = stats["errors"].last(5)
+      ensure
+        persist_stats!
+      end
     end
   end
 
   private
+
+    # Minimal upsert and balance update for balances-only mode
+    def import_account_minimal_and_balance(account_data)
+      account_id = account_data[:id].to_s
+      return if account_id.blank?
+
+      sfa = simplefin_item.simplefin_accounts.find_or_initialize_by(account_id: account_id)
+      sfa.assign_attributes(
+        name: account_data[:name],
+        account_type: account_data["type"] || account_data[:type] || sfa.account_type || "unknown",
+        currency: account_data[:currency] || sfa.currency || "USD",
+        current_balance: account_data[:balance],
+        available_balance: account_data[:"available-balance"],
+        balance_date: account_data["balance-date"] || account_data[:"balance-date"],
+        raw_payload: account_data,
+        org_data: account_data[:org]
+      )
+      sfa.save!
+      # In pre-prompt balances-only discovery, do NOT auto-create provider-linked accounts.
+      # Only update balance for already-linked accounts (if any), to avoid creating duplicates in setup.
+      if (acct = sfa.current_account)
+        adapter = Account::ProviderImportAdapter.new(acct)
+        adapter.update_balance(
+          balance: account_data[:balance],
+          cash_balance: account_data[:"available-balance"],
+          source: "simplefin"
+        )
+      end
+    end
+
+  private
+
+    def stats
+      @stats ||= {}
+    end
+
+    def persist_stats!
+      return unless sync && sync.respond_to?(:sync_stats)
+      merged = (sync.sync_stats || {}).merge(stats)
+      sync.update_columns(sync_stats: merged) # avoid callbacks/validations during tight loops
+    end
 
     def import_with_chunked_history
       # SimpleFin's actual limit is 60 days (not 365 as documented)
@@ -85,11 +170,41 @@ class SimplefinItem::Importer
           simplefin_item.upsert_simplefin_snapshot!(accounts_data)
         end
 
-        # Import accounts and transactions for this chunk
+        # Tally accounts returned for stats
+        chunk_accounts = accounts_data[:accounts]&.size.to_i
+        total_accounts_imported += chunk_accounts
+        stats["total_accounts"] = stats.fetch("total_accounts", 0) + chunk_accounts
+
+        # Import accounts and transactions for this chunk with per-account error skipping
         accounts_data[:accounts]&.each do |account_data|
-          import_account(account_data)
+          begin
+            import_account(account_data)
+          rescue => e
+            stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+            # Collect lightweight error info for UI stats
+            stats["errors"] ||= []
+            stats["total_errors"] = stats.fetch("total_errors", 0) + 1
+            cat = classify_error(e)
+            buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
+            buckets[cat] = buckets.fetch(cat, 0) + 1
+            begin
+              err_item = {
+                account_id: account_data[:id],
+                name: account_data[:name],
+                message: e.message.to_s,
+                category: cat
+              }
+              stats["errors"] << err_item
+              # Keep only a small sample for UI (avoid blowing up sync_stats)
+              stats["errors"] = stats["errors"].last(5)
+            rescue
+              # no-op if account_data is missing keys
+            end
+            Rails.logger.warn("SimpleFin: Skipping account due to error: #{e.class} - #{e.message}")
+          ensure
+            persist_stats!
+          end
         end
-        total_accounts_imported += accounts_data[:accounts]&.size || 0
 
         # Stop if we've reached our target start date
         if chunk_start_date <= target_start_date
@@ -109,15 +224,26 @@ class SimplefinItem::Importer
 
       # Step 2: Fetch transactions/holdings using the regular window.
       start_date = determine_sync_start_date
-      accounts_data = fetch_accounts_data(start_date: start_date)
+      accounts_data = fetch_accounts_data(start_date: start_date, pending: true)
       return if accounts_data.nil? # Error already handled
 
       # Store raw payload
       simplefin_item.upsert_simplefin_snapshot!(accounts_data)
 
-      # Import accounts (merges transactions/holdings into existing rows)
+      # Tally accounts for stats
+      count = accounts_data[:accounts]&.size.to_i
+      stats["total_accounts"] = stats.fetch("total_accounts", 0) + count
+
+      # Import accounts (merges transactions/holdings into existing rows), skipping failures per-account
       accounts_data[:accounts]&.each do |account_data|
-        import_account(account_data)
+        begin
+          import_account(account_data)
+        rescue => e
+          stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+          Rails.logger.warn("SimpleFin: Skipping account during regular sync due to error: #{e.class} - #{e.message}")
+        ensure
+          persist_stats!
+        end
       end
     end
 
@@ -144,7 +270,17 @@ class SimplefinItem::Importer
 
       if discovery_data && discovered_count > 0
         simplefin_item.upsert_simplefin_snapshot!(discovery_data)
-        discovery_data[:accounts]&.each { |account_data| import_account(account_data) }
+        stats["total_accounts"] = stats.fetch("total_accounts", 0) + discovered_count
+        discovery_data[:accounts]&.each do |account_data|
+          begin
+            import_account(account_data)
+          rescue => e
+            stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+            Rails.logger.warn("SimpleFin discovery: Skipping account due to error: #{e.class} - #{e.message}")
+          ensure
+            persist_stats!
+          end
+        end
       end
     end
 
@@ -287,10 +423,29 @@ class SimplefinItem::Importer
         raise RateLimitedError, "SimpleFin rate limit: data refreshes at most once every 24 hours. Try again later."
       end
 
+      # Fall back to generic SimpleFin error classified as :api_error
       raise Provider::Simplefin::SimplefinError.new(
         "SimpleFin API errors: #{error_messages}",
         :api_error
       )
+    end
+
+    # Classify exceptions into simple buckets for UI stats
+    def classify_error(e)
+      msg = e.message.to_s.downcase
+      klass = e.class.name.to_s
+      # Avoid referencing Net::OpenTimeout/ReadTimeout constants (may not be loaded)
+      is_timeout = msg.include?("timeout") || msg.include?("timed out") || klass.include?("Timeout")
+      case
+      when is_timeout
+        "network"
+      when msg.include?("auth") || msg.include?("reauth") || msg.include?("forbidden") || msg.include?("unauthorized")
+        "auth"
+      when msg.include?("429") || msg.include?("too many requests") || msg.include?("rate limit") || msg.include?("5xx") || msg.include?("502") || msg.include?("503") || msg.include?("504")
+        "api"
+      else
+        "other"
+      end
     end
 
     def initial_sync_lookback_period

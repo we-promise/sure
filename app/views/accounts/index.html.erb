@@ -42,3 +42,19 @@
     <% end %>
   </div>
 <% end %>
+
+<%# Auto-open the SimpleFin relink modal after creation when requested %>
+<% if params[:open_relink_for].present? %>
+  <script>
+    (function(){
+      var url = "<%= relink_simplefin_item_path(params[:open_relink_for]) %>";
+      var frame = document.getElementById("modal");
+      if (frame) {
+        frame.src = url;
+      } else {
+        // Fallback to full-page navigation if the modal frame is not present
+        window.location.href = url;
+      }
+    })();
+  </script>
+<% end %>

@@ -1,5 +1,5 @@
 class SimplefinItemsController < ApplicationController
-  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup, :errors ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -112,6 +112,17 @@ class SimplefinItemsController < ApplicationController
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
       format.json { head :ok }
+    end
+  end
+
+  # Starts a balances-only sync for this SimpleFin item
+  def balances
+    sync = @simplefin_item.syncs.create!(status: :pending, sync_stats: { "balances_only" => true })
+    SimplefinItem::Syncer.new(@simplefin_item).perform_sync(sync)
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { render json: { ok: true, sync_id: sync.id } }
     end
   end
 

@@ -16,12 +16,30 @@ class SimplefinEntry::Processor
       date: date,
       name: name,
       source: "simplefin",
-      merchant: merchant
+      merchant: merchant,
+      notes: notes,
+      posted_date: posted_date,
+      transacted_date: transacted_date,
+      pending: pending?,
+      extra: extra_metadata
     )
   end
 
   private
     attr_reader :simplefin_transaction, :simplefin_account
+
+    def extra_metadata
+      sf = {}
+      # Preserve raw strings from provider so nothing is lost
+      sf["payee"] = data[:payee] if data.key?(:payee)
+      sf["memo"] = data[:memo] if data.key?(:memo)
+      sf["description"] = data[:description] if data.key?(:description)
+      # Include provider-supplied extra hash if present
+      sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
+
+      return nil if sf.empty?
+      { "simplefin" => sf }
+    end
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
@@ -85,26 +103,73 @@ class SimplefinEntry::Processor
       Rails.logger.warn("Invalid currency code '#{currency_value}' in SimpleFIN transaction #{external_id}, falling back to account currency")
     end
 
+    # UI/entry date selection by account type:
+    # - Credit cards/loans: prefer transaction date (matches statements), then posted
+    # - Others: prefer posted date, then transaction date
+    # Epochs parsed with Time.zone to respect user/app timezone
     def date
-      case data[:posted]
-      when String
-        Date.parse(data[:posted])
-      when Integer, Float
-        # Unix timestamp
-        Time.at(data[:posted]).to_date
-      when Time, DateTime
-        data[:posted].to_date
-      when Date
-        data[:posted]
+      acct_type = account&.accountable_type
+      if acct_type == "CreditCard" || acct_type == "Loan"
+        t = transacted_date
+        return t if t
+        p = posted_date
+        return p if p
       else
-        Rails.logger.error("SimpleFin transaction has invalid date value: #{data[:posted].inspect}")
-        raise ArgumentError, "Invalid date format: #{data[:posted].inspect}"
+        p = posted_date
+        return p if p
+        t = transacted_date
+        return t if t
       end
-    rescue ArgumentError, TypeError => e
-      Rails.logger.error("Failed to parse SimpleFin transaction date '#{data[:posted]}': #{e.message}")
-      raise ArgumentError, "Unable to parse transaction date: #{data[:posted].inspect}"
+      Rails.logger.error("SimpleFin transaction missing posted/transacted date: #{data.inspect}")
+      raise ArgumentError, "Invalid date format: #{data[:posted].inspect} / #{data[:transacted_at].inspect}"
     end
 
+    def posted_date
+      val = data[:posted]
+      return nil if val.blank?
+      case val
+      when String
+        Date.parse(val)
+      when Integer, Float
+        Time.zone.at(val).to_date
+      when Time, DateTime
+        val.to_date
+      when Date
+        val
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def transacted_date
+      val = data[:transacted_at]
+      return nil if val.blank?
+      case val
+      when String
+        Date.parse(val)
+      when Integer, Float
+        Time.zone.at(val).to_date
+      when Time, DateTime
+        val.to_date
+      when Date
+        val
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def pending?
+      # Prefer explicit pending flag if present; otherwise infer when posted comes after transacted
+      explicit = data[:pending]
+      return !!explicit unless explicit.nil?
+      p = posted_date
+      t = transacted_date
+      return (t && p && p > t)
+    end
 
     def merchant
       # Use SimpleFin's clean payee data for merchant detection
@@ -124,5 +189,19 @@ class SimplefinEntry::Processor
     def generate_merchant_id(merchant_name)
       # Generate a consistent ID for merchants without explicit IDs
       "simplefin_#{Digest::MD5.hexdigest(merchant_name.downcase)}"
+    end
+
+    def notes
+      # Prefer memo if present; include payee when it differs from description for richer context
+      memo = data[:memo].to_s.strip
+      payee = data[:payee].to_s.strip
+      description = data[:description].to_s.strip
+
+      parts = []
+      parts << memo if memo.present?
+      if payee.present? && payee != description
+        parts << "Payee: #{payee}"
+      end
+      parts.presence&.join(" | ")
     end
 end
