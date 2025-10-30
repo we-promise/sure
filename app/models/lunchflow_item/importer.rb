@@ -278,9 +278,10 @@ class LunchflowItem::Importer
         # Account has no stored transactions - this is a first sync for this account
         # Use account creation date or a generous historical window
         account_baseline = lunchflow_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].min
+        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].max
 
-        # Use the earlier of: (account created - 7 days) or (90 days ago)
+        # Use the more recent of: (account created - 7 days) or (90 days ago)
+        # This caps old accounts at 90 days while respecting recent account creation dates
         first_sync_window
       end
     end

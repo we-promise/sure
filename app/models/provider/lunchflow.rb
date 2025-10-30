@@ -42,7 +42,7 @@ class Provider::Lunchflow
       query_params[:end_date] = end_date.to_date.to_s
     end
 
-    path = "/accounts/#{account_id}/transactions"
+    path = "/accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions"
     path += "?#{URI.encode_www_form(query_params)}" unless query_params.empty?
 
     response = self.class.get(
@@ -62,7 +62,7 @@ class Provider::Lunchflow
   # Get balance for a specific account
   # Returns: { balance: { amount: N, currency: "USD" } }
   def get_account_balance(account_id)
-    path = "/accounts/#{account_id}/balance"
+    path = "/accounts/#{ERB::Util.url_encode(account_id.to_s)}/balance"
 
     response = self.class.get(
       "#{@base_url}#{path}",
