@@ -1,5 +1,6 @@
 require "set"
 class SimplefinItemsController < ApplicationController
+  include SimplefinItems::RelinkHelpers
   before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :errors, :relink, :apply_relink ]
 
   def index
@@ -330,140 +331,29 @@ class SimplefinItemsController < ApplicationController
   def apply_relink
     pairs = Array(params[:pairs]).map { |h| h.permit(:sfa_id, :manual_id, :checked).to_h.symbolize_keys }.select { |p| p[:checked].present? }
     Rails.logger.info("SimpleFin apply_relink: received #{pairs.size} checked pairs for item_id=#{@simplefin_item.id}")
-    results = []
 
-    SimplefinItem.transaction do
-      pairs.each do |pair|
-        sfa = @simplefin_item.simplefin_accounts.find_by(id: pair[:sfa_id])
-        manual = Current.family.accounts.find_by(id: pair[:manual_id])
-        next unless sfa && manual
-
-        a_new = sfa.current_account
-        # Defensive lookup in case associations are not loaded
-        if a_new.nil?
-          ap = AccountProvider.find_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
-          a_new = Account.find_by(id: ap&.account_id)
-        end
-
-        # If SimpleFin account already linked to the same manual account, skip
-        if a_new && a_new.id == manual.id
-          results << { sfa_id: sfa.id, manual_id: manual.id, status: "skipped_same" }
-          next
-        end
-
-        moved_entries = 0; deleted_entries = 0
-        moved_holdings = 0; deleted_holdings = 0
-
-        if a_new
-          # Ensure a single AccountProvider row exists for this SFA and point it at the manual account first
-          ap = AccountProvider.find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
-          ap.account = manual
-          ap.save!
-
-          # Move entries with duplicate guard on (external_id, source)
-          if a_new.respond_to?(:entries)
-            a_new.entries.find_each do |e|
-              if e.external_id.present? && e.source.present? && manual.entries.exists?(external_id: e.external_id, source: e.source)
-                e.destroy!
-                deleted_entries += 1
-              else
-                # Bypass validations when only reassigning ownership to avoid unrelated validation collisions
-                e.update_columns(account_id: manual.id, updated_at: Time.current)
-                moved_entries += 1
-              end
-            end
-          end
-          # Move holdings with duplicate guard (security,date,currency)
-          if a_new.respond_to?(:holdings)
-            a_new.holdings.find_each do |h|
-              if manual.holdings.exists?(security_id: h.security_id, date: h.date, currency: h.currency)
-                h.destroy!
-                deleted_holdings += 1
-              else
-                # Also repoint holdings to the reused provider row to satisfy FK constraints
-                h.update_columns(account_id: manual.id, account_provider_id: ap.id, updated_at: Time.current)
-                moved_holdings += 1
-              end
-            end
-          end
-
-          # Provider link already repointed via ap above
-
-          # Link legacy fk
-          manual.update!(simplefin_account_id: sfa.id)
-
-          # Remove redundant provider-linked account (duplicate)
-          a_new.destroy!
-        else
-          # No provider-linked account yet; reassign or create a provider link to the manual account first
-          ap = AccountProvider.find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
-          ap.account = manual
-          ap.save!
-          manual.update!(simplefin_account_id: sfa.id)
-        end
-
-        results << {
-          sfa_id: sfa.id,
-          manual_id: manual.id,
-          moved_entries: moved_entries,
-          deleted_entries: deleted_entries,
-          moved_holdings: moved_holdings,
-          deleted_holdings: deleted_holdings,
-          status: "ok"
-        }
-      end
-    end
-
-    # Final cleanup: merge any duplicate provider-linked Accounts that may have been created previously
-    begin
-      merge_stats = @simplefin_item.merge_duplicate_provider_accounts!
-      sfa_stats = @simplefin_item.dedup_simplefin_accounts!
-      Rails.logger.info("SimpleFin apply_relink: cleanup merge_stats=#{merge_stats.inspect} sfa_stats=#{sfa_stats.inspect} for item_id=#{@simplefin_item.id}")
-    rescue => e
-      Rails.logger.warn("SimpleFin apply_relink cleanup failed: #{e.class} - #{e.message}")
-    end
-
-    # Recompute unlinked count and clear pending flag when zero
-    begin
-      unlinked = @simplefin_item.simplefin_accounts
-        .left_joins(:account, :account_provider)
-        .where(accounts: { id: nil }, account_providers: { id: nil })
-        .count
-      Rails.logger.info("SimpleFin apply_relink: unlinked_count=#{unlinked} (controls setup CTA) for item_id=#{@simplefin_item.id}")
-      if unlinked.zero? && @simplefin_item.respond_to?(:pending_account_setup?) && @simplefin_item.pending_account_setup?
-        @simplefin_item.update!(pending_account_setup: false)
-        Rails.logger.info("SimpleFin apply_relink: cleared pending_account_setup (no unlinked accounts) for item_id=#{@simplefin_item.id}")
-      end
-    rescue => e
-      Rails.logger.warn("SimpleFin apply_relink: failed to compute unlinked_count: #{e.class} - #{e.message}")
-    end
+    relink = SimplefinItem::RelinkService.new.apply!(
+      simplefin_item: @simplefin_item,
+      pairs: pairs,
+      current_family: Current.family
+    )
 
     respond_to do |format|
-      # Close the modal and refresh the SimpleFin card so UI updates without a full page reload
       format.turbo_stream do
-        # Render the card partial to HTML to avoid passing a Hash to the stream builder
-        # Force HTML format explicitly so Rails does not look for a turbo_stream variant of the partial
         card_html = render_to_string(partial: "simplefin_items/simplefin_item", formats: [ :html ], locals: { simplefin_item: @simplefin_item })
         render turbo_stream: [
           turbo_stream.remove("modal"),
           turbo_stream.replace(view_context.dom_id(@simplefin_item), card_html)
         ], status: :ok
       end
-      format.html { redirect_to accounts_path, notice: "Linked #{results.size} accounts" }
-      format.json { render json: { ok: true, results: results } }
+      format.html { redirect_to accounts_path, notice: "Linked #{relink.results.size} accounts" }
+      format.json { render json: { ok: true, results: relink.results, merge: relink.merge_stats, sfa: relink.sfa_stats, unlinked: relink.unlinked_count } }
     end
   end
 
   private
 
-    NAME_NORM_RE = /\s+/.freeze
 
-    def compute_unlinked_count(item)
-      item.simplefin_accounts
-          .left_joins(:account, :account_provider)
-          .where(accounts: { id: nil }, account_providers: { id: nil })
-          .count
-    end
 
     def normalize_name(str)
       s = str.to_s.downcase.strip
