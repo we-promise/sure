@@ -1,0 +1,7 @@
+en:
+  simplefin_items:
+    update:
+      success: "SimpleFin connection updated."
+      errors:
+        blank_token: "Missing SimpleFin access token. Please provide a token or use Link Existing Accounts to proceed."
+        update_failed: "Failed to update SimpleFin connection: %{message}"

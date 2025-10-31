@@ -305,12 +305,18 @@ class SimplefinItem::Importer
       Rails.logger.info "SimplefinItem::Importer - API Request: #{start_str} to #{end_str} (#{days_requested} days)"
 
       begin
+        # Track API request count for quota awareness
+        stats["api_requests"] = stats.fetch("api_requests", 0) + 1
         accounts_data = simplefin_provider.get_accounts(
           simplefin_item.access_url,
           start_date: start_date,
           end_date: end_date,
           pending: pending
         )
+        # Soft warning when approaching SimpleFin daily refresh guidance
+        if stats["api_requests"].to_i >= 20
+          stats["rate_limit_warning"] = true
+        end
       rescue Provider::Simplefin::SimplefinError => e
         # Handle authentication errors by marking item as requiring update
         if e.error_type == :access_forbidden

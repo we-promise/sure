@@ -55,8 +55,8 @@ namespace :sure do
     else false
     end
 
-    # Guard: ensure encryption is configured
-    encryption_ready = SimplefinItem.respond_to?(:encryption_ready?) ? SimplefinItem.encryption_ready? : Rails.application.credentials.active_record_encryption.present?
+    # Guard: ensure encryption is configured (centralized on the model)
+    encryption_ready = SimplefinItem.encryption_ready?
 
     unless encryption_ready
       puts({

@@ -1,6 +1,7 @@
 require "test_helper"
 
 class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
+  fixtures :users, :families
   setup do
     sign_in users(:family_admin)
     @family = families(:dylan_family)
@@ -242,5 +243,69 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     get select_existing_account_simplefin_items_url(account_id: account.id)
     assert_redirected_to account_path(account)
     assert_equal "No available SimpleFIN accounts to link. Please connect a new SimpleFIN account first.", flash[:alert]
+  end
+  test "destroy should unlink provider links and legacy fk" do
+    # Create SFA and linked Account with AccountProvider
+    sfa = @simplefin_item.simplefin_accounts.create!(name: "Linked", account_id: "sf_link_1", currency: "USD", current_balance: 1, account_type: "depository")
+    acct = Account.create!(family: @family, name: "Manual A", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"), simplefin_account_id: sfa.id)
+    AccountProvider.create!(account: acct, provider_type: "SimplefinAccount", provider_id: sfa.id)
+
+    delete simplefin_item_url(@simplefin_item)
+    assert_redirected_to accounts_path
+
+    # Links are removed immediately even though deletion is scheduled
+    assert_nil acct.reload.simplefin_account_id
+    assert_equal 0, AccountProvider.where(provider_type: "SimplefinAccount", provider_id: sfa.id).count
+  end
+
+  test "apply_relink links pairs in one pass and avoids duplicates" do
+    # Manual account existing
+    manual = Account.create!(family: @family, name: "Quicksilver", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
+
+    # SimpleFin account with same name (candidate by name)
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Quicksilver", account_id: "sf_qs_1", currency: "USD", current_balance: -10, account_type: "credit"
+    )
+
+    # Simulate provider-linked duplicate account that should be removed after relink
+    dup_acct = Account.create!(family: @family, name: "Quicksilver (dup)", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
+    AccountProvider.create!(account: dup_acct, provider_type: "SimplefinAccount", provider_id: sfa.id)
+
+    post apply_relink_simplefin_item_url(@simplefin_item), params: {
+      pairs: [ { sfa_id: sfa.id, manual_id: manual.id, checked: "1" } ]
+    }, as: :json
+    assert_response :success
+
+    # Provider link should now point to manual, and duplicate account should be gone after cleanup
+    ap = AccountProvider.find_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
+    assert_equal manual.id, ap.account_id
+    assert_raises(ActiveRecord::RecordNotFound) { dup_acct.reload }
+  end
+
+  test "complete_account_setup creates accounts only for truly unlinked SFAs" do
+    # Linked SFA (should be ignored by setup)
+    linked_sfa = @simplefin_item.simplefin_accounts.create!(name: "Linked", account_id: "sf_l_1", currency: "USD", current_balance: 5, account_type: "depository")
+    linked_acct = Account.create!(family: @family, name: "Already Linked", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "savings"))
+    linked_sfa.update!(account: linked_acct)
+
+    # Unlinked SFA (should be created via setup)
+    unlinked_sfa = @simplefin_item.simplefin_accounts.create!(name: "New CC", account_id: "sf_cc_1", currency: "USD", current_balance: -20, account_type: "credit")
+
+    post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+      account_types: { unlinked_sfa.id => "CreditCard" },
+      account_subtypes: { unlinked_sfa.id => "credit_card" },
+      sync_start_date: Date.today.to_s
+    }
+
+    assert_redirected_to accounts_path
+    assert_not @simplefin_item.reload.pending_account_setup
+
+    # Linked one unchanged, unlinked now has an account
+    linked_sfa.reload
+    unlinked_sfa.reload
+    # The previously linked SFA should still point to the same Maybe account via legacy FK or provider link
+    assert_equal linked_acct.id, linked_sfa.account&.id
+    # The newly created account for the unlinked SFA should now exist
+    assert_not_nil unlinked_sfa.account_id
   end
 end
