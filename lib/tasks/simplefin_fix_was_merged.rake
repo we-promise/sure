@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require Rails.root.join("lib/simplefin/date_utils").to_s
+
 # Fix and optionally recompute was_merged flags for a specific Account over a recent window
 #
 # Usage:
@@ -96,34 +98,24 @@ namespace :sure do
 
           if sfa && sfa.raw_transactions_payload.present?
             txs = Array(sfa.raw_transactions_payload).map { |t| t.with_indifferent_access }
-            txs.each do |t|
-              begin
-                # Determine best date for window filter
-                posted = t[:posted]
-                trans  = t[:transacted_at]
-                posted_d = case posted
-                when String then Date.parse(posted) rescue nil
-                when Numeric then Time.zone.at(posted).to_date rescue nil
-                when Date then posted
-                when Time, DateTime then posted.to_date
-                else nil
-                end
-                trans_d  = case trans
-                when String then Date.parse(trans) rescue nil
-                when Numeric then Time.zone.at(trans).to_date rescue nil
-                when Date then trans
-                when Time, DateTime then trans.to_date
-                else nil
-                end
-                best = posted_d || trans_d
-                next if best.nil? || best < window_start || best > window_end
+            ActiveRecord::Base.transaction do
+              txs.each do |t|
+                begin
+                  posted_d = Simplefin::DateUtils.parse_provider_date(t[:posted])
+                  trans_d  = Simplefin::DateUtils.parse_provider_date(t[:transacted_at])
+                  best = posted_d || trans_d
+                  next if best.nil? || best < window_start || best > window_end
 
-                # Re-run processor (idempotent); current heuristics will set was_merged where appropriate
-                SimplefinEntry::Processor.new(t, simplefin_account: sfa).process
-                updated += 1
-              rescue => e
-                errors += 1
-                puts({ warn: "recompute_error", message: e.message, tx_id: t[:id] }.to_json)
+                  # Re-run processor (idempotent); current heuristics will set was_merged where appropriate
+                  SimplefinEntry::Processor.new(t, simplefin_account: sfa).process
+                  updated += 1
+                rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+                  errors += 1
+                  puts({ warn: "recompute_error", message: e.message, tx_id: t[:id] }.to_json)
+                rescue ArgumentError, TypeError => e
+                  errors += 1
+                  puts({ warn: "recompute_parse_error", message: e.message, tx_id: t[:id] }.to_json)
+                end
               end
             end
           else

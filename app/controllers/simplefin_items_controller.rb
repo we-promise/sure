@@ -357,11 +357,8 @@ class SimplefinItemsController < ApplicationController
 
 
     def set_simplefin_item
-      if defined?(Current) && Current.respond_to?(:family) && Current.family.present?
-        @simplefin_item = Current.family.simplefin_items.find(params[:id])
-      else
-        @simplefin_item = SimplefinItem.find(params[:id])
-      end
+      scope = Current.respond_to?(:family) && Current.family.present? ? Current.family.simplefin_items : SimplefinItem
+      @simplefin_item = scope.find(params[:id])
     end
 
 
