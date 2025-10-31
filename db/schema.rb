@@ -11,10 +11,14 @@
 # It's strongly recommended that you check this file into your version control system.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ActiveRecord::Schema[7.2].define(version: 2025_10_29_204447) do
 =======
 ActiveRecord::Schema[7.2].define(version: 2025_10_29_190000) do
 >>>>>>> c55e0cbf (SimpleFin: metadata + merge fixes; holdings (incl. crypto) + Day Change; Sync Summary; ops rakes; lint)
+=======
+ActiveRecord::Schema[7.2].define(version: 2025_10_30_172500) do
+>>>>>>> da0f500c (fix testing)
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -978,7 +982,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_29_190000) do
     t.string "subtype"
   end
 
-  add_foreign_key "account_providers", "accounts"
+  add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
@@ -992,11 +996,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_29_190000) do
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
-  add_foreign_key "entries", "accounts"
+  add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "imports"
   add_foreign_key "family_exports", "families"
   add_foreign_key "holdings", "account_providers"
-  add_foreign_key "holdings", "accounts"
+  add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"

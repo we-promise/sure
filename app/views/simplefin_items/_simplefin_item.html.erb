@@ -175,7 +175,7 @@
                   <span>Total: <%= stats["total_accounts"].to_i %></span>
                   <span>Linked: <%= stats["linked_accounts"].to_i %></span>
                   <span>Unlinked: <%= stats["unlinked_accounts"].to_i %></span>
-                  <% institutions = simplefin_item.simplefin_accounts.map { |sfa| (sfa.org_data || {})["name"].presence || (sfa.org_data || {})["domain"].presence }.compact.uniq %>
+                  <% institutions = simplefin_item.connected_institutions %>
                   <span>Institutions: <%= institutions.size %></span>
                 </div>
               </div>
@@ -214,7 +214,13 @@
           </details>
         <% end %>
 
-        <% if simplefin_item.pending_account_setup? %>
+        <%# Compute unlinked SimpleFin accounts (no legacy account and no AccountProvider link) %>
+        <% unlinked_count = simplefin_item.simplefin_accounts
+             .left_joins(:account, :account_provider)
+             .where(accounts: { id: nil }, account_providers: { id: nil })
+             .count %>
+
+        <% if unlinked_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
             <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
