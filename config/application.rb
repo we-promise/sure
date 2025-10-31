@@ -41,5 +41,9 @@ module Sure
 
     # Enable Rack::Attack middleware for API rate limiting
     config.middleware.use Rack::Attack
+
+    config.x.ui = ActiveSupport::OrderedOptions.new
+    default_layout = ENV.fetch("DEFAULT_UI_LAYOUT", "dashboard")
+    config.x.ui.default_layout = default_layout.in?(%w[dashboard intro]) ? default_layout : "dashboard"
   end
 end

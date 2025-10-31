@@ -23,6 +23,9 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+  enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
+
+  before_validation :apply_ui_layout_defaults, on: :create
 
   has_one_attached :profile_image do |attachable|
     attachable.variant :thumbnail, resize_to_fill: [ 300, 300 ], convert: :webp, saver: { quality: 80 }
@@ -94,6 +97,11 @@ class User < ApplicationRecord
 
   def ai_enabled?
     ai_enabled && ai_available?
+  end
+
+  def self.default_ui_layout
+    layout = Rails.application.config.x.ui&.default_layout || "dashboard"
+    layout.in?(%w[intro dashboard]) ? layout : "dashboard"
   end
 
   # Deactivation
@@ -170,6 +178,16 @@ class User < ApplicationRecord
   end
 
   private
+    def apply_ui_layout_defaults
+      self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
+
+      if ui_layout_intro?
+        self.show_sidebar = false
+        self.show_ai_sidebar = false
+        self.ai_enabled = true
+      end
+    end
+
     def ensure_valid_profile_image
       return unless profile_image.attached?
 
