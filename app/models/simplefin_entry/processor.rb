@@ -36,8 +36,6 @@ class SimplefinEntry::Processor
       sf["description"] = data[:description] if data.key?(:description)
       # Include provider-supplied extra hash if present
       sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
-
-      return nil if sf.empty?
       { "simplefin" => sf }
     end
 
