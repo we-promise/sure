@@ -54,6 +54,13 @@
     <% else %>
       <div class="overflow-x-auto">
         <table class="w-full">
+          <p><%= t("recurring_transactions.title") %></p>
+          <span class="text-subdued">&middot;</span>
+          <p><%= @recurring_transactions.count %></p>
+        </div>
+
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <table class="w-full">
           <thead>
             <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.merchant") %></th>
@@ -126,6 +133,7 @@
             <% end %>
           </tbody>
         </table>
+        </div>
       </div>
     <% end %>
   </div>
