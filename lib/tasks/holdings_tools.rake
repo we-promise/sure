@@ -37,7 +37,7 @@ namespace :sure do
       h = Holding.find(holding_id)
       prev = h.dup
       prev.date = h.date - days_ago
-      # Apply percentage change to price and amount (negative change_pct produces a loss)
+      # Apply percentage change to price and amount (positive change_pct decreases values, negative increases)
       factor = (1.0 - change_pct)
       prev.price  = (h.price  * factor).round(4)
       prev.amount = (h.amount * factor).round(4)

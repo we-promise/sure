@@ -28,7 +28,8 @@
               <%= simplefin_item.institution_summary %>
             </p>
             <%# Extra inline badges from latest sync stats %>
-            <% if (stats = simplefin_item.syncs.ordered.first&.sync_stats).present? %>
+            <% stats = (defined?(sync_stats) && sync_stats) || (@simplefin_sync_stats_map && @simplefin_sync_stats_map[simplefin_item.id]) || {} %>
+            <% if stats.present? %>
               <div class="flex items-center gap-2 mt-1">
                 <% if stats["unlinked_accounts"].to_i > 0 %>
                   <%= render DS::Tooltip.new(text: "Accounts need setup", icon: "link-2", size: "sm") %>
@@ -57,7 +58,7 @@
                     <%= render DS::Tooltip.new(text: tooltip_text, icon: "alert-octagon", size: "sm", color: "warning") %>
                   <% end %>
                   <%= render DS::Link.new(text: "View errors", icon: "alert-octagon", variant: "secondary", href: errors_simplefin_item_path(simplefin_item), frame: "modal") %>
-                  <%= render DS::Link.new(text: "Link existing accounts", icon: "link-2", variant: "secondary", href: relink_simplefin_item_path(simplefin_item), frame: "modal") %>
+                  <%= render DS::Link.new(text: "Link existing accounts", icon: "link-2", variant: "secondary", href: manual_relink_simplefin_item_path(simplefin_item), frame: "modal") %>
                 <% end %>
 
                 <% if stats["total_accounts"].to_i > 0 %>
@@ -120,7 +121,8 @@
         <% end %>
 
         <%# Show only when there are manual accounts to link %>
-        <% if simplefin_item.family.accounts.left_joins(:account_providers).where(account_providers: { id: nil }).exists? %>
+        <% has_unlinked = (defined?(has_unlinked) ? has_unlinked : (@simplefin_has_unlinked_map && @simplefin_has_unlinked_map[simplefin_item.id])) %>
+        <% if has_unlinked %>
           <%= render DS::Link.new(
             text: "Link existing accounts",
             icon: "link-2",

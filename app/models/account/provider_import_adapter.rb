@@ -15,8 +15,10 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param category_id [Integer, nil] Optional category ID
   # @param merchant [Merchant, nil] Optional merchant object
+  # @param notes [String, nil] Optional transaction notes/memo
+  # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, posted_date: nil, transacted_date: nil, pending: nil, extra: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, extra: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
