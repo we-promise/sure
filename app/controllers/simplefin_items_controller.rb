@@ -52,16 +52,8 @@ class SimplefinItemsController < ApplicationController
       # Clear any requires_update status on new item
       updated_item.update!(status: :good)
 
-      # Run a quick balances-only discovery on the new item to ensure SFAs exist and are fresh
-      begin
-        SimplefinItem::Importer.new(updated_item, simplefin_provider: updated_item.simplefin_provider).import_balances_only
-        updated_item.dedup_simplefin_accounts!
-        # Merge any duplicate provider-linked Accounts as a safe cleanup
-        updated_item.merge_duplicate_provider_accounts! rescue nil
-        updated_item.update!(last_synced_at: Time.current) if updated_item.has_attribute?(:last_synced_at)
-      rescue Provider::Simplefin::SimplefinError, ArgumentError, StandardError => e
-        Rails.logger.warn("SimpleFin update balances-only failed: #{e.class} - #{e.message}")
-      end
+      # Post-update: schedule a balances-only discovery to refresh SFAs and balances
+      SimplefinItem::BalancesOnlyJob.perform_later(updated_item.id)
 
       # Recompute unlinked count and clear pending flag when zero
       begin
@@ -119,18 +111,8 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFin Connection"
       )
 
-      # Pre-prompt: run a quick balances-only discovery to populate minimal accounts
-      begin
-        SimplefinItem::Importer.new(@simplefin_item, simplefin_provider: @simplefin_item.simplefin_provider).import_balances_only
-        # De-dup any duplicate upstream accounts created previously
-        @simplefin_item.dedup_simplefin_accounts!
-        # Update freshness timestamp only if the column exists in this schema
-        if @simplefin_item.has_attribute?(:last_synced_at)
-          @simplefin_item.update!(last_synced_at: Time.current)
-        end
-      rescue Provider::Simplefin::SimplefinError, ArgumentError, StandardError => e
-        Rails.logger.warn("SimpleFin pre-prompt balances-only failed: #{e.class} - #{e.message}")
-      end
+      # Pre-prompt: schedule a balances-only discovery to populate minimal accounts
+      SimplefinItem::BalancesOnlyJob.perform_later(@simplefin_item.id)
 
       # Recompute unlinked count and clear pending flag when zero
       begin
