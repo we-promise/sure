@@ -101,16 +101,44 @@ class RecurringTransaction
       end
 
       # Calculate the expected day based on the most common day
+      # Uses circular rotation to handle month-wrapping sequences (e.g., [29, 30, 31, 1, 2])
       def calculate_expected_day(days)
-        # Use median as the expected day
-        sorted = days.sort
-        mid = sorted.size / 2
+        return days.first if days.size == 1
 
-        if sorted.size.odd?
-          sorted[mid]
-        else
-          ((sorted[mid - 1] + sorted[mid]) / 2.0).round
+        # Convert to 0-indexed (0-30 instead of 1-31) for modular arithmetic
+        days_0 = days.map { |d| d - 1 }
+
+        # Find the rotation (pivot) that minimizes span, making the cluster contiguous
+        # This handles month-wrapping sequences like [29, 30, 31, 1, 2]
+        best_pivot = 0
+        min_span = Float::INFINITY
+
+        (0..30).each do |pivot|
+          rotated = days_0.map { |d| (d - pivot) % 31 }
+          span = rotated.max - rotated.min
+
+          if span < min_span
+            min_span = span
+            best_pivot = pivot
+          end
         end
+
+        # Rotate days using best pivot to create contiguous array
+        rotated_days = days_0.map { |d| (d - best_pivot) % 31 }.sort
+
+        # Calculate median on rotated, contiguous array
+        mid = rotated_days.size / 2
+        rotated_median = if rotated_days.size.odd?
+          rotated_days[mid]
+        else
+          # For even count, average and round
+          ((rotated_days[mid - 1] + rotated_days[mid]) / 2.0).round
+        end
+
+        # Map median back to original day space (unrotate) and convert to 1-indexed
+        original_day = (rotated_median + best_pivot) % 31 + 1
+
+        original_day
       end
 
       # Calculate next expected date
