@@ -28,7 +28,7 @@ class RecurringTransaction < ApplicationRecord
   def matching_transactions
     entries = family.entries
       .where(entryable_type: "Transaction")
-      .where("ABS(entries.amount - ?) < 0.01", amount)
+      .where("entries.amount = ?", amount)
       .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
              [expected_day_of_month - 2, 1].max,
              [expected_day_of_month + 2, 31].min)
