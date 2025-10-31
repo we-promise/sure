@@ -52,7 +52,7 @@
           <tbody>
             <% @recurring_transactions.each do |recurring_transaction| %>
               <tr class="border-b border-gray-100 hover:bg-gray-50 <%= 'opacity-60' unless recurring_transaction.active? %>">
-                <td class="py-3 px-2">
+                <td class="py-3 px-2 text-sm">
                   <div class="flex items-center gap-2">
                     <% if recurring_transaction.merchant&.logo_url.present? %>
                       <%= image_tag recurring_transaction.merchant.logo_url,
@@ -69,19 +69,19 @@
                     <span class="text-primary font-medium"><%= recurring_transaction.merchant.name %></span>
                   </div>
                 </td>
-                <td class="py-3 px-2 font-medium <%= recurring_transaction.amount.negative? ? 'text-green-600' : 'text-primary' %>">
+                <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? 'text-green-600' : 'text-primary' %>">
                   <%= format_money(-recurring_transaction.amount_money) %>
                 </td>
-                <td class="py-3 px-2 text-secondary">
+                <td class="py-3 px-2 text-sm text-secondary">
                   <%= t("recurring_transactions.day_of_month", day: recurring_transaction.expected_day_of_month) %>
                 </td>
-                <td class="py-3 px-2 text-secondary">
+                <td class="py-3 px-2 text-sm text-secondary">
                   <%= l(recurring_transaction.next_expected_date, format: :short) %>
                 </td>
-                <td class="py-3 px-2 text-secondary">
+                <td class="py-3 px-2 text-sm text-secondary">
                   <%= l(recurring_transaction.last_occurrence_date, format: :short) %>
                 </td>
-                <td class="py-3 px-2">
+                <td class="py-3 px-2 text-sm">
                   <% if recurring_transaction.active? %>
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                       <%= t("recurring_transactions.status.active") %>
@@ -92,7 +92,7 @@
                     </span>
                   <% end %>
                 </td>
-                <td class="py-3 px-2 text-right">
+                <td class="py-3 px-2 text-sm text-right">
                   <div class="flex items-center justify-end gap-2">
                     <%= link_to toggle_status_recurring_transaction_path(recurring_transaction),
                         data: { turbo_method: :post },
