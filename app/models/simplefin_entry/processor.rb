@@ -163,7 +163,7 @@ class SimplefinEntry::Processor
       return !!explicit unless explicit.nil?
       p = posted_date
       t = transacted_date
-      return (t && p && p > t)
+      (t && p && p > t)
     end
 
     def merchant

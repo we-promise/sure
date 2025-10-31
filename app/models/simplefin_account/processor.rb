@@ -40,7 +40,7 @@ class SimplefinAccount::Processor
       name = simplefin_account.name.to_s
       return if name.blank?
       family = simplefin_account.simplefin_item.family
-      norm = ->(s){ s.to_s.downcase.gsub(/\s+/, " ").strip }
+      norm = ->(s) { s.to_s.downcase.gsub(/\s+/, " ").strip }
 
       manuals = family.accounts
         .left_joins(:account_providers)

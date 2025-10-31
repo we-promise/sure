@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class AddCascadeOnAccountDeletes < ActiveRecord::Migration[7.0]
   def up
     # Clean up orphaned rows before re-adding foreign keys with cascade

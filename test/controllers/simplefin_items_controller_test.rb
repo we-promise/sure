@@ -306,40 +306,40 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 end
 
 
-  class SimplefinItemsControllerTurboTest < ActionDispatch::IntegrationTest
-    fixtures :users, :families
+class SimplefinItemsControllerTurboTest < ActionDispatch::IntegrationTest
+  fixtures :users, :families
 
-    setup do
-      sign_in users(:family_admin)
-      @family = families(:dylan_family)
-      @simplefin_item = SimplefinItem.create!(
-        family: @family,
-        name: "Test Connection",
-        access_url: "https://example.com/test_access"
-      )
-    end
-
-    test "apply_relink responds with turbo stream" do
-      # Manual account existing
-      manual = Account.create!(family: @family, name: "QS Manual", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
-
-      # SimpleFin account
-      sfa = @simplefin_item.simplefin_accounts.create!(
-        name: "QS", account_id: "sf_qs_ts", currency: "USD", current_balance: -10, account_type: "credit"
-      )
-
-      # Simulate provider-linked duplicate account that should be removed after relink
-      dup_acct = Account.create!(family: @family, name: "QS dup", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
-      AccountProvider.create!(account: dup_acct, provider_type: "SimplefinAccount", provider_id: sfa.id)
-
-      post apply_relink_simplefin_item_url(@simplefin_item), params: {
-        pairs: [ { sfa_id: sfa.id, manual_id: manual.id, checked: "1" } ]
-      }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
-
-      assert_response :success
-      assert_equal "text/vnd.turbo-stream.html", response.media_type
-      assert_includes response.body, "turbo-stream"
-      assert_includes response.body, "action=\"remove\""
-      assert_includes response.body, "action=\"replace\""
-    end
+  setup do
+    sign_in users(:family_admin)
+    @family = families(:dylan_family)
+    @simplefin_item = SimplefinItem.create!(
+      family: @family,
+      name: "Test Connection",
+      access_url: "https://example.com/test_access"
+    )
   end
+
+  test "apply_relink responds with turbo stream" do
+    # Manual account existing
+    manual = Account.create!(family: @family, name: "QS Manual", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
+
+    # SimpleFin account
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "QS", account_id: "sf_qs_ts", currency: "USD", current_balance: -10, account_type: "credit"
+    )
+
+    # Simulate provider-linked duplicate account that should be removed after relink
+    dup_acct = Account.create!(family: @family, name: "QS dup", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
+    AccountProvider.create!(account: dup_acct, provider_type: "SimplefinAccount", provider_id: sfa.id)
+
+    post apply_relink_simplefin_item_url(@simplefin_item), params: {
+      pairs: [ { sfa_id: sfa.id, manual_id: manual.id, checked: "1" } ]
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_includes response.body, "turbo-stream"
+    assert_includes response.body, "action=\"remove\""
+    assert_includes response.body, "action=\"replace\""
+  end
+end

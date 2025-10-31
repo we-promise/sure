@@ -19,9 +19,9 @@
 namespace :sure do
   namespace :simplefin do
     desc "Clear and optionally recompute transaction.was_merged for a given account and date window"
-    task :fix_was_merged, [:account_id, :days, :dry_run, :recompute] => :environment do |_, args|
+    task :fix_was_merged, [ :account_id, :days, :dry_run, :recompute ] => :environment do |_, args|
       kv = {}
-      [args[:account_id], args[:days], args[:dry_run], args[:recompute]].each do |raw|
+      [ args[:account_id], args[:days], args[:dry_run], args[:recompute] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v
@@ -94,19 +94,19 @@ namespace :sure do
                 posted = t[:posted]
                 trans  = t[:transacted_at]
                 posted_d = case posted
-                           when String then Date.parse(posted) rescue nil
-                           when Numeric then Time.zone.at(posted).to_date rescue nil
-                           when Date then posted
-                           when Time, DateTime then posted.to_date
-                           else nil
-                           end
+                when String then Date.parse(posted) rescue nil
+                when Numeric then Time.zone.at(posted).to_date rescue nil
+                when Date then posted
+                when Time, DateTime then posted.to_date
+                else nil
+                end
                 trans_d  = case trans
-                           when String then Date.parse(trans) rescue nil
-                           when Numeric then Time.zone.at(trans).to_date rescue nil
-                           when Date then trans
-                           when Time, DateTime then trans.to_date
-                           else nil
-                           end
+                when String then Date.parse(trans) rescue nil
+                when Numeric then Time.zone.at(trans).to_date rescue nil
+                when Date then trans
+                when Time, DateTime then trans.to_date
+                else nil
+                end
                 best = posted_d || trans_d
                 next if best.nil? || best < window_start || best > window_end
 

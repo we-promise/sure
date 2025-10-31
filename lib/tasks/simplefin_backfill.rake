@@ -23,7 +23,7 @@ namespace :sure do
     task :backfill_extra, [ :item_id, :account_id, :days, :dry_run, :force ] => :environment do |_, args|
       # Support both positional and named (key=value) args; prefer named
       kv = {}
-      [args[:item_id], args[:account_id], args[:days], args[:dry_run], args[:force]].each do |raw|
+      [ args[:item_id], args[:account_id], args[:days], args[:dry_run], args[:force] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v
@@ -86,19 +86,19 @@ namespace :sure do
 
             # convert to Date where possible for window filtering
             posted_d = case posted
-                       when String then Date.parse(posted) rescue nil
-                       when Numeric then Time.zone.at(posted).to_date rescue nil
-                       when Date then posted
-                       when Time, DateTime then posted.to_date
-                       else nil
-                       end
+            when String then Date.parse(posted) rescue nil
+            when Numeric then Time.zone.at(posted).to_date rescue nil
+            when Date then posted
+            when Time, DateTime then posted.to_date
+            else nil
+            end
             trans_d  = case trans
-                       when String then Date.parse(trans) rescue nil
-                       when Numeric then Time.zone.at(trans).to_date rescue nil
-                       when Date then trans
-                       when Time, DateTime then trans.to_date
-                       else nil
-                       end
+            when String then Date.parse(trans) rescue nil
+            when Numeric then Time.zone.at(trans).to_date rescue nil
+            when Date then trans
+            when Time, DateTime then trans.to_date
+            else nil
+            end
 
             best = posted_d || trans_d
             # If neither date is available, skip (cannot window-match safely)
@@ -130,7 +130,7 @@ namespace :sure do
             if dry_run
               # Simulate: check if we can composite-match; we won't persist
               entry = acct.entries.find_by(external_id: external_id, source: "simplefin")
-              entry ||= adapter.composite_match(source: "simplefin", name: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:name), amount: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:amount), date: (posted_d || trans_d), window_days: (acct.accountable_type.in?(["CreditCard", "Loan"]) ? 5 : 3))
+              entry ||= adapter.composite_match(source: "simplefin", name: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:name), amount: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:amount), date: (posted_d || trans_d), window_days: (acct.accountable_type.in?([ "CreditCard", "Loan" ]) ? 5 : 3))
               matched = entry.present?
               total_matched += 1 if matched
             else
@@ -156,7 +156,7 @@ namespace :sure do
     desc "List and optionally delete known demo SimpleFin entries for a given Account. Args (named): account_id, dry_run=true, pattern"
     task :cleanup_demo_entries, [ :account_id, :dry_run, :pattern ] => :environment do |_, args|
       kv = {}
-      [args[:account_id], args[:dry_run], args[:pattern]].each do |raw|
+      [ args[:account_id], args[:dry_run], args[:pattern] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v
