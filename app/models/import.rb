@@ -69,9 +69,6 @@ class Import < ApplicationRecord
 
     family.sync_later
 
-    # Identify recurring transaction patterns after import
-    RecurringTransaction.identify_patterns_for(family)
-
     update! status: :complete
   rescue => error
     update! status: :failed, error: error.message
