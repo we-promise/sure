@@ -6,9 +6,7 @@
       <%= link_to "Close", "#", data: { action: "modal#close" }, class: "text-secondary text-sm" %>
     </div>
 
-    <% if @candidates.blank? %>
-      <p class="text-secondary text-sm">No matching manual accounts were found. If duplicates remain under "Other accounts", you can relink them later after a full sync populates balances.</p>
-    <% else %>
+    <% if @candidates.present? %>
       <%= form_with url: apply_relink_simplefin_item_path(@simplefin_item), method: :post, data: { turbo_frame: "modal" } do %>
         <div class="text-sm text-secondary mb-2">Select pairs to link. We matched by last4 (when available), then balance (±$0.01), then name.</div>
         <div class="divide-y divide-gray-200 rounded-md border border-gray-200">
@@ -29,6 +27,38 @@
         <div class="mt-4 flex items-center justify-end gap-2">
           <%= submit_tag "Link selected", class: "btn btn--primary" %>
         </div>
+      <% end %>
+    <% else %>
+      <div class="text-sm text-secondary">No automatic matches yet. You can still relink manually below.</div>
+
+      <% if @unlinked_sfas.any? && @manual_accounts.any? %>
+        <%= form_with url: apply_relink_simplefin_item_path(@simplefin_item), method: :post, data: { turbo_frame: "modal" } do %>
+          <div class="mt-2 text-xs text-secondary">Pick the corresponding manual account for each SimpleFin account you want to link.</div>
+          <div class="mt-2 divide-y divide-gray-200 rounded-md border border-gray-200">
+            <% @unlinked_sfas.each_with_index do |sfa, idx| %>
+              <div class="p-3 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-primary font-medium truncate"><%= sfa.name %></div>
+                </div>
+                <div class="shrink-0 flex items-center gap-2">
+                  <input type="checkbox" name="pairs[][checked]" id="manual_pair_<%= idx %>" value="1" class="checkbox checkbox--light" checked>
+                  <input type="hidden" name="pairs[][sfa_id]" value="<%= sfa.id %>">
+                  <select name="pairs[][manual_id]" class="select select--sm">
+                    <option value="">Select manual…</option>
+                    <% @manual_accounts.each do |acct| %>
+                      <option value="<%= acct.id %>"><%= acct.name %></option>
+                    <% end %>
+                  </select>
+                </div>
+              </div>
+            <% end %>
+          </div>
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <%= submit_tag "Link selected", class: "btn btn--primary" %>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="text-secondary text-sm">If no accounts appear, a background refresh may still be running. Try again after the sync completes.</p>
       <% end %>
     <% end %>
   </div>

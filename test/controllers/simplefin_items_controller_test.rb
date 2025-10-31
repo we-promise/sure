@@ -224,7 +224,9 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       simplefin_item: { setup_token: "valid_token" }
     }
 
-    assert_redirected_to accounts_path
+    assert_response :redirect
+    uri2 = URI(response.redirect_url)
+    assert_equal "/accounts", uri2.path
 
     # Verify Maybe account still linked to old SimpleFin account (no transfer occurred)
     maybe_account.reload

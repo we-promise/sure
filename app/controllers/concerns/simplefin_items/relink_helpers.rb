@@ -33,8 +33,8 @@ module SimplefinItems
 
         Rails.logger.info("SimpleFin compute_relink_candidates: manuals=#{manuals.size} sfas=#{sfas.size} (item_id=#{@simplefin_item.id})")
 
-        used_manual_ids = Set.new
         pairs = []
+        used_manual_ids = []
 
         sfas.each do |sfa|
           next if sfa.name.blank?
