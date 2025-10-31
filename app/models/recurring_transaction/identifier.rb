@@ -71,16 +71,33 @@ class RecurringTransaction
 
     private
       # Check if days cluster together (within ~5 days variance)
+      # Uses circular distance to handle month-boundary wrapping (e.g., 28, 29, 30, 31, 1, 2)
       def days_cluster_together?(days)
         return false if days.empty?
 
-        # Calculate standard deviation
-        mean = days.sum.to_f / days.size
-        variance = days.map { |day| (day - mean)**2 }.sum / days.size
+        # Calculate median as reference point
+        median = calculate_expected_day(days)
+
+        # Calculate circular distances from median
+        circular_distances = days.map { |day| circular_distance(day, median) }
+
+        # Calculate standard deviation of circular distances
+        mean_distance = circular_distances.sum.to_f / circular_distances.size
+        variance = circular_distances.map { |dist| (dist - mean_distance)**2 }.sum / circular_distances.size
         std_dev = Math.sqrt(variance)
 
         # Allow up to 5 days standard deviation
         std_dev <= 5
+      end
+
+      # Calculate circular distance between two days on a 31-day circle
+      # Examples:
+      #   circular_distance(1, 31) = 2  (wraps around: 31 -> 1 is 1 day, 1 -> 31 is 1 day)
+      #   circular_distance(28, 2) = 5  (wraps: 28, 29, 30, 31, 1, 2)
+      def circular_distance(day1, day2)
+        linear_distance = (day1 - day2).abs
+        wrap_distance = 31 - linear_distance
+        [ linear_distance, wrap_distance ].min
       end
 
       # Calculate the expected day based on the most common day
