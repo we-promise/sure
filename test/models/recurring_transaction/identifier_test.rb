@@ -70,6 +70,9 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     recurring = @family.recurring_transactions.first
     assert_equal merchant, recurring.merchant
     assert_equal 15.99, recurring.amount
+    # Add validation that expected_day is near 31 or 1, not mid-month
+    assert_includes [ 30, 31, 1 ], recurring.expected_day_of_month,
+      "Expected day should be near month boundary (30, 31, or 1), not mid-month. Got: #{recurring.expected_day_of_month}"
   end
 
   test "identifies recurring pattern with transactions spanning end and start of month" do
@@ -104,6 +107,13 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
 
     assert_equal 1, patterns_count, "Should identify pattern with circular clustering at month boundary"
     assert_equal 1, @family.recurring_transactions.count
+
+    recurring = @family.recurring_transactions.first
+    assert_equal merchant, recurring.merchant
+    assert_equal 15.99, recurring.amount
+    # Validate expected_day falls within the cluster range (28-31 or 1-2), not an outlier like day 15
+    assert_includes (28..31).to_a + [ 1, 2 ], recurring.expected_day_of_month,
+      "Expected day should be within cluster range (28-31 or 1-2), not mid-month. Got: #{recurring.expected_day_of_month}"
   end
 
   test "does not identify pattern when days are not clustered" do
