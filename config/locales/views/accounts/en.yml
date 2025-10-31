@@ -2,6 +2,7 @@
 en:
   accounts:
     account:
+      link_lunchflow: Link with Lunch Flow
       troubleshoot: Troubleshoot
     chart:
       data_not_available: Data not available for the selected period

@@ -277,6 +277,8 @@ Rails.application.routes.draw do
     collection do
       get :select_accounts
       post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
     end
 
     member do
