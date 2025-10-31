@@ -75,4 +75,6 @@ Rails.application.configure do
   config.autoload_paths += %w[test/support]
 
   config.action_mailer.default_url_options = { host: "example.com" }
+
+  config.assets.paths << Rails.root.join("test/support/assets")
 end

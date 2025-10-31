@@ -1,9 +1,18 @@
-<% mobile_nav_items = [
-  { name: "Home", path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
-  { name: "Transactions", path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
-  { name: "Budgets", path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
-  { name: "Assistant", path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
-] %>
+<% intro_mode = Current.user&.ui_layout_intro? %>
+<% home_path = intro_mode ? chats_path : root_path %>
+<% mobile_nav_items = if intro_mode
+  [
+    { name: "Home", path: chats_path, icon: "home", icon_custom: false, active: page_active?(chats_path) },
+    { name: "Intro", path: intro_path, icon: "sparkles", icon_custom: false, active: page_active?(intro_path) }
+  ]
+else
+  [
+    { name: "Home", path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
+    { name: "Transactions", path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
+    { name: "Budgets", path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
+    { name: "Assistant", path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
+  ]
+end %>
 
 <% desktop_nav_items = mobile_nav_items.reject { |item| item[:mobile_only] } %>
 <% expanded_sidebar_class = "w-full" %>
@@ -35,18 +44,18 @@
     <nav class="lg:hidden flex justify-between items-center p-3">
       <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
 
-      <%= link_to root_path, class: "block" do %>
+      <%= link_to home_path, class: "block" do %>
         <%= image_tag "logomark-color.svg", class: "w-9 h-9 mx-auto" %>
       <% end %>
 
-      <%= render "users/user_menu", user: Current.user, placement: "bottom-end", offset: 12 %>
+      <%= render "users/user_menu", user: Current.user, placement: "bottom-end", offset: 12, intro_mode: intro_mode %>
     </nav>
 
     <%# DESKTOP - Left navbar %>
     <div class="hidden lg:block">
       <nav class="h-full flex flex-col shrink-0 w-[84px] py-4 mr-3">
         <div class="pl-2 mb-3">
-          <%= link_to root_path, class: "block" do %>
+          <%= link_to home_path, class: "block" do %>
             <%= image_tag "logomark-color.svg", class: "w-9 h-9 mx-auto" %>
           <% end %>
         </div>
@@ -67,7 +76,7 @@
             target: "_blank"
           ) %>
 
-          <%= render "users/user_menu", user: Current.user %>
+          <%= render "users/user_menu", user: Current.user, intro_mode: intro_mode %>
         </div>
       </nav>
     </div>

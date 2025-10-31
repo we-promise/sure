@@ -304,6 +304,7 @@ Rails.application.routes.draw do
 
   get "privacy", to: redirect("about:blank")
   get "terms", to: redirect("about:blank")
+  get "intro", to: "pages#intro"
 
   # Defines the root path route ("/")
   root "pages#dashboard"
