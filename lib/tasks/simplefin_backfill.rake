@@ -142,7 +142,7 @@ namespace :sure do
             if dry_run
               # Simulate: check if we can composite-match; we won't persist
               entry = acct.entries.find_by(external_id: external_id, source: "simplefin")
-              entry ||= adapter.composite_match(source: "simplefin", name: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:name), amount: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:amount), date: (posted_d || trans_d), window_days: (acct.accountable_type.in?(["CreditCard", "Loan"]) ? 5 : 3))
+              entry ||= adapter.composite_match(source: "simplefin", name: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:name), amount: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:amount), date: (posted_d || trans_d), window_days: (acct.accountable_type.in?([ "CreditCard", "Loan" ]) ? 5 : 3))
               matched = entry.present?
               total_matched += 1 if matched
             else
@@ -168,7 +168,7 @@ namespace :sure do
     desc "List and optionally delete known demo SimpleFin entries for a given Account. Args (named): account_id, dry_run=true, pattern"
     task :cleanup_demo_entries, [ :account_id, :dry_run, :pattern ] => :environment do |_, args|
       kv = {}
-      [args[:account_id], args[:dry_run], args[:pattern]].each do |raw|
+      [ args[:account_id], args[:dry_run], args[:pattern] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v

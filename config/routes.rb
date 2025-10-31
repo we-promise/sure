@@ -305,6 +305,7 @@ Rails.application.routes.draw do
       post :balances
       get :errors
       get :relink
+      get :manual_relink
       post :apply_relink
       get :setup_accounts
       post :complete_account_setup
