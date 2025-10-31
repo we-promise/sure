@@ -32,12 +32,20 @@ namespace :sure do
       dry_raw    = (kv["dry_run"] || args[:dry_run]).to_s.downcase
       reco_raw   = (kv["recompute"] || args[:recompute]).to_s.downcase
 
-      dry_run   = %w[1 true yes y].include?(dry_raw)
+      # Default to dry_run=true unless explicitly disabled
+      dry_run   = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
       recompute = reco_raw.blank? ? true : %w[1 true yes y].include?(reco_raw)
       days_i = 30 if days_i <= 0
 
       unless account_id.present?
         puts({ ok: false, error: "usage", message: "Provide account_id" }.to_json)
+        exit 1
+      end
+
+      # Basic UUID validation
+      uuid_rx = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+      unless account_id.match?(uuid_rx)
+        puts({ ok: false, error: "invalid_argument", message: "account_id must be a hyphenated UUID" }.to_json)
         exit 1
       end
 

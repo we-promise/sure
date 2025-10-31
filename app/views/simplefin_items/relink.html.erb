@@ -13,7 +13,7 @@
         <div class="text-sm text-secondary mb-2">Select pairs to link. We matched by last4 (when available), then balance (±$0.01), then name.</div>
         <div class="divide-y divide-gray-200 rounded-md border border-gray-200">
           <% @candidates.each_with_index do |c, idx| %>
-            <div class="p-3 flex items-start justify-between gap-3">
+            <label for="pair_<%= idx %>" class="p-3 flex items-start justify-between gap-3 cursor-pointer">
               <div class="min-w-0">
                 <div class="text-primary font-medium truncate"><%= c[:sfa_name] %></div>
                 <div class="text-xs text-secondary truncate">Manual: <%= c[:manual_name] %></div>
@@ -23,7 +23,7 @@
                 <input type="hidden" name="pairs[][sfa_id]" value="<%= c[:sfa_id] %>">
                 <input type="hidden" name="pairs[][manual_id]" value="<%= c[:manual_id] %>">
               </div>
-            </div>
+            </label>
           <% end %>
         </div>
         <div class="mt-4 flex items-center justify-end gap-2">

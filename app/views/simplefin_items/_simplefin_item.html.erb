@@ -52,14 +52,10 @@
                 <% end %>
 
                 <% if stats["total_errors"].to_i > 0 || (stats["errors"].is_a?(Array) && stats["errors"].any?) %>
-                  <% sample = Array(stats["errors"]).map { |e| name = (e[:name] || e["name"]).to_s; msg = (e[:message] || e["message"]).to_s; name.present? ? "#{name}: #{msg}" : msg }.compact.first(2).join(" • ") %>
-                  <% buckets = stats["error_buckets"] || {} %>
-                  <% bucket_text = buckets.present? ? buckets.map { |k,v| "#{k}: #{v}" }.join(", ") : nil %>
-                  <% parts = ["Errors: ", (stats["total_errors"] || stats["accounts_skipped"]).to_i.to_s] %>
-                  <% parts << (" (" + bucket_text + ")") if bucket_text.present? %>
-                  <% parts << (" — " + sample) if sample.present? %>
-                  <% tooltip_text = parts.join %>
-                  <%= render DS::Tooltip.new(text: tooltip_text, icon: "alert-octagon", size: "sm", color: "warning") %>
+                  <% tooltip_text = simplefin_error_tooltip(stats) %>
+                  <% if tooltip_text.present? %>
+                    <%= render DS::Tooltip.new(text: tooltip_text, icon: "alert-octagon", size: "sm", color: "warning") %>
+                  <% end %>
                   <%= render DS::Link.new(text: "View errors", icon: "alert-octagon", variant: "secondary", href: errors_simplefin_item_path(simplefin_item), frame: "modal") %>
                   <%= render DS::Link.new(text: "Link existing accounts", icon: "link-2", variant: "secondary", href: relink_simplefin_item_path(simplefin_item), frame: "modal") %>
                 <% end %>
