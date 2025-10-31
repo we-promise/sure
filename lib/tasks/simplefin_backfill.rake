@@ -35,12 +35,24 @@ namespace :sure do
       dry_raw    = (kv["dry_run"] || args[:dry_run]).to_s.downcase
       force_raw  = (kv["force"] || args[:force]).to_s.downcase
 
-      dry_run = %w[1 true yes y].include?(dry_raw)
+      # Default to dry_run=true unless explicitly disabled
+      dry_run = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
       force   = %w[1 true yes y].include?(force_raw)
       days_i = 30 if days_i <= 0
 
       window_start = days_i.days.ago.to_date
       window_end   = Date.today
+
+      # Basic UUID validation when provided
+      uuid_rx = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+      if item_id.present? && !item_id.match?(uuid_rx)
+        puts({ ok: false, error: "invalid_argument", message: "item_id must be a hyphenated UUID" }.to_json)
+        exit 1
+      end
+      if account_id.present? && !account_id.match?(uuid_rx)
+        puts({ ok: false, error: "invalid_argument", message: "account_id must be a hyphenated UUID" }.to_json)
+        exit 1
+      end
 
       # Select SimplefinAccounts to process
       sfas = if item_id.present?
