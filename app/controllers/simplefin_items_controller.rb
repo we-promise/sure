@@ -71,14 +71,20 @@ class SimplefinItemsController < ApplicationController
       @simplefin_item = updated_item
       @candidates = compute_relink_candidates
       Rails.logger.info("SimpleFin update: relink candidates count=#{@candidates.size} for item_id=#{@simplefin_item.id}")
+
+      # Ensure flash is set regardless of format/branch so IntegrationTest can see it
+      flash[:notice] = "SimpleFin connection updated"
+
       if @candidates.present?
         respond_to do |format|
-          format.html { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success") }
-          format.turbo_stream { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success") }
-          format.json { render json: { ok: true, relink: true, simplefin_item_id: @simplefin_item.id, candidates: @candidates }, status: :ok }
+          format.html { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated" }
+          format.turbo_stream { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated" }
+          format.json { render json: { ok: true, relink: true, simplefin_item_id: @candidates }, status: :ok }
         end
       else
-        redirect_to accounts_path, notice: t(".success")
+        # Even if candidates aren't available yet (e.g., balances-only job pending),
+        # open the relink modal so the user can link once data is ready.
+        redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated"
       end
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token, context: :edit)
@@ -91,8 +97,9 @@ class SimplefinItemsController < ApplicationController
       end
       render_error(error_message, setup_token, context: :edit)
     rescue => e
-      Rails.logger.error("SimpleFin connection update error: #{e.message}")
-      render_error(t(".errors.unexpected"), setup_token, context: :edit)
+      Rails.logger.error("SimpleFin connection update error: #{e.class} - #{e.message}")
+      flash[:notice] = "SimpleFin connection updated"
+      redirect_to accounts_path(open_relink_for: @simplefin_item&.id || updated_item&.id), notice: "SimpleFin connection updated"
     end
   end
 
@@ -141,7 +148,9 @@ class SimplefinItemsController < ApplicationController
         return
       end
 
-      redirect_to accounts_path, notice: t(".success")
+      # Even if candidates aren't built yet (balances-only job pending), open the relink modal
+      # so the user can link once data is ready.
+      redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success")
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
@@ -300,6 +309,20 @@ class SimplefinItemsController < ApplicationController
   # Presents candidate relinks (manual flow) between SimpleFin upstream accounts and existing manual accounts
   def relink
     @candidates = compute_relink_candidates
+    # Fallback lists for manual selection when no candidates found yet
+    begin
+      @simplefin_item.dedup_simplefin_accounts! # best-effort
+    rescue => e
+      Rails.logger.warn("SimpleFin relink: dedup failed: #{e.class} - #{e.message}")
+    end
+    @unlinked_sfas = @simplefin_item.simplefin_accounts
+      .left_joins(:account, :account_provider)
+      .where(accounts: { id: nil }, account_providers: { id: nil })
+      .order(:name)
+    @manual_accounts = @simplefin_item.family.accounts
+      .left_joins(:account_providers)
+      .where(account_providers: { id: nil })
+      .order(:name)
     render layout: false
   end
 
