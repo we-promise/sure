@@ -56,7 +56,7 @@
       <%= render "transactions/selection_bar" %>
     </div>
 
-    <% if @pagy.count > 0 %>
+    <% if @pagy.count > 0 || @projected_recurring.any? %>
       <div class="grow overflow-y-auto">
         <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 hidden md:grid">
           <div class="pl-0.5 col-span-8 flex items-center gap-4">
@@ -80,6 +80,20 @@
         <% end %>
 
         <div class="space-y-6">
+          <% if @projected_recurring.any? %>
+            <div class="space-y-2">
+              <h3 class="text-xs uppercase font-medium text-secondary px-2"><%= t("recurring_transactions.upcoming") %></h3>
+              <% @projected_recurring.group_by(&:next_expected_date).sort.each do |date, transactions| %>
+                <div class="space-y-2">
+                  <div class="text-xs text-secondary px-2 pt-2"><%= l(date, format: :long) %></div>
+                  <% transactions.each do |recurring_transaction| %>
+                    <%= render "recurring_transactions/projected_transaction", recurring_transaction: recurring_transaction %>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+
           <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
             <%= render entries %>
           <% end %>
