@@ -1,6 +1,6 @@
 <%# locals: (recurring_transaction:) %>
 
-<div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4 lg:p-4 bg-container-inset rounded">
+<div class="grid grid-cols-12 items-center text-subdued text-sm font-medium p-4 lg:p-4 bg-container-inset rounded">
   <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
     <div class="max-w-full">
       <%= content_tag :div, class: ["flex items-center gap-2"] do %>
@@ -45,6 +45,6 @@
   </div>
 
   <div class="col-span-2 ml-auto text-right">
-    <%= content_tag :p, format_money(-recurring_transaction.amount_money), class: ["font-medium", "text-success": recurring_transaction.amount.negative?] %>
+    <%= content_tag :p, format_money(-recurring_transaction.amount_money), class: ["font-medium text-subdued"] %>
   </div>
 </div>
