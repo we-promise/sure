@@ -184,7 +184,7 @@ class SimplefinItem < ApplicationRecord
     SimplefinItem.transaction do
       dupes.each_value do |list|
         keeper = list.find { |s| s.current_account.present? } || list.max_by(&:updated_at)
-        (list - [keeper]).each do |dupe|
+        (list - [ keeper ]).each do |dupe|
           keeper_acct = keeper.current_account
           dupe_acct = dupe.current_account
 
@@ -251,8 +251,8 @@ class SimplefinItem < ApplicationRecord
       groups.each_value do |links|
         accounts = Account.where(id: links.map(&:account_id))
         # Choose keeper by most entries, else newest by updated_at
-        keeper = accounts.max_by { |a| [a.entries.count, a.updated_at.to_i] }
-        (accounts - [keeper]).each do |dupe|
+        keeper = accounts.max_by { |a| [ a.entries.count, a.updated_at.to_i ] }
+        (accounts - [ keeper ]).each do |dupe|
           # Move entries (avoid duplicates by external_id+source)
           dupe.entries.find_each do |e|
             if e.external_id.present? && e.source.present? && keeper.entries.exists?(external_id: e.external_id, source: e.source)

@@ -15,9 +15,9 @@
 namespace :sure do
   namespace :holdings do
     desc "Seed a previous snapshot for Day Change demo. Args: holding_id, change_pct=2, days_ago=1, dry_run=true"
-    task :seed_prev_snapshot, [:holding_id, :change_pct, :days_ago, :dry_run] => :environment do |_, args|
+    task :seed_prev_snapshot, [ :holding_id, :change_pct, :days_ago, :dry_run ] => :environment do |_, args|
       kv = {}
-      [args[:holding_id], args[:change_pct], args[:days_ago], args[:dry_run]].each do |raw|
+      [ args[:holding_id], args[:change_pct], args[:days_ago], args[:dry_run] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v
@@ -44,7 +44,7 @@ namespace :sure do
       prev.external_id = nil
 
       if dry_run
-        puts({ ok: true, dry_run: true, holding_id: h.id, would_create: prev.attributes.slice("account_id","security_id","date","qty","price","amount","currency") }.to_json)
+        puts({ ok: true, dry_run: true, holding_id: h.id, would_create: prev.attributes.slice("account_id", "security_id", "date", "qty", "price", "amount", "currency") }.to_json)
       else
         prev.save!
         puts({ ok: true, created_prev_id: prev.id, date: prev.date, amount: prev.amount, price: prev.price }.to_json)
@@ -55,7 +55,7 @@ namespace :sure do
     end
 
     desc "Remove a snapshot by holding id. Args: id"
-    task :remove_snapshot, [:id] => :environment do |_, args|
+    task :remove_snapshot, [ :id ] => :environment do |_, args|
       id = args[:id]
       unless id
         puts({ ok: false, error: "usage", message: "Provide id" }.to_json)

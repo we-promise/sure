@@ -26,9 +26,9 @@
 namespace :sure do
   namespace :simplefin do
     desc "Backfill holdings for SimpleFin-linked investment accounts. Args: item_id, account_id, account_name, dry_run=true, sleep_ms=200"
-    task :backfill_holdings, [:item_id, :account_id, :account_name, :dry_run, :sleep_ms] => :environment do |_, args|
+    task :backfill_holdings, [ :item_id, :account_id, :account_name, :dry_run, :sleep_ms ] => :environment do |_, args|
       kv = {}
-      [args[:item_id], args[:account_id], args[:account_name], args[:dry_run], args[:sleep_ms]].each do |raw|
+      [ args[:item_id], args[:account_id], args[:account_name], args[:dry_run], args[:sleep_ms] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v
@@ -97,7 +97,7 @@ namespace :sure do
       sfas.each do |sfa|
         begin
           account = sfa.current_account
-          next unless ["Investment", "Crypto"].include?(account&.accountable_type)
+          next unless [ "Investment", "Crypto" ].include?(account&.accountable_type)
 
           total_accounts += 1
           holdings_data = Array(sfa.raw_holdings_payload)
