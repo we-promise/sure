@@ -314,8 +314,14 @@ class SimplefinItemsController < ApplicationController
     render layout: false
   end
 
-  # Presents candidate relinks between SimpleFin upstream accounts and existing manual accounts
+  # Presents candidate relinks (manual flow) between SimpleFin upstream accounts and existing manual accounts
   def relink
+    @candidates = compute_relink_candidates
+    render layout: false
+  end
+
+  # Explicit manual relink endpoint (identical to relink, provided for clarity of flow)
+  def manual_relink
     @candidates = compute_relink_candidates
     render layout: false
   end
