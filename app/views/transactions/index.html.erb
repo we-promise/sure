@@ -80,7 +80,7 @@
         <% end %>
 
         <div class="space-y-6">
-          <% if @projected_recurring.any? %>
+          <% if @projected_recurring.any? && @q.blank? %>
             <div class="space-y-2">
               <h3 class="text-xs uppercase font-medium text-secondary px-2"><%= t("recurring_transactions.upcoming") %></h3>
               <% @projected_recurring.group_by(&:next_expected_date).sort.each do |date, transactions| %>
