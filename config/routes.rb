@@ -268,6 +268,11 @@ Rails.application.routes.draw do
   resources :simplefin_items, only: %i[index new create show edit update destroy] do
     member do
       post :sync
+      post :balances
+      get :errors
+      get :relink
+      get :manual_relink
+      post :apply_relink
       get :setup_accounts
       post :complete_account_setup
     end

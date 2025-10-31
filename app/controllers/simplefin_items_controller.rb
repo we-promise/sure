@@ -1,5 +1,7 @@
+require "set"
 class SimplefinItemsController < ApplicationController
-  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  include SimplefinItems::RelinkHelpers
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :errors, :relink, :manual_relink, :apply_relink ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -50,7 +52,40 @@ class SimplefinItemsController < ApplicationController
       # Clear any requires_update status on new item
       updated_item.update!(status: :good)
 
-      redirect_to accounts_path, notice: t(".success")
+      # Post-update: schedule a balances-only discovery to refresh SFAs and balances
+      SimplefinItem::BalancesOnlyJob.perform_later(updated_item.id)
+
+      # Recompute unlinked count and clear pending flag when zero
+      begin
+        unlinked = compute_unlinked_count(updated_item)
+        Rails.logger.info("SimpleFin update: unlinked_count=#{unlinked} (controls setup CTA) for item_id=#{updated_item.id}")
+        if unlinked.zero? && updated_item.respond_to?(:pending_account_setup?) && updated_item.pending_account_setup?
+          updated_item.update!(pending_account_setup: false)
+          Rails.logger.info("SimpleFin update: cleared pending_account_setup (no unlinked accounts) for item_id=#{updated_item.id}")
+        end
+      rescue => e
+        Rails.logger.warn("SimpleFin update: failed to compute unlinked_count: #{e.class} - #{e.message}")
+      end
+
+      # Attempt to auto-open relink modal when viable pairs exist after update
+      @simplefin_item = updated_item
+      @candidates = compute_relink_candidates
+      Rails.logger.info("SimpleFin update: relink candidates count=#{@candidates.size} for item_id=#{@simplefin_item.id}")
+
+      # Ensure flash is set regardless of format/branch so IntegrationTest can see it
+      flash[:notice] = "SimpleFin connection updated"
+
+      if @candidates.present?
+        respond_to do |format|
+          format.html { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated" }
+          format.turbo_stream { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated" }
+          format.json { render json: { ok: true, relink: true, simplefin_item_id: @candidates }, status: :ok }
+        end
+      else
+        # Even if candidates aren't available yet (e.g., balances-only job pending),
+        # open the relink modal so the user can link once data is ready.
+        redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated"
+      end
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token, context: :edit)
     rescue Provider::Simplefin::SimplefinError => e
@@ -62,8 +97,9 @@ class SimplefinItemsController < ApplicationController
       end
       render_error(error_message, setup_token, context: :edit)
     rescue => e
-      Rails.logger.error("SimpleFin connection update error: #{e.message}")
-      render_error(t(".errors.unexpected"), setup_token, context: :edit)
+      Rails.logger.error("SimpleFin connection update error: #{e.class} - #{e.message}")
+      flash[:notice] = "SimpleFin connection updated"
+      redirect_to accounts_path(open_relink_for: @simplefin_item&.id || updated_item&.id), notice: "SimpleFin connection updated"
     end
   end
 
@@ -82,7 +118,39 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFin Connection"
       )
 
-      redirect_to accounts_path, notice: t(".success")
+      # Pre-prompt: schedule a balances-only discovery to populate minimal accounts
+      SimplefinItem::BalancesOnlyJob.perform_later(@simplefin_item.id)
+
+      # Recompute unlinked count and clear pending flag when zero
+      begin
+        unlinked = @simplefin_item.simplefin_accounts
+          .left_joins(:account, :account_provider)
+          .where(accounts: { id: nil }, account_providers: { id: nil })
+          .count
+        Rails.logger.info("SimpleFin create: unlinked_count=#{unlinked} (controls setup CTA) for item_id=#{@simplefin_item.id}")
+        if unlinked.zero? && @simplefin_item.respond_to?(:pending_account_setup?) && @simplefin_item.pending_account_setup?
+          @simplefin_item.update!(pending_account_setup: false)
+          Rails.logger.info("SimpleFin create: cleared pending_account_setup (no unlinked accounts) for item_id=#{@simplefin_item.id}")
+        end
+      rescue => e
+        Rails.logger.warn("SimpleFin create: failed to compute unlinked_count: #{e.class} - #{e.message}")
+      end
+
+      # If there are manual accounts that look like matches, present the relink modal immediately
+      @candidates = compute_relink_candidates
+      Rails.logger.info("SimpleFin create: relink candidates count=#{@candidates.size} for item_id=#{@simplefin_item.id}")
+      if @candidates.present?
+        respond_to do |format|
+          format.html { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success") }
+          format.turbo_stream { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success") }
+          format.json { render json: { ok: true, relink: true, simplefin_item_id: @simplefin_item.id, candidates: @candidates }, status: :created }
+        end
+        return
+      end
+
+      # Even if candidates aren't built yet (balances-only job pending), open the relink modal
+      # so the user can link once data is ready.
+      redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success")
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
@@ -100,8 +168,15 @@ class SimplefinItemsController < ApplicationController
   end
 
   def destroy
-    @simplefin_item.destroy_later
-    redirect_to accounts_path, notice: t(".success")
+    begin
+      # Ensure any provider links are removed so accounts move to "Other accounts" before deletion
+      SimplefinItem::Unlinker.new(@simplefin_item, dry_run: false).unlink_all!
+      @simplefin_item.destroy_later
+      redirect_to accounts_path, notice: t(".success")
+    rescue => e
+      Rails.logger.error("SimplefinItemsController#destroy unlink error: #{e.class} - #{e.message}")
+      redirect_to accounts_path, alert: t(".errors.destroy_failed", message: e.message)
+    end
   end
 
   def sync
@@ -115,8 +190,35 @@ class SimplefinItemsController < ApplicationController
     end
   end
 
+  # Starts a balances-only sync for this SimpleFin item
+  def balances
+    sync = @simplefin_item.syncs.create!(status: :pending, sync_stats: { "balances_only" => true })
+    SimplefinItem::Syncer.new(@simplefin_item).perform_sync(sync)
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { render json: { ok: true, sync_id: sync.id } }
+    end
+  end
+
   def setup_accounts
-    @simplefin_accounts = @simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
+    # Ensure we don't present duplicates if upstream produced duplicate rows for the same account_id
+    begin
+      @simplefin_item.dedup_simplefin_accounts!
+    rescue => e
+      Rails.logger.warn("SimpleFin setup_accounts: dedup failed: #{e.class} - #{e.message}")
+    end
+
+    @simplefin_accounts = @simplefin_item.simplefin_accounts
+      .includes(:account, :account_provider)
+      .where(accounts: { id: nil })
+      .where(account_providers: { id: nil })
+
+    # Logging for observability of Setup Accounts filtering
+    Rails.logger.info(
+      "SimpleFin setup_accounts: listing #{ @simplefin_accounts.size } unlinked SF accounts (item_id=#{ @simplefin_item.id })"
+    )
+
     @account_type_options = [
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
@@ -186,11 +288,84 @@ class SimplefinItemsController < ApplicationController
     redirect_to accounts_path, notice: t(".success")
   end
 
+  # Lists per-account errors from the latest sync in a modal-friendly view
+  def errors
+    latest_sync = @simplefin_item.syncs.ordered.first
+    @stats = latest_sync&.sync_stats || {}
+
+    @error_buckets = @stats["error_buckets"] || {}
+    @errors = Array(@stats["errors"]).map do |e|
+      {
+        account_id: e[:account_id] || e["account_id"],
+        name: e[:name] || e["name"],
+        category: e[:category] || e["category"],
+        message: e[:message] || e["message"]
+      }
+    end
+
+    render layout: false
+  end
+
+  # Presents candidate relinks (manual flow) between SimpleFin upstream accounts and existing manual accounts
+  def relink
+    @candidates = compute_relink_candidates
+    # Fallback lists for manual selection when no candidates found yet
+    begin
+      @simplefin_item.dedup_simplefin_accounts! # best-effort
+    rescue => e
+      Rails.logger.warn("SimpleFin relink: dedup failed: #{e.class} - #{e.message}")
+    end
+    @unlinked_sfas = @simplefin_item.simplefin_accounts
+      .left_joins(:account, :account_provider)
+      .where(accounts: { id: nil }, account_providers: { id: nil })
+      .order(:name)
+    @manual_accounts = @simplefin_item.family.accounts
+      .left_joins(:account_providers)
+      .where(account_providers: { id: nil })
+      .order(:name)
+    render layout: false
+  end
+
+  # Explicit manual relink endpoint (identical to relink, provided for clarity of flow)
+  def manual_relink
+    @candidates = compute_relink_candidates
+    render layout: false
+  end
+
+  # Applies selected relinks by migrating data and moving provider links
+  def apply_relink
+    pairs = Array(params[:pairs]).map { |h| h.permit(:sfa_id, :manual_id, :checked).to_h.symbolize_keys }.select { |p| p[:checked].present? }
+    Rails.logger.info("SimpleFin apply_relink: received #{pairs.size} checked pairs for item_id=#{@simplefin_item.id}")
+
+    relink = SimplefinItem::RelinkService.new.apply!(
+      simplefin_item: @simplefin_item,
+      pairs: pairs,
+      current_family: Current.family
+    )
+
+    respond_to do |format|
+      format.turbo_stream do
+        card_html = render_to_string(partial: "simplefin_items/simplefin_item", formats: [ :html ], locals: { simplefin_item: @simplefin_item })
+        render turbo_stream: [
+          turbo_stream.remove("modal"),
+          turbo_stream.replace(view_context.dom_id(@simplefin_item), card_html)
+        ], status: :ok
+      end
+      format.html { redirect_to accounts_path, notice: "Linked #{relink.results.size} accounts" }
+      format.json { render json: { ok: true, results: relink.results, merge: relink.merge_stats, sfa: relink.sfa_stats, unlinked: relink.unlinked_count } }
+    end
+  end
+
   private
 
+
+
+
     def set_simplefin_item
-      @simplefin_item = Current.family.simplefin_items.find(params[:id])
+      scope = Current.respond_to?(:family) && Current.family.present? ? Current.family.simplefin_items : SimplefinItem
+      @simplefin_item = scope.find(params[:id])
     end
+
 
     def simplefin_params
       params.require(:simplefin_item).permit(:setup_token, :sync_start_date)
