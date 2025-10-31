@@ -50,7 +50,7 @@ jobs:
 
     - name: Update Deployment
       run: |
-        if [[ "$DOCKER_IMAGE_TAG" == v*-alpha* ]]; then
+        if [[ "$DOCKER_IMAGE_TAG" =~ ^v[0-9][0-9.]*-alpha([.-][0-9]+)?$ ]]; then
           yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
           if [[ "$DOCKER_IMAGE_TAG" == v* ]]; then
             yq -i '.companion.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/companion-staging/values.yaml
