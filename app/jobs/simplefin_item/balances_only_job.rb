@@ -39,5 +39,17 @@ class SimplefinItem::BalancesOnlyJob < ApplicationJob
     rescue => e
       Rails.logger.warn("SimpleFin BalancesOnlyJob last_synced_at update failed: #{e.class} - #{e.message}")
     end
+
+    # Notify any open modal to refresh its contents with up-to-date relink options
+    begin
+      url = Rails.application.routes.url_helpers.relink_simplefin_item_path(item)
+      html = ApplicationController.render(
+        inline: "<turbo-frame id='modal' src='#{ERB::Util.html_escape(url)}'></turbo-frame>",
+        formats: [ :html ]
+      )
+      Turbo::StreamsChannel.broadcast_replace_to(item.family, target: "modal", html: html)
+    rescue => e
+      Rails.logger.warn("SimpleFin BalancesOnlyJob broadcast failed: #{e.class} - #{e.message}")
+    end
   end
 end
