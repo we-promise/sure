@@ -2,7 +2,7 @@
 
 <%= render DS::Menu.new(variant: "button") do |menu| %>
   <% menu.with_button do %>
-    <% render partial: "categories/badge", locals: { category: transaction.category } %>
+    <%= render partial: "categories/badge", locals: { category: transaction.category, icon_only: true } %>
   <% end %>
 
   <% menu.with_custom_content do %>
