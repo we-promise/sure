@@ -365,13 +365,13 @@ class SimplefinItemsController < ApplicationController
           # Move holdings with duplicate guard (security,date,currency)
           if a_new.respond_to?(:holdings)
             a_new.holdings.find_each do |h|
-                if manual.holdings.exists?(security_id: h.security_id, date: h.date, currency: h.currency)
-                  h.destroy!
-                  deleted_holdings += 1
-                else
-                  h.update_columns(account_id: manual.id, updated_at: Time.current)
-                  moved_holdings += 1
-                end
+              if manual.holdings.exists?(security_id: h.security_id, date: h.date, currency: h.currency)
+                h.destroy!
+                deleted_holdings += 1
+              else
+                h.update_columns(account_id: manual.id, updated_at: Time.current)
+                moved_holdings += 1
+              end
             end
           end
 
@@ -440,7 +440,7 @@ class SimplefinItemsController < ApplicationController
       format.turbo_stream do
         # Render the card partial to HTML to avoid passing a Hash to the stream builder
         # Force HTML format explicitly so Rails does not look for a turbo_stream variant of the partial
-        card_html = render_to_string(partial: "simplefin_items/simplefin_item", formats: [:html], locals: { simplefin_item: @simplefin_item })
+        card_html = render_to_string(partial: "simplefin_items/simplefin_item", formats: [ :html ], locals: { simplefin_item: @simplefin_item })
         render turbo_stream: [
           turbo_stream.remove("modal"),
           turbo_stream.replace(view_context.dom_id(@simplefin_item), card_html)

@@ -3,9 +3,9 @@
 namespace :sure do
   namespace :simplefin do
     desc "Unlink all provider links for a SimpleFin item so its accounts move to 'Other accounts'. Args: item_id, dry_run=true"
-    task :unlink_item, [:item_id, :dry_run] => :environment do |_, args|
+    task :unlink_item, [ :item_id, :dry_run ] => :environment do |_, args|
       kv = {}
-      [args[:item_id], args[:dry_run]].each do |raw|
+      [ args[:item_id], args[:dry_run] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v

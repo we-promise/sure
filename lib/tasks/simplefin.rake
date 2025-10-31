@@ -62,7 +62,7 @@ namespace :sure do
       puts({
         ok: false,
         error: "encryption_not_configured",
-        message: "Rails.application.credentials.active_record_encryption is missing; cannot encrypt access_url",
+        message: "Rails.application.credentials.active_record_encryption is missing; cannot encrypt access_url"
       }.to_json)
       exit 1
     end
