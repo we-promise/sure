@@ -16,7 +16,7 @@ class Account::ProviderImportAdapter
   # @param category_id [Integer, nil] Optional category ID
   # @param merchant [Merchant, nil] Optional merchant object
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, posted_date: nil, transacted_date: nil, pending: nil, extra: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -63,6 +63,20 @@ class Account::ProviderImportAdapter
       if merchant
         entry.transaction.enrich_attribute(:merchant_id, merchant.id, source: source)
       end
+
+      if notes.present? && entry.respond_to?(:enrich_attribute)
+        entry.enrich_attribute(:notes, notes, source: source)
+      end
+
+      # Persist extra provider metadata on the transaction (non-enriched; always merged)
+      if extra.present? && entry.entryable.is_a?(Transaction)
+        existing = entry.transaction.extra || {}
+        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+        entry.transaction.extra = existing.deep_merge(incoming)
+      end
+
+      # We accept posted/transacted/pending to support UI badges and future heuristics.
+      # This adapter does not currently persist these fields directly on Entry.
 
       entry.save!
       entry
