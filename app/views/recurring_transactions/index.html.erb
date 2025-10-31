@@ -19,6 +19,22 @@
     </div>
   </header>
 
+  <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <div class="flex items-start gap-2">
+      <%= icon "info", class: "w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" %>
+      <div>
+        <p class="text-sm font-medium text-blue-900 mb-2"><%= t("recurring_transactions.info.title") %></p>
+        <p class="text-xs text-blue-700 mb-2"><%= t("recurring_transactions.info.manual_description") %></p>
+        <p class="text-xs text-blue-700 mb-1"><%= t("recurring_transactions.info.automatic_description") %></p>
+        <ul class="list-disc list-inside text-xs text-blue-700 space-y-0.5 ml-2">
+          <% t("recurring_transactions.info.triggers").each do |trigger| %>
+            <li><%= trigger %></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
     <% if @recurring_transactions.empty? %>
       <div class="text-center py-12">

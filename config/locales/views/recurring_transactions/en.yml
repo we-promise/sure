@@ -9,6 +9,13 @@ en:
     day_of_month: Day %{day} of month
     identify_patterns: Identify Patterns
     cleanup_stale: Clean Up Stale
+    info:
+      title: Automatic Pattern Detection
+      manual_description: You can manually identify patterns or clean up stale recurring transactions using the buttons above.
+      automatic_description: "Automatic identification also runs after:"
+      triggers:
+        - CSV imports complete (transactions, trades, accounts, etc. )
+        - Any provider sync completes ( Plaid, SimpleFIN, etc. )
     identified: Identified %{count} recurring transaction patterns
     cleaned_up: Cleaned up %{count} stale recurring transactions
     marked_inactive: Recurring transaction marked as inactive

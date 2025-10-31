@@ -1,4 +1,6 @@
 class RecurringTransactionsController < ApplicationController
+  layout "settings"
+
   def index
     @recurring_transactions = Current.family.recurring_transactions
                                     .includes(:merchant)

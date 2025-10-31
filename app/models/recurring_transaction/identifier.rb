@@ -27,13 +27,16 @@ class RecurringTransaction
       grouped_transactions.each do |(merchant_id, amount, currency), entries|
         next if entries.size < 3  # Must have at least 3 occurrences
 
+        # Check if the last occurrence was within the last 45 days
+        last_occurrence = entries.max_by(&:date)
+        next if last_occurrence.date < 45.days.ago.to_date
+
         # Check if transactions occur on similar days (within 5 days of each other)
         days_of_month = entries.map { |e| e.date.day }.sort
 
         # Calculate if days cluster together (standard deviation check)
         if days_cluster_together?(days_of_month)
           expected_day = calculate_expected_day(days_of_month)
-          last_occurrence = entries.max_by(&:date)
 
           recurring_patterns << {
             merchant_id: merchant_id,
