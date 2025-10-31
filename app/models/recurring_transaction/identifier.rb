@@ -20,7 +20,7 @@ class RecurringTransaction
       # Filter to only those with merchants and group by merchant and amount (preserve sign)
       grouped_transactions = entries_with_transactions
         .select { |entry| entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id.present? }
-        .group_by { |entry| [entry.entryable.merchant_id, entry.amount.round(2), entry.currency] }
+        .group_by { |entry| [ entry.entryable.merchant_id, entry.amount.round(2), entry.currency ] }
 
       recurring_patterns = []
 
@@ -70,43 +70,42 @@ class RecurringTransaction
     end
 
     private
+      # Check if days cluster together (within ~5 days variance)
+      def days_cluster_together?(days)
+        return false if days.empty?
 
-    # Check if days cluster together (within ~5 days variance)
-    def days_cluster_together?(days)
-      return false if days.empty?
+        # Calculate standard deviation
+        mean = days.sum.to_f / days.size
+        variance = days.map { |day| (day - mean)**2 }.sum / days.size
+        std_dev = Math.sqrt(variance)
 
-      # Calculate standard deviation
-      mean = days.sum.to_f / days.size
-      variance = days.map { |day| (day - mean)**2 }.sum / days.size
-      std_dev = Math.sqrt(variance)
-
-      # Allow up to 5 days standard deviation
-      std_dev <= 5
-    end
-
-    # Calculate the expected day based on the most common day
-    def calculate_expected_day(days)
-      # Use median as the expected day
-      sorted = days.sort
-      mid = sorted.size / 2
-
-      if sorted.size.odd?
-        sorted[mid]
-      else
-        ((sorted[mid - 1] + sorted[mid]) / 2.0).round
+        # Allow up to 5 days standard deviation
+        std_dev <= 5
       end
-    end
 
-    # Calculate next expected date
-    def calculate_next_expected_date(last_date, expected_day)
-      next_month = last_date.next_month
+      # Calculate the expected day based on the most common day
+      def calculate_expected_day(days)
+        # Use median as the expected day
+        sorted = days.sort
+        mid = sorted.size / 2
 
-      begin
-        Date.new(next_month.year, next_month.month, expected_day)
-      rescue ArgumentError
-        # If day doesn't exist in month, use last day of month
-        next_month.end_of_month
+        if sorted.size.odd?
+          sorted[mid]
+        else
+          ((sorted[mid - 1] + sorted[mid]) / 2.0).round
+        end
       end
-    end
+
+      # Calculate next expected date
+      def calculate_next_expected_date(last_date, expected_day)
+        next_month = last_date.next_month
+
+        begin
+          Date.new(next_month.year, next_month.month, expected_day)
+        rescue ArgumentError
+          # If day doesn't exist in month, use last day of month
+          next_month.end_of_month
+        end
+      end
   end
 end

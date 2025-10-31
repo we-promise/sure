@@ -56,7 +56,7 @@
       <%= render "transactions/selection_bar" %>
     </div>
 
-    <% if @pagy.count > 0 || @projected_recurring.any? %>
+    <% if @pagy.count > 0 || (@projected_recurring.any? && @q.blank?) %>
       <div class="grow overflow-y-auto">
         <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 hidden md:grid">
           <div class="pl-0.5 col-span-8 flex items-center gap-4">

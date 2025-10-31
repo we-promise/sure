@@ -30,8 +30,8 @@ class RecurringTransaction < ApplicationRecord
       .where(entryable_type: "Transaction")
       .where("entries.amount = ?", amount)
       .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-             [expected_day_of_month - 2, 1].max,
-             [expected_day_of_month + 2, 31].min)
+             [ expected_day_of_month - 2, 1 ].max,
+             [ expected_day_of_month + 2, 31 ].min)
       .order(date: :desc)
 
     # Filter by merchant through the entryable (Transaction)
@@ -95,8 +95,7 @@ class RecurringTransaction < ApplicationRecord
   end
 
   private
-
-  def monetizable_currency
-    currency
-  end
+    def monetizable_currency
+      currency
+    end
 end

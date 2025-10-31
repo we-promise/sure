@@ -14,10 +14,10 @@ class CreateRecurringTransactions < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :recurring_transactions, [:family_id, :merchant_id, :amount, :currency],
+    add_index :recurring_transactions, [ :family_id, :merchant_id, :amount, :currency ],
               unique: true,
               name: "idx_recurring_txns_on_family_merchant_amount_currency"
-    add_index :recurring_transactions, [:family_id, :status]
+    add_index :recurring_transactions, [ :family_id, :status ]
     add_index :recurring_transactions, :next_expected_date
   end
 end
