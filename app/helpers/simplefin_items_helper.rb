@@ -27,7 +27,7 @@ module SimplefinItemsHelper
       buckets.map { |k, v| "#{k}: #{v}" }.join(", ")
     end
 
-    parts = ["Errors: ", total_errors.to_s]
+    parts = [ "Errors: ", total_errors.to_s ]
     parts << " (#{bucket_text})" if bucket_text.present?
     parts << " — #{sample}" if sample.present?
     parts.join
