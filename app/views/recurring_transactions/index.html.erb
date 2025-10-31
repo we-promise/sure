@@ -35,7 +35,7 @@
     </div>
   </div>
 
-  <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
     <% if @recurring_transactions.empty? %>
       <div class="text-center py-12">
         <div class="text-secondary mb-4">
@@ -52,8 +52,8 @@
         ) %>
       </div>
     <% else %>
-      <div class="overflow-x-auto">
-        <table class="w-full">
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
           <p><%= t("recurring_transactions.title") %></p>
           <span class="text-subdued">&middot;</span>
           <p><%= @recurring_transactions.count %></p>
