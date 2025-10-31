@@ -23,7 +23,7 @@ namespace :sure do
     task :backfill_extra, [ :item_id, :account_id, :days, :dry_run, :force ] => :environment do |_, args|
       # Support both positional and named (key=value) args; prefer named
       kv = {}
-      [args[:item_id], args[:account_id], args[:days], args[:dry_run], args[:force]].each do |raw|
+      [ args[:item_id], args[:account_id], args[:days], args[:dry_run], args[:force] ].each do |raw|
         next unless raw.is_a?(String) && raw.include?("=")
         k, v = raw.split("=", 2)
         kv[k.to_s] = v

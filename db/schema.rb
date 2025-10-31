@@ -10,15 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-ActiveRecord::Schema[7.2].define(version: 2025_10_29_204447) do
-=======
-ActiveRecord::Schema[7.2].define(version: 2025_10_29_190000) do
->>>>>>> c55e0cbf (SimpleFin: metadata + merge fixes; holdings (incl. crypto) + Day Change; Sync Summary; ops rakes; lint)
-=======
 ActiveRecord::Schema[7.2].define(version: 2025_10_30_172500) do
->>>>>>> da0f500c (fix testing)
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
