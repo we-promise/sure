@@ -45,6 +45,6 @@
   </div>
 
   <div class="col-span-2 ml-auto text-right">
-    <%= content_tag :p, format_money(-recurring_transaction.amount_money), class: ["font-medium text-subdued"] %>
+    <%= content_tag :p, format_money(-recurring_transaction.amount_money), class: ["font-medium", recurring_transaction.amount.negative? ? "text-success" : "text-subdued"] %>
   </div>
 </div>
