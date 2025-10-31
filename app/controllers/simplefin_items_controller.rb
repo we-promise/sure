@@ -349,6 +349,11 @@ class SimplefinItemsController < ApplicationController
         moved_holdings = 0; deleted_holdings = 0
 
         if a_new
+          # Ensure a single AccountProvider row exists for this SFA and point it at the manual account first
+          ap = AccountProvider.find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
+          ap.account = manual
+          ap.save!
+
           # Move entries with duplicate guard on (external_id, source)
           if a_new.respond_to?(:entries)
             a_new.entries.find_each do |e|
@@ -369,15 +374,14 @@ class SimplefinItemsController < ApplicationController
                 h.destroy!
                 deleted_holdings += 1
               else
-                h.update_columns(account_id: manual.id, updated_at: Time.current)
+                # Also repoint holdings to the reused provider row to satisfy FK constraints
+                h.update_columns(account_id: manual.id, account_provider_id: ap.id, updated_at: Time.current)
                 moved_holdings += 1
               end
             end
           end
 
-          # Move provider link to manual
-          AccountProvider.where(account: a_new, provider_type: "SimplefinAccount", provider_id: sfa.id).delete_all
-          AccountProvider.find_or_create_by!(account: manual, provider_type: "SimplefinAccount", provider_id: sfa.id)
+          # Provider link already repointed via ap above
 
           # Link legacy fk
           manual.update!(simplefin_account_id: sfa.id)
@@ -385,18 +389,11 @@ class SimplefinItemsController < ApplicationController
           # Remove redundant provider-linked account (duplicate)
           a_new.destroy!
         else
-          # No provider-linked account yet; ensure no stale links exist, then attach provider link to manual
-          # Capture any previously linked account id (if present) to remove the orphaned duplicate
-          prev_ap = AccountProvider.find_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
-          prev_account_id = prev_ap&.account_id
-          AccountProvider.where(provider_type: "SimplefinAccount", provider_id: sfa.id).delete_all
-          AccountProvider.find_or_create_by!(account: manual, provider_type: "SimplefinAccount", provider_id: sfa.id)
+          # No provider-linked account yet; reassign or create a provider link to the manual account first
+          ap = AccountProvider.find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
+          ap.account = manual
+          ap.save!
           manual.update!(simplefin_account_id: sfa.id)
-
-          # If there was a previous duplicate provider-linked account, remove it now
-          if prev_account_id.present? && prev_account_id != manual.id
-            Account.where(id: prev_account_id).destroy_all
-          end
         end
 
         results << {
