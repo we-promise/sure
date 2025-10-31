@@ -16,4 +16,32 @@ class PlaidItemTest < ActiveSupport::TestCase
       @plaid_item.destroy
     end
   end
+
+  test "destroys item even when Plaid credentials are invalid" do
+    error_response = {
+      "error_code" => "INVALID_API_KEYS",
+      "error_message" => "invalid client_id or secret provided"
+    }.to_json
+
+    plaid_error = Plaid::ApiError.new(code: 400, response_body: error_response)
+    @plaid_provider.expects(:remove_item).raises(plaid_error)
+
+    assert_difference "PlaidItem.count", -1 do
+      @plaid_item.destroy
+    end
+  end
+
+  test "destroys item even when Plaid item not found" do
+    error_response = {
+      "error_code" => "ITEM_NOT_FOUND",
+      "error_message" => "item not found"
+    }.to_json
+
+    plaid_error = Plaid::ApiError.new(code: 400, response_body: error_response)
+    @plaid_provider.expects(:remove_item).raises(plaid_error)
+
+    assert_difference "PlaidItem.count", -1 do
+      @plaid_item.destroy
+    end
+  end
 end
