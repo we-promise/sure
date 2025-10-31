@@ -6,22 +6,14 @@ namespace :sure do
     task :unlink_item, [ :item_id, :dry_run ] => :environment do |_, args|
       require "json"
 
-      # Parse named key=value args while still supporting positional
-      kv = {}
-      [ args[:item_id], args[:dry_run] ].each do |raw|
-        next unless raw.is_a?(String) && raw.include?("=")
-        k, v = raw.split("=", 2)
-        kv[k.to_s] = v
-      end
-
-      item_id = (kv["item_id"] || args[:item_id]).to_s.strip.presence
-      dry_raw = (kv["dry_run"] || args[:dry_run]).to_s.downcase
+      item_id = args[:item_id].to_s.strip.presence
+      dry_raw  = args[:dry_run].to_s.downcase
 
       # Default to non-destructive (dry run) unless explicitly disabled
       dry_run = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
 
       unless item_id.present?
-        puts({ ok: false, error: "usage", example: "bin/rails 'sure:simplefin:unlink_item[item_id=ITEM_UUID,dry_run=true]'" }.to_json)
+        puts({ ok: false, error: "usage", example: "bin/rails 'sure:simplefin:unlink_item[ITEM_UUID,true]'" }.to_json)
         exit 1
       end
 

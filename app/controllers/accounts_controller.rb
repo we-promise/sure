@@ -5,8 +5,21 @@ class AccountsController < ApplicationController
   def index
     @manual_accounts = family.accounts.manual.alphabetically
     @plaid_items = family.plaid_items.ordered
-    @simplefin_items = family.simplefin_items.ordered
+    @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
     @lunchflow_items = family.lunchflow_items.ordered
+
+    # Precompute per-item maps to avoid queries in the view
+    @simplefin_sync_stats_map = {}
+    @simplefin_has_unlinked_map = {}
+
+    @simplefin_items.each do |item|
+      latest_sync = item.syncs.ordered.first
+      @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
+      @simplefin_has_unlinked_map[item.id] = item.family.accounts
+        .left_joins(:account_providers)
+        .where(account_providers: { id: nil })
+        .exists?
+    end
 
     render layout: "settings"
   end
