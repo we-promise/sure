@@ -95,7 +95,7 @@ class RecurringTransaction
 
       # Calculate circular distance between two days on a 31-day circle
       # Examples:
-      #   circular_distance(1, 31) = 2  (wraps around: 31 -> 1 is 1 day, 1 -> 31 is 1 day)
+      #   circular_distance(1, 31) = 2  (wraps around: 31 -> 1 is 1 day forward)
       #   circular_distance(28, 2) = 5  (wraps: 28, 29, 30, 31, 1, 2)
       def circular_distance(day1, day2)
         linear_distance = (day1 - day2).abs

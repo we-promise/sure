@@ -19,14 +19,14 @@
     </div>
   </header>
 
-  <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+  <div class="p-4 bg-container-inset border border-secondary rounded-lg">
     <div class="flex items-start gap-2">
-      <%= icon "info", class: "w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" %>
+      <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
       <div>
-        <p class="text-sm font-medium text-blue-900 mb-2"><%= t("recurring_transactions.info.title") %></p>
-        <p class="text-xs text-blue-700 mb-2"><%= t("recurring_transactions.info.manual_description") %></p>
-        <p class="text-xs text-blue-700 mb-1"><%= t("recurring_transactions.info.automatic_description") %></p>
-        <ul class="list-disc list-inside text-xs text-blue-700 space-y-0.5 ml-2">
+        <p class="text-sm font-medium text-primary mb-2"><%= t("recurring_transactions.info.title") %></p>
+        <p class="text-xs text-secondary mb-2"><%= t("recurring_transactions.info.manual_description") %></p>
+        <p class="text-xs text-secondary mb-1"><%= t("recurring_transactions.info.automatic_description") %></p>
+        <ul class="list-disc list-inside text-xs text-secondary space-y-0.5 ml-2">
           <% t("recurring_transactions.info.triggers").each do |trigger| %>
             <li><%= trigger %></li>
           <% end %>
@@ -55,7 +55,7 @@
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
-            <tr class="text-xs uppercase font-medium text-secondary border-b border-gray-200">
+            <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.merchant") %></th>
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.amount") %></th>
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.expected_day") %></th>
@@ -67,7 +67,7 @@
           </thead>
           <tbody>
             <% @recurring_transactions.each do |recurring_transaction| %>
-              <tr class="border-b border-gray-100 hover:bg-gray-50 <%= "opacity-60" unless recurring_transaction.active? %>">
+              <tr class="border-b border-subdued hover:bg-surface-hover <%= "opacity-60" unless recurring_transaction.active? %>">
                 <td class="py-3 px-2 text-sm">
                   <div class="flex items-center gap-2">
                     <% if recurring_transaction.merchant&.logo_url.present? %>
@@ -85,7 +85,7 @@
                     <span class="text-primary font-medium"><%= recurring_transaction.merchant.name %></span>
                   </div>
                 </td>
-                <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? "text-green-600" : "text-primary" %>">
+                <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
                   <%= format_money(-recurring_transaction.amount_money) %>
                 </td>
                 <td class="py-3 px-2 text-sm text-secondary">
@@ -99,11 +99,11 @@
                 </td>
                 <td class="py-3 px-2 text-sm">
                   <% if recurring_transaction.active? %>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-success">
                       <%= t("recurring_transactions.status.active") %>
                     </span>
                   <% else %>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-inset text-primary">
                       <%= t("recurring_transactions.status.inactive") %>
                     </span>
                   <% end %>
@@ -117,7 +117,7 @@
                     <% end %>
                     <%= link_to recurring_transaction_path(recurring_transaction),
                         data: { turbo_method: :delete, turbo_confirm: t("recurring_transactions.confirm_delete") },
-                        class: "text-secondary hover:text-red-600" do %>
+                        class: "text-secondary hover:text-destructive" do %>
                       <%= icon "trash-2", size: "sm" %>
                     <% end %>
                   </div>
