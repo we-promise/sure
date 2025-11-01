@@ -52,7 +52,7 @@ jobs:
       run: |
         if [[ "$DOCKER_IMAGE_TAG" =~ ^v[0-9][0-9.]*-alpha([.-][0-9]+)?$ ]]; then
           yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
-          if [[ "$DOCKER_IMAGE_TAG" == v* ]]; then
+          if [[ "$DOCKER_IMAGE_TAG" =~ ^v[0-9][0-9.]*-beta([.-][0-9]+)?$ ]]; then
             yq -i '.companion.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/companion-staging/values.yaml
           else
             echo "No need to deploy this tag to an environment."
