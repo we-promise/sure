@@ -22,6 +22,14 @@ class TransactionsController < ApplicationController
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: per_page)
+
+    # Load projected recurring transactions for next month
+    @projected_recurring = Current.family.recurring_transactions
+                                  .active
+                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
+                                         1.month.from_now.to_date,
+                                         Date.current)
+                                  .includes(:merchant)
   end
 
   def clear_filter

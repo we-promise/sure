@@ -37,7 +37,7 @@
               </div>
 
               <div class="text-3xl font-medium text-primary">
-                <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(outflows_data[:total], delimiter: ',') %>
+                <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(outflows_data[:total], delimiter: ",") %>
               </div>
             </div>
 
@@ -47,7 +47,7 @@
                   <p class="text-sm text-secondary"><%= category[:name] %></p>
 
                   <p class="text-3xl font-medium text-primary">
-                    <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ',') %>
+                    <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ",") %>
                   </p>
 
                   <p class="text-sm text-secondary"><%= category[:percentage] %>%</p>
@@ -75,7 +75,7 @@
                 <span class="text-sm font-medium text-primary truncate"><%= category[:name] %></span>
               </div>
               <div class="flex items-center gap-4 flex-shrink-0">
-                <span class="text-sm font-medium text-primary whitespace-nowrap"><%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ',') %></span>
+                <span class="text-sm font-medium text-primary whitespace-nowrap"><%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ",") %></span>
                 <span class="text-sm text-secondary whitespace-nowrap"><%= category[:percentage] %>%</span>
               </div>
             <% end %>
