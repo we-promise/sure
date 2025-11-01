@@ -178,6 +178,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      post :clear_ai_cache
     end
   end
 

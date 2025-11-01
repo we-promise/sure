@@ -35,6 +35,7 @@ class Setting < RailsSettings::Base
   class << self
     alias_method :raw_onboarding_state, :onboarding_state
     alias_method :raw_onboarding_state=, :onboarding_state=
+    alias_method :raw_openai_model=, :openai_model=
 
     def onboarding_state
       value = raw_onboarding_state
@@ -47,6 +48,17 @@ class Setting < RailsSettings::Base
       validate_onboarding_state!(state)
       self.require_invite_for_signup = state == "invite_only"
       self.raw_onboarding_state = state
+    end
+
+    def openai_model=(value)
+      old_value = openai_model
+      self.raw_openai_model = value
+
+      # Clear AI cache when model changes
+      if old_value != value && old_value.present?
+        Rails.logger.info("OpenAI model changed from #{old_value} to #{value}, clearing AI cache")
+        ClearAiCacheJob.perform_later
+      end
     end
 
     # Support dynamic field access via bracket notation
