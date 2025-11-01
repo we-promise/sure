@@ -1,0 +1,140 @@
+<div class="space-y-4 pb-20 flex flex-col">
+  <header class="flex justify-between items-center text-primary font-medium">
+    <h1 class="text-xl"><%= t("recurring_transactions.title") %></h1>
+    <div class="flex items-center gap-2">
+      <%= render DS::Link.new(
+        text: t("recurring_transactions.identify_patterns"),
+        icon: "search",
+        variant: "outline",
+        href: identify_recurring_transactions_path,
+        method: :post
+      ) %>
+      <%= render DS::Link.new(
+        text: t("recurring_transactions.cleanup_stale"),
+        icon: "trash-2",
+        variant: "outline",
+        href: cleanup_recurring_transactions_path,
+        method: :post
+      ) %>
+    </div>
+  </header>
+
+  <div class="p-4 bg-container-inset border border-secondary rounded-lg">
+    <div class="flex items-start gap-2">
+      <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
+      <div>
+        <p class="text-sm font-medium text-primary mb-2"><%= t("recurring_transactions.info.title") %></p>
+        <p class="text-xs text-secondary mb-2"><%= t("recurring_transactions.info.manual_description") %></p>
+        <p class="text-xs text-secondary mb-1"><%= t("recurring_transactions.info.automatic_description") %></p>
+        <ul class="list-disc list-inside text-xs text-secondary space-y-0.5 ml-2">
+          <% t("recurring_transactions.info.triggers").each do |trigger| %>
+            <li><%= trigger %></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <% if @recurring_transactions.empty? %>
+      <div class="text-center py-12">
+        <div class="text-secondary mb-4">
+          <%= icon "repeat", size: "xl" %>
+        </div>
+        <p class="text-primary font-medium mb-2"><%= t("recurring_transactions.empty.title") %></p>
+        <p class="text-secondary text-sm mb-4"><%= t("recurring_transactions.empty.description") %></p>
+        <%= render DS::Link.new(
+          text: t("recurring_transactions.identify_patterns"),
+          icon: "search",
+          variant: "primary",
+          href: identify_recurring_transactions_path,
+          method: :post
+        ) %>
+      </div>
+    <% else %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+          <p><%= t("recurring_transactions.title") %></p>
+          <span class="text-subdued">&middot;</span>
+          <p><%= @recurring_transactions.count %></p>
+        </div>
+
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <table class="w-full">
+          <thead>
+            <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.merchant") %></th>
+              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.amount") %></th>
+              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.expected_day") %></th>
+              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.next_date") %></th>
+              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.last_occurrence") %></th>
+              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.status") %></th>
+              <th class="text-right py-3 px-2"><%= t("recurring_transactions.table.actions") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @recurring_transactions.each do |recurring_transaction| %>
+              <tr class="border-b border-subdued hover:bg-surface-hover <%= "opacity-60" unless recurring_transaction.active? %>">
+                <td class="py-3 px-2 text-sm">
+                  <div class="flex items-center gap-2">
+                    <% if recurring_transaction.merchant&.logo_url.present? %>
+                      <%= image_tag recurring_transaction.merchant.logo_url,
+                          class: "w-6 h-6 rounded-full",
+                          loading: "lazy" %>
+                    <% else %>
+                      <%= render DS::FilledIcon.new(
+                        variant: :text,
+                        text: recurring_transaction.merchant.name,
+                        size: "sm",
+                        rounded: true
+                      ) %>
+                    <% end %>
+                    <span class="text-primary font-medium"><%= recurring_transaction.merchant.name %></span>
+                  </div>
+                </td>
+                <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
+                  <%= format_money(-recurring_transaction.amount_money) %>
+                </td>
+                <td class="py-3 px-2 text-sm text-secondary">
+                  <%= t("recurring_transactions.day_of_month", day: recurring_transaction.expected_day_of_month) %>
+                </td>
+                <td class="py-3 px-2 text-sm text-secondary">
+                  <%= l(recurring_transaction.next_expected_date, format: :short) %>
+                </td>
+                <td class="py-3 px-2 text-sm text-secondary">
+                  <%= l(recurring_transaction.last_occurrence_date, format: :short) %>
+                </td>
+                <td class="py-3 px-2 text-sm">
+                  <% if recurring_transaction.active? %>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-success">
+                      <%= t("recurring_transactions.status.active") %>
+                    </span>
+                  <% else %>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-inset text-primary">
+                      <%= t("recurring_transactions.status.inactive") %>
+                    </span>
+                  <% end %>
+                </td>
+                <td class="py-3 px-2 text-sm text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <%= link_to toggle_status_recurring_transaction_path(recurring_transaction),
+                        data: { turbo_method: :post },
+                        class: "text-secondary hover:text-primary" do %>
+                      <%= icon recurring_transaction.active? ? "pause" : "play", size: "sm" %>
+                    <% end %>
+                    <%= link_to recurring_transaction_path(recurring_transaction),
+                        data: { turbo_method: :delete, turbo_confirm: t("recurring_transactions.confirm_delete") },
+                        class: "text-secondary hover:text-destructive" do %>
+                      <%= icon "trash-2", size: "sm" %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

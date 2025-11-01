@@ -149,6 +149,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :recurring_transactions, only: %i[index destroy] do
+    collection do
+      match :identify, via: [ :get, :post ]
+      match :cleanup, via: [ :get, :post ]
+    end
+
+    member do
+      match :toggle_status, via: [ :get, :post ]
+    end
+  end
+
   resources :accountable_sparklines, only: :show, param: :accountable_type
 
   direct :entry do |entry, options|
@@ -277,6 +288,8 @@ Rails.application.routes.draw do
     collection do
       get :select_accounts
       post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
     end
 
     member do

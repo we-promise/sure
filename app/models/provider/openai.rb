@@ -54,6 +54,11 @@ class Provider::Openai < Provider
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil)
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
+      if user_categories.blank?
+        family_id = family&.id || "unknown"
+        Rails.logger.error("Cannot auto-categorize transactions for family #{family_id}: no categories available")
+        raise Error, "No categories available for auto-categorization"
+      end
 
       effective_model = model.presence || @default_model
 

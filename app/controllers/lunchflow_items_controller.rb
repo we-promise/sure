@@ -138,6 +138,139 @@ class LunchflowItemsController < ApplicationController
     redirect_to new_account_path, alert: t(".api_error", message: e.message)
   end
 
+  # Fetch available Lunchflow accounts to link with an existing account
+  def select_existing_account
+    account_id = params[:account_id]
+
+    unless account_id.present?
+      redirect_to accounts_path, alert: t(".no_account_specified")
+      return
+    end
+
+    @account = Current.family.accounts.find(account_id)
+
+    # Check if account is already linked
+    if @account.account_providers.exists?
+      redirect_to accounts_path, alert: t(".account_already_linked")
+      return
+    end
+
+    begin
+      cache_key = "lunchflow_accounts_#{Current.family.id}"
+
+      # Try to get cached accounts first
+      @available_accounts = Rails.cache.read(cache_key)
+
+      # If not cached, fetch from API
+      if @available_accounts.nil?
+        lunchflow_provider = Provider::LunchflowAdapter.build_provider
+
+        unless lunchflow_provider.present?
+          redirect_to accounts_path, alert: t(".no_api_key")
+          return
+        end
+
+        accounts_data = lunchflow_provider.get_accounts
+
+        @available_accounts = accounts_data[:accounts] || []
+
+        # Cache the accounts for 5 minutes
+        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
+      end
+
+      if @available_accounts.empty?
+        redirect_to accounts_path, alert: t(".no_accounts_found")
+        return
+      end
+
+      # Filter out already linked accounts
+      lunchflow_item = Current.family.lunchflow_items.first
+      if lunchflow_item
+        linked_account_ids = lunchflow_item.lunchflow_accounts.joins(:account_provider).pluck(:account_id)
+        @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
+      end
+
+      if @available_accounts.empty?
+        redirect_to accounts_path, alert: t(".all_accounts_already_linked")
+        return
+      end
+
+      @return_to = safe_return_to_path
+
+      render layout: false
+    rescue Provider::Lunchflow::LunchflowError => e
+      redirect_to accounts_path, alert: t(".api_error", message: e.message)
+    end
+  end
+
+  # Link a selected Lunchflow account to an existing account
+  def link_existing_account
+    account_id = params[:account_id]
+    lunchflow_account_id = params[:lunchflow_account_id]
+    return_to = safe_return_to_path
+
+    unless account_id.present? && lunchflow_account_id.present?
+      redirect_to accounts_path, alert: t(".missing_parameters")
+      return
+    end
+
+    @account = Current.family.accounts.find(account_id)
+
+    # Check if account is already linked
+    if @account.account_providers.exists?
+      redirect_to accounts_path, alert: t(".account_already_linked")
+      return
+    end
+
+    # Create or find lunchflow_item for this family
+    lunchflow_item = Current.family.lunchflow_items.first_or_create!(
+      name: "Lunchflow Connection"
+    )
+
+    # Fetch account details from API
+    lunchflow_provider = Provider::LunchflowAdapter.build_provider
+    unless lunchflow_provider.present?
+      redirect_to accounts_path, alert: t(".no_api_key")
+      return
+    end
+
+    accounts_data = lunchflow_provider.get_accounts
+
+    # Find the selected Lunchflow account data
+    account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == lunchflow_account_id.to_s }
+    unless account_data
+      redirect_to accounts_path, alert: t(".lunchflow_account_not_found")
+      return
+    end
+
+    # Create or find lunchflow_account
+    lunchflow_account = lunchflow_item.lunchflow_accounts.find_or_initialize_by(
+      account_id: lunchflow_account_id.to_s
+    )
+    lunchflow_account.upsert_lunchflow_snapshot!(account_data)
+    lunchflow_account.save!
+
+    # Check if this lunchflow_account is already linked to another account
+    if lunchflow_account.account_provider.present?
+      redirect_to accounts_path, alert: t(".lunchflow_account_already_linked")
+      return
+    end
+
+    # Link account to lunchflow_account via account_providers join table
+    AccountProvider.create!(
+      account: @account,
+      provider: lunchflow_account
+    )
+
+    # Trigger sync to fetch transactions
+    lunchflow_item.sync_later
+
+    redirect_to return_to || accounts_path,
+                notice: t(".success", account_name: @account.name)
+  rescue Provider::Lunchflow::LunchflowError => e
+    redirect_to accounts_path, alert: t(".api_error", message: e.message)
+  end
+
   def new
     @lunchflow_item = Current.family.lunchflow_items.build
   end
