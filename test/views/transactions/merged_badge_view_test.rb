@@ -1,7 +1,6 @@
 require "test_helper"
 
 class Transactions::MergedBadgeViewTest < ActionView::TestCase
-
   # Render the transactions/_transaction partial and ensure the merged badge appears
   test "renders merged badge when transaction.was_merged is true" do
     family = families(:one) rescue Family.first || Family.create!(name: "Test Family")
