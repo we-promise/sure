@@ -18,9 +18,6 @@ class SimplefinEntry::Processor
       source: "simplefin",
       merchant: merchant,
       notes: notes,
-      posted_date: posted_date,
-      transacted_date: transacted_date,
-      pending: pending?,
       extra: extra_metadata
     )
   end

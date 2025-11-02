@@ -51,7 +51,7 @@ namespace :sure do
           posted: posted,
           transacted_at: trans,
           pending_flag: t[:pending],
-          inferred_pending: (trans.present? && posted.present? && posted.to_i > trans.to_i),
+          inferred_pending: (trans.present? && posted.present? && posted.to_i > trans.to_i)
         }
       end
 
