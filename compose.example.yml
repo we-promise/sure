@@ -28,9 +28,9 @@
 #
 
 x-db-env: &db_env
-  POSTGRES_USER: ${POSTGRES_USER:-maybe_user}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maybe_password}
-  POSTGRES_DB: ${POSTGRES_DB:-maybe_production}
+  POSTGRES_USER: ${POSTGRES_USER:-sure_user}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure_password}
+  POSTGRES_DB: ${POSTGRES_DB:-sure_production}
 
 x-rails-env: &rails_env
   <<: *db_env

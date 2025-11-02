@@ -1,0 +1,27 @@
+---
+ca:
+  family_merchants:
+    create:
+      error: "Error en crear el comerç: %{error}"
+      success: Comerç creat correctament
+    destroy:
+      success: Comerç eliminat correctament
+    edit:
+      title: Edita el comerç
+    form:
+      name_placeholder: Nom del comerç
+    index:
+      empty: Encara no hi ha comerços
+      new: Nou comerç
+      title: Comerços
+    merchant:
+      confirm_accept: Elimina el comerç
+      confirm_body: Segur que vols eliminar aquest comerç? Si l'elimines, es desvincularan totes les transaccions associades i pot afectar els teus informes.
+      confirm_title: Vols eliminar el comerç?
+      delete: Elimina el comerç
+      edit: Edita el comerç
+    new:
+      title: Nou comerç
+    update:
+      success: Comerç actualitzat correctament
+

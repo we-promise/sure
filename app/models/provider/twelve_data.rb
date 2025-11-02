@@ -67,7 +67,9 @@ class Provider::TwelveData < Provider
     end
     data = JSON.parse(response.body).dig("values")
     if data.nil?
-      Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}")
+      error_message = parsed.dig("message") || "No data returned"
+      error_code = parsed.dig("code") || "unknown"
+      Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}, error: #{error_message} (code: #{error_code})")
       raise InvalidExchangeRateError.new("Could not fetch exchange rates for #{from}/#{to} between #{start_date} and #{end_date}, response: #{response.body}")
     end
     data
@@ -82,7 +84,9 @@ class Provider::TwelveData < Provider
     end
     parsed = JSON.parse(response.body)
     if parsed.dig("code") == 404
-      Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}")
+      error_message = parsed.dig("message") || "No data returned"
+      error_code = parsed.dig("code") || "unknown"
+      Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} between: #{start_date} and #{end_date}, response: #{response.body}, error: #{error_message} (code: #{error_code})")
       fetch_exchange_cross_rates(from:, to:, start_date:, end_date:)
     end
     parsed.dig("values")
@@ -116,8 +120,15 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
+      data = parsed.dig("data")
 
-      parsed.dig("data").map do |security|
+      if data.nil?
+        error_message = parsed.dig("message") || "No data returned"
+        error_code = parsed.dig("code") || "unknown"
+        raise Error, "API error (code: #{error_code}): #{error_message}"
+      end
+
+      data.map do |security|
         country = ISO3166::Country.find_country_by_any_name(security.dig("country"))
 
         Security.new(
@@ -181,8 +192,10 @@ class Provider::TwelveData < Provider
 
       parsed = JSON.parse(response.body)
       if !parsed.dig("code").nil?
+        error_message = parsed.dig("message") || "No data returned"
+        error_code = parsed.dig("code") || "unknown"
         Rails.logger.warn("#{self.class.name} returned invalid price data for security #{symbol} between #{start_date} and #{end_date}.")
-        raise InvalidSecurityPriceError.new("Could not fetch security prices for #{symbol} between #{start_date} and #{end_date}, response: #{response.body}")
+        raise InvalidSecurityPriceError.new("Could not fetch security prices for #{symbol} between #{start_date} and #{end_date}, response: #{response.body}, error: #{error_message} (code: #{error_code})")
       end
       parsed.dig("values").map do |resp|
         price = resp.dig("close")

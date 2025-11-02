@@ -1,4 +1,4 @@
 ---
 nb:
   subscriptions:
-    self_hosted_alert: "Sure+ er ikke tilgjengelig i selvhostet modus."
+    self_hosted_alert: "%{product_name} er ikke tilgjengelig i selvhostet modus."

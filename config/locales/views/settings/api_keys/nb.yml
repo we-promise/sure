@@ -15,7 +15,7 @@ nb:
         title: "Administrasjon av API-nøkkel"
       no_api_key:
         title: "Opprett din API-nøkkel"
-        description: "Få programmatisk tilgang til dine Sure-data med en sikker API-nøkkel."
+        description: "Få programmatisk tilgang til dine %{product_name}-data med en sikker API-nøkkel."
         what_you_can_do: "Hva du kan gjøre med API-et:"
         feature_1: "Få tilgang til konto dataene dine programmatisk"
         feature_2: "Bygg tilpassede integrasjoner og applikasjoner"

@@ -36,6 +36,11 @@ VCR.configure do |config|
   config.filter_sensitive_data("<PLAID_SECRET>") { ENV["PLAID_SECRET"] }
 end
 
+# Configure OmniAuth for testing
+OmniAuth.config.test_mode = true
+# Allow both GET and POST for OIDC callbacks in tests
+OmniAuth.config.allowed_request_methods = [ :get, :post ]
+
 module ActiveSupport
   class TestCase
     # Run tests in parallel with specified workers

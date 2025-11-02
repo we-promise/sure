@@ -8,6 +8,7 @@ en:
       user:
         create: Continue
   registrations:
+    closed: Signups are currently closed.
     create:
       failure: There was a problem signing up.
       invalid_invite_code: Invalid invite code, please try again.

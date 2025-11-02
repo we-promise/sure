@@ -1,0 +1,38 @@
+---
+en:
+  recurring_transactions:
+    title: Recurring Transactions
+    upcoming: Upcoming Recurring Transactions
+    projected: Projected
+    recurring: Recurring
+    expected_on: Expected on %{date}
+    day_of_month: Day %{day} of month
+    identify_patterns: Identify Patterns
+    cleanup_stale: Clean Up Stale
+    info:
+      title: Automatic Pattern Detection
+      manual_description: You can manually identify patterns or clean up stale recurring transactions using the buttons above.
+      automatic_description: "Automatic identification also runs after:"
+      triggers:
+        - CSV imports complete (transactions, trades, accounts, etc. )
+        - Any provider sync completes ( Plaid, SimpleFIN, etc. )
+    identified: Identified %{count} recurring transaction patterns
+    cleaned_up: Cleaned up %{count} stale recurring transactions
+    marked_inactive: Recurring transaction marked as inactive
+    marked_active: Recurring transaction marked as active
+    deleted: Recurring transaction deleted
+    confirm_delete: Are you sure you want to delete this recurring transaction?
+    empty:
+      title: No recurring transactions found
+      description: Click "Identify Patterns" to automatically detect recurring transactions from your transaction history.
+    table:
+      merchant: Merchant
+      amount: Amount
+      expected_day: Expected Day
+      next_date: Next Date
+      last_occurrence: Last Occurrence
+      status: Status
+      actions: Actions
+    status:
+      active: Active
+      inactive: Inactive

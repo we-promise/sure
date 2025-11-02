@@ -5,9 +5,11 @@ class Holding < ApplicationRecord
 
   belongs_to :account
   belongs_to :security
+  belongs_to :account_provider, optional: true
 
   validates :qty, :currency, :date, :price, :amount, presence: true
   validates :qty, :price, :amount, numericality: { greater_than_or_equal_to: 0 }
+  validates :external_id, uniqueness: { scope: :account_id }, allow_blank: true
 
   scope :chronological, -> { order(:date) }
   scope :for, ->(security) { where(security_id: security).order(:date) }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_31_132654) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -18,6 +18,16 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "account_status", ["ok", "syncing", "error"]
+
+  create_table "account_providers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.string "provider_type", null: false
+    t.uuid "provider_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "provider_type"], name: "index_account_providers_on_account_and_provider_type", unique: true
+    t.index ["provider_type", "provider_id"], name: "index_account_providers_on_provider_type_and_provider_id", unique: true
+  end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "subtype"
@@ -238,8 +248,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.boolean "excluded", default: false
     t.string "plaid_id"
     t.jsonb "locked_attributes", default: {}
+    t.string "external_id"
+    t.string "source"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
+    t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["amount"], name: "index_entries_on_amount"
     t.index ["date"], name: "index_entries_on_date"
@@ -297,8 +310,13 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "external_id"
+    t.decimal "cost_basis", precision: 19, scale: 4
+    t.uuid "account_provider_id"
+    t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
+    t.index ["account_provider_id"], name: "index_holdings_on_account_provider_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
   end
 
@@ -423,6 +441,23 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.index ["token"], name: "index_invite_codes_on_token", unique: true
   end
 
+  create_table "llm_usages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "provider", null: false
+    t.string "model", null: false
+    t.string "operation", null: false
+    t.integer "prompt_tokens", default: 0, null: false
+    t.integer "completion_tokens", default: 0, null: false
+    t.integer "total_tokens", default: 0, null: false
+    t.decimal "estimated_cost", precision: 10, scale: 6
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "created_at"], name: "index_llm_usages_on_family_id_and_created_at"
+    t.index ["family_id", "operation"], name: "index_llm_usages_on_family_id_and_operation"
+    t.index ["family_id"], name: "index_llm_usages_on_family_id"
+  end
+
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -432,6 +467,44 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.decimal "initial_balance", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "lunchflow_item_id", null: false
+    t.string "name"
+    t.string "account_id"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "provider"
+    t.string "account_type"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_lunchflow_accounts_on_account_id"
+    t.index ["lunchflow_item_id"], name: "index_lunchflow_accounts_on_lunchflow_item_id"
+  end
+
+  create_table "lunchflow_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_lunchflow_items_on_family_id"
+    t.index ["status"], name: "index_lunchflow_items_on_status"
   end
 
   create_table "merchants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -447,6 +520,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.string "provider_merchant_id"
     t.index ["family_id", "name"], name: "index_merchants_on_family_id_and_name", unique: true, where: "((type)::text = 'FamilyMerchant'::text)"
     t.index ["family_id"], name: "index_merchants_on_family_id"
+    t.index ["provider_merchant_id", "source"], name: "index_merchants_on_provider_merchant_id_and_source", unique: true, where: "((provider_merchant_id IS NOT NULL) AND ((type)::text = 'ProviderMerchant'::text))"
     t.index ["source", "name"], name: "index_merchants_on_source_and_name", unique: true, where: "((type)::text = 'ProviderMerchant'::text)"
     t.index ["type"], name: "index_merchants_on_type"
   end
@@ -526,6 +600,18 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
+  create_table "oidc_identities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.jsonb "info", default: {}
+    t.datetime "last_authenticated_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "uid"], name: "index_oidc_identities_on_provider_and_uid", unique: true
+    t.index ["user_id"], name: "index_oidc_identities_on_user_id"
+  end
+
   create_table "other_assets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -590,6 +676,25 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.string "area_unit"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "merchant_id", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.integer "expected_day_of_month", null: false
+    t.date "last_occurrence_date", null: false
+    t.date "next_expected_date", null: false
+    t.string "status", default: "active", null: false
+    t.integer "occurrence_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_on_family_merchant_amount_currency", unique: true
+    t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
+    t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
+    t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
+    t.index ["next_expected_date"], name: "index_recurring_transactions_on_next_expected_date"
   end
 
   create_table "rejected_transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -702,6 +807,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.datetime "balance_date"
     t.jsonb "extra"
     t.jsonb "org_data"
+    t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
   end
@@ -720,7 +826,13 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "pending_account_setup", default: false, null: false
+    t.string "institution_domain"
+    t.string "institution_color"
+    t.date "sync_start_date"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
+    t.index ["institution_domain"], name: "index_simplefin_items_on_institution_domain"
+    t.index ["institution_id"], name: "index_simplefin_items_on_institution_id"
+    t.index ["institution_name"], name: "index_simplefin_items_on_institution_name"
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
 
@@ -753,6 +865,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.datetime "failed_at"
     t.date "window_start_date"
     t.date "window_end_date"
+    t.text "sync_stats"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
@@ -794,7 +907,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
   create_table "trades", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "security_id", null: false
     t.decimal "qty", precision: 19, scale: 4
-    t.decimal "price", precision: 19, scale: 4
+    t.decimal "price", precision: 19, scale: 10
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "currency"
@@ -881,6 +994,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
     t.string "subtype"
   end
 
+  add_foreign_key "account_providers", "accounts"
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
@@ -897,6 +1011,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
   add_foreign_key "entries", "accounts"
   add_foreign_key "entries", "imports"
   add_foreign_key "family_exports", "families"
+  add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts"
   add_foreign_key "holdings", "securities"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"
@@ -906,13 +1021,19 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_143007) do
   add_foreign_key "imports", "families"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
+  add_foreign_key "llm_usages", "families"
+  add_foreign_key "lunchflow_accounts", "lunchflow_items"
+  add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
+  add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "recurring_transactions", "families"
+  add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id"
   add_foreign_key "rule_actions", "rules"

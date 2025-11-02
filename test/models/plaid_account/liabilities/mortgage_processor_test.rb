@@ -8,7 +8,7 @@ class PlaidAccount::Liabilities::MortgageProcessorTest < ActiveSupport::TestCase
       plaid_subtype: "mortgage"
     )
 
-    @plaid_account.account.update!(accountable: Loan.new)
+    @plaid_account.current_account.update!(accountable: Loan.new)
   end
 
   test "updates loan interest rate and type from Plaid data" do
@@ -24,7 +24,7 @@ class PlaidAccount::Liabilities::MortgageProcessorTest < ActiveSupport::TestCase
     processor = PlaidAccount::Liabilities::MortgageProcessor.new(@plaid_account)
     processor.process
 
-    loan = @plaid_account.account.loan
+    loan = @plaid_account.current_account.loan
 
     assert_equal "fixed", loan.rate_type
     assert_equal 4.25, loan.interest_rate
@@ -36,7 +36,7 @@ class PlaidAccount::Liabilities::MortgageProcessorTest < ActiveSupport::TestCase
     processor = PlaidAccount::Liabilities::MortgageProcessor.new(@plaid_account)
     processor.process
 
-    loan = @plaid_account.account.loan
+    loan = @plaid_account.current_account.loan
 
     assert_nil loan.rate_type
     assert_nil loan.interest_rate

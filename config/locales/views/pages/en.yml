@@ -4,11 +4,28 @@ en:
     changelog:
       title: What's new
     dashboard:
+      welcome: "Welcome back, %{name}"
+      subtitle: "Here's what's happening with your finances"
+      new: "New"
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth
       no_account_empty_state:
         new_account: New account
-        no_account_subtitle: Since no accounts have been added, there's no data to
-          display. Add your first accounts to start viewing dashboard data.
+        no_account_subtitle: Since no accounts have been added, there's no data to display. Add your first accounts to start viewing dashboard data.
         no_account_title: No accounts yet
+      balance_sheet:
+        no_items: "No %{name} yet"
+        add_accounts: "Add your %{name} accounts to see a full breakdown"
+      cashflow_sankey:
+        title: "Cashflow"
+        no_data_title: "No cash flow data for this time period"
+        no_data_description: "Add transactions to display cash flow data or expand the time period"
+        add_transaction: "Add transaction"
+      no_accounts:
+        title: "No accounts yet"
+        description: "Add accounts to display net worth data"
+        add_account: "Add account"
+      outflows_donut:
+        title: "Outflows"
+        total_outflows: "Total Outflows"

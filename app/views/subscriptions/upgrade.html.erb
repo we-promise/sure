@@ -32,11 +32,11 @@
 
     <h2 class="text-xl lg:text-3xl font-display font-medium mb-2">
       <span class="text-secondary">Unlock</span>
-      <span class="bg-gradient-to-r from-[#EABE7F] to-[#957049] bg-clip-text text-transparent">Maybe</span>
+      <span class="bg-gradient-to-r from-[#EABE7F] to-[#957049] bg-clip-text text-transparent">Sure</span>
       <span class="text-secondary">today</span>
     </h2>
 
-    <p class="text-sm text-secondary mb-8">To continue using Maybe pick a plan below.</p>
+    <p class="text-sm text-secondary mb-8">To continue using Sure pick a plan below.</p>
 
     <%= form_with url: new_subscription_path, method: :get, class: "max-w-xs", data: { turbo: false } do |form| %>
       <div class="space-y-4 mb-6">
@@ -46,7 +46,7 @@
 
       <div class="text-center space-y-2">
         <%= render DS::Button.new(
-          text: "Subscribe and unlock Maybe",
+          text: "Subscribe and unlock Sure",
           variant: "primary",
           full_width: true
         ) %>

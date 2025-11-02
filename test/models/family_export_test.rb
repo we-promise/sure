@@ -29,7 +29,7 @@ class FamilyExportTest < ActiveSupport::TestCase
   test "filename is generated correctly" do
     travel_to Time.zone.local(2024, 1, 15, 14, 30, 0) do
       export = @family.family_exports.create!
-      expected_filename = "maybe_export_20240115_143000.zip"
+      expected_filename = "sure_export_20240115_143000.zip"
       assert_equal expected_filename, export.filename
     end
   end

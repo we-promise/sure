@@ -1,0 +1,5 @@
+---
+ca:
+  subscriptions:
+    self_hosted_alert: "%{product_name} no està disponible en mode autoallotjat."
+

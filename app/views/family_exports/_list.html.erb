@@ -38,13 +38,13 @@
               <%= button_to family_export_path(export),
                   method: :delete,
                   class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
-                  data: { 
+                  data: {
                     turbo_confirm: "Are you sure you want to delete this export? This action cannot be undone.",
                     turbo_frame: "_top"
                   } do %>
                 <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
               <% end %>
-              
+
               <%= link_to download_family_export_path(export),
                   class: "flex items-center gap-2 text-primary hover:text-primary-hover",
                   data: { turbo_frame: "_top" } do %>
@@ -56,11 +56,11 @@
               <div class="flex items-center gap-2 text-destructive">
                 <%= icon "alert-circle", class: "w-4 h-4" %>
               </div>
-              
+
               <%= button_to family_export_path(export),
                   method: :delete,
                   class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
-                  data: { 
+                  data: {
                     turbo_confirm: "Are you sure you want to delete this failed export?",
                     turbo_frame: "_top"
                   } do %>

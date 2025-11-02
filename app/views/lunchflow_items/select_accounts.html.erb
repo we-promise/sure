@@ -1,0 +1,43 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description") %>
+        </p>
+
+        <form action="<%= link_accounts_lunchflow_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <%= hidden_field_tag :accountable_type, @accountable_type %>
+          <%= hidden_field_tag :return_to, @return_to %>
+
+          <div class="space-y-2">
+            <% @available_accounts.each do |account| %>
+              <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-subtle cursor-pointer transition-colors">
+                <%= check_box_tag "account_ids[]", account[:id], false, class: "mt-1" %>
+                <div class="flex-1">
+                  <div class="font-medium text-sm text-primary">
+                    <%= account[:name] %>
+                  </div>
+                  <div class="text-xs text-secondary mt-1">
+                    <%= account[:institution_name] %> • <%= account[:currency] %> • <%= account[:status] %>
+                  </div>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= link_to t(".cancel"), @return_to || new_account_path,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                data: { turbo_frame: "_top" } %>
+            <%= submit_tag t(".link_accounts"),
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
+          </div>
+        </form>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

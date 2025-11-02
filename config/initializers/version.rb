@@ -1,4 +1,4 @@
-module Maybe
+module Sure
   class << self
     def version
       Semver.new(semver)
@@ -14,7 +14,7 @@ module Maybe
 
     private
       def semver
-        "0.6.3"
+        "0.6.5-alpha.6"
       end
   end
 end
