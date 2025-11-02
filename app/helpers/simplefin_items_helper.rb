@@ -16,6 +16,8 @@ module SimplefinItemsHelper
     return nil unless stats.is_a?(Hash)
 
     total_errors = stats["total_errors"].to_i
+    return nil if total_errors.zero?
+
     sample = Array(stats["errors"]).map do |e|
       name = (e[:name] || e["name"]).to_s
       msg  = (e[:message] || e["message"]).to_s

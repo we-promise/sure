@@ -21,6 +21,16 @@ class AccountsController < ApplicationController
         .exists?
     end
 
+    # Count of SimpleFin accounts that are not linked (no legacy account and no AccountProvider)
+    @simplefin_unlinked_count_map = {}
+    @simplefin_items.each do |item|
+      count = item.simplefin_accounts
+        .left_joins(:account, :account_provider)
+        .where(accounts: { id: nil }, account_providers: { id: nil })
+        .count
+      @simplefin_unlinked_count_map[item.id] = count
+    end
+
     render layout: "settings"
   end
 

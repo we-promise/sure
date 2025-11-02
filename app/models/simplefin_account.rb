@@ -23,11 +23,12 @@ class SimplefinAccount < ApplicationRecord
     acct = current_account
     return nil unless acct
 
-    AccountProvider.find_or_create_by!(
-      account: acct,
-      provider_type: "SimplefinAccount",
-      provider_id: id
-    )
+    AccountProvider
+      .find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: id)
+      .tap do |provider|
+        provider.account = acct
+        provider.save!
+      end
   rescue => e
     Rails.logger.warn("SimplefinAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
     nil

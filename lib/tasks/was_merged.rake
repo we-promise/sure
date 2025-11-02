@@ -15,10 +15,10 @@ namespace :sure do
     total_seen = 0
     total_flagged = 0
 
-    NAME_STRIP_REGEX = /\b(visa|mastercard|card|debit|credit|payment|auth|pending|pos|bank|transaction)\b|[^a-z0-9]+/i.freeze
+    name_strip_regex = /\b(visa|mastercard|card|debit|credit|payment|auth|pending|pos|bank|transaction)\b|[^a-z0-9]+/i.freeze
     normalize = ->(s) do
       base = s.to_s.downcase
-      base = base.gsub(NAME_STRIP_REGEX, " ").squeeze(" ").strip
+      base = base.gsub(name_strip_regex, " ").squeeze(" ").strip
       base = base.gsub(/\b\d+\b/, " ").squeeze(" ").strip
       base
     end

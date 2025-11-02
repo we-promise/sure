@@ -38,12 +38,12 @@
             <% @unlinked_sfas.each_with_index do |sfa, idx| %>
               <div class="p-3 flex items-center justify-between gap-3">
                 <div class="min-w-0">
-                  <div class="text-primary font-medium truncate"><%= sfa.name %></div>
+                  <label for="manual_pair_<%= idx %>" class="text-primary font-medium truncate cursor-pointer"><%= sfa.name %></label>
                 </div>
                 <div class="shrink-0 flex items-center gap-2">
                   <input type="checkbox" name="pairs[][checked]" id="manual_pair_<%= idx %>" value="1" class="checkbox checkbox--light" checked>
                   <input type="hidden" name="pairs[][sfa_id]" value="<%= sfa.id %>">
-                  <select name="pairs[][manual_id]" class="select select--sm">
+                  <select name="pairs[][manual_id]" class="select select--sm" aria-label="Link <%= sfa.name %> to manual account">
                     <option value="">Select manual…</option>
                     <% @manual_accounts.each do |acct| %>
                       <option value="<%= acct.id %>"><%= acct.name %></option>

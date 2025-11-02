@@ -82,23 +82,21 @@ namespace :sure do
               cleared += 1
             end
           end
-        end
 
-        if recompute
-          # Try to reprocess SimpleFin raw payload for the linked SimplefinAccount
-          sfa = begin
-            # Prefer AccountProvider linkage
-            ap = acct.account_providers.where(provider_type: "SimplefinAccount").first
-            ap&.provider
-          rescue
-            nil
-          end
+          if recompute
+            # Try to reprocess SimpleFin raw payload for the linked SimplefinAccount
+            sfa = begin
+              # Prefer AccountProvider linkage
+              ap = acct.account_providers.where(provider_type: "SimplefinAccount").first
+              ap&.provider
+            rescue StandardError
+              nil
+            end
 
-          sfa ||= SimplefinAccount.find_by(account: acct)
+            sfa ||= SimplefinAccount.find_by(account: acct)
 
-          if sfa && sfa.raw_transactions_payload.present?
-            txs = Array(sfa.raw_transactions_payload).map { |t| t.with_indifferent_access }
-            ActiveRecord::Base.transaction do
+            if sfa && sfa.raw_transactions_payload.present?
+              txs = Array(sfa.raw_transactions_payload).map { |t| t.with_indifferent_access }
               txs.each do |t|
                 begin
                   posted_d = Simplefin::DateUtils.parse_provider_date(t[:posted])
@@ -117,9 +115,9 @@ namespace :sure do
                   puts({ warn: "recompute_parse_error", message: e.message, tx_id: t[:id] }.to_json)
                 end
               end
+            else
+              puts({ info: "no_raw_transactions", message: "Unable to recompute without raw SimpleFin payload" }.to_json)
             end
-          else
-            puts({ info: "no_raw_transactions", message: "Unable to recompute without raw SimpleFin payload" }.to_json)
           end
         end
       end
