@@ -57,7 +57,7 @@ class RecurringTransaction < ApplicationRecord
   # Check if this recurring transaction should be marked inactive
   def should_be_inactive?
     return false if last_occurrence_date.nil?
-    last_occurrence_date < 2.months.ago
+    last_occurrence_date < 2.months.ago.to_date
   end
 
   # Mark as inactive

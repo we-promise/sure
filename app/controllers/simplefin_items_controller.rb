@@ -4,7 +4,11 @@ class SimplefinItemsController < ApplicationController
   before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :errors, :relink, :manual_relink, :apply_relink ]
 
   def index
-    @simplefin_items = Current.family.simplefin_items.active.ordered
+    @simplefin_items = Current.family.simplefin_items.active.ordered.includes(:syncs)
+
+    # Precompute per-item maps used by the item partial to avoid inline queries and N+1
+    build_simplefin_maps_for(@simplefin_items)
+
     render layout: "settings"
   end
 
@@ -98,8 +102,8 @@ class SimplefinItemsController < ApplicationController
       render_error(error_message, setup_token, context: :edit)
     rescue => e
       Rails.logger.error("SimpleFin connection update error: #{e.class} - #{e.message}")
-      flash[:notice] = "SimpleFin connection updated"
-      redirect_to accounts_path(open_relink_for: @simplefin_item&.id || updated_item&.id), notice: "SimpleFin connection updated"
+      flash[:alert] = "SimpleFin update failed. Please relink your connection."
+      redirect_to accounts_path(open_relink_for: @simplefin_item&.id || updated_item&.id), alert: "SimpleFin update failed. Please relink your connection."
     end
   end
 
@@ -123,10 +127,7 @@ class SimplefinItemsController < ApplicationController
 
       # Recompute unlinked count and clear pending flag when zero
       begin
-        unlinked = @simplefin_item.simplefin_accounts
-          .left_joins(:account, :account_provider)
-          .where(accounts: { id: nil }, account_providers: { id: nil })
-          .count
+        unlinked = compute_unlinked_count(@simplefin_item)
         Rails.logger.info("SimpleFin create: unlinked_count=#{unlinked} (controls setup CTA) for item_id=#{@simplefin_item.id}")
         if unlinked.zero? && @simplefin_item.respond_to?(:pending_account_setup?) && @simplefin_item.pending_account_setup?
           @simplefin_item.update!(pending_account_setup: false)
@@ -343,6 +344,9 @@ class SimplefinItemsController < ApplicationController
       current_family: Current.family
     )
 
+    # Prepare maps used by the simplefin_item partial before rendering
+    build_simplefin_maps_for(@simplefin_item)
+
     respond_to do |format|
       format.turbo_stream do
         card_html = render_to_string(partial: "simplefin_items/simplefin_item", formats: [ :html ], locals: { simplefin_item: @simplefin_item })
@@ -380,5 +384,43 @@ class SimplefinItemsController < ApplicationController
       end
       @error_message = message
       render context, status: :unprocessable_entity
+    end
+
+    # Build per-item maps consumed by the simplefin_item partial.
+    # Accepts a single SimplefinItem or a collection.
+    def build_simplefin_maps_for(items)
+      items = Array(items).compact
+
+      @simplefin_sync_stats_map ||= {}
+      @simplefin_has_unlinked_map ||= {}
+      @simplefin_unlinked_count_map ||= {}
+
+      items.each do |item|
+        # Latest sync stats (avoid N+1; rely on includes(:syncs) where appropriate)
+        latest_sync = if item.syncs.loaded?
+          item.syncs.max_by(&:created_at)
+        else
+          item.syncs.ordered.first
+        end
+        @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
+
+        # Whether the family has any manual accounts available to link
+        @simplefin_has_unlinked_map[item.id] = item.family.accounts
+          .left_joins(:account_providers)
+          .where(account_providers: { id: nil })
+          .exists?
+
+        # Count of SimpleFin accounts for this item that have neither legacy account nor AccountProvider
+        count = item.simplefin_accounts
+          .left_joins(:account, :account_provider)
+          .where(accounts: { id: nil }, account_providers: { id: nil })
+          .count
+        @simplefin_unlinked_count_map[item.id] = count
+      end
+
+      # Ensure maps are hashes even when items empty
+      @simplefin_sync_stats_map ||= {}
+      @simplefin_has_unlinked_map ||= {}
+      @simplefin_unlinked_count_map ||= {}
     end
 end

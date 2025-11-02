@@ -178,7 +178,7 @@ namespace :sure do
       dry_raw     = (kv["dry_run"] || args[:dry_run]).to_s.downcase
       pattern     = (kv["pattern"] || args[:pattern]).presence || "simplefin_posted_demo_%|simplefin_posted_ui"
 
-      dry_run = %w[1 true yes y].include?(dry_raw)
+      dry_run = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
 
       unless account_id.present?
         puts({ ok: false, error: "usage", message: "Provide account_id" }.to_json)

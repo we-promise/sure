@@ -28,7 +28,7 @@
               <%= simplefin_item.institution_summary %>
             </p>
             <%# Extra inline badges from latest sync stats %>
-            <% stats = (defined?(sync_stats) && sync_stats) || (@simplefin_sync_stats_map && @simplefin_sync_stats_map[simplefin_item.id]) || {} %>
+            <% stats = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {} %>
             <% if stats.present? %>
               <div class="flex items-center gap-2 mt-1">
                 <% if stats["unlinked_accounts"].to_i > 0 %>
@@ -43,7 +43,7 @@
 
                 <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
                   <% ts = stats["rate_limited_at"] %>
-                  <% ago = (ts.present? ? (time_ago_in_words(Time.parse(ts)) rescue nil) : nil) %>
+                  <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
                   <%= render DS::Tooltip.new(
                         text: (ago ? "Rate limited (" + ago + " ago)" : "Rate limited recently"),
                         icon: "clock",
@@ -162,70 +162,10 @@
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
         <% end %>
 
-        <%# Sync summary (collapsible) %>
-        <% if (latest_sync = simplefin_item.syncs.ordered.first).present? %>
-          <% stats = latest_sync.sync_stats || {} %>
-          <details class="group bg-surface rounded-lg border border-surface-inset/50">
-            <summary class="flex items-center justify-between gap-2 p-3 cursor-pointer">
-              <div class="flex items-center gap-2">
-                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
-                <span class="text-sm text-primary font-medium">Sync summary</span>
-              </div>
-              <div class="flex items-center gap-2 text-xs text-secondary">
-                <% if simplefin_item.last_synced_at %>
-                  <span>Last sync: <%= time_ago_in_words(simplefin_item.last_synced_at) %> ago</span>
-                <% end %>
-              </div>
-            </summary>
-            <div class="p-3 text-sm text-secondary grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <h4 class="text-primary font-medium mb-1">Accounts</h4>
-                <div class="flex items-center gap-3">
-                  <span>Total: <%= stats["total_accounts"].to_i %></span>
-                  <span>Linked: <%= stats["linked_accounts"].to_i %></span>
-                  <span>Unlinked: <%= stats["unlinked_accounts"].to_i %></span>
-                  <% institutions = simplefin_item.simplefin_accounts.map { |sfa| (sfa.org_data || {})["name"].presence || (sfa.org_data || {})["domain"].presence }.compact.uniq %>
-                  <span>Institutions: <%= institutions.size %></span>
-                </div>
-              </div>
-              <div>
-                <h4 class="text-primary font-medium mb-1">Transactions</h4>
-                <div class="flex items-center gap-3">
-                  <span>Seen: <%= stats["tx_seen"].to_i %></span>
-                  <span>Imported: <%= stats["tx_imported"].to_i %></span>
-                  <span>Updated: <%= stats["tx_updated"].to_i %></span>
-                  <span>Skipped: <%= stats["tx_skipped"].to_i %></span>
-                </div>
-              </div>
-              <div>
-                <h4 class="text-primary font-medium mb-1">Holdings</h4>
-                <div class="flex items-center gap-3">
-                  <span>Processed: <%= stats["holdings_processed"].to_i %></span>
-                </div>
-              </div>
-              <div>
-                <h4 class="text-primary font-medium mb-1">Health</h4>
-                <div class="flex items-center gap-3">
-                  <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
-                    <% ts = stats["rate_limited_at"] %>
-                    <% ago = (ts.present? ? (time_ago_in_words(Time.parse(ts)) rescue nil) : nil) %>
-                    <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
-                  <% end %>
-                  <% total_errors = stats["total_errors"].to_i %>
-                  <% if total_errors > 0 %>
-                    <span class="text-destructive">Errors: <%= total_errors %></span>
-                  <% else %>
-                    <span>Errors: 0</span>
-                  <% end %>
-                </div>
-              </div>
-            </div>
-          </details>
-        <% end %>
 
         <%# Sync summary (collapsible) %>
-        <% if (latest_sync = simplefin_item.syncs.ordered.first).present? %>
-          <% stats = latest_sync.sync_stats || {} %>
+        <% stats = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {} %>
+        <% if stats.present? %>
           <details class="group bg-surface rounded-lg border border-surface-inset/50">
             <summary class="flex items-center justify-between gap-2 p-3 cursor-pointer">
               <div class="flex items-center gap-2">
@@ -269,7 +209,7 @@
                 <div class="flex items-center gap-3">
                   <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
                     <% ts = stats["rate_limited_at"] %>
-                    <% ago = (ts.present? ? (time_ago_in_words(Time.parse(ts)) rescue nil) : nil) %>
+                    <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
                     <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
                   <% end %>
                   <% total_errors = stats["total_errors"].to_i %>
@@ -284,11 +224,8 @@
           </details>
         <% end %>
 
-        <%# Compute unlinked SimpleFin accounts (no legacy account and no AccountProvider link) %>
-        <% unlinked_count = simplefin_item.simplefin_accounts
-             .left_joins(:account, :account_provider)
-             .where(accounts: { id: nil }, account_providers: { id: nil })
-             .count %>
+        <%# Compute unlinked SimpleFin accounts (no legacy account and no AccountProvider link) in controller; read here %>
+        <% unlinked_count = (defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map[simplefin_item.id]) || 0 %>
 
         <% if unlinked_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
