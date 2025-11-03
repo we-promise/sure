@@ -23,9 +23,6 @@ class ReportsController < ApplicationController
     # Build comparison data
     @comparison_data = build_comparison_data
 
-    # Get budget performance data (for current month only)
-    @budget_performance = build_budget_performance
-
     # Build trend data (last 6 months)
     @trends_data = build_trends_data
 
@@ -212,43 +209,6 @@ class ReportsController < ApplicationController
         },
         currency_symbol: currency_symbol
       }
-    end
-
-    def build_budget_performance
-      return [] unless @period_type == :monthly
-
-      budget = Budget.find_or_bootstrap(Current.family, start_date: @start_date.beginning_of_month.to_date)
-      return [] if budget.nil?
-
-      budget.budget_categories.includes(:category).map do |bc|
-        next if bc.category.nil?
-
-        actual = bc.actual_spending
-        budgeted = bc.budgeted_spending
-        remaining = budgeted - actual
-        percent_used = budgeted.zero? ? 0 : (actual / budgeted * 100).round(1)
-
-        {
-          category_id: bc.category.id,
-          category_name: bc.category.name,
-          category_color: bc.category.color || Category::UNCATEGORIZED_COLOR,
-          budgeted: budgeted.to_f.to_i,
-          actual: actual.to_f.to_i,
-          remaining: remaining.to_f.to_i,
-          percent_used: percent_used,
-          status: budget_status(percent_used)
-        }
-      end.compact.sort_by { |b| -b[:percent_used] }
-    end
-
-    def budget_status(percent_used)
-      if percent_used >= 100
-        :over
-      elsif percent_used >= 80
-        :warning
-      else
-        :good
-      end
     end
 
     def build_trends_data

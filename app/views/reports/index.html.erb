@@ -98,16 +98,6 @@
       } %>
     </section>
 
-    <%# Budget Performance (only for monthly view) %>
-    <% if @period_type == :monthly && @budget_performance.any? %>
-      <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
-        <%= render partial: "reports/budget_performance", locals: {
-          budget_data: @budget_performance,
-          start_date: @start_date
-        } %>
-      </section>
-    <% end %>
-
     <%# Trends & Insights %>
     <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
       <%= render partial: "reports/trends_insights", locals: {
