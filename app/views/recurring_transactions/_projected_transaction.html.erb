@@ -1,0 +1,50 @@
+<%# locals: (recurring_transaction:) %>
+
+<div class="grid grid-cols-12 items-center text-subdued text-sm font-medium p-4 lg:p-4 bg-container-inset rounded">
+  <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
+    <div class="max-w-full">
+      <%= content_tag :div, class: ["flex items-center gap-2"] do %>
+        <% if recurring_transaction.merchant&.logo_url.present? %>
+          <%= image_tag recurring_transaction.merchant.logo_url,
+              class: "w-6 h-6 rounded-full",
+              loading: "lazy" %>
+        <% else %>
+          <%= render DS::FilledIcon.new(
+            variant: :text,
+            text: recurring_transaction.merchant.name,
+            size: "sm",
+            rounded: true
+          ) %>
+        <% end %>
+
+        <div class="truncate">
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="truncate flex-shrink">
+                <%= recurring_transaction.merchant.name %>
+              </div>
+
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
+                  <%= t("recurring_transactions.projected") %>
+                </span>
+              </div>
+            </div>
+
+            <div class="text-secondary text-xs font-normal">
+              <%= t("recurring_transactions.expected_on", date: l(recurring_transaction.next_expected_date, format: :short)) %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="hidden lg:flex items-center gap-1 col-span-2">
+    <span class="text-xs text-secondary"><%= t("recurring_transactions.recurring") %></span>
+  </div>
+
+  <div class="col-span-2 ml-auto text-right">
+    <%= content_tag :p, format_money(-recurring_transaction.amount_money), class: ["font-medium", recurring_transaction.amount.negative? ? "text-success" : "text-subdued"] %>
+  </div>
+</div>

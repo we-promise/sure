@@ -1,0 +1,63 @@
+---
+en:
+  lunchflow_items:
+    create:
+      success: Lunch Flow connection created successfully
+    destroy:
+      success: Lunch Flow connection removed
+    index:
+      title: Lunch Flow Connections
+    loading:
+      loading_message: Loading Lunch Flow accounts...
+      loading_title: Loading
+    link_accounts:
+      all_already_linked:
+        one: "The selected account (%{names}) is already linked"
+        other: "All %{count} selected accounts are already linked: %{names}"
+      api_error: "API error: %{message}"
+      link_failed: Failed to link accounts
+      no_accounts_selected: Please select at least one account
+      partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked: %{already_linked_names}"
+      success:
+        one: "Successfully linked %{count} account"
+        other: "Successfully linked %{count} accounts"
+    lunchflow_item:
+      delete: Delete connection
+      deletion_in_progress: deletion in progress...
+      error: Error
+      no_accounts_description: This connection has no linked accounts yet.
+      no_accounts_title: No accounts
+      status: "Synced %{timestamp} ago"
+      status_never: Never synced
+      syncing: Syncing...
+    select_accounts:
+      accounts_selected: accounts selected
+      api_error: "API error: %{message}"
+      cancel: Cancel
+      description: Select the accounts you want to link to your Sure account.
+      link_accounts: Link selected accounts
+      no_accounts_found: No accounts found. Please check your API key configuration.
+      no_api_key: Lunch Flow API key is not configured. Please configure it in Settings.
+      title: Select Lunch Flow Accounts
+    select_existing_account:
+      account_already_linked: This account is already linked to a provider
+      all_accounts_already_linked: All Lunch Flow accounts are already linked
+      api_error: "API error: %{message}"
+      cancel: Cancel
+      description: Select a Lunch Flow account to link with this account. Transactions will be synced and deduplicated automatically.
+      link_account: Link account
+      no_account_specified: No account specified
+      no_accounts_found: No Lunch Flow accounts found. Please check your API key configuration.
+      no_api_key: Lunch Flow API key is not configured. Please configure it in Settings.
+      title: "Link %{account_name} with Lunch Flow"
+    link_existing_account:
+      account_already_linked: This account is already linked to a provider
+      api_error: "API error: %{message}"
+      lunchflow_account_already_linked: This Lunch Flow account is already linked to another account
+      lunchflow_account_not_found: Lunch Flow account not found
+      missing_parameters: Missing required parameters
+      success: "Successfully linked %{account_name} with Lunch Flow"
+    sync:
+      success: Sync started
+    update:
+      success: Lunch Flow connection updated

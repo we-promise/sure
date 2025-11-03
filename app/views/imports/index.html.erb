@@ -7,7 +7,7 @@
         <%= render partial: "imports/import", collection: @imports.ordered %>
       </div>
     <% end %>
-    
+
     <%= link_to new_import_path,
         class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
         data: { turbo_frame: :modal } do %>
@@ -27,7 +27,7 @@
           </div>
         <% end %>
       </div>
-      
+
       <%= link_to new_family_export_path,
           class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
           data: { turbo_frame: :modal } do %>

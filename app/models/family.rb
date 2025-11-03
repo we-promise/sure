@@ -1,5 +1,5 @@
 class Family < ApplicationRecord
-  include PlaidConnectable, SimplefinConnectable, Syncable, AutoTransferMatchable, Subscribeable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, Syncable, AutoTransferMatchable, Subscribeable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -35,6 +35,7 @@ class Family < ApplicationRecord
   has_many :budget_categories, through: :budgets
 
   has_many :llm_usages, dependent: :destroy
+  has_many :recurring_transactions, dependent: :destroy
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_28_174016) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_31_132654) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -465,6 +465,44 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_28_174016) do
     t.string "subtype"
   end
 
+  create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "lunchflow_item_id", null: false
+    t.string "name"
+    t.string "account_id"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "provider"
+    t.string "account_type"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_lunchflow_accounts_on_account_id"
+    t.index ["lunchflow_item_id"], name: "index_lunchflow_accounts_on_lunchflow_item_id"
+  end
+
+  create_table "lunchflow_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_lunchflow_items_on_family_id"
+    t.index ["status"], name: "index_lunchflow_items_on_status"
+  end
+
   create_table "merchants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.string "color"
@@ -634,6 +672,25 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_28_174016) do
     t.string "area_unit"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "merchant_id", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.integer "expected_day_of_month", null: false
+    t.date "last_occurrence_date", null: false
+    t.date "next_expected_date", null: false
+    t.string "status", default: "active", null: false
+    t.integer "occurrence_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_on_family_merchant_amount_currency", unique: true
+    t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
+    t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
+    t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
+    t.index ["next_expected_date"], name: "index_recurring_transactions_on_next_expected_date"
   end
 
   create_table "rejected_transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -960,6 +1017,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_28_174016) do
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "llm_usages", "families"
+  add_foreign_key "lunchflow_accounts", "lunchflow_items"
+  add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
@@ -968,6 +1027,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_28_174016) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "recurring_transactions", "families"
+  add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id"
   add_foreign_key "rule_actions", "rules"
