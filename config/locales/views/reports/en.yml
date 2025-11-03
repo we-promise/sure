@@ -9,6 +9,7 @@ en:
         monthly: Monthly
         quarterly: Quarterly
         ytd: Year to Date
+        last_6_months: Last 6 Months
         custom: Custom Range
       date_range:
         from: From
@@ -46,7 +47,7 @@ en:
         over: Over Budget
     trends:
       title: Trends & Insights
-      last_six_months: Last 6 Months
+      monthly_breakdown: Monthly Breakdown
       month: Month
       income: Income
       expenses: Expenses

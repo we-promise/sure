@@ -1,20 +1,12 @@
 <% content_for :page_header do %>
   <div class="space-y-4 mb-6">
-    <div class="flex gap-4 justify-between items-center lg:items-start">
-      <div class="space-y-1">
-        <h1 class="text-xl lg:text-3xl font-medium text-primary">
-          <%= t("reports.index.title") %>
-        </h1>
-        <p class="text-sm lg:text-base text-secondary">
-          <%= t("reports.index.subtitle") %>
-        </p>
-      </div>
-
-      <%= link_to export_reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date, format: :csv),
-                  class: "inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-opacity" do %>
-        <%= icon("download", class: "w-4 h-4") %>
-        <span class="hidden lg:inline"><%= t("reports.index.export") %></span>
-      <% end %>
+    <div class="space-y-1">
+      <h1 class="text-xl lg:text-3xl font-medium text-primary">
+        <%= t("reports.index.title") %>
+      </h1>
+      <p class="text-sm lg:text-base text-secondary">
+        <%= t("reports.index.subtitle") %>
+      </p>
     </div>
 
     <%# Period Navigation Tabs %>
@@ -35,6 +27,12 @@
         text: t("reports.index.periods.ytd"),
         variant: @period_type == :ytd ? "secondary" : "ghost",
         href: reports_path(period_type: :ytd),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.last_6_months"),
+        variant: @period_type == :last_6_months ? "secondary" : "ghost",
+        href: reports_path(period_type: :last_6_months),
         size: :sm
       ) %>
       <%= render DS::Link.new(

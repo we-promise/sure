@@ -35,25 +35,6 @@ class ReportsController < ApplicationController
     @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
   end
 
-  def export
-    @period_type = params[:period_type]&.to_sym || :monthly
-    @start_date = parse_date_param(:start_date) || default_start_date
-    @end_date = parse_date_param(:end_date) || default_end_date
-
-    period = Period.custom(start_date: @start_date, end_date: @end_date)
-    income_totals = Current.family.income_statement.income_totals(period: period)
-    expense_totals = Current.family.income_statement.expense_totals(period: period)
-
-    respond_to do |format|
-      format.csv do
-        csv_data = generate_csv_export(income_totals, expense_totals, period)
-        send_data csv_data,
-                  filename: "reports_#{@period_type}_#{@start_date.strftime('%Y%m%d')}.csv",
-                  type: "text/csv"
-      end
-    end
-  end
-
   def export_transactions
     @period_type = params[:period_type]&.to_sym || :monthly
     @start_date = parse_date_param(:start_date) || default_start_date
@@ -115,6 +96,8 @@ class ReportsController < ApplicationController
         Date.current.beginning_of_quarter.to_date
       when :ytd
         Date.current.beginning_of_year.to_date
+      when :last_6_months
+        6.months.ago.beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
@@ -124,7 +107,7 @@ class ReportsController < ApplicationController
 
     def default_end_date
       case @period_type
-      when :monthly, :quarterly, :ytd
+      when :monthly, :quarterly, :ytd, :last_6_months
         Date.current.end_of_month.to_date
       when :custom
         Date.current
@@ -205,11 +188,20 @@ class ReportsController < ApplicationController
     end
 
     def build_trends_data
-      # Get last 6 months of data for trends
+      # Generate month-by-month data based on the current period filter
       trends = []
-      6.downto(0) do |i|
-        month_start = i.months.ago.beginning_of_month.to_date
-        month_end = i.months.ago.end_of_month.to_date
+
+      # Generate list of months within the period
+      current_month = @start_date.beginning_of_month
+      end_of_period = @end_date.end_of_month
+
+      while current_month <= end_of_period
+        month_start = current_month
+        month_end = current_month.end_of_month
+
+        # Ensure we don't go beyond the end date
+        month_end = @end_date if month_end > @end_date
+
         period = Period.custom(start_date: month_start, end_date: month_end)
 
         income = Current.family.income_statement.income_totals(period: period).total
@@ -221,6 +213,8 @@ class ReportsController < ApplicationController
           expenses: expenses.to_f.to_i,
           net: (income - expenses).to_f.to_i
         }
+
+        current_month = current_month.next_month
       end
 
       trends
@@ -293,18 +287,9 @@ class ReportsController < ApplicationController
       # Apply filters
       transactions = apply_transaction_filters(transactions)
 
-      # Apply sorting
-      sort_by = params[:sort_by] || "date"
+      # Get sort parameters
+      sort_by = params[:sort_by] || "amount"
       sort_direction = params[:sort_direction] || "desc"
-
-      case sort_by
-      when "date"
-        transactions = transactions.order("entries.date #{sort_direction}")
-      when "amount"
-        transactions = transactions.order("entries.amount #{sort_direction}")
-      else
-        transactions = transactions.order("entries.date desc")
-      end
 
       # Group by category and type
       all_transactions = transactions.to_a
@@ -323,8 +308,8 @@ class ReportsController < ApplicationController
         grouped_data[key][:total] += entry.amount.abs
       end
 
-      # Convert to array and sort by total (descending)
-      grouped_data.map do |key, data|
+      # Convert to array
+      result = grouped_data.map do |key, data|
         {
           category_name: key[0],
           type: key[1],
@@ -332,7 +317,14 @@ class ReportsController < ApplicationController
           total: data[:total],
           count: data[:count]
         }
-      end.sort_by { |g| -g[:total] }
+      end
+
+      # Sort by amount (total) with the specified direction
+      if sort_direction == "asc"
+        result.sort_by { |g| g[:total] }
+      else
+        result.sort_by { |g| -g[:total] }
+      end
     end
 
     def apply_transaction_filters(transactions)
@@ -709,40 +701,4 @@ class ReportsController < ApplicationController
       end.render
     end
 
-    def generate_csv_export(income_totals, expense_totals, period)
-      require "csv"
-
-      CSV.generate do |csv|
-        # Header
-        csv << [ "Reports Export" ]
-        csv << [ "Period", "#{period.date_range.first} to #{period.date_range.last}" ]
-        csv << []
-
-        # Summary
-        total_income = ensure_money(income_totals.total)
-        total_expenses = ensure_money(expense_totals.total)
-        net_savings = total_income - total_expenses
-
-        csv << [ "Summary" ]
-        csv << [ "Total Income", total_income.format ]
-        csv << [ "Total Expenses", total_expenses.format ]
-        csv << [ "Net Savings", net_savings.format ]
-        csv << []
-
-        # Income breakdown
-        csv << [ "Income by Category" ]
-        csv << [ "Category", "Amount", "Percentage" ]
-        income_totals.category_totals.each do |ct|
-          csv << [ ct.category.name, ensure_money(ct.total).format, "#{ct.weight.round(1)}%" ]
-        end
-        csv << []
-
-        # Expense breakdown
-        csv << [ "Expenses by Category" ]
-        csv << [ "Category", "Amount", "Percentage" ]
-        expense_totals.category_totals.each do |ct|
-          csv << [ ct.category.name, ensure_money(ct.total).format, "#{ct.weight.round(1)}%" ]
-        end
-      end
-    end
 end

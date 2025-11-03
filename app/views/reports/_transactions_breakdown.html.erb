@@ -6,152 +6,18 @@
     </h2>
   </div>
 
-  <%# Filters %>
-  <div class="mb-4" data-controller="filters">
-    <details class="group">
-      <summary class="cursor-pointer flex items-center gap-2 text-sm font-medium text-secondary hover:text-primary">
-        <%= icon("filter", class: "w-4 h-4") %>
-        <%= t("reports.transactions_breakdown.filters.title") %>
-        <%= icon("chevron-down", class: "w-4 h-4 transition-transform group-open:rotate-180") %>
-      </summary>
-
-      <div class="mt-4 p-4 bg-surface-inset rounded-lg space-y-4">
-        <%= form_with url: reports_path, method: :get, class: "space-y-4" do |f| %>
-          <%# Preserve existing params %>
-          <%= f.hidden_field :period_type, value: period_type %>
-          <%= f.hidden_field :start_date, value: start_date %>
-          <%= f.hidden_field :end_date, value: end_date %>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <%# Category Filter %>
-            <div>
-              <label class="block text-sm font-medium text-secondary mb-1">
-                <%= t("reports.transactions_breakdown.filters.category") %>
-              </label>
-              <%= f.select :filter_category_id,
-                          options_for_select(
-                            [[t("reports.transactions_breakdown.filters.all_categories"), ""]] +
-                            Current.family.categories.order(:name).map { |c| [c.name, c.id] },
-                            params[:filter_category_id]
-                          ),
-                          {},
-                          class: "w-full px-3 py-2 border border-primary rounded-lg text-sm" %>
-            </div>
-
-            <%# Account Filter %>
-            <div>
-              <label class="block text-sm font-medium text-secondary mb-1">
-                <%= t("reports.transactions_breakdown.filters.account") %>
-              </label>
-              <%= f.select :filter_account_id,
-                          options_for_select(
-                            [[t("reports.transactions_breakdown.filters.all_accounts"), ""]] +
-                            Current.family.accounts.order(:name).map { |a| [a.name, a.id] },
-                            params[:filter_account_id]
-                          ),
-                          {},
-                          class: "w-full px-3 py-2 border border-primary rounded-lg text-sm" %>
-            </div>
-
-            <%# Tag Filter %>
-            <div>
-              <label class="block text-sm font-medium text-secondary mb-1">
-                <%= t("reports.transactions_breakdown.filters.tag") %>
-              </label>
-              <%= f.select :filter_tag_id,
-                          options_for_select(
-                            [[t("reports.transactions_breakdown.filters.all_tags"), ""]] +
-                            Current.family.tags.order(:name).map { |t| [t.name, t.id] },
-                            params[:filter_tag_id]
-                          ),
-                          {},
-                          class: "w-full px-3 py-2 border border-primary rounded-lg text-sm" %>
-            </div>
-
-            <%# Amount Min %>
-            <div>
-              <label class="block text-sm font-medium text-secondary mb-1">
-                <%= t("reports.transactions_breakdown.filters.amount_min") %>
-              </label>
-              <%= f.number_field :filter_amount_min,
-                                value: params[:filter_amount_min],
-                                step: 0.01,
-                                placeholder: "0.00",
-                                class: "w-full px-3 py-2 border border-primary rounded-lg text-sm" %>
-            </div>
-
-            <%# Amount Max %>
-            <div>
-              <label class="block text-sm font-medium text-secondary mb-1">
-                <%= t("reports.transactions_breakdown.filters.amount_max") %>
-              </label>
-              <%= f.number_field :filter_amount_max,
-                                value: params[:filter_amount_max],
-                                step: 0.01,
-                                placeholder: "0.00",
-                                class: "w-full px-3 py-2 border border-primary rounded-lg text-sm" %>
-            </div>
-
-            <%# Date Range %>
-            <div>
-              <label class="block text-sm font-medium text-secondary mb-1">
-                <%= t("reports.transactions_breakdown.filters.date_range") %>
-              </label>
-              <div class="flex gap-2">
-                <%= f.date_field :filter_date_start,
-                                value: params[:filter_date_start],
-                                class: "w-full px-3 py-2 border border-primary rounded-lg text-sm" %>
-                <span class="text-secondary">—</span>
-                <%= f.date_field :filter_date_end,
-                                value: params[:filter_date_end],
-                                class: "w-full px-3 py-2 border border-primary rounded-lg text-sm" %>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex gap-2">
-            <%= f.submit t("reports.transactions_breakdown.filters.apply"),
-                        class: "px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 text-sm" %>
-            <%= link_to t("reports.transactions_breakdown.filters.clear"),
-                        reports_path(period_type: period_type, start_date: start_date, end_date: end_date),
-                        class: "px-4 py-2 border border-primary text-primary rounded-lg hover:bg-surface-inset text-sm" %>
-          </div>
-        <% end %>
-      </div>
-    </details>
-  </div>
-
-  <%# Sort and Export Controls %>
-  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+  <%# Export Controls %>
+  <div class="flex items-center justify-end mb-4 flex-wrap gap-3">
     <%
       # Build params hash for links
       base_params = {
         period_type: period_type,
         start_date: start_date,
         end_date: end_date,
-        filter_category_id: params[:filter_category_id],
-        filter_account_id: params[:filter_account_id],
-        filter_tag_id: params[:filter_tag_id],
-        filter_amount_min: params[:filter_amount_min],
-        filter_amount_max: params[:filter_amount_max],
-        filter_date_start: params[:filter_date_start],
-        filter_date_end: params[:filter_date_end]
+        sort_by: params[:sort_by],
+        sort_direction: params[:sort_direction]
       }.compact
     %>
-
-    <%# Sort Options %>
-    <div class="flex items-center gap-2">
-      <span class="text-sm text-secondary"><%= t("reports.transactions_breakdown.sort.label") %>:</span>
-      <%= link_to t("reports.transactions_breakdown.sort.date_desc"),
-                  reports_path(base_params.merge(sort_by: "date", sort_direction: "desc")),
-                  class: "text-sm px-3 py-1 rounded-lg #{params[:sort_by] == 'date' && params[:sort_direction] == 'desc' ? 'bg-gray-900 text-white' : 'bg-surface-inset text-secondary hover:bg-gray-200'}" %>
-      <%= link_to t("reports.transactions_breakdown.sort.amount_desc"),
-                  reports_path(base_params.merge(sort_by: "amount", sort_direction: "desc")),
-                  class: "text-sm px-3 py-1 rounded-lg #{params[:sort_by] == 'amount' && params[:sort_direction] == 'desc' ? 'bg-gray-900 text-white' : 'bg-surface-inset text-secondary hover:bg-gray-200'}" %>
-      <%= link_to t("reports.transactions_breakdown.sort.amount_asc"),
-                  reports_path(base_params.merge(sort_by: "amount", sort_direction: "asc")),
-                  class: "text-sm px-3 py-1 rounded-lg #{params[:sort_by] == 'amount' && params[:sort_direction] == 'asc' ? 'bg-gray-900 text-white' : 'bg-surface-inset text-secondary hover:bg-gray-200'}" %>
-    </div>
 
     <%# Export Options %>
     <div class="flex items-center gap-2">
@@ -190,6 +56,16 @@
       # Calculate totals
       income_total = income_groups.sum { |g| g[:total] }
       expense_total = expense_groups.sum { |g| g[:total] }
+
+      # Determine sort direction for Amount column
+      current_sort_by = params[:sort_by]
+      current_sort_direction = params[:sort_direction]
+
+      # Toggle sort direction: if currently sorting by amount desc, switch to asc; otherwise default to desc
+      next_sort_direction = (current_sort_by == "amount" && current_sort_direction == "desc") ? "asc" : "desc"
+
+      # Build params for amount sort link
+      amount_sort_params = base_params.merge(sort_by: "amount", sort_direction: next_sort_direction)
     %>
 
     <div class="space-y-8">
@@ -207,7 +83,14 @@
               <thead>
                 <tr class="border-b border-tertiary">
                   <th class="text-left py-3 pr-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.category") %></th>
-                  <th class="text-right py-3 px-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.amount") %></th>
+                  <th class="text-right py-3 px-4 font-medium text-secondary">
+                    <%= link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do %>
+                      <%= t("reports.transactions_breakdown.table.amount") %>
+                      <% if current_sort_by == "amount" %>
+                        <%= icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") %>
+                      <% end %>
+                    <% end %>
+                  </th>
                   <th class="text-right py-3 pl-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.percentage") %></th>
                 </tr>
               </thead>
@@ -254,7 +137,14 @@
               <thead>
                 <tr class="border-b border-tertiary">
                   <th class="text-left py-3 pr-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.category") %></th>
-                  <th class="text-right py-3 px-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.amount") %></th>
+                  <th class="text-right py-3 px-4 font-medium text-secondary">
+                    <%= link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do %>
+                      <%= t("reports.transactions_breakdown.table.amount") %>
+                      <% if current_sort_by == "amount" %>
+                        <%= icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") %>
+                      <% end %>
+                    <% end %>
+                  </th>
                   <th class="text-right py-3 pl-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.percentage") %></th>
                 </tr>
               </thead>

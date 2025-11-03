@@ -103,7 +103,6 @@ Rails.application.routes.draw do
   end
 
   resources :reports, only: %i[index] do
-    get :export, on: :collection
     get :export_transactions, on: :collection
   end
 
