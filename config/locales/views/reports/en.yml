@@ -99,6 +99,7 @@ en:
         csv: CSV
         excel: Excel
         pdf: PDF
+        google_sheets: Open in Google Sheets
       table:
         category: Category
         amount: Amount

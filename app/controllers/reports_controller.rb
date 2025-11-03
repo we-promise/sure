@@ -71,29 +71,22 @@ class ReportsController < ApplicationController
                   type: "text/csv"
       end
 
-      format.xlsx do
-        begin
-          xlsx_data = generate_transactions_xlsx
-          send_data xlsx_data,
-                    filename: "transactions_breakdown_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.xlsx",
-                    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        rescue LoadError, NameError
-          flash[:error] = "Excel export requires the 'caxlsx' gem to be installed"
-          redirect_to reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date)
-        end
-      end
-
-      format.pdf do
-        begin
-          pdf_data = generate_transactions_pdf
-          send_data pdf_data,
-                    filename: "transactions_breakdown_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.pdf",
-                    type: "application/pdf"
-        rescue LoadError, NameError
-          flash[:error] = "PDF export requires the 'prawn' gem to be installed"
-          redirect_to reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date)
-        end
-      end
+      # Excel and PDF exports require additional gems (caxlsx and prawn)
+      # Uncomment and install gems if needed:
+      #
+      # format.xlsx do
+      #   xlsx_data = generate_transactions_xlsx
+      #   send_data xlsx_data,
+      #             filename: "transactions_breakdown_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.xlsx",
+      #             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      # end
+      #
+      # format.pdf do
+      #   pdf_data = generate_transactions_pdf
+      #   send_data pdf_data,
+      #             filename: "transactions_breakdown_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.pdf",
+      #             type: "application/pdf"
+      # end
     end
   end
 
