@@ -32,6 +32,9 @@ class ReportsController < ApplicationController
     # Spending patterns (weekday vs weekend)
     @spending_patterns = build_spending_patterns
 
+    # Transactions breakdown
+    @transactions = build_transactions_breakdown
+
     @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
   end
 
@@ -50,6 +53,49 @@ class ReportsController < ApplicationController
         send_data csv_data,
                   filename: "reports_#{@period_type}_#{@start_date.strftime('%Y%m%d')}.csv",
                   type: "text/csv"
+      end
+    end
+  end
+
+  def export_transactions
+    @period_type = params[:period_type]&.to_sym || :monthly
+    @start_date = parse_date_param(:start_date) || default_start_date
+    @end_date = parse_date_param(:end_date) || default_end_date
+    @period = Period.custom(start_date: @start_date, end_date: @end_date)
+
+    # Get all transactions (no pagination for export)
+    @transactions = build_transactions_breakdown_for_export
+
+    respond_to do |format|
+      format.csv do
+        csv_data = generate_transactions_csv
+        send_data csv_data,
+                  filename: "transactions_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.csv",
+                  type: "text/csv"
+      end
+
+      format.xlsx do
+        begin
+          xlsx_data = generate_transactions_xlsx
+          send_data xlsx_data,
+                    filename: "transactions_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.xlsx",
+                    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        rescue LoadError, NameError
+          flash[:error] = "Excel export requires the 'caxlsx' gem to be installed"
+          redirect_to reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date)
+        end
+      end
+
+      format.pdf do
+        begin
+          pdf_data = generate_transactions_pdf
+          send_data pdf_data,
+                    filename: "transactions_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.pdf",
+                    type: "application/pdf"
+        rescue LoadError, NameError
+          flash[:error] = "PDF export requires the 'prawn' gem to be installed"
+          redirect_to reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date)
+        end
       end
     end
   end
@@ -280,6 +326,212 @@ class ReportsController < ApplicationController
         weekday_count: 0,
         weekend_count: 0
       }
+    end
+
+    def build_transactions_breakdown
+      # Base query: all transactions in the period
+      transactions = Transaction
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: [])
+
+      # Apply filters
+      transactions = apply_transaction_filters(transactions)
+
+      # Apply sorting
+      sort_by = params[:sort_by] || "date"
+      sort_direction = params[:sort_direction] || "desc"
+
+      case sort_by
+      when "date"
+        transactions = transactions.order("entries.date #{sort_direction}")
+      when "amount"
+        transactions = transactions.order("entries.amount #{sort_direction}")
+      else
+        transactions = transactions.order("entries.date desc")
+      end
+
+      # Group by category and type
+      all_transactions = transactions.to_a
+      grouped_data = {}
+
+      all_transactions.each do |transaction|
+        entry = transaction.entry
+        is_expense = entry.amount > 0
+        type = is_expense ? "expense" : "income"
+        category_name = transaction.category&.name || "Uncategorized"
+        category_color = transaction.category&.color || "#9CA3AF"
+
+        key = [ category_name, type, category_color ]
+        grouped_data[key] ||= { total: 0, count: 0 }
+        grouped_data[key][:count] += 1
+        grouped_data[key][:total] += entry.amount.abs
+      end
+
+      # Convert to array and sort by total (descending)
+      grouped_data.map do |key, data|
+        {
+          category_name: key[0],
+          type: key[1],
+          category_color: key[2],
+          total: data[:total],
+          count: data[:count]
+        }
+      end.sort_by { |g| -g[:total] }
+    end
+
+    def apply_transaction_filters(transactions)
+      # Filter by category
+      if params[:filter_category_id].present?
+        transactions = transactions.where(category_id: params[:filter_category_id])
+      end
+
+      # Filter by account
+      if params[:filter_account_id].present?
+        transactions = transactions.where(entries: { account_id: params[:filter_account_id] })
+      end
+
+      # Filter by tag
+      if params[:filter_tag_id].present?
+        transactions = transactions.joins(:taggings).where(taggings: { tag_id: params[:filter_tag_id] })
+      end
+
+      # Filter by amount range
+      if params[:filter_amount_min].present?
+        transactions = transactions.where("ABS(entries.amount) >= ?", params[:filter_amount_min].to_f)
+      end
+
+      if params[:filter_amount_max].present?
+        transactions = transactions.where("ABS(entries.amount) <= ?", params[:filter_amount_max].to_f)
+      end
+
+      # Filter by date range (within the period)
+      if params[:filter_date_start].present?
+        filter_start = Date.parse(params[:filter_date_start])
+        transactions = transactions.where("entries.date >= ?", filter_start) if filter_start >= @start_date
+      end
+
+      if params[:filter_date_end].present?
+        filter_end = Date.parse(params[:filter_date_end])
+        transactions = transactions.where("entries.date <= ?", filter_end) if filter_end <= @end_date
+      end
+
+      transactions
+    rescue Date::Error
+      transactions
+    end
+
+    def build_transactions_breakdown_for_export
+      # Get flat transactions list (not grouped) for export
+      transactions = Transaction
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: [])
+
+      transactions = apply_transaction_filters(transactions)
+
+      sort_by = params[:sort_by] || "date"
+      sort_direction = params[:sort_direction] || "desc"
+
+      case sort_by
+      when "date"
+        transactions.order("entries.date #{sort_direction}")
+      when "amount"
+        transactions.order("entries.amount #{sort_direction}")
+      else
+        transactions.order("entries.date desc")
+      end
+    end
+
+    def generate_transactions_csv
+      require "csv"
+
+      CSV.generate do |csv|
+        # Header row
+        csv << [ "Date", "Category", "Type", "Amount" ]
+
+        # Data rows
+        @transactions.each do |transaction|
+          entry = transaction.entry
+          is_expense = entry.amount > 0
+
+          csv << [
+            entry.date.strftime("%Y-%m-%d"),
+            transaction.category&.name || "Uncategorized",
+            is_expense ? "Expense" : "Income",
+            Money.new(entry.amount.abs, entry.currency).format
+          ]
+        end
+      end
+    end
+
+    def generate_transactions_xlsx
+      require "caxlsx"
+
+      package = Axlsx::Package.new
+      workbook = package.workbook
+
+      workbook.add_worksheet(name: "Transactions") do |sheet|
+        # Header row
+        sheet.add_row [ "Date", "Category", "Type", "Amount" ],
+                      style: workbook.styles.add_style(b: true)
+
+        # Data rows
+        @transactions.each do |transaction|
+          entry = transaction.entry
+          is_expense = entry.amount > 0
+
+          sheet.add_row [
+            entry.date.strftime("%Y-%m-%d"),
+            transaction.category&.name || "Uncategorized",
+            is_expense ? "Expense" : "Income",
+            Money.new(entry.amount.abs, entry.currency).format
+          ]
+        end
+      end
+
+      package.to_stream.read
+    end
+
+    def generate_transactions_pdf
+      require "prawn"
+
+      Prawn::Document.new do |pdf|
+        pdf.text "Transaction Report", size: 20, style: :bold
+        pdf.text "Period: #{@start_date.strftime('%b %-d, %Y')} to #{@end_date.strftime('%b %-d, %Y')}", size: 12
+        pdf.move_down 20
+
+        if @transactions.any?
+          table_data = [ [ "Date", "Category", "Type", "Amount" ] ]
+
+          @transactions.each do |transaction|
+            entry = transaction.entry
+            is_expense = entry.amount > 0
+
+            table_data << [
+              entry.date.strftime("%Y-%m-%d"),
+              transaction.category&.name || "Uncategorized",
+              is_expense ? "Expense" : "Income",
+              Money.new(entry.amount.abs, entry.currency).format
+            ]
+          end
+
+          pdf.table(table_data, header: true, width: pdf.bounds.width) do
+            row(0).font_style = :bold
+            row(0).background_color = "EEEEEE"
+            columns(0..2).align = :left
+            columns(3).align = :right
+            self.row_colors = [ "FFFFFF", "F9F9F9" ]
+            self.header = true
+          end
+        else
+          pdf.text "No transactions found for this period.", size: 12
+        end
+      end.render
     end
 
     def generate_csv_export(income_totals, expense_totals, period)

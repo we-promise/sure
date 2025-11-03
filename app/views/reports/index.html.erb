@@ -115,6 +115,16 @@
         spending_patterns: @spending_patterns
       } %>
     </section>
+
+    <%# Transactions Breakdown %>
+    <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
+      <%= render partial: "reports/transactions_breakdown", locals: {
+        transactions: @transactions,
+        period_type: @period_type,
+        start_date: @start_date,
+        end_date: @end_date
+      } %>
+    </section>
   <% else %>
     <%# Empty State %>
     <section>

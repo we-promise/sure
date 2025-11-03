@@ -73,3 +73,41 @@ en:
       description: Start tracking your finances by adding transactions or connecting your accounts to see comprehensive reports
       add_transaction: Add Transaction
       add_account: Add Account
+    transactions_breakdown:
+      title: Transactions Breakdown
+      no_transactions: No transactions found for the selected period and filters
+      filters:
+        title: Filters
+        category: Category
+        account: Account
+        tag: Tag
+        amount_min: Min Amount
+        amount_max: Max Amount
+        date_range: Date Range
+        all_categories: All Categories
+        all_accounts: All Accounts
+        all_tags: All Tags
+        apply: Apply Filters
+        clear: Clear Filters
+      sort:
+        label: Sort by
+        date_desc: Date (Newest)
+        amount_desc: Amount (High to Low)
+        amount_asc: Amount (Low to High)
+      export:
+        label: Export
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+      table:
+        category: Category
+        amount: Amount
+        type: Type
+        expense: Expense
+        income: Income
+        uncategorized: Uncategorized
+        transactions: transactions
+      pagination:
+        showing: Showing %{count} transactions
+        previous: Previous
+        next: Next

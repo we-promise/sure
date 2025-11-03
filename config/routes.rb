@@ -104,6 +104,7 @@ Rails.application.routes.draw do
 
   resources :reports, only: %i[index] do
     get :export, on: :collection
+    get :export_transactions, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
