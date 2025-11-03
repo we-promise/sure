@@ -1,6 +1,7 @@
 <% content_for :title, "Add SimpleFin Connection" %>
 
-<%= render DS::Dialog.new do |dialog| %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: "Add SimpleFin Connection") %>
   <% dialog.with_body do %>
     <% if @error_message.present? %>
@@ -42,5 +43,6 @@
 
       <%= form.submit "Add Connection" %>
     <% end %>
+  <% end %>
   <% end %>
 <% end %>
