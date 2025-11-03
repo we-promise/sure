@@ -700,5 +700,4 @@ class ReportsController < ApplicationController
         end
       end.render
     end
-
 end

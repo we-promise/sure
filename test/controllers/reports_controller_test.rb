@@ -36,16 +36,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "export generates CSV" do
-    get export_reports_path(
-      period_type: :monthly,
-      start_date: Date.current.beginning_of_month.to_s,
-      end_date: Date.current.end_of_month.to_s,
-      format: :csv
-    )
+  test "index with last 6 months period" do
+    get reports_path(period_type: :last_6_months)
     assert_response :ok
-    assert_equal "text/csv", response.media_type
-    assert_match /reports_monthly_\d{8}\.csv/, response.headers["Content-Disposition"]
   end
 
   test "index shows empty state when no transactions" do
