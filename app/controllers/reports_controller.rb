@@ -60,14 +60,14 @@ class ReportsController < ApplicationController
     @end_date = parse_date_param(:end_date) || default_end_date
     @period = Period.custom(start_date: @start_date, end_date: @end_date)
 
-    # Get all transactions (no pagination for export)
-    @transactions = build_transactions_breakdown_for_export
+    # Build monthly breakdown data for export
+    @export_data = build_monthly_breakdown_for_export
 
     respond_to do |format|
       format.csv do
         csv_data = generate_transactions_csv
         send_data csv_data,
-                  filename: "transactions_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.csv",
+                  filename: "transactions_breakdown_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.csv",
                   type: "text/csv"
       end
 
@@ -75,7 +75,7 @@ class ReportsController < ApplicationController
         begin
           xlsx_data = generate_transactions_xlsx
           send_data xlsx_data,
-                    filename: "transactions_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.xlsx",
+                    filename: "transactions_breakdown_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.xlsx",
                     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         rescue LoadError, NameError
           flash[:error] = "Excel export requires the 'caxlsx' gem to be installed"
@@ -87,7 +87,7 @@ class ReportsController < ApplicationController
         begin
           pdf_data = generate_transactions_pdf
           send_data pdf_data,
-                    filename: "transactions_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.pdf",
+                    filename: "transactions_breakdown_#{@start_date.strftime('%Y%m%d')}_to_#{@end_date.strftime('%Y%m%d')}.pdf",
                     type: "application/pdf"
         rescue LoadError, NameError
           flash[:error] = "PDF export requires the 'prawn' gem to be installed"
@@ -407,24 +407,133 @@ class ReportsController < ApplicationController
       end
     end
 
+    def build_monthly_breakdown_for_export
+      # Generate list of months in the period
+      months = []
+      current_month = @start_date.beginning_of_month
+      end_of_period = @end_date.end_of_month
+
+      while current_month <= end_of_period
+        months << current_month
+        current_month = current_month.next_month
+      end
+
+      # Get all transactions in the period
+      transactions = Transaction
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: [])
+
+      transactions = apply_transaction_filters(transactions)
+
+      # Group transactions by category, type, and month
+      breakdown = {}
+
+      transactions.each do |transaction|
+        entry = transaction.entry
+        is_expense = entry.amount > 0
+        type = is_expense ? "expense" : "income"
+        category_name = transaction.category&.name || "Uncategorized"
+        month_key = entry.date.beginning_of_month
+
+        key = [ category_name, type ]
+        breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
+        breakdown[key][:months][month_key] ||= 0
+        breakdown[key][:months][month_key] += entry.amount.abs
+        breakdown[key][:total] += entry.amount.abs
+      end
+
+      # Convert to array and sort by type and total (descending)
+      result = breakdown.map do |key, data|
+        {
+          category: data[:category],
+          type: data[:type],
+          months: data[:months],
+          total: data[:total]
+        }
+      end
+
+      # Separate and sort income and expenses
+      income_data = result.select { |r| r[:type] == "income" }.sort_by { |r| -r[:total] }
+      expense_data = result.select { |r| r[:type] == "expense" }.sort_by { |r| -r[:total] }
+
+      {
+        months: months,
+        income: income_data,
+        expenses: expense_data
+      }
+    end
+
     def generate_transactions_csv
       require "csv"
 
       CSV.generate do |csv|
-        # Header row
-        csv << [ "Date", "Category", "Type", "Amount" ]
+        # Build header row: Category + Month columns + Total
+        month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
+        header_row = [ "Category" ] + month_headers + [ "Total" ]
+        csv << header_row
 
-        # Data rows
-        @transactions.each do |transaction|
-          entry = transaction.entry
-          is_expense = entry.amount > 0
+        # Income section
+        if @export_data[:income].any?
+          csv << [ "INCOME" ] + Array.new(month_headers.length + 1, "")
 
-          csv << [
-            entry.date.strftime("%Y-%m-%d"),
-            transaction.category&.name || "Uncategorized",
-            is_expense ? "Expense" : "Income",
-            Money.new(entry.amount.abs, entry.currency).format
-          ]
+          @export_data[:income].each do |category_data|
+            row = [ category_data[:category] ]
+
+            # Add amounts for each month
+            @export_data[:months].each do |month|
+              amount = category_data[:months][month] || 0
+              row << Money.new(amount.to_i, Current.family.currency).format
+            end
+
+            # Add row total
+            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            csv << row
+          end
+
+          # Income totals row
+          totals_row = [ "TOTAL INCOME" ]
+          @export_data[:months].each do |month|
+            month_total = @export_data[:income].sum { |c| c[:months][month] || 0 }
+            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+          end
+          grand_income_total = @export_data[:income].sum { |c| c[:total] }
+          totals_row << Money.new(grand_income_total.to_i, Current.family.currency).format
+          csv << totals_row
+
+          # Blank row
+          csv << []
+        end
+
+        # Expenses section
+        if @export_data[:expenses].any?
+          csv << [ "EXPENSES" ] + Array.new(month_headers.length + 1, "")
+
+          @export_data[:expenses].each do |category_data|
+            row = [ category_data[:category] ]
+
+            # Add amounts for each month
+            @export_data[:months].each do |month|
+              amount = category_data[:months][month] || 0
+              row << Money.new(amount.to_i, Current.family.currency).format
+            end
+
+            # Add row total
+            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            csv << row
+          end
+
+          # Expenses totals row
+          totals_row = [ "TOTAL EXPENSES" ]
+          @export_data[:months].each do |month|
+            month_total = @export_data[:expenses].sum { |c| c[:months][month] || 0 }
+            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+          end
+          grand_expenses_total = @export_data[:expenses].sum { |c| c[:total] }
+          totals_row << Money.new(grand_expenses_total.to_i, Current.family.currency).format
+          csv << totals_row
         end
       end
     end
@@ -434,23 +543,73 @@ class ReportsController < ApplicationController
 
       package = Axlsx::Package.new
       workbook = package.workbook
+      bold_style = workbook.styles.add_style(b: true)
 
-      workbook.add_worksheet(name: "Transactions") do |sheet|
-        # Header row
-        sheet.add_row [ "Date", "Category", "Type", "Amount" ],
-                      style: workbook.styles.add_style(b: true)
+      workbook.add_worksheet(name: "Breakdown") do |sheet|
+        # Build header row: Category + Month columns + Total
+        month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
+        header_row = [ "Category" ] + month_headers + [ "Total" ]
+        sheet.add_row header_row, style: bold_style
 
-        # Data rows
-        @transactions.each do |transaction|
-          entry = transaction.entry
-          is_expense = entry.amount > 0
+        # Income section
+        if @export_data[:income].any?
+          sheet.add_row [ "INCOME" ] + Array.new(month_headers.length + 1, ""), style: bold_style
 
-          sheet.add_row [
-            entry.date.strftime("%Y-%m-%d"),
-            transaction.category&.name || "Uncategorized",
-            is_expense ? "Expense" : "Income",
-            Money.new(entry.amount.abs, entry.currency).format
-          ]
+          @export_data[:income].each do |category_data|
+            row = [ category_data[:category] ]
+
+            # Add amounts for each month
+            @export_data[:months].each do |month|
+              amount = category_data[:months][month] || 0
+              row << Money.new(amount.to_i, Current.family.currency).format
+            end
+
+            # Add row total
+            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            sheet.add_row row
+          end
+
+          # Income totals row
+          totals_row = [ "TOTAL INCOME" ]
+          @export_data[:months].each do |month|
+            month_total = @export_data[:income].sum { |c| c[:months][month] || 0 }
+            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+          end
+          grand_income_total = @export_data[:income].sum { |c| c[:total] }
+          totals_row << Money.new(grand_income_total.to_i, Current.family.currency).format
+          sheet.add_row totals_row, style: bold_style
+
+          # Blank row
+          sheet.add_row []
+        end
+
+        # Expenses section
+        if @export_data[:expenses].any?
+          sheet.add_row [ "EXPENSES" ] + Array.new(month_headers.length + 1, ""), style: bold_style
+
+          @export_data[:expenses].each do |category_data|
+            row = [ category_data[:category] ]
+
+            # Add amounts for each month
+            @export_data[:months].each do |month|
+              amount = category_data[:months][month] || 0
+              row << Money.new(amount.to_i, Current.family.currency).format
+            end
+
+            # Add row total
+            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            sheet.add_row row
+          end
+
+          # Expenses totals row
+          totals_row = [ "TOTAL EXPENSES" ]
+          @export_data[:months].each do |month|
+            month_total = @export_data[:expenses].sum { |c| c[:months][month] || 0 }
+            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+          end
+          grand_expenses_total = @export_data[:expenses].sum { |c| c[:total] }
+          totals_row << Money.new(grand_expenses_total.to_i, Current.family.currency).format
+          sheet.add_row totals_row, style: bold_style
         end
       end
 
@@ -460,33 +619,96 @@ class ReportsController < ApplicationController
     def generate_transactions_pdf
       require "prawn"
 
-      Prawn::Document.new do |pdf|
-        pdf.text "Transaction Report", size: 20, style: :bold
+      Prawn::Document.new(page_layout: :landscape) do |pdf|
+        pdf.text "Transaction Breakdown Report", size: 20, style: :bold
         pdf.text "Period: #{@start_date.strftime('%b %-d, %Y')} to #{@end_date.strftime('%b %-d, %Y')}", size: 12
         pdf.move_down 20
 
-        if @transactions.any?
-          table_data = [ [ "Date", "Category", "Type", "Amount" ] ]
+        if @export_data[:income].any? || @export_data[:expenses].any?
+          # Build header row
+          month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
+          header_row = [ "Category" ] + month_headers + [ "Total" ]
 
-          @transactions.each do |transaction|
-            entry = transaction.entry
-            is_expense = entry.amount > 0
+          # Income section
+          if @export_data[:income].any?
+            pdf.text "INCOME", size: 14, style: :bold
+            pdf.move_down 10
 
-            table_data << [
-              entry.date.strftime("%Y-%m-%d"),
-              transaction.category&.name || "Uncategorized",
-              is_expense ? "Expense" : "Income",
-              Money.new(entry.amount.abs, entry.currency).format
-            ]
+            income_table_data = [ header_row ]
+
+            @export_data[:income].each do |category_data|
+              row = [ category_data[:category] ]
+
+              @export_data[:months].each do |month|
+                amount = category_data[:months][month] || 0
+                row << Money.new(amount.to_i, Current.family.currency).format
+              end
+
+              row << Money.new(category_data[:total].to_i, Current.family.currency).format
+              income_table_data << row
+            end
+
+            # Income totals row
+            totals_row = [ "TOTAL INCOME" ]
+            @export_data[:months].each do |month|
+              month_total = @export_data[:income].sum { |c| c[:months][month] || 0 }
+              totals_row << Money.new(month_total.to_i, Current.family.currency).format
+            end
+            grand_income_total = @export_data[:income].sum { |c| c[:total] }
+            totals_row << Money.new(grand_income_total.to_i, Current.family.currency).format
+            income_table_data << totals_row
+
+            pdf.table(income_table_data, header: true, width: pdf.bounds.width, cell_style: { size: 8 }) do
+              row(0).font_style = :bold
+              row(0).background_color = "CCFFCC"
+              row(-1).font_style = :bold
+              row(-1).background_color = "99FF99"
+              columns(0).align = :left
+              columns(1..-1).align = :right
+              self.row_colors = [ "FFFFFF", "F9F9F9" ]
+            end
+
+            pdf.move_down 20
           end
 
-          pdf.table(table_data, header: true, width: pdf.bounds.width) do
-            row(0).font_style = :bold
-            row(0).background_color = "EEEEEE"
-            columns(0..2).align = :left
-            columns(3).align = :right
-            self.row_colors = [ "FFFFFF", "F9F9F9" ]
-            self.header = true
+          # Expenses section
+          if @export_data[:expenses].any?
+            pdf.text "EXPENSES", size: 14, style: :bold
+            pdf.move_down 10
+
+            expenses_table_data = [ header_row ]
+
+            @export_data[:expenses].each do |category_data|
+              row = [ category_data[:category] ]
+
+              @export_data[:months].each do |month|
+                amount = category_data[:months][month] || 0
+                row << Money.new(amount.to_i, Current.family.currency).format
+              end
+
+              row << Money.new(category_data[:total].to_i, Current.family.currency).format
+              expenses_table_data << row
+            end
+
+            # Expenses totals row
+            totals_row = [ "TOTAL EXPENSES" ]
+            @export_data[:months].each do |month|
+              month_total = @export_data[:expenses].sum { |c| c[:months][month] || 0 }
+              totals_row << Money.new(month_total.to_i, Current.family.currency).format
+            end
+            grand_expenses_total = @export_data[:expenses].sum { |c| c[:total] }
+            totals_row << Money.new(grand_expenses_total.to_i, Current.family.currency).format
+            expenses_table_data << totals_row
+
+            pdf.table(expenses_table_data, header: true, width: pdf.bounds.width, cell_style: { size: 8 }) do
+              row(0).font_style = :bold
+              row(0).background_color = "FFCCCC"
+              row(-1).font_style = :bold
+              row(-1).background_color = "FF9999"
+              columns(0).align = :left
+              columns(1..-1).align = :right
+              self.row_colors = [ "FFFFFF", "F9F9F9" ]
+            end
           end
         else
           pdf.text "No transactions found for this period.", size: 12

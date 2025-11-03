@@ -103,10 +103,11 @@ en:
         category: Category
         amount: Amount
         type: Type
-        expense: Expense
+        expense: Expenses
         income: Income
         uncategorized: Uncategorized
         transactions: transactions
+        percentage: "% of Total"
       pagination:
         showing: Showing %{count} transactions
         previous: Previous
