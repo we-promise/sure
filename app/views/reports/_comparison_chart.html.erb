@@ -1,3 +1,25 @@
+<%
+  currency = Current.family.currency
+
+  # Helper to calculate percentage change and determine if it's good or bad
+  def comparison_class(current, previous, inverse: false)
+    return "text-primary" if previous.zero?
+
+    change = current - previous
+    is_positive_change = change > 0
+
+    # For expenses, lower is better (inverse logic)
+    is_good = inverse ? !is_positive_change : is_positive_change
+
+    is_good ? "text-green-600" : "text-gray-600"
+  end
+
+  def percentage_change(current, previous)
+    return 0 if previous.zero?
+    ((current - previous) / previous.abs * 100).round(1)
+  end
+%>
+
 <div>
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-lg font-medium text-primary">
@@ -8,7 +30,7 @@
     </p>
   </div>
 
-  <div class="space-y-8">
+  <div class="space-y-6">
     <%# Income Comparison %>
     <div>
       <div class="flex items-center justify-between mb-3">
@@ -18,37 +40,59 @@
         </h3>
       </div>
 
-      <div class="space-y-3">
-        <%# Current Period %>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-sm text-tertiary"><%= t("reports.comparison.current") %></span>
-            <span class="text-sm font-medium text-primary">
-              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:current][:income].round(2)) %>
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl font-semibold <%= comparison_class(comparison_data[:current][:income], comparison_data[:previous][:income]) %>">
+            <%= Money.new(comparison_data[:current][:income], currency).format %>
+          </span>
+          <% change = percentage_change(comparison_data[:current][:income], comparison_data[:previous][:income]) %>
+          <% if change != 0 %>
+            <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:income], comparison_data[:previous][:income]) %>">
+              <%= change >= 0 ? "+" : "" %><%= change %>%
             </span>
-          </div>
-          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
-            <% max_income = [comparison_data[:current][:income], comparison_data[:previous][:income]].max %>
-            <% current_width = max_income > 0 ? (comparison_data[:current][:income] / max_income * 100).round(1) : 0 %>
-            <div class="h-full bg-success rounded-lg transition-all duration-500"
-                 style="width: <%= current_width %>%"></div>
-          </div>
+          <% end %>
         </div>
+        <span class="text-sm text-tertiary">
+          <%= t("reports.comparison.previous") %>: <%= Money.new(comparison_data[:previous][:income], currency).format %>
+        </span>
+      </div>
 
-        <%# Previous Period %>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-sm text-tertiary"><%= t("reports.comparison.previous") %></span>
-            <span class="text-sm font-medium text-secondary">
-              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:previous][:income].round(2)) %>
-            </span>
-          </div>
-          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
-            <% previous_width = max_income > 0 ? (comparison_data[:previous][:income] / max_income * 100).round(1) : 0 %>
-            <div class="h-full bg-success opacity-50 rounded-lg transition-all duration-500"
+      <%# Overlapping bars %>
+      <div class="relative h-10">
+        <%
+          current_income_abs = comparison_data[:current][:income].to_f.abs
+          previous_income_abs = comparison_data[:previous][:income].to_f.abs
+          max_income = [current_income_abs, previous_income_abs].max
+
+          if max_income > 0
+            current_width = [3, (current_income_abs / max_income * 100)].max
+            previous_width = [3, (previous_income_abs / max_income * 100)].max
+          else
+            current_width = 0
+            previous_width = 0
+          end
+
+          # Income: green if increased, gray/primary if decreased
+          income_increased = comparison_data[:current][:income] >= comparison_data[:previous][:income]
+          income_bar_color = income_increased ? "bg-green-500" : "bg-gray-600"
+          income_bg_color = income_increased ? "bg-green-200" : "bg-gray-300"
+        %>
+        <% if previous_width > 0 || current_width > 0 %>
+          <%# Previous period bar (background) %>
+          <% if previous_width > 0 %>
+            <div class="absolute top-0 left-0 h-10 <%= income_bg_color %> rounded-lg transition-all duration-500"
                  style="width: <%= previous_width %>%"></div>
+          <% end %>
+          <%# Current period bar (foreground) %>
+          <% if current_width > 0 %>
+            <div class="absolute top-2 left-0 h-6 <%= income_bar_color %> rounded-lg transition-all duration-500"
+                 style="width: <%= current_width %>%"></div>
+          <% end %>
+        <% else %>
+          <div class="flex items-center justify-center h-10 text-sm text-tertiary">
+            <%= t("reports.comparison.no_data") %>
           </div>
-        </div>
+        <% end %>
       </div>
     </div>
 
@@ -61,37 +105,59 @@
         </h3>
       </div>
 
-      <div class="space-y-3">
-        <%# Current Period %>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-sm text-tertiary"><%= t("reports.comparison.current") %></span>
-            <span class="text-sm font-medium text-primary">
-              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:current][:expenses].round(2)) %>
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl font-semibold <%= comparison_class(comparison_data[:current][:expenses], comparison_data[:previous][:expenses], inverse: true) %>">
+            <%= Money.new(comparison_data[:current][:expenses], currency).format %>
+          </span>
+          <% change = percentage_change(comparison_data[:current][:expenses], comparison_data[:previous][:expenses]) %>
+          <% if change != 0 %>
+            <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:expenses], comparison_data[:previous][:expenses], inverse: true) %>">
+              <%= change >= 0 ? "+" : "" %><%= change %>%
             </span>
-          </div>
-          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
-            <% max_expenses = [comparison_data[:current][:expenses], comparison_data[:previous][:expenses]].max %>
-            <% current_exp_width = max_expenses > 0 ? (comparison_data[:current][:expenses] / max_expenses * 100).round(1) : 0 %>
-            <div class="h-full bg-danger rounded-lg transition-all duration-500"
-                 style="width: <%= current_exp_width %>%"></div>
-          </div>
+          <% end %>
         </div>
+        <span class="text-sm text-tertiary">
+          <%= t("reports.comparison.previous") %>: <%= Money.new(comparison_data[:previous][:expenses], currency).format %>
+        </span>
+      </div>
 
-        <%# Previous Period %>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-sm text-tertiary"><%= t("reports.comparison.previous") %></span>
-            <span class="text-sm font-medium text-secondary">
-              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:previous][:expenses].round(2)) %>
-            </span>
+      <%# Overlapping bars %>
+      <div class="relative h-10">
+        <%
+          current_expenses_abs = comparison_data[:current][:expenses].to_f.abs
+          previous_expenses_abs = comparison_data[:previous][:expenses].to_f.abs
+          max_expenses = [current_expenses_abs, previous_expenses_abs].max
+
+          if max_expenses > 0
+            current_width = [3, (current_expenses_abs / max_expenses * 100)].max
+            previous_width = [3, (previous_expenses_abs / max_expenses * 100)].max
+          else
+            current_width = 0
+            previous_width = 0
+          end
+
+          # Expenses: green if decreased (inverse logic), gray/primary if increased
+          expenses_decreased = comparison_data[:current][:expenses] <= comparison_data[:previous][:expenses]
+          expenses_bar_color = expenses_decreased ? "bg-green-500" : "bg-gray-600"
+          expenses_bg_color = expenses_decreased ? "bg-green-200" : "bg-gray-300"
+        %>
+        <% if previous_width > 0 || current_width > 0 %>
+          <%# Previous period bar (background) %>
+          <% if previous_width > 0 %>
+            <div class="absolute top-0 left-0 h-10 <%= expenses_bg_color %> rounded-lg transition-all duration-500"
+                 style="width: <%= previous_width %>%"></div>
+          <% end %>
+          <%# Current period bar (foreground) %>
+          <% if current_width > 0 %>
+            <div class="absolute top-2 left-0 h-6 <%= expenses_bar_color %> rounded-lg transition-all duration-500"
+                 style="width: <%= current_width %>%"></div>
+          <% end %>
+        <% else %>
+          <div class="flex items-center justify-center h-10 text-sm text-tertiary">
+            <%= t("reports.comparison.no_data") %>
           </div>
-          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
-            <% previous_exp_width = max_expenses > 0 ? (comparison_data[:previous][:expenses] / max_expenses * 100).round(1) : 0 %>
-            <div class="h-full bg-danger opacity-50 rounded-lg transition-all duration-500"
-                 style="width: <%= previous_exp_width %>%"></div>
-          </div>
-        </div>
+        <% end %>
       </div>
     </div>
 
@@ -104,37 +170,59 @@
         </h3>
       </div>
 
-      <div class="space-y-3">
-        <%# Current Period %>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-sm text-tertiary"><%= t("reports.comparison.current") %></span>
-            <span class="text-sm font-medium <%= comparison_data[:current][:net] >= 0 ? "text-success" : "text-danger" %>">
-              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:current][:net].round(2)) %>
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl font-semibold <%= comparison_class(comparison_data[:current][:net], comparison_data[:previous][:net]) %>">
+            <%= Money.new(comparison_data[:current][:net], currency).format %>
+          </span>
+          <% change = percentage_change(comparison_data[:current][:net], comparison_data[:previous][:net]) %>
+          <% if change != 0 %>
+            <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:net], comparison_data[:previous][:net]) %>">
+              <%= change >= 0 ? "+" : "" %><%= change %>%
             </span>
-          </div>
-          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
-            <% max_net = [comparison_data[:current][:net].abs, comparison_data[:previous][:net].abs].max %>
-            <% current_net_width = max_net > 0 ? (comparison_data[:current][:net].abs / max_net * 100).round(1) : 0 %>
-            <div class="h-full <%= comparison_data[:current][:net] >= 0 ? "bg-success" : "bg-danger" %> rounded-lg transition-all duration-500"
-                 style="width: <%= current_net_width %>%"></div>
-          </div>
+          <% end %>
         </div>
+        <span class="text-sm text-tertiary">
+          <%= t("reports.comparison.previous") %>: <%= Money.new(comparison_data[:previous][:net], currency).format %>
+        </span>
+      </div>
 
-        <%# Previous Period %>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-sm text-tertiary"><%= t("reports.comparison.previous") %></span>
-            <span class="text-sm font-medium <%= comparison_data[:previous][:net] >= 0 ? "text-success" : "text-danger" %> opacity-70">
-              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:previous][:net].round(2)) %>
-            </span>
+      <%# Overlapping bars %>
+      <div class="relative h-10">
+        <%
+          current_net_abs = comparison_data[:current][:net].to_f.abs
+          previous_net_abs = comparison_data[:previous][:net].to_f.abs
+          max_net = [current_net_abs, previous_net_abs].max
+
+          if max_net > 0
+            current_width = [3, (current_net_abs / max_net * 100)].max
+            previous_width = [3, (previous_net_abs / max_net * 100)].max
+          else
+            current_width = 0
+            previous_width = 0
+          end
+
+          # Net Savings: green if improved (increased), gray/primary if got worse
+          net_improved = comparison_data[:current][:net] >= comparison_data[:previous][:net]
+          net_bar_color = net_improved ? "bg-green-500" : "bg-gray-600"
+          net_bg_color = net_improved ? "bg-green-200" : "bg-gray-300"
+        %>
+        <% if previous_width > 0 || current_width > 0 %>
+          <%# Previous period bar (background) %>
+          <% if previous_width > 0 %>
+            <div class="absolute top-0 left-0 h-10 <%= net_bg_color %> rounded-lg transition-all duration-500"
+                 style="width: <%= previous_width %>%"></div>
+          <% end %>
+          <%# Current period bar (foreground) %>
+          <% if current_width > 0 %>
+            <div class="absolute top-2 left-0 h-6 <%= net_bar_color %> rounded-lg transition-all duration-500"
+                 style="width: <%= current_width %>%"></div>
+          <% end %>
+        <% else %>
+          <div class="flex items-center justify-center h-10 text-sm text-tertiary">
+            <%= t("reports.comparison.no_data") %>
           </div>
-          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
-            <% previous_net_width = max_net > 0 ? (comparison_data[:previous][:net].abs / max_net * 100).round(1) : 0 %>
-            <div class="h-full <%= comparison_data[:previous][:net] >= 0 ? "bg-success" : "bg-danger" %> opacity-50 rounded-lg transition-all duration-500"
-                 style="width: <%= previous_net_width %>%"></div>
-          </div>
-        </div>
+        <% end %>
       </div>
     </div>
   </div>

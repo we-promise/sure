@@ -152,16 +152,17 @@ class ReportsController < ApplicationController
     def build_comparison_data
       currency_symbol = Money::Currency.new(Current.family.currency).symbol
 
+      # Totals are integers in cents - keep as cents for display
       {
         current: {
-          income: (@current_income_totals.total.to_f / 100.0).round(2),
-          expenses: (@current_expense_totals.total.to_f / 100.0).round(2),
-          net: ((@current_income_totals.total - @current_expense_totals.total).to_f / 100.0).round(2)
+          income: @current_income_totals.total.to_f,
+          expenses: @current_expense_totals.total.to_f,
+          net: (@current_income_totals.total - @current_expense_totals.total).to_f
         },
         previous: {
-          income: (@previous_income_totals.total.to_f / 100.0).round(2),
-          expenses: (@previous_expense_totals.total.to_f / 100.0).round(2),
-          net: ((@previous_income_totals.total - @previous_expense_totals.total).to_f / 100.0).round(2)
+          income: @previous_income_totals.total.to_f,
+          expenses: @previous_expense_totals.total.to_f,
+          net: (@previous_income_totals.total - @previous_expense_totals.total).to_f
         },
         currency_symbol: currency_symbol
       }
@@ -228,39 +229,56 @@ class ReportsController < ApplicationController
 
     def build_spending_patterns
       # Analyze weekday vs weekend spending
-      # Get expense entries for the period
-      entries = Entry.joins(:account)
-        .where(accounts: { family_id: Current.family.id })
-        .where(date: @period.date_range)
-        .where(entryable_type: "Transaction")
-        .includes(:entryable)
-        .select { |e| e.entryable&.category&.classification == "expense" }
-
-      weekday_total = Money.new(0, Current.family.currency)
-      weekend_total = Money.new(0, Current.family.currency)
+      weekday_total = 0
+      weekend_total = 0
       weekday_count = 0
       weekend_count = 0
 
-      entries.each do |entry|
+      # Build query matching income_statement logic:
+      # Expenses are transactions with positive amounts, regardless of category
+      expense_transactions = Transaction
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .where(kind: [ "standard", "loan_payment" ])
+        .where("entries.amount > 0") # Positive amount = expense (matching income_statement logic)
+
+      # Sum up amounts by weekday vs weekend
+      expense_transactions.each do |transaction|
+        entry = transaction.entry
+        amount = entry.amount.to_f.to_i.abs
+
         if entry.date.wday.in?([ 0, 6 ]) # Sunday or Saturday
-          weekend_total += entry.amount.abs
+          weekend_total += amount
           weekend_count += 1
         else
-          weekday_total += entry.amount.abs
+          weekday_total += amount
           weekday_count += 1
         end
       end
 
-      weekday_avg = weekday_count.positive? ? weekday_total / weekday_count : Money.new(0, Current.family.currency)
-      weekend_avg = weekend_count.positive? ? weekend_total / weekend_count : Money.new(0, Current.family.currency)
+      weekday_avg = weekday_count.positive? ? (weekday_total / weekday_count) : 0
+      weekend_avg = weekend_count.positive? ? (weekend_total / weekend_count) : 0
 
       {
-        weekday_total: weekday_total.to_f.to_i,
-        weekend_total: weekend_total.to_f.to_i,
-        weekday_avg: weekday_avg.to_f.to_i,
-        weekend_avg: weekend_avg.to_f.to_i,
+        weekday_total: weekday_total,
+        weekend_total: weekend_total,
+        weekday_avg: weekday_avg,
+        weekend_avg: weekend_avg,
         weekday_count: weekday_count,
         weekend_count: weekend_count
+      }
+    end
+
+    def default_spending_patterns
+      {
+        weekday_total: 0,
+        weekend_total: 0,
+        weekday_avg: 0,
+        weekend_avg: 0,
+        weekday_count: 0,
+        weekend_count: 0
       }
     end
 
@@ -274,17 +292,21 @@ class ReportsController < ApplicationController
         csv << []
 
         # Summary
+        total_income = ensure_money(income_totals.total)
+        total_expenses = ensure_money(expense_totals.total)
+        net_savings = total_income - total_expenses
+
         csv << [ "Summary" ]
-        csv << [ "Total Income", income_totals.total.format ]
-        csv << [ "Total Expenses", expense_totals.total.format ]
-        csv << [ "Net Savings", (income_totals.total - expense_totals.total).format ]
+        csv << [ "Total Income", total_income.format ]
+        csv << [ "Total Expenses", total_expenses.format ]
+        csv << [ "Net Savings", net_savings.format ]
         csv << []
 
         # Income breakdown
         csv << [ "Income by Category" ]
         csv << [ "Category", "Amount", "Percentage" ]
         income_totals.category_totals.each do |ct|
-          csv << [ ct.category.name, ct.total.format, "#{ct.weight.round(1)}%" ]
+          csv << [ ct.category.name, ensure_money(ct.total).format, "#{ct.weight.round(1)}%" ]
         end
         csv << []
 
@@ -292,7 +314,7 @@ class ReportsController < ApplicationController
         csv << [ "Expenses by Category" ]
         csv << [ "Category", "Amount", "Percentage" ]
         expense_totals.category_totals.each do |ct|
-          csv << [ ct.category.name, ct.total.format, "#{ct.weight.round(1)}%" ]
+          csv << [ ct.category.name, ensure_money(ct.total).format, "#{ct.weight.round(1)}%" ]
         end
       end
     end

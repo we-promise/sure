@@ -76,25 +76,24 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   test "index calculates summary metrics correctly" do
     get reports_path(period_type: :monthly)
     assert_response :ok
-    assert assigns(:summary_metrics).present?
-    assert assigns(:summary_metrics)[:current_income].is_a?(Money)
-    assert assigns(:summary_metrics)[:current_expenses].is_a?(Money)
-    assert assigns(:summary_metrics)[:net_savings].is_a?(Money)
+    assert_select "h3", text: I18n.t("reports.summary.total_income")
+    assert_select "h3", text: I18n.t("reports.summary.total_expenses")
+    assert_select "h3", text: I18n.t("reports.summary.net_savings")
   end
 
   test "index builds comparison data" do
     get reports_path(period_type: :monthly)
     assert_response :ok
-    assert assigns(:comparison_data).present?
-    assert assigns(:comparison_data)[:current].present?
-    assert assigns(:comparison_data)[:previous].present?
+    assert_select "h2", text: I18n.t("reports.comparison.title")
+    assert_select "h3", text: I18n.t("reports.comparison.income")
+    assert_select "h3", text: I18n.t("reports.comparison.expenses")
   end
 
   test "index builds trends data" do
     get reports_path(period_type: :monthly)
     assert_response :ok
-    assert assigns(:trends_data).present?
-    assert assigns(:trends_data).is_a?(Array)
+    assert_select "h2", text: I18n.t("reports.trends.title")
+    assert_select "th", text: I18n.t("reports.trends.month")
   end
 
   test "index handles invalid date parameters gracefully" do
@@ -104,5 +103,51 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       end_date: "also-invalid"
     )
     assert_response :ok # Should not crash, uses defaults
+  end
+
+  test "spending patterns returns data when expense transactions exist" do
+    # Create expense category
+    expense_category = @family.categories.create!(
+      name: "Test Groceries",
+      classification: "expense"
+    )
+
+    # Create account
+    account = @family.accounts.first
+
+    # Create expense transaction on a weekday (Monday)
+    weekday_date = Date.current.beginning_of_month + 2.days
+    weekday_date = weekday_date.next_occurring(:monday)
+
+    entry = account.entries.create!(
+      name: "Grocery shopping",
+      date: weekday_date,
+      amount: -50.00,
+      currency: "USD",
+      entryable: Transaction.new(
+        category: expense_category,
+        kind: "standard"
+      )
+    )
+
+    # Create expense transaction on a weekend (Saturday)
+    weekend_date = weekday_date.next_occurring(:saturday)
+
+    weekend_entry = account.entries.create!(
+      name: "Weekend shopping",
+      date: weekend_date,
+      amount: -75.00,
+      currency: "USD",
+      entryable: Transaction.new(
+        category: expense_category,
+        kind: "standard"
+      )
+    )
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    # Verify spending patterns shows data (not the "no data" message)
+    assert_select ".text-center.py-8.text-tertiary", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
   end
 end

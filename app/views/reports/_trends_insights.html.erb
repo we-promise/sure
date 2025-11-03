@@ -41,7 +41,7 @@
                     <%= Money.new(trend[:net], Current.family.currency).format %>
                   </td>
                   <td class="text-right py-3 pl-4 <%= trend[:net] >= 0 ? "text-success" : "text-danger" %>">
-                    <% savings_rate = trend[:income] > 0 ? ((trend[:net] / trend[:income]) * 100).round(1) : 0 %>
+                    <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
                     <%= savings_rate %>%
                   </td>
                 </tr>
@@ -165,14 +165,29 @@
                   <%= t("reports.trends.insight_title") %>
                 </p>
                 <p class="text-sm text-secondary">
-                  <% ratio = (spending_patterns[:weekend_avg] / spending_patterns[:weekday_avg] * 100).round(0) %>
-                  <% if ratio > 120 %>
-                    <%= t("reports.trends.insight_higher_weekend", percent: ratio - 100) %>
-                  <% elsif ratio < 80 %>
-                    <%= t("reports.trends.insight_higher_weekday", percent: 100 - ratio) %>
-                  <% else %>
-                    <%= t("reports.trends.insight_similar") %>
-                  <% end %>
+                  <%
+                    weekday = spending_patterns[:weekday_avg].to_f
+                    weekend = spending_patterns[:weekend_avg].to_f
+
+                    if weekend > weekday
+                      percent_diff = ((weekend - weekday) / weekday * 100).round(0)
+                      if percent_diff > 20
+                        message = t("reports.trends.insight_higher_weekend", percent: percent_diff)
+                      else
+                        message = t("reports.trends.insight_similar")
+                      end
+                    elsif weekday > weekend
+                      percent_diff = ((weekday - weekend) / weekend * 100).round(0)
+                      if percent_diff > 20
+                        message = t("reports.trends.insight_higher_weekday", percent: percent_diff)
+                      else
+                        message = t("reports.trends.insight_similar")
+                      end
+                    else
+                      message = t("reports.trends.insight_similar")
+                    end
+                  %>
+                  <%= message %>
                 </p>
               </div>
             </div>
