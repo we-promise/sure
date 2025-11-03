@@ -1,0 +1,124 @@
+<% content_for :page_header do %>
+  <div class="space-y-4 mb-6">
+    <div class="flex gap-4 justify-between items-center lg:items-start">
+      <div class="space-y-1">
+        <h1 class="text-xl lg:text-3xl font-medium text-primary">
+          <%= t("reports.index.title") %>
+        </h1>
+        <p class="text-sm lg:text-base text-secondary">
+          <%= t("reports.index.subtitle") %>
+        </p>
+      </div>
+
+      <%= link_to export_reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date, format: :csv),
+                  class: "inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-opacity" do %>
+        <%= icon("download", class: "w-4 h-4") %>
+        <span class="hidden lg:inline"><%= t("reports.index.export") %></span>
+      <% end %>
+    </div>
+
+    <%# Period Navigation Tabs %>
+    <div class="flex items-center gap-2 overflow-x-auto pb-2">
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.monthly"),
+        variant: @period_type == :monthly ? "secondary" : "ghost",
+        href: reports_path(period_type: :monthly),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.quarterly"),
+        variant: @period_type == :quarterly ? "secondary" : "ghost",
+        href: reports_path(period_type: :quarterly),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.ytd"),
+        variant: @period_type == :ytd ? "secondary" : "ghost",
+        href: reports_path(period_type: :ytd),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.custom"),
+        variant: @period_type == :custom ? "secondary" : "ghost",
+        href: reports_path(period_type: :custom),
+        size: :sm
+      ) %>
+    </div>
+
+    <%# Custom Date Range Picker (only shown when custom is selected) %>
+    <% if @period_type == :custom %>
+      <div class="flex items-center gap-3 bg-surface-inset p-3 rounded-lg">
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.from") %></label>
+          <input type="date"
+                 value="<%= @start_date.strftime("%Y-%m-%d") %>"
+                 data-controller="date-picker"
+                 data-action="change->date-picker#updateStartDate"
+                 autocomplete="off"
+                 class="px-3 py-1.5 border border-primary rounded-lg text-sm">
+        </div>
+        <span class="text-secondary">—</span>
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.to") %></label>
+          <input type="date"
+                 value="<%= @end_date.strftime("%Y-%m-%d") %>"
+                 data-controller="date-picker"
+                 data-action="change->date-picker#updateEndDate"
+                 autocomplete="off"
+                 class="px-3 py-1.5 border border-primary rounded-lg text-sm">
+        </div>
+      </div>
+    <% end %>
+
+    <%# Period Display %>
+    <div class="text-sm text-secondary">
+      <%= t("reports.index.showing_period",
+            start: @start_date.strftime("%b %-d, %Y"),
+            end: @end_date.strftime("%b %-d, %Y")) %>
+    </div>
+  </div>
+<% end %>
+
+<div class="w-full space-y-6 pb-24">
+  <% if Current.family.transactions.any? %>
+    <%# Summary Dashboard %>
+    <section>
+      <%= render partial: "reports/summary_dashboard", locals: {
+        metrics: @summary_metrics,
+        period_type: @period_type
+      } %>
+    </section>
+
+    <%# Comparison Chart %>
+    <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
+      <%= render partial: "reports/comparison_chart", locals: {
+        comparison_data: @comparison_data,
+        period_type: @period_type,
+        start_date: @start_date
+      } %>
+    </section>
+
+    <%# Budget Performance (only for monthly view) %>
+    <% if @period_type == :monthly && @budget_performance.any? %>
+      <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
+        <%= render partial: "reports/budget_performance", locals: {
+          budget_data: @budget_performance,
+          start_date: @start_date
+        } %>
+      </section>
+    <% end %>
+
+    <%# Trends & Insights %>
+    <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
+      <%= render partial: "reports/trends_insights", locals: {
+        trends_data: @trends_data,
+        spending_patterns: @spending_patterns
+      } %>
+    </section>
+  <% else %>
+    <%# Empty State %>
+    <section>
+      <%= render partial: "reports/empty_state" %>
+    </section>
+  <% end %>
+</div>

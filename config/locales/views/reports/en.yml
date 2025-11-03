@@ -1,0 +1,74 @@
+---
+en:
+  reports:
+    index:
+      title: Reports
+      subtitle: Comprehensive insights into your financial health
+      export: Export CSV
+      periods:
+        monthly: Monthly
+        quarterly: Quarterly
+        ytd: Year to Date
+        custom: Custom Range
+      date_range:
+        from: From
+        to: To
+      showing_period: "Showing data from %{start} to %{end}"
+    summary:
+      total_income: Total Income
+      total_expenses: Total Expenses
+      net_savings: Net Savings
+      budget_performance: Budget Performance
+      vs_previous: vs previous period
+      income_minus_expenses: Income minus expenses
+      of_budget_used: of budget used
+      no_budget_data: No budget data for this period
+    comparison:
+      title: Period Comparison
+      currency: "Currency: %{symbol}"
+      income: Income
+      expenses: Expenses
+      net_savings: Net Savings
+      current: Current Period
+      previous: Previous Period
+    budget_performance:
+      title: Budget Performance
+      spent: Spent
+      budgeted: Budgeted
+      remaining: Remaining
+      over_by: Over by
+      suggested_daily: "%{amount} suggested per day for %{days} remaining days"
+      no_budgets: No budget categories set up for this month
+      status:
+        good: On Track
+        warning: Near Limit
+        over: Over Budget
+    trends:
+      title: Trends & Insights
+      last_six_months: Last 6 Months
+      month: Month
+      income: Income
+      expenses: Expenses
+      net: Net
+      savings_rate: Savings Rate
+      current: current
+      avg_monthly_income: Avg. Monthly Income
+      avg_monthly_expenses: Avg. Monthly Expenses
+      avg_monthly_savings: Avg. Monthly Savings
+      no_data: No trend data available
+      spending_patterns: Spending Patterns
+      weekday_spending: Weekday Spending
+      weekend_spending: Weekend Spending
+      total: Total
+      avg_per_transaction: Avg. per transaction
+      transactions: Transactions
+      insight_title: Insight
+      insight_higher_weekend: "You spend %{percent}% more per transaction on weekends than weekdays"
+      insight_higher_weekday: "You spend %{percent}% more per transaction on weekdays than weekends"
+      insight_similar: "Your spending per transaction is similar on weekdays and weekends"
+      no_spending_data: No spending data available for this period
+    empty_state:
+      title: No Data Available
+      description: Start tracking your finances by adding transactions or connecting your accounts to see comprehensive reports
+      add_transaction: Add Transaction
+      add_account: Add Account

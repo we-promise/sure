@@ -1,0 +1,141 @@
+<div>
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-lg font-medium text-primary">
+      <%= t("reports.comparison.title") %>
+    </h2>
+    <p class="text-sm text-tertiary">
+      <%= t("reports.comparison.currency", symbol: comparison_data[:currency_symbol]) %>
+    </p>
+  </div>
+
+  <div class="space-y-8">
+    <%# Income Comparison %>
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-medium text-secondary flex items-center gap-2">
+          <%= icon("trending-up", class: "w-4 h-4 text-success") %>
+          <%= t("reports.comparison.income") %>
+        </h3>
+      </div>
+
+      <div class="space-y-3">
+        <%# Current Period %>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm text-tertiary"><%= t("reports.comparison.current") %></span>
+            <span class="text-sm font-medium text-primary">
+              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:current][:income].round(2)) %>
+            </span>
+          </div>
+          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
+            <% max_income = [comparison_data[:current][:income], comparison_data[:previous][:income]].max %>
+            <% current_width = max_income > 0 ? (comparison_data[:current][:income] / max_income * 100).round(1) : 0 %>
+            <div class="h-full bg-success rounded-lg transition-all duration-500"
+                 style="width: <%= current_width %>%"></div>
+          </div>
+        </div>
+
+        <%# Previous Period %>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm text-tertiary"><%= t("reports.comparison.previous") %></span>
+            <span class="text-sm font-medium text-secondary">
+              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:previous][:income].round(2)) %>
+            </span>
+          </div>
+          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
+            <% previous_width = max_income > 0 ? (comparison_data[:previous][:income] / max_income * 100).round(1) : 0 %>
+            <div class="h-full bg-success opacity-50 rounded-lg transition-all duration-500"
+                 style="width: <%= previous_width %>%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# Expenses Comparison %>
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-medium text-secondary flex items-center gap-2">
+          <%= icon("trending-down", class: "w-4 h-4 text-danger") %>
+          <%= t("reports.comparison.expenses") %>
+        </h3>
+      </div>
+
+      <div class="space-y-3">
+        <%# Current Period %>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm text-tertiary"><%= t("reports.comparison.current") %></span>
+            <span class="text-sm font-medium text-primary">
+              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:current][:expenses].round(2)) %>
+            </span>
+          </div>
+          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
+            <% max_expenses = [comparison_data[:current][:expenses], comparison_data[:previous][:expenses]].max %>
+            <% current_exp_width = max_expenses > 0 ? (comparison_data[:current][:expenses] / max_expenses * 100).round(1) : 0 %>
+            <div class="h-full bg-danger rounded-lg transition-all duration-500"
+                 style="width: <%= current_exp_width %>%"></div>
+          </div>
+        </div>
+
+        <%# Previous Period %>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm text-tertiary"><%= t("reports.comparison.previous") %></span>
+            <span class="text-sm font-medium text-secondary">
+              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:previous][:expenses].round(2)) %>
+            </span>
+          </div>
+          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
+            <% previous_exp_width = max_expenses > 0 ? (comparison_data[:previous][:expenses] / max_expenses * 100).round(1) : 0 %>
+            <div class="h-full bg-danger opacity-50 rounded-lg transition-all duration-500"
+                 style="width: <%= previous_exp_width %>%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# Net Savings Comparison %>
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-medium text-secondary flex items-center gap-2">
+          <%= icon("piggy-bank", class: "w-4 h-4 text-primary") %>
+          <%= t("reports.comparison.net_savings") %>
+        </h3>
+      </div>
+
+      <div class="space-y-3">
+        <%# Current Period %>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm text-tertiary"><%= t("reports.comparison.current") %></span>
+            <span class="text-sm font-medium <%= comparison_data[:current][:net] >= 0 ? "text-success" : "text-danger" %>">
+              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:current][:net].round(2)) %>
+            </span>
+          </div>
+          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
+            <% max_net = [comparison_data[:current][:net].abs, comparison_data[:previous][:net].abs].max %>
+            <% current_net_width = max_net > 0 ? (comparison_data[:current][:net].abs / max_net * 100).round(1) : 0 %>
+            <div class="h-full <%= comparison_data[:current][:net] >= 0 ? "bg-success" : "bg-danger" %> rounded-lg transition-all duration-500"
+                 style="width: <%= current_net_width %>%"></div>
+          </div>
+        </div>
+
+        <%# Previous Period %>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm text-tertiary"><%= t("reports.comparison.previous") %></span>
+            <span class="text-sm font-medium <%= comparison_data[:previous][:net] >= 0 ? "text-success" : "text-danger" %> opacity-70">
+              <%= comparison_data[:currency_symbol] %><%= number_with_delimiter(comparison_data[:previous][:net].round(2)) %>
+            </span>
+          </div>
+          <div class="h-8 bg-surface-inset rounded-lg overflow-hidden">
+            <% previous_net_width = max_net > 0 ? (comparison_data[:previous][:net].abs / max_net * 100).round(1) : 0 %>
+            <div class="h-full <%= comparison_data[:previous][:net] >= 0 ? "bg-success" : "bg-danger" %> opacity-50 rounded-lg transition-all duration-500"
+                 style="width: <%= previous_net_width %>%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

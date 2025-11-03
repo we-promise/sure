@@ -102,6 +102,10 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  resources :reports, only: %i[index] do
+    get :export, on: :collection
+  end
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     get :picker, on: :collection
 
