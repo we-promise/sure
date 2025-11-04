@@ -111,8 +111,12 @@ class ReportsController < ApplicationController
 
     def default_end_date
       case @period_type
-      when :monthly, :quarterly, :ytd, :last_6_months
+      when :monthly, :last_6_months
         Date.current.end_of_month.to_date
+      when :quarterly
+        Date.current.end_of_quarter.to_date
+      when :ytd
+        Date.current
       when :custom
         Date.current
       else
