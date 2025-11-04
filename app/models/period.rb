@@ -69,6 +69,12 @@ class Period
       label_short: "10Y",
       label: "Last 10 Years",
       comparison_label: "vs. 10 years ago"
+    },
+    "all_time" => {
+      date_range: -> { [ Current.family&.oldest_entry_date || Date.current, Date.current ] },
+      label_short: "All",
+      label: "All Time",
+      comparison_label: "vs. beginning"
     }
   }
 
