@@ -91,9 +91,9 @@
           </div>
 
           <%# Suggested Daily Limit (if remaining days in month) %>
-          <% if budget_item[:remaining] > 0 %>
+          <% if budget_item[:remaining] > 0 && start_date.month == Date.current.month && start_date.year == Date.current.year %>
             <% days_remaining = (start_date.end_of_month - Date.current).to_i + 1 %>
-            <% if days_remaining > 0 && start_date.month == Date.current.month && start_date.year == Date.current.year %>
+            <% if days_remaining > 0 %>
               <div class="mt-3 pt-3 border-t border-tertiary">
                 <p class="text-xs text-tertiary">
                   <%= t("reports.budget_performance.suggested_daily",
