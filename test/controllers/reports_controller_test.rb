@@ -55,12 +55,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
     category = @family.categories.expenses.first
 
-    if category && budget
-      # Find or create budget category to avoid duplicate errors
-      budget_category = budget.budget_categories.find_or_initialize_by(category: category)
-      budget_category.budgeted_spending = Money.new(50000, @family.currency)
-      budget_category.save!
-    end
+    # Fail fast if test setup is incomplete
+    assert_not_nil category, "Test setup failed: no expense category found for family"
+    assert_not_nil budget, "Test setup failed: budget could not be created or found"
+
+    # Find or create budget category to avoid duplicate errors
+    budget_category = budget.budget_categories.find_or_initialize_by(category: category)
+    budget_category.budgeted_spending = Money.new(50000, @family.currency)
+    budget_category.save!
 
     get reports_path(period_type: :monthly)
     assert_response :ok
