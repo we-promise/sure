@@ -17,6 +17,7 @@ RUN apt-get update -qq \
     openssh-client \
     postgresql-client \
     vim \
+    procps \
   && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 RUN gem install bundler foreman
