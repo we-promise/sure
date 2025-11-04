@@ -5,7 +5,7 @@ class FamilyMerchantsController < ApplicationController
     @breadcrumbs = [ [ "Home", root_path ], [ "Merchants", nil ] ]
 
     # Show all merchants assigned to transactions (both FamilyMerchant and ProviderMerchant)
-    @family_merchants = Current.family.assigned_merchants.alphabetically
+    @family_merchants = Current.family.merchants.alphabetically
 
     render layout: "settings"
   end
