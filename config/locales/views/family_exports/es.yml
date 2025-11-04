@@ -1,0 +1,7 @@
+---
+es:
+  family_exports:
+    list:
+      in_progress: En progreso
+      complete: Completo
+      failed: Fallido

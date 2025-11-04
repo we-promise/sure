@@ -1,0 +1,31 @@
+---
+es:
+  pages:
+    changelog:
+      title: Novedades
+    dashboard:
+      welcome: "Bienvenido de nuevo, %{name}"
+      subtitle: "Esto es lo que está pasando con tus finanzas"
+      new: "Nuevo"
+      net_worth_chart:
+        data_not_available: Datos no disponibles para el período seleccionado
+        title: Patrimonio neto
+      no_account_empty_state:
+        new_account: Nueva cuenta
+        no_account_subtitle: Como no se han añadido cuentas, no hay datos para mostrar. Añade tus primeras cuentas para empezar a ver los datos del panel.
+        no_account_title: Aún no hay cuentas
+      balance_sheet:
+        no_items: "Aún no hay %{name}"
+        add_accounts: "Añade tus cuentas de %{name} para ver un desglose completo"
+      cashflow_sankey:
+        title: "Flujo de caja"
+        no_data_title: "No hay datos de flujo de caja para este período"
+        no_data_description: "Añade transacciones para mostrar datos de flujo de caja o amplía el período de tiempo"
+        add_transaction: "Añadir transacción"
+      no_accounts:
+        title: "Aún no hay cuentas"
+        description: "Añade cuentas para mostrar datos de patrimonio neto"
+        add_account: "Añadir cuenta"
+      outflows_donut:
+        title: "Salidas"
+        total_outflows: "Salidas totales"
