@@ -6,7 +6,7 @@ class UsersController < ApplicationController
     if @user.resend_confirmation_email
       redirect_to settings_profile_path, notice: t(".success")
     else
-      redirect_to settings_profile_path, alert: "No email change is currently pending!"
+      redirect_to settings_profile_path, alert: t("no_pending_change")
     end
   end
 

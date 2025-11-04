@@ -10,6 +10,7 @@ en:
       success: Your profile has been updated.
     resend_confirmation_email:
       success: A new confirmation email is queued to be sent.
+      no_pending_change: No email change is currently pending!
     reset:
       success: Your account has been reset. Data will be deleted in the background in some time.
       unauthorized: You are not authorized to perform this action
