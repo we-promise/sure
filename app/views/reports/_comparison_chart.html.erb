@@ -47,9 +47,16 @@
           </span>
           <% change = percentage_change(comparison_data[:current][:income], comparison_data[:previous][:income]) %>
           <% if change != 0 %>
-            <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:income], comparison_data[:previous][:income]) %>">
-              <%= change >= 0 ? "+" : "" %><%= change %>%
-            </span>
+            <% income_improved = comparison_data[:current][:income] > comparison_data[:previous][:income] %>
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:income], comparison_data[:previous][:income]) %>">
+                <%= change >= 0 ? "+" : "" %><%= change %>%
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium <%= income_improved ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' %>">
+                <%= icon(income_improved ? "trending-up" : "trending-down", class: "w-3 h-3") %>
+                <%= t(income_improved ? "reports.comparison.status.improved" : "reports.comparison.status.decreased") %>
+              </span>
+            </div>
           <% end %>
         </div>
         <span class="text-sm text-tertiary">
@@ -112,9 +119,16 @@
           </span>
           <% change = percentage_change(comparison_data[:current][:expenses], comparison_data[:previous][:expenses]) %>
           <% if change != 0 %>
-            <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:expenses], comparison_data[:previous][:expenses], inverse: true) %>">
-              <%= change >= 0 ? "+" : "" %><%= change %>%
-            </span>
+            <% expenses_improved = comparison_data[:current][:expenses] < comparison_data[:previous][:expenses] %>
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:expenses], comparison_data[:previous][:expenses], inverse: true) %>">
+                <%= change >= 0 ? "+" : "" %><%= change %>%
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium <%= expenses_improved ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' %>">
+                <%= icon(expenses_improved ? "trending-down" : "trending-up", class: "w-3 h-3") %>
+                <%= t(expenses_improved ? "reports.comparison.status.reduced" : "reports.comparison.status.increased") %>
+              </span>
+            </div>
           <% end %>
         </div>
         <span class="text-sm text-tertiary">
@@ -177,9 +191,16 @@
           </span>
           <% change = percentage_change(comparison_data[:current][:net], comparison_data[:previous][:net]) %>
           <% if change != 0 %>
-            <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:net], comparison_data[:previous][:net]) %>">
-              <%= change >= 0 ? "+" : "" %><%= change %>%
-            </span>
+            <% net_improved = comparison_data[:current][:net] > comparison_data[:previous][:net] %>
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-medium <%= comparison_class(comparison_data[:current][:net], comparison_data[:previous][:net]) %>">
+                <%= change >= 0 ? "+" : "" %><%= change %>%
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium <%= net_improved ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' %>">
+                <%= icon(net_improved ? "trending-up" : "trending-down", class: "w-3 h-3") %>
+                <%= t(net_improved ? "reports.comparison.status.improved" : "reports.comparison.status.decreased") %>
+              </span>
+            </div>
           <% end %>
         </div>
         <span class="text-sm text-tertiary">

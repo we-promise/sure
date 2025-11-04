@@ -33,6 +33,11 @@ en:
       current: Current Period
       previous: Previous Period
       no_data: No data available
+      status:
+        improved: Improved
+        decreased: Decreased
+        reduced: Reduced
+        increased: Increased
     budget_performance:
       title: Budget Performance
       spent: Spent
