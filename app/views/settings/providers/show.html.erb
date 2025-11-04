@@ -1,0 +1,15 @@
+<%= content_for :page_title, "Bank Sync Providers" %>
+
+<div class="space-y-8">
+  <div>
+    <p class="text-secondary mb-4">
+      Configure credentials for third-party bank sync providers. Settings configured here will override environment variables.
+    </p>
+  </div>
+
+  <% @provider_configurations.each do |config| %>
+    <%= settings_section title: config.provider_key.titleize do %>
+      <%= render "settings/providers/provider_form", configuration: config %>
+    <% end %>
+  <% end %>
+</div>

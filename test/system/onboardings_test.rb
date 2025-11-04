@@ -38,7 +38,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     # Should redirect to goals page
     assert_current_path goals_onboarding_path
-    assert_text "What brings you to Sure?"
+    assert_text "What brings you here?"
   end
 
   test "preferences page renders chart without errors" do
@@ -137,7 +137,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     visit goals_onboarding_path
 
-    assert_text "What brings you to Sure?"
+    assert_text "What brings you here?"
     assert_button "Next"
   end
 
@@ -183,7 +183,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     def sign_in(user)
       visit new_session_path
-      within "form" do
+      within %(form[action='#{sessions_path}']) do
         fill_in "Email", with: user.email
         fill_in "Password", with: user_password_test
         click_on "Log in"

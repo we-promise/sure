@@ -23,11 +23,18 @@ class Assistant
       ai_model: message.ai_model
     )
 
+    llm_provider = get_model_provider(message.ai_model)
+
+    unless llm_provider
+      error_message = build_no_provider_error_message(message.ai_model)
+      raise StandardError, error_message
+    end
+
     responder = Assistant::Responder.new(
       message: message,
       instructions: instructions,
       function_tool_caller: function_tool_caller,
-      llm: get_model_provider(message.ai_model)
+      llm: llm_provider
     )
 
     latest_response_id = chat.latest_assistant_response_id
@@ -71,5 +78,24 @@ class Assistant
       end
 
       @function_tool_caller ||= FunctionToolCaller.new(function_instances)
+    end
+
+    def build_no_provider_error_message(requested_model)
+      available_providers = registry.providers
+
+      if available_providers.empty?
+        "No LLM provider configured that supports model '#{requested_model}'. " \
+        "Please configure an LLM provider (e.g., OpenAI) in settings."
+      else
+        provider_details = available_providers.map do |provider|
+          "  - #{provider.provider_name}: #{provider.supported_models_description}"
+        end.join("\n")
+
+        "No LLM provider configured that supports model '#{requested_model}'.\n\n" \
+        "Available providers:\n#{provider_details}\n\n" \
+        "Please either:\n" \
+        "  1. Use a supported model from the list above, or\n" \
+        "  2. Configure a provider that supports '#{requested_model}' in settings."
+      end
     end
 end

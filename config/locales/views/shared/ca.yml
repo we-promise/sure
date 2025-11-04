@@ -1,0 +1,15 @@
+---
+ca:
+  shared:
+    confirm_modal:
+      accept: Confirma
+      body_html: "<p>No podràs desfer aquesta acció</p>"
+      cancel: Cancel·la
+      title: Segur que vols continuar?
+    money_field:
+      label: Import
+    syncing_notice:
+      syncing: S'estan sincronitzant les dades dels comptes...
+    trend_change:
+      no_change: "sense canvis"
+

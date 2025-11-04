@@ -5,6 +5,6 @@ nb:
       cta: Tilbakestill passordet ditt
       ignore_if_not_requested: Hvis du ikke gjorde denne forespørselen, kan du ignorere denne
         e-posten.
-      request_made: En forespørsel ble gjort for å tilbakestille ditt Sure-passord. Klikk på lenken
+      request_made: En forespørsel ble gjort for å tilbakestille %{product_name}-passordet ditt. Klikk på lenken
         for å tilbakestille det.
-      subject: 'Sure: Tilbakestill passordet ditt'
+      subject: '%{product_name}: Tilbakestill passordet ditt'

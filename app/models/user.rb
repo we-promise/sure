@@ -10,6 +10,7 @@ class User < ApplicationRecord
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
   has_many :impersonator_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonator_id, dependent: :destroy
   has_many :impersonated_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonated_id, dependent: :destroy
+  has_many :oidc_identities, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -44,7 +45,6 @@ class User < ApplicationRecord
 
   def initiate_email_change(new_email)
     return false if new_email == email
-    return false if new_email == unconfirmed_email
 
     if Rails.application.config.app_mode.self_hosted? && !Setting.require_email_confirmation
       update(email: new_email)
@@ -55,6 +55,15 @@ class User < ApplicationRecord
       else
         false
       end
+    end
+  end
+
+  def resend_confirmation_email
+    if pending_email_change?
+      EmailConfirmationMailer.with(user: self).confirmation_email.deliver_later
+      true
+    else
+      false
     end
   end
 

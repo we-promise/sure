@@ -38,6 +38,20 @@ class RulesController < ApplicationController
   end
 
   def confirm
+    # Compute provider, model, and cost estimation for auto-categorize actions
+    if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
+      # Use the same provider determination logic as Family::AutoCategorizer
+      llm_provider = Provider::Registry.get_provider(:openai)
+
+      if llm_provider
+        @selected_model = Provider::Openai.effective_model
+        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
+          transaction_count: @rule.affected_resource_count,
+          category_count: @rule.family.categories.count,
+          model: @selected_model
+        )
+      end
+    end
   end
 
   def edit

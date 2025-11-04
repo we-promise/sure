@@ -99,15 +99,24 @@ class PlaidItem < ApplicationRecord
 
   private
     def remove_plaid_item
+      return unless plaid_provider.present?
+
       plaid_provider.remove_item(access_token)
     rescue Plaid::ApiError => e
       json_response = JSON.parse(e.response_body)
+      error_code = json_response["error_code"]
 
-      # If the item is not found, that means it was already deleted by the user on their
-      # Plaid portal OR by Plaid support.  Either way, we're not being billed, so continue
-      # with the deletion of our internal record.
-      unless json_response["error_code"] == "ITEM_NOT_FOUND"
-        raise e
+      # Continue with deletion if:
+      # - ITEM_NOT_FOUND: Item was already deleted by the user on their Plaid portal OR by Plaid support
+      # - INVALID_API_KEYS: API credentials are invalid/missing, so we can't communicate with Plaid anyway
+      # - Other credential errors: We're deleting our record, so no need to fail if we can't reach Plaid
+      ignorable_errors = %w[ITEM_NOT_FOUND INVALID_API_KEYS INVALID_CLIENT_ID INVALID_SECRET]
+
+      unless ignorable_errors.include?(error_code)
+        # Log the error but don't prevent deletion - we're removing the item from our database
+        # If we can't tell Plaid, we'll at least stop using it on our end
+        Rails.logger.warn("Failed to remove Plaid item: #{error_code} - #{json_response['error_message']}")
+        Sentry.capture_exception(e) if defined?(Sentry)
       end
     end
 

@@ -32,6 +32,15 @@
         <%= link_to edit_account_path(account, return_to: return_to), data: { turbo_frame: :modal }, class: "group-hover/account:flex hidden hover:opacity-80 items-center justify-center" do %>
           <%= icon("pencil-line", size: "sm") %>
         <% end %>
+
+        <% if !account.account_providers.exists? && (account.accountable_type == "Depository" || account.accountable_type == "CreditCard") %>
+          <%= link_to select_existing_account_lunchflow_items_path(account_id: account.id, return_to: return_to),
+                      data: { turbo_frame: :modal },
+                      class: "group-hover/account:flex hidden hover:opacity-80 items-center justify-center gap-1",
+                      title: t("accounts.account.link_lunchflow") do %>
+            <%= icon("link", size: "sm") %>
+          <% end %>
+        <% end %>
       <% end %>
     </div>
     <div class="flex items-center gap-8">

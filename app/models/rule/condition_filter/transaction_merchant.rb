@@ -4,7 +4,7 @@ class Rule::ConditionFilter::TransactionMerchant < Rule::ConditionFilter
   end
 
   def options
-    family.assigned_merchants.pluck(:name, :id)
+    family.assigned_merchants.alphabetically.pluck(:name, :id)
   end
 
   def prepare(scope)

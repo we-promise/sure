@@ -12,6 +12,8 @@ class AssistantTest < ActiveSupport::TestCase
     )
     @assistant = Assistant.for_chat(@chat)
     @provider = mock
+    @expected_session_id = @chat.id.to_s
+    @expected_user_identifier = ::Digest::SHA256.hexdigest(@chat.user_id.to_s)
   end
 
   test "errors get added to chat" do
@@ -23,6 +25,56 @@ class AssistantTest < ActiveSupport::TestCase
     @chat.expects(:add_error).with(error).once
 
     assert_no_difference "AssistantMessage.count"  do
+      @assistant.respond_to(@message)
+    end
+  end
+
+  test "handles missing provider gracefully with helpful error message" do
+    # Simulate no provider configured (returns nil)
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(nil)
+
+    # Mock the registry to return empty providers
+    mock_registry = mock("registry")
+    mock_registry.stubs(:providers).returns([])
+    @assistant.stubs(:registry).returns(mock_registry)
+
+    @chat.expects(:add_error).with do |error|
+      assert_includes error.message, "No LLM provider configured that supports model 'gpt-4.1'"
+      assert_includes error.message, "Please configure an LLM provider (e.g., OpenAI) in settings."
+      true
+    end
+
+    assert_no_difference "AssistantMessage.count" do
+      @assistant.respond_to(@message)
+    end
+  end
+
+  test "shows available providers in error message when model not supported" do
+    # Simulate provider exists but doesn't support the model
+    @assistant.expects(:get_model_provider).with("claude-3").returns(nil)
+
+    # Create mock provider
+    mock_provider = mock("openai_provider")
+    mock_provider.stubs(:provider_name).returns("OpenAI")
+    mock_provider.stubs(:supported_models_description).returns("models starting with: gpt-4, gpt-5, o1, o3")
+
+    # Mock the registry to return the provider
+    mock_registry = mock("registry")
+    mock_registry.stubs(:providers).returns([ mock_provider ])
+    @assistant.stubs(:registry).returns(mock_registry)
+
+    # Update message to use unsupported model
+    @message.update!(ai_model: "claude-3")
+
+    @chat.expects(:add_error).with do |error|
+      assert_includes error.message, "No LLM provider configured that supports model 'claude-3'"
+      assert_includes error.message, "Available providers:"
+      assert_includes error.message, "OpenAI: models starting with: gpt-4, gpt-5, o1, o3"
+      assert_includes error.message, "Use a supported model from the list above"
+      true
+    end
+
+    assert_no_difference "AssistantMessage.count" do
       @assistant.respond_to(@message)
     end
   end
@@ -46,6 +98,8 @@ class AssistantTest < ActiveSupport::TestCase
     response = provider_success_response(response_chunk.data)
 
     @provider.expects(:chat_response).with do |message, **options|
+      assert_equal @expected_session_id, options[:session_id]
+      assert_equal @expected_user_identifier, options[:user_identifier]
       text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -98,6 +152,8 @@ class AssistantTest < ActiveSupport::TestCase
     sequence = sequence("provider_chat_response")
 
     @provider.expects(:chat_response).with do |message, **options|
+      assert_equal @expected_session_id, options[:session_id]
+      assert_equal @expected_user_identifier, options[:user_identifier]
       call2_text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -107,6 +163,8 @@ class AssistantTest < ActiveSupport::TestCase
     end.returns(call2_response).once.in_sequence(sequence)
 
     @provider.expects(:chat_response).with do |message, **options|
+      assert_equal @expected_session_id, options[:session_id]
+      assert_equal @expected_user_identifier, options[:user_identifier]
       options[:streamer].call(call1_response_chunk)
       true
     end.returns(call1_response).once.in_sequence(sequence)
@@ -133,10 +191,10 @@ class AssistantTest < ActiveSupport::TestCase
     end
 
     def provider_text_chunk(text)
-      Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text)
+      Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil)
     end
 
-    def provider_response_chunk(id:, model:, messages:, function_requests:)
+    def provider_response_chunk(id:, model:, messages:, function_requests:, usage: nil)
       Provider::LlmConcept::ChatStreamChunk.new(
         type: "response",
         data: Provider::LlmConcept::ChatResponse.new(
@@ -144,7 +202,8 @@ class AssistantTest < ActiveSupport::TestCase
           model: model,
           messages: messages,
           function_requests: function_requests
-        )
+        ),
+        usage: usage
       )
     end
 end

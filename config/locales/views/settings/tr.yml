@@ -62,7 +62,7 @@ tr:
         last_name: Soyad
         page_title: Hesap
         pending: Beklemede
-        profile_subtitle: Maybe'de nasıl göründüğünüzü özelleştirin
+        profile_subtitle: "%{product_name}'de nasıl göründüğünüzü özelleştirin"
         profile_title: Profil
         remove_invitation: Daveti Kaldır
         remove_member: Üyeyi Kaldır
