@@ -2,8 +2,9 @@ class ReportsController < ApplicationController
   include Periodable
 
   # Allow API key authentication for exports (for Google Sheets integration)
-  skip_authentication only: :export_transactions, if: :api_key_present?
-  before_action :authenticate_with_api_key, only: :export_transactions, if: :api_key_present?
+  # Note: We run authentication_for_export which handles both session and API key auth
+  skip_authentication only: :export_transactions
+  before_action :authenticate_for_export, only: :export_transactions
 
   def index
     @period_type = params[:period_type]&.to_sym || :monthly
@@ -728,6 +729,17 @@ class ReportsController < ApplicationController
       end.render
     end
 
+    # Export Authentication - handles both session and API key auth
+    def authenticate_for_export
+      if api_key_present?
+        # Use API key authentication
+        authenticate_with_api_key
+      else
+        # Use normal session authentication
+        authenticate_user!
+      end
+    end
+
     # API Key Authentication Methods
     def api_key_present?
       params[:api_key].present? || request.headers["X-Api-Key"].present?
@@ -759,25 +771,39 @@ class ReportsController < ApplicationController
       @api_key.update_last_used!
 
       # Set up Current context for API requests (similar to Api::V1::BaseController)
-      setup_current_context_for_api_key
+      # Return false if setup fails to halt the filter chain
+      return false unless setup_current_context_for_api_key
 
       true
     end
 
     def setup_current_context_for_api_key
-      return unless @current_user
-
-      # Find or create a temporary session for this API request
-      session = @current_user.sessions.first
-      if session
-        Current.session = session
-      else
-        # Create a temporary session for this API request
-        session = @current_user.sessions.build(
-          user_agent: request.user_agent,
-          ip_address: request.ip
-        )
-        Current.session = session
+      unless @current_user
+        render plain: "User not found for API key", status: :internal_server_error
+        return false
       end
+
+      # Find or create a session for this API request
+      # We need to find or create a persisted session so that Current.user delegation works properly
+      session = @current_user.sessions.first_or_create!(
+        user_agent: request.user_agent,
+        ip_address: request.ip
+      )
+
+      Current.session = session
+
+      # Verify the delegation chain works
+      unless Current.user
+        render plain: "Failed to establish user context", status: :internal_server_error
+        return false
+      end
+
+      # Ensure we have a valid family context
+      unless Current.family
+        render plain: "User does not have an associated family", status: :internal_server_error
+        return false
+      end
+
+      true
     end
 end

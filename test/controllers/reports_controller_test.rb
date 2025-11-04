@@ -145,4 +145,52 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # Verify spending patterns shows data (not the "no data" message)
     assert_select ".text-center.py-8.text-tertiary", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
   end
+
+  test "export transactions with API key authentication" do
+    # Use an active API key with read permissions
+    api_key = api_keys(:active_key)
+
+    # Make sure the API key has the correct source
+    api_key.update!(source: "web") unless api_key.source == "web"
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      start_date: Date.current.beginning_of_year,
+      end_date: Date.current,
+      api_key: api_key.plain_key
+    )
+
+    assert_response :ok
+    assert_equal "text/csv", @response.media_type
+    assert_match /Category/, @response.body
+  end
+
+  test "export transactions with invalid API key" do
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      api_key: "invalid_key"
+    )
+
+    assert_response :unauthorized
+    assert_match /Invalid or expired API key/, @response.body
+  end
+
+  test "export transactions without API key uses session auth" do
+    # Should use normal session-based authentication
+    # The setup already signs in @user = users(:family_admin)
+    assert_not_nil @user, "User should be set in test setup"
+    assert_not_nil @family, "Family should be set in test setup"
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      start_date: Date.current.beginning_of_year,
+      end_date: Date.current
+    )
+
+    assert_response :ok, "Export should work with session auth. Response: #{@response.body}"
+    assert_equal "text/csv", @response.media_type
+  end
 end
