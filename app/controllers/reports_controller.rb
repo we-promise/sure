@@ -1,6 +1,10 @@
 class ReportsController < ApplicationController
   include Periodable
 
+  # Allow API key authentication for exports (for Google Sheets integration)
+  skip_authentication only: :export_transactions, if: :api_key_present?
+  before_action :authenticate_with_api_key, only: :export_transactions, if: :api_key_present?
+
   def index
     @period_type = params[:period_type]&.to_sym || :monthly
     @start_date = parse_date_param(:start_date) || default_start_date
@@ -699,5 +703,58 @@ class ReportsController < ApplicationController
           pdf.text "No transactions found for this period.", size: 12
         end
       end.render
+    end
+
+    # API Key Authentication Methods
+    def api_key_present?
+      params[:api_key].present? || request.headers["X-Api-Key"].present?
+    end
+
+    def authenticate_with_api_key
+      api_key_value = params[:api_key] || request.headers["X-Api-Key"]
+
+      unless api_key_value
+        render plain: "API key is required", status: :unauthorized
+        return false
+      end
+
+      @api_key = ApiKey.find_by_value(api_key_value)
+
+      unless @api_key && @api_key.active?
+        render plain: "Invalid or expired API key", status: :unauthorized
+        return false
+      end
+
+      # Check if API key has read permissions
+      unless @api_key.scopes&.include?("read") || @api_key.scopes&.include?("read_write")
+        render plain: "API key does not have read permission", status: :forbidden
+        return false
+      end
+
+      # Set up the current user and session context
+      @current_user = @api_key.user
+      @api_key.update_last_used!
+
+      # Set up Current context for API requests (similar to Api::V1::BaseController)
+      setup_current_context_for_api_key
+
+      true
+    end
+
+    def setup_current_context_for_api_key
+      return unless @current_user
+
+      # Find or create a temporary session for this API request
+      session = @current_user.sessions.first
+      if session
+        Current.session = session
+      else
+        # Create a temporary session for this API request
+        session = @current_user.sessions.build(
+          user_agent: request.user_agent,
+          ip_address: request.ip
+        )
+        Current.session = session
+      end
     end
 end

@@ -45,27 +45,27 @@
 
     <%# Custom Date Range Picker (only shown when custom is selected) %>
     <% if @period_type == :custom %>
-      <div class="flex items-center gap-3 bg-surface-inset p-3 rounded-lg">
+      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
+        <%= f.hidden_field :period_type, value: :custom %>
+
         <div class="flex items-center gap-2">
           <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.from") %></label>
-          <input type="date"
-                 value="<%= @start_date.strftime("%Y-%m-%d") %>"
-                 data-controller="date-picker"
-                 data-action="change->date-picker#updateStartDate"
-                 autocomplete="off"
-                 class="px-3 py-1.5 border border-primary rounded-lg text-sm">
+          <%= f.date_field :start_date,
+                           value: @start_date.strftime("%Y-%m-%d"),
+                           data: { auto_submit_form_target: "auto" },
+                           autocomplete: "off",
+                           class: "px-3 py-1.5 border border-primary rounded-lg text-sm" %>
         </div>
         <span class="text-secondary">—</span>
         <div class="flex items-center gap-2">
           <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.to") %></label>
-          <input type="date"
-                 value="<%= @end_date.strftime("%Y-%m-%d") %>"
-                 data-controller="date-picker"
-                 data-action="change->date-picker#updateEndDate"
-                 autocomplete="off"
-                 class="px-3 py-1.5 border border-primary rounded-lg text-sm">
+          <%= f.date_field :end_date,
+                           value: @end_date.strftime("%Y-%m-%d"),
+                           data: { auto_submit_form_target: "auto" },
+                           autocomplete: "off",
+                           class: "px-3 py-1.5 border border-primary rounded-lg text-sm" %>
         </div>
-      </div>
+      <% end %>
     <% end %>
 
     <%# Period Display %>

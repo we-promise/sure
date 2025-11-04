@@ -1,0 +1,27 @@
+<%# This dialog is used for showing informational messages to users %>
+<%# See info_dialog_controller.js %>
+<%= render DS::Dialog.new(id: "info-dialog", auto_open: false, data: { controller: "info-dialog" }, width: "md", disable_frame: true) do |dialog| %>
+  <% dialog.with_body do %>
+    <form method="dialog" class="space-y-4">
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="font-medium text-primary" data-info-dialog-target="title">Information</h3>
+          <%= icon("x", as_button: true, type: "submit", value: "close", class: "text-subdued hover:text-primary") %>
+        </div>
+
+        <div class="text-sm text-secondary whitespace-pre-line" data-info-dialog-target="content"></div>
+      </div>
+
+      <div>
+        <%= render DS::Button.new(
+          text: "Got it",
+          variant: "primary",
+          autofocus: true,
+          full_width: true,
+          value: "close",
+          type: "submit"
+        ) %>
+      </div>
+    </form>
+  <% end %>
+<% end %>
