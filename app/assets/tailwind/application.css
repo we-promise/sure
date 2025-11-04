@@ -187,3 +187,9 @@
   pointer-events: none;
   position: absolute;
 }
+
+/* Fix calendar picker icon visibility in dark mode */
+[data-theme=dark] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
