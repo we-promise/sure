@@ -9,7 +9,7 @@
 
       <% if @user.unconfirmed_email.present? %>
         <p class="mt-2 text-sm text-gray-600">
-          You have requested to change your email to <%= @user.unconfirmed_email %>. Please go to your email and confirm for the change to take effect.
+          You have requested to change your email to <%= @user.unconfirmed_email %>. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or <%= link_to "request a new confirmation email", resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary" %>.
         </p>
       <% end %>
 

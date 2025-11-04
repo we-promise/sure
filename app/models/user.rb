@@ -59,6 +59,15 @@ class User < ApplicationRecord
     end
   end
 
+  def resend_confirmation_email
+    if pending_email_change?
+      EmailConfirmationMailer.with(user: self).confirmation_email.deliver_later
+      true
+    else
+      false
+    end
+  end
+
   def request_impersonation_for(user_id)
     impersonated = User.find(user_id)
     impersonator_support_sessions.create!(impersonated: impersonated)

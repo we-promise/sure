@@ -53,6 +53,7 @@ Rails.application.routes.draw do
     delete :reset, on: :member
     delete :reset_with_sample_data, on: :member
     patch :rule_prompt_settings, on: :member
+    get :resend_confirmation_email, on: :member
   end
 
   resource :onboarding, only: :show do
