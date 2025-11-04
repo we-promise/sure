@@ -2,10 +2,22 @@
   header_title t(".title")
 %>
 
-<%= styled_form_with url: sessions_path, class: "space-y-4", data: { turbo: false } do |form| %>
-  <%= form.email_field :email, label: t(".email"), autofocus: false, autocomplete: "email", required: "required", placeholder: t(".email_placeholder") %>
+<% prefill_demo_credentials = request.host == "sure-demo.pikapod.net" %>
 
-  <%= form.password_field :password, label: t(".password"), required: "required", placeholder: t(".password_placeholder") %>
+<%= styled_form_with url: sessions_path, class: "space-y-4", data: { turbo: false } do |form| %>
+  <%= form.email_field :email,
+                       label: t(".email"),
+                       autofocus: false,
+                       autocomplete: "email",
+                       required: "required",
+                       placeholder: t(".email_placeholder"),
+                       value: params[:email].presence || (prefill_demo_credentials ? "user@example.com" : nil) %>
+
+  <%= form.password_field :password,
+                          label: t(".password"),
+                          required: "required",
+                          placeholder: t(".password_placeholder"),
+                          value: params[:password].presence || (prefill_demo_credentials ? "Password1!" : nil) %>
 
   <%= form.submit t(".submit") %>
 <% end %>
