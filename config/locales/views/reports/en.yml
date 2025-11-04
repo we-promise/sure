@@ -114,3 +114,19 @@ en:
         showing: Showing %{count} transactions
         previous: Previous
         next: Next
+    google_sheets_instructions:
+      title_with_key: "✅ Copy URL for Google Sheets"
+      title_no_key: "⚠️ API Key Required"
+      ready: Your CSV URL (with API key) is ready.
+      steps: "To import into Google Sheets:\n1. Create a new Google Sheet\n2. In cell A1, enter the formula shown below\n3. Press Enter"
+      security_warning: "This URL includes your API key. Keep it secure!"
+      need_key: To import data into Google Sheets, you need an API key.
+      step1: "Go to Settings → API Keys"
+      step2: "Create a new API key with \"read\" permission"
+      step3: Copy the API key
+      step4: "Add it to this URL as: ?api_key=YOUR_KEY"
+      example: Example
+      then_use: Then use the full URL with =IMPORTDATA() in Google Sheets.
+      open_sheets: Open Google Sheets
+      go_to_api_keys: Go to API Keys
+      close: Got it

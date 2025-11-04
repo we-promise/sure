@@ -75,6 +75,24 @@ class ReportsController < ApplicationController
     end
   end
 
+  def google_sheets_instructions
+    # Re-build the params needed for the export URL
+    base_params = {
+      period_type: params[:period_type],
+      start_date: params[:start_date],
+      end_date: params[:end_date],
+      sort_by: params[:sort_by],
+      sort_direction: params[:sort_direction]
+    }.compact
+
+    # Build the full URL with the API key, if present
+    @csv_url = export_transactions_reports_url(base_params.merge(format: :csv))
+    @api_key_present = @csv_url.include?("api_key=")
+
+    # This action will render `app/views/reports/google_sheets_instructions.html.erb`
+    # It will render *inside* the modal frame.
+  end
+
   private
 
     def ensure_money(value)
