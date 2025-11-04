@@ -10,7 +10,6 @@ class SettingsTest < ApplicationSystemTestCase
       [ "Preferences", settings_preferences_path ],
       [ "Profile Info", settings_profile_path ],
       [ "Security", settings_security_path ],
-      [ "Billing", settings_billing_path ],
       [ "Categories", categories_path ],
       [ "Tags", tags_path ],
       [ "Rules", rules_path ],
