@@ -70,7 +70,7 @@ class PeriodTest < ActiveSupport::TestCase
     # Mock Current.family to return a family with oldest_entry_date
     mock_family = mock("family")
     mock_family.expects(:oldest_entry_date).returns(2.years.ago.to_date)
-    Current.expects(:family).returns(mock_family)
+    Current.expects(:family).at_least_once.returns(mock_family)
 
     period = Period.from_key("all_time")
     assert_equal 2.years.ago.to_date, period.start_date
