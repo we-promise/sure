@@ -384,7 +384,8 @@ class ReportsController < ApplicationController
       transactions = apply_transaction_filters(transactions)
 
       sort_by = params[:sort_by] || "date"
-      sort_direction = params[:sort_direction] || "desc"
+      # Whitelist sort_direction to prevent SQL injection
+      sort_direction = %w[asc desc].include?(params[:sort_direction]&.downcase) ? params[:sort_direction].upcase : "DESC"
 
       case sort_by
       when "date"
@@ -392,7 +393,7 @@ class ReportsController < ApplicationController
       when "amount"
         transactions.order("entries.amount #{sort_direction}")
       else
-        transactions.order("entries.date desc")
+        transactions.order("entries.date DESC")
       end
     end
 

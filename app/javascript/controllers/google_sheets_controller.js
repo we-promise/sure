@@ -5,15 +5,8 @@ export default class extends Controller {
     csvUrl: String
   }
 
-  connect() {
-    // When the link is clicked, copy the CSV URL and show instructions
-    this.element.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.copyAndShowInstructions()
-    })
-  }
-
-  async copyAndShowInstructions() {
+  async copyAndShowInstructions(event) {
+    event.preventDefault()
     // Check if URL already has an api_key parameter
     const url = new URL(this.csvUrlValue, window.location.origin)
     const hasApiKey = url.searchParams.has('api_key')
