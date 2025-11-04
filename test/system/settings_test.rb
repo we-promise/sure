@@ -19,7 +19,6 @@ class SettingsTest < ApplicationSystemTestCase
       [ "AI Prompts", settings_ai_prompts_path ],
       [ "LLM Usage", settings_llm_usage_path ],
       [ "API Key", settings_api_key_path ],
-      [ "Self-Hosting", settings_hosting_path ],
       [ "Providers", settings_providers_path ],
       [ "Imports", imports_path ],
       [ "SimpleFin", simplefin_items_path ],
