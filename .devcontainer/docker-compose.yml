@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
   
   db:
-    image: postgres:latest
+    image: postgres:16
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
