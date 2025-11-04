@@ -75,8 +75,8 @@ class ReportsController < ApplicationController
 
     def ensure_money(value)
       return value if value.is_a?(Money)
-      # If value is numeric (like 0), it's already in fractional units (cents)
-      Money.new(value.to_i, Current.family.currency)
+      # Value is numeric (BigDecimal or Integer) in dollars - pass directly to Money.new
+      Money.new(value, Current.family.currency)
     end
 
     def parse_date_param(param_name)
@@ -171,17 +171,17 @@ class ReportsController < ApplicationController
     def build_comparison_data
       currency_symbol = Money::Currency.new(Current.family.currency).symbol
 
-      # Totals are integers in cents - keep as cents for display
+      # Totals are BigDecimal amounts in dollars - pass directly to Money.new()
       {
         current: {
-          income: @current_income_totals.total.to_f,
-          expenses: @current_expense_totals.total.to_f,
-          net: (@current_income_totals.total - @current_expense_totals.total).to_f
+          income: @current_income_totals.total,
+          expenses: @current_expense_totals.total,
+          net: @current_income_totals.total - @current_expense_totals.total
         },
         previous: {
-          income: @previous_income_totals.total.to_f,
-          expenses: @previous_expense_totals.total.to_f,
-          net: (@previous_income_totals.total - @previous_expense_totals.total).to_f
+          income: @previous_income_totals.total,
+          expenses: @previous_expense_totals.total,
+          net: @previous_income_totals.total - @previous_expense_totals.total
         },
         currency_symbol: currency_symbol
       }
@@ -209,9 +209,9 @@ class ReportsController < ApplicationController
 
         trends << {
           month: month_start.strftime("%b %Y"),
-          income: income.to_f.to_i,
-          expenses: expenses.to_f.to_i,
-          net: (income - expenses).to_f.to_i
+          income: income,
+          expenses: expenses,
+          net: income - expenses
         }
 
         current_month = current_month.next_month
@@ -240,7 +240,7 @@ class ReportsController < ApplicationController
       # Sum up amounts by weekday vs weekend
       expense_transactions.each do |transaction|
         entry = transaction.entry
-        amount = entry.amount.to_f.to_i.abs
+        amount = entry.amount.abs
 
         if entry.date.wday.in?([ 0, 6 ]) # Sunday or Saturday
           weekend_total += amount
@@ -470,11 +470,11 @@ class ReportsController < ApplicationController
             # Add amounts for each month
             @export_data[:months].each do |month|
               amount = category_data[:months][month] || 0
-              row << Money.new(amount.to_i, Current.family.currency).format
+              row << Money.new(amount, Current.family.currency).format
             end
 
             # Add row total
-            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            row << Money.new(category_data[:total], Current.family.currency).format
             csv << row
           end
 
@@ -482,10 +482,10 @@ class ReportsController < ApplicationController
           totals_row = [ "TOTAL INCOME" ]
           @export_data[:months].each do |month|
             month_total = @export_data[:income].sum { |c| c[:months][month] || 0 }
-            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+            totals_row << Money.new(month_total, Current.family.currency).format
           end
           grand_income_total = @export_data[:income].sum { |c| c[:total] }
-          totals_row << Money.new(grand_income_total.to_i, Current.family.currency).format
+          totals_row << Money.new(grand_income_total, Current.family.currency).format
           csv << totals_row
 
           # Blank row
@@ -502,11 +502,11 @@ class ReportsController < ApplicationController
             # Add amounts for each month
             @export_data[:months].each do |month|
               amount = category_data[:months][month] || 0
-              row << Money.new(amount.to_i, Current.family.currency).format
+              row << Money.new(amount, Current.family.currency).format
             end
 
             # Add row total
-            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            row << Money.new(category_data[:total], Current.family.currency).format
             csv << row
           end
 
@@ -514,10 +514,10 @@ class ReportsController < ApplicationController
           totals_row = [ "TOTAL EXPENSES" ]
           @export_data[:months].each do |month|
             month_total = @export_data[:expenses].sum { |c| c[:months][month] || 0 }
-            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+            totals_row << Money.new(month_total, Current.family.currency).format
           end
           grand_expenses_total = @export_data[:expenses].sum { |c| c[:total] }
-          totals_row << Money.new(grand_expenses_total.to_i, Current.family.currency).format
+          totals_row << Money.new(grand_expenses_total, Current.family.currency).format
           csv << totals_row
         end
       end
@@ -546,11 +546,11 @@ class ReportsController < ApplicationController
             # Add amounts for each month
             @export_data[:months].each do |month|
               amount = category_data[:months][month] || 0
-              row << Money.new(amount.to_i, Current.family.currency).format
+              row << Money.new(amount, Current.family.currency).format
             end
 
             # Add row total
-            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            row << Money.new(category_data[:total], Current.family.currency).format
             sheet.add_row row
           end
 
@@ -558,10 +558,10 @@ class ReportsController < ApplicationController
           totals_row = [ "TOTAL INCOME" ]
           @export_data[:months].each do |month|
             month_total = @export_data[:income].sum { |c| c[:months][month] || 0 }
-            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+            totals_row << Money.new(month_total, Current.family.currency).format
           end
           grand_income_total = @export_data[:income].sum { |c| c[:total] }
-          totals_row << Money.new(grand_income_total.to_i, Current.family.currency).format
+          totals_row << Money.new(grand_income_total, Current.family.currency).format
           sheet.add_row totals_row, style: bold_style
 
           # Blank row
@@ -578,11 +578,11 @@ class ReportsController < ApplicationController
             # Add amounts for each month
             @export_data[:months].each do |month|
               amount = category_data[:months][month] || 0
-              row << Money.new(amount.to_i, Current.family.currency).format
+              row << Money.new(amount, Current.family.currency).format
             end
 
             # Add row total
-            row << Money.new(category_data[:total].to_i, Current.family.currency).format
+            row << Money.new(category_data[:total], Current.family.currency).format
             sheet.add_row row
           end
 
@@ -590,10 +590,10 @@ class ReportsController < ApplicationController
           totals_row = [ "TOTAL EXPENSES" ]
           @export_data[:months].each do |month|
             month_total = @export_data[:expenses].sum { |c| c[:months][month] || 0 }
-            totals_row << Money.new(month_total.to_i, Current.family.currency).format
+            totals_row << Money.new(month_total, Current.family.currency).format
           end
           grand_expenses_total = @export_data[:expenses].sum { |c| c[:total] }
-          totals_row << Money.new(grand_expenses_total.to_i, Current.family.currency).format
+          totals_row << Money.new(grand_expenses_total, Current.family.currency).format
           sheet.add_row totals_row, style: bold_style
         end
       end
@@ -626,10 +626,10 @@ class ReportsController < ApplicationController
 
               @export_data[:months].each do |month|
                 amount = category_data[:months][month] || 0
-                row << Money.new(amount.to_i, Current.family.currency).format
+                row << Money.new(amount, Current.family.currency).format
               end
 
-              row << Money.new(category_data[:total].to_i, Current.family.currency).format
+              row << Money.new(category_data[:total], Current.family.currency).format
               income_table_data << row
             end
 
@@ -637,10 +637,10 @@ class ReportsController < ApplicationController
             totals_row = [ "TOTAL INCOME" ]
             @export_data[:months].each do |month|
               month_total = @export_data[:income].sum { |c| c[:months][month] || 0 }
-              totals_row << Money.new(month_total.to_i, Current.family.currency).format
+              totals_row << Money.new(month_total, Current.family.currency).format
             end
             grand_income_total = @export_data[:income].sum { |c| c[:total] }
-            totals_row << Money.new(grand_income_total.to_i, Current.family.currency).format
+            totals_row << Money.new(grand_income_total, Current.family.currency).format
             income_table_data << totals_row
 
             pdf.table(income_table_data, header: true, width: pdf.bounds.width, cell_style: { size: 8 }) do
@@ -668,10 +668,10 @@ class ReportsController < ApplicationController
 
               @export_data[:months].each do |month|
                 amount = category_data[:months][month] || 0
-                row << Money.new(amount.to_i, Current.family.currency).format
+                row << Money.new(amount, Current.family.currency).format
               end
 
-              row << Money.new(category_data[:total].to_i, Current.family.currency).format
+              row << Money.new(category_data[:total], Current.family.currency).format
               expenses_table_data << row
             end
 
@@ -679,10 +679,10 @@ class ReportsController < ApplicationController
             totals_row = [ "TOTAL EXPENSES" ]
             @export_data[:months].each do |month|
               month_total = @export_data[:expenses].sum { |c| c[:months][month] || 0 }
-              totals_row << Money.new(month_total.to_i, Current.family.currency).format
+              totals_row << Money.new(month_total, Current.family.currency).format
             end
             grand_expenses_total = @export_data[:expenses].sum { |c| c[:total] }
-            totals_row << Money.new(grand_expenses_total.to_i, Current.family.currency).format
+            totals_row << Money.new(grand_expenses_total, Current.family.currency).format
             expenses_table_data << totals_row
 
             pdf.table(expenses_table_data, header: true, width: pdf.bounds.width, cell_style: { size: 8 }) do
