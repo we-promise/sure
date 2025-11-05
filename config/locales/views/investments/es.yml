@@ -14,5 +14,4 @@ es:
       cash: Efectivo
       holdings: Inversiones
       total: Saldo de la cartera
-      total_value_tooltip: El saldo total de la cartera es la suma del efectivo de corretaje
-        (disponible para operar) y el valor de mercado actual de tus inversiones.
+      total_value_tooltip: El saldo total de la cartera es la suma del efectivo de corretaje (disponible para operar) y el valor de mercado actual de tus inversiones.
