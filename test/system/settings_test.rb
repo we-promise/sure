@@ -15,7 +15,7 @@ class SettingsTest < ApplicationSystemTestCase
       [ "Tags", tags_path ],
       [ "Rules", rules_path ],
       [ "Merchants", family_merchants_path ],
-      [ "Recurring", recurring_transactions_path ],
+      [ "Recurring Transactions", recurring_transactions_path ],
       [ "Guides", settings_guides_path ],
       [ "What's new", changelog_path ],
       [ "Feedback", feedback_path ]
@@ -42,9 +42,7 @@ class SettingsTest < ApplicationSystemTestCase
 
       @settings_links.each do |name, path|
         click_link name
-        # Just check that an h1 exists, don't worry about exact text match
-        # since the h1 content comes from translations and might not match link names exactly
-        assert_selector "h1", message: "Missing h1 for '#{name}' on page #{current_path}"
+        assert_selector "h1", text: name
         assert_current_path path
       end
     end
