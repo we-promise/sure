@@ -12,7 +12,7 @@ module SettingsHelper
     { name: "Tags", path: :tags_path },
     { name: "Rules", path: :rules_path },
     { name: "Merchants", path: :family_merchants_path },
-    { name: "Recurring", path: :recurring_transactions_path },
+    { name: "Recurring Transactions", path: :recurring_transactions_path },
     # Advanced section
     { name: "AI Prompts", path: :settings_ai_prompts_path, condition: :admin_user? },
     { name: "LLM Usage", path: :settings_llm_usage_path, condition: :admin_user? },
