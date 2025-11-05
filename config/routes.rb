@@ -2,13 +2,17 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
-  resources :simplefin_items do
+  resources :simplefin_items, only: %i[create edit update destroy] do
     member do
-      get :errors
+      post :sync
       post :balances
+      get :errors
       get :relink
+      get :manual_relink
       post :apply_relink
       get :prelink
+      get :setup_accounts
+      post :complete_account_setup
     end
   end
   use_doorkeeper
@@ -291,18 +295,6 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :simplefin_items, only: %i[index new create show edit update destroy] do
-    member do
-      post :sync
-      post :balances
-      get :errors
-      get :relink
-      get :manual_relink
-      post :apply_relink
-      get :setup_accounts
-      post :complete_account_setup
-    end
-  end
 
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
     collection do

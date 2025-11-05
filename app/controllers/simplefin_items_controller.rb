@@ -71,7 +71,7 @@ class SimplefinItemsController < ApplicationController
         Rails.logger.warn("SimpleFin update: failed to compute unlinked_count: #{e.class} - #{e.message}")
       end
 
-      # Attempt to auto-open relink modal when viable pairs exist after update
+      # Attempt to auto-open relink modal only when there are actionable items
       @simplefin_item = updated_item
       @candidates = compute_relink_candidates
       Rails.logger.info("SimpleFin update: relink candidates count=#{@candidates.size} for item_id=#{@simplefin_item.id}")
@@ -79,16 +79,20 @@ class SimplefinItemsController < ApplicationController
       # Ensure flash is set regardless of format/branch so IntegrationTest can see it
       flash[:notice] = "SimpleFin connection updated"
 
-      if @candidates.present?
+      manuals_exist = @simplefin_item.family.accounts
+        .left_joins(:account_providers)
+        .where(account_providers: { id: nil })
+        .exists?
+      auto_open = (@candidates.present?) || ((unlinked.to_i > 0) && manuals_exist)
+      if auto_open
         respond_to do |format|
           format.html { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated" }
           format.turbo_stream { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated" }
-          format.json { render json: { ok: true, relink: true, simplefin_item_id: @candidates }, status: :ok }
+          format.json { render json: { ok: true, relink: true, simplefin_item_id: @simplefin_item.id, candidates: @candidates }, status: :ok }
         end
       else
-        # Even if candidates aren't available yet (e.g., balances-only job pending),
-        # open the relink modal so the user can link once data is ready.
-        redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: "SimpleFin connection updated"
+        # No new/unlinked accounts or candidates detected — keep modal opt-in
+        redirect_to accounts_path, notice: "SimpleFin connection updated"
       end
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token, context: :edit)
@@ -114,7 +118,10 @@ class SimplefinItemsController < ApplicationController
   def create
     setup_token = simplefin_params[:setup_token]
 
-    return render_error(t(".errors.blank_token")) if setup_token.blank?
+    # Inline validation for providers panel (Turbo)
+    if setup_token.blank?
+      return render_error(t(".errors.blank_token"), setup_token, context: :providers_panel)
+    end
 
     begin
       @simplefin_item = Current.family.create_simplefin_item!(
@@ -137,21 +144,35 @@ class SimplefinItemsController < ApplicationController
         Rails.logger.warn("SimpleFin create: failed to compute unlinked_count: #{e.class} - #{e.message}")
       end
 
-      # If there are manual accounts that look like matches, present the relink modal immediately
-      @candidates = compute_relink_candidates
-      Rails.logger.info("SimpleFin create: relink candidates count=#{@candidates.size} for item_id=#{@simplefin_item.id}")
-      if @candidates.present?
-        respond_to do |format|
-          format.html { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success") }
-          format.turbo_stream { redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success") }
-          format.json { render json: { ok: true, relink: true, simplefin_item_id: @simplefin_item.id, candidates: @candidates }, status: :created }
+      # If the request came from the Providers page (Turbo), refresh the panel in place for immediate feedback.
+      respond_to do |format|
+        format.turbo_stream do
+          # Re-render the providers SimpleFin panel with status light/message
+          @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
+          build_simplefin_maps_for(@simplefin_items)
+          html = render_to_string(partial: "settings/providers/simplefin_panel", formats: [ :html ])
+          render turbo_stream: turbo_stream.replace("simplefin-providers-panel", html), status: :created
         end
-        return
-      end
 
-      # Even if candidates aren't built yet (balances-only job pending), open the relink modal
-      # so the user can link once data is ready.
-      redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success")
+        format.html do
+          # If there are manual accounts that look like matches, consider auto-opening the relink modal
+          @candidates = compute_relink_candidates
+          Rails.logger.info("SimpleFin create: relink candidates count=#{@candidates.size} for item_id=#{@simplefin_item.id}")
+
+          manuals_exist = @simplefin_item.family.accounts
+            .left_joins(:account_providers)
+            .where(account_providers: { id: nil })
+            .exists?
+          auto_open = (@candidates.present?) || ((unlinked.to_i > 0) && manuals_exist)
+          if auto_open
+            redirect_to accounts_path(open_relink_for: @simplefin_item.id), notice: t(".success")
+          else
+            redirect_to accounts_path, notice: t(".success")
+          end
+        end
+
+        format.json { render json: { ok: true, simplefin_item_id: @simplefin_item.id }, status: :created }
+      end
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
@@ -203,21 +224,19 @@ class SimplefinItemsController < ApplicationController
   end
 
   def setup_accounts
-    # Ensure we don't present duplicates if upstream produced duplicate rows for the same account_id
-    begin
-      @simplefin_item.dedup_simplefin_accounts!
-    rescue => e
-      Rails.logger.warn("SimpleFin setup_accounts: dedup failed: #{e.class} - #{e.message}")
-    end
-
-    @simplefin_accounts = @simplefin_item.simplefin_accounts
+    raw_unlinked = @simplefin_item.simplefin_accounts
       .includes(:account, :account_provider)
       .where(accounts: { id: nil })
       .where(account_providers: { id: nil })
+      .to_a
+
+    # De‑duplicate by upstream account_id (prefer newer record)
+    grouped = raw_unlinked.group_by(&:account_id)
+    @simplefin_accounts = grouped.values.map { |list| list.max_by(&:updated_at) }
 
     # Logging for observability of Setup Accounts filtering
     Rails.logger.info(
-      "SimpleFin setup_accounts: listing #{ @simplefin_accounts.size } unlinked SF accounts (item_id=#{ @simplefin_item.id })"
+      "SimpleFin setup_accounts: raw=#{ raw_unlinked.size } unique=#{ @simplefin_accounts.size } unlinked SF accounts (item_id=#{ @simplefin_item.id })"
     )
 
     @account_type_options = [
@@ -310,32 +329,51 @@ class SimplefinItemsController < ApplicationController
   # Presents candidate relinks (manual flow) between SimpleFin upstream accounts and existing manual accounts
   def relink
     @candidates = compute_relink_candidates
-    # Fallback lists for manual selection when no candidates found yet
-    begin
-      @simplefin_item.dedup_simplefin_accounts! # best-effort
-    rescue => e
-      Rails.logger.warn("SimpleFin relink: dedup failed: #{e.class} - #{e.message}")
-    end
-    @unlinked_sfas = @simplefin_item.simplefin_accounts
-      .left_joins(:account, :account_provider)
-      .where(accounts: { id: nil }, account_providers: { id: nil })
+
+    # Provide full SFA list (show linked as disabled/grayed in UI) — de‑dupe by upstream account_id
+    raw_sfas = @simplefin_item.simplefin_accounts
+      .includes(:account, :account_provider)
       .order(:name)
+      .to_a
+    grouped = raw_sfas.group_by(&:account_id)
+    @sfas_all = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
+
+    # Manual accounts available to link (unlinked)
     @manual_accounts = @simplefin_item.family.accounts
       .left_joins(:account_providers)
       .where(account_providers: { id: nil })
       .order(:name)
+
     render layout: false
   end
 
   # Explicit manual relink endpoint (identical to relink, provided for clarity of flow)
   def manual_relink
     @candidates = compute_relink_candidates
+
+    # Provide full SFA list (show linked as disabled/grayed in UI) — de‑dupe by upstream account_id
+    raw_sfas = @simplefin_item.simplefin_accounts
+      .includes(:account, :account_provider)
+      .order(:name)
+      .to_a
+    grouped = raw_sfas.group_by(&:account_id)
+    @sfas_all = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
+
+    # Manual accounts available to link (unlinked)
+    @manual_accounts = @simplefin_item.family.accounts
+      .left_joins(:account_providers)
+      .where(account_providers: { id: nil })
+      .order(:name)
+
     render layout: false
   end
 
   # Applies selected relinks by migrating data and moving provider links
   def apply_relink
-    pairs = Array(params[:pairs]).map { |h| h.permit(:sfa_id, :manual_id, :checked).to_h.symbolize_keys }.select { |p| p[:checked].present? }
+    raw_pairs = Array(params[:pairs])
+    sanitized = raw_pairs.map { |h| h.permit(:sfa_id, :manual_id, :checked).to_h.symbolize_keys }
+    # Treat a row as selected only when the user explicitly checked it AND chose a manual account.
+    pairs = sanitized.select { |p| p[:sfa_id].present? && p[:manual_id].present? && p[:checked].present? }
     Rails.logger.info("SimpleFin apply_relink: received #{pairs.size} checked pairs for item_id=#{@simplefin_item.id}")
 
     relink = SimplefinItem::RelinkService.new.apply!(
@@ -344,15 +382,27 @@ class SimplefinItemsController < ApplicationController
       current_family: Current.family
     )
 
+    # Reload the item and its associations so rendered partials reflect the new links immediately
+    @simplefin_item = SimplefinItem.includes(:accounts, :simplefin_accounts, :syncs).find(@simplefin_item.id)
+
     # Prepare maps used by the simplefin_item partial before rendering
     build_simplefin_maps_for(@simplefin_item)
 
     respond_to do |format|
       format.turbo_stream do
         card_html = render_to_string(partial: "simplefin_items/simplefin_item", formats: [ :html ], locals: { simplefin_item: @simplefin_item })
+
+        # Also refresh the Manual Accounts group on the Accounts page so duplicates are cleaned up immediately
+        manual_accounts = @simplefin_item.family.accounts
+          .left_joins(:account_providers)
+          .where(account_providers: { id: nil })
+          .order(:name)
+        manual_html = render_to_string(partial: "accounts/index/manual_accounts", formats: [ :html ], locals: { accounts: manual_accounts })
+
         render turbo_stream: [
           turbo_stream.remove("modal"),
-          turbo_stream.replace(view_context.dom_id(@simplefin_item), card_html)
+          turbo_stream.replace(view_context.dom_id(@simplefin_item), card_html),
+          turbo_stream.replace("manual-accounts", manual_html)
         ], status: :ok
       end
       format.html { redirect_to accounts_path, notice: "Linked #{relink.results.size} accounts" }
@@ -376,6 +426,19 @@ class SimplefinItemsController < ApplicationController
     end
 
     def render_error(message, setup_token = nil, context: :new)
+      if context == :providers_panel
+        # Re-render the providers SimpleFin panel with inline error via Turbo Stream
+        @error_message = message
+        @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
+        build_simplefin_maps_for(@simplefin_items)
+        html = render_to_string(partial: "settings/providers/simplefin_panel", formats: [ :html ])
+        respond_to do |format|
+          format.turbo_stream { render turbo_stream: turbo_stream.replace("simplefin-providers-panel", html), status: :unprocessable_entity }
+          format.html { render :new, status: :unprocessable_entity }
+        end
+        return
+      end
+
       if context == :edit
         # Keep the persisted record and assign the token for re-render
         @simplefin_item.setup_token = setup_token if @simplefin_item

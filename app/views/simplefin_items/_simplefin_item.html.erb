@@ -67,6 +67,14 @@
               </div>
             <% end %>
           <% end %>
+          <%# Determine if all reported errors are benign duplicate-skips (suppress scary banner) %>
+          <% duplicate_only_errors = begin
+               s = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {}
+               errs = Array(s["errors"]).map { |e| e.is_a?(Hash) ? (e["message"] || e[:message]) : e.to_s }
+               errs.present? && errs.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
+             rescue
+               false
+             end %>
           <% if simplefin_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>
@@ -82,10 +90,15 @@
               <%= icon "clock", size: "sm", color: "warning" %>
               <%= tag.span simplefin_item.rate_limited_message %>
             </div>
-          <% elsif simplefin_item.sync_error.present? %>
+          <% elsif simplefin_item.sync_error.present? && !duplicate_only_errors %>
             <div class="text-secondary flex items-center gap-1">
               <%= render DS::Tooltip.new(text: simplefin_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
               <%= tag.span t(".error"), class: "text-destructive" %>
+            </div>
+          <% elsif duplicate_only_errors %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "info", size: "sm" %>
+              <%= tag.span "Some accounts were skipped as duplicates — use ‘Link existing accounts’ to merge.", class: "text-secondary" %>
             </div>
           <% else %>
             <p class="text-secondary">
@@ -120,9 +133,34 @@
           ) %>
         <% end %>
 
-        <%# Show only when there are manual accounts to link %>
-        <% has_unlinked = (defined?(has_unlinked) ? has_unlinked : (@simplefin_has_unlinked_map && @simplefin_has_unlinked_map[simplefin_item.id])) %>
-        <% if has_unlinked %>
+        <%# CTA logic precedence:
+           # - If there are unlinked SimpleFin accounts, we guide the user to Set up accounts first.
+           # - Only show "Link existing accounts" when there are zero unlinked SFAs AND there are manual accounts to link.
+        %>
+        <% begin
+             # Determine unlinked count (prefer controller map; fallback to query)
+             unlinked_for_button = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
+               @simplefin_unlinked_count_map[simplefin_item.id] || 0
+             else
+               simplefin_item.simplefin_accounts
+                 .left_joins(:account, :account_provider)
+                 .where(accounts: { id: nil }, account_providers: { id: nil })
+                 .count
+             end
+
+             manuals_exist = simplefin_item.family.accounts
+               .left_joins(:account_providers)
+               .where(account_providers: { id: nil })
+               .exists?
+
+             sfa_any = simplefin_item.simplefin_accounts.exists?
+
+             show_relink = unlinked_for_button.to_i == 0 && manuals_exist && sfa_any
+           rescue => e
+             Rails.logger.warn("SimpleFin card: CTA computation failed: #{e.class} - #{e.message}")
+             show_relink = false
+           end %>
+        <% if show_relink %>
           <%= render DS::Link.new(
             text: "Link existing accounts",
             icon: "link-2",
@@ -132,16 +170,6 @@
           ) %>
         <% end %>
 
-        <%# Show only when there are manual accounts to link %>
-        <% if simplefin_item.family.accounts.left_joins(:account_providers).where(account_providers: { id: nil }).exists? %>
-          <%= render DS::Link.new(
-            text: "Link existing accounts",
-            icon: "link-2",
-            variant: "secondary",
-            href: relink_simplefin_item_path(simplefin_item),
-            frame: "modal"
-          ) %>
-        <% end %>
 
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
@@ -224,10 +252,23 @@
           </details>
         <% end %>
 
-        <%# Compute unlinked SimpleFin accounts (no legacy account and no AccountProvider link) in controller; read here %>
-        <% unlinked_count = (defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map[simplefin_item.id]) || 0 %>
+        <%# Compute unlinked SimpleFin accounts (no legacy account and no AccountProvider link)
+           # Prefer controller-provided map; fallback to a local query so the card stays accurate after Turbo broadcasts %>
+        <% unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
+             @simplefin_unlinked_count_map[simplefin_item.id] || 0
+           else
+             begin
+               simplefin_item.simplefin_accounts
+                 .left_joins(:account, :account_provider)
+                 .where(accounts: { id: nil }, account_providers: { id: nil })
+                 .count
+             rescue => e
+               Rails.logger.warn("SimpleFin card: unlinked_count fallback failed: #{e.class} - #{e.message}")
+               0
+             end
+           end %>
 
-        <% if unlinked_count > 0 %>
+        <% if unlinked_count.to_i > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
             <p class="text-secondary text-sm"><%= t(".setup_description") %></p>

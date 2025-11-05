@@ -21,9 +21,6 @@ module SimplefinItems
       end
 
       def compute_relink_candidates
-        # Best-effort dedup before building candidates
-        @simplefin_item.dedup_simplefin_accounts! rescue nil
-
         family = @simplefin_item.family
         manuals = family.accounts.left_joins(:account_providers).where(account_providers: { id: nil }).to_a
 

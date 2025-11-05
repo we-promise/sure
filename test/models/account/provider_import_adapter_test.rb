@@ -324,13 +324,13 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     adapter = Account::ProviderImportAdapter.new(investment_account)
     security = securities(:aapl)
 
-    # Create a future holding
+    # Create a future holding (far enough in the future to avoid cross-test collisions)
     future_holding = investment_account.holdings.create!(
       security: security,
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 7.days,
       price: 150
     )
 
@@ -343,7 +343,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.today - 1.day,
       price: 150,
       source: "plaid",
       delete_future_holdings: true
@@ -381,7 +381,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 30.days,
       price: 150,
       account_provider_id: provider.id
     )
@@ -391,7 +391,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 3,
       amount: 450,
       currency: "USD",
-      date: Date.today + 2.days,
+      date: Date.today + 31.days,
       price: 150,
       account_provider_id: nil
     )
@@ -405,7 +405,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.today - 1.day,
       price: 150,
       source: "plaid",
       account_provider_id: provider.id,
@@ -428,7 +428,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 60.days,
       price: 150
     )
 
@@ -437,7 +437,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 3,
       amount: 450,
       currency: "USD",
-      date: Date.today + 2.days,
+      date: Date.today + 61.days,
       price: 150
     )
 
@@ -450,7 +450,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.today - 1.day,
       price: 150,
       source: "plaid",
       delete_future_holdings: true

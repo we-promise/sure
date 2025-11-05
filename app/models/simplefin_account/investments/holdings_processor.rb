@@ -13,22 +13,16 @@ class SimplefinAccount::Investments::HoldingsProcessor
         symbol = data[:symbol]
         holding_id = data[:id]
 
-        if ENV["SURE_LOG_SIMPLEFIN_HOLDINGS"].present?
-          Rails.logger.info({ event: "simplefin.holding.start", sfa_id: simplefin_account.id, account_id: account&.id, id: holding_id, symbol: symbol, raw: data }.to_json)
-        end
+        Rails.logger.debug({ event: "simplefin.holding.start", sfa_id: simplefin_account.id, account_id: account&.id, id: holding_id, symbol: symbol, raw: data }.to_json)
 
         unless symbol.present? && holding_id.present?
-          if ENV["SURE_LOG_SIMPLEFIN_HOLDINGS"].present?
-            Rails.logger.info({ event: "simplefin.holding.skip", reason: "missing_symbol_or_id", id: holding_id, symbol: symbol }.to_json)
-          end
+          Rails.logger.debug({ event: "simplefin.holding.skip", reason: "missing_symbol_or_id", id: holding_id, symbol: symbol }.to_json)
           next
         end
 
         security = resolve_security(symbol, simplefin_holding["description"])
         unless security.present?
-          if ENV["SURE_LOG_SIMPLEFIN_HOLDINGS"].present?
-            Rails.logger.info({ event: "simplefin.holding.skip", reason: "unresolved_security", id: holding_id, symbol: symbol }.to_json)
-          end
+          Rails.logger.debug({ event: "simplefin.holding.skip", reason: "unresolved_security", id: holding_id, symbol: symbol }.to_json)
           next
         end
 
@@ -77,9 +71,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
           delete_future_holdings: false  # SimpleFin tracks each holding uniquely
         )
 
-        if ENV["SURE_LOG_SIMPLEFIN_HOLDINGS"].present?
-          Rails.logger.info({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id }.to_json)
-        end
+        Rails.logger.debug({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id }.to_json)
       rescue => e
         ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
         Rails.logger.error "Error processing SimpleFin holding#{ctx}: #{e.message}"

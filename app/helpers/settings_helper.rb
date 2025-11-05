@@ -73,12 +73,4 @@ module SettingsHelper
     def not_self_hosted?
       !self_hosted?
     end
-
-    def admin_user?
-      Current.user&.admin? == true
-    end
-
-    def self_hosted_and_admin?
-      self_hosted? && admin_user?
-    end
 end
