@@ -4,6 +4,7 @@ class SettingsTest < ApplicationSystemTestCase
   setup do
     sign_in @user = users(:family_admin)
 
+    # Base settings available to all users
     @settings_links = [
       [ "Accounts", accounts_path ],
       [ "Bank Sync", settings_bank_sync_path ],
@@ -15,16 +16,22 @@ class SettingsTest < ApplicationSystemTestCase
       [ "Rules", rules_path ],
       [ "Merchants", family_merchants_path ],
       [ "Recurring", recurring_transactions_path ],
-      [ "AI Prompts", settings_ai_prompts_path ],
-      [ "LLM Usage", settings_llm_usage_path ],
-      [ "API Key", settings_api_key_path ],
-      [ "Providers", settings_providers_path ],
-      [ "Imports", imports_path ],
-      [ "SimpleFin", simplefin_items_path ],
       [ "Guides", settings_guides_path ],
       [ "What's new", changelog_path ],
       [ "Feedback", feedback_path ]
     ]
+
+    # Add admin settings if user is admin
+    if @user.admin?
+      @settings_links += [
+        [ "AI Prompts", settings_ai_prompts_path ],
+        [ "LLM Usage", settings_llm_usage_path ],
+        [ "API Key", settings_api_key_path ],
+        [ "Providers", settings_providers_path ],
+        [ "Imports", imports_path ],
+        [ "SimpleFin", simplefin_items_path ]
+      ]
+    end
   end
 
   test "can access settings from sidebar" do
