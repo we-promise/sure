@@ -96,6 +96,9 @@ class Settings::ProvidersController < ApplicationController
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.message}")
     flash.now[:alert] = "Failed to update provider settings: #{error.message}"
+    # Set @provider_configurations so the view can render properly
+    Provider::Factory.ensure_adapters_loaded
+    @provider_configurations = Provider::ConfigurationRegistry.all
     render :show, status: :unprocessable_entity
   end
 

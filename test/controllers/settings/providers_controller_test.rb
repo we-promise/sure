@@ -265,22 +265,20 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "logs errors when update fails" do
     with_self_hosting do
-      # Test that errors during update are properly logged
+      # Test that errors during update are properly logged and handled gracefully
       # We'll force an error by making the dynamic_fields= setter raise
       Setting.expects(:dynamic_fields=).raises(StandardError.new("Database error")).once
 
       # Mock logger to verify error is logged
       Rails.logger.expects(:error).with(regexp_matches(/Failed to update provider settings.*Database error/)).once
 
-      begin
-        patch settings_providers_url, params: {
-          setting: { plaid_client_id: "test" }
-        }
-      rescue
-        # The error will propagate because the rescue in the controller
-        # tries to render a view that needs @provider_configurations
-        # In a real scenario, the controller should set this before rendering
-      end
+      patch settings_providers_url, params: {
+        setting: { plaid_client_id: "test" }
+      }
+
+      # Controller should handle the error gracefully
+      assert_response :unprocessable_entity
+      assert_equal "Failed to update provider settings: Database error", flash[:alert]
     end
   end
 
