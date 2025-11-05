@@ -12,11 +12,14 @@ module SettingsHelper
     { name: "Tags", path: :tags_path },
     { name: "Rules", path: :rules_path },
     { name: "Merchants", path: :family_merchants_path },
+    { name: "Recurring", path: :recurring_transactions_path },
     # Advanced section
     { name: "AI Prompts", path: :settings_ai_prompts_path },
+    { name: "LLM Usage", path: :settings_llm_usage_path },
     { name: "API Key", path: :settings_api_key_path },
     { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted? },
-    { name: "Imports", path: :imports_path },
+    { name: "Providers", path: :settings_providers_path },
+    { name: "Import/Export", path: :imports_path },
     { name: "SimpleFin", path: :simplefin_items_path },
     # More section
     { name: "Guides", path: :settings_guides_path },
