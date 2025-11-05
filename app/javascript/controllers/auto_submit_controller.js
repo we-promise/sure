@@ -22,7 +22,9 @@ export default class extends Controller {
       form.requestSubmit();
     } finally {
       // allow subsequent attempts after a short tick
-      setTimeout(() => (this.submitting = false), 150);
+      setTimeout(() => {
+        this.submitting = false;
+      }, 150);
     }
   }
 }

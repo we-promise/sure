@@ -11,31 +11,7 @@ class Settings::ProvidersController < ApplicationController
       [ "Bank Sync Providers", nil ]
     ]
 
-    # Load all provider configurations (exclude SimpleFin, which has its own unified panel below)
-    Provider::Factory.ensure_adapters_loaded
-    @provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp("simplefin").zero? }
-
-    # SimpleFin integration on Providers page: preload items and stats maps used by the shared partial
-    @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
-    @simplefin_sync_stats_map = {}
-    @simplefin_has_unlinked_map = {}
-    @simplefin_unlinked_count_map = {}
-
-    @simplefin_items.each do |item|
-      latest_sync = item.syncs.loaded? ? item.syncs.max_by(&:created_at) : item.syncs.ordered.first
-      @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
-
-      @simplefin_has_unlinked_map[item.id] = item.family.accounts
-        .left_joins(:account_providers)
-        .where(account_providers: { id: nil })
-        .exists?
-
-      count = item.simplefin_accounts
-        .left_joins(:account, :account_provider)
-        .where(accounts: { id: nil }, account_providers: { id: nil })
-        .count
-      @simplefin_unlinked_count_map[item.id] = count
-    end
+    prepare_show_context
   end
 
   def update
@@ -96,9 +72,7 @@ class Settings::ProvidersController < ApplicationController
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.message}")
     flash.now[:alert] = "Failed to update provider settings: #{error.message}"
-    # Set @provider_configurations so the view can render properly
-    Provider::Factory.ensure_adapters_loaded
-    @provider_configurations = Provider::ConfigurationRegistry.all
+    prepare_show_context
     render :show, status: :unprocessable_entity
   end
 
@@ -142,5 +116,39 @@ class Settings::ProvidersController < ApplicationController
         adapter_class = Provider::ConfigurationRegistry.get_adapter_class(provider_key)
         adapter_class&.reload_configuration
       end
+    end
+
+    # Prepares instance vars needed by the show view and partials
+    def prepare_show_context
+      # Load all provider configurations (exclude SimpleFin, which has its own unified panel below)
+      Provider::Factory.ensure_adapters_loaded
+      @provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp("simplefin").zero? }
+
+      # SimpleFin integration on Providers page: preload items and stats maps used by the shared partial
+      @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
+      @simplefin_sync_stats_map = {}
+      @simplefin_has_unlinked_map = {}
+      @simplefin_unlinked_count_map = {}
+
+      @simplefin_items.each do |item|
+        latest_sync = item.syncs.loaded? ? item.syncs.max_by(&:created_at) : item.syncs.ordered.first
+        @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
+
+        @simplefin_has_unlinked_map[item.id] = item.family.accounts
+          .left_joins(:account_providers)
+          .where(account_providers: { id: nil })
+          .exists?
+
+        count = item.simplefin_accounts
+          .left_joins(:account, :account_provider)
+          .where(accounts: { id: nil }, account_providers: { id: nil })
+          .count
+        @simplefin_unlinked_count_map[item.id] = count
+      end
+
+      # Ensure hashes are initialized even when there are no items
+      @simplefin_sync_stats_map ||= {}
+      @simplefin_has_unlinked_map ||= {}
+      @simplefin_unlinked_count_map ||= {}
     end
 end

@@ -32,7 +32,7 @@
                         data: { auto_submit_target: "input" } %>
   <% end %>
 
-  <% if @simplefin_items.any? %>
+  <% if @simplefin_items&.any? %>
     <div class="flex items-center gap-2">
       <div class="w-2 h-2 bg-green-500 rounded-full"></div>
       <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
