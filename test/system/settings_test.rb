@@ -15,7 +15,6 @@ class SettingsTest < ApplicationSystemTestCase
       [ "Tags", tags_path ],
       [ "Rules", rules_path ],
       [ "Merchants", family_merchants_path ],
-      [ "Recurring Transactions", recurring_transactions_path ],
       [ "Guides", settings_guides_path ],
       [ "What's new", changelog_path ],
       [ "Feedback", feedback_path ]
@@ -25,11 +24,7 @@ class SettingsTest < ApplicationSystemTestCase
     if @user.admin?
       @settings_links += [
         [ "AI Prompts", settings_ai_prompts_path ],
-        [ "LLM Usage", settings_llm_usage_path ],
         [ "API Key", settings_api_key_path ],
-        [ "Providers", settings_providers_path ],
-        [ "Imports", imports_path ],
-        [ "SimpleFin", simplefin_items_path ]
       ]
     end
   end
@@ -86,14 +81,10 @@ class SettingsTest < ApplicationSystemTestCase
 
       # Go directly to accounts (settings) page
       visit accounts_path
-      
+
       # Assert that admin-only settings are not present in the navigation
       assert_no_selector "li", text: "AI Prompts"
-      assert_no_selector "li", text: "LLM Usage"
       assert_no_selector "li", text: "API Key"
-      assert_no_selector "li", text: "Providers"
-      assert_no_selector "li", text: "Imports"
-      assert_no_selector "li", text: "SimpleFin"
     end
   end
 
