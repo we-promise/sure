@@ -24,7 +24,7 @@ class SettingsTest < ApplicationSystemTestCase
     if @user.admin?
       @settings_links += [
         [ "AI Prompts", settings_ai_prompts_path ],
-        [ "API Key", settings_api_key_path ],
+        [ "API Key", settings_api_key_path ]
       ]
     end
   end
