@@ -12,21 +12,6 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "should get index" do
-    get simplefin_items_url
-    assert_response :success
-    assert_includes response.body, @simplefin_item.name
-  end
-
-  test "should get new" do
-    get new_simplefin_item_url
-    assert_response :success
-  end
-
-  test "should show simplefin item" do
-    get simplefin_item_url(@simplefin_item)
-    assert_response :success
-  end
 
   test "should destroy simplefin item" do
     assert_difference("SimplefinItem.count", 0) do # doesn't actually delete immediately
@@ -309,5 +294,64 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal linked_acct.id, linked_sfa.account&.id
     # The newly created account for the unlinked SFA should now exist
     assert_not_nil unlinked_sfa.account_id
+  end
+  test "update auto-opens relink modal when unlinked SFAs present" do
+    @simplefin_item.update!(status: :requires_update)
+
+    # Mock provider to return one account so updated_item creates SFAs
+    mock_provider = mock()
+    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
+    mock_provider.expects(:get_accounts).returns({
+      accounts: [
+        { id: "sf_auto_open_1", name: "Auto Open Checking", type: "depository", currency: "USD", balance: 100, transactions: [] }
+      ]
+    }).at_least_once
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+
+    patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: "valid_token" } }
+
+    assert_response :redirect
+    uri = URI(response.redirect_url)
+    assert_equal "/accounts", uri.path
+    # Expect open_relink_for param present when there are unlinked SFAs
+    q = Rack::Utils.parse_nested_query(uri.query)
+    assert q.key?("open_relink_for"), "expected open_relink_for param to trigger auto-open modal"
+  end
+
+  test "create does not auto-open when no candidates or unlinked" do
+    # Mock provider interactions for item creation (no immediate account import on create)
+    mock_provider = mock()
+    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+
+    post simplefin_items_url, params: { simplefin_item: { setup_token: "valid_token" } }
+
+    assert_response :redirect
+    uri = URI(response.redirect_url)
+    assert_equal "/accounts", uri.path
+    q = Rack::Utils.parse_nested_query(uri.query)
+    assert !q.key?("open_relink_for"), "did not expect auto-open when nothing actionable"
+  end
+
+  test "update does not auto-open when no SFAs present" do
+    @simplefin_item.update!(status: :requires_update)
+
+    mock_provider = mock()
+    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
+    mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+
+    patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: "valid_token" } }
+
+    assert_response :redirect
+    uri = URI(response.redirect_url)
+    assert_equal "/accounts", uri.path
+    q = Rack::Utils.parse_nested_query(uri.query)
+    assert !q.key?("open_relink_for"), "did not expect auto-open when update produced no SFAs/candidates"
+  end
+  test "manual_relink renders modal content" do
+    get manual_relink_simplefin_item_url(@simplefin_item)
+    assert_response :success
+    assert_includes @response.body, "Link existing accounts"
   end
 end

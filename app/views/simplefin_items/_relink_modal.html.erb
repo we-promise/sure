@@ -1,0 +1,58 @@
+<div class="p-4 space-y-4">
+  <header class="flex items-center gap-2">
+    <h2 class="text-lg text-primary font-medium">Link existing accounts</h2>
+  </header>
+
+  <%# Build a map of suggested pairs for preselection %>
+  <% candidate_map = (@candidates || []).each_with_object({}) { |c, h| h[c[:sfa_id] || c["sfa_id"]] = (c[:manual_id] || c["manual_id"]) } %>
+
+  <% if @manual_accounts.blank? %>
+    <div class="text-sm text-secondary">No manual accounts are available to link. Create a manual account first, then try again.</div>
+  <% else %>
+    <%= form_with url: apply_relink_simplefin_item_path(@simplefin_item), method: :post, data: { turbo: true } do |f| %>
+      <div class="space-y-3">
+        <div class="text-sm text-secondary">Choose which existing manual accounts to link to your SimpleFin accounts. Only checked rows will be linked.</div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-secondary text-xs">
+                <th class="text-left p-2">SimpleFin account</th>
+                <th class="text-left p-2">Link to manual account</th>
+                <th class="text-left p-2">Select</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @sfas_all.each_with_index do |sfa, idx| %>
+                <tr class="border-t border-surface-inset/50">
+                  <td class="p-2 align-top">
+                    <div class="flex items-center gap-2">
+                      <div class="font-medium text-primary"><%= sfa.name %></div>
+                    </div>
+                  </td>
+                  <td class="p-2 align-top">
+                    <% options = @manual_accounts.map { |a| [a.name, a.id] } %>
+                    <% selected = candidate_map[sfa.id] %>
+                    <%= hidden_field_tag "pairs[][sfa_id]", sfa.id %>
+                    <%= select_tag "pairs[][manual_id]", options_for_select(options, selected), class: "input w-full" %>
+                  </td>
+                  <td class="p-2 align-top">
+                    <% checked_default = selected.present? %>
+                    <%= check_box_tag "pairs[][checked]", "1", checked_default %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <%= button_tag type: :submit, class: "btn btn--primary" do %>
+            Link accounts
+          <% end %>
+          <%= link_to "Cancel", "#", data: { action: "turbo-modal#close" }, class: "btn" %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

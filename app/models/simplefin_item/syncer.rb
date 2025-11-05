@@ -99,9 +99,57 @@ class SimplefinItem::Syncer
         Rails.logger.warn("SimplefinItem::Syncer#mark_completed stats error: #{e.class} - #{e.message}")
       end
 
+      # If all recorded errors are duplicate-skips, do not surface a generic failure message
+      begin
+        stats = (sync.sync_stats || {})
+        errors = Array(stats["errors"]).map { |e| (e.is_a?(Hash) ? e["message"] || e[:message] : e.to_s) }
+        if errors.present? && errors.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
+          sync.update_columns(error: nil) if sync.respond_to?(:error)
+          # Provide a gentle status hint instead
+          if sync.respond_to?(:status_text)
+            sync.update_columns(status_text: "Some accounts skipped as duplicates — try Link existing accounts to merge.")
+          end
+        end
+      rescue => e
+        Rails.logger.warn("SimplefinItem::Syncer duplicate-only error normalization failed: #{e.class} - #{e.message}")
+      end
+
       # Bump item freshness timestamp (guard column existence and skip for balances-only)
       if simplefin_item.has_attribute?(:last_synced_at) && !(sync.sync_stats || {})["balances_only"].present?
         simplefin_item.update!(last_synced_at: Time.current)
+      end
+
+      # Broadcast UI updates so Providers/Accounts pages refresh without manual reload
+      begin
+        # Replace the SimpleFin card
+        card_html = ApplicationController.render(
+          partial: "simplefin_items/simplefin_item",
+          formats: [ :html ],
+          locals: { simplefin_item: simplefin_item }
+        )
+        target_id = ActionView::RecordIdentifier.dom_id(simplefin_item)
+        Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: target_id, html: card_html)
+
+        # Also refresh the Manual Accounts group so duplicates clear without a full page reload
+        begin
+          manual_accounts = simplefin_item.family.accounts
+            .left_joins(:account_providers)
+            .where(account_providers: { id: nil })
+            .order(:name)
+          manual_html = ApplicationController.render(
+            partial: "accounts/index/manual_accounts",
+            formats: [ :html ],
+            locals: { accounts: manual_accounts }
+          )
+          Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: "manual-accounts", html: manual_html)
+        rescue => inner
+          Rails.logger.warn("SimplefinItem::Syncer manual-accounts broadcast failed: #{inner.class} - #{inner.message}")
+        end
+
+        # Intentionally do not broadcast modal reloads here to avoid unexpected auto-pop after sync.
+        # Modal opening is controlled explicitly via controller redirects with actionable conditions.
+      rescue => e
+        Rails.logger.warn("SimplefinItem::Syncer broadcast failed: #{e.class} - #{e.message}")
       end
     end
 

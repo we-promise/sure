@@ -88,15 +88,9 @@ class SimplefinItem::RelinkService
       end
     end
 
-    # Final cleanup: merge duplicate provider accounts and dedup SFAs
+    # Final cleanup removed: we no longer auto-merge provider accounts or dedup SFAs here.
     merge_stats = {}
     sfa_stats = {}
-    begin
-      merge_stats = simplefin_item.merge_duplicate_provider_accounts!
-      sfa_stats = simplefin_item.dedup_simplefin_accounts!
-    rescue => e
-      Rails.logger.warn("RelinkService cleanup failed: #{e.class} - #{e.message}")
-    end
 
     # Recompute unlinked count and clear pending flag when zero
     unlinked_count = 0

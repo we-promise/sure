@@ -69,9 +69,6 @@
                       <%= render "transactions/transfer_match", transaction: transaction %>
                     <% end %>
 
-                    <% if transaction.respond_to?(:was_merged) && transaction.was_merged %>
-                      <%= render DS::Tooltip.new(text: "Merged from pending to posted", icon: "git-merge", size: "sm") %>
-                    <% end %>
                   </div>
                 </div>
 

@@ -85,7 +85,23 @@ class SimplefinItem::Importer
         raw_payload: account_data,
         org_data: account_data[:org]
       )
-      sfa.save!
+      begin
+        sfa.save!
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+        # Surface a friendly duplicate/validation signal in sync stats and continue
+        stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+        stats["errors"] ||= []
+        stats["total_errors"] = stats.fetch("total_errors", 0) + 1
+        cat = "other"
+        msg = e.message.to_s
+        if msg.downcase.include?("already been taken") || msg.downcase.include?("unique")
+          msg = "Duplicate upstream account detected for SimpleFin (account_id=#{account_id}). Try relinking to an existing manual account."
+        end
+        stats["errors"] << { account_id: account_id, name: account_data[:name], message: msg, category: cat }
+        stats["errors"] = stats["errors"].last(5)
+        persist_stats!
+        return
+      end
       # In pre-prompt balances-only discovery, do NOT auto-create provider-linked accounts.
       # Only update balance for already-linked accounts (if any), to avoid creating duplicates in setup.
       if (acct = sfa.current_account)
@@ -355,7 +371,7 @@ class SimplefinItem::Importer
     end
 
     def import_account(account_data)
-      account_id = account_data[:id]
+      account_id = account_data[:id].to_s
 
       # Validate required account_id to prevent duplicate creation
       return if account_id.blank?
@@ -401,7 +417,23 @@ class SimplefinItem::Importer
         simplefin_account.account_id = account_id
       end
 
-      simplefin_account.save!
+      begin
+        simplefin_account.save!
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+        # Treat duplicates/validation failures as partial success: count and surface friendly error, then continue
+        stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+        stats["errors"] ||= []
+        stats["total_errors"] = stats.fetch("total_errors", 0) + 1
+        cat = "other"
+        msg = e.message.to_s
+        if msg.downcase.include?("already been taken") || msg.downcase.include?("unique")
+          msg = "Duplicate upstream account detected for SimpleFin (account_id=#{account_id}). Try relinking to an existing manual account."
+        end
+        stats["errors"] << { account_id: account_id, name: account_data[:name], message: msg, category: cat }
+        stats["errors"] = stats["errors"].last(5)
+        persist_stats!
+        nil
+      end
     end
 
 
