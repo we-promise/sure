@@ -1,0 +1,117 @@
+<div>
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-lg font-medium text-primary">
+      <%= t("reports.budget_performance.title") %>
+    </h2>
+    <p class="text-sm text-tertiary">
+      <%= start_date.strftime("%B %Y") %>
+    </p>
+  </div>
+
+  <% if budget_data.any? %>
+    <div class="space-y-4">
+      <% budget_data.each do |budget_item| %>
+        <div class="p-4 bg-surface-inset rounded-lg">
+          <%# Category Header %>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full" style="background-color: <%= budget_item[:category_color] %>"></div>
+              <h3 class="font-medium text-primary"><%= budget_item[:category_name] %></h3>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <% case budget_item[:status] %>
+              <% when :over %>
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-danger/10 text-danger text-xs font-medium rounded-full">
+                  <%= icon("alert-circle", class: "w-3 h-3") %>
+                  <%= t("reports.budget_performance.status.over") %>
+                </span>
+              <% when :warning %>
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-warning/10 text-warning text-xs font-medium rounded-full">
+                  <%= icon("alert-triangle", class: "w-3 h-3") %>
+                  <%= t("reports.budget_performance.status.warning") %>
+                </span>
+              <% when :good %>
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-success/10 text-success text-xs font-medium rounded-full">
+                  <%= icon("check-circle", class: "w-3 h-3") %>
+                  <%= t("reports.budget_performance.status.good") %>
+                </span>
+              <% end %>
+
+              <span class="text-sm font-semibold text-primary">
+                <%= budget_item[:percent_used].round(0) %>%
+              </span>
+            </div>
+          </div>
+
+          <%# Progress Bar %>
+          <div class="mb-3">
+            <div class="h-3 bg-container rounded-full overflow-hidden">
+              <% bar_width = [budget_item[:percent_used], 100].min %>
+              <% bar_color = case budget_item[:status]
+                when :over then "bg-danger"
+                when :warning then "bg-warning"
+                else "bg-success"
+              end %>
+              <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
+                   style="width: <%= bar_width %>%"></div>
+            </div>
+          </div>
+
+          <%# Budget Details %>
+          <div class="flex items-center justify-between text-sm">
+            <div class="flex items-center gap-4">
+              <div>
+                <span class="text-tertiary"><%= t("reports.budget_performance.spent") %>:</span>
+                <span class="font-medium text-primary">
+                  <%= Money.new(budget_item[:actual], Current.family.currency).format %>
+                </span>
+              </div>
+              <div>
+                <span class="text-tertiary"><%= t("reports.budget_performance.budgeted") %>:</span>
+                <span class="font-medium text-secondary">
+                  <%= Money.new(budget_item[:budgeted], Current.family.currency).format %>
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <% if budget_item[:remaining] >= 0 %>
+                <span class="text-tertiary"><%= t("reports.budget_performance.remaining") %>:</span>
+                <span class="font-medium text-success">
+                  <%= Money.new(budget_item[:remaining], Current.family.currency).format %>
+                </span>
+              <% else %>
+                <span class="text-tertiary"><%= t("reports.budget_performance.over_by") %>:</span>
+                <span class="font-medium text-danger">
+                  <%= Money.new(budget_item[:remaining].abs, Current.family.currency).format %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+
+          <%# Suggested Daily Limit (if remaining days in month) %>
+          <% if budget_item[:remaining] > 0 && start_date.month == Date.current.month && start_date.year == Date.current.year %>
+            <% days_remaining = (start_date.end_of_month - Date.current).to_i + 1 %>
+            <% if days_remaining > 0 %>
+              <div class="mt-3 pt-3 border-t border-tertiary">
+                <p class="text-xs text-tertiary">
+                  <%= t("reports.budget_performance.suggested_daily",
+                        amount: Money.new((budget_item[:remaining] / days_remaining), Current.family.currency).format,
+                        days: days_remaining) %>
+                </p>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="text-center py-12">
+      <%= icon("gauge", class: "w-12 h-12 text-tertiary mx-auto mb-4") %>
+      <p class="text-tertiary">
+        <%= t("reports.budget_performance.no_budgets") %>
+      </p>
+    </div>
+  <% end %>
+</div>
