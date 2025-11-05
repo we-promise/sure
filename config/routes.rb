@@ -53,6 +53,7 @@ Rails.application.routes.draw do
     delete :reset, on: :member
     delete :reset_with_sample_data, on: :member
     patch :rule_prompt_settings, on: :member
+    get :resend_confirmation_email, on: :member
   end
 
   resource :onboarding, only: :show do
@@ -100,6 +101,11 @@ Rails.application.routes.draw do
 
     post :bootstrap, on: :collection
     delete :destroy_all, on: :collection
+  end
+
+  resources :reports, only: %i[index] do
+    get :export_transactions, on: :collection
+    get :google_sheets_instructions, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do

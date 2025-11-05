@@ -70,10 +70,14 @@ class Setting < RailsSettings::Base
       if respond_to?("#{key_str}=")
         public_send("#{key_str}=", value)
       else
-        # Otherwise, store in dynamic_fields hash
+        # Otherwise, manage in dynamic_fields hash
         current_dynamic = dynamic_fields.dup
-        current_dynamic[key_str] = value
-        self.dynamic_fields = current_dynamic
+        if value.nil?
+          current_dynamic.delete(key_str)          # treat nil as delete
+        else
+          current_dynamic[key_str] = value
+        end
+        self.dynamic_fields = current_dynamic      # persists & busts cache
       end
     end
 

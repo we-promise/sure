@@ -1,0 +1,27 @@
+<div class="bg-container rounded-xl shadow-border-xs p-12 text-center">
+  <%= icon("chart-bar", class: "w-16 h-16 text-tertiary mx-auto mb-6") %>
+
+  <h3 class="text-xl font-medium text-primary mb-3">
+    <%= t("reports.empty_state.title") %>
+  </h3>
+
+  <p class="text-base text-secondary mb-6 max-w-md mx-auto">
+    <%= t("reports.empty_state.description") %>
+  </p>
+
+  <div class="flex gap-3 justify-center">
+    <%= render DS::Link.new(
+      text: t("reports.empty_state.add_transaction"),
+      href: new_transaction_path,
+      variant: "primary",
+      frame: :modal
+    ) %>
+
+    <%= render DS::Link.new(
+      text: t("reports.empty_state.add_account"),
+      href: new_account_path,
+      variant: "secondary",
+      frame: :modal
+    ) %>
+  </div>
+</div>

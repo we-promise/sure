@@ -1,0 +1,203 @@
+<div>
+  <h2 class="text-lg font-medium text-primary mb-6">
+    <%= t("reports.trends.title") %>
+  </h2>
+
+  <div class="space-y-8">
+    <%# Month-over-Month Trends %>
+    <div>
+      <h3 class="text-sm font-medium text-secondary mb-4">
+        <%= t("reports.trends.monthly_breakdown") %>
+      </h3>
+
+      <% if trends_data.any? %>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-tertiary">
+                <th class="text-left py-2 pr-4 font-medium text-secondary"><%= t("reports.trends.month") %></th>
+                <th class="text-right py-2 px-4 font-medium text-secondary"><%= t("reports.trends.income") %></th>
+                <th class="text-right py-2 px-4 font-medium text-secondary"><%= t("reports.trends.expenses") %></th>
+                <th class="text-right py-2 px-2 font-medium text-secondary"><%= t("reports.trends.net") %></th>
+                <th class="text-right py-2 pl-4 font-medium text-secondary"><%= t("reports.trends.savings_rate") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% trends_data.each_with_index do |trend, index| %>
+                <tr class="border-b border-tertiary/50 <%= index == trends_data.length - 1 ? "font-medium" : "" %>">
+                  <td class="py-3 pr-4 text-primary">
+                    <%= trend[:month] %>
+                    <% if index == trends_data.length - 1 %>
+                      <span class="ml-2 text-xs text-tertiary">(<%= t("reports.trends.current") %>)</span>
+                    <% end %>
+                  </td>
+                  <td class="text-right py-3 px-4 text-success">
+                    <%= Money.new(trend[:income], Current.family.currency).format %>
+                  </td>
+                  <td class="text-right py-3 px-4 text-danger">
+                    <%= Money.new(trend[:expenses], Current.family.currency).format %>
+                  </td>
+                  <td class="text-right py-3 px-2 <%= trend[:net] >= 0 ? "text-success" : "text-danger" %>">
+                    <%= Money.new(trend[:net], Current.family.currency).format %>
+                  </td>
+                  <td class="text-right py-3 pl-4 <%= trend[:net] >= 0 ? "text-success" : "text-danger" %>">
+                    <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
+                    <%= savings_rate %>%
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <%# Trend Insights %>
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <% avg_income = trends_data.sum { |t| t[:income] } / trends_data.length %>
+          <% avg_expenses = trends_data.sum { |t| t[:expenses] } / trends_data.length %>
+          <% avg_net = trends_data.sum { |t| t[:net] } / trends_data.length %>
+
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_income") %></p>
+            <p class="text-lg font-semibold text-success">
+              <%= Money.new(avg_income, Current.family.currency).format %>
+            </p>
+          </div>
+
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
+            <p class="text-lg font-semibold text-danger">
+              <%= Money.new(avg_expenses, Current.family.currency).format %>
+            </p>
+          </div>
+
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_savings") %></p>
+            <p class="text-lg font-semibold <%= avg_net >= 0 ? "text-success" : "text-danger" %>">
+              <%= Money.new(avg_net, Current.family.currency).format %>
+            </p>
+          </div>
+        </div>
+      <% else %>
+        <div class="text-center py-8 text-tertiary">
+          <%= t("reports.trends.no_data") %>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Spending Patterns %>
+    <div>
+      <h3 class="text-sm font-medium text-secondary mb-4">
+        <%= t("reports.trends.spending_patterns") %>
+      </h3>
+
+      <% if spending_patterns[:weekday_count] + spending_patterns[:weekend_count] > 0 %>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <%# Weekday Spending %>
+          <div class="p-6 bg-surface-inset rounded-lg">
+            <div class="flex items-center gap-2 mb-4">
+              <%= icon("calendar", class: "w-5 h-5 text-primary") %>
+              <h4 class="font-medium text-primary"><%= t("reports.trends.weekday_spending") %></h4>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.total") %></p>
+                <p class="text-xl font-semibold text-primary">
+                  <%= Money.new(spending_patterns[:weekday_total], Current.family.currency).format %>
+                </p>
+              </div>
+
+              <div>
+                <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_per_transaction") %></p>
+                <p class="text-base font-medium text-secondary">
+                  <%= Money.new(spending_patterns[:weekday_avg], Current.family.currency).format %>
+                </p>
+              </div>
+
+              <div>
+                <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.transactions") %></p>
+                <p class="text-base font-medium text-secondary">
+                  <%= spending_patterns[:weekday_count] %>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <%# Weekend Spending %>
+          <div class="p-6 bg-surface-inset rounded-lg">
+            <div class="flex items-center gap-2 mb-4">
+              <%= icon("calendar-check", class: "w-5 h-5 text-primary") %>
+              <h4 class="font-medium text-primary"><%= t("reports.trends.weekend_spending") %></h4>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.total") %></p>
+                <p class="text-xl font-semibold text-primary">
+                  <%= Money.new(spending_patterns[:weekend_total], Current.family.currency).format %>
+                </p>
+              </div>
+
+              <div>
+                <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_per_transaction") %></p>
+                <p class="text-base font-medium text-secondary">
+                  <%= Money.new(spending_patterns[:weekend_avg], Current.family.currency).format %>
+                </p>
+              </div>
+
+              <div>
+                <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.transactions") %></p>
+                <p class="text-base font-medium text-secondary">
+                  <%= spending_patterns[:weekend_count] %>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%# Comparison Insight %>
+        <% if spending_patterns[:weekday_avg] > 0 && spending_patterns[:weekend_avg] > 0 %>
+          <div class="mt-4 p-4 bg-container rounded-lg border border-tertiary">
+            <div class="flex items-start gap-3">
+              <%= icon("lightbulb", class: "w-5 h-5 text-warning mt-0.5") %>
+              <div>
+                <p class="text-sm font-medium text-primary mb-1">
+                  <%= t("reports.trends.insight_title") %>
+                </p>
+                <p class="text-sm text-secondary">
+                  <%
+                    weekday = spending_patterns[:weekday_avg].to_f
+                    weekend = spending_patterns[:weekend_avg].to_f
+
+                    if weekend > weekday
+                      percent_diff = ((weekend - weekday) / weekday * 100).round(0)
+                      if percent_diff > 20
+                        message = t("reports.trends.insight_higher_weekend", percent: percent_diff)
+                      else
+                        message = t("reports.trends.insight_similar")
+                      end
+                    elsif weekday > weekend
+                      percent_diff = ((weekday - weekend) / weekend * 100).round(0)
+                      if percent_diff > 20
+                        message = t("reports.trends.insight_higher_weekday", percent: percent_diff)
+                      else
+                        message = t("reports.trends.insight_similar")
+                      end
+                    else
+                      message = t("reports.trends.insight_similar")
+                    end
+                  %>
+                  <%= message %>
+                </p>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="text-center py-8 text-tertiary">
+          <%= t("reports.trends.no_spending_data") %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

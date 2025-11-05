@@ -11,6 +11,7 @@
 @import "./simonweb_pickr.css";
 
 @import "./google-sign-in.css";
+@import "./date-picker-dark-mode.css";
 
 @layer components {
   .pcr-app{

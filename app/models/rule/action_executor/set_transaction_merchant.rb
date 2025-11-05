@@ -4,7 +4,7 @@ class Rule::ActionExecutor::SetTransactionMerchant < Rule::ActionExecutor
   end
 
   def options
-    family.merchants.pluck(:name, :id)
+    family.merchants.alphabetically.pluck(:name, :id)
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false)
