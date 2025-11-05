@@ -102,6 +102,8 @@ export default class extends Controller {
   }
 
   update() {
+    if (!this.buttonTarget || !this.contentTarget) return;
+
     const isSmallScreen = !window.matchMedia("(min-width: 768px)").matches;
 
     computePosition(this.buttonTarget, this.contentTarget, {
