@@ -5,6 +5,9 @@ class SessionsController < ApplicationController
   layout "auth"
 
   def new
+    @prefill_demo_credentials = request.host == "sure-demo.pikapod.net"
+    @email = params[:email].presence || (@prefill_demo_credentials ? "user@example.com" : nil)
+    @password = params[:password].presence || (@prefill_demo_credentials ? "Password1!" : nil)
   end
 
   def create

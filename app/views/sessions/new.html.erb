@@ -2,8 +2,6 @@
   header_title t(".title")
 %>
 
-<% prefill_demo_credentials = request.host == "sure-demo.pikapod.net" %>
-
 <%= styled_form_with url: sessions_path, class: "space-y-4", data: { turbo: false } do |form| %>
   <%= form.email_field :email,
                        label: t(".email"),
@@ -11,13 +9,13 @@
                        autocomplete: "email",
                        required: "required",
                        placeholder: t(".email_placeholder"),
-                       value: params[:email].presence || (prefill_demo_credentials ? "user@example.com" : nil) %>
+                       value: @email %>
 
   <%= form.password_field :password,
                           label: t(".password"),
                           required: "required",
                           placeholder: t(".password_placeholder"),
-                          value: params[:password].presence || (prefill_demo_credentials ? "Password1!" : nil) %>
+                          value: @password %>
 
   <%= form.submit t(".submit") %>
 <% end %>
