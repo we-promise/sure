@@ -76,4 +76,23 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal 2.years.ago.to_date, period.start_date
     assert_equal Date.current, period.end_date
   end
+
+  test "all_time period uses fallback when no family or entries exist" do
+    Current.expects(:family).returns(nil)
+
+    period = Period.from_key("all_time")
+    assert_equal 5.years.ago.to_date, period.start_date
+    assert_equal Date.current, period.end_date
+  end
+
+  test "all_time period uses fallback when oldest_entry_date equals current date" do
+    # Mock a family that has no historical entries (oldest_entry_date returns today)
+    mock_family = mock("family")
+    mock_family.expects(:oldest_entry_date).returns(Date.current)
+    Current.expects(:family).at_least_once.returns(mock_family)
+
+    period = Period.from_key("all_time")
+    assert_equal 5.years.ago.to_date, period.start_date
+    assert_equal Date.current, period.end_date
+  end
 end
