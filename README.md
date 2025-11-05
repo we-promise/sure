@@ -1,5 +1,5 @@
 
-<img width="1190" alt="sure_hero" src="https://github.com/user-attachments/assets/959f6e9f-2d8a-4f8c-893e-cd3e6eeb4ff2" />
+<img width="1270" height="1140" alt="sure_shot" src="https://github.com/user-attachments/assets/9c6e03cc-3490-40ab-9a68-52e042c51293" />
 
 <p align="center">
   <!-- Keep these links. Translations will automatically update with the README. -->
@@ -13,13 +13,13 @@
   <a href="https://readme-i18n.com/zh/we-promise/sure">中文</a>
 </p>
 
-# ~Maybe~Sure: The personal finance app for everyone
+# Sure: The personal finance app for everyone
 
 <b>Get
 involved: [Discord](https://discord.gg/36ZGBsxYEK) • [(archived) Website](https://web.archive.org/web/20250715182050/https://maybefinance.com/) • [Issues](https://github.com/we-promise/sure/issues)</b>
 
 > [!IMPORTANT]
-> This repository is a community fork of the now-abandoned Maybe Finance project. 
+> This repository is a community fork of the now-abandoned Maybe Finance project. <br />
 > Learn more in their [final release](https://github.com/maybe-finance/maybe/releases/tag/v0.6.0) doc.
 
 ## Backstory
@@ -36,7 +36,7 @@ That also didn’t work out — at least not as a sustainable B2C business — s
 
 Join us!
 
-## Hosting ~Maybe~Sure
+## Hosting Sure
 
 Sure is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
 
@@ -85,6 +85,12 @@ For further instructions, see guides below.
 - [Linux dev setup](https://github.com/we-promise/sure/wiki/Linux-Dev-Setup-Guide)
 - [Windows dev setup](https://github.com/we-promise/sure/wiki/Windows-Dev-Setup-Guide)
 - Dev containers - visit [this guide](https://code.visualstudio.com/docs/devcontainers/containers)
+
+### One-click
+
+[![Run on PikaPods](https://www.pikapods.com/static/run-button.svg)](https://www.pikapods.com/pods?run=maybe)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 
 ## License and Trademarks
 

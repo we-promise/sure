@@ -1,0 +1,11 @@
+---
+ca:
+  depositories:
+    edit:
+      edit: Edita %{account}
+    form:
+      none: Cap
+      subtype_prompt: Selecciona el tipus de compte
+    new:
+      title: Introdueix el saldo del compte
+

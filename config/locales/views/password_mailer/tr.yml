@@ -4,5 +4,5 @@ tr:
     password_reset:
       cta: Şifrenizi sıfırlayın
       ignore_if_not_requested: Eğer bu isteği siz yapmadıysanız, bu e-postayı yok sayabilirsiniz.
-      request_made: Maybe şifrenizi sıfırlamak için bir istek yapıldı. Sıfırlamak için bağlantıya tıklayın.
-      subject: 'Maybe: Şifrenizi sıfırlayın'
+      request_made: "%{product_name} şifrenizi sıfırlamak için bir istek yapıldı. Sıfırlamak için bağlantıya tıklayın."
+      subject: '%{product_name}: Şifrenizi sıfırlayın'

@@ -1,31 +1,24 @@
 class Provider::Openai::AutoCategorizer
-  DEFAULT_MODEL = "gpt-4.1-mini"
+  include Provider::Openai::Concerns::UsageRecorder
 
-  def initialize(client, model: "", transactions: [], user_categories: [])
+  attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family
+
+  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil)
     @client = client
     @model = model
     @transactions = transactions
     @user_categories = user_categories
+    @custom_provider = custom_provider
+    @langfuse_trace = langfuse_trace
+    @family = family
   end
 
   def auto_categorize
-    response = client.responses.create(parameters: {
-      model: model.presence || DEFAULT_MODEL,
-      input: [ { role: "developer", content: developer_message } ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "auto_categorize_personal_finance_transactions",
-          strict: true,
-          schema: json_schema
-        }
-      },
-      instructions: instructions
-    })
-
-    Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage").dig("total_tokens")}")
-
-    build_response(extract_categorizations(response))
+    if custom_provider
+      auto_categorize_openai_generic
+    else
+      auto_categorize_openai_native
+    end
   end
 
   def instructions
@@ -50,7 +43,93 @@ class Provider::Openai::AutoCategorizer
   end
 
   private
-    attr_reader :client, :model, :transactions, :user_categories
+
+    def auto_categorize_openai_native
+      span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_categories: user_categories
+      })
+
+      response = client.responses.create(parameters: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        input: [ { role: "developer", content: developer_message } ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "auto_categorize_personal_finance_transactions",
+            strict: true,
+            schema: json_schema
+          }
+        },
+        instructions: instructions
+      })
+      Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
+
+      categorizations = extract_categorizations_native(response)
+      result = build_response(categorizations)
+
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_categorize",
+        metadata: {
+          transaction_count: transactions.size,
+          category_count: user_categories.size
+        }
+      )
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
+    end
+
+    def auto_categorize_openai_generic
+      span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        transactions: transactions,
+        user_categories: user_categories
+      })
+
+      response = client.chat(parameters: {
+        model: model.presence || Provider::Openai::DEFAULT_MODEL,
+        messages: [
+          { role: "system", content: instructions },
+          { role: "user", content: developer_message }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "auto_categorize_personal_finance_transactions",
+            strict: true,
+            schema: json_schema
+          }
+        }
+      })
+
+      Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
+
+      categorizations = extract_categorizations_generic(response)
+      result = build_response(categorizations)
+
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_categorize",
+        metadata: {
+          transaction_count: transactions.size,
+          category_count: user_categories.size
+        }
+      )
+
+      span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
+      result
+    rescue => e
+      span&.end(output: { error: e.message }, level: "ERROR")
+      raise
+    end
 
     AutoCategorization = Provider::LlmConcept::AutoCategorization
 
@@ -69,9 +148,23 @@ class Provider::Openai::AutoCategorizer
       category_name
     end
 
-    def extract_categorizations(response)
-      response_json = JSON.parse(response.dig("output")[0].dig("content")[0].dig("text"))
-      response_json.dig("categorizations")
+    def extract_categorizations_native(response)
+      # Find the message output (not reasoning output)
+      message_output = response["output"]&.find { |o| o["type"] == "message" }
+      raw = message_output&.dig("content", 0, "text")
+
+      raise Provider::Openai::Error, "No message content found in response" if raw.nil?
+
+      JSON.parse(raw).dig("categorizations")
+    rescue JSON::ParserError => e
+      raise Provider::Openai::Error, "Invalid JSON in native categorization: #{e.message}"
+    end
+
+    def extract_categorizations_generic(response)
+      raw = response.dig("choices", 0, "message", "content")
+      JSON.parse(raw).dig("categorizations")
+    rescue JSON::ParserError => e
+      raise Provider::Openai::Error, "Invalid JSON in generic categorization: #{e.message}"
     end
 
     def json_schema

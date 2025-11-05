@@ -2,6 +2,7 @@
 en:
   accounts:
     account:
+      link_lunchflow: Link with Lunch Flow
       troubleshoot: Troubleshoot
     chart:
       data_not_available: Data not available for the selected period
@@ -28,6 +29,7 @@ en:
       method_selector:
         connected_entry: Link account
         connected_entry_eu: Link EU account
+        lunchflow_entry: Link Lunch Flow account
         manual_entry: Enter account balance
         title: How would you like to add it?
       title: What would you like to add?
@@ -42,6 +44,8 @@ en:
         new_balance: New balance
         new_transaction: New transaction
         no_entries: No entries found
+        search:
+          placeholder: Search entries by name
         title: Activity
       chart:
         balance: Balance
@@ -59,6 +63,29 @@ en:
         manage: Manage accounts
     update:
       success: "%{type} account updated"
+    sidebar:
+      missing_data: Missing historical data
+      missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
+      configure_providers: Configure your providers here.
+      tabs:
+        all: All
+        assets: Assets
+        debts: Debts
+      new_asset: New asset
+      new_debt: New debt
+      new_account: New account
+      new_account_group: "New %{account_group}"
+    types:
+      depository: Cash
+      investment: Investment
+      crypto: Crypto
+      property: Property
+      vehicle: Vehicle
+      other_asset: Other Asset
+      credit_card: Credit Card
+      loan: Loan
+      other_liability: Other Liability
+
   email_confirmations:
     new:
       invalid_token: Invalid or expired confirmation link.

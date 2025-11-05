@@ -11,6 +11,11 @@ export default class extends Controller {
     "subConditionsList",
   ];
 
+  connect() {
+    // Hide value field on initial load if operator is "is_null"
+    this.#toggleValueFieldVisibility();
+  }
+
   addSubCondition() {
     const html = this.subConditionTemplateTarget.innerHTML.replaceAll(
       "IDX_CHILD_PLACEHOLDER",
@@ -52,6 +57,11 @@ export default class extends Controller {
     }
 
     this.#updateOperatorsField(conditionFilter);
+    this.#toggleValueFieldVisibility();
+  }
+
+  handleOperatorChange(e) {
+    this.#toggleValueFieldVisibility();
   }
 
   get valueInputEl() {
@@ -111,5 +121,19 @@ export default class extends Controller {
 
   #uniqueKey() {
     return Date.now();
+  }
+
+  #toggleValueFieldVisibility() {
+    const operator = this.operatorSelectTarget.value;
+
+    if (operator === "is_null") {
+      this.filterValueTarget.classList.add("hidden");
+      // Clear the value since it's not needed
+      if (this.valueInputEl) {
+        this.valueInputEl.value = "";
+      }
+    } else {
+      this.filterValueTarget.classList.remove("hidden");
+    }
   }
 }
