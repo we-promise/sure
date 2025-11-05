@@ -74,6 +74,21 @@ class SettingsTest < ApplicationSystemTestCase
     assert_no_selector "li", text: I18n.t("settings.settings_nav.billing_label")
   end
 
+  test "does not show admin settings to non-admin users" do
+    VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
+      sign_in users(:family_member)
+      open_settings_from_sidebar
+      
+      # Assert that admin-only settings are not present
+      assert_no_selector "li", text: "AI Prompts"
+      assert_no_selector "li", text: "LLM Usage"
+      assert_no_selector "li", text: "API Key"
+      assert_no_selector "li", text: "Providers"
+      assert_no_selector "li", text: "Imports"
+      assert_no_selector "li", text: "SimpleFin"
+    end
+  end
+
   private
 
     def open_settings_from_sidebar
