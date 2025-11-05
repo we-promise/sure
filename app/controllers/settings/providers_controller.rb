@@ -70,8 +70,15 @@ class Settings::ProvidersController < ApplicationController
         # 1. READ the current hash once
         current_dynamic = Setting.dynamic_fields.dup
 
-        # 2. MODIFY by merging all changes
-        current_dynamic.merge!(dynamic_updates)
+        # 2. MODIFY by merging changes
+        # Treat nil values as deletions to keep the hash clean
+        dynamic_updates.each do |key, value|
+          if value.nil?
+            current_dynamic.delete(key)
+          else
+            current_dynamic[key] = value
+          end
+        end
 
         # 3. WRITE the complete, merged hash back once
         Setting.dynamic_fields = current_dynamic

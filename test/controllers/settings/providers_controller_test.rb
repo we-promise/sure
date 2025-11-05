@@ -157,10 +157,12 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "converts blank values to nil" do
+  test "converts blank values to nil and removes from dynamic_fields" do
     with_self_hosting do
       # Set initial values
       Setting["plaid_client_id"] = "old_value"
+      assert_equal "old_value", Setting["plaid_client_id"]
+      assert Setting.dynamic_fields.key?("plaid_client_id")
 
       patch settings_providers_url, params: {
         setting: { plaid_client_id: "  " }  # Blank string with spaces
@@ -168,6 +170,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_redirected_to settings_providers_url
       assert_nil Setting["plaid_client_id"]
+      # Key should be removed from hash, not just set to nil
+      refute Setting.dynamic_fields.key?("plaid_client_id"),
+        "nil values should delete the key from dynamic_fields"
     end
   end
 
