@@ -27,7 +27,6 @@ class SimplefinAccount::Processor
 
   private
 
-
     def process_account!
       # This should not happen in normal flow since accounts are created manually
       # during setup, but keeping as safety check
