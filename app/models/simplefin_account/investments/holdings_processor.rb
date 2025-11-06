@@ -9,11 +9,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
     holdings_data.each do |simplefin_holding|
       begin
-        data = simplefin_holding.with_indifferent_access
-        symbol = data[:symbol]
-        holding_id = data[:id]
+        symbol = simplefin_holding["symbol"]
+        holding_id = simplefin_holding["id"]
 
-        Rails.logger.debug({ event: "simplefin.holding.start", sfa_id: simplefin_account.id, account_id: account&.id, id: holding_id, symbol: symbol, raw: data }.to_json)
+        Rails.logger.debug({ event: "simplefin.holding.start", sfa_id: simplefin_account.id, account_id: account&.id, id: holding_id, symbol: symbol, raw: simplefin_holding }.to_json)
 
         unless symbol.present? && holding_id.present?
           Rails.logger.debug({ event: "simplefin.holding.skip", reason: "missing_symbol_or_id", id: holding_id, symbol: symbol }.to_json)
@@ -27,12 +26,12 @@ class SimplefinAccount::Investments::HoldingsProcessor
         end
 
         # Parse provider data with robust fallbacks across SimpleFin sources
-        qty = parse_decimal(any_of(data, %w[shares quantity qty units]))
-        market_value = parse_decimal(any_of(data, %w[market_value value current_value]))
-        cost_basis = parse_decimal(any_of(data, %w[cost_basis basis total_cost]))
+        qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
+        market_value = parse_decimal(any_of(simplefin_holding, %w[market_value value current_value]))
+        cost_basis = parse_decimal(any_of(simplefin_holding, %w[cost_basis basis total_cost]))
 
         # Derive price from market_value when possible; otherwise fall back to any price field
-        fallback_price = parse_decimal(any_of(data, %w[purchase_price price unit_price average_cost avg_cost]))
+        fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
         price = if qty > 0 && market_value > 0
           market_value / qty
         else
@@ -49,10 +48,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         end
 
         # Use best-known date: created -> updated_at -> as_of -> date -> today
-        holding_date = parse_holding_date(any_of(data, %w[created updated_at as_of date])) || Date.current
-
-        # Currency defaults to account currency then USD
-        currency = (data[:currency].presence || account.currency.presence || "USD").to_s.upcase
+        holding_date = parse_holding_date(any_of(simplefin_holding, %w[created updated_at as_of date])) || Date.current
 
         # Skip zero positions with no value to avoid invisible rows
         next if qty.to_d.zero? && computed_amount.to_d.zero?
@@ -61,7 +57,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
           security: security,
           quantity: qty,
           amount: computed_amount,
-          currency: currency,
+          currency: simplefin_holding["currency"] || "USD",
           date: holding_date,
           price: price,
           cost_basis: cost_basis,
