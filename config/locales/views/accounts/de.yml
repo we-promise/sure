@@ -1,6 +1,7 @@
 de:
   accounts:
     account:
+      link_lunchflow: Mit Lunch Flow verknüpfen
       troubleshoot: Fehlerbehebung
     chart:
       data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar
@@ -54,6 +55,29 @@ de:
         manage: Konten verwalten
     update:
       success: "%{type}-Konto aktualisiert"
+    sidebar:
+      missing_data: Fehlende historische Daten
+      missing_data_description: "%{product} verwendet Drittanbieter, um historische Wechselkurse, Wertpapierpreise und weitere Daten abzurufen. Diese Daten sind erforderlich, um genaue historische Kontostände zu berechnen."
+      configure_providers: Konfiguriere deine Anbieter hier
+      tabs:
+        all: Alle
+        assets: Vermögen
+        debts: Schulden
+      new_asset: Neues Vermögen
+      new_debt: Neue Verbindlichkeit
+      new_account: Neues Konto
+      new_account_group: "Neue %{account_group}"
+    types:
+      depository: Bargeld
+      investment: Investition
+      crypto: Krypto
+      property: Immobilie
+      vehicle: Fahrzeug
+      other_asset: Sonstiges Vermögen
+      credit_card: Kreditkarte
+      loan: Darlehen
+      other_liability: Sonstige Verbindlichkeit
+
   email_confirmations:
     new:
       invalid_token: Ungültiger oder abgelaufener Bestätigungslink

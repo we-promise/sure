@@ -20,5 +20,5 @@ de:
       submit: Konto erstellen
       title: Erstelle dein Konto
       welcome_body: Um zu beginnen musst du ein neues Konto erstellen Danach kannst du zusätzliche Einstellungen in der App konfigurieren
-      welcome_title: Willkommen bei Self Hosted Maybe
+      welcome_title: Willkommen bei Self Hosted %{product_name}
       password_placeholder: Passwort eingeben

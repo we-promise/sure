@@ -2,12 +2,12 @@
 de:
   invitations:
     create:
-      failure: Einladung konnte nicht gesendet werden
-      success: Einladung erfolgreich gesendet
+      failure: Einladung konnte nicht gesendet werden.
+      success: Einladung erfolgreich gesendet.
     destroy:
-      failure: Beim Entfernen der Einladung ist ein Problem aufgetreten
-      not_authorized: Du bist nicht berechtigt Einladungen zu verwalten
-      success: Einladung erfolgreich entfernt
+      failure: Beim Entfernen der Einladung ist ein Problem aufgetreten.
+      not_authorized: Du bist nicht berechtigt, Einladungen zu verwalten.
+      success: Einladung erfolgreich entfernt.
     new:
       email_label: E-Mail-Adresse
       email_placeholder: E-Mail-Adresse eingeben
@@ -15,5 +15,5 @@ de:
       role_label: Rolle
       role_member: Mitglied
       submit: Einladung senden
-      subtitle: Sende eine Einladung um deinem Familienkonto auf Maybe beizutreten
+      subtitle: Sende eine Einladung, um deinem Familienkonto auf %{product_name} beizutreten.
       title: Jemanden einladen

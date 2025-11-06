@@ -24,4 +24,4 @@ de:
     show:
       message: Wir freuen uns sehr dass du hier bist Im nächsten Schritt stellen wir dir ein paar Fragen um dein Profil zu vervollständigen und alles für dich einzurichten
       setup: Konto einrichten
-      title: Willkommen bei Sure
+      title: Willkommen bei %{product_name}

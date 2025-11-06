@@ -2,8 +2,8 @@
 de:
   layouts:
     auth:
-      existing_account: Du hast bereits ein Konto
-      no_account: Neu bei Sure
+      existing_account: Du hast bereits ein Konto?
+      no_account: Neu bei %{product_name}?
       sign_in: Anmelden
       sign_up: Konto erstellen
       your_account: Dein Konto

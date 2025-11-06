@@ -2,4 +2,4 @@
 de:
   invitation_mailer:
     invite_email:
-      subject: "%{inviter} hat dich eingeladen, seinem Haushalt auf Sure beizutreten!"
+      subject: "%{inviter} hat dich eingeladen, dem Haushalt von %{inviter} auf %{product_name} beizutreten!"

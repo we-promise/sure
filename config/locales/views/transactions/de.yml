@@ -12,7 +12,7 @@ de:
       description_placeholder: Transaktion beschreiben
       expense: Ausgabe
       income: Einnahme
-      none: Keine
+      none: (keine)
       note_label: Notizen
       note_placeholder: Notiz eingeben
       submit: Transaktion hinzufügen
@@ -26,19 +26,19 @@ de:
       category_label: Kategorie
       date_label: Datum
       delete: Löschen
-      delete_subtitle: Diese Aktion löscht die Transaktion dauerhaft beeinflusst deine bisherigen Kontostände und kann nicht rückgängig gemacht werden
+      delete_subtitle: Diese Aktion löscht die Transaktion dauerhaft, beeinflusst deine bisherigen Kontostände und kann nicht rückgängig gemacht werden.
       delete_title: Transaktion löschen
       details: Details
       merchant_label: Händler
       name_label: Name
       nature: Typ
-      none: Keine
+      none: (keine)
       note_label: Notizen
       note_placeholder: Notiz eingeben
       overview: Übersicht
       settings: Einstellungen
       tags_label: Tags
-      uncategorized: Ohne Kategorie
+      uncategorized: (ohne Kategorie)
     header:
       edit_categories: Kategorien bearbeiten
       edit_imports: Importe bearbeiten

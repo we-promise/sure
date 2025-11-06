@@ -69,7 +69,7 @@ de:
       new:
         title: 'Autorisierung erforderlich'
         prompt: '%{client_name} Zugriff auf dein Konto erlauben?'
-        able_to: 'Diese Anwendung kann Folgendes tun:'
+        able_to: 'Diese Anwendung kann Folgendes tun'
       show:
         title: 'Autorisierungscode'
       form_post:
@@ -87,11 +87,11 @@ de:
         date_format: '%Y-%m-%d %H:%M:%S'
 
     pre_authorization:
-      status: 'Vor-Autorisierung'
+      status: 'Vorab-Autorisierung'
 
     errors:
       messages:
-      # Common error messages
+        # Common error messages
         invalid_request:
           unknown: 'Die Anfrage fehlt ein erforderlicher Parameter, enthält einen nicht unterstützten Wert oder ist fehlerhaft aufgebaut.'
           missing_param: 'Fehlender erforderlicher Parameter: %{value}.'

@@ -2,7 +2,7 @@
 de:
   trades:
     form:
-      account: Überweisungskonto optional
+      account: Überweisungskonto (optional)
       account_prompt: Konto suchen
       amount: Betrag
       holding: Tickersymbol
@@ -19,7 +19,7 @@ de:
       purchase_qty_label: Kaufmenge
       sell: Verkaufen
       symbol_label: Symbol
-      total_return_label: Nicht realisierter Gewinn Verlust
+      total_return_label: Nicht realisierter Gewinn/Verlust
     new:
       title: Neue Transaktion
     show:
@@ -33,6 +33,6 @@ de:
       exclude_subtitle: Dieser Trade wird nicht in Berichten und Berechnungen berücksichtigt
       exclude_title: Von Analysen ausschließen
       note_label: Notiz
-      note_placeholder: Füge hier zusätzliche Notizen hinzu
+      note_placeholder: Füge hier zusätzliche Notizen hinzu …
       quantity_label: Menge
       settings: Einstellungen
