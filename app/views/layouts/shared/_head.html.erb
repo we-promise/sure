@@ -19,13 +19,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="<%= product_name %>">
+  <meta name="color-scheme" content="dark light">
 
-  <meta name="msapplication-TileColor" content="#F9F9F9">
-  <meta name="theme-color" content="#F9F9F9">
+  <%# Use a dark surface color so iOS PWA chrome matches the app theme %>
+  <meta name="msapplication-TileColor" content="#0B0B0B">
+  <meta name="theme-color" content="#0B0B0B">
 
   <link rel="manifest" href="<%= pwa_manifest_path %>">
-  <link rel="apple-touch-icon" href="/logo-pwa.png">
+  <%# Provide multiple iOS icons (standard 180x180 and larger) %>
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="apple-touch-icon" sizes="512x512" href="/logo-pwa.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/android-chrome-192x192.png">
 
   <%= yield :head %>
 </head>

@@ -26,7 +26,7 @@
         </div>
 
         <% if actions? %>
-          <div class="flex items-center gap-2 justify-end p-4">
+          <div class="flex items-center gap-2 justify-end p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <% actions.each do |action| %>
               <%= action %>
             <% end %>

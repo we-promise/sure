@@ -90,7 +90,7 @@ class DS::Dialog < DesignSystemComponent
     end
 
     class_names(
-      "flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full overflow-hidden",
+      "flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
       variant_classes
     )
   end
