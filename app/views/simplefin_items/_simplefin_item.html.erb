@@ -276,7 +276,8 @@
               text: t(".setup_action"),
               icon: "settings",
               variant: "primary",
-              href: setup_accounts_simplefin_item_path(simplefin_item)
+              href: setup_accounts_simplefin_item_path(simplefin_item),
+              frame: :modal
             ) %>
           </div>
         <% elsif simplefin_item.accounts.empty? %>
