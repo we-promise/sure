@@ -11,7 +11,9 @@ class SimplefinAccount::Processor
   def process
     # If the account is missing (e.g., user deleted the connection and re‑linked later),
     # do not auto‑link. Relinking is now a manual, user‑confirmed flow via the Relink modal.
-    return unless simplefin_account.current_account.present?
+    unless simplefin_account.current_account.present?
+      return
+    end
 
     process_account!
     # Ensure provider link exists after processing the account/balance
