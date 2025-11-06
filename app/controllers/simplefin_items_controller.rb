@@ -412,14 +412,10 @@ class SimplefinItemsController < ApplicationController
 
   private
 
-
-
-
     def set_simplefin_item
       scope = Current.respond_to?(:family) && Current.family.present? ? Current.family.simplefin_items : SimplefinItem
       @simplefin_item = scope.find(params[:id])
     end
-
 
     def simplefin_params
       params.require(:simplefin_item).permit(:setup_token, :sync_start_date)
