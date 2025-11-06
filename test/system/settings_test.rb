@@ -39,12 +39,16 @@ class SettingsTest < ApplicationSystemTestCase
   test "can update self hosting settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
     open_settings_from_sidebar
     assert_selector "li", text: "Self-Hosting"
     click_link "Self-Hosting"
     assert_current_path settings_hosting_path
     assert_selector "h1", text: "Self-Hosting"
-    check "setting[require_invite_for_signup]", allow_label_click: true
+    find("select#setting_onboarding_state").select("Invite-only")
+    within("select#setting_onboarding_state") do
+      assert_selector "option[selected]", text: "Invite-only"
+    end
     click_button "Generate new code"
     assert_selector 'span[data-clipboard-target="source"]', visible: true, count: 1 # invite code copy widget
     copy_button = find('button[data-action="clipboard#copy"]', match: :first) # Find the first copy button (adjust if needed)

@@ -2,6 +2,14 @@ class UsersController < ApplicationController
   before_action :set_user
   before_action :ensure_admin, only: %i[reset reset_with_sample_data]
 
+  def resend_confirmation_email
+    if @user.resend_confirmation_email
+      redirect_to settings_profile_path, notice: t(".success")
+    else
+      redirect_to settings_profile_path, alert: t("no_pending_change")
+    end
+  end
+
   def update
     @user = Current.user
 
@@ -21,9 +29,11 @@ class UsersController < ApplicationController
       @user.update!(user_params.except(:redirect_to, :delete_profile_image))
       @user.profile_image.purge if should_purge_profile_image?
 
-      # Add a special notice if AI was just enabled
+      # Add a special notice if AI was just enabled or disabled
       notice = if !was_ai_enabled && @user.ai_enabled
         "AI Assistant has been enabled successfully."
+      elsif was_ai_enabled && !@user.ai_enabled
+        "AI Assistant has been disabled."
       else
         t(".success")
       end
@@ -72,6 +82,8 @@ class UsersController < ApplicationController
         redirect_to goals_onboarding_path
       when "trial"
         redirect_to trial_onboarding_path
+      when "ai_prompts"
+        redirect_to settings_ai_prompts_path, notice: notice
       else
         redirect_to settings_profile_path, notice: notice
       end

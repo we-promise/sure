@@ -61,8 +61,8 @@ class Transaction::Search
 
         Totals.new(
           count: result.transactions_count.to_i,
-          income_money: Money.new(result.income_total.round, family.currency),
-          expense_money: Money.new(result.expense_total.round, family.currency)
+          income_money: Money.new(result.income_total, family.currency),
+          expense_money: Money.new(result.expense_total, family.currency)
         )
       end
     end

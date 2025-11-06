@@ -9,7 +9,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq \
-    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 \
+    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment

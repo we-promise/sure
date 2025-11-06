@@ -6,6 +6,7 @@ class AccountsController < ApplicationController
     @manual_accounts = family.accounts.manual.alphabetically
     @plaid_items = family.plaid_items.ordered
     @simplefin_items = family.simplefin_items.ordered
+    @lunchflow_items = family.lunchflow_items.ordered
 
     render layout: "settings"
   end
@@ -28,7 +29,17 @@ class AccountsController < ApplicationController
 
   def sync
     unless @account.syncing?
-      @account.sync_later
+      if @account.linked?
+        # Sync all provider items for this account
+        # Each provider item will trigger an account sync when complete
+        @account.account_providers.each do |account_provider|
+          item = account_provider.adapter&.item
+          item&.sync_later if item && !item.syncing?
+        end
+      else
+        # Manual accounts just need balance materialization
+        @account.sync_later
+      end
     end
 
     redirect_to account_path(@account)

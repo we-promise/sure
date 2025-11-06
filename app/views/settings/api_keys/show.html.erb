@@ -148,9 +148,9 @@
   </div>
 <% else %>
   <header class="flex items-center justify-between">
-    <h1 class="text-primary text-xl font-medium">API Key</h1>
+    <h1 class="text-primary text-xl font-medium"><%= t(".no_api_key.title") %></h1>
     <%= render DS::Link.new(
-      text: "Create API Key",
+      text: t(".no_api_key.create_api_key"),
       href: new_settings_api_key_path,
       variant: "primary"
     ) %>
@@ -166,32 +166,33 @@
             size: "lg"
           ) %>
           <div class="flex-1">
-            <h3 class="font-medium text-primary">Access your account data programmatically</h3>
-            <p class="text-secondary text-sm mt-1">Generate an API key to integrate with your applications and access your financial data securely.</p>
+            <h3 class="font-medium text-primary"><%= t(".no_api_key.heading", product_name: product_name) %></h3>
+            <p class="text-secondary text-sm mt-1"><%= t(".no_api_key.description") %></p>
           </div>
         </div>
       </div>
 
       <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3">What you can do with API keys:</h4>
+        <h4 class="font-medium text-primary mb-3"><%= t(".no_api_key.what_you_can_do") %></h4>
         <ul class="space-y-2 text-sm text-secondary">
           <li class="flex items-start gap-2">
             <%= icon("check", class: "w-4 h-4 text-primary mt-0.5") %>
-            <span>Access your accounts and balances</span>
+            <span><%= t(".no_api_key.feature_1") %></span>
           </li>
           <li class="flex items-start gap-2">
             <%= icon("check", class: "w-4 h-4 text-primary mt-0.5") %>
-            <span>View transaction history</span>
+            <span><%= t(".no_api_key.feature_2") %></span>
           </li>
           <li class="flex items-start gap-2">
             <%= icon("check", class: "w-4 h-4 text-primary mt-0.5") %>
-            <span>Create new transactions</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <%= icon("check", class: "w-4 h-4 text-primary mt-0.5") %>
-            <span>Integrate with third-party applications</span>
+            <span><%= t(".no_api_key.feature_3") %></span>
           </li>
         </ul>
+      </div>
+
+      <div class="bg-surface-inset rounded-xl p-4">
+        <h4 class="font-medium text-primary mb-2"><%= t(".no_api_key.security_note_title") %></h4>
+        <p class="text-secondary text-sm"><%= t(".no_api_key.security_note") %></p>
       </div>
     </div>
   </div>

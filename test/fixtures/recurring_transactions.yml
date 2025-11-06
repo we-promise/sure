@@ -1,0 +1,21 @@
+netflix_subscription:
+  family: dylan_family
+  merchant: netflix
+  amount: 15.99
+  currency: USD
+  expected_day_of_month: 5
+  last_occurrence_date: <%= 1.month.ago.to_date %>
+  next_expected_date: <%= 5.days.from_now.to_date %>
+  status: active
+  occurrence_count: 3
+
+inactive_subscription:
+  family: dylan_family
+  merchant: amazon
+  amount: 9.99
+  currency: USD
+  expected_day_of_month: 15
+  last_occurrence_date: <%= 3.months.ago.to_date %>
+  next_expected_date: <%= 2.months.ago.to_date %>
+  status: inactive
+  occurrence_count: 2

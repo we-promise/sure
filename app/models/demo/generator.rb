@@ -146,10 +146,6 @@ class Demo::Generator
       raise ActiveRecord::RecordNotFound, "No admin user with email #{email} found in family ##{family.id}"
     end
 
-    def partner_email_for(email)
-      "partner_#{email}"
-    end
-
     def create_family_and_users!(family_name, email, onboarded:, subscribed:)
       family = Family.create!(
         name: family_name,

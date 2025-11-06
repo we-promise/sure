@@ -47,16 +47,12 @@ services:
     image: redis:latest
     volumes:
       - redis-data:/data
-    ports:
-      - "6379:6379"
     restart: unless-stopped
   
   db:
-    image: postgres:latest
+    image: postgres:16
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     restart: unless-stopped
     environment:
       <<: *db_env

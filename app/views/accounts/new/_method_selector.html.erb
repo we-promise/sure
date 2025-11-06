@@ -1,4 +1,4 @@
-<%# locals: (path:, accountable_type:, show_us_link: true, show_eu_link: true) %>
+<%# locals: (path:, accountable_type:, show_us_link: true, show_eu_link: true, show_lunchflow_link: false) %>
 
 <%= render layout: "accounts/new/container", locals: { title: t(".title"), back_path: new_account_path } do %>
   <div class="text-sm">
@@ -30,6 +30,21 @@
           <%= icon("link-2") %>
         </span>
         <%= t("accounts.new.method_selector.connected_entry_eu") %>
+      <% end %>
+    <% end %>
+
+    <%# Lunchflow Link %>
+    <% if show_lunchflow_link %>
+      <%= link_to select_accounts_lunchflow_items_path(accountable_type: accountable_type, return_to: params[:return_to]),
+                  class: "text-primary flex items-center gap-4 w-full text-center focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-primary px-2 hover:bg-surface rounded-lg p-2",
+                  data: {
+                    turbo_frame: "modal",
+                    turbo_action: "advance"
+                  } do %>
+        <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
+          <%= icon("link-2") %>
+        </span>
+        <%= t("accounts.new.method_selector.lunchflow_entry") %>
       <% end %>
     <% end %>
 

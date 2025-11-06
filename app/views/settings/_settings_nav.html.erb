@@ -17,7 +17,8 @@ nav_sections = [
       { label: t(".categories_label"), path: categories_path, icon: "shapes" },
       { label: t(".tags_label"), path: tags_path, icon: "tags" },
       { label: t(".rules_label"), path: rules_path, icon: "git-branch" },
-      { label: t(".merchants_label"), path: family_merchants_path, icon: "store" }
+      { label: t(".merchants_label"), path: family_merchants_path, icon: "store" },
+      { label: t(".recurring_transactions_label"), path: recurring_transactions_path, icon: "repeat" }
     ]
   },
   (
@@ -25,8 +26,10 @@ nav_sections = [
       header: t(".advanced_section_title"),
       items: [
         { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },
+        { label: "LLM Usage", path: settings_llm_usage_path, icon: "activity" },
         { label: t(".api_keys_label"), path: settings_api_key_path, icon: "key" },
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
+        { label: "Providers", path: settings_providers_path, icon: "plug" },
         { label: t(".imports_label"), path: imports_path, icon: "download" },
         { label: "SimpleFin", path: simplefin_items_path, icon: "building-2" }
       ]

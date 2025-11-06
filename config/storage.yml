@@ -22,4 +22,12 @@ cloudflare:
   bucket: <%= ENV['CLOUDFLARE_BUCKET'] %>
   request_checksum_calculation: "when_required"
   response_checksum_validation: "when_required"
-  
+
+generic_s3:
+  service: S3
+  access_key_id: <%= ENV["GENERIC_S3_ACCESS_KEY_ID"] %> 
+  secret_access_key: <%= ENV["GENERIC_S3_SECRET_ACCESS_KEY"] %>
+  region: <%= ENV["GENERIC_S3_REGION"] %>
+  bucket: <%= ENV["GENERIC_S3_BUCKET"] %>
+  endpoint: <%= ENV["GENERIC_S3_ENDPOINT"] %>
+  force_path_style: <%= ActiveModel::Type::Boolean.new.cast(ENV.fetch("GENERIC_S3_FORCE_PATH_STYLE", "false")) %>

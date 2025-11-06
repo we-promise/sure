@@ -1,0 +1,9 @@
+---
+ca:
+  invitation_mailer:
+    invite_email:
+      accept_button: Accepta la invitació
+      body: "%{inviter} t'ha convidat a unir-te a la família %{family} a %{product_name}!"
+      expiry_notice: Aquesta invitació caducarà en %{days} dies
+      greeting: Benvingut/da a %{product_name}!
+

@@ -34,7 +34,7 @@ class SimplefinItem < ApplicationRecord
   end
 
   def process_accounts
-    simplefin_accounts.each do |simplefin_account|
+    simplefin_accounts.joins(:account).each do |simplefin_account|
       SimplefinAccount::Processor.new(simplefin_account).process
     end
   end
@@ -54,18 +54,118 @@ class SimplefinItem < ApplicationRecord
       raw_payload: accounts_snapshot,
     )
 
+    # Do not populate item-level institution fields from account data.
+    # Institution metadata belongs to each simplefin_account (in org_data).
+
     save!
   end
 
-  def upsert_simplefin_institution_snapshot!(institution_snapshot)
-    assign_attributes(
-      institution_id: institution_snapshot[:id],
-      institution_name: institution_snapshot[:name],
-      institution_url: institution_snapshot[:url],
-      raw_institution_payload: institution_snapshot
-    )
+  def upsert_institution_data!(org_data)
+    org = org_data.to_h.with_indifferent_access
+    url = org[:url] || org[:"sfin-url"]
+    domain = org[:domain]
 
-    save!
+    # Derive domain from URL if missing
+    if domain.blank? && url.present?
+      begin
+        domain = URI.parse(url).host&.gsub(/^www\./, "")
+      rescue URI::InvalidURIError
+        Rails.logger.warn("Invalid SimpleFin institution URL: #{url.inspect}")
+      end
+    end
+
+    assign_attributes(
+      institution_id: org[:id],
+      institution_name: org[:name],
+      institution_domain: domain,
+      institution_url: url,
+      raw_institution_payload: org_data
+    )
+  end
+
+
+  def has_completed_initial_setup?
+    # Setup is complete if we have any linked accounts
+    accounts.any?
+  end
+
+  def sync_status_summary
+    latest = latest_sync
+    return nil unless latest
+
+    # If sync has statistics, use them
+    if latest.sync_stats.present?
+      stats = latest.sync_stats
+      total = stats["total_accounts"] || 0
+      linked = stats["linked_accounts"] || 0
+      unlinked = stats["unlinked_accounts"] || 0
+
+      if total == 0
+        "No accounts found"
+      elsif unlinked == 0
+        "#{linked} #{'account'.pluralize(linked)} synced"
+      else
+        "#{linked} synced, #{unlinked} need setup"
+      end
+    else
+      # Fallback to current account counts
+      total_accounts = simplefin_accounts.count
+      linked_count = accounts.count
+      unlinked_count = total_accounts - linked_count
+
+      if total_accounts == 0
+        "No accounts found"
+      elsif unlinked_count == 0
+        "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      else
+        "#{linked_count} synced, #{unlinked_count} need setup"
+      end
+    end
+  end
+
+  def institution_display_name
+    # Try to get institution name from stored metadata
+    institution_name.presence || institution_domain.presence || name
+  end
+
+  def connected_institutions
+    # Get unique institutions from all accounts
+    simplefin_accounts.includes(:account)
+                     .where.not(org_data: nil)
+                     .map { |acc| acc.org_data }
+                     .uniq { |org| org["domain"] || org["name"] }
+  end
+
+  def institution_summary
+    institutions = connected_institutions
+    case institutions.count
+    when 0
+      "No institutions connected"
+    when 1
+      institutions.first["name"] || institutions.first["domain"] || "1 institution"
+    else
+      "#{institutions.count} institutions"
+    end
+  end
+
+  # Detect a recent rate-limited sync and return a friendly message, else nil
+  def rate_limited_message
+    latest = latest_sync
+    return nil unless latest
+
+    # Some Sync records may not have a status_text column; guard with respond_to?
+    parts = []
+    parts << latest.error if latest.respond_to?(:error)
+    parts << latest.status_text if latest.respond_to?(:status_text)
+    msg = parts.compact.join(" — ")
+    return nil if msg.blank?
+
+    down = msg.downcase
+    if down.include?("make fewer requests") || down.include?("only refreshed once every 24 hours") || down.include?("rate limit")
+      "You've hit SimpleFin's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+    else
+      nil
+    end
   end
 
   private
