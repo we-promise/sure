@@ -59,8 +59,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 end
 
-require "test_helper"
-
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
   fixtures :users, :families
 
