@@ -12,7 +12,7 @@
   <%= form_with model: @simplefin_item, url: simplefin_items_path, method: :post, data: { turbo: true } do |f| %>
     <div class="space-y-3">
       <div>
-        <label class="text-sm text-secondary block mb-1">Setup token</label>
+        <%= f.label :setup_token, "Setup token", class: "text-sm text-secondary block mb-1" %>
         <%= f.text_field :setup_token, class: "input", placeholder: "paste your SimpleFin setup token" %>
       </div>
       <div class="flex items-center gap-2">
