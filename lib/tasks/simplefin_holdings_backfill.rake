@@ -85,8 +85,9 @@ namespace :sure do
         sfa = ap&.provider || SimplefinAccount.find_by(account: acct)
         sfas = Array.wrap(sfa).compact
       else
-        puts({ ok: false, error: "usage", message: "Provide item_id, account_id, or account_name" }.to_json)
-        exit 1
+        success = errors.empty?
+        puts({ ok: success, accounts_processed: total_accounts, holdings_seen: total_holdings_seen, holdings_written: total_holdings_written, errors: errors }.to_json)
+        exit 1 unless success        exit 1
       end
 
       total_accounts = 0
