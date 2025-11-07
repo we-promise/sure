@@ -123,40 +123,12 @@ class SimplefinEntry::Processor
 
     def posted_date
       val = data[:posted]
-      return nil if val.blank?
-      case val
-      when String
-        Date.parse(val)
-      when Integer, Float
-        Time.zone.at(val).to_date
-      when Time, DateTime
-        val.to_date
-      when Date
-        val
-      else
-        nil
-      end
-    rescue ArgumentError, TypeError
-      nil
+      Simplefin::DateUtils.parse_provider_date(val)
     end
 
     def transacted_date
       val = data[:transacted_at]
-      return nil if val.blank?
-      case val
-      when String
-        Date.parse(val)
-      when Integer, Float
-        Time.zone.at(val).to_date
-      when Time, DateTime
-        val.to_date
-      when Date
-        val
-      else
-        nil
-      end
-    rescue ArgumentError, TypeError
-      nil
+      Simplefin::DateUtils.parse_provider_date(val)
     end
 
     def merchant
