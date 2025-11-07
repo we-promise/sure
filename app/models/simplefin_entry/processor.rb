@@ -159,15 +159,6 @@ class SimplefinEntry::Processor
       nil
     end
 
-    def pending?
-      # Prefer explicit pending flag if present; otherwise infer when posted comes after transacted
-      explicit = data[:pending]
-      return !!explicit unless explicit.nil?
-      p = posted_date
-      t = transacted_date
-      (t && p && p > t)
-    end
-
     def merchant
       # Use SimpleFin's clean payee data for merchant detection
       payee = data[:payee]&.strip
