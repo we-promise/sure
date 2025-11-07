@@ -77,11 +77,11 @@ class SimplefinItem::Importer
       sfa = simplefin_item.simplefin_accounts.find_or_initialize_by(account_id: account_id)
       sfa.assign_attributes(
         name: account_data[:name],
-        account_type: account_data["type"] || account_data[:type] || sfa.account_type || "unknown",
-        currency: account_data[:currency] || sfa.currency || "USD",
+        account_type: (account_data["type"].presence || account_data[:type].presence || sfa.account_type.presence || "unknown"),
+        currency: (account_data[:currency].presence || account_data["currency"].presence || sfa.currency.presence || "USD"),
         current_balance: account_data[:balance],
         available_balance: account_data[:"available-balance"],
-        balance_date: account_data["balance-date"] || account_data[:"balance-date"],
+        balance_date: (account_data["balance-date"] || account_data[:"balance-date"]),
         raw_payload: account_data,
         org_data: account_data[:org]
       )
@@ -387,11 +387,11 @@ class SimplefinItem::Importer
       # Update all attributes; only update transactions if present to avoid wiping prior data
       attrs = {
         name: account_data[:name],
-        account_type: account_data["type"] || account_data[:type] || "unknown",
-        currency: account_data[:currency] || "USD",
+        account_type: (account_data["type"].presence || account_data[:type].presence || "unknown"),
+        currency: (account_data[:currency].presence || account_data["currency"].presence || simplefin_account.currency.presence || "USD"),
         current_balance: account_data[:balance],
         available_balance: account_data[:"available-balance"],
-        balance_date: account_data[:"balance-date"],
+        balance_date: (account_data["balance-date"] || account_data[:"balance-date"]),
         raw_payload: account_data,
         org_data: account_data[:org]
       }
