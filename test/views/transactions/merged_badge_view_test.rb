@@ -2,7 +2,7 @@ require "test_helper"
 
 class Transactions::MergedBadgeViewTest < ActionView::TestCase
   # Render the transactions/_transaction partial and verify the merged badge does not appear
-  test "does not render merged badge even when transaction.was_merged is true (legacy flag not surfaced)" do
+  test "does not render merged badge after was_merged column removal" do
     account = accounts(:depository)
 
     transaction = Transaction.create!
