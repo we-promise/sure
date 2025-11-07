@@ -86,10 +86,9 @@ namespace :sure do
         sfas = Array.wrap(sfa).compact
       else
         success = errors.empty?
-        puts({ ok: success, accounts_processed: total_accounts, holdings_seen: total_holdings_seen, holdings_written: total_holdings_written, errors: errors }.to_json)
-        exit 1 unless success exit 1
+        puts({ ok: false, error: "usage", message: "Provide one of item_id, account_id, or account_name" }.to_json)
+        exit 1
       end
-
       total_accounts = 0
       total_holdings_seen = 0
       total_holdings_written = 0
