@@ -17,7 +17,7 @@ de:
           title: API-Schlüssel
           heading: Greife programmatisch auf deine Kontodaten zu
           description: Erhalte programmatischen Zugriff auf deine Sure-Daten mit einem sicheren API-Schlüssel.
-          what_you_can_do: Was du mit der API tun kannst:
+          what_you_can_do: "Was du mit der API tun kannst:"
           feature_1: Greife programmatisch auf deine Kontodaten zu.
           feature_2: Erstelle eigene Integrationen und Anwendungen.
           feature_3: Automatisiere Datenabrufe und Analysen.
@@ -37,7 +37,7 @@ de:
           never_expires: Läuft nie ab
           permissions: Berechtigungen
           usage_instructions_title: Verwendung deines API-Schlüssels
-          usage_instructions: Füge deinen API-Schlüssel im X-Api-Key-Header ein, wenn du Anfragen an die Sure-API sendest:
+          usage_instructions: "Füge deinen API-Schlüssel im X-Api-Key-Header ein, wenn du Anfragen an die Sure-API sendest:"
           regenerate_key: Neuen Schlüssel erstellen
           revoke_key: Schlüssel widerrufen
           revoke_confirmation: Bist du sicher, dass du diesen API-Schlüssel widerrufen möchtest? Diese Aktion kann nicht rückgängig gemacht werden und deaktiviert sofort alle Anwendungen, die diesen Schlüssel verwenden.
@@ -66,11 +66,11 @@ de:
         your_api_key: Dein API-Schlüssel
         key_name: Name
         permissions: Berechtigungen
-        critical_warning_title: ⚠️ Wichtig: Speichere deinen API-Schlüssel jetzt
+        critical_warning_title: "⚠️ Wichtig: Speichere deinen API-Schlüssel jetzt"
         critical_warning_1: Dies ist das einzige Mal, dass dein API-Schlüssel im Klartext angezeigt wird.
         critical_warning_2: Kopiere ihn und speichere ihn sicher in deinem Passwort-Manager oder deiner Anwendung.
         critical_warning_3: Wenn du diesen Schlüssel verlierst, musst du einen neuen erstellen.
         usage_instructions_title: Schnellstart
-        usage_instructions: Verwende deinen API-Schlüssel, indem du ihn im X-Api-Key-Header einfügst:
+        usage_instructions: "Verwende deinen API-Schlüssel, indem du ihn im X-Api-Key-Header einfügst:"
         copy_key: API-Schlüssel kopieren
         continue: Weiter zu den API-Schlüssel-Einstellungen
