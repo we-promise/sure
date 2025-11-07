@@ -103,7 +103,7 @@ class SimplefinEntry::Processor
     # UI/entry date selection by account type:
     # - Credit cards/loans: prefer transaction date (matches statements), then posted
     # - Others: prefer posted date, then transaction date
-    # Epochs parsed with Time.zone to respect user/app timezone
+    # Epochs parsed as UTC timestamps via DateUtils
     def date
       acct_type = account&.accountable_type
       if acct_type == "CreditCard" || acct_type == "Loan"
