@@ -74,9 +74,9 @@ namespace :sure do
           exit 1
         end
       elsif account_name.present?
-        acct = Account.order(updated_at: :desc).find do |a|
-          a.name.to_s.downcase.include?(account_name.to_s.downcase)
-        end
+        acct = Account.where("LOWER(name) LIKE ?", "%#{account_name.to_s.downcase}%")
+                      .order(updated_at: :desc)
+                      .first
         unless acct
           puts({ ok: false, error: "not_found", message: "No Account matched", account_name: account_name }.to_json)
           exit 1
