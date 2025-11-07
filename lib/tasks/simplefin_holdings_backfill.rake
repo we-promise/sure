@@ -87,7 +87,7 @@ namespace :sure do
       else
         success = errors.empty?
         puts({ ok: success, accounts_processed: total_accounts, holdings_seen: total_holdings_seen, holdings_written: total_holdings_written, errors: errors }.to_json)
-        exit 1 unless success        exit 1
+        exit 1 unless success exit 1
       end
 
       total_accounts = 0
