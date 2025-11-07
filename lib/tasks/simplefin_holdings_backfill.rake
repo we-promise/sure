@@ -74,7 +74,8 @@ namespace :sure do
           exit 1
         end
       elsif account_name.present?
-        acct = Account.where("LOWER(name) LIKE ?", "%#{account_name.to_s.downcase}%")
+        sanitized = account_name.to_s.downcase.gsub(/[%_]/, '\\\\\0')
+        acct = Account.where("LOWER(name) LIKE ?", "%#{sanitized}%")
                       .order(updated_at: :desc)
                       .first
         unless acct
