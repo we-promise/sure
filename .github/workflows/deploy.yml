@@ -50,16 +50,34 @@ jobs:
 
     - name: Update Deployment
       run: |
-        if [[ "$DOCKER_IMAGE_TAG" =~ ^v[0-9][0-9.]*-alpha([.-][0-9]+)?$ ]]; then
+        TAG="${DOCKER_IMAGE_TAG:?DOCKER_IMAGE_TAG is required}"
+
+        # Stricter semver-like prerelease match: vMAJOR.MINOR.PATCH[-alpha.X|-beta.X]
+        is_alpha='^v[0-9]+(\.[0-9]+)*-alpha([.-][0-9]+)?$'
+        is_beta='^v[0-9]+(\.[0-9]+)*-beta([.-][0-9]+)?$'
+
+        if [[ "$TAG" =~ $is_beta ]]; then
+          echo "Beta tag detected: $TAG"
+          # [future] Deploy Sure
+          # yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
+          # Deploy Companion (staging)
+          yq -i '.companion.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/companion-staging/values.yaml
+
+        elif [[ "$TAG" =~ $is_alpha ]]; then
+          echo "Alpha tag detected: $TAG"
+          # Deploy Sure only
           yq -i '.sure.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/sure/values.yaml
-          if [[ "$DOCKER_IMAGE_TAG" =~ ^v[0-9][0-9.]*-beta([.-][0-9]+)?$ ]]; then
-            yq -i '.companion.image.tag = "${{ env.DOCKER_IMAGE_TAG }}"' platform-eks-production/apps/companion-staging/values.yaml
-          else
-            echo "No need to deploy this tag to an environment."
-          fi
+
+        else
+          echo "Tag '$TAG' does not match alpha/beta patterns. No deployment."
         fi
-        cd platform-eks-production
-        git config --global user.email "platform@chancen.international"
-        git config --global user.name "platform-chancen"
-        git config --global credential.helper cache
-        git add . && git commit -m "Updating ${{ env.ECR_REPOSITORY}} image tag" && git push
+
+        if git -C platform-eks-production diff --cached --quiet; then
+          echo "No changes to commit."
+        else
+          cd platform-eks-production
+          git config --global user.email "platform@chancen.international"
+          git config --global user.name "platform-chancen"
+          git config --global credential.helper cache        
+          git add . && git commit -m "Updating ${{ env.ECR_REPOSITORY}} image tag" && git push
+        fi
