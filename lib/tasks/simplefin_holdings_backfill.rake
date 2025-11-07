@@ -50,7 +50,7 @@ namespace :sure do
       dry_raw      = (kv["dry_run"] || args[:dry_run]).to_s.downcase
       sleep_ms     = ((kv["sleep_ms"] || args[:sleep_ms] || 200).to_i).clamp(0, 5000)
 
-      dry_run = %w[1 true yes y].include?(dry_raw)
+      dry_run = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
 
       # Select SimplefinAccounts to process
       sfas = []
