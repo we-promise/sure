@@ -15,7 +15,7 @@ module Simplefin
       when Time, DateTime
         val.to_date
       when Integer, Float
-        Time.zone.at(val).to_date
+        Time.at(val).utc.to_date
       when String
         Date.parse(val)
       else
