@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Transactions::MergedBadgeViewTest < ActionView::TestCase
-  # Render the transactions/_transaction partial and ensure the merged badge appears
+  # Render the transactions/_transaction partial and verify the merged badge does not appear
   test "does not render merged badge even when transaction.was_merged is true (legacy flag not surfaced)" do
     account = accounts(:depository)
 
