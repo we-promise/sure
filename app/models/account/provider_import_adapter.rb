@@ -76,10 +76,6 @@ class Account::ProviderImportAdapter
         incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
         entry.transaction.extra = existing.deep_merge(incoming)
       end
-
-      # We accept posted/transacted/pending to support UI badges and future heuristics.
-      # This adapter does not currently persist these fields directly on Entry.
-
       entry.save!
       entry
     end
