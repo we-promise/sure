@@ -20,7 +20,9 @@ class Settings::BankSyncController < ApplicationController
       {
         name: "SimpleFin",
         description: "US & Canada connections via SimpleFin protocol.",
-        path: simplefin_items_path
+        path: "https://beta-bridge.simplefin.org",
+        target: "_blank",
+        rel: "noopener noreferrer"
       }
     ]
   end
