@@ -113,9 +113,6 @@ class SimplefinItem::Importer
         )
       end
     end
-
-  private
-
     def stats
       @stats ||= {}
     end

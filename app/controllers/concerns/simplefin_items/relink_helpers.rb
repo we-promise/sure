@@ -69,7 +69,7 @@ module SimplefinItems
                 if sfa_balance.nonzero? && ab.nonzero? && (ab - sfa_balance).abs > BigDecimal("1.00")
                   cand = nil
                 end
-              rescue
+              rescue ArgumentError, TypeError
               end
               if cand
                 chosen = cand
