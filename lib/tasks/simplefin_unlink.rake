@@ -25,7 +25,7 @@ namespace :sure do
       end
 
       item = SimplefinItem.find(item_id)
-      results = SimplefinItem::Unlinker.new(item, dry_run: dry_run).unlink_all!
+      results = item.unlink_all!(dry_run: dry_run)
 
       # Redact potentially sensitive names or identifiers in output
       safe_details = Array(results).map do |r|

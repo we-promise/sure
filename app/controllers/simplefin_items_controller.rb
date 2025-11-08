@@ -192,7 +192,7 @@ class SimplefinItemsController < ApplicationController
   def destroy
     begin
       # Ensure any provider links are removed so accounts move to "Other accounts" before deletion
-      SimplefinItem::Unlinker.new(@simplefin_item, dry_run: false).unlink_all!
+      @simplefin_item.unlink_all!(dry_run: false)
       @simplefin_item.destroy_later
       redirect_to accounts_path, notice: t(".success")
     rescue => e

@@ -38,7 +38,7 @@ class SimplefinItem::UnlinkerTest < ActiveSupport::TestCase
   end
 
   test "unlink_all! detaches holdings, destroys provider links, and clears legacy FK" do
-    results = SimplefinItem::Unlinker.new(@item).unlink_all!
+    results = @item.unlink_all!
 
     # Observability payload
     assert_equal 1, results.size
@@ -57,10 +57,10 @@ class SimplefinItem::UnlinkerTest < ActiveSupport::TestCase
   end
 
   test "unlink_all! is idempotent when run twice" do
-    SimplefinItem::Unlinker.new(@item).unlink_all!
+    @item.unlink_all!
 
     # Run again should be a no-op without raising
-    results = SimplefinItem::Unlinker.new(@item).unlink_all!
+    results = @item.unlink_all!
 
     assert_equal 1, results.size
     assert_equal [], results.first[:provider_link_ids]
