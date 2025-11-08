@@ -78,7 +78,7 @@ class SimplefinItem::Importer
       sfa.assign_attributes(
         name: account_data[:name],
         account_type: (account_data["type"].presence || account_data[:type].presence || sfa.account_type.presence || "unknown"),
-        currency: (account_data[:currency].presence || account_data["currency"].presence || sfa.currency.presence || "USD"),
+        currency: (account_data[:currency].presence || account_data["currency"].presence || sfa.currency.presence || sfa.current_account&.currency.presence || simplefin_item.family&.currency.presence || "USD"),
         current_balance: account_data[:balance],
         available_balance: account_data[:"available-balance"],
         balance_date: (account_data["balance-date"] || account_data[:"balance-date"]),
@@ -388,7 +388,7 @@ class SimplefinItem::Importer
       attrs = {
         name: account_data[:name],
         account_type: (account_data["type"].presence || account_data[:type].presence || "unknown"),
-        currency: (account_data[:currency].presence || account_data["currency"].presence || simplefin_account.currency.presence || "USD"),
+        currency: (account_data[:currency].presence || account_data["currency"].presence || simplefin_account.currency.presence || simplefin_account.current_account&.currency.presence || simplefin_item.family&.currency.presence || "USD"),
         current_balance: account_data[:balance],
         available_balance: account_data[:"available-balance"],
         balance_date: (account_data["balance-date"] || account_data[:"balance-date"]),
