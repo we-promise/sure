@@ -1,5 +1,6 @@
 class SimplefinItem < ApplicationRecord
   include Syncable, Provided
+  include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 

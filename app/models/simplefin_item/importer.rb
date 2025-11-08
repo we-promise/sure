@@ -190,7 +190,7 @@ class SimplefinItem::Importer
         chunk_accounts = accounts_data[:accounts]&.size.to_i
         total_accounts_imported += chunk_accounts
         # Treat total as max unique accounts seen this run, not per-chunk accumulation
-        stats["total_accounts"] = [stats["total_accounts"].to_i, chunk_accounts].max
+        stats["total_accounts"] = [ stats["total_accounts"].to_i, chunk_accounts ].max
 
         # Import accounts and transactions for this chunk with per-account error skipping
         accounts_data[:accounts]&.each do |account_data|
@@ -250,7 +250,7 @@ class SimplefinItem::Importer
       # Tally accounts for stats
       count = accounts_data[:accounts]&.size.to_i
       # Treat total as max unique accounts seen this run, not accumulation
-      stats["total_accounts"] = [stats["total_accounts"].to_i, count].max
+      stats["total_accounts"] = [ stats["total_accounts"].to_i, count ].max
 
       # Import accounts (merges transactions/holdings into existing rows), skipping failures per-account
       accounts_data[:accounts]&.each do |account_data|
@@ -289,7 +289,7 @@ class SimplefinItem::Importer
       if discovery_data && discovered_count > 0
         simplefin_item.upsert_simplefin_snapshot!(discovery_data)
         # Treat total as max unique accounts seen this run, not accumulation
-        stats["total_accounts"] = [stats["total_accounts"].to_i, discovered_count].max
+        stats["total_accounts"] = [ stats["total_accounts"].to_i, discovered_count ].max
         discovery_data[:accounts]&.each do |account_data|
           begin
             import_account(account_data)
