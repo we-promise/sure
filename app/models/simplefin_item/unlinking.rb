@@ -41,11 +41,9 @@ module SimplefinItem::Unlinking
         end
 
         # Legacy FK fallback: ensure any legacy link is cleared
-        if sfa.account_id.present? || sfa.account.present?
-          begin
-            sfa.update!(account: nil)
-          rescue => e
-            Rails.logger.warn("Unlinker: failed to clear legacy account for SFA ##{sfa.id}: #{e.class} - #{e.message}")
+        if sfa.account_id.present?
+          unless sfa.update(account: nil)
+            Rails.logger.warn("Unlinker: failed to clear legacy account for SFA ##{sfa.id}")
           end
         end
       end
