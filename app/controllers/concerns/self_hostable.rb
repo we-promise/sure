@@ -9,9 +9,11 @@ module SelfHostable
 
   private
     def self_hosted?
-      # Respect per-request ENV overrides used in tests (and optional runtime toggles)
-      env_flag = ENV["SELF_HOSTED"].presence || ENV["SELF_HOSTING_ENABLED"].presence
-      return env_flag == "true" if env_flag.present?
+      # Respect per-request ENV overrides in test/development environments
+      if Rails.env.test? || Rails.env.development?
+        env_flag = ENV["SELF_HOSTED"].presence || ENV["SELF_HOSTING_ENABLED"].presence
+        return env_flag == "true" if env_flag.present?
+      end
 
       Rails.configuration.app_mode.self_hosted?
     end
