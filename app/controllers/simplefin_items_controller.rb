@@ -328,43 +328,13 @@ class SimplefinItemsController < ApplicationController
 
   # Presents candidate relinks (manual flow) between SimpleFin upstream accounts and existing manual accounts
   def relink
-    @candidates = compute_relink_candidates
-
-    # Provide full SFA list (show linked as disabled/grayed in UI) — de‑dupe by upstream account_id
-    raw_sfas = @simplefin_item.simplefin_accounts
-      .includes(:account, :account_provider)
-      .order(:name)
-      .to_a
-    grouped = raw_sfas.group_by(&:account_id)
-    @sfas_all = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
-
-    # Manual accounts available to link (unlinked)
-    @manual_accounts = @simplefin_item.family.accounts
-      .left_joins(:account_providers)
-      .where(account_providers: { id: nil })
-      .order(:name)
-
+    prepare_relink_data
     render layout: false
   end
 
   # Explicit manual relink endpoint (identical to relink, provided for clarity of flow)
   def manual_relink
-    @candidates = compute_relink_candidates
-
-    # Provide full SFA list (show linked as disabled/grayed in UI) — de‑dupe by upstream account_id
-    raw_sfas = @simplefin_item.simplefin_accounts
-      .includes(:account, :account_provider)
-      .order(:name)
-      .to_a
-    grouped = raw_sfas.group_by(&:account_id)
-    @sfas_all = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
-
-    # Manual accounts available to link (unlinked)
-    @manual_accounts = @simplefin_item.family.accounts
-      .left_joins(:account_providers)
-      .where(account_providers: { id: nil })
-      .order(:name)
-
+    prepare_relink_data
     render layout: false
   end
 
@@ -419,6 +389,25 @@ class SimplefinItemsController < ApplicationController
 
     def simplefin_params
       params.require(:simplefin_item).permit(:setup_token, :sync_start_date)
+    end
+
+    # Shared data preparation for relink and manual_relink actions
+    def prepare_relink_data
+      @candidates = compute_relink_candidates
+
+      # Provide full SFA list (show linked as disabled/grayed in UI) — de‑dupe by upstream account_id
+      raw_sfas = @simplefin_item.simplefin_accounts
+        .includes(:account, :account_provider)
+        .order(:name)
+        .to_a
+      grouped = raw_sfas.group_by(&:account_id)
+      @sfas_all = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
+
+      # Manual accounts available to link (unlinked)
+      @manual_accounts = @simplefin_item.family.accounts
+        .left_joins(:account_providers)
+        .where(account_providers: { id: nil })
+        .order(:name)
     end
 
     def render_error(message, setup_token = nil, context: :new)
