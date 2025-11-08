@@ -255,6 +255,22 @@ class SimplefinItem::Importer
           import_account(account_data)
         rescue => e
           stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+          stats["errors"] ||= []
+          stats["total_errors"] = stats.fetch("total_errors", 0) + 1
+          cat = classify_error(e)
+          buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
+          buckets[cat] = buckets.fetch(cat, 0) + 1
+          begin
+            stats["errors"] << {
+              account_id: account_data[:id],
+              name: account_data[:name],
+              message: e.message.to_s,
+              category: cat
+            }
+            stats["errors"] = stats["errors"].last(5)
+          rescue
+            # no-op if account_data is missing keys
+          end
           Rails.logger.warn("SimpleFin: Skipping account during regular sync due to error: #{e.class} - #{e.message}")
         ensure
           persist_stats!
@@ -292,6 +308,22 @@ class SimplefinItem::Importer
             import_account(account_data)
           rescue => e
             stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+            tats["errors"] ||= []
+            stats["total_errors"] = stats.fetch("total_errors", 0) + 1
+            cat = classify_error(e)
+            buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
+            buckets[cat] = buckets.fetch(cat, 0) + 1
+            begin
+              stats["errors"] << {
+                account_id: account_data[:id],
+                name: account_data[:name],
+                message: e.message.to_s,
+                category: cat
+              }
+              stats["errors"] = stats["errors"].last(5)
+            rescue
+              # no-op if account_data is missing keys
+            end
             Rails.logger.warn("SimpleFin discovery: Skipping account due to error: #{e.class} - #{e.message}")
           ensure
             persist_stats!
