@@ -2,11 +2,12 @@
 
 <% transaction = entry.entryable %>
 
-<%= turbo_frame_tag dom_id(entry) do %>
-  <%= turbo_frame_tag dom_id(transaction) do %>
-    <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
+<%= turbo_frame_tag dom_id(entry), class: "contents" do %>
+  <%= turbo_frame_tag dom_id(transaction),
+      class: "grid grid-cols-[subgrid] col-span-full items-center gap-x-2 md:gap-x-4 text-primary text-sm font-medium p-4 lg:p-4 #{entry.excluded ? 'opacity-50 text-gray-400' : ''}" do %>
 
-      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
+    <div class="contents">
+      <div class="flex items-center gap-3 lg:gap-4 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
             class: "checkbox checkbox--light",
@@ -16,20 +17,26 @@
               action: "bulk-select#toggleRowSelection"
             } %>
 
-        <div class="max-w-full">
+        <div class="min-w-0 w-full">
           <%= content_tag :div, class: ["flex items-center gap-2"] do %>
-            <% if transaction.merchant&.logo_url.present? %>
-              <%= image_tag transaction.merchant.logo_url,
-                  class: "w-6 h-6 rounded-full",
-                  loading: "lazy" %>
-            <% else %>
-              <%= render DS::FilledIcon.new(
-                variant: :text,
-                text: entry.name,
-                size: "sm",
-                rounded: true
-              ) %>
-            <% end %>
+            <div class="hidden sm:block flex-shrink-0">
+              <% if transaction.merchant&.logo_url.present? %>
+                <%= image_tag transaction.merchant.logo_url,
+                    class: "w-6 h-6 rounded-full",
+                    loading: "lazy" %>
+              <% else %>
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  text: entry.name,
+                  size: "md",
+                  rounded: true
+                ) %>
+              <% end %>
+            </div>
+
+            <div class="sm:hidden flex-shrink-0">
+              <%= render "transactions/transaction_category", transaction: transaction %>
+            </div>
 
             <div class="truncate">
               <div class="space-y-0.5">
@@ -39,10 +46,10 @@
                       <%= link_to(
                             entry.name,
                             transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry),
-                            data: {
+                            data: { 
                               turbo_frame: "drawer",
-                              turbo_prefetch: false
-                            },
+                              turbo_prefetch: false 
+                              },
                             class: "hover:underline"
                           ) %>
                     <% else %>
@@ -52,7 +59,7 @@
                             data: {
                               turbo_frame: "drawer",
                               turbo_prefetch: false
-                            },
+                              },
                             class: "hover:underline"
                           ) %>
                     <% end %>
@@ -87,16 +94,16 @@
             </div>
           <% end %>
         </div>
+
+        <div class="hidden sm:block flex items-center justify-end flex-shrink-0">
+          <%= render "transactions/transaction_category", transaction: transaction %>
+        </div>
       </div>
 
-      <div class="hidden lg:flex items-center gap-1 col-span-2">
-        <%= render "transactions/transaction_category", transaction: transaction %>
-      </div>
-
-      <div class="col-span-2 ml-auto text-right">
+      <div class="text-right">
         <%= content_tag :p,
-            transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
-            class: ["text-green-600": entry.amount.negative?] %>
+          transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
+          class: ["text-green-600": entry.amount.negative?] %>
       </div>
     </div>
   <% end %>
