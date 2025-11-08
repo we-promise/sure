@@ -39,7 +39,11 @@ module SimplefinItems
           raw = (sfa.raw_payload || {}).with_indifferent_access
           sfa_last4 = raw[:mask] || raw[:last4] || raw[:"last-4"] || raw[:"account_number_last4"]
           sfa_last4 = sfa_last4.to_s.strip.presence
-          sfa_balance = (sfa.current_balance || sfa.available_balance).to_d rescue 0.to_d
+          sfa_balance = begin
+            (sfa.current_balance || sfa.available_balance).to_d
+          rescue ArgumentError, TypeError
+            0.to_d
+          end
 
           chosen = nil
           reason = nil
