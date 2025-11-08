@@ -308,7 +308,7 @@ class SimplefinItem::Importer
             import_account(account_data)
           rescue => e
             stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-            tats["errors"] ||= []
+            stats["errors"] ||= []
             stats["total_errors"] = stats.fetch("total_errors", 0) + 1
             cat = classify_error(e)
             buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
