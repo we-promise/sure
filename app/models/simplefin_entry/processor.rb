@@ -105,8 +105,9 @@ class SimplefinEntry::Processor
     # - Others: prefer posted date, then transaction date
     # Epochs parsed as UTC timestamps via DateUtils
     def date
-      acct_type = account&.accountable_type
-      if acct_type == "CreditCard" || acct_type == "Loan"
+      # Prefer transaction date for revolving debt (credit cards/loans); otherwise prefer posted date
+      acct_type = simplefin_account&.account_type.to_s.strip.downcase.tr(" ", "_")
+      if %w[credit_card credit loan mortgage].include?(acct_type)
         t = transacted_date
         return t if t
         p = posted_date
