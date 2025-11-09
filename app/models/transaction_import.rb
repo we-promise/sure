@@ -7,11 +7,21 @@ class TransactionImport < Import
       updated_entries = []
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
 
-      rows.each do |row|
+      rows.each_with_index do |row, index|
         mapped_account = if account
           account
         else
           mappings.accounts.mappable_for(row.account)
+        end
+
+        # Guard against nil account - this happens when an account name in CSV is not mapped
+        if mapped_account.nil?
+          row_number = index + 1
+          account_name = row.account.presence || "(blank)"
+          error_message = "Row #{row_number}: Account '#{account_name}' is not mapped to an existing account. " \
+                         "Please map this account in the import configuration."
+          errors.add(:base, error_message)
+          raise Import::MappingError, error_message
         end
 
         category = mappings.categories.mappable_for(row.category)

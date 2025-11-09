@@ -276,4 +276,50 @@ class TransactionImportTest < ActiveSupport::TestCase
       name: "Vending Machine"
     ).count
   end
+
+  test "does not raise error when all accounts are properly mapped" do
+    # Import CSV with multiple accounts, all mapped
+    import_csv = <<~CSV
+      date,name,amount,account
+      01/01/2024,Coffee Shop,100,Checking Account
+      01/02/2024,Grocery Store,200,Credit Card
+    CSV
+
+    checking = accounts(:depository)
+    credit_card = accounts(:credit_card)
+
+    @import.update!(
+      account: nil,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      account_col_label: "account",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+
+    # Map both accounts
+    @import.mappings.create!(key: "Checking Account", mappable: checking, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "Credit Card", mappable: credit_card, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::CategoryMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::TagMapping")
+
+    @import.reload
+
+    # Should succeed without errors
+    assert_difference -> { Entry.count } => 2,
+                      -> { Transaction.count } => 2 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    # Check that each account got one entry from this import
+    assert_equal 1, checking.entries.where(import: @import).count
+    assert_equal 1, credit_card.entries.where(import: @import).count
+  end
 end
