@@ -218,7 +218,7 @@ class SimplefinItemsController < ApplicationController
     SimplefinItem::Syncer.new(@simplefin_item).perform_sync(sync)
 
     respond_to do |format|
-      format.html { redirect_back_or_to accounts_path }
+      format.html { redirect_back_or_to accounts_path, notice: t("simplefin_items.balances.success") }
       format.json { render json: { ok: true, sync_id: sync.id } }
     end
   end
@@ -305,7 +305,7 @@ class SimplefinItemsController < ApplicationController
     # Trigger a sync to process the imported SimpleFin data (transactions and holdings)
     @simplefin_item.sync_later
 
-    redirect_to accounts_path, notice: t(".success")
+    redirect_to accounts_path, notice: t("simplefin_items.setup_accounts.success")
   end
 
   # Lists per-account errors from the latest sync in a modal-friendly view
@@ -375,7 +375,7 @@ class SimplefinItemsController < ApplicationController
           turbo_stream.replace("manual-accounts", manual_html)
         ], status: :ok
       end
-      format.html { redirect_to accounts_path, notice: "Linked #{relink.results.size} accounts" }
+      format.html { redirect_to accounts_path, notice: t("simplefin_items.apply_relink.success") }
       format.json { render json: { ok: true, results: relink.results, merge: relink.merge_stats, sfa: relink.sfa_stats, unlinked: relink.unlinked_count } }
     end
   end
@@ -442,6 +442,8 @@ class SimplefinItemsController < ApplicationController
       @simplefin_sync_stats_map ||= {}
       @simplefin_has_unlinked_map ||= {}
       @simplefin_unlinked_count_map ||= {}
+      @simplefin_duplicate_only_map ||= {}
+      @simplefin_show_relink_map ||= {}
 
       items.each do |item|
         # Latest sync stats (avoid N+1; rely on includes(:syncs) where appropriate)
@@ -450,7 +452,8 @@ class SimplefinItemsController < ApplicationController
         else
           item.syncs.ordered.first
         end
-        @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
+        stats = (latest_sync&.sync_stats || {})
+        @simplefin_sync_stats_map[item.id] = stats
 
         # Whether the family has any manual accounts available to link
         @simplefin_has_unlinked_map[item.id] = item.family.accounts
@@ -464,11 +467,45 @@ class SimplefinItemsController < ApplicationController
           .where(accounts: { id: nil }, account_providers: { id: nil })
           .count
         @simplefin_unlinked_count_map[item.id] = count
+
+        # Whether all reported errors for this item are duplicate-account warnings
+        @simplefin_duplicate_only_map[item.id] = compute_duplicate_only_flag(stats)
+
+        # Compute CTA visibility: show relink only when there are zero unlinked SFAs,
+        # there exist manual accounts to link, and the item has at least one SFA
+        begin
+          unlinked_count = @simplefin_unlinked_count_map[item.id] || 0
+          manuals_exist = @simplefin_has_unlinked_map[item.id]
+          sfa_any = if item.simplefin_accounts.loaded?
+            item.simplefin_accounts.any?
+          else
+            item.simplefin_accounts.exists?
+          end
+          @simplefin_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
+        rescue => e
+          Rails.logger.warn("SimpleFin card: CTA computation failed for item #{item.id}: #{e.class} - #{e.message}")
+          @simplefin_show_relink_map[item.id] = false
+        end
       end
 
       # Ensure maps are hashes even when items empty
       @simplefin_sync_stats_map ||= {}
       @simplefin_has_unlinked_map ||= {}
       @simplefin_unlinked_count_map ||= {}
+      @simplefin_duplicate_only_map ||= {}
+      @simplefin_show_relink_map ||= {}
+    end
+
+    def compute_duplicate_only_flag(stats)
+      errs = Array(stats && stats["errors"]).map do |e|
+        if e.is_a?(Hash)
+          e["message"] || e[:message]
+        else
+          e.to_s
+        end
+      end
+      errs.present? && errs.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
+    rescue
+      false
     end
 end

@@ -31,6 +31,24 @@ class AccountsController < ApplicationController
       @simplefin_unlinked_count_map[item.id] = count
     end
 
+    # Compute CTA visibility map used by the simplefin_item partial
+    @simplefin_show_relink_map = {}
+    @simplefin_items.each do |item|
+      begin
+        unlinked_count = @simplefin_unlinked_count_map[item.id] || 0
+        manuals_exist = @simplefin_has_unlinked_map[item.id]
+        sfa_any = if item.simplefin_accounts.loaded?
+          item.simplefin_accounts.any?
+        else
+          item.simplefin_accounts.exists?
+        end
+        @simplefin_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
+      rescue => e
+        Rails.logger.warn("SimpleFin card: CTA computation failed for item #{item.id}: #{e.class} - #{e.message}")
+        @simplefin_show_relink_map[item.id] = false
+      end
+    end
+
     render layout: "settings"
   end
 

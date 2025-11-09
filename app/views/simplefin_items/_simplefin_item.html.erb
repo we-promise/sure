@@ -67,14 +67,8 @@
               </div>
             <% end %>
           <% end %>
-          <%# Determine if all reported errors are benign duplicate-skips (suppress scary banner) %>
-          <% duplicate_only_errors = begin
-               s = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {}
-               errs = Array(s["errors"]).map { |e| e.is_a?(Hash) ? (e["message"] || e[:message]) : e.to_s }
-               errs.present? && errs.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
-             rescue
-               false
-             end %>
+          <%# Determine if all reported errors are benign duplicate-skips (suppress scary banner). Computed in controller for testability. %>
+          <% duplicate_only_errors = (@simplefin_duplicate_only_map || {})[simplefin_item.id] || false %>
           <% if simplefin_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>
@@ -137,30 +131,7 @@
            # - If there are unlinked SimpleFin accounts, we guide the user to Set up accounts first.
            # - Only show "Link existing accounts" when there are zero unlinked SFAs AND there are manual accounts to link.
         %>
-        <% begin
-             # Determine unlinked count (prefer controller map; fallback to query)
-             unlinked_for_button = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
-               @simplefin_unlinked_count_map[simplefin_item.id] || 0
-             else
-               simplefin_item.simplefin_accounts
-                 .left_joins(:account, :account_provider)
-                 .where(accounts: { id: nil }, account_providers: { id: nil })
-                 .count
-             end
-
-             manuals_exist = simplefin_item.family.accounts
-               .left_joins(:account_providers)
-               .where(account_providers: { id: nil })
-               .exists?
-
-             sfa_any = simplefin_item.simplefin_accounts.exists?
-
-             show_relink = unlinked_for_button.to_i == 0 && manuals_exist && sfa_any
-           rescue => e
-             Rails.logger.warn("SimpleFin card: CTA computation failed: #{e.class} - #{e.message}")
-             show_relink = false
-           end %>
-        <% if show_relink %>
+        <% if (@simplefin_show_relink_map || {})[simplefin_item.id] %>
           <%= render DS::Link.new(
             text: "Link existing accounts",
             icon: "link-2",

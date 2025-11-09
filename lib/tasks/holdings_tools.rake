@@ -26,8 +26,9 @@ namespace :sure do
       holding_id = (kv["holding_id"] || args[:holding_id]).presence
       change_pct = ((kv["change_pct"] || args[:change_pct] || 2).to_f) / 100.0
       days_ago   = (kv["days_ago"] || args[:days_ago] || 1).to_i
-      dry_raw    = (kv["dry_run"] || args[:dry_run]).to_s.downcase
-      dry_run    = %w[1 true yes y].include?(dry_raw)
+      raw_dry    = kv.key?("dry_run") ? kv["dry_run"] : args[:dry_run]
+      dry_raw    = raw_dry.to_s.downcase
+      dry_run    = raw_dry.nil? ? true : %w[1 true yes y].include?(dry_raw)
 
       unless holding_id
         puts({ ok: false, error: "usage", message: "Provide holding_id" }.to_json)

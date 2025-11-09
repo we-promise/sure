@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "json"
+require "time"
+
 namespace :sure do
   namespace :simplefin do
     desc "Print last N raw SimpleFin transactions for a given item/account name. Args: item_id, account_name, limit (default 15)"

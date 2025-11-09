@@ -72,6 +72,12 @@ namespace :sure do
         exit 1
       end
 
+      # Ensure sfas is an ActiveRecord::Relation so downstream can call find_each safely
+      unless sfas.respond_to?(:find_each)
+        sfa_ids = Array.wrap(sfas).compact.map { |x| x.is_a?(SimplefinAccount) ? x.id : x }
+        sfas = SimplefinAccount.where(id: sfa_ids)
+      end
+
       total_seen = 0
       total_matched = 0
       total_updated = 0
@@ -79,6 +85,9 @@ namespace :sure do
       total_errors = 0
 
       sfas.find_each do |sfa|
+        # Per-SFA counters (reset each iteration)
+        s_seen = s_matched = s_updated = s_skipped = s_errors = 0
+
         acct = sfa.current_account
         unless acct
           puts({ warn: "no_linked_account", sfa_id: sfa.id, name: sfa.name }.to_json)
@@ -115,10 +124,12 @@ namespace :sure do
             best = posted_d || trans_d
             # If neither date is available, skip (cannot window-match safely)
             if best.nil? || best < window_start || best > window_end
+              s_skipped += 1
               total_skipped += 1
               next
             end
 
+            s_seen += 1
             total_seen += 1
 
             # Build extra payload exactly like SimplefinEntry::Processor
@@ -131,35 +142,50 @@ namespace :sure do
 
             # Skip if no metadata to add (unless forcing overwrite)
             if extra_hash.nil? && !force
+              s_skipped += 1
               total_skipped += 1
               next
             end
 
             # Reuse the import adapter path so we merge onto the existing entry
             adapter = Account::ProviderImportAdapter.new(acct)
-            external_id = "simplefin_#{t[:id]}"
+            external_id = t[:id].present? ? "simplefin_#{t[:id]}" : nil
 
             if dry_run
               # Simulate: check if we can composite-match; we won't persist
-              entry = acct.entries.find_by(external_id: external_id, source: "simplefin")
-              entry ||= adapter.composite_match(source: "simplefin", name: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:name), amount: SimplefinEntry::Processor.new(t, simplefin_account: sfa).send(:amount), date: (posted_d || trans_d), window_days: (acct.accountable_type.in?([ "CreditCard", "Loan" ]) ? 5 : 3))
+              entry = external_id && acct.entries.find_by(external_id: external_id, source: "simplefin")
+              processor = SimplefinEntry::Processor.new(t, simplefin_account: sfa)
+              window_days = (acct.accountable_type.in?([ "CreditCard", "Loan" ]) ? 5 : 3)
+              entry ||= adapter.composite_match(
+                source: "simplefin",
+                name: processor.send(:name),
+                amount: processor.send(:amount),
+                date: (posted_d || trans_d),
+                window_days: window_days
+              )
               matched = entry.present?
-              total_matched += 1 if matched
+              if matched
+                s_matched += 1
+                total_matched += 1
+              end
             else
               processed = SimplefinEntry::Processor.new(t, simplefin_account: sfa).process
               if processed&.transaction&.extra.present?
+                s_updated += 1
                 total_updated += 1
               else
+                s_skipped += 1
                 total_skipped += 1
               end
             end
           rescue => e
+            s_errors += 1
             total_errors += 1
             puts({ error: e.class.name, message: e.message }.to_json)
           end
         end
 
-        puts({ sfa_id: sfa.id, account_id: acct.id, name: sfa.name, seen: total_seen, matched: total_matched, updated: total_updated, skipped: total_skipped, errors: total_errors, window_start: window_start, window_end: window_end, dry_run: dry_run, force: force }.to_json)
+        puts({ sfa_id: sfa.id, account_id: acct.id, name: sfa.name, seen: s_seen, matched: s_matched, updated: s_updated, skipped: s_skipped, errors: s_errors, window_start: window_start, window_end: window_end, dry_run: dry_run, force: force }.to_json)
       end
 
       puts({ ok: true, total_seen: total_seen, total_matched: total_matched, total_updated: total_updated, total_skipped: total_skipped, total_errors: total_errors, window_start: window_start, window_end: window_end, dry_run: dry_run, force: force }.to_json)
