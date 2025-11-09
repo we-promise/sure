@@ -151,6 +151,13 @@ namespace :sure do
             adapter = Account::ProviderImportAdapter.new(acct)
             external_id = t[:id].present? ? "simplefin_#{t[:id]}" : nil
 
+            if external_id.nil?
+              s_skipped += 1
+              total_skipped += 1
+              uts({ warn: "missing_transaction_id", sfa_id: sfa.id, account_id: acct.id, name: sfa.name }.to_json)
+              next
+            end
+
             if dry_run
               # Simulate: check if we can composite-match; we won't persist
               entry = external_id && acct.entries.find_by(external_id: external_id, source: "simplefin")
