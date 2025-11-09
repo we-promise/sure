@@ -275,8 +275,9 @@ class Account::ProviderImportAdapter
   # @param amount [BigDecimal, Numeric] Transaction amount
   # @param currency [String] Currency code
   # @param name [String, nil] Optional transaction name for more accurate matching
+  # @param exclude_entry_ids [Set, Array, nil] Entry IDs to exclude from the search (e.g., already claimed entries)
   # @return [Entry, nil] The duplicate entry or nil if not found
-  def find_duplicate_transaction(date:, amount:, currency:, name: nil)
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil)
     # Convert date to Date object if it's a string
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
@@ -287,6 +288,7 @@ class Account::ProviderImportAdapter
     # 4. No external_id (manual/CSV imported transactions)
     # 5. Entry type is Transaction (not Trade or Valuation)
     # 6. Optionally same name (if name parameter is provided)
+    # 7. Not in the excluded IDs list (if provided)
     query = account.entries
                    .where(entryable_type: "Transaction")
                    .where(date: date)
@@ -296,6 +298,9 @@ class Account::ProviderImportAdapter
 
     # Add name filter if provided
     query = query.where(name: name) if name.present?
+
+    # Exclude already claimed entries if provided
+    query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
 
     query.order(created_at: :asc).first
   end

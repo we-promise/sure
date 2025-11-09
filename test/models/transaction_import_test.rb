@@ -185,4 +185,95 @@ class TransactionImportTest < ActiveSupport::TestCase
     # Both transactions should exist
     assert_equal 2, account.entries.where(date: Date.new(2024, 1, 1), amount: 100).count
   end
+
+  test "imports all identical transactions from CSV even when one exists in database" do
+    account = accounts(:depository)
+
+    # Create an existing manual transaction
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 50,
+      currency: "USD",
+      name: "Vending Machine",
+      entryable: Transaction.new
+    )
+
+    # Import CSV with 3 identical transactions (e.g., buying from vending machine 3 times)
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should update 1 existing and create 2 new (total of 3 in system)
+    # The first matching row claims the existing entry, the other 2 create new ones
+    assert_difference -> { Entry.count } => 2,
+                      -> { Transaction.count } => 2 do
+      @import.publish
+    end
+
+    # Should have exactly 3 identical transactions total
+    assert_equal 3, account.entries.where(
+      date: Date.new(2024, 1, 1),
+      amount: 50,
+      name: "Vending Machine"
+    ).count
+
+    # The existing entry should be linked to the import
+    assert_equal @import.id, existing_entry.reload.import_id
+  end
+
+  test "imports all identical transactions from CSV when none exist in database" do
+    account = accounts(:depository)
+
+    # Import CSV with 3 identical transactions (no existing entry in database)
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should create all 3 as new transactions
+    assert_difference -> { Entry.count } => 3,
+                      -> { Transaction.count } => 3 do
+      @import.publish
+    end
+
+    # Should have exactly 3 identical transactions
+    assert_equal 3, account.entries.where(
+      date: Date.new(2024, 1, 1),
+      amount: 50,
+      name: "Vending Machine"
+    ).count
+  end
 end

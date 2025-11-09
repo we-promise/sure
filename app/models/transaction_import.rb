@@ -5,6 +5,7 @@ class TransactionImport < Import
 
       new_transactions = []
       updated_entries = []
+      claimed_entry_ids = Set.new # Track entries we've already claimed in this import
 
       rows.each do |row|
         mapped_account = if account
@@ -17,12 +18,15 @@ class TransactionImport < Import
         tags = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
 
         # Check for duplicate transactions using the adapter's deduplication logic
+        # Pass claimed_entry_ids to exclude entries we've already matched in this import
+        # This ensures identical rows within the CSV are all imported as separate transactions
         adapter = Account::ProviderImportAdapter.new(mapped_account)
         duplicate_entry = adapter.find_duplicate_transaction(
           date: row.date_iso,
           amount: row.signed_amount,
           currency: row.currency,
-          name: row.name
+          name: row.name,
+          exclude_entry_ids: claimed_entry_ids
         )
 
         if duplicate_entry
@@ -32,8 +36,9 @@ class TransactionImport < Import
           duplicate_entry.notes = row.notes if row.notes.present?
           duplicate_entry.import = self
           updated_entries << duplicate_entry
+          claimed_entry_ids.add(duplicate_entry.id)
         else
-          # Create new transaction
+          # Create new transaction (no duplicate found)
           new_transactions << Transaction.new(
             category: category,
             tags: tags,
