@@ -33,12 +33,12 @@
                   <td class="p-2 align-top">
                     <% options = @manual_accounts.map { |a| [a.name, a.id] } %>
                     <% selected = candidate_map[sfa.id] %>
-                    <%= hidden_field_tag "pairs[][sfa_id]", sfa.id %>
-                    <%= select_tag "pairs[][manual_id]", options_for_select(options, selected), class: "input w-full" %>
+                    <%= hidden_field_tag "pairs[#{idx}][sfa_id]", sfa.id %>
+                    <%= select_tag "pairs[#{idx}][manual_id]", options_for_select(options, selected), class: "input w-full" %>
                   </td>
                   <td class="p-2 align-top">
                     <% checked_default = selected.present? %>
-                    <%= check_box_tag "pairs[][checked]", "1", checked_default %>
+                    <%= check_box_tag "pairs[#{idx}][checked]", "1", checked_default %>
                   </td>
                 </tr>
               <% end %>
