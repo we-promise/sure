@@ -55,7 +55,7 @@ namespace :sure do
       exit 1
     end
 
-    desc "Remove a seeded snapshot by its id. Args: id"
+    desc "Remove a seeded snapshot by its id. Args: snapshot_id"
     task :remove_snapshot, [ :snapshot_id ] => :environment do |_, args|
       id = args[:snapshot_id]
       unless id
@@ -66,7 +66,7 @@ namespace :sure do
       h.destroy!
       puts({ ok: true, removed: id }.to_json)
     rescue => e
-      puts({ ok: false, error: e.class.name, message: e.message }.to_json)
+      puts({ ok: false, error: "usage", message: "Provide snapshot_id" }.to_json)
       exit 1
     end
   end
