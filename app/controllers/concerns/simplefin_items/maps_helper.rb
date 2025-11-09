@@ -8,12 +8,31 @@ module SimplefinItems
     # Accepts a single SimplefinItem or a collection.
     def build_simplefin_maps_for(items)
       items = Array(items).compact
+      return if items.empty?
 
       @simplefin_sync_stats_map ||= {}
       @simplefin_has_unlinked_map ||= {}
       @simplefin_unlinked_count_map ||= {}
       @simplefin_duplicate_only_map ||= {}
       @simplefin_show_relink_map ||= {}
+
+      # Batch-check if ANY family has manual accounts (same result for all items from same family)
+      family_ids = items.map { |i| i.family_id }.uniq
+      families_with_manuals = Account
+        .left_joins(:account_providers)
+        .where(account_providers: { id: nil })
+        .where(family_id: family_ids)
+        .distinct
+        .pluck(:family_id)
+        .to_set
+
+      # Batch-fetch unlinked counts for all items in one query
+      unlinked_counts = SimplefinAccount
+        .where(simplefin_item_id: items.map(&:id))
+        .left_joins(:account, :account_provider)
+        .where(accounts: { id: nil }, account_providers: { id: nil })
+        .group(:simplefin_item_id)
+        .count
 
       items.each do |item|
         # Latest sync stats (avoid N+1; rely on includes(:syncs) where appropriate)
@@ -25,18 +44,11 @@ module SimplefinItems
         stats = (latest_sync&.sync_stats || {})
         @simplefin_sync_stats_map[item.id] = stats
 
-        # Whether the family has any manual accounts available to link
-        @simplefin_has_unlinked_map[item.id] = item.family.accounts
-          .left_joins(:account_providers)
-          .where(account_providers: { id: nil })
-          .exists?
+        # Whether the family has any manual accounts available to link (from batch query)
+        @simplefin_has_unlinked_map[item.id] = families_with_manuals.include?(item.family_id)
 
-        # Count of SimpleFin accounts for this item that have neither legacy account nor AccountProvider
-        count = item.simplefin_accounts
-          .left_joins(:account, :account_provider)
-          .where(accounts: { id: nil }, account_providers: { id: nil })
-          .count
-        @simplefin_unlinked_count_map[item.id] = count
+        # Count from batch query (defaults to 0 if not found)
+        @simplefin_unlinked_count_map[item.id] = unlinked_counts[item.id] || 0
 
         # Whether all reported errors for this item are duplicate-account warnings
         @simplefin_duplicate_only_map[item.id] = compute_duplicate_only_flag(stats)
