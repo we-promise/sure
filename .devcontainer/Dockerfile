@@ -1,4 +1,4 @@
-ARG RUBY_VERSION=3.4.4
+ARG RUBY_VERSION=3.4.7
 FROM ruby:${RUBY_VERSION}-slim-bullseye
 
 ENV DEBIAN_FRONTEND=noninteractive
