@@ -3,7 +3,10 @@ class TransactionImport < Import
     transaction do
       mappings.each(&:create_mappable!)
 
-      transactions = rows.map do |row|
+      new_transactions = []
+      updated_entries = []
+
+      rows.each do |row|
         mapped_account = if account
           account
         else
@@ -13,22 +16,48 @@ class TransactionImport < Import
         category = mappings.categories.mappable_for(row.category)
         tags = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
 
-        Transaction.new(
-          category: category,
-          tags: tags,
-          entry: Entry.new(
-            account: mapped_account,
-            date: row.date_iso,
-            amount: row.signed_amount,
-            name: row.name,
-            currency: row.currency,
-            notes: row.notes,
-            import: self
-          )
+        # Check for duplicate transactions using the adapter's deduplication logic
+        adapter = Account::ProviderImportAdapter.new(mapped_account)
+        duplicate_entry = adapter.find_duplicate_transaction(
+          date: row.date_iso,
+          amount: row.signed_amount,
+          currency: row.currency,
+          name: row.name
         )
+
+        if duplicate_entry
+          # Update existing transaction instead of creating a new one
+          duplicate_entry.transaction.category = category if category.present?
+          duplicate_entry.transaction.tags = tags if tags.any?
+          duplicate_entry.notes = row.notes if row.notes.present?
+          duplicate_entry.import = self
+          updated_entries << duplicate_entry
+        else
+          # Create new transaction
+          new_transactions << Transaction.new(
+            category: category,
+            tags: tags,
+            entry: Entry.new(
+              account: mapped_account,
+              date: row.date_iso,
+              amount: row.signed_amount,
+              name: row.name,
+              currency: row.currency,
+              notes: row.notes,
+              import: self
+            )
+          )
+        end
       end
 
-      Transaction.import!(transactions, recursive: true)
+      # Save updated entries first
+      updated_entries.each do |entry|
+        entry.transaction.save!
+        entry.save!
+      end
+
+      # Bulk import new transactions
+      Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
     end
   end
 

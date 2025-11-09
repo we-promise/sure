@@ -100,4 +100,89 @@ class TransactionImportTest < ActiveSupport::TestCase
 
     assert_equal [ -100, 200, -300 ], @import.entries.map(&:amount)
   end
+
+  test "does not create duplicate when matching transaction exists with same name" do
+    account = accounts(:depository)
+
+    # Create an existing manual transaction
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+
+    # Try to import a CSV with the same transaction
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Coffee Shop,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should not create a new entry, should update the existing one
+    assert_no_difference -> { Entry.count } do
+      assert_no_difference -> { Transaction.count } do
+        @import.publish
+      end
+    end
+
+    # The existing entry should now be linked to the import
+    assert_equal @import.id, existing_entry.reload.import_id
+  end
+
+  test "creates new transaction when name differs even if date and amount match" do
+    account = accounts(:depository)
+
+    # Create an existing manual transaction
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      entryable: Transaction.new
+    )
+
+    # Try to import a CSV with same date/amount but different name
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Different Store,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should create a new entry because the name is different
+    assert_difference -> { Entry.count } => 1,
+                      -> { Transaction.count } => 1 do
+      @import.publish
+    end
+
+    # Both transactions should exist
+    assert_equal 2, account.entries.where(date: Date.new(2024, 1, 1), amount: 100).count
+  end
 end
