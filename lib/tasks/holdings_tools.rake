@@ -55,9 +55,9 @@ namespace :sure do
       exit 1
     end
 
-    desc "Remove a snapshot by holding id. Args: id"
-    task :remove_snapshot, [ :id ] => :environment do |_, args|
-      id = args[:id]
+    desc "Remove a seeded snapshot by its id. Args: id"
+    task :remove_snapshot, [ :snapshot_id ] => :environment do |_, args|
+      id = args[:snapshot_id]
       unless id
         puts({ ok: false, error: "usage", message: "Provide id" }.to_json)
         exit 1
