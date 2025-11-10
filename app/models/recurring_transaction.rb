@@ -120,7 +120,7 @@ class RecurringTransaction < ApplicationRecord
       entries.where(name: name)
     end
 
-    matching_entries.map(&:amount).uniq
+    matching_entries.map(&:amount)
   end
 
   # Calculate next expected date from today
@@ -239,8 +239,8 @@ class RecurringTransaction < ApplicationRecord
     # Calculate new average using incremental formula
     # For n samples with average A_n, adding sample x_{n+1} gives:
     # A_{n+1} = A_n + (x_{n+1} - A_n)/(n+1)
-    # occurrence_count tracks total occurrences including initial, so n = occurrence_count - 1
-    n = occurrence_count - 1  # Number of previous samples
+    # occurrence_count is number of previous samples at this point
+    n = occurrence_count  # Number of previous samples
     self.expected_amount_avg = expected_amount_avg + ((transaction_amount - expected_amount_avg) / (n + 1))
   end
 

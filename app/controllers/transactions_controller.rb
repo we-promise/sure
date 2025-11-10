@@ -123,6 +123,7 @@ class TransactionsController < ApplicationController
     existing = Current.family.recurring_transactions.find_by(
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : transaction.entry.name,
+      currency: transaction.entry.currency,
       manual: true
     )
 
