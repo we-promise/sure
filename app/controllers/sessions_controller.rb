@@ -5,9 +5,15 @@ class SessionsController < ApplicationController
   layout "auth"
 
   def new
-    @prefill_demo_credentials = request.host == "sure-demo.pikapod.net"
-    @email = params[:email].presence || (@prefill_demo_credentials ? "user@example.com" : nil)
-    @password = params[:password].presence || (@prefill_demo_credentials ? "Password1!" : nil)
+    demo = Rails.application.config_for(:demo)
+    @prefill_demo_credentials = request.host == demo["host"]
+    if @prefill_demo_credentials
+      @email = params[:email].presence || demo["email"]
+      @password = params[:password].presence || demo["password"]
+    else
+      @email = params[:email]
+      @password = params[:password]
+    end
   end
 
   def create

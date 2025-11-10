@@ -1,0 +1,13 @@
+default: &default
+  host: sure-demo.pikapod.net
+  email: user@example.com
+  password: Password1!
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default
