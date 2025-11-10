@@ -113,9 +113,11 @@ class RecurringTransaction < ApplicationRecord
 
     # Filter by merchant or name
     if merchant_id.present?
-      entries.select do |entry|
-        entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
-      end
+      # Join with transactions table to filter by merchant_id in SQL (avoids N+1)
+      entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+        .where(transactions: { merchant_id: merchant_id })
+        .to_a
     else
       entries.where(name: name).to_a
     end
