@@ -98,8 +98,8 @@ class RecurringTransaction < ApplicationRecord
     )
   end
 
-  # Find matching transaction amounts for variance calculation
-  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6)
+  # Find matching transaction entries for variance calculation
+  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6)
     lookback_date = lookback_months.months.ago.to_date
 
     entries = family.entries
@@ -112,13 +112,25 @@ class RecurringTransaction < ApplicationRecord
       .order(date: :desc)
 
     # Filter by merchant or name
-    matching_entries = if merchant_id.present?
+    if merchant_id.present?
       entries.select do |entry|
         entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
       end
     else
-      entries.where(name: name)
+      entries.where(name: name).to_a
     end
+  end
+
+  # Find matching transaction amounts for variance calculation
+  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6)
+    matching_entries = find_matching_transaction_entries(
+      family: family,
+      merchant_id: merchant_id,
+      name: name,
+      currency: currency,
+      expected_day: expected_day,
+      lookback_months: lookback_months
+    )
 
     matching_entries.map(&:amount)
   end
@@ -239,8 +251,8 @@ class RecurringTransaction < ApplicationRecord
     # Calculate new average using incremental formula
     # For n samples with average A_n, adding sample x_{n+1} gives:
     # A_{n+1} = A_n + (x_{n+1} - A_n)/(n+1)
-    # occurrence_count is number of previous samples at this point
-    n = occurrence_count  # Number of previous samples
+    # occurrence_count includes the initial occurrence, so subtract 1 to get variance samples recorded
+    n = occurrence_count - 1  # Number of variance samples recorded so far
     self.expected_amount_avg = expected_amount_avg + ((transaction_amount - expected_amount_avg) / (n + 1))
   end
 
