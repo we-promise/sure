@@ -60,6 +60,7 @@ The instructions below are for developers to get started with contributing to th
 
 - See `.ruby-version` file for required Ruby version
 - PostgreSQL >9.3 (latest stable version recommended)
+- Redis > 5.4 (latest stable version recommended)
 
 ### Getting Started
 ```sh
