@@ -142,7 +142,7 @@ class RecurringTransaction
         recurring.update!(
           expected_amount_min: matching_amounts.min,
           expected_amount_max: matching_amounts.max,
-          expected_amount_avg: matching_amounts.sum / matching_amounts.size.to_f,
+          expected_amount_avg: matching_amounts.sum / matching_amounts.size,
           occurrence_count: matching_amounts.size,
           last_occurrence_date: last_entry.date,
           next_expected_date: calculate_next_expected_date(last_entry.date, recurring.expected_day_of_month)
@@ -171,7 +171,7 @@ class RecurringTransaction
           recurring_transaction.update!(
             expected_amount_min: matching_amounts.min,
             expected_amount_max: matching_amounts.max,
-            expected_amount_avg: matching_amounts.sum / matching_amounts.size.to_f,
+            expected_amount_avg: matching_amounts.sum / matching_amounts.size,
             occurrence_count: matching_amounts.size,
             last_occurrence_date: pattern[:last_occurrence_date],
             next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], recurring_transaction.expected_day_of_month),

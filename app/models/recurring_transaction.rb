@@ -68,7 +68,7 @@ class RecurringTransaction < ApplicationRecord
       # Multiple transactions found - calculate variance
       expected_min = matching_amounts.min
       expected_max = matching_amounts.max
-      expected_avg = matching_amounts.sum / matching_amounts.size.to_f
+      expected_avg = matching_amounts.sum / matching_amounts.size
     elsif matching_amounts.size == 1
       # Single transaction - no variance yet
       amount = matching_amounts.first
