@@ -112,11 +112,19 @@ class LunchflowItemsController < ApplicationController
 
     created_accounts = []
     already_linked_accounts = []
+    invalid_accounts = []
 
     selected_account_ids.each do |account_id|
       # Find the account data from API response
       account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == account_id.to_s }
       next unless account_data
+
+      # Validate account name is not blank (required by Account model)
+      if account_data[:name].blank?
+        invalid_accounts << account_id
+        Rails.logger.warn "LunchflowItemsController - Skipping account #{account_id} with blank name"
+        next
+      end
 
       # Create or find lunchflow_account
       lunchflow_account = lunchflow_item.lunchflow_accounts.find_or_initialize_by(
@@ -154,7 +162,17 @@ class LunchflowItemsController < ApplicationController
     lunchflow_item.sync_later if created_accounts.any?
 
     # Build appropriate flash message
-    if created_accounts.any? && already_linked_accounts.any?
+    if invalid_accounts.any? && created_accounts.empty? && already_linked_accounts.empty?
+      # All selected accounts were invalid (blank names)
+      redirect_to new_account_path, alert: t(".invalid_account_names", count: invalid_accounts.count)
+    elsif invalid_accounts.any? && (created_accounts.any? || already_linked_accounts.any?)
+      # Some accounts were created/already linked, but some had invalid names
+      redirect_to return_to || accounts_path,
+                  alert: t(".partial_invalid",
+                           created_count: created_accounts.count,
+                           already_linked_count: already_linked_accounts.count,
+                           invalid_count: invalid_accounts.count)
+    elsif created_accounts.any? && already_linked_accounts.any?
       redirect_to return_to || accounts_path,
                   notice: t(".partial_success",
                            created_count: created_accounts.count,
@@ -277,6 +295,12 @@ class LunchflowItemsController < ApplicationController
     account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == lunchflow_account_id.to_s }
     unless account_data
       redirect_to accounts_path, alert: t(".lunchflow_account_not_found")
+      return
+    end
+
+    # Validate account name is not blank (required by Account model)
+    if account_data[:name].blank?
+      redirect_to accounts_path, alert: t(".invalid_account_name")
       return
     end
 

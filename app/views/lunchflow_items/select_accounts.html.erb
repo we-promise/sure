@@ -15,15 +15,28 @@
 
           <div class="space-y-2">
             <% @available_accounts.each do |account| %>
-              <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-subtle cursor-pointer transition-colors">
-                <%= check_box_tag "account_ids[]", account[:id], false, class: "mt-1" %>
+              <% has_blank_name = account[:name].blank? %>
+              <label class="flex items-start gap-3 p-3 border <%= has_blank_name ? 'border-error bg-error/5' : 'border-primary' %> rounded-lg <%= has_blank_name ? 'cursor-not-allowed opacity-60' : 'hover:bg-subtle cursor-pointer' %> transition-colors">
+                <%= check_box_tag "account_ids[]", account[:id], false, disabled: has_blank_name, class: "mt-1" %>
                 <div class="flex-1">
-                  <div class="font-medium text-sm text-primary">
-                    <%= account[:name] %>
+                  <div class="font-medium text-sm <%= has_blank_name ? 'text-error' : 'text-primary' %>">
+                    <% if has_blank_name %>
+                      <%= t(".no_name_placeholder") %>
+                    <% else %>
+                      <%= account[:name] %>
+                    <% end %>
                   </div>
                   <div class="text-xs text-secondary mt-1">
+                    <% if account[:iban].present? %>
+                      <%= account[:iban] %> •
+                    <% end %>
                     <%= account[:institution_name] %> • <%= account[:currency] %> • <%= account[:status] %>
                   </div>
+                  <% if has_blank_name %>
+                    <div class="text-xs text-error mt-1">
+                      <%= t(".configure_name_in_lunchflow") %>
+                    </div>
+                  <% end %>
                 </div>
               </label>
             <% end %>
