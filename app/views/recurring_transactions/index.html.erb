@@ -101,8 +101,8 @@
                       <span class="text-primary font-medium"><%= recurring_transaction.name %></span>
                     <% end %>
                     <% if recurring_transaction.manual? %>
-                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                        Manual
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
+                        <%= t("recurring_transactions.badges.manual") %>
                       </span>
                     <% end %>
                   </div>

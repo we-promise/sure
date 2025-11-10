@@ -41,3 +41,5 @@ en:
     status:
       active: Active
       inactive: Inactive
+    badges:
+      manual: Manual
