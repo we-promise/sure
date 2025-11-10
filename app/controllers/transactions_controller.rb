@@ -116,6 +116,36 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def mark_as_recurring
+    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    amount_variance_percent = params[:amount_variance_percent]&.to_f
+
+    # Check if a recurring transaction already exists for this pattern
+    existing = Current.family.recurring_transactions.find_by(
+      merchant_id: transaction.merchant_id,
+      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
+      manual: true
+    )
+
+    if existing
+      flash[:alert] = t("recurring_transactions.already_exists")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    recurring_transaction = RecurringTransaction.create_from_transaction(
+      transaction,
+      amount_variance_percent: amount_variance_percent
+    )
+
+    respond_to do |format|
+      format.html do
+        flash[:notice] = t("recurring_transactions.marked_as_recurring")
+        redirect_back_or_to transactions_path
+      end
+    end
+  end
+
   private
     def per_page
       params[:per_page].to_i.positive? ? params[:per_page].to_i : 20

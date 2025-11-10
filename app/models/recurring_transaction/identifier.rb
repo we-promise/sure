@@ -84,6 +84,9 @@ class RecurringTransaction
 
         recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
 
+        # Skip manual recurring transactions - they should not be auto-updated
+        next if recurring_transaction.persisted? && recurring_transaction.manual?
+
         # Set the name or merchant_id on new records
         if recurring_transaction.new_record?
           if pattern[:merchant_id].present?
@@ -91,6 +94,8 @@ class RecurringTransaction
           else
             recurring_transaction.name = pattern[:name]
           end
+          # New auto-detected recurring transactions are not manual
+          recurring_transaction.manual = false
         end
 
         recurring_transaction.assign_attributes(

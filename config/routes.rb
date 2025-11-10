@@ -153,6 +153,10 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
     end
+
+    member do
+      post :mark_as_recurring
+    end
   end
 
   resources :recurring_transactions, only: %i[index destroy] do

@@ -5,6 +5,9 @@ class RecurringTransaction < ApplicationRecord
   belongs_to :merchant, optional: true
 
   monetize :amount
+  monetize :expected_amount_min, allow_nil: true
+  monetize :expected_amount_max, allow_nil: true
+  monetize :expected_amount_avg, allow_nil: true
 
   enum :status, { active: "active", inactive: "inactive" }
 
@@ -12,10 +15,21 @@ class RecurringTransaction < ApplicationRecord
   validates :currency, presence: true
   validates :expected_day_of_month, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 31 }
   validate :merchant_or_name_present
+  validate :amount_variance_consistency
 
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
       errors.add(:base, "Either merchant or name must be present")
+    end
+  end
+
+  def amount_variance_consistency
+    return unless manual?
+
+    if expected_amount_min.present? && expected_amount_max.present?
+      if expected_amount_min > expected_amount_max
+        errors.add(:expected_amount_min, "cannot be greater than expected_amount_max")
+      end
     end
   end
 
@@ -31,16 +45,89 @@ class RecurringTransaction < ApplicationRecord
     Cleaner.new(family).cleanup_stale_transactions
   end
 
+  # Create a manual recurring transaction from an existing transaction
+  def self.create_from_transaction(transaction, date_variance: 2, amount_variance_percent: nil)
+    entry = transaction.entry
+    expected_day = entry.date.day
+
+    # Initialize amount variance if specified
+    expected_min = expected_max = expected_avg = nil
+    if amount_variance_percent.present?
+      variance_multiplier = amount_variance_percent.to_f / 100.0
+      expected_min = entry.amount * (1 - variance_multiplier)
+      expected_max = entry.amount * (1 + variance_multiplier)
+      expected_avg = entry.amount
+    end
+
+    # Calculate next expected date relative to today, not the transaction date
+    next_expected = calculate_next_expected_date_from_today(expected_day)
+
+    create!(
+      family: entry.account.family,
+      merchant_id: transaction.merchant_id,
+      name: transaction.merchant_id.present? ? nil : entry.name,
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: expected_day,
+      last_occurrence_date: entry.date,
+      next_expected_date: next_expected,
+      status: "active",
+      occurrence_count: 1,
+      manual: true,
+      expected_amount_min: expected_min,
+      expected_amount_max: expected_max,
+      expected_amount_avg: expected_avg
+    )
+  end
+
+  # Calculate next expected date from today
+  def self.calculate_next_expected_date_from_today(expected_day)
+    today = Date.current
+
+    # Try this month first
+    begin
+      this_month_date = Date.new(today.year, today.month, expected_day)
+      return this_month_date if this_month_date > today
+    rescue ArgumentError
+      # Day doesn't exist in this month (e.g., 31st in February)
+    end
+
+    # Otherwise use next month
+    calculate_next_expected_date_for(today, expected_day)
+  end
+
+  def self.calculate_next_expected_date_for(from_date, expected_day)
+    next_month = from_date.next_month
+    begin
+      Date.new(next_month.year, next_month.month, expected_day)
+    rescue ArgumentError
+      next_month.end_of_month
+    end
+  end
+
   # Find matching transactions for this recurring pattern
   def matching_transactions
-    entries = family.entries
-      .where(entryable_type: "Transaction")
-      .where(currency: currency)
-      .where("entries.amount = ?", amount)
-      .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-             [ expected_day_of_month - 2, 1 ].max,
-             [ expected_day_of_month + 2, 31 ].min)
-      .order(date: :desc)
+    # For manual recurring with amount variance, match within range
+    # For automatic recurring, match exact amount
+    entries = if manual? && has_amount_variance?
+      family.entries
+        .where(entryable_type: "Transaction")
+        .where(currency: currency)
+        .where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
+        .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
+               [ expected_day_of_month - 2, 1 ].max,
+               [ expected_day_of_month + 2, 31 ].min)
+        .order(date: :desc)
+    else
+      family.entries
+        .where(entryable_type: "Transaction")
+        .where(currency: currency)
+        .where("entries.amount = ?", amount)
+        .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
+               [ expected_day_of_month - 2, 1 ].max,
+               [ expected_day_of_month + 2, 31 ].min)
+        .order(date: :desc)
+    end
 
     # Filter by merchant or name
     if merchant_id.present?
@@ -54,10 +141,17 @@ class RecurringTransaction < ApplicationRecord
     end
   end
 
+  # Check if this recurring transaction has amount variance configured
+  def has_amount_variance?
+    expected_amount_min.present? && expected_amount_max.present?
+  end
+
   # Check if this recurring transaction should be marked inactive
   def should_be_inactive?
     return false if last_occurrence_date.nil?
-    last_occurrence_date < 2.months.ago
+    # Manual recurring transactions have a longer threshold
+    threshold = manual? ? 6.months.ago : 2.months.ago
+    last_occurrence_date < threshold
   end
 
   # Mark as inactive
@@ -71,12 +165,40 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Update based on a new transaction occurrence
-  def record_occurrence!(transaction_date)
+  def record_occurrence!(transaction_date, transaction_amount = nil)
     self.last_occurrence_date = transaction_date
     self.next_expected_date = calculate_next_expected_date(transaction_date)
+
+    # Update amount variance for manual recurring transactions BEFORE incrementing count
+    if manual? && transaction_amount.present?
+      update_amount_variance(transaction_amount)
+    end
+
     self.occurrence_count += 1
     self.status = "active"
     save!
+  end
+
+  # Update amount variance tracking based on a new transaction
+  def update_amount_variance(transaction_amount)
+    # First sample - initialize everything
+    if expected_amount_avg.nil?
+      self.expected_amount_min = transaction_amount
+      self.expected_amount_max = transaction_amount
+      self.expected_amount_avg = transaction_amount
+      return
+    end
+
+    # Update min/max
+    self.expected_amount_min = [ expected_amount_min, transaction_amount ].min if expected_amount_min.present?
+    self.expected_amount_max = [ expected_amount_max, transaction_amount ].max if expected_amount_max.present?
+
+    # Calculate new average using incremental formula
+    # For n samples with average A_n, adding sample x_{n+1} gives:
+    # A_{n+1} = A_n + (x_{n+1} - A_n)/(n+1)
+    # occurrence_count tracks total occurrences including initial, so n = occurrence_count - 1
+    n = occurrence_count - 1  # Number of previous samples
+    self.expected_amount_avg = expected_amount_avg + ((transaction_amount - expected_amount_avg) / (n + 1))
   end
 
   # Calculate the next expected date based on the last occurrence
@@ -98,14 +220,25 @@ class RecurringTransaction < ApplicationRecord
     return nil unless active?
     return nil unless next_expected_date.future?
 
+    # Use average amount for manual recurring with variance, otherwise use fixed amount
+    display_amount = if manual? && expected_amount_avg.present?
+      expected_amount_avg
+    else
+      amount
+    end
+
     OpenStruct.new(
       date: next_expected_date,
-      amount: amount,
+      amount: display_amount,
       currency: currency,
       merchant: merchant,
       name: merchant.present? ? merchant.name : name,
       recurring: true,
-      projected: true
+      projected: true,
+      amount_min: expected_amount_min,
+      amount_max: expected_amount_max,
+      amount_avg: expected_amount_avg,
+      has_variance: has_amount_variance?
     )
   end
 
