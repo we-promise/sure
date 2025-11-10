@@ -84,8 +84,12 @@ class RecurringTransaction
 
         recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
 
-        # Skip manual recurring transactions - they should not be auto-updated
-        next if recurring_transaction.persisted? && recurring_transaction.manual?
+        # Handle manual recurring transactions specially
+        if recurring_transaction.persisted? && recurring_transaction.manual?
+          # Update variance for manual recurring transactions
+          update_manual_recurring_variance(recurring_transaction, pattern)
+          next
+        end
 
         # Set the name or merchant_id on new records
         if recurring_transaction.new_record?
@@ -109,7 +113,65 @@ class RecurringTransaction
         recurring_transaction.save!
       end
 
+      # Also check for manual recurring transactions that might need variance updates
+      update_manual_recurring_transactions(three_months_ago)
+
       recurring_patterns.size
+    end
+
+    # Update variance for existing manual recurring transactions
+    def update_manual_recurring_transactions(since_date)
+      family.recurring_transactions.where(manual: true, status: "active").find_each do |recurring|
+        # Find matching transactions in the recent period
+        matching_amounts = RecurringTransaction.find_matching_transaction_amounts(
+          family: family,
+          merchant_id: recurring.merchant_id,
+          name: recurring.name,
+          currency: recurring.currency,
+          expected_day: recurring.expected_day_of_month,
+          lookback_months: 6
+        )
+
+        next if matching_amounts.empty?
+
+        # Recalculate variance if we have new data
+        if matching_amounts.size > 1
+          recurring.update!(
+            expected_amount_min: matching_amounts.min,
+            expected_amount_max: matching_amounts.max,
+            expected_amount_avg: matching_amounts.sum / matching_amounts.size.to_f,
+            occurrence_count: matching_amounts.size
+          )
+        end
+      end
+    end
+
+    # Update variance for a manual recurring transaction when pattern is found
+    def update_manual_recurring_variance(recurring_transaction, pattern)
+      # Check if this transaction's date is more recent
+      if pattern[:last_occurrence_date] > recurring_transaction.last_occurrence_date
+        # Find all matching transactions to recalculate variance
+        matching_amounts = RecurringTransaction.find_matching_transaction_amounts(
+          family: family,
+          merchant_id: recurring_transaction.merchant_id,
+          name: recurring_transaction.name,
+          currency: recurring_transaction.currency,
+          expected_day: recurring_transaction.expected_day_of_month,
+          lookback_months: 6
+        )
+
+        if matching_amounts.size > 1
+          recurring_transaction.update!(
+            expected_amount_min: matching_amounts.min,
+            expected_amount_max: matching_amounts.max,
+            expected_amount_avg: matching_amounts.sum / matching_amounts.size.to_f,
+            occurrence_count: matching_amounts.size,
+            last_occurrence_date: pattern[:last_occurrence_date],
+            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], recurring_transaction.expected_day_of_month),
+            status: "active"
+          )
+        end
+      end
     end
 
     private

@@ -517,30 +517,35 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_in_delta 103.33, recurring.expected_amount_avg.to_f, 0.01
   end
 
-  test "identify_patterns_for does not overwrite manual recurring transactions" do
-    # Create a manual recurring transaction
+  test "identify_patterns_for updates variance for manual recurring transactions" do
+    account = @family.accounts.first
+
+    # Create a manual recurring transaction with initial variance
     manual_recurring = @family.recurring_transactions.create!(
       merchant: @merchant,
       amount: 50.00,
       currency: "USD",
       expected_day_of_month: 15,
-      last_occurrence_date: Date.current,
+      last_occurrence_date: 3.months.ago,
       next_expected_date: 1.month.from_now,
       status: "active",
       manual: true,
-      occurrence_count: 1
+      occurrence_count: 1,
+      expected_amount_min: 50.00,
+      expected_amount_max: 50.00,
+      expected_amount_avg: 50.00
     )
 
-    # Create transactions that would match the pattern
-    account = @family.accounts.first
-    [ 0, 1, 2 ].each do |months_ago|
+    # Create new transactions with varying amounts that would match the pattern
+    amounts = [ 45.00, 55.00, 60.00 ]
+    amounts.each_with_index do |amount, i|
       transaction = Transaction.create!(
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
       account.entries.create!(
-        date: months_ago.months.ago.beginning_of_month + 15.days,
-        amount: 50.00,
+        date: (amounts.size - i).months.ago.beginning_of_month + 14.days,
+        amount: amount,
         currency: "USD",
         name: "Test Transaction",
         entryable: transaction
@@ -552,10 +557,13 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       RecurringTransaction.identify_patterns_for(@family)
     end
 
-    # Manual recurring should still exist with same attributes
+    # Manual recurring should be updated with new variance
     manual_recurring.reload
     assert manual_recurring.manual?
-    assert_equal 1, manual_recurring.occurrence_count
+    assert_equal 45.00, manual_recurring.expected_amount_min
+    assert_equal 60.00, manual_recurring.expected_amount_max
+    assert_in_delta 53.33, manual_recurring.expected_amount_avg.to_f, 0.01 # (45 + 55 + 60) / 3
+    assert manual_recurring.occurrence_count > 1
   end
 
   test "cleaner does not delete manual recurring transactions" do
