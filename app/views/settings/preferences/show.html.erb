@@ -61,7 +61,7 @@
       ].each do |theme| %>
         <%= form.label :"theme_#{theme[:value]}", class: "group" do %>
           <div class="<%= theme_option_class %>">
-            <%= image_tag(theme[:image], alt: "#{theme[:value].titleize} Theme Preview", class: "h-44 mb-2") %>
+            <%= image_tag(theme[:image], alt: "#{theme[:value].titleize} Theme Preview", class: "max-h-44 mb-2") %>
             <div class="<%= theme[:value] == "system" ? "flex items-center gap-2 justify-center" : "text-sm font-medium text-primary" %>">
               <%= form.radio_button :theme, theme[:value], checked: @user.theme == theme[:value], class: "sr-only",
                 data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change", action: "theme#updateTheme" } %>

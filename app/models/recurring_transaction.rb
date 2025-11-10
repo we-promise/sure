@@ -2,7 +2,7 @@ class RecurringTransaction < ApplicationRecord
   include Monetizable
 
   belongs_to :family
-  belongs_to :merchant
+  belongs_to :merchant, optional: true
 
   monetize :amount
 
@@ -11,6 +11,13 @@ class RecurringTransaction < ApplicationRecord
   validates :amount, presence: true
   validates :currency, presence: true
   validates :expected_day_of_month, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 31 }
+  validate :merchant_or_name_present
+
+  def merchant_or_name_present
+    if merchant_id.blank? && name.blank?
+      errors.add(:base, "Either merchant or name must be present")
+    end
+  end
 
   scope :for_family, ->(family) { where(family: family) }
   scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
@@ -35,9 +42,15 @@ class RecurringTransaction < ApplicationRecord
              [ expected_day_of_month + 2, 31 ].min)
       .order(date: :desc)
 
-    # Filter by merchant through the entryable (Transaction)
-    entries.select do |entry|
-      entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
+    # Filter by merchant or name
+    if merchant_id.present?
+      # Match by merchant through the entryable (Transaction)
+      entries.select do |entry|
+        entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
+      end
+    else
+      # Match by entry name
+      entries.where(name: name)
     end
   end
 
@@ -90,6 +103,7 @@ class RecurringTransaction < ApplicationRecord
       amount: amount,
       currency: currency,
       merchant: merchant,
+      name: merchant.present? ? merchant.name : name,
       recurring: true,
       projected: true
     )
