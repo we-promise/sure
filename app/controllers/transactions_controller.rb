@@ -133,12 +133,28 @@ class TransactionsController < ApplicationController
       return
     end
 
-    recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+    begin
+      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
 
-    respond_to do |format|
-      format.html do
-        flash[:notice] = t("recurring_transactions.marked_as_recurring")
-        redirect_back_or_to transactions_path
+      respond_to do |format|
+        format.html do
+          flash[:notice] = t("recurring_transactions.marked_as_recurring")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue ActiveRecord::RecordInvalid => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.creation_failed")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue StandardError => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.unexpected_error")
+          redirect_back_or_to transactions_path
+        end
       end
     end
   end

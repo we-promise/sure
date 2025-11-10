@@ -24,6 +24,8 @@ en:
     confirm_delete: Are you sure you want to delete this recurring transaction?
     marked_as_recurring: Transaction marked as recurring
     already_exists: A manual recurring transaction already exists for this pattern
+    creation_failed: Failed to create recurring transaction. Please check the transaction details and try again.
+    unexpected_error: An unexpected error occurred while creating the recurring transaction
     amount_range: "Range: %{min} to %{max}"
     empty:
       title: No recurring transactions found
