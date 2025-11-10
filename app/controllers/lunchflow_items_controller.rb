@@ -9,6 +9,43 @@ class LunchflowItemsController < ApplicationController
   def show
   end
 
+  # Preload Lunchflow accounts in background (async, non-blocking)
+  def preload_accounts
+    begin
+      cache_key = "lunchflow_accounts_#{Current.family.id}"
+
+      # Check if already cached
+      cached_accounts = Rails.cache.read(cache_key)
+
+      if cached_accounts.present?
+        render json: { success: true, has_accounts: cached_accounts.any?, cached: true }
+        return
+      end
+
+      # Fetch from API
+      lunchflow_provider = Provider::LunchflowAdapter.build_provider
+
+      unless lunchflow_provider.present?
+        render json: { success: false, error: "no_api_key", has_accounts: false }
+        return
+      end
+
+      accounts_data = lunchflow_provider.get_accounts
+      available_accounts = accounts_data[:accounts] || []
+
+      # Cache the accounts for 5 minutes
+      Rails.cache.write(cache_key, available_accounts, expires_in: 5.minutes)
+
+      render json: { success: true, has_accounts: available_accounts.any?, cached: false }
+    rescue Provider::Lunchflow::LunchflowError => e
+      Rails.logger.error("Lunchflow preload error: #{e.message}")
+      render json: { success: false, error: e.message, has_accounts: false }
+    rescue StandardError => e
+      Rails.logger.error("Unexpected error preloading Lunchflow accounts: #{e.class}: #{e.message}")
+      render json: { success: false, error: "unexpected_error", has_accounts: false }
+    end
+  end
+
   # Fetch available accounts from Lunchflow API and show selection UI
   def select_accounts
     begin

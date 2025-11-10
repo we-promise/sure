@@ -292,6 +292,7 @@ Rails.application.routes.draw do
 
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
     collection do
+      get :preload_accounts
       get :select_accounts
       post :link_accounts
       get :select_existing_account
