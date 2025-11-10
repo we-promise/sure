@@ -15,7 +15,7 @@ class SessionsController < ApplicationController
         @email = params[:email]
         @password = params[:password]
       end
-    rescue RuntimeError, Errno::ENOENT
+    rescue RuntimeError, Errno::ENOENT, Psych::SyntaxError
       # Demo config file missing or malformed - disable demo credential prefilling
       @prefill_demo_credentials = false
       @email = params[:email]
