@@ -29,8 +29,8 @@ class LunchflowItem::Importer
     accounts_failed = 0
 
     if accounts_data[:accounts].present?
-      # Get all existing lunchflow account IDs for this item
-      existing_account_ids = lunchflow_item.lunchflow_accounts.pluck(:account_id)
+      # Get all existing lunchflow account IDs for this item (normalize to strings for comparison)
+      existing_account_ids = lunchflow_item.lunchflow_accounts.pluck(:account_id).map(&:to_s)
 
       accounts_data[:accounts].each do |account_data|
         account_id = account_data[:id]&.to_s
