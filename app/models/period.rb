@@ -69,6 +69,22 @@ class Period
       label_short: "10Y",
       label: "Last 10 Years",
       comparison_label: "vs. 10 years ago"
+    },
+    "all_time" => {
+      date_range: -> {
+        oldest_date = Current.family&.oldest_entry_date
+        # If no family or no entries exist, use a reasonable historical fallback
+        # to ensure "All Time" represents a meaningful range, not just today
+        start_date = if oldest_date && oldest_date < Date.current
+          oldest_date
+        else
+          5.years.ago.to_date
+        end
+        [ start_date, Date.current ]
+      },
+      label_short: "All",
+      label: "All Time",
+      comparison_label: "vs. beginning"
     }
   }
 
