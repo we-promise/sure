@@ -2,6 +2,24 @@
   header_title t(".title")
 %>
 
+<% if @prefill_demo_credentials %>
+  <div class="mb-4 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 theme-dark:bg-blue-900/20 theme-dark:text-blue-400 theme-dark:border-blue-800 p-4" role="status" aria-live="polite">
+    <div class="flex items-start gap-3">
+      <div class="shrink-0">
+        <%= icon "info", size: "sm", color: "blue-600" %>
+      </div>
+      <div class="flex-1 text-sm">
+        <h3 class="font-semibold mb-1">
+          <%= t(".demo_banner_title") %>
+        </h3>
+        <p>
+          <%= t(".demo_banner_message") %>
+        </p>
+      </div>
+    </div>
+  </div>
+<% end %>
+
 <%= styled_form_with url: sessions_path, class: "space-y-4", data: { turbo: false } do |form| %>
   <%= form.email_field :email,
                        label: t(".email"),
