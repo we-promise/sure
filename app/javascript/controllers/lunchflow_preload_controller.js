@@ -41,6 +41,10 @@ export default class extends Controller {
 
       const response = await fetch(url, { headers });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success && data.has_accounts) {
