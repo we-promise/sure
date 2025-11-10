@@ -5,12 +5,19 @@ class SessionsController < ApplicationController
   layout "auth"
 
   def new
-    demo = Rails.application.config_for(:demo)
-    @prefill_demo_credentials = request.host == demo["host"]
-    if @prefill_demo_credentials
-      @email = params[:email].presence || demo["email"]
-      @password = params[:password].presence || demo["password"]
-    else
+    begin
+      demo = Rails.application.config_for(:demo)
+      @prefill_demo_credentials = demo.present? && demo["host"].present? && request.host == demo["host"]
+      if @prefill_demo_credentials
+        @email = params[:email].presence || demo["email"]
+        @password = params[:password].presence || demo["password"]
+      else
+        @email = params[:email]
+        @password = params[:password]
+      end
+    rescue RuntimeError, Errno::ENOENT
+      # Demo config file missing or malformed - disable demo credential prefilling
+      @prefill_demo_credentials = false
       @email = params[:email]
       @password = params[:password]
     end
