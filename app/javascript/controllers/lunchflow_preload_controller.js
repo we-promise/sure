@@ -31,12 +31,15 @@ export default class extends Controller {
         url.searchParams.append("return_to", this.returnToValue);
       }
 
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content,
-        },
-      });
+      const csrfToken = document.querySelector('[name="csrf-token"]');
+      const headers = {
+        Accept: "application/json",
+      };
+      if (csrfToken) {
+        headers["X-CSRF-Token"] = csrfToken.content;
+      }
+
+      const response = await fetch(url, { headers });
 
       const data = await response.json();
 
