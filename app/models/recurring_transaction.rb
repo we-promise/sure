@@ -46,24 +46,42 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Create a manual recurring transaction from an existing transaction
-  def self.create_from_transaction(transaction, date_variance: 2, amount_variance_percent: nil)
+  # Automatically calculates amount variance from past 6 months of matching transactions
+  def self.create_from_transaction(transaction, date_variance: 2)
     entry = transaction.entry
+    family = entry.account.family
     expected_day = entry.date.day
 
-    # Initialize amount variance if specified
+    # Find matching transactions from the past 6 months
+    matching_amounts = find_matching_transaction_amounts(
+      family: family,
+      merchant_id: transaction.merchant_id,
+      name: transaction.merchant_id.present? ? nil : entry.name,
+      currency: entry.currency,
+      expected_day: expected_day,
+      lookback_months: 6
+    )
+
+    # Calculate amount variance from historical data
     expected_min = expected_max = expected_avg = nil
-    if amount_variance_percent.present?
-      variance_multiplier = amount_variance_percent.to_f / 100.0
-      expected_min = entry.amount * (1 - variance_multiplier)
-      expected_max = entry.amount * (1 + variance_multiplier)
-      expected_avg = entry.amount
+    if matching_amounts.size > 1
+      # Multiple transactions found - calculate variance
+      expected_min = matching_amounts.min
+      expected_max = matching_amounts.max
+      expected_avg = matching_amounts.sum / matching_amounts.size.to_f
+    elsif matching_amounts.size == 1
+      # Single transaction - no variance yet
+      amount = matching_amounts.first
+      expected_min = amount
+      expected_max = amount
+      expected_avg = amount
     end
 
     # Calculate next expected date relative to today, not the transaction date
     next_expected = calculate_next_expected_date_from_today(expected_day)
 
     create!(
-      family: entry.account.family,
+      family: family,
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : entry.name,
       amount: entry.amount,
@@ -72,12 +90,37 @@ class RecurringTransaction < ApplicationRecord
       last_occurrence_date: entry.date,
       next_expected_date: next_expected,
       status: "active",
-      occurrence_count: 1,
+      occurrence_count: matching_amounts.size,
       manual: true,
       expected_amount_min: expected_min,
       expected_amount_max: expected_max,
       expected_amount_avg: expected_avg
     )
+  end
+
+  # Find matching transaction amounts for variance calculation
+  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6)
+    lookback_date = lookback_months.months.ago.to_date
+
+    entries = family.entries
+      .where(entryable_type: "Transaction")
+      .where(currency: currency)
+      .where("entries.date >= ?", lookback_date)
+      .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
+             [ expected_day - 2, 1 ].max,
+             [ expected_day + 2, 31 ].min)
+      .order(date: :desc)
+
+    # Filter by merchant or name
+    matching_entries = if merchant_id.present?
+      entries.select do |entry|
+        entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
+      end
+    else
+      entries.where(name: name)
+    end
+
+    matching_entries.map(&:amount).uniq
   end
 
   # Calculate next expected date from today

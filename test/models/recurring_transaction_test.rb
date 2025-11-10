@@ -357,7 +357,39 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert recurring.next_expected_date >= Date.current
   end
 
-  test "create_from_transaction with amount variance sets min/max/avg" do
+  test "create_from_transaction automatically calculates amount variance from history" do
+    account = @family.accounts.first
+
+    # Create multiple historical transactions with varying amounts on the same day of month
+    amounts = [ 90.00, 100.00, 110.00, 120.00 ]
+    amounts.each_with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: @merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: (amounts.size - i).months.ago.beginning_of_month + 14.days, # Day 15
+        amount: amount,
+        currency: "USD",
+        name: "Test Transaction",
+        entryable: transaction
+      )
+    end
+
+    # Mark the most recent one as recurring
+    most_recent_entry = account.entries.order(date: :desc).first
+    recurring = RecurringTransaction.create_from_transaction(most_recent_entry.transaction)
+
+    assert recurring.manual?
+    assert_equal 90.00, recurring.expected_amount_min
+    assert_equal 120.00, recurring.expected_amount_max
+    assert_equal 105.00, recurring.expected_amount_avg # (90 + 100 + 110 + 120) / 4
+    assert_equal 4, recurring.occurrence_count
+    # Next expected date should be in the future
+    assert recurring.next_expected_date >= Date.current
+  end
+
+  test "create_from_transaction with single transaction sets fixed amount" do
     account = @family.accounts.first
     transaction = Transaction.create!(
       merchant: @merchant,
@@ -365,21 +397,19 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     )
     entry = account.entries.create!(
       date: 1.month.ago,
-      amount: 100.00,
+      amount: 50.00,
       currency: "USD",
       name: "Test Transaction",
       entryable: transaction
     )
 
-    recurring = RecurringTransaction.create_from_transaction(
-      transaction,
-      amount_variance_percent: 20
-    )
+    recurring = RecurringTransaction.create_from_transaction(transaction)
 
     assert recurring.manual?
-    assert_equal 80.00, recurring.expected_amount_min
-    assert_equal 120.00, recurring.expected_amount_max
-    assert_equal 100.00, recurring.expected_amount_avg
+    assert_equal 50.00, recurring.expected_amount_min
+    assert_equal 50.00, recurring.expected_amount_max
+    assert_equal 50.00, recurring.expected_amount_avg
+    assert_equal 1, recurring.occurrence_count
     # Next expected date should be in the future
     assert recurring.next_expected_date >= Date.current
   end

@@ -118,7 +118,6 @@ class TransactionsController < ApplicationController
 
   def mark_as_recurring
     transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
-    amount_variance_percent = params[:amount_variance_percent]&.to_f
 
     # Check if a recurring transaction already exists for this pattern
     existing = Current.family.recurring_transactions.find_by(
@@ -133,10 +132,7 @@ class TransactionsController < ApplicationController
       return
     end
 
-    recurring_transaction = RecurringTransaction.create_from_transaction(
-      transaction,
-      amount_variance_percent: amount_variance_percent
-    )
+    recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
 
     respond_to do |format|
       format.html do
