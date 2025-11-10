@@ -7,7 +7,7 @@ class SessionsController < ApplicationController
   def new
     begin
       demo = Rails.application.config_for(:demo)
-      @prefill_demo_credentials = demo.present? && demo["host"].present? && request.host == demo["host"]
+      @prefill_demo_credentials = demo_host_match?(demo)
       if @prefill_demo_credentials
         @email = params[:email].presence || demo["email"]
         @password = params[:password].presence || demo["password"]
@@ -90,5 +90,11 @@ class SessionsController < ApplicationController
   private
     def set_session
       @session = Current.user.sessions.find(params[:id])
+    end
+
+    def demo_host_match?(demo)
+      return false unless demo.present? && demo["hosts"].present?
+
+      demo["hosts"].include?(request.host)
     end
 end

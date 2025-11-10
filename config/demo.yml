@@ -1,5 +1,6 @@
 default: &default
-  host: sure-demo.pikapod.net
+  hosts:
+    - sure-demo.pikapod.net
   email: user@example.com
   password: Password1!
 
