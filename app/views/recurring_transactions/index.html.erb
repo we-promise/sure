@@ -100,11 +100,6 @@
                       ) %>
                       <span class="text-primary font-medium"><%= recurring_transaction.name %></span>
                     <% end %>
-                    <% if recurring_transaction.manual? %>
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
-                        <%= t("recurring_transactions.badges.manual") %>
-                      </span>
-                    <% end %>
                   </div>
                 </td>
                 <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
