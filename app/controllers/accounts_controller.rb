@@ -12,6 +12,10 @@ class AccountsController < ApplicationController
     render layout: "settings"
   end
 
+  def new
+    @show_lunchflow_link = family.can_connect_lunchflow?
+  end
+
   def sync_all
     family.sync_later
     redirect_to accounts_path, notice: "Syncing accounts..."
