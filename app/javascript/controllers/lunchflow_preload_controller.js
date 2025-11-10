@@ -13,19 +13,21 @@ export default class extends Controller {
   }
 
   async preloadAccounts() {
-    if (!this.hasLinkTarget) return;
-
     try {
-      // Show loading state
-      this.showLoading();
+      // Show loading state if we have a link target (on method selector page)
+      if (this.hasLinkTarget) {
+        this.showLoading();
+      }
 
       // Fetch accounts in background to populate cache
       const url = new URL(
         "/lunchflow_items/preload_accounts",
         window.location.origin
       );
-      url.searchParams.append("accountable_type", this.accountableTypeValue);
-      if (this.returnToValue) {
+      if (this.hasAccountableTypeValue) {
+        url.searchParams.append("accountable_type", this.accountableTypeValue);
+      }
+      if (this.hasReturnToValue) {
         url.searchParams.append("return_to", this.returnToValue);
       }
 
@@ -40,18 +42,26 @@ export default class extends Controller {
 
       if (data.success && data.has_accounts) {
         // Accounts loaded successfully, enable the link
-        this.hideLoading();
+        if (this.hasLinkTarget) {
+          this.hideLoading();
+        }
       } else if (!data.has_accounts) {
         // No accounts available, hide the link entirely
-        this.linkTarget.style.display = "none";
+        if (this.hasLinkTarget) {
+          this.linkTarget.style.display = "none";
+        }
       } else {
         // Error occurred
-        this.hideLoading();
+        if (this.hasLinkTarget) {
+          this.hideLoading();
+        }
         console.error("Failed to preload Lunchflow accounts:", data.error);
       }
     } catch (error) {
       // On error, still enable the link so user can try
-      this.hideLoading();
+      if (this.hasLinkTarget) {
+        this.hideLoading();
+      }
       console.error("Error preloading Lunchflow accounts:", error);
     }
   }

@@ -32,7 +32,7 @@
           <div class="flex gap-2 justify-end pt-4">
             <%= link_to t(".cancel"), @return_to || new_account_path,
                 class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                data: { turbo_frame: "_top" } %>
+                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
             <%= submit_tag t(".link_accounts"),
                 class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
           </div>
