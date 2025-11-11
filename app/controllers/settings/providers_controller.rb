@@ -28,9 +28,6 @@ class Settings::ProvidersController < ApplicationController
 
     updated_fields = []
 
-    # This hash will store only the updates for dynamic (non-declared) fields
-    dynamic_updates = {}
-
     # Perform all updates within a transaction for consistency
     Setting.transaction do
       provider_params.each do |param_key, param_value|
@@ -57,31 +54,12 @@ class Settings::ProvidersController < ApplicationController
           # This is safe and uses the proper setter.
           Setting.public_send("#{key_str}=", value)
         else
-          # If it's a dynamic field, add it to our batch hash
-          # to avoid the Read-Modify-Write conflict.
-          dynamic_updates[key_str] = value
+          # If it's a dynamic field, set it as an individual entry
+          # Each field is stored independently, preventing race conditions
+          Setting[key_str] = value
         end
 
         updated_fields << param_key
-      end
-
-      # Now, if we have any dynamic updates, apply them all at once
-      if dynamic_updates.any?
-        # 1. READ the current hash once
-        current_dynamic = Setting.dynamic_fields.dup
-
-        # 2. MODIFY by merging changes
-        # Treat nil values as deletions to keep the hash clean
-        dynamic_updates.each do |key, value|
-          if value.nil?
-            current_dynamic.delete(key)
-          else
-            current_dynamic[key] = value
-          end
-        end
-
-        # 3. WRITE the complete, merged hash back once
-        Setting.dynamic_fields = current_dynamic
       end
     end
 
