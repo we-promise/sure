@@ -84,7 +84,7 @@ namespace :sure do
           exit 1
         end
       elsif account_name.present?
-        sanitized = account_name.to_s.downcase.gsub(/[%_]/, '\\\\\0')
+        sanitized = ActiveRecord::Base.sanitize_sql_like(account_name.to_s.downcase)
         acct = Account.where("LOWER(name) LIKE ?", "%#{sanitized}%")
                       .order(updated_at: :desc)
                       .first

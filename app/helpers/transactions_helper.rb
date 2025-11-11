@@ -64,7 +64,7 @@ module TransactionsHelper
     else
       pretty = begin
         JSON.pretty_generate(extra)
-      rescue
+      rescue StandardError
         extra.to_s
       end
       {
