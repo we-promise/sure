@@ -72,12 +72,16 @@ jobs:
           echo "Tag '$TAG' does not match alpha/beta patterns. No deployment."
         fi
 
-        if git -C platform-eks-production diff --cached --quiet; then
+        # Stage changes
+        git -C platform-eks-production add -A
+        
+        # Exit 0 if no diff vs HEAD; nonzero if there are changes
+        if git -C platform-eks-production diff-index --quiet HEAD --; then
           echo "No changes to commit."
         else
-          cd platform-eks-production
           git config --global user.email "platform@chancen.international"
           git config --global user.name "platform-chancen"
           git config --global credential.helper cache        
-          git add . && git commit -m "Updating ${{ env.ECR_REPOSITORY}} image tag" && git push
+          git -C platform-eks-production commit -m "Update ${ECR_REPOSITORY:-unknown} image tag to ${TAG}"
+          git -C platform-eks-production push
         fi
