@@ -74,7 +74,9 @@ class Setting < RailsSettings::Base
         if value.nil?
           where(var: dynamic_key).destroy_all
         else
-          super(dynamic_key, value)
+          # Use upsert for atomic insert/update to avoid race conditions
+          upsert({ var: dynamic_key, value: value.to_yaml }, unique_by: :var)
+          clear_cache
         end
       end
     end
