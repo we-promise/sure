@@ -29,6 +29,13 @@ class LunchflowItem::Importer
     accounts_failed = 0
 
     if accounts_data[:accounts].present?
+      # Get only linked lunchflow account IDs (ones actually imported/used by the user)
+      # This prevents updating orphaned accounts from old behavior that saved everything
+      existing_account_ids = lunchflow_item.lunchflow_accounts
+                                           .joins(:account_provider)
+                                           .pluck(:account_id)
+                                           .map(&:to_s)
+
       accounts_data[:accounts].each do |account_data|
         begin
           import_account(account_data)

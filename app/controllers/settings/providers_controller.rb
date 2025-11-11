@@ -44,8 +44,21 @@ class Settings::ProvidersController < ApplicationController
           next
         end
 
-        # Set the value using dynamic hash-style access
-        Setting[field.setting_key] = value
+        key_str = field.setting_key.to_s
+
+        # Check if the setting is a declared field in setting.rb
+        # Use method_defined? to check if the setter actually exists on the singleton class,
+        # not just respond_to? which returns true for dynamic fields due to respond_to_missing?
+        if Setting.singleton_class.method_defined?("#{key_str}=")
+          # If it's a declared field (e.g., openai_model), set it directly.
+          # This is safe and uses the proper setter.
+          Setting.public_send("#{key_str}=", value)
+        else
+          # If it's a dynamic field, set it as an individual entry
+          # Each field is stored independently, preventing race conditions
+          Setting[key_str] = value
+        end
+
         updated_fields << param_key
       end
     end
