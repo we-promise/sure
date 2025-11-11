@@ -1,7 +1,6 @@
 import {
   autoUpdate,
   computePosition,
-  flip,
   offset,
   shift,
 } from "@floating-ui/dom";
@@ -103,15 +102,30 @@ export default class extends Controller {
   }
 
   update() {
+    if (!this.buttonTarget || !this.contentTarget) return;
+
+    const isSmallScreen = !window.matchMedia("(min-width: 768px)").matches;
+
     computePosition(this.buttonTarget, this.contentTarget, {
-      placement: this.placementValue,
-      middleware: [offset(this.offsetValue), flip(), shift({ padding: 5 })],
+      placement: isSmallScreen ? "bottom" : this.placementValue,
+      middleware: [offset(this.offsetValue), shift({ padding: 5 })],
+      strategy: "fixed",
     }).then(({ x, y }) => {
-      Object.assign(this.contentTarget.style, {
-        position: "fixed",
-        left: `${x}px`,
-        top: `${y}px`,
-      });
+      if (isSmallScreen) {
+        Object.assign(this.contentTarget.style, {
+          position: "fixed",
+          left: "0px",
+          width: "100vw",
+          top: `${y}px`,
+        });
+      } else {
+        Object.assign(this.contentTarget.style, {
+          position: "fixed",
+          left: `${x}px`,
+          top: `${y}px`,
+          width: "",
+        });
+      }
     });
   }
 }

@@ -304,11 +304,13 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown
       # Base query: all transactions in the period
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .where.not(kind: [ "funds_movement", "one_time", "cc_payment" ])
         .includes(entry: :account, category: [])
 
       # Apply filters
@@ -397,11 +399,13 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .where.not(kind: [ "funds_movement", "one_time", "cc_payment" ])
         .includes(entry: :account, category: [])
 
       transactions = apply_transaction_filters(transactions)
@@ -432,11 +436,13 @@ class ReportsController < ApplicationController
       end
 
       # Get all transactions in the period
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .where.not(kind: [ "funds_movement", "one_time", "cc_payment" ])
         .includes(entry: :account, category: [])
 
       transactions = apply_transaction_filters(transactions)

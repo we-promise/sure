@@ -26,7 +26,7 @@ en:
       title: No recurring transactions found
       description: Click "Identify Patterns" to automatically detect recurring transactions from your transaction history.
     table:
-      merchant: Merchant
+      merchant: Name
       amount: Amount
       expected_day: Expected Day
       next_date: Next Date

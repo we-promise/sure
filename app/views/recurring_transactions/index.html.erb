@@ -77,19 +77,29 @@
               <tr class="border-b border-subdued hover:bg-surface-hover <%= "opacity-60" unless recurring_transaction.active? %>">
                 <td class="py-3 px-2 text-sm">
                   <div class="flex items-center gap-2">
-                    <% if recurring_transaction.merchant&.logo_url.present? %>
-                      <%= image_tag recurring_transaction.merchant.logo_url,
-                          class: "w-6 h-6 rounded-full",
-                          loading: "lazy" %>
+                    <% if recurring_transaction.merchant.present? %>
+                      <% if recurring_transaction.merchant.logo_url.present? %>
+                        <%= image_tag recurring_transaction.merchant.logo_url,
+                            class: "w-6 h-6 rounded-full",
+                            loading: "lazy" %>
+                      <% else %>
+                        <%= render DS::FilledIcon.new(
+                          variant: :text,
+                          text: recurring_transaction.merchant.name,
+                          size: "sm",
+                          rounded: true
+                        ) %>
+                      <% end %>
+                      <span class="text-primary font-medium"><%= recurring_transaction.merchant.name %></span>
                     <% else %>
                       <%= render DS::FilledIcon.new(
                         variant: :text,
-                        text: recurring_transaction.merchant.name,
+                        text: recurring_transaction.name,
                         size: "sm",
                         rounded: true
                       ) %>
+                      <span class="text-primary font-medium"><%= recurring_transaction.name %></span>
                     <% end %>
-                    <span class="text-primary font-medium"><%= recurring_transaction.merchant.name %></span>
                   </div>
                 </td>
                 <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">

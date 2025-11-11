@@ -17,14 +17,19 @@ class RecurringTransaction
         .includes(:entryable)
         .to_a
 
-      # Filter to only those with merchants and group by merchant and amount (preserve sign)
+      # Group by merchant (if present) or name, along with amount (preserve sign) and currency
       grouped_transactions = entries_with_transactions
-        .select { |entry| entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id.present? }
-        .group_by { |entry| [ entry.entryable.merchant_id, entry.amount.round(2), entry.currency ] }
+        .select { |entry| entry.entryable.is_a?(Transaction) }
+        .group_by do |entry|
+          transaction = entry.entryable
+          # Use merchant_id if present, otherwise use entry name
+          identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
+          [ identifier, entry.amount.round(2), entry.currency ]
+        end
 
       recurring_patterns = []
 
-      grouped_transactions.each do |(merchant_id, amount, currency), entries|
+      grouped_transactions.each do |(identifier, amount, currency), entries|
         next if entries.size < 3  # Must have at least 3 occurrences
 
         # Check if the last occurrence was within the last 45 days
@@ -38,8 +43,10 @@ class RecurringTransaction
         if days_cluster_together?(days_of_month)
           expected_day = calculate_expected_day(days_of_month)
 
-          recurring_patterns << {
-            merchant_id: merchant_id,
+          # Unpack identifier - either [:merchant, id] or [:name, name_string]
+          identifier_type, identifier_value = identifier
+
+          pattern = {
             amount: amount,
             currency: currency,
             expected_day_of_month: expected_day,
@@ -47,16 +54,44 @@ class RecurringTransaction
             occurrence_count: entries.size,
             entries: entries
           }
+
+          # Set either merchant_id or name based on identifier type
+          if identifier_type == :merchant
+            pattern[:merchant_id] = identifier_value
+          else
+            pattern[:name] = identifier_value
+          end
+
+          recurring_patterns << pattern
         end
       end
 
       # Create or update RecurringTransaction records
       recurring_patterns.each do |pattern|
-        recurring_transaction = family.recurring_transactions.find_or_initialize_by(
-          merchant_id: pattern[:merchant_id],
+        # Build find conditions based on whether it's merchant-based or name-based
+        find_conditions = {
           amount: pattern[:amount],
           currency: pattern[:currency]
-        )
+        }
+
+        if pattern[:merchant_id].present?
+          find_conditions[:merchant_id] = pattern[:merchant_id]
+          find_conditions[:name] = nil
+        else
+          find_conditions[:name] = pattern[:name]
+          find_conditions[:merchant_id] = nil
+        end
+
+        recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
+
+        # Set the name or merchant_id on new records
+        if recurring_transaction.new_record?
+          if pattern[:merchant_id].present?
+            recurring_transaction.merchant_id = pattern[:merchant_id]
+          else
+            recurring_transaction.name = pattern[:name]
+          end
+        end
 
         recurring_transaction.assign_attributes(
           expected_day_of_month: pattern[:expected_day_of_month],

@@ -1,5 +1,5 @@
-ARG RUBY_VERSION=3.4.4
-FROM ruby:${RUBY_VERSION}-slim-bullseye
+ARG RUBY_VERSION=3.4.7
+FROM ruby:${RUBY_VERSION}-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 

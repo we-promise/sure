@@ -13,7 +13,7 @@ class LunchflowItem::Syncer
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
     total_accounts = lunchflow_item.lunchflow_accounts.count
-    linked_accounts = lunchflow_item.lunchflow_accounts.joins(:account)
+    linked_accounts = lunchflow_item.lunchflow_accounts.joins(:account).merge(Account.visible)
     unlinked_accounts = lunchflow_item.lunchflow_accounts.includes(:account).where(accounts: { id: nil })
 
     # Store sync statistics for display
