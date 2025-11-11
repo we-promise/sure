@@ -73,6 +73,7 @@ class Setting < RailsSettings::Base
         dynamic_key = dynamic_key_name(key_str)
         if value.nil?
           where(var: dynamic_key).destroy_all
+          clear_cache
         else
           # Use upsert for atomic insert/update to avoid race conditions
           upsert({ var: dynamic_key, value: value.to_yaml }, unique_by: :var)
@@ -98,6 +99,7 @@ class Setting < RailsSettings::Base
       dynamic_key = dynamic_key_name(key_str)
       value = self[key_str]
       where(var: dynamic_key).destroy_all
+      clear_cache
       value
     end
 
