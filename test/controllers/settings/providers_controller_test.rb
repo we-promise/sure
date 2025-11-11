@@ -41,10 +41,10 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "updates dynamic provider fields using batch update" do
-    # plaid_client_id is a dynamic field, so it should go through dynamic_fields hash
+    # plaid_client_id is a dynamic field, stored as an individual entry
     with_self_hosting do
       # Clear any existing plaid settings
-      Setting.dynamic_fields = {}
+      Setting["plaid_client_id"] = nil
 
       patch settings_providers_url, params: {
         setting: { plaid_client_id: "test_client_id" }
@@ -52,14 +52,16 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_redirected_to settings_providers_url
       assert_equal "test_client_id", Setting["plaid_client_id"]
-      assert_equal "test_client_id", Setting.dynamic_fields["plaid_client_id"]
     end
   end
 
   test "batches multiple dynamic fields from same provider atomically" do
-    # Test that multiple fields from Plaid are updated together in one write operation
+    # Test that multiple fields from Plaid are updated as individual entries
     with_self_hosting do
-      Setting.dynamic_fields = {}
+      # Clear existing fields
+      Setting["plaid_client_id"] = nil
+      Setting["plaid_secret"] = nil
+      Setting["plaid_environment"] = nil
 
       patch settings_providers_url, params: {
         setting: {
@@ -71,7 +73,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_redirected_to settings_providers_url
 
-      # All three should be present in dynamic_fields
+      # All three should be present as individual entries
       assert_equal "new_client_id", Setting["plaid_client_id"]
       assert_equal "new_secret", Setting["plaid_secret"]
       assert_equal "production", Setting["plaid_environment"]
@@ -79,9 +81,14 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "batches dynamic fields from multiple providers atomically" do
-    # Test that fields from different providers are all batched together
+    # Test that fields from different providers are stored as individual entries
     with_self_hosting do
-      Setting.dynamic_fields = {}
+      # Clear existing fields
+      Setting["plaid_client_id"] = nil
+      Setting["plaid_secret"] = nil
+      Setting["plaid_eu_client_id"] = nil
+      Setting["plaid_eu_secret"] = nil
+      Setting["simplefin_setup_token"] = nil
 
       patch settings_providers_url, params: {
         setting: {
@@ -108,10 +115,8 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     # Test that updating some fields doesn't overwrite other existing fields
     with_self_hosting do
       # Set initial fields
-      Setting.dynamic_fields = {
-        "existing_field_1" => "value1",
-        "plaid_client_id" => "old_client_id"
-      }
+      Setting["existing_field_1"] = "value1"
+      Setting["plaid_client_id"] = "old_client_id"
 
       # Update one field and add a new one
       patch settings_providers_url, params: {
@@ -162,7 +167,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       # Set initial values
       Setting["plaid_client_id"] = "old_value"
       assert_equal "old_value", Setting["plaid_client_id"]
-      assert Setting.dynamic_fields.key?("plaid_client_id")
+      assert Setting.key?("plaid_client_id")
 
       patch settings_providers_url, params: {
         setting: { plaid_client_id: "  " }  # Blank string with spaces
@@ -170,18 +175,18 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_redirected_to settings_providers_url
       assert_nil Setting["plaid_client_id"]
-      # Key should be removed from hash, not just set to nil
-      refute Setting.dynamic_fields.key?("plaid_client_id"),
-        "nil values should delete the key from dynamic_fields"
+      # Entry should be removed, not just set to nil
+      refute Setting.key?("plaid_client_id"),
+        "nil values should delete the entry"
     end
   end
 
   test "handles sequential updates to different dynamic fields safely" do
     # This test simulates what would happen if two requests tried to update
-    # different dynamic fields sequentially. With the batch update approach,
-    # all changes should be preserved.
+    # different dynamic fields sequentially. With individual entries,
+    # all changes should be preserved without conflicts.
     with_self_hosting do
-      Setting.dynamic_fields = { "existing_field" => "existing_value" }
+      Setting["existing_field"] = "existing_value"
 
       # Simulate first request updating plaid fields
       patch settings_providers_url, params: {
@@ -266,8 +271,8 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   test "logs errors when update fails" do
     with_self_hosting do
       # Test that errors during update are properly logged and handled gracefully
-      # We'll force an error by making the dynamic_fields= setter raise
-      Setting.expects(:dynamic_fields=).raises(StandardError.new("Database error")).once
+      # We'll force an error by making the []= method raise
+      Setting.expects(:[]=).with("plaid_client_id", "test").raises(StandardError.new("Database error")).once
 
       # Mock logger to verify error is logged
       Rails.logger.expects(:error).with(regexp_matches(/Failed to update provider settings.*Database error/)).once

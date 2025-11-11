@@ -11,9 +11,8 @@ class Setting < RailsSettings::Base
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
 
-  # Single hash field for all dynamic provider credentials and other dynamic settings
-  # This allows unlimited dynamic fields without declaring them upfront
-  field :dynamic_fields, type: :hash, default: {}
+  # Dynamic fields are now stored as individual entries with "dynamic:" prefix
+  # This prevents race conditions and ensures each field is independently managed
 
   # Onboarding and app settings
   ONBOARDING_STATES = %w[open closed invite_only].freeze
@@ -50,7 +49,7 @@ class Setting < RailsSettings::Base
     end
 
     # Support dynamic field access via bracket notation
-    # First checks if it's a declared field, then falls back to dynamic_fields hash
+    # First checks if it's a declared field, then falls back to individual dynamic entries
     def [](key)
       key_str = key.to_s
 
@@ -58,8 +57,8 @@ class Setting < RailsSettings::Base
       if respond_to?(key_str)
         public_send(key_str)
       else
-        # Fall back to dynamic_fields hash
-        dynamic_fields[key_str]
+        # Fall back to individual dynamic entry lookup
+        find_by(var: dynamic_key_name(key_str))&.value
       end
     end
 
@@ -70,21 +69,26 @@ class Setting < RailsSettings::Base
       if respond_to?("#{key_str}=")
         public_send("#{key_str}=", value)
       else
-        # Otherwise, manage in dynamic_fields hash
-        current_dynamic = dynamic_fields.dup
+        # Store as individual dynamic entry
+        dynamic_key = dynamic_key_name(key_str)
         if value.nil?
-          current_dynamic.delete(key_str)          # treat nil as delete
+          where(var: dynamic_key).destroy_all
         else
-          current_dynamic[key_str] = value
+          # Use upsert to avoid conflicts
+          record = find_or_initialize_by(var: dynamic_key)
+          record.value = value
+          record.save!
         end
-        self.dynamic_fields = current_dynamic      # persists & busts cache
       end
     end
 
     # Check if a dynamic field exists (useful to distinguish nil value vs missing key)
     def key?(key)
       key_str = key.to_s
-      respond_to?(key_str) || dynamic_fields.key?(key_str)
+      return true if respond_to?(key_str)
+
+      # Check if dynamic entry exists
+      where(var: dynamic_key_name(key_str)).exists?
     end
 
     # Delete a dynamic field
@@ -92,15 +96,21 @@ class Setting < RailsSettings::Base
       key_str = key.to_s
       return nil if respond_to?(key_str) # Can't delete declared fields
 
-      current_dynamic = dynamic_fields.dup
-      value = current_dynamic.delete(key_str)
-      self.dynamic_fields = current_dynamic
+      dynamic_key = dynamic_key_name(key_str)
+      value = self[key_str]
+      where(var: dynamic_key).destroy_all
       value
     end
 
     # List all dynamic field keys (excludes declared fields)
     def dynamic_keys
-      dynamic_fields.keys
+      where("var LIKE ?", "dynamic:%").pluck(:var).map { |var| var.sub(/^dynamic:/, "") }
+    end
+
+    private
+
+    def dynamic_key_name(key_str)
+      "dynamic:#{key_str}"
     end
   end
 
