@@ -35,8 +35,17 @@ namespace :sure do
       dry_raw    = (kv["dry_run"] || args[:dry_run]).to_s.downcase
       force_raw  = (kv["force"] || args[:force]).to_s.downcase
 
-      # Default to dry_run=true unless explicitly disabled
-      dry_run = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
+      # Default to dry_run=true unless explicitly disabled, and validate input strictly
+      if dry_raw.blank?
+        dry_run = true
+      elsif %w[1 true yes y].include?(dry_raw)
+        dry_run = true
+      elsif %w[0 false no n].include?(dry_raw)
+        dry_run = false
+      else
+        puts({ ok: false, error: "invalid_argument", message: "dry_run must be one of: true/yes/1 or false/no/0" }.to_json)
+        exit 1
+      end
       force   = %w[1 true yes y].include?(force_raw)
       days_i = 30 if days_i <= 0
 
@@ -154,7 +163,7 @@ namespace :sure do
             if external_id.nil?
               s_skipped += 1
               total_skipped += 1
-              uts({ warn: "missing_transaction_id", sfa_id: sfa.id, account_id: acct.id, name: sfa.name }.to_json)
+              puts({ warn: "missing_transaction_id", sfa_id: sfa.id, account_id: acct.id, name: sfa.name }.to_json)
               next
             end
 

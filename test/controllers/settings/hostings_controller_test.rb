@@ -25,13 +25,12 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   test "cannot edit when self hosting is disabled" do
     @provider.stubs(:usage).returns(@usage_response)
 
-    with_env_overrides SELF_HOSTED: "false" do
-      get settings_hosting_url
-      assert_response :forbidden
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    get settings_hosting_url
+    assert_response :forbidden
 
-      patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
-      assert_response :forbidden
-    end
+    patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
+    assert_response :forbidden
   end
 
   test "should get edit when self hosting is enabled" do

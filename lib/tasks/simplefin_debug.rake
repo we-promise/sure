@@ -72,7 +72,7 @@ namespace :sure do
       end
 
       acct = Account
-        .where("LOWER(name) LIKE ?", "%#{args[:account_name].to_s.downcase}%")
+        .where("LOWER(name) LIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(args[:account_name].to_s.downcase)}%")
         .order(updated_at: :desc)
         .first
 
@@ -84,7 +84,7 @@ namespace :sure do
       limit = (args[:limit] || 15).to_i
       limit = 15 if limit <= 0
 
-      entries = acct.entries.where(entryable_type: "Transaction").order(date: :desc).limit(limit)
+      entries = acct.entries.includes(:entryable).where(entryable_type: "Transaction").order(date: :desc).limit(limit)
       out = entries.map do |e|
         {
           id: e.id,

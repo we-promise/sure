@@ -64,7 +64,7 @@ module SimplefinItems
             item.simplefin_accounts.exists?
           end
           @simplefin_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
-        rescue => e
+        rescue StandardError => e
           Rails.logger.warn("SimpleFin card: CTA computation failed for item #{item.id}: #{e.class} - #{e.message}")
           @simplefin_show_relink_map[item.id] = false
         end
