@@ -74,10 +74,7 @@ class Setting < RailsSettings::Base
         if value.nil?
           where(var: dynamic_key).destroy_all
         else
-          # Use upsert to avoid conflicts
-          record = find_or_initialize_by(var: dynamic_key)
-          record.value = value
-          record.save!
+          super(dynamic_key, value)
         end
       end
     end
