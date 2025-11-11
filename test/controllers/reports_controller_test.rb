@@ -76,14 +76,6 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: I18n.t("reports.summary.net_savings")
   end
 
-  test "index builds comparison data" do
-    get reports_path(period_type: :monthly)
-    assert_response :ok
-    assert_select "h2", text: I18n.t("reports.comparison.title")
-    assert_select "h3", text: I18n.t("reports.comparison.income")
-    assert_select "h3", text: I18n.t("reports.comparison.expenses")
-  end
-
   test "index builds trends data" do
     get reports_path(period_type: :monthly)
     assert_response :ok

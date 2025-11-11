@@ -367,6 +367,11 @@
       }
     }
   }
+
+  textarea.form-field__input {
+    @apply whitespace-normal overflow-auto;
+    text-overflow: clip;
+  }
   
   select.form-field__input {
     @apply pr-10 appearance-none;
