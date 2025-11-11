@@ -52,15 +52,21 @@ class Holding < ApplicationRecord
   # Day change based on previous holding snapshot (same account/security/currency)
   # Returns a Trend struct similar to other trend usages or nil if no prior snapshot.
   def day_change
-    return nil unless amount_money
-    prev = account.holdings
-                 .where(security_id: security_id, currency: currency)
-                 .where("date < ?", date)
-                 .order(date: :desc)
-                 .first
-    return nil unless prev&.amount_money
+    # Memoize even when nil to avoid repeated queries during a request lifecycle
+    return @day_change if instance_variable_defined?(:@day_change)
 
-    Trend.new current: amount_money, previous: prev.amount_money
+    @day_change = begin
+      return nil unless amount_money
+
+      prev = account.holdings
+                   .where(security_id: security_id, currency: currency)
+                   .where("date < ?", date)
+                   .order(date: :desc)
+                   .first
+      return nil unless prev&.amount_money
+
+      Trend.new current: amount_money, previous: prev.amount_money
+    end
   end
 
   def trades

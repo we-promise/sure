@@ -50,9 +50,12 @@ namespace :sure do
     limit = raw_limit.to_i
     limit = nil if limit <= 0
 
+    # Default to non-destructive (dry run) unless explicitly disabled
     dry_run = case raw_dry.to_s.strip.downcase
+    when "0", "false", "no", "n" then false
     when "1", "true", "yes", "y" then true
-    else false
+    else
+      true
     end
 
     # Guard: ensure encryption is configured (centralized on the model)

@@ -10,7 +10,17 @@ namespace :sure do
       dry_raw  = args[:dry_run].to_s.downcase
 
       # Default to non-destructive (dry run) unless explicitly disabled
-      dry_run = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
+      # Accept only explicit true/false values; abort on invalid input to prevent accidental destructive runs
+      if dry_raw.blank?
+        dry_run = true
+      elsif %w[1 true yes y].include?(dry_raw)
+        dry_run = true
+      elsif %w[0 false no n].include?(dry_raw)
+        dry_run = false
+      else
+        puts({ ok: false, error: "invalid_argument", message: "dry_run must be one of: true/yes/1 or false/no/0" }.to_json)
+        exit 1
+      end
 
       unless item_id.present?
         puts({ ok: false, error: "usage", example: "bin/rails 'sure:simplefin:unlink_item[ITEM_UUID,true]'" }.to_json)

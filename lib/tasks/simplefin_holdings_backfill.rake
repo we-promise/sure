@@ -50,7 +50,17 @@ namespace :sure do
       dry_raw      = (kv["dry_run"] || args[:dry_run]).to_s.downcase
       sleep_ms     = ((kv["sleep_ms"] || args[:sleep_ms] || 200).to_i).clamp(0, 5000)
 
-      dry_run = dry_raw.blank? ? true : %w[1 true yes y].include?(dry_raw)
+      # Default to dry_run=true unless explicitly disabled, and validate input strictly
+      if dry_raw.blank?
+        dry_run = true
+      elsif %w[1 true yes y].include?(dry_raw)
+        dry_run = true
+      elsif %w[0 false no n].include?(dry_raw)
+        dry_run = false
+      else
+        puts({ ok: false, error: "invalid_argument", message: "dry_run must be one of: true/yes/1 or false/no/0" }.to_json)
+        exit 1
+      end
 
       # Select SimplefinAccounts to process
       sfas = []

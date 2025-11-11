@@ -815,6 +815,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
     t.jsonb "org_data"
     t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
+    t.index ["simplefin_item_id", "account_id"], name: "idx_unique_sfa_per_item_and_upstream", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
   end
 
@@ -928,8 +929,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
     t.jsonb "locked_attributes", default: {}
     t.string "kind", default: "standard", null: false
     t.string "external_id"
+    t.jsonb "extra", default: {}, null: false
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
+    t.index ["extra"], name: "index_transactions_on_extra", using: :gin
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
   end
