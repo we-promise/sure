@@ -41,16 +41,16 @@ namespace :sure do
       # Recursively redact sensitive fields from output
       def redact_sensitive(obj)
         case obj
-      when Hash
-        obj.except(:name, :payee, :account_number).transform_values { |v| redact_sensitive(v) }
-      when Array
-        obj.map { |item| redact_sensitive(item) }
-      else
-        obj
-      end
+        when Hash
+          obj.except(:name, :payee, :account_number).transform_values { |v| redact_sensitive(v) }
+        when Array
+          obj.map { |item| redact_sensitive(item) }
+        else
+          obj
+        end
     end
 
-    safe_details = redact_sensitive(Array(results))
+      safe_details = redact_sensitive(Array(results))
 
       puts({ ok: true, dry_run: dry_run, item_id: item.id, unlinked_count: safe_details.size, details: safe_details }.to_json)
     rescue ActiveRecord::RecordNotFound
