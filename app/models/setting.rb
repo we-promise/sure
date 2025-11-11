@@ -109,9 +109,9 @@ class Setting < RailsSettings::Base
 
     private
 
-    def dynamic_key_name(key_str)
-      "dynamic:#{key_str}"
-    end
+      def dynamic_key_name(key_str)
+        "dynamic:#{key_str}"
+      end
   end
 
   # Validates OpenAI configuration requires model when custom URI base is set
