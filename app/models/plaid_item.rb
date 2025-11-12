@@ -24,8 +24,12 @@ class PlaidItem < ApplicationRecord
 
   # Get accounts from both new and legacy systems
   def accounts
-    # Collect accounts from plaid_accounts using both systems
-    plaid_accounts.map(&:current_account).compact.uniq
+    # Preload associations to avoid N+1 queries
+    plaid_accounts
+      .includes(:account, account_provider: :account)
+      .map(&:current_account)
+      .compact
+      .uniq
   end
 
   def get_update_link_token(webhooks_url:, redirect_url:)

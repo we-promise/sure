@@ -26,8 +26,12 @@ class SimplefinItem < ApplicationRecord
 
   # Get accounts from both new and legacy systems
   def accounts
-    # Collect accounts from simplefin_accounts using both systems
-    simplefin_accounts.map(&:current_account).compact.uniq
+    # Preload associations to avoid N+1 queries
+    simplefin_accounts
+      .includes(:account, account_provider: :account)
+      .map(&:current_account)
+      .compact
+      .uniq
   end
 
   def destroy_later

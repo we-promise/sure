@@ -57,9 +57,22 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "link_existing_account links plaid account to existing account" do
     account = accounts(:depository)
-    plaid_account = plaid_accounts(:one)
+
+    # Create a new unlinked plaid_account for testing
+    plaid_account = PlaidAccount.create!(
+      plaid_item: plaid_items(:one),
+      name: "Test Plaid Account",
+      plaid_id: "test_acc_123",
+      plaid_type: "depository",
+      plaid_subtype: "checking",
+      currency: "USD",
+      current_balance: 1000,
+      available_balance: 1000
+    )
 
     assert_not account.linked?
+    assert_nil plaid_account.account
+    assert_nil plaid_account.account_provider
 
     assert_difference "AccountProvider.count", 1 do
       post link_existing_account_plaid_items_url, params: {

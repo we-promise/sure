@@ -47,8 +47,8 @@ module Account::Linkable
     return provider&.provider_name if provider.present?
 
     # Fall back to legacy system
-    return "Plaid" if plaid_account.present?
-    return "SimpleFIN" if simplefin_account.present?
+    return "plaid" if plaid_account.present?
+    return "simplefin" if simplefin_account.present?
 
     nil
   end
