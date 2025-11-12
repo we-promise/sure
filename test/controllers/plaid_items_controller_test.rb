@@ -46,4 +46,32 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
   end
+
+  test "select_existing_account redirects when no available plaid accounts" do
+    account = accounts(:depository)
+
+    get select_existing_account_plaid_items_url(account_id: account.id, region: "us")
+    assert_redirected_to account_path(account)
+    assert_equal "No available Plaid accounts to link. Please connect a new Plaid account first.", flash[:alert]
+  end
+
+  test "link_existing_account links plaid account to existing account" do
+    account = accounts(:depository)
+    plaid_account = plaid_accounts(:one)
+
+    assert_not account.linked?
+
+    assert_difference "AccountProvider.count", 1 do
+      post link_existing_account_plaid_items_url, params: {
+        account_id: account.id,
+        plaid_account_id: plaid_account.id
+      }
+    end
+
+    account.reload
+    assert account.linked?, "Account should be linked after creating AccountProvider"
+    assert_equal 1, account.account_providers.count
+    assert_redirected_to accounts_path
+    assert_equal "Account successfully linked to Plaid", flash[:notice]
+  end
 end

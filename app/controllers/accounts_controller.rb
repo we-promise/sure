@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink]
+  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -86,10 +86,68 @@ class AccountsController < ApplicationController
 
   def unlink
     if @account.linked?
+      # Remove new system links (account_providers join table)
       @account.account_providers.destroy_all
+
+      # Remove legacy system links (foreign keys)
+      @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
+
       redirect_to accounts_path, notice: "Account unlinked successfully. It is now a manual account."
     else
       redirect_to account_path(@account), alert: "Account is not linked to a provider"
+    end
+  end
+
+  def select_provider
+    if @account.linked?
+      redirect_to account_path(@account), alert: "Account is already linked to a provider"
+      return
+    end
+
+    @available_providers = []
+
+    # Check SimpleFIN
+    if family.can_connect_simplefin?
+      @available_providers << {
+        name: "SimpleFIN",
+        key: "simplefin",
+        description: "Connect to your bank via SimpleFIN",
+        path: select_existing_account_simplefin_items_path(account_id: @account.id)
+      }
+    end
+
+    # Check Plaid US
+    if family.can_connect_plaid_us?
+      @available_providers << {
+        name: "Plaid",
+        key: "plaid_us",
+        description: "Connect to your US bank via Plaid",
+        path: select_existing_account_plaid_items_path(account_id: @account.id, region: "us")
+      }
+    end
+
+    # Check Plaid EU
+    if family.can_connect_plaid_eu?
+      @available_providers << {
+        name: "Plaid (EU)",
+        key: "plaid_eu",
+        description: "Connect to your EU bank via Plaid",
+        path: select_existing_account_plaid_items_path(account_id: @account.id, region: "eu")
+      }
+    end
+
+    # Check Lunchflow
+    if family.can_connect_lunchflow?
+      @available_providers << {
+        name: "Lunchflow",
+        key: "lunchflow",
+        description: "Connect to your bank via Lunchflow",
+        path: select_existing_account_lunchflow_items_path(account_id: @account.id)
+      }
+    end
+
+    if @available_providers.empty?
+      redirect_to account_path(@account), alert: "No providers are currently configured"
     end
   end
 

@@ -3,6 +3,7 @@ en:
   accounts:
     account:
       link_lunchflow: Link with Lunch Flow
+      link_provider: Link with provider
       unlink_provider: Unlink from provider
       troubleshoot: Troubleshoot
     chart:
@@ -95,6 +96,9 @@ en:
       warning_transactions_kept: All existing transactions and balances will be preserved
       warning_can_delete: After unlinking, you will be able to delete the account if needed
       confirm_button: Confirm and unlink
+    select_provider:
+      title: Select a provider to link
+      description: "Choose which provider you want to use to link %{account_name}"
 
   email_confirmations:
     new:

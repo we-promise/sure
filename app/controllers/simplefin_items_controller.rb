@@ -186,6 +186,46 @@ class SimplefinItemsController < ApplicationController
     redirect_to accounts_path, notice: t(".success")
   end
 
+  def select_existing_account
+    @account = Current.family.accounts.find(params[:account_id])
+
+    # Get all SimpleFIN accounts from this family's SimpleFIN items
+    # that are not yet linked to any account
+    @available_simplefin_accounts = Current.family.simplefin_items
+      .includes(:simplefin_accounts)
+      .flat_map(&:simplefin_accounts)
+      .select { |sa| sa.account_provider.nil? && sa.account.nil? } # Not linked via new or legacy system
+
+    if @available_simplefin_accounts.empty?
+      redirect_to account_path(@account), alert: "No available SimpleFIN accounts to link. Please connect a new SimpleFIN account first."
+    end
+  end
+
+  def link_existing_account
+    @account = Current.family.accounts.find(params[:account_id])
+    simplefin_account = SimplefinAccount.find(params[:simplefin_account_id])
+
+    # Verify the SimpleFIN account belongs to this family's SimpleFIN items
+    unless Current.family.simplefin_items.include?(simplefin_account.simplefin_item)
+      redirect_to account_path(@account), alert: "Invalid SimpleFIN account selected"
+      return
+    end
+
+    # Verify the SimpleFIN account is not already linked
+    if simplefin_account.account_provider.present? || simplefin_account.account.present?
+      redirect_to account_path(@account), alert: "This SimpleFIN account is already linked"
+      return
+    end
+
+    # Create the link via AccountProvider
+    AccountProvider.create!(
+      account: @account,
+      provider: simplefin_account
+    )
+
+    redirect_to accounts_path, notice: "Account successfully linked to SimpleFIN"
+  end
+
   private
 
     def set_simplefin_item
