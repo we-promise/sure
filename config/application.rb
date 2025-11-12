@@ -41,5 +41,9 @@ module Sure
 
     # Enable Rack::Attack middleware for API rate limiting
     config.middleware.use Rack::Attack
+
+    # Plaid configuration (loaded lazily on first access)
+    config.plaid = nil
+    config.plaid_eu = nil
   end
 end
