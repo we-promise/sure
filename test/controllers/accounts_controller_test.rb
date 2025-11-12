@@ -57,4 +57,60 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)
   end
+
+  test "confirms unlink for linked account" do
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: @account, provider: plaid_account)
+
+    get confirm_unlink_account_url(@account)
+    assert_response :success
+  end
+
+  test "redirects when confirming unlink for unlinked account" do
+    get confirm_unlink_account_url(@account)
+    assert_redirected_to account_url(@account)
+    assert_equal "Account is not linked to a provider", flash[:alert]
+  end
+
+  test "unlinks linked account successfully" do
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: @account, provider: plaid_account)
+    @account.reload
+
+    assert @account.linked?
+
+    delete unlink_account_url(@account)
+    @account.reload
+
+    assert_not @account.linked?
+    assert_redirected_to accounts_path
+    assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
+  end
+
+  test "redirects when unlinking unlinked account" do
+    delete unlink_account_url(@account)
+    assert_redirected_to account_url(@account)
+    assert_equal "Account is not linked to a provider", flash[:alert]
+  end
+
+  test "unlinked account can be deleted" do
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: @account, provider: plaid_account)
+    @account.reload
+
+    # Cannot delete while linked
+    delete account_url(@account)
+    assert_redirected_to account_url(@account)
+    assert_equal "Cannot delete a linked account", flash[:alert]
+
+    # Unlink the account
+    delete unlink_account_url(@account)
+    @account.reload
+
+    # Now can delete
+    delete account_url(@account)
+    assert_redirected_to accounts_path
+    assert_enqueued_with job: DestroyJob
+    assert_equal "Account scheduled for deletion", flash[:notice]
+  end
 end

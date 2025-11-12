@@ -3,6 +3,7 @@ en:
   accounts:
     account:
       link_lunchflow: Link with Lunch Flow
+      unlink_provider: Unlink from provider
       troubleshoot: Troubleshoot
     chart:
       data_not_available: Data not available for the selected period
@@ -85,6 +86,15 @@ en:
       credit_card: Credit Card
       loan: Loan
       other_liability: Other Liability
+    confirm_unlink:
+      title: Unlink account from provider?
+      description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."
+      warning_title: What this means
+      warning_no_sync: The account will no longer sync automatically with your bank
+      warning_manual_updates: You will need to add transactions and update balances manually
+      warning_transactions_kept: All existing transactions and balances will be preserved
+      warning_can_delete: After unlinking, you will be able to delete the account if needed
+      confirm_button: Confirm and unlink
 
   email_confirmations:
     new:

@@ -192,6 +192,8 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      get :confirm_unlink
+      delete :unlink
     end
 
     collection do

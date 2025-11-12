@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active show destroy]
+  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink]
   include Periodable
 
   def index
@@ -75,6 +75,21 @@ class AccountsController < ApplicationController
     else
       @account.destroy_later
       redirect_to accounts_path, notice: "Account scheduled for deletion"
+    end
+  end
+
+  def confirm_unlink
+    unless @account.linked?
+      redirect_to account_path(@account), alert: "Account is not linked to a provider"
+    end
+  end
+
+  def unlink
+    if @account.linked?
+      @account.account_providers.destroy_all
+      redirect_to accounts_path, notice: "Account unlinked successfully. It is now a manual account."
+    else
+      redirect_to account_path(@account), alert: "Account is not linked to a provider"
     end
   end
 

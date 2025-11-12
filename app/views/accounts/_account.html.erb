@@ -40,6 +40,13 @@
                       title: t("accounts.account.link_lunchflow") do %>
             <%= icon("link", size: "sm") %>
           <% end %>
+        <% elsif account.linked? %>
+          <%= link_to confirm_unlink_account_path(account),
+                      data: { turbo_frame: :modal },
+                      class: "group-hover/account:flex hidden hover:opacity-80 items-center justify-center gap-1",
+                      title: t("accounts.account.unlink_provider") do %>
+            <%= icon("unlink", size: "sm") %>
+          <% end %>
         <% end %>
       <% end %>
     </div>
