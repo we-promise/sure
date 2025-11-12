@@ -44,7 +44,8 @@ class LunchflowAccount::Processor
 
       account.update!(
         balance: balance,
-        cash_balance: balance
+        cash_balance: balance,
+        currency: lunchflow_account.currency
       )
     end
 
