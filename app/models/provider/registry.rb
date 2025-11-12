@@ -41,11 +41,7 @@ class Provider::Registry
       end
 
       def plaid_us
-        # Lazy load configuration if not already set
-        if Rails.application.config.plaid.nil?
-          Provider::PlaidAdapter.reload_configuration
-        end
-
+        Provider::PlaidAdapter.ensure_configuration_loaded
         config = Rails.application.config.plaid
 
         return nil unless config.present?
@@ -54,11 +50,7 @@ class Provider::Registry
       end
 
       def plaid_eu
-        # Lazy load configuration if not already set
-        if Rails.application.config.plaid_eu.nil?
-          Provider::PlaidEuAdapter.reload_configuration
-        end
-
+        Provider::PlaidEuAdapter.ensure_configuration_loaded
         config = Rails.application.config.plaid_eu
 
         return nil unless config.present?
