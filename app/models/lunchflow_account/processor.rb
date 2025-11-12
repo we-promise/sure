@@ -1,4 +1,6 @@
 class LunchflowAccount::Processor
+  include CurrencyNormalizable
+
   attr_reader :lunchflow_account
 
   def initialize(lunchflow_account)
@@ -43,11 +45,14 @@ class LunchflowAccount::Processor
         balance = balance.abs
       end
 
+      # Normalize currency with fallback chain: parsed lunchflow currency -> existing account currency -> USD
+      currency = parse_currency(lunchflow_account.currency) || account.currency || "USD"
+
       # Update account balance
       account.update!(
         balance: balance,
         cash_balance: balance,
-        currency: lunchflow_account.currency
+        currency: currency
       )
     end
 
