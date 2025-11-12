@@ -37,11 +37,13 @@ class LunchflowAccount::Processor
       account = lunchflow_account.current_account
       balance = lunchflow_account.current_balance || 0
 
-      # For credit cards and loans, ensure positive balances
+      # For liability accounts (credit cards and loans), ensure positive balances
+      # LunchFlow may return negative values for liabilities, but Sure expects positive
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
         balance = balance.abs
       end
 
+      # Update account balance
       account.update!(
         balance: balance,
         cash_balance: balance,
