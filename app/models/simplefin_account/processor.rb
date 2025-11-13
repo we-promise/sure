@@ -49,7 +49,8 @@ class SimplefinAccount::Processor
 
       account.update!(
         balance: balance,
-        cash_balance: cash_balance
+        cash_balance: cash_balance,
+        currency: simplefin_account.currency
       )
     end
 

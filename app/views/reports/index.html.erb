@@ -87,15 +87,6 @@
       } %>
     </section>
 
-    <%# Comparison Chart %>
-    <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
-      <%= render partial: "reports/comparison_chart", locals: {
-        comparison_data: @comparison_data,
-        period_type: @period_type,
-        start_date: @start_date
-      } %>
-    </section>
-
     <%# Trends & Insights %>
     <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
       <%= render partial: "reports/trends_insights", locals: {

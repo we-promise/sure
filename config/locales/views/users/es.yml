@@ -1,0 +1,16 @@
+---
+es:
+  users:
+    destroy:
+      success: Tu cuenta ha sido eliminada.
+    update:
+      email_change_failed: No se pudo cambiar la dirección de correo electrónico.
+      email_change_initiated: Por favor, revisa tu nueva dirección de correo electrónico
+       para obtener instrucciones de confirmación.
+      success: Tu perfil ha sido actualizado.
+    reset:
+      success: Tu cuenta ha sido restablecida. Los datos se eliminarán en segundo plano en algún momento.
+      unauthorized: No estás autorizado para realizar esta acción.
+    reset_with_sample_data:
+      success: Tu cuenta ha sido restablecida y se están preparando datos de muestra. 
+        Verás datos de demostración en breve.

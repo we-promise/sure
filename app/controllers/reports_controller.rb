@@ -25,9 +25,6 @@ class ReportsController < ApplicationController
     # Calculate summary metrics
     @summary_metrics = build_summary_metrics
 
-    # Build comparison data
-    @comparison_data = build_comparison_data
-
     # Build trend data (last 6 months)
     @trends_data = build_trends_data
 
@@ -193,25 +190,6 @@ class ReportsController < ApplicationController
       (budget.actual_spending / budget.allocated_spending * 100).round(1)
     rescue StandardError
       nil
-    end
-
-    def build_comparison_data
-      currency_symbol = Money::Currency.new(Current.family.currency).symbol
-
-      # Totals are BigDecimal amounts in dollars - pass directly to Money.new()
-      {
-        current: {
-          income: @current_income_totals.total,
-          expenses: @current_expense_totals.total,
-          net: @current_income_totals.total - @current_expense_totals.total
-        },
-        previous: {
-          income: @previous_income_totals.total,
-          expenses: @previous_expense_totals.total,
-          net: @previous_income_totals.total - @previous_expense_totals.total
-        },
-        currency_symbol: currency_symbol
-      }
     end
 
     def build_trends_data
