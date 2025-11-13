@@ -1,0 +1,63 @@
+---
+es:
+  lunchflow_items:
+    create:
+      success: Conexión con Lunch Flow creada con éxito
+    destroy:
+      success: Conexión con Lunch Flow eliminada
+    index:
+      title: Conexiones de Lunch Flow
+    loading:
+      loading_message: Cargando cuentas de Lunch Flow...
+      loading_title: Cargando
+    link_accounts:
+      all_already_linked:
+        one: "La cuenta seleccionada (%{names}) ya está vinculada"
+        other: "Todas las %{count} cuentas seleccionadas ya están vinculadas: %{names}"
+      api_error: "Error de API: %{message}"
+      link_failed: Error al vincular cuentas
+      no_accounts_selected: Por favor, selecciona al menos una cuenta
+      partial_success: "%{created_count} cuenta(s) vinculada(s) con éxito. %{already_linked_count} cuenta(s) ya estaban vinculadas: %{already_linked_names}"
+      success:
+        one: "%{count} cuenta vinculada con éxito"
+        other: "%{count} cuentas vinculadas con éxito"
+    lunchflow_item:
+      delete: Eliminar conexión
+      deletion_in_progress: eliminación en progreso...
+      error: Error
+      no_accounts_description: Esta conexión aún no tiene cuentas vinculadas.
+      no_accounts_title: Sin cuentas
+      status: "Sincronizado hace %{timestamp}"
+      status_never: Nunca sincronizado
+      syncing: Sincronizando...
+    select_accounts:
+      accounts_selected: cuentas seleccionadas
+      api_error: "Error de API: %{message}"
+      cancel: Cancelar
+      description: Selecciona las cuentas que deseas vincular a tu cuenta de Sure.
+      link_accounts: Vincular cuentas seleccionadas
+      no_accounts_found: No se encontraron cuentas. Por favor, verifica la configuración de tu clave API.
+      no_api_key: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
+      title: Seleccionar cuentas de Lunch Flow
+    select_existing_account:
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor
+      all_accounts_already_linked: Todas las cuentas de Lunch Flow ya están vinculadas
+      api_error: "Error de API: %{message}"
+      cancel: Cancelar
+      description: Selecciona una cuenta de Lunch Flow para vincular con esta cuenta. Las transacciones se sincronizarán y desduplicarán automáticamente.
+      link_account: Vincular cuenta
+      no_account_specified: No se especificó ninguna cuenta
+      no_accounts_found: No se encontraron cuentas de Lunch Flow. Por favor, verifica la configuración de tu clave API.
+      no_api_key: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
+      title: "Vincular %{account_name} con Lunch Flow"
+    link_existing_account:
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor
+      api_error: "Error de API: %{message}"
+      lunchflow_account_already_linked: Esta cuenta de Lunch Flow ya está vinculada a otra cuenta
+      lunchflow_account_not_found: Cuenta de Lunch Flow no encontrada
+      missing_parameters: Faltan parámetros requeridos
+      success: "%{account_name} vinculada con Lunch Flow con éxito"
+    sync:
+      success: Sincronización iniciada
+    update:
+      success: Conexión con Lunch Flow actualizada

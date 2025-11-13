@@ -1,0 +1,37 @@
+---
+es:
+  holdings:
+    cash:
+      brokerage_cash: Efectivo en la cuenta de corretaje
+    destroy:
+      success: Posición eliminada
+    holding:
+      per_share: por acción
+      shares: "%{qty} acciones"
+    index:
+      average_cost: Costo promedio
+      holdings: Posiciones
+      name: Nombre
+      new_holding: Nueva transacción
+      no_holdings: No hay posiciones para mostrar.
+      return: Rendimiento total
+      weight: Peso
+    missing_price_tooltip:
+      description: Esta inversión tiene valores faltantes y no pudimos calcular
+        su rendimiento o valor.
+      missing_data: Datos faltantes
+    show:
+      avg_cost_label: Costo promedio
+      current_market_price_label: Precio de mercado actual
+      delete: Eliminar
+      delete_subtitle: Esto eliminará la posición y todas tus operaciones asociadas
+        en esta cuenta. Esta acción no se puede deshacer.
+      delete_title: Eliminar posición
+      history: Historial
+      overview: Resumen
+      portfolio_weight_label: Peso en el portafolio
+      settings: Configuración
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} acciones de %{security} a %{price}"
+      total_return_label: Rendimiento total
+      unknown: Desconocido

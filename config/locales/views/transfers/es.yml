@@ -1,0 +1,30 @@
+---
+es:
+  transfers:
+    create:
+      success: Transferencia creada
+    destroy:
+      success: Transferencia eliminada
+    form:
+      amount: Importe
+      date: Fecha
+      expense: Gasto
+      from: Desde
+      income: Ingreso
+      select_account: Seleccionar cuenta
+      submit: Crear transferencia
+      to: Hacia
+      transfer: Transferencia
+    new:
+      title: Nueva transferencia
+    show:
+      delete: Eliminar transferencia
+      delete_subtitle: Esto eliminará la transferencia. No se eliminarán las transacciones subyacentes.
+      delete_title: ¿Eliminar transferencia?
+      details: Detalles
+      note_label: Notas
+      note_placeholder: Añade una nota a esta transferencia
+      overview: Resumen
+      settings: Configuración
+    update:
+      success: Transferencia actualizada

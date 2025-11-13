@@ -1,0 +1,65 @@
+---
+es:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Controla cómo se registran nuevas personas en tu instancia de %{product}.
+        email_confirmation_description: Cuando está habilitado, los usuarios deben confirmar su dirección de correo electrónico al cambiarla.
+        email_confirmation_title: Requerir confirmación de correo electrónico
+        generate_tokens: Generar nuevo código
+        generated_tokens: Códigos generados
+        title: Incorporación
+        states:
+          open: Abierto
+          closed: Cerrado
+          invite_only: Solo con invitación
+      show:
+        general: Configuración General
+        financial_data_providers: Proveedores de Datos Financieros
+        invites: Códigos de Invitación
+        title: Autoalojamiento
+        danger_zone: Zona de Peligro
+        clear_cache: Limpiar caché de datos
+        clear_cache_warning: Limpiar la caché de datos eliminará todos los tipos de cambio, precios de valores, 
+          saldos de cuentas y otros datos. Esto no eliminará cuentas, transacciones, categorías u otros datos propiedad del usuario.
+        confirm_clear_cache:
+          title: ¿Limpiar caché de datos?
+          body: ¿Estás seguro de que deseas limpiar la caché de datos? Esto eliminará todos los tipos de cambio, 
+            precios de valores, saldos de cuentas y otros datos. Esta acción no se puede deshacer.
+      brand_fetch_settings:
+        description: Introduce el ID de Cliente proporcionado por Brand Fetch
+        label: ID de Cliente
+        placeholder: Introduce tu ID de Cliente aquí
+        title: Configuración de Brand Fetch
+      openai_settings:
+        description: Introduce el token de acceso y, opcionalmente, configura un proveedor compatible con OpenAI personalizado
+        env_configured_message: Configurado con éxito a través de variables de entorno.
+        access_token_label: Token de Acceso
+        access_token_placeholder: Introduce tu token de acceso aquí
+        uri_base_label: URL Base de la API (Opcional)
+        uri_base_placeholder: "https://api.openai.com/v1 (por defecto)"
+        model_label: Modelo (Opcional)
+        model_placeholder: "gpt-4.1 (por defecto)"
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance proporciona acceso gratuito a precios de acciones, tipos de cambio y datos financieros sin necesidad de una clave API.
+        status_active: Yahoo Finance está activo y funcionando
+        status_inactive: La conexión con Yahoo Finance falló
+        connection_failed: No se pudo conectar con Yahoo Finance
+        troubleshooting: Verifica tu conexión a internet y la configuración del firewall. Yahoo Finance puede estar temporalmente no disponible.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} llamadas diarias a la API utilizadas (%{percentage})"
+        description: Introduce la clave API proporcionada por Twelve Data
+        env_configured_message: Configurado con éxito a través de la variable de entorno TWELVE_DATA_API_KEY.
+        label: Clave API
+        placeholder: Introduce tu clave API aquí
+        plan: Plan %{plan}
+        title: Twelve Data
+      update:
+        failure: Valor de configuración inválido
+        success: Configuración actualizada
+        invalid_onboarding_state: Estado de incorporación inválido
+      clear_cache:
+        cache_cleared: La caché de datos ha sido limpiada. Esto puede tardar unos momentos en completarse.
+      not_authorized: No estás autorizado para realizar esta acción

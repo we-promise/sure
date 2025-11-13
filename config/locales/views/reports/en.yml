@@ -24,20 +24,6 @@ en:
       income_minus_expenses: Income minus expenses
       of_budget_used: of budget used
       no_budget_data: No budget data for this period
-    comparison:
-      title: Period Comparison
-      currency: "Currency: %{symbol}"
-      income: Income
-      expenses: Expenses
-      net_savings: Net Savings
-      current: Current Period
-      previous: Previous Period
-      no_data: No data available
-      status:
-        improved: Improved
-        decreased: Decreased
-        reduced: Reduced
-        increased: Increased
     budget_performance:
       title: Budget Performance
       spent: Spent
