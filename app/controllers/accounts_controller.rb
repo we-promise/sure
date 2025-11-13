@@ -136,12 +136,12 @@ class AccountsController < ApplicationController
       }
     end
 
-    # Check Lunchflow
+    # Check Lunch Flow
     if family.can_connect_lunchflow?
       @available_providers << {
-        name: "Lunchflow",
+        name: "Lunch Flow",
         key: "lunchflow",
-        description: "Connect to your bank via Lunchflow",
+        description: "Connect to your bank via Lunch Flow",
         path: select_existing_account_lunchflow_items_path(account_id: @account.id)
       }
     end
