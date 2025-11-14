@@ -73,14 +73,14 @@ class CategoryImport < Import
 
   private
 
-  def ensure_placeholder_category(name)
-    trimmed_name = name.to_s.strip
-    return if trimmed_name.blank?
+    def ensure_placeholder_category(name)
+      trimmed_name = name.to_s.strip
+      return if trimmed_name.blank?
 
-    family.categories.find_or_create_by!(name: trimmed_name) do |placeholder|
-      placeholder.color = Category::UNCATEGORIZED_COLOR
-      placeholder.classification = "expense"
-      placeholder.lucide_icon = "shapes"
+      family.categories.find_or_create_by!(name: trimmed_name) do |placeholder|
+        placeholder.color = Category::UNCATEGORIZED_COLOR
+        placeholder.classification = "expense"
+        placeholder.lucide_icon = "shapes"
+      end
     end
-  end
 end

@@ -16,7 +16,7 @@ class CategoryImportTest < ActiveSupport::TestCase
     import.generate_rows_from_csv
     assert_equal 3, import.rows.count
 
-    tracked_categories = Category.where(family: @family, name: ["Food & Drink", "Groceries", "Salary"])
+    tracked_categories = Category.where(family: @family, name: [ "Food & Drink", "Groceries", "Salary" ])
 
     assert_difference -> { tracked_categories.count }, 2 do
       import.send(:import!)
