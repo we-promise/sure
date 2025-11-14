@@ -1,5 +1,5 @@
 class Accounts::SyncAllJob < ApplicationJob
-  queue_as :default
+  queue_as :scheduled
 
   def perform
     Family.find_each do |family|
