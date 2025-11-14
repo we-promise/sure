@@ -5,8 +5,19 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     # Do not change, this is whitelisted in the Plaid Dashboard for local dev
     @redirect_url = "http://localhost:3000/accounts"
 
+    with_env_overrides(
+      "PLAID_CLIENT_ID" => "foo",
+      "PLAID_SECRET" => "bar"
+    ) do
+      Provider::PlaidAdapter.reload_configuration
+    end
+
     # A specialization of Plaid client with sandbox-only extensions
     @plaid = Provider::PlaidSandbox.new
+  end
+
+  teardown do
+    Provider::PlaidAdapter.reload_configuration
   end
 
   test "gets link token" do

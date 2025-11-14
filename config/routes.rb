@@ -153,6 +153,10 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
     end
+
+    member do
+      post :mark_as_recurring
+    end
   end
 
   resources :recurring_transactions, only: %i[index destroy] do
@@ -292,6 +296,7 @@ Rails.application.routes.draw do
 
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
     collection do
+      get :preload_accounts
       get :select_accounts
       post :link_accounts
       get :select_existing_account

@@ -100,4 +100,226 @@ class TransactionImportTest < ActiveSupport::TestCase
 
     assert_equal [ -100, 200, -300 ], @import.entries.map(&:amount)
   end
+
+  test "does not create duplicate when matching transaction exists with same name" do
+    account = accounts(:depository)
+
+    # Create an existing manual transaction
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+
+    # Try to import a CSV with the same transaction
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Coffee Shop,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should not create a new entry, should update the existing one
+    assert_no_difference -> { Entry.count } do
+      assert_no_difference -> { Transaction.count } do
+        @import.publish
+      end
+    end
+
+    # The existing entry should now be linked to the import
+    assert_equal @import.id, existing_entry.reload.import_id
+  end
+
+  test "creates new transaction when name differs even if date and amount match" do
+    account = accounts(:depository)
+
+    # Create an existing manual transaction
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      entryable: Transaction.new
+    )
+
+    # Try to import a CSV with same date/amount but different name
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Different Store,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should create a new entry because the name is different
+    assert_difference -> { Entry.count } => 1,
+                      -> { Transaction.count } => 1 do
+      @import.publish
+    end
+
+    # Both transactions should exist
+    assert_equal 2, account.entries.where(date: Date.new(2024, 1, 1), amount: 100).count
+  end
+
+  test "imports all identical transactions from CSV even when one exists in database" do
+    account = accounts(:depository)
+
+    # Create an existing manual transaction
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 50,
+      currency: "USD",
+      name: "Vending Machine",
+      entryable: Transaction.new
+    )
+
+    # Import CSV with 3 identical transactions (e.g., buying from vending machine 3 times)
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should update 1 existing and create 2 new (total of 3 in system)
+    # The first matching row claims the existing entry, the other 2 create new ones
+    assert_difference -> { Entry.count } => 2,
+                      -> { Transaction.count } => 2 do
+      @import.publish
+    end
+
+    # Should have exactly 3 identical transactions total
+    assert_equal 3, account.entries.where(
+      date: Date.new(2024, 1, 1),
+      amount: 50,
+      name: "Vending Machine"
+    ).count
+
+    # The existing entry should be linked to the import
+    assert_equal @import.id, existing_entry.reload.import_id
+  end
+
+  test "imports all identical transactions from CSV when none exist in database" do
+    account = accounts(:depository)
+
+    # Import CSV with 3 identical transactions (no existing entry in database)
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+      01/01/2024,Vending Machine,50
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should create all 3 as new transactions
+    assert_difference -> { Entry.count } => 3,
+                      -> { Transaction.count } => 3 do
+      @import.publish
+    end
+
+    # Should have exactly 3 identical transactions
+    assert_equal 3, account.entries.where(
+      date: Date.new(2024, 1, 1),
+      amount: 50,
+      name: "Vending Machine"
+    ).count
+  end
+
+  test "does not raise error when all accounts are properly mapped" do
+    # Import CSV with multiple accounts, all mapped
+    import_csv = <<~CSV
+      date,name,amount,account
+      01/01/2024,Coffee Shop,100,Checking Account
+      01/02/2024,Grocery Store,200,Credit Card
+    CSV
+
+    checking = accounts(:depository)
+    credit_card = accounts(:credit_card)
+
+    @import.update!(
+      account: nil,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      account_col_label: "account",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+
+    # Map both accounts
+    @import.mappings.create!(key: "Checking Account", mappable: checking, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "Credit Card", mappable: credit_card, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::CategoryMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::TagMapping")
+
+    @import.reload
+
+    # Should succeed without errors
+    assert_difference -> { Entry.count } => 2,
+                      -> { Transaction.count } => 2 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    # Check that each account got one entry from this import
+    assert_equal 1, checking.entries.where(import: @import).count
+    assert_equal 1, credit_card.entries.where(import: @import).count
+  end
 end

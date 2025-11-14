@@ -1,0 +1,15 @@
+---
+es:
+  impersonation_sessions:
+    approve:
+      success: Solicitud aprobada
+    complete:
+      success: Sesión completada
+    create:
+      success: Solicitud enviada al usuario. Esperando aprobación.
+    join:
+      success: Unido a la sesión
+    leave:
+      success: Salió de la sesión
+    reject:
+      success: Solicitud rechazada

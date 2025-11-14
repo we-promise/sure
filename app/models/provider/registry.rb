@@ -41,6 +41,7 @@ class Provider::Registry
       end
 
       def plaid_us
+        Provider::PlaidAdapter.ensure_configuration_loaded
         config = Rails.application.config.plaid
 
         return nil unless config.present?
@@ -49,6 +50,7 @@ class Provider::Registry
       end
 
       def plaid_eu
+        Provider::PlaidEuAdapter.ensure_configuration_loaded
         config = Rails.application.config.plaid_eu
 
         return nil unless config.present?

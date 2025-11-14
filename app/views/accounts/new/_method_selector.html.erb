@@ -1,7 +1,14 @@
 <%# locals: (path:, accountable_type:, show_us_link: true, show_eu_link: true, show_lunchflow_link: false) %>
 
 <%= render layout: "accounts/new/container", locals: { title: t(".title"), back_path: new_account_path } do %>
-  <div class="text-sm">
+  <div class="text-sm"
+       <% if show_lunchflow_link %>
+         data-controller="lunchflow-preload"
+         data-lunchflow-preload-accountable-type-value="<%= h(accountable_type) %>"
+         <% if params[:return_to] %>
+           data-lunchflow-preload-return-to-value="<%= h(params[:return_to]) %>"
+         <% end %>
+       <% end %>>
     <%= link_to path, class: "flex items-center gap-4 w-full text-center text-primary focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-gray-200 px-2 hover:bg-surface rounded-lg p-2" do %>
       <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
         <%= icon("keyboard") %>
@@ -39,12 +46,18 @@
                   class: "text-primary flex items-center gap-4 w-full text-center focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-primary px-2 hover:bg-surface rounded-lg p-2",
                   data: {
                     turbo_frame: "modal",
-                    turbo_action: "advance"
+                    turbo_action: "advance",
+                    lunchflow_preload_target: "link"
                   } do %>
         <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
           <%= icon("link-2") %>
         </span>
-        <%= t("accounts.new.method_selector.lunchflow_entry") %>
+        <span class="flex items-center gap-2">
+          <%= t("accounts.new.method_selector.lunchflow_entry") %>
+          <span data-lunchflow-preload-target="spinner" class="hidden">
+            <%= icon("loader-2", class: "animate-spin") %>
+          </span>
+        </span>
       <% end %>
     <% end %>
 

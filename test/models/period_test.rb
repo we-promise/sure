@@ -45,16 +45,40 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal "Custom Period", period.label
   end
 
-  test "comparison_label returns correct label for known period" do
-    period = Period.from_key("last_30_days")
-    assert_equal "vs. last month", period.comparison_label
+  test "all_time period can be created" do
+    period = Period.from_key("all_time")
+    assert_equal "all_time", period.key
+    assert_equal "All Time", period.label
+    assert_equal "All", period.label_short
   end
 
-  test "comparison_label returns date range for unknown period" do
-    start_date = Date.current - 15.days
-    end_date = Date.current
-    period = Period.new(start_date: start_date, end_date: end_date)
-    expected = "#{start_date.strftime("%b %d, %Y")} to #{end_date.strftime("%b %d, %Y")}"
-    assert_equal expected, period.comparison_label
+  test "all_time period uses family's oldest entry date" do
+    # Mock Current.family to return a family with oldest_entry_date
+    mock_family = mock("family")
+    mock_family.expects(:oldest_entry_date).returns(2.years.ago.to_date)
+    Current.expects(:family).at_least_once.returns(mock_family)
+
+    period = Period.from_key("all_time")
+    assert_equal 2.years.ago.to_date, period.start_date
+    assert_equal Date.current, period.end_date
+  end
+
+  test "all_time period uses fallback when no family or entries exist" do
+    Current.expects(:family).returns(nil)
+
+    period = Period.from_key("all_time")
+    assert_equal 5.years.ago.to_date, period.start_date
+    assert_equal Date.current, period.end_date
+  end
+
+  test "all_time period uses fallback when oldest_entry_date equals current date" do
+    # Mock a family that has no historical entries (oldest_entry_date returns today)
+    mock_family = mock("family")
+    mock_family.expects(:oldest_entry_date).returns(Date.current)
+    Current.expects(:family).at_least_once.returns(mock_family)
+
+    period = Period.from_key("all_time")
+    assert_equal 5.years.ago.to_date, period.start_date
+    assert_equal Date.current, period.end_date
   end
 end
