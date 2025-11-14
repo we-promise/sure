@@ -30,7 +30,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     delete account_url(@account)
     assert_redirected_to accounts_path
     assert_enqueued_with job: DestroyJob
-    assert_equal "Account scheduled for deletion", flash[:notice]
+    assert_equal "Depository account scheduled for deletion", flash[:notice]
   end
 
   test "syncing linked account triggers sync for all provider items" do
@@ -117,7 +117,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # Cannot delete while linked
     delete account_url(@account)
     assert_redirected_to account_url(@account)
-    assert_equal "Cannot delete a linked account", flash[:alert]
+    assert_equal "Cannot delete a linked account. Please unlink it first.", flash[:alert]
 
     # Unlink the account
     delete unlink_account_url(@account)
@@ -127,7 +127,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     delete account_url(@account)
     assert_redirected_to accounts_path
     assert_enqueued_with job: DestroyJob
-    assert_equal "Account scheduled for deletion", flash[:notice]
+    assert_equal "Depository account scheduled for deletion", flash[:notice]
   end
 
   test "select_provider shows available providers" do
