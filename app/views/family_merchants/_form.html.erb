@@ -14,7 +14,7 @@
         <% FamilyMerchant::COLORS.each do |color| %>
           <label class="relative">
             <%= f.radio_button :color, color, class: "sr-only peer", data: { action: "change->color-avatar#handleColorChange" } %>
-            <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-blue-500" style="background-color: <%= color %>"></div>
+            <div class="w-6 h-6 rounded-sm cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-blue-500" style="background-color: <%= color %>"></div>
           </label>
         <% end %>
       </div>
