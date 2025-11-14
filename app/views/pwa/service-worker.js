@@ -1,11 +1,14 @@
 const CACHE_VERSION = 'v1';
-const OFFLINE_URL = '/offline.html';
+const OFFLINE_ASSETS = [
+  '/offline.html',
+  '/logo-offline.svg'
+];
 
-// Install event - cache the offline page
+// Install event - cache the offline page and assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
-      return cache.add(OFFLINE_URL);
+      return cache.addAll(OFFLINE_ASSETS);
     })
   );
   // Activate immediately
@@ -31,11 +34,19 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve offline page when network fails
 self.addEventListener('fetch', (event) => {
-  // Only handle navigation requests (page loads)
+  // Handle navigation requests (page loads)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
+        return caches.match('/offline.html');
+      })
+    );
+  }
+  // Handle offline assets (logo, etc.)
+  else if (OFFLINE_ASSETS.some(asset => event.request.url.includes(asset))) {
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        return response || fetch(event.request);
       })
     );
   }
