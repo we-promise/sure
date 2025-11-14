@@ -5,8 +5,8 @@
       <%= t("pages.dashboard.outflows_donut.title") %>
     </h2>
 
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "outflows_donut_section" } do |form| %>
-      <%= form.select :outflows_period,
+    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
+      <%= form.select :period,
                 Period.as_options,
                 { selected: period.key },
                 data: { "auto-submit-form-target": "auto" },
