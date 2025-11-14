@@ -9,25 +9,17 @@ class PagesController < ApplicationController
 
     # Handle cashflow period
     cashflow_period_param = params[:cashflow_period]
-    @cashflow_period = if cashflow_period_param.present?
-      begin
-        Period.from_key(cashflow_period_param)
-      rescue Period::InvalidKeyError
-        Period.last_30_days
-      end
-    else
+    @cashflow_period = begin
+      Period.from_key(cashflow_period_param || Current.user&.default_period)
+    rescue Period::InvalidKeyError
       Period.last_30_days
     end
 
     # Handle outflows period
     outflows_period_param = params[:outflows_period]
-    @outflows_period = if outflows_period_param.present?
-      begin
-        Period.from_key(outflows_period_param)
-      rescue Period::InvalidKeyError
-        Period.last_30_days
-      end
-    else
+    @outflows_period = begin
+      Period.from_key(outflows_period_param || Current.user&.default_period)
+    rescue Period::InvalidKeyError
       Period.last_30_days
     end
 
