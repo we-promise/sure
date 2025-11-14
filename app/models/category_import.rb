@@ -47,7 +47,7 @@ class CategoryImport < Import
 
   def csv_template
     template = <<-CSV
-      name*,color,parent_category,classification,icon
+      name*,color,parent_category,classification,lucide-icon
       Food & Drink,#f97316,,expense,carrot
       Groceries,#407706,Food & Drink,expense,shopping-basket
       Salary,#22c55e,,income,briefcase
@@ -65,7 +65,7 @@ class CategoryImport < Import
         category_color: row["color"].to_s.strip,
         category_parent: row["parent_category"].to_s.strip,
         category_classification: row["classification"].to_s.strip,
-        category_icon: row["icon"].to_s.strip,
+        category_icon: (row["lucide-icon"].presence || row["icon"]).to_s.strip,
         currency: default_currency
       )
     end

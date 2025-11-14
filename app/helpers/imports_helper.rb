@@ -26,7 +26,7 @@ module ImportsHelper
       category_parent: "Parent category",
       category_color: "Color",
       category_classification: "Classification",
-      category_icon: "Icon"
+      category_icon: "Lucide icon"
     }[key]
   end
 
