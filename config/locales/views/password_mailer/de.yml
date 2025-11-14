@@ -4,5 +4,5 @@ de:
     password_reset:
       cta: Passwort zurücksetzen
       ignore_if_not_requested: Wenn du diese Anfrage nicht gestellt hast kannst du diese E-Mail ignorieren
-      request_made: Es wurde eine Anfrage zum Zurücksetzen deines Maybe-Passworts gestellt Klicke auf den Link um es zurückzusetzen
-      subject: Maybe Passwort zurücksetzen
+      request_made: Es wurde eine Anfrage zum Zurücksetzen deines %{product_name}-Passworts gestellt Klicke auf den Link um es zurückzusetzen
+      subject: "%{product_name} Passwort zurücksetzen"

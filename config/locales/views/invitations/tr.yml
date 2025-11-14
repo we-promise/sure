@@ -15,5 +15,5 @@ tr:
       role_label: Rol
       role_member: Üye
       submit: Davet Gönder
-      subtitle: Maybe'de aile hesabınıza katılmaları için bir davetiye gönderin
+      subtitle: "%{product_name}'de aile hesabınıza katılmaları için bir davetiye gönderin"
       title: Birini Davet Et
