@@ -16,11 +16,21 @@ class PlaidItem < ApplicationRecord
   has_one_attached :logo
 
   has_many :plaid_accounts, dependent: :destroy
-  has_many :accounts, through: :plaid_accounts
+  has_many :legacy_accounts, through: :plaid_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+
+  # Get accounts from both new and legacy systems
+  def accounts
+    # Preload associations to avoid N+1 queries
+    plaid_accounts
+      .includes(:account, account_provider: :account)
+      .map(&:current_account)
+      .compact
+      .uniq
+  end
 
   def get_update_link_token(webhooks_url:, redirect_url:)
     family.get_link_token(

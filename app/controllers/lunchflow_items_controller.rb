@@ -98,7 +98,7 @@ class LunchflowItemsController < ApplicationController
 
     # Create or find lunchflow_item for this family
     lunchflow_item = Current.family.lunchflow_items.first_or_create!(
-      name: "Lunchflow Connection"
+      name: "Lunch Flow Connection"
     )
 
     # Fetch account details from API
@@ -279,7 +279,7 @@ class LunchflowItemsController < ApplicationController
 
     # Create or find lunchflow_item for this family
     lunchflow_item = Current.family.lunchflow_items.first_or_create!(
-      name: "Lunchflow Connection"
+      name: "Lunch Flow Connection"
     )
 
     # Fetch account details from API
@@ -338,7 +338,7 @@ class LunchflowItemsController < ApplicationController
 
   def create
     @lunchflow_item = Current.family.lunchflow_items.build(lunchflow_params)
-    @lunchflow_item.name = "Lunchflow Connection"
+    @lunchflow_item.name = "Lunch Flow Connection"
 
     if @lunchflow_item.save
       # Trigger initial sync to fetch accounts
