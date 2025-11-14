@@ -1,0 +1,11 @@
+---
+de:
+  address:
+    attributes:
+      country: Land
+      line1: Adresszeile 1
+      line2: Adresszeile 2
+      locality: Ort
+      postal_code: Postleitzahl
+      region: Region
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

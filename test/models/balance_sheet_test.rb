@@ -56,9 +56,9 @@ class BalanceSheetTest < ActiveSupport::TestCase
     asset_groups = BalanceSheet.new(@family).assets.account_groups
 
     assert_equal 3, asset_groups.size
-    assert_equal 1000 + 2000, asset_groups.find { |ag| ag.name == "Cash" }.total
-    assert_equal 3000, asset_groups.find { |ag| ag.name == "Investments" }.total
-    assert_equal 5000, asset_groups.find { |ag| ag.name == "Other Assets" }.total
+    assert_equal 1000 + 2000, asset_groups.find { |ag| ag.name == I18n.t("accounts.types.depository") }.total
+    assert_equal 3000, asset_groups.find { |ag| ag.name == I18n.t("accounts.types.investment") }.total
+    assert_equal 5000, asset_groups.find { |ag| ag.name == I18n.t("accounts.types.other_asset") }.total
   end
 
   test "calculates liability group totals" do
@@ -71,8 +71,8 @@ class BalanceSheetTest < ActiveSupport::TestCase
     liability_groups = BalanceSheet.new(@family).liabilities.account_groups
 
     assert_equal 2, liability_groups.size
-    assert_equal 1000 + 2000, liability_groups.find { |ag| ag.name == "Credit Cards" }.total
-    assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == "Other Liabilities" }.total
+    assert_equal 1000 + 2000, liability_groups.find { |ag| ag.name == I18n.t("accounts.types.credit_card") }.total
+    assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == I18n.t("accounts.types.other_liability") }.total
   end
 
   private

@@ -27,6 +27,20 @@ class Account::ProviderImportAdapter
         e.entryable = Transaction.new
       end
 
+      # If this is a new entry, check for potential duplicates from manual/CSV imports
+      # This handles the case where a user manually created or CSV imported a transaction
+      # before linking their account to a provider
+      # Note: We don't pass name here to allow matching even when provider formats names differently
+      if entry.new_record?
+        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
+        if duplicate
+          # "Claim" the duplicate by updating its external_id and source
+          # This prevents future duplicate checks from matching it again
+          entry = duplicate
+          entry.assign_attributes(external_id: external_id, source: source)
+        end
+      end
+
       # Validate entryable type matches to prevent external_id collisions
       if entry.persisted? && !entry.entryable.is_a?(Transaction)
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
@@ -251,5 +265,43 @@ class Account::ProviderImportAdapter
   rescue => e
     Rails.logger.error("Failed to update #{account.accountable_type} attributes from #{source}: #{e.message}")
     false
+  end
+
+  # Finds a potential duplicate transaction from manual entry or CSV import
+  # Matches on date, amount, currency, and optionally name
+  # Only matches transactions without external_id (manual/CSV imported)
+  #
+  # @param date [Date, String] Transaction date
+  # @param amount [BigDecimal, Numeric] Transaction amount
+  # @param currency [String] Currency code
+  # @param name [String, nil] Optional transaction name for more accurate matching
+  # @param exclude_entry_ids [Set, Array, nil] Entry IDs to exclude from the search (e.g., already claimed entries)
+  # @return [Entry, nil] The duplicate entry or nil if not found
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil)
+    # Convert date to Date object if it's a string
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+
+    # Look for entries on the same account with:
+    # 1. Same date
+    # 2. Same amount (exact match)
+    # 3. Same currency
+    # 4. No external_id (manual/CSV imported transactions)
+    # 5. Entry type is Transaction (not Trade or Valuation)
+    # 6. Optionally same name (if name parameter is provided)
+    # 7. Not in the excluded IDs list (if provided)
+    query = account.entries
+                   .where(entryable_type: "Transaction")
+                   .where(date: date)
+                   .where(amount: amount)
+                   .where(currency: currency)
+                   .where(external_id: nil)
+
+    # Add name filter if provided
+    query = query.where(name: name) if name.present?
+
+    # Exclude already claimed entries if provided
+    query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
+
+    query.order(created_at: :asc).first
   end
 end

@@ -1,0 +1,123 @@
+---
+en:
+  reports:
+    index:
+      title: Reports
+      subtitle: Comprehensive insights into your financial health
+      export: Export CSV
+      periods:
+        monthly: Monthly
+        quarterly: Quarterly
+        ytd: Year to Date
+        last_6_months: Last 6 Months
+        custom: Custom Range
+      date_range:
+        from: From
+        to: To
+      showing_period: "Showing data from %{start} to %{end}"
+    summary:
+      total_income: Total Income
+      total_expenses: Total Expenses
+      net_savings: Net Savings
+      budget_performance: Budget Performance
+      vs_previous: vs previous period
+      income_minus_expenses: Income minus expenses
+      of_budget_used: of budget used
+      no_budget_data: No budget data for this period
+    budget_performance:
+      title: Budget Performance
+      spent: Spent
+      budgeted: Budgeted
+      remaining: Remaining
+      over_by: Over by
+      suggested_daily: "%{amount} suggested per day for %{days} remaining days"
+      no_budgets: No budget categories set up for this month
+      status:
+        good: On Track
+        warning: Near Limit
+        over: Over Budget
+    trends:
+      title: Trends & Insights
+      monthly_breakdown: Monthly Breakdown
+      month: Month
+      income: Income
+      expenses: Expenses
+      net: Net
+      savings_rate: Savings Rate
+      current: current
+      avg_monthly_income: Avg. Monthly Income
+      avg_monthly_expenses: Avg. Monthly Expenses
+      avg_monthly_savings: Avg. Monthly Savings
+      no_data: No trend data available
+      spending_patterns: Spending Patterns
+      weekday_spending: Weekday Spending
+      weekend_spending: Weekend Spending
+      total: Total
+      avg_per_transaction: Avg. per transaction
+      transactions: Transactions
+      insight_title: Insight
+      insight_higher_weekend: "You spend %{percent}% more per transaction on weekends than weekdays"
+      insight_higher_weekday: "You spend %{percent}% more per transaction on weekdays than weekends"
+      insight_similar: "Your spending per transaction is similar on weekdays and weekends"
+      no_spending_data: No spending data available for this period
+    empty_state:
+      title: No Data Available
+      description: Start tracking your finances by adding transactions or connecting your accounts to see comprehensive reports
+      add_transaction: Add Transaction
+      add_account: Add Account
+    transactions_breakdown:
+      title: Transactions Breakdown
+      no_transactions: No transactions found for the selected period and filters
+      filters:
+        title: Filters
+        category: Category
+        account: Account
+        tag: Tag
+        amount_min: Min Amount
+        amount_max: Max Amount
+        date_range: Date Range
+        all_categories: All Categories
+        all_accounts: All Accounts
+        all_tags: All Tags
+        apply: Apply Filters
+        clear: Clear Filters
+      sort:
+        label: Sort by
+        date_desc: Date (Newest)
+        amount_desc: Amount (High to Low)
+        amount_asc: Amount (Low to High)
+      export:
+        label: Export
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Open in Google Sheets
+      table:
+        category: Category
+        amount: Amount
+        type: Type
+        expense: Expenses
+        income: Income
+        uncategorized: Uncategorized
+        transactions: transactions
+        percentage: "% of Total"
+      pagination:
+        showing: Showing %{count} transactions
+        previous: Previous
+        next: Next
+    google_sheets_instructions:
+      title_with_key: "✅ Copy URL for Google Sheets"
+      title_no_key: "⚠️ API Key Required"
+      ready: Your CSV URL (with API key) is ready.
+      steps: "To import into Google Sheets:\n1. Create a new Google Sheet\n2. In cell A1, enter the formula shown below\n3. Press Enter"
+      security_warning: "This URL includes your API key. Keep it secure!"
+      need_key: To import data into Google Sheets, you need an API key.
+      step1: "Go to Settings → API Keys"
+      step2: "Create a new API key with \"read\" permission"
+      step3: Copy the API key
+      step4: "Add it to this URL as: ?api_key=YOUR_KEY"
+      example: Example
+      then_use: Then use the full URL with =IMPORTDATA() in Google Sheets.
+      open_sheets: Open Google Sheets
+      go_to_api_keys: Go to API Keys
+      close: Got it

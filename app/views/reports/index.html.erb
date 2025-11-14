@@ -1,0 +1,113 @@
+<% content_for :page_header do %>
+  <div class="space-y-4 mb-6">
+    <div class="space-y-1">
+      <h1 class="text-xl lg:text-3xl font-medium text-primary">
+        <%= t("reports.index.title") %>
+      </h1>
+      <p class="text-sm lg:text-base text-secondary">
+        <%= t("reports.index.subtitle") %>
+      </p>
+    </div>
+
+    <%# Period Navigation Tabs %>
+    <div class="flex items-center gap-2 overflow-x-auto pb-2">
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.monthly"),
+        variant: @period_type == :monthly ? "secondary" : "ghost",
+        href: reports_path(period_type: :monthly),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.quarterly"),
+        variant: @period_type == :quarterly ? "secondary" : "ghost",
+        href: reports_path(period_type: :quarterly),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.ytd"),
+        variant: @period_type == :ytd ? "secondary" : "ghost",
+        href: reports_path(period_type: :ytd),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.last_6_months"),
+        variant: @period_type == :last_6_months ? "secondary" : "ghost",
+        href: reports_path(period_type: :last_6_months),
+        size: :sm
+      ) %>
+      <%= render DS::Link.new(
+        text: t("reports.index.periods.custom"),
+        variant: @period_type == :custom ? "secondary" : "ghost",
+        href: reports_path(period_type: :custom),
+        size: :sm
+      ) %>
+    </div>
+
+    <%# Custom Date Range Picker (only shown when custom is selected) %>
+    <% if @period_type == :custom %>
+      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
+        <%= f.hidden_field :period_type, value: :custom %>
+
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.from") %></label>
+          <%= f.date_field :start_date,
+                           value: @start_date.strftime("%Y-%m-%d"),
+                           data: { auto_submit_form_target: "auto" },
+                           autocomplete: "off",
+                           class: "px-3 py-1.5 border border-primary rounded-lg text-sm" %>
+        </div>
+        <span class="text-secondary">—</span>
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.to") %></label>
+          <%= f.date_field :end_date,
+                           value: @end_date.strftime("%Y-%m-%d"),
+                           data: { auto_submit_form_target: "auto" },
+                           autocomplete: "off",
+                           class: "px-3 py-1.5 border border-primary rounded-lg text-sm" %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%# Period Display %>
+    <div class="text-sm text-secondary">
+      <%= t("reports.index.showing_period",
+            start: @start_date.strftime("%b %-d, %Y"),
+            end: @end_date.strftime("%b %-d, %Y")) %>
+    </div>
+  </div>
+<% end %>
+
+<div class="w-full space-y-6 pb-24">
+  <% if Current.family.transactions.any? %>
+    <%# Summary Dashboard %>
+    <section>
+      <%= render partial: "reports/summary_dashboard", locals: {
+        metrics: @summary_metrics,
+        period_type: @period_type
+      } %>
+    </section>
+
+    <%# Trends & Insights %>
+    <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
+      <%= render partial: "reports/trends_insights", locals: {
+        trends_data: @trends_data,
+        spending_patterns: @spending_patterns
+      } %>
+    </section>
+
+    <%# Transactions Breakdown %>
+    <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
+      <%= render partial: "reports/transactions_breakdown", locals: {
+        transactions: @transactions,
+        period_type: @period_type,
+        start_date: @start_date,
+        end_date: @end_date
+      } %>
+    </section>
+  <% else %>
+    <%# Empty State %>
+    <section>
+      <%= render partial: "reports/empty_state" %>
+    </section>
+  <% end %>
+</div>

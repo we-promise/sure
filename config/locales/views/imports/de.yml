@@ -1,0 +1,78 @@
+---
+de:
+  import:
+    cleans:
+      show:
+        description: Bearbeite deine Daten in der Tabelle unten. Rote Zellen sind ungültig.
+        errors_notice: Deine Daten enthalten Fehler. Fahre mit der Maus über den Fehler, um Details zu sehen.
+        errors_notice_mobile: Deine Daten enthalten Fehler. Tippe auf den Fehler-Tooltip, um Details zu sehen.
+        title: Daten bereinigen
+    configurations:
+      mint_import:
+        date_format_label: Datumsformat
+      show:
+        description: Wähle die Spalten aus, die den jeweiligen Feldern in deiner CSV entsprechen.
+        title: Import konfigurieren
+      trade_import:
+        date_format_label: Datumsformat
+      transaction_import:
+        date_format_label: Datumsformat
+    confirms:
+      mappings:
+        create_account: Konto erstellen
+        csv_mapping_label: "%{mapping} in CSV"
+        sure_mapping_label: "%{mapping} in %{product_name}"
+        no_accounts: Du hast noch keine Konten. Bitte erstelle ein Konto, das wir für nicht zugewiesene Zeilen in deiner CSV verwenden können, oder gehe zurück zum Bereinigungsschritt und gib dort einen Kontonamen an.
+        rows_label: Zeilen
+        unassigned_account: Neues Konto für nicht zugewiesene Zeilen erstellen?
+      show:
+        account_mapping_description: Weise alle Konten aus deiner importierten Datei den bestehenden Konten in %{product_name} zu. Du kannst auch neue Konten hinzufügen oder sie ohne Kategorie lassen.
+        account_mapping_title: Konten zuweisen
+        account_type_mapping_description: Weise alle Kontotypen aus deiner importierten Datei den Kontotypen in %{product_name} zu.
+        account_type_mapping_title: Kontotypen zuweisen
+        category_mapping_description: Weise alle Kategorien aus deiner importierten Datei den bestehenden Kategorien in %{product_name} zu. Du kannst auch neue Kategorien hinzufügen oder sie ohne Kategorie lassen.
+        category_mapping_title: Kategorien zuweisen
+        tag_mapping_description: Weise alle Tags aus deiner importierten Datei den bestehenden Tags in %{product_name} zu. Du kannst auch neue Tags hinzufügen oder sie ohne Kategorie lassen.
+        tag_mapping_title: Tags zuweisen
+    uploads:
+      show:
+        description: Füge unten deine CSV-Datei ein oder lade sie hoch. Bitte lies die Anweisungen in der Tabelle unten, bevor du beginnst.
+        instructions_1: Unten siehst du ein Beispiel einer CSV-Datei mit verfügbaren Spalten für den Import.
+        instructions_2: Deine CSV muss eine Kopfzeile enthalten.
+        instructions_3: Du kannst deine Spalten beliebig benennen. Die Zuordnung erfolgt in einem späteren Schritt.
+        instructions_4: Spalten mit einem Sternchen (*) sind Pflichtfelder.
+        instructions_5: Keine Kommas, Währungssymbole oder Klammern in Zahlen verwenden.
+        title: Daten importieren
+  imports:
+    empty:
+      message: Noch keine Importe vorhanden.
+      new: Neuer Import
+    import:
+      complete: Abgeschlossen
+      delete: Löschen
+      failed: Fehlgeschlagen
+      in_progress: Wird ausgeführt
+      label: "%{type}: %{datetime}"
+      revert_failed: Rückgängig machen fehlgeschlagen
+      reverting: Wird rückgängig gemacht
+      uploading: Zeilen werden verarbeitet
+      view: Anzeigen
+    index:
+      imports: Importe
+      new: Neuer Import
+      title: Import/Export
+      exports: Exporte
+      new_export: Neuer Export
+      no_exports: Noch keine Exporte vorhanden.
+    new:
+      description: Du kannst verschiedene Datentypen manuell über CSV importieren oder eine unserer Importvorlagen wie Mint verwenden.
+      import_accounts: Konten importieren
+      import_mint: Von Mint importieren
+      import_portfolio: Investitionen importieren
+      import_transactions: Transaktionen importieren
+      resume: "%{type} fortsetzen"
+      sources: Quellen
+      title: Neuer CSV-Import
+    ready:
+      description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
+      title: Importdaten bestätigen

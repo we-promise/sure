@@ -38,25 +38,21 @@
 
   <div class="flex items-center gap-2">
 
-
     <% if import.complete? || import.revert_failed? %>
       <%= button_to revert_import_path(import),
           method: :put,
           class: "flex items-center gap-2 text-orange-500 hover:text-orange-600",
-          data: { 
+          data: {
             turbo_confirm: "This will delete transactions that were imported, but you will still be able to review and re-import your data at any time."
           } do %>
         <%= icon "rotate-ccw", class: "w-5 h-5 text-destructive" %>
       <% end %>
 
-
-
-
     <% else %>
       <%= button_to import_path(import),
           method: :delete,
           class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
-          data: { 
+          data: {
             turbo_confirm: CustomConfirm.for_resource_deletion("import")
           } do %>
         <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>

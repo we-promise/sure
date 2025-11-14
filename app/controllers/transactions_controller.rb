@@ -22,6 +22,14 @@ class TransactionsController < ApplicationController
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: per_page)
+
+    # Load projected recurring transactions for next month
+    @projected_recurring = Current.family.recurring_transactions
+                                  .active
+                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
+                                         1.month.from_now.to_date,
+                                         Date.current)
+                                  .includes(:merchant)
   end
 
   def clear_filter
@@ -105,6 +113,49 @@ class TransactionsController < ApplicationController
       end
     else
       render :show, status: :unprocessable_entity
+    end
+  end
+
+  def mark_as_recurring
+    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+
+    # Check if a recurring transaction already exists for this pattern
+    existing = Current.family.recurring_transactions.find_by(
+      merchant_id: transaction.merchant_id,
+      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
+      currency: transaction.entry.currency,
+      manual: true
+    )
+
+    if existing
+      flash[:alert] = t("recurring_transactions.already_exists")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    begin
+      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+
+      respond_to do |format|
+        format.html do
+          flash[:notice] = t("recurring_transactions.marked_as_recurring")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue ActiveRecord::RecordInvalid => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.creation_failed")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue StandardError => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.unexpected_error")
+          redirect_back_or_to transactions_path
+        end
+      end
     end
   end
 

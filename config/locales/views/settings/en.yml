@@ -81,7 +81,7 @@ en:
         last_name: Last Name
         page_title: Profile Info
         pending: Pending
-        profile_subtitle: Customize how you appear on %{product}
+        profile_subtitle: Customize how you appear on %{product_name}
         profile_title: Personal
         remove_invitation: Remove Invitation
         remove_member: Remove Member
@@ -105,6 +105,7 @@ en:
       other_section_title: More
       preferences_label: Preferences
       profile_label: Profile Info
+      recurring_transactions_label: Recurring
       rules_label: Rules
       security_label: Security
       self_hosting_label: Self-Hosting

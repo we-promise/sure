@@ -145,7 +145,7 @@ image: ghcr.io/we-promise/sure:latest
 
 We recommend using one of the following images, but you can pin your app to whatever version you'd like (see [packages](https://github.com/we-promise/sure/pkgs/container/sure)):
 
-- `ghcr.io/we-promise/sure:latest` (latest commit)
+- `ghcr.io/we-promise/sure:latest` (latest `alpha`)
 - `ghcr.io/we-promise/sure:stable` (latest release)
 
 By default, your app _will NOT_ automatically update. To update your self-hosted app, run the following commands in your terminal:

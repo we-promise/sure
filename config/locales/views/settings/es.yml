@@ -1,0 +1,121 @@
+---
+es:
+  settings:
+    ai_prompts:
+      show:
+        page_title: Indicaciones de IA
+        openai_label: OpenAI
+        disable_ai: Desactivar Asistente de IA
+        prompt_instructions: Instrucciones de Indicaciones
+        main_system_prompt:
+          title: Indicaciones del Sistema Principal
+          subtitle: Instrucciones principales que definen cómo se comporta el asistente de IA en todas las conversaciones de chat
+        transaction_categorizer:
+          title: Categorizador de Transacciones
+          subtitle: La IA categoriza automáticamente tus transacciones según tus categorías definidas
+        merchant_detector:
+          title: Detector de Comerciantes
+          subtitle: La IA identifica y enriquece los datos de transacciones con información de comerciantes
+    billings:
+      show:
+        page_title: Facturación
+        subscription_subtitle: Actualiza tu suscripción y detalles de facturación
+        subscription_title: Gestionar suscripción
+    preferences:
+      show:
+        country: País
+        currency: Moneda
+        date_format: Formato de fecha
+        general_subtitle: Configura tus preferencias
+        general_title: General
+        default_period: Periodo Predeterminado
+        default_account_order: Orden Predeterminado de Cuentas
+        language: Idioma
+        page_title: Preferencias
+        theme_dark: Oscuro
+        theme_light: Claro
+        theme_subtitle: Elige un tema preferido para la aplicación
+        theme_system: Sistema
+        theme_title: Tema
+        timezone: Zona horaria
+    profiles:
+      destroy:
+        cannot_remove_self: No puedes eliminarte a ti mismo de la cuenta.
+        member_removal_failed: Hubo un problema al eliminar al miembro.
+        member_removed: El miembro fue eliminado con éxito.
+        not_authorized: No estás autorizado para eliminar miembros.
+      show:
+        confirm_delete:
+          body: ¿Estás seguro de que deseas eliminar permanentemente tu cuenta? Esta acción es irreversible.
+          title: ¿Eliminar cuenta?
+        confirm_reset:
+          body: ¿Estás seguro de que deseas restablecer tu cuenta? Esto eliminará todas tus cuentas, categorías, comerciantes, etiquetas y otros datos. Esta acción no se puede deshacer.
+          title: ¿Restablecer cuenta?
+        confirm_reset_with_sample_data:
+          body: ¿Estás seguro de que deseas restablecer tu cuenta y cargar datos de ejemplo? Esto eliminará tus datos existentes y los reemplazará con datos de demostración para que puedas explorar Sure de forma segura.
+          title: ¿Restablecer cuenta y cargar datos de ejemplo?
+        confirm_remove_invitation:
+          body: ¿Estás seguro de que deseas eliminar la invitación para %{email}?
+          title: Eliminar Invitación
+        confirm_remove_member:
+          body: ¿Estás seguro de que deseas eliminar a %{name} de tu cuenta?
+          title: Eliminar Miembro
+        danger_zone_title: Zona de Peligro
+        delete_account: Eliminar cuenta
+        delete_account_warning: Eliminar tu cuenta eliminará permanentemente todos tus datos y no se puede deshacer.
+        reset_account: Restablecer cuenta
+        reset_account_warning: Restablecer tu cuenta eliminará todas tus cuentas, categorías, comerciantes, etiquetas y otros datos, pero mantendrá tu cuenta de usuario intacta.
+        reset_account_with_sample_data: Restablecer y precargar
+        reset_account_with_sample_data_warning: Elimina todos tus datos existentes y luego carga nuevos datos de ejemplo para que puedas explorar con un entorno prellenado.
+        email: Correo electrónico
+        first_name: Nombre
+        household_form_input_placeholder: Introduce el nombre del grupo familiar
+        household_form_label: Nombre del grupo familiar
+        household_subtitle: Invita a miembros de la familia, socios y otras personas. Los invitados pueden entrar en la cuenta y acceder a las cuentas compartidas.
+        household_title: Grupo Familiar
+        invitation_link: Enlace de invitación
+        invite_member: Añadir miembro
+        last_name: Apellido
+        page_title: Información del Perfil
+        pending: Pendiente
+        profile_subtitle: Personaliza cómo apareces en %{product_name}
+        profile_title: Personal
+        remove_invitation: Eliminar Invitación
+        remove_member: Eliminar Miembro
+        save: Guardar
+    securities:
+      show:
+        page_title: Seguridad
+    settings_nav:
+      accounts_label: Cuentas
+      advanced_section_title: Avanzado
+      ai_prompts_label: Indicaciones de IA
+      api_key_label: Clave API
+      billing_label: Facturación
+      categories_label: Categorías
+      feedback_label: Comentarios
+      general_section_title: General
+      imports_label: Importar/Exportar
+      logout: Cerrar sesión
+      merchants_label: Comerciantes
+      guides_label: Guías
+      other_section_title: Más
+      preferences_label: Preferencias
+      profile_label: Información del Perfil
+      recurring_transactions_label: Recurrentes
+      rules_label: Reglas
+      security_label: Seguridad
+      self_hosting_label: Autoalojamiento
+      tags_label: Etiquetas
+      transactions_section_title: Transacciones
+      whats_new_label: Novedades
+      api_keys_label: Clave API
+      bank_sync_label: Sincronización Bancaria
+    settings_nav_link_large:
+      next: Siguiente
+      previous: Atrás
+    user_avatar_field:
+      accepted_formats: JPG o PNG. Máx. 5MB.
+      choose: Subir foto
+      choose_label: (opcional)
+      change: Cambiar foto

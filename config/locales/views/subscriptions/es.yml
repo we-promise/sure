@@ -1,0 +1,4 @@
+---
+es:
+  subscriptions:
+    self_hosted_alert: "%{product_name} no está disponible en modo autoalojado."

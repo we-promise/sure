@@ -60,6 +60,28 @@ ca:
         manage: Gestiona els comptes
     update:
       success: "Compte %{type} actualitzat"
+    sidebar:
+      missing_data: Falten dades històriques
+      missing_data_description: "%{product} utilitza proveïdors externs per obtenir tipus de canvi històrics, preus de valors i més. Aquestes dades són necessàries per calcular saldos històrics precisos dels comptes."
+      configure_providers: Configura els teus proveïdors aquí.
+      tabs:
+        all: Tots
+        assets: Actius
+        debts: Deutes
+      new_asset: Nou actiu
+      new_debt: Nou deute
+      new_account: Nou compte
+      new_account_group: "Nou %{account_group}"
+    types:
+      depository: Efectiu
+      investment: Inversió
+      crypto: Cripto
+      property: Propietat
+      vehicle: Vehicle
+      other_asset: Altre actiu
+      credit_card: Targeta de crèdit
+      loan: Préstec
+      other_liability: Altra passiu
   email_confirmations:
     new:
       invalid_token: L'enllaç de confirmació no és vàlid o ha caducat.

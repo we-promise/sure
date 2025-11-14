@@ -4,7 +4,7 @@
 
 <% if self_hosted_first_login? %>
   <div class="fixed inset-0 w-full h-fit bg-container p-5 border-b border-secondary flex flex-col gap-3 items-center text-center mb-12">
-    <h2 class="font-bold text-primary text-xl"><%= t(".welcome_title") %></h2>
+    <h2 class="font-bold text-primary text-xl"><%= t(".welcome_title", product_name: product_name) %></h2>
     <p class="text-secondary text-secondary text-sm"><%= t(".welcome_body") %></p>
   </div>
 <% elsif @invitation %>

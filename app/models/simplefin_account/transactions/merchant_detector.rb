@@ -1,3 +1,5 @@
+require "digest/md5"
+
 # Detects and creates merchant records from SimpleFin transaction data
 # SimpleFin provides clean payee data that works well for merchant identification
 class SimplefinAccount::Transactions::MerchantDetector
