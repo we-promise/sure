@@ -5,7 +5,7 @@
     <% dialog.with_body do %>
       <div class="space-y-4">
         <p class="text-sm text-secondary">
-          <%= t(".description") %>
+          <%= t(".description", product_name: product_name) %>
         </p>
 
         <form action="<%= link_accounts_lunchflow_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
