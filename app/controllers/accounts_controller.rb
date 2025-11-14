@@ -17,7 +17,7 @@ class AccountsController < ApplicationController
 
   def sync_all
     family.sync_later
-    redirect_to accounts_path, notice: "Syncing accounts..."
+    redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
   end
 
   def show
@@ -71,36 +71,46 @@ class AccountsController < ApplicationController
 
   def destroy
     if @account.linked?
-      redirect_to account_path(@account), alert: "Cannot delete a linked account"
+      redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
       @account.destroy_later
-      redirect_to accounts_path, notice: "Account scheduled for deletion"
+      redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
     end
   end
 
   def confirm_unlink
     unless @account.linked?
-      redirect_to account_path(@account), alert: "Account is not linked to a provider"
+      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
     end
   end
 
   def unlink
-    if @account.linked?
-      # Remove new system links (account_providers join table)
-      @account.account_providers.destroy_all
+    unless @account.linked?
+      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
+      return
+    end
 
-      # Remove legacy system links (foreign keys)
-      @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
+    begin
+      Account.transaction do
+        # Remove new system links (account_providers join table)
+        @account.account_providers.destroy_all
 
-      redirect_to accounts_path, notice: "Account unlinked successfully. It is now a manual account."
-    else
-      redirect_to account_path(@account), alert: "Account is not linked to a provider"
+        # Remove legacy system links (foreign keys)
+        @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
+      end
+
+      redirect_to accounts_path, notice: t("accounts.unlink.success")
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to account_path(@account), alert: t("accounts.unlink.error", error: e.message)
+    rescue StandardError => e
+      Rails.logger.error "Failed to unlink account #{@account.id}: #{e.message}"
+      redirect_to account_path(@account), alert: t("accounts.unlink.error", error: t("accounts.unlink.generic_error"))
     end
   end
 
   def select_provider
     if @account.linked?
-      redirect_to account_path(@account), alert: "Account is already linked to a provider"
+      redirect_to account_path(@account), alert: t("accounts.select_provider.already_linked")
       return
     end
 
@@ -147,7 +157,7 @@ class AccountsController < ApplicationController
     end
 
     if @available_providers.empty?
-      redirect_to account_path(@account), alert: "No providers are currently configured"
+      redirect_to account_path(@account), alert: t("accounts.select_provider.no_providers")
     end
   end
 

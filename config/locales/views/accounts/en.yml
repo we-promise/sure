@@ -12,6 +12,7 @@ en:
       success: "%{type} account created"
     destroy:
       success: "%{type} account scheduled for deletion"
+      cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
     empty:
       empty_message: Add an account either via connection, importing or entering manually.
       new_account: New account
@@ -26,6 +27,8 @@ en:
         other_accounts: Other accounts
       new_account: New account
       sync: Sync all
+    sync_all:
+      syncing: "Syncing accounts..."
     new:
       import_accounts: Import accounts
       method_selector:
@@ -96,9 +99,16 @@ en:
       warning_transactions_kept: All existing transactions and balances will be preserved
       warning_can_delete: After unlinking, you will be able to delete the account if needed
       confirm_button: Confirm and unlink
+    unlink:
+      success: "Account unlinked successfully. It is now a manual account."
+      not_linked: "Account is not linked to a provider"
+      error: "Failed to unlink account: %{error}"
+      generic_error: "An unexpected error occurred. Please try again."
     select_provider:
       title: Select a provider to link
       description: "Choose which provider you want to use to link %{account_name}"
+      already_linked: "Account is already linked to a provider"
+      no_providers: "No providers are currently configured"
 
   email_confirmations:
     new:
