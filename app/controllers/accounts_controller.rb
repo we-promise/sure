@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active show destroy]
+  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -11,9 +11,13 @@ class AccountsController < ApplicationController
     render layout: "settings"
   end
 
+  def new
+    @show_lunchflow_link = family.can_connect_lunchflow?
+  end
+
   def sync_all
     family.sync_later
-    redirect_to accounts_path, notice: "Syncing accounts..."
+    redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
   end
 
   def show
@@ -67,10 +71,93 @@ class AccountsController < ApplicationController
 
   def destroy
     if @account.linked?
-      redirect_to account_path(@account), alert: "Cannot delete a linked account"
+      redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
       @account.destroy_later
-      redirect_to accounts_path, notice: "Account scheduled for deletion"
+      redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+    end
+  end
+
+  def confirm_unlink
+    unless @account.linked?
+      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
+    end
+  end
+
+  def unlink
+    unless @account.linked?
+      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
+      return
+    end
+
+    begin
+      Account.transaction do
+        # Remove new system links (account_providers join table)
+        @account.account_providers.destroy_all
+
+        # Remove legacy system links (foreign keys)
+        @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
+      end
+
+      redirect_to accounts_path, notice: t("accounts.unlink.success")
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to account_path(@account), alert: t("accounts.unlink.error", error: e.message)
+    rescue StandardError => e
+      Rails.logger.error "Failed to unlink account #{@account.id}: #{e.message}"
+      redirect_to account_path(@account), alert: t("accounts.unlink.error", error: t("accounts.unlink.generic_error"))
+    end
+  end
+
+  def select_provider
+    if @account.linked?
+      redirect_to account_path(@account), alert: t("accounts.select_provider.already_linked")
+      return
+    end
+
+    @available_providers = []
+
+    # Check SimpleFIN
+    if family.can_connect_simplefin?
+      @available_providers << {
+        name: "SimpleFIN",
+        key: "simplefin",
+        description: "Connect to your bank via SimpleFIN",
+        path: select_existing_account_simplefin_items_path(account_id: @account.id)
+      }
+    end
+
+    # Check Plaid US
+    if family.can_connect_plaid_us?
+      @available_providers << {
+        name: "Plaid",
+        key: "plaid_us",
+        description: "Connect to your US bank via Plaid",
+        path: select_existing_account_plaid_items_path(account_id: @account.id, region: "us")
+      }
+    end
+
+    # Check Plaid EU
+    if family.can_connect_plaid_eu?
+      @available_providers << {
+        name: "Plaid (EU)",
+        key: "plaid_eu",
+        description: "Connect to your EU bank via Plaid",
+        path: select_existing_account_plaid_items_path(account_id: @account.id, region: "eu")
+      }
+    end
+
+    # Check Lunch Flow
+    if family.can_connect_lunchflow?
+      @available_providers << {
+        name: "Lunch Flow",
+        key: "lunchflow",
+        description: "Connect to your bank via Lunch Flow",
+        path: select_existing_account_lunchflow_items_path(account_id: @account.id)
+      }
+    end
+
+    if @available_providers.empty?
+      redirect_to account_path(@account), alert: t("accounts.select_provider.no_providers")
     end
   end
 

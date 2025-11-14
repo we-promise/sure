@@ -18,11 +18,21 @@ class SimplefinItem < ApplicationRecord
   has_one_attached :logo
 
   has_many :simplefin_accounts, dependent: :destroy
-  has_many :accounts, through: :simplefin_accounts
+  has_many :legacy_accounts, through: :simplefin_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+
+  # Get accounts from both new and legacy systems
+  def accounts
+    # Preload associations to avoid N+1 queries
+    simplefin_accounts
+      .includes(:account, account_provider: :account)
+      .map(&:current_account)
+      .compact
+      .uniq
+  end
 
   def destroy_later
     update!(scheduled_for_deletion: true)

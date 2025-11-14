@@ -425,6 +425,8 @@ GEM
     platform_agent (1.0.1)
       activesupport (>= 5.2.0)
       useragent (~> 0.16.3)
+    posthog-ruby (3.3.3)
+      concurrent-ruby (~> 1)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -736,6 +738,7 @@ DEPENDENCIES
   pagy
   pg (~> 1.5)
   plaid
+  posthog-ruby
   propshaft
   puma (>= 5.0)
   rack-attack (~> 6.6)
@@ -771,7 +774,7 @@ DEPENDENCIES
   webmock
 
 RUBY VERSION
-   ruby 3.4.4p34
+   ruby 3.4.7p58
 
 BUNDLED WITH
    2.6.7

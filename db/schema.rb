@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_31_132654) do
+ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -676,7 +676,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_31_132654) do
 
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
-    t.uuid "merchant_id", null: false
+    t.uuid "merchant_id"
     t.decimal "amount", precision: 19, scale: 4, null: false
     t.string "currency", null: false
     t.integer "expected_day_of_month", null: false
@@ -686,7 +686,13 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_31_132654) do
     t.integer "occurrence_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_on_family_merchant_amount_currency", unique: true
+    t.string "name"
+    t.boolean "manual", default: false, null: false
+    t.decimal "expected_amount_min", precision: 19, scale: 4
+    t.decimal "expected_amount_max", precision: 19, scale: 4
+    t.decimal "expected_amount_avg", precision: 19, scale: 4
+    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_merchant", unique: true, where: "(merchant_id IS NOT NULL)"
+    t.index ["family_id", "name", "amount", "currency"], name: "idx_recurring_txns_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL))"
     t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
     t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
     t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
@@ -989,7 +995,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_31_132654) do
     t.string "subtype"
   end
 
-  add_foreign_key "account_providers", "accounts"
+  add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
@@ -1003,11 +1009,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_31_132654) do
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
-  add_foreign_key "entries", "accounts"
+  add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "imports"
   add_foreign_key "family_exports", "families"
   add_foreign_key "holdings", "account_providers"
-  add_foreign_key "holdings", "accounts"
+  add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"

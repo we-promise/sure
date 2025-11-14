@@ -58,24 +58,17 @@
 
     <% if @pagy.count > 0 || (@projected_recurring.any? && @q.blank?) %>
       <div class="grow overflow-y-auto">
-        <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 hidden md:grid">
-          <div class="pl-0.5 col-span-8 flex items-center gap-4">
-            <%= check_box_tag "selection_entry",
-                              class: "checkbox checkbox--light",
-                              data: { action: "bulk-select#togglePageSelection" } %>
-            <p>transaction</p>
-          </div>
-
-          <p class="col-span-2">category</p>
-          <p class="col-span-2 justify-self-end">amount</p>
-        </div>
-
         <% if @transactions.any? %>
-          <div class="md:hidden text-xs uppercase font-medium text-secondary mb-2 px-2">
-            <%= check_box_tag "selection_entry",
-                              class: "checkbox checkbox--light mr-2 ml-1",
-                              data: { action: "bulk-select#togglePageSelection" } %>
-            <span>TRANSACTION</span>
+          <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
+            <div class="pl-0.5 col-span-8 flex items-center gap-4">
+              <%= check_box_tag "selection_entry",
+                                class: "checkbox checkbox--light",
+                                data: { action: "bulk-select#togglePageSelection" } %>
+              <p>transaction</p>
+            </div>
+
+            <p class="col-span-2 md:block hidden">category</p>
+            <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block">amount</p>
           </div>
         <% end %>
 

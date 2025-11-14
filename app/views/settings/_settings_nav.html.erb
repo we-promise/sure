@@ -22,7 +22,7 @@ nav_sections = [
     ]
   },
   (
-    Current.user.admin? ? {
+    Current.user&.admin? ? {
       header: t(".advanced_section_title"),
       items: [
         { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },

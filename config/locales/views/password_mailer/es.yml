@@ -1,0 +1,10 @@
+---
+es:
+  password_mailer:
+    password_reset:
+      cta: Restablecer tu contraseña
+      ignore_if_not_requested: Si no hiciste esta solicitud, puedes ignorar este
+        correo electrónico.
+      request_made: Se ha solicitado restablecer tu contraseña de %{product_name}. Haz clic en el enlace
+        para restablecerla.
+      subject: '%{product_name}: Restablecer tu contraseña'

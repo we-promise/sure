@@ -27,5 +27,9 @@
   <link rel="apple-touch-icon" href="/logo-pwa.png">
   <link rel="apple-touch-icon" sizes="512x512" href="/logo-pwa.png">
 
+  <% if Rails.env.production? && (posthog_config = Rails.configuration.x.posthog).try(:api_key).present? %>
+    <%= render "shared/posthog", posthog_api_key: posthog_config.api_key, posthog_host: posthog_config.host %>
+  <% end %>
+
   <%= yield :head %>
 </head>

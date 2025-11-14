@@ -37,6 +37,20 @@ runuser -l postgres -c "createuser -s $(whoami)" 2>/dev/null || echo "User may a
 echo "Starting Redis server..."
 service redis-server start
 
+# Check Ruby version compatibility
+RUBY_VERSION=$(cat .ruby-version | tr -d '[:space:]')
+CURRENT_RUBY=$(ruby -v | awk '{print $2}' | cut -d'p' -f1)
+echo "Ruby version check: $CURRENT_RUBY (required: $RUBY_VERSION)"
+
+# Removing Ruby version requirement from Gemfile
+if [ "$CURRENT_RUBY" != "$RUBY_VERSION" ]; then
+  echo "Ruby version mismatch — commenting ruby version requirement in Gemfile..."
+  # Only comment if the line isn't already commented
+  sed -i 's/^ruby file: "\.ruby-version"$/#&/' Gemfile
+  # Ignore Gemfile changes for this session
+  git update-index --assume-unchanged Gemfile Gemfile.lock
+fi
+
 echo "Environment setup completed successfully!"
 echo "PostgreSQL and Redis are now running."
 echo "You can now run 'bin/setup' to prepare your Rails application and database."

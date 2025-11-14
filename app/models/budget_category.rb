@@ -140,8 +140,4 @@ class BudgetCategory < ApplicationRecord
       .joins(:category)
       .where(categories: { parent_id: category.id })
   end
-
-  def subcategory?
-    category.parent_id.present?
-  end
 end
