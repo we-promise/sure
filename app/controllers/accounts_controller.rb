@@ -1,12 +1,16 @@
 class AccountsController < ApplicationController
+  include SimplefinItems::MapsHelper
   before_action :set_account, only: %i[sync sparkline toggle_active show destroy]
   include Periodable
 
   def index
     @manual_accounts = family.accounts.manual.alphabetically
     @plaid_items = family.plaid_items.ordered
-    @simplefin_items = family.simplefin_items.ordered
+    @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
     @lunchflow_items = family.lunchflow_items.ordered
+
+    # Precompute per-item maps to avoid inline queries and N+1s in the view
+    build_simplefin_maps_for(@simplefin_items)
 
     render layout: "settings"
   end

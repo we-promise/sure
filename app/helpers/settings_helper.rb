@@ -74,8 +74,9 @@ module SettingsHelper
       !self_hosted?
     end
 
+    # Helper used by SETTINGS_ORDER conditions
     def admin_user?
-      Current.user&.admin? == true
+      Current.user&.admin?
     end
 
     def self_hosted_and_admin?

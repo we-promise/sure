@@ -10,7 +10,9 @@ en:
         create_failed: "Failed to connect: %{message}"
         unexpected: An unexpected error occurred. Please try again or contact support.
     destroy:
-      success: SimpleFin connection will be removed
+      success: SimpleFin connection deleted. Unlinked accounts can be found under Other accounts.
+      errors:
+        destroy_failed: "Failed to delete SimpleFin connection: %{message}"
     update:
       success: SimpleFin connection updated successfully! Your accounts are being reconnected.
       errors:
@@ -45,3 +47,11 @@ en:
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
       update: Update connection
+    balances:
+      success: Balances refreshed.
+    setup_accounts:
+      success: Accounts created and linked. A sync has been started.
+    apply_relink:
+      success: Accounts relinked successfully.
+      errors:
+        relink_failed: "Relink failed: %{message}"
