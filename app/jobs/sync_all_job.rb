@@ -1,4 +1,4 @@
-class Accounts::SyncAllJob < ApplicationJob
+class SyncAllJob < ApplicationJob
   queue_as :scheduled
 
   def perform
