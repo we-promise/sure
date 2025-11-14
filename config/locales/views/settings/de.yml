@@ -77,7 +77,7 @@ de:
         last_name: Nachname
         page_title: Profilinformationen
         pending: Ausstehend
-        profile_subtitle: Passe an, wie du in %{product} erscheinst.
+        profile_subtitle: Passe an, wie du in %{product_name} erscheinst.
         profile_title: Persönlich
         remove_invitation: Einladung entfernen
         remove_member: Mitglied entfernen
