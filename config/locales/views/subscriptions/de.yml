@@ -1,0 +1,4 @@
+---
+de:
+  subscriptions:
+    self_hosted_alert: "%{product_name} ist im Self-Hosting-Modus nicht verfügbar."

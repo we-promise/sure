@@ -1,0 +1,31 @@
+---
+de:
+  pages:
+    changelog:
+      title: Was ist neu
+    dashboard:
+      welcome: "Willkommen zurück, %{name}"
+      subtitle: "Hier siehst du, was in deinen Finanzen passiert."
+      new: "Neu"
+      net_worth_chart:
+        data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar.
+        title: Nettovermögen
+      no_account_empty_state:
+        new_account: Neues Konto
+        no_account_subtitle: Da noch keine Konten hinzugefügt wurden, gibt es keine Daten anzuzeigen. Füge dein erstes Konto hinzu, um Dashboard-Daten zu sehen.
+        no_account_title: Noch keine Konten vorhanden
+      balance_sheet:
+        no_items: "Noch keine %{name}"
+        add_accounts: "Füge deine %{name}-Konten hinzu, um eine vollständige Übersicht zu erhalten."
+      cashflow_sankey:
+        title: "Cashflow"
+        no_data_title: "Keine Cashflow-Daten für diesen Zeitraum"
+        no_data_description: "Füge Transaktionen hinzu, um Cashflow-Daten anzuzeigen, oder erweitere den Zeitraum."
+        add_transaction: "Transaktion hinzufügen"
+      no_accounts:
+        title: "Noch keine Konten vorhanden"
+        description: "Füge Konten hinzu, um Daten zum Nettovermögen anzuzeigen."
+        add_account: "Konto hinzufügen"
+      outflows_donut:
+        title: "Ausgaben"
+        total_outflows: "Gesamtausgaben"
