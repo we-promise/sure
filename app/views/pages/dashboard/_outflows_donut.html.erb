@@ -71,10 +71,10 @@
             </div>
           </div>
         </div>
-        <div class="space-y-2 py-2 lg:py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm min-w-fit max-w-full">
+        <div class="py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm min-w-fit max-w-full">
           <% outflows_data[:categories].each_with_index do |category, idx| %>
             <%= link_to transactions_path(q: { categories: [category[:name]], start_date: period.date_range.first, end_date: period.date_range.last }),
-                class: "flex items-center justify-between mx-3 p-3 rounded-lg hover:bg-container-inset transition-colors cursor-pointer group",
+                class: "flex items-center justify-between mx-3 p-3 rounded-lg cursor-pointer group",
                 data: {
                   turbo_frame: "_top",
                   category_id: category[:id],
