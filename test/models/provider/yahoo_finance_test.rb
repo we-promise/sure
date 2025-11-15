@@ -215,4 +215,34 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       @provider.send(:validate_date_range!, Date.current - 5.years, Date.current)
     end
   end
+
+  # ================================
+  #   Currency Normalization Tests
+  # ================================
+
+  test "normalize_currency_and_price converts GBp to GBP" do
+    currency, price = @provider.send(:normalize_currency_and_price, "GBp", 1234.56)
+    assert_equal "GBP", currency
+    assert_equal 12.3456, price
+  end
+
+  test "normalize_currency_and_price converts ZAc to ZAR" do
+    currency, price = @provider.send(:normalize_currency_and_price, "ZAc", 5000.0)
+    assert_equal "ZAR", currency
+    assert_equal 50.0, price
+  end
+
+  test "normalize_currency_and_price leaves standard currencies unchanged" do
+    currency, price = @provider.send(:normalize_currency_and_price, "USD", 100.50)
+    assert_equal "USD", currency
+    assert_equal 100.50, price
+
+    currency, price = @provider.send(:normalize_currency_and_price, "GBP", 50.25)
+    assert_equal "GBP", currency
+    assert_equal 50.25, price
+
+    currency, price = @provider.send(:normalize_currency_and_price, "EUR", 75.75)
+    assert_equal "EUR", currency
+    assert_equal 75.75, price
+  end
 end
