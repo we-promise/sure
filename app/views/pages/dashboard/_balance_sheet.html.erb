@@ -35,7 +35,7 @@
           </div>
         </div>
 
-        <div class="bg-surface rounded-xl p-1 space-y-1 overflow-x-auto">
+        <div class="bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
           <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
             <div class="w-40">Name</div>
             <div class="ml-auto text-right flex items-center gap-6">
@@ -50,11 +50,11 @@
 
           <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm min-w-fit">
             <% classification_group.account_groups.each_with_index do |account_group, idx| %>
-              <details class="group open:bg-surface
+              <details class="group open:bg-container
                 <%= idx == 0 ? "rounded-t-lg" : "" %>
                 <%= idx == classification_group.account_groups.size - 1 ? "rounded-b-lg" : "" %>
               ">
-                <summary class="cursor-pointer p-4 group-open:bg-surface rounded-lg flex items-center justify-between">
+                <summary class="cursor-pointer p-4 group-open:bg-container rounded-lg flex items-center justify-between">
                   <div class="w-40 shrink-0 flex items-center gap-4">
                     <%= icon("chevron-right", class: "group-open:rotate-90") %>
 
