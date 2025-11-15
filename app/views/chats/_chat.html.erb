@@ -2,7 +2,7 @@
 
 <%= tag.div class: "flex items-center justify-between px-4 py-3 bg-container shadow-border-xs rounded-lg" do %>
   <div class="grow truncate">
-    <%= turbo_frame_tag dom_id(chat, :title) do %>
+    <%= turbo_frame_tag dom_id(chat, :title), title: chat.title do %>
       <%= render "chats/chat_title", chat: chat, ctx: "list" %>
     <% end %>
 
