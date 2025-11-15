@@ -9,7 +9,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq \
-    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps \
+    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps\
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
@@ -57,6 +57,9 @@ COPY --chown=rails:rails --from=build /rails /rails
 
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl --fail http://localhost:3000/healthcheck || exit 1
 
 # Start the server by default, this can be overwritten at runtime
 EXPOSE 3000

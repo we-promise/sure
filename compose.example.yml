@@ -52,6 +52,13 @@ services:
     ports:
       - 3000:3000
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://0.0.0.0:3000 || exit 1" ]
+      start_period: 10s
+      start_interval: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
     environment:
       <<: *rails_env
     depends_on:
@@ -73,6 +80,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "pgrep -f sidekiq || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       <<: *rails_env
     networks:
