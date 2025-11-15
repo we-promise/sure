@@ -2,6 +2,11 @@
 
 <%= turbo_frame_tag dom_id(account, "entries") do %>
   <div class="bg-container p-5 shadow-border-xs rounded-xl">
+    <% if account.balance_type == :non_cash %>
+      <div class="mb-4">
+        <%= render DS::Alert.new(message: t(".non_cash_account_info"), variant: :info) %>
+      </div>
+    <% end %>
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t(".title"), class: "font-medium text-lg" %>
       <% unless @account.linked? %>
