@@ -49,7 +49,7 @@ en:
         new_balance: New balance
         new_transaction: New transaction
         no_entries: No entries found
-        non_cash_account_info: "This account is tracked via manual valuations. To update the balance, use 'New Balance'. Transactions will not affect the account balance."
+        non_cash_account_info: "This account is tracked via manual valuations. To update the balance, use 'New Balance'. Cashflow will not affect the account balance."
         search:
           placeholder: Search entries by name
         title: Activity
