@@ -59,11 +59,22 @@
       </div>
 
       <!-- Category List -->
-      <div class="w-full lg:w-2/3">
-        <div class="space-y-2">
-          <% outflows_data[:categories].each do |category| %>
+      <div class="w-full lg:w-2/3 bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
+        <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
+          <div class="w-40">Name</div>
+          <div class="ml-auto text-right flex items-center gap-6">
+            <div class="w-40">
+              <p><%= t("value") %></p>
+            </div>
+            <div class="w-20">
+              <p><%= t("weight") %></p>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2 py-2 lg:py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm min-w-fit max-w-full">
+          <% outflows_data[:categories].each_with_index do |category, idx| %>
             <%= link_to transactions_path(q: { categories: [category[:name]], start_date: period.date_range.first, end_date: period.date_range.last }),
-                class: "flex items-center justify-between p-3 rounded-lg hover:bg-container-inset transition-colors cursor-pointer group",
+                class: "flex items-center justify-between mx-3 p-3 rounded-lg hover:bg-container-inset transition-colors cursor-pointer group",
                 data: {
                   turbo_frame: "_top",
                   category_id: category[:id],
@@ -78,6 +89,9 @@
                 <span class="text-sm font-medium text-primary whitespace-nowrap"><%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ",") %></span>
                 <span class="text-sm text-secondary whitespace-nowrap"><%= category[:percentage] %>%</span>
               </div>
+            <% end %>
+            <% if idx < outflows_data[:categories].size - 1 %>
+              <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
             <% end %>
           <% end %>
         </div>
