@@ -37,7 +37,7 @@ class HealthController < ApplicationController
     def check_redis
       Sidekiq.redis(&:ping)
       true
-    rescue Redis::CannotConnectError => e
+    rescue StandardError => e
       Rails.logger.error("Redis health check failed: #{e.message}")
       false
     end
@@ -50,4 +50,3 @@ class HealthController < ApplicationController
       Rails.logger.level = old_level
     end
 end
-
