@@ -101,7 +101,7 @@ class Family::DataExporter
 
     def generate_categories_csv
       CSV.generate do |csv|
-        csv << [ "name", "color", "parent_category", "classification" ]
+        csv << [ "name", "color", "parent_category", "classification", "lucide_icon" ]
 
         # Only export categories belonging to this family
         @family.categories.includes(:parent).find_each do |category|
@@ -109,7 +109,8 @@ class Family::DataExporter
             category.name,
             category.color,
             category.parent&.name,
-            category.classification
+            category.classification,
+            category.lucide_icon
           ]
         end
       end

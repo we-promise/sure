@@ -20,7 +20,7 @@ class Import::ConfigurationsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(
+      params.fetch(:import, {}).permit(
         :date_col_label,
         :amount_col_label,
         :name_col_label,

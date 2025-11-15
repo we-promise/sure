@@ -22,7 +22,11 @@ module ImportsHelper
       ticker: "Ticker",
       exchange: "Exchange",
       price: "Price",
-      entity_type: "Type"
+      entity_type: "Type",
+      category_parent: "Parent category",
+      category_color: "Color",
+      category_classification: "Classification",
+      category_icon: "Lucide icon"
     }[key]
   end
 
@@ -62,7 +66,7 @@ module ImportsHelper
 
   private
     def permitted_import_types
-      %w[transaction_import trade_import account_import mint_import]
+      %w[transaction_import trade_import account_import mint_import category_import]
     end
 
     DryRunResource = Struct.new(:label, :icon, :text_class, :bg_class, keyword_init: true)

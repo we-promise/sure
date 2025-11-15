@@ -370,6 +370,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "exchange_operating_mic"
+    t.string "category_parent"
+    t.string "category_color"
+    t.string "category_classification"
+    t.string "category_icon"
     t.index ["import_id"], name: "index_import_rows_on_import_id"
   end
 
