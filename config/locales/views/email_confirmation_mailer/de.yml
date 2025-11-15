@@ -1,0 +1,9 @@
+---
+de:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: Du hast kürzlich beantragt, deine E-Mail-Adresse zu ändern. Klicke auf die Schaltfläche unten, um diese Änderung zu bestätigen.
+      cta: E-Mail-Änderung bestätigen
+      expiry_notice: Dieser Link läuft in %{hours} Stunden ab.
+      greeting: Hallo!
+      subject: "%{product_name}: E-Mail-Änderung bestätigen"

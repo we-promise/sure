@@ -1,6 +1,7 @@
 require "digest/md5"
 
 class SimplefinEntry::Processor
+  include CurrencyNormalizable
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   def initialize(simplefin_transaction, simplefin_account:)
     @simplefin_transaction = simplefin_transaction
@@ -77,7 +78,11 @@ class SimplefinEntry::Processor
     end
 
     def currency
-      data[:currency] || account.currency
+      parse_currency(data[:currency]) || account.currency
+    end
+
+    def log_invalid_currency(currency_value)
+      Rails.logger.warn("Invalid currency code '#{currency_value}' in SimpleFIN transaction #{external_id}, falling back to account currency")
     end
 
     def date

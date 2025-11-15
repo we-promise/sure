@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_11_10_104411) do
+ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -370,6 +370,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_10_104411) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "exchange_operating_mic"
+    t.string "category_parent"
+    t.string "category_color"
+    t.string "category_classification"
+    t.string "category_icon"
     t.index ["import_id"], name: "index_import_rows_on_import_id"
   end
 
@@ -687,6 +691,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_10_104411) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "name"
+    t.boolean "manual", default: false, null: false
+    t.decimal "expected_amount_min", precision: 19, scale: 4
+    t.decimal "expected_amount_max", precision: 19, scale: 4
+    t.decimal "expected_amount_avg", precision: 19, scale: 4
     t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_merchant", unique: true, where: "(merchant_id IS NOT NULL)"
     t.index ["family_id", "name", "amount", "currency"], name: "idx_recurring_txns_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL))"
     t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"

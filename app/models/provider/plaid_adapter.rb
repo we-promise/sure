@@ -17,6 +17,10 @@ class Provider::PlaidAdapter < Provider::Base
   # Register this adapter with the factory for ALL PlaidAccount instances
   Provider::Factory.register("PlaidAccount", self)
 
+  # Mutex for thread-safe configuration loading
+  # Initialized at class load time to avoid race conditions on mutex creation
+  @config_mutex = Mutex.new
+
   # Configuration for Plaid US
   configure do
     description <<~DESC
@@ -49,6 +53,21 @@ class Provider::PlaidAdapter < Provider::Base
 
   def provider_name
     "plaid"
+  end
+
+  # Thread-safe lazy loading of Plaid US configuration
+  # Ensures configuration is loaded exactly once even under concurrent access
+  def self.ensure_configuration_loaded
+    # Fast path: return immediately if already loaded (no lock needed)
+    return if Rails.application.config.plaid.present?
+
+    # Slow path: acquire lock and reload if still needed
+    @config_mutex.synchronize do
+      # Double-check after acquiring lock (another thread may have loaded it)
+      return if Rails.application.config.plaid.present?
+
+      reload_configuration
+    end
   end
 
   # Reload Plaid US configuration when settings are updated

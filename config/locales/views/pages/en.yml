@@ -29,3 +29,6 @@ en:
       outflows_donut:
         title: "Outflows"
         total_outflows: "Total Outflows"
+        categories: "Categories"
+        value: "Value"
+        weight: "Weight"

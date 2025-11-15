@@ -235,4 +235,12 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     @simplefin_item.reload
     assert @simplefin_item.scheduled_for_deletion?
   end
+
+  test "select_existing_account redirects when no available simplefin accounts" do
+    account = accounts(:depository)
+
+    get select_existing_account_simplefin_items_url(account_id: account.id)
+    assert_redirected_to account_path(account)
+    assert_equal "No available SimpleFIN accounts to link. Please connect a new SimpleFIN account first.", flash[:alert]
+  end
 end
