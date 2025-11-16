@@ -6,7 +6,6 @@ nb:
       no_account: Ny hos %{product_name}?
       sign_in: Logg inn
       sign_up: Opprett konto
-      your_account: Din konto
     shared:
       footer:
         privacy_policy: Personvernerklæring
