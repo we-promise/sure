@@ -1,9 +1,9 @@
 module Family::AutoTransferMatchable
   def transfer_match_candidates
     Entry.select([
-      "inflow_candidates.entryable_id as inflow_transaction_id",
-      "outflow_candidates.entryable_id as outflow_transaction_id",
-      "ABS(inflow_candidates.date - outflow_candidates.date) as date_diff"
+      "inflow_candidates.entryable_id AS inflow_transaction_id",
+      "outflow_candidates.entryable_id AS outflow_transaction_id",
+      "ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff"
     ]).from("entries inflow_candidates")
       .joins("
         JOIN entries outflow_candidates ON (
@@ -52,8 +52,6 @@ module Family::AutoTransferMatchable
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
-
-    candidates = []
 
     Transfer.transaction do
       candidates_scope.each do |match|
