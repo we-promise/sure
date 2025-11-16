@@ -38,8 +38,12 @@ self.addEventListener('fetch', (event) => {
   // Handle navigation requests (page loads)
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/offline.html');
+      fetch(event.request).catch((error) => {
+        // Only show offline page for network errors
+        if (error.name === 'TypeError' || !navigator.onLine) {
+          return caches.match('/offline.html');
+        }
+        throw error;
       })
     );
   }
