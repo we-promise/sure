@@ -15,6 +15,6 @@ ca:
       role_label: Rol
       role_member: Membre
       submit: Envia invitació
-      subtitle: Envia una invitació per unir-te al teu compte familiar a Maybe
+      subtitle: Envia una invitació per unir-te al teu compte familiar a %{product_name}
       title: Convida algú
 

@@ -1,0 +1,62 @@
+de:
+  lunchflow_items:
+    create:
+      success: Lunch-Flow-Verbindung erfolgreich erstellt
+    destroy:
+      success: Lunch-Flow-Verbindung entfernt
+    index:
+      title: Lunch-Flow-Verbindungen
+    loading:
+      loading_message: Lunch-Flow-Konten werden geladen...
+      loading_title: Wird geladen
+    link_accounts:
+      all_already_linked:
+        one: "Das ausgewählte Konto (%{names}) ist bereits verknüpft"
+        other: "Alle %{count} ausgewählten Konten sind bereits verknüpft: %{names}"
+      api_error: "API-Fehler: %{message}"
+      link_failed: Konten konnten nicht verknüpft werden
+      no_accounts_selected: Bitte wähle mindestens ein Konto aus
+      partial_success: "%{created_count} Konto/Konten erfolgreich verknüpft. %{already_linked_count} Konto/Konten waren bereits verknüpft: %{already_linked_names}"
+      success:
+        one: "%{count} Konto erfolgreich verknüpft"
+        other: "%{count} Konten erfolgreich verknüpft"
+    lunchflow_item:
+      delete: Verbindung löschen
+      deletion_in_progress: Löschung wird durchgeführt...
+      error: Fehler
+      no_accounts_description: Diese Verbindung enthält derzeit keine verknüpften Konten.
+      no_accounts_title: Keine Konten
+      status: "Vor %{timestamp} synchronisiert"
+      status_never: Noch nie synchronisiert
+      syncing: Wird synchronisiert...
+    select_accounts:
+      accounts_selected: Konten ausgewählt
+      api_error: "API-Fehler: %{message}"
+      cancel: Abbrechen
+      description: Wähle die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchtest.
+      link_accounts: Ausgewählte Konten verknüpfen
+      no_accounts_found: Keine Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
+      no_api_key: Lunch-Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      title: Lunch-Flow-Konten auswählen
+    select_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
+      all_accounts_already_linked: Alle Lunch-Flow-Konten sind bereits verknüpft
+      api_error: "API-Fehler: %{message}"
+      cancel: Abbrechen
+      description: Wähle ein Lunch-Flow-Konto aus, um es mit diesem Konto zu verknüpfen. Transaktionen werden automatisch synchronisiert und doppelte Einträge entfernt.
+      link_account: Konto verknüpfen
+      no_account_specified: Kein Konto angegeben
+      no_accounts_found: Keine Lunch-Flow-Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
+      no_api_key: Lunch-Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      title: "%{account_name} mit Lunch Flow verknüpfen"
+    link_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
+      api_error: "API-Fehler: %{message}"
+      lunchflow_account_already_linked: Dieses Lunch-Flow-Konto ist bereits mit einem anderen Konto verknüpft
+      lunchflow_account_not_found: Lunch-Flow-Konto nicht gefunden
+      missing_parameters: Erforderliche Parameter fehlen
+      success: "%{account_name} erfolgreich mit Lunch Flow verknüpft"
+    sync:
+      success: Synchronisierung gestartet
+    update:
+      success: Lunch-Flow-Verbindung aktualisiert

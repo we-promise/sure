@@ -84,6 +84,13 @@ class RecurringTransaction
 
         recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
 
+        # Handle manual recurring transactions specially
+        if recurring_transaction.persisted? && recurring_transaction.manual?
+          # Update variance for manual recurring transactions
+          update_manual_recurring_variance(recurring_transaction, pattern)
+          next
+        end
+
         # Set the name or merchant_id on new records
         if recurring_transaction.new_record?
           if pattern[:merchant_id].present?
@@ -91,6 +98,8 @@ class RecurringTransaction
           else
             recurring_transaction.name = pattern[:name]
           end
+          # New auto-detected recurring transactions are not manual
+          recurring_transaction.manual = false
         end
 
         recurring_transaction.assign_attributes(
@@ -104,7 +113,72 @@ class RecurringTransaction
         recurring_transaction.save!
       end
 
+      # Also check for manual recurring transactions that might need variance updates
+      update_manual_recurring_transactions(three_months_ago)
+
       recurring_patterns.size
+    end
+
+    # Update variance for existing manual recurring transactions
+    def update_manual_recurring_transactions(since_date)
+      family.recurring_transactions.where(manual: true, status: "active").find_each do |recurring|
+        # Find matching transactions in the recent period
+        matching_entries = RecurringTransaction.find_matching_transaction_entries(
+          family: family,
+          merchant_id: recurring.merchant_id,
+          name: recurring.name,
+          currency: recurring.currency,
+          expected_day: recurring.expected_day_of_month,
+          lookback_months: 6
+        )
+
+        next if matching_entries.empty?
+
+        # Extract amounts and dates from all matching entries
+        matching_amounts = matching_entries.map(&:amount)
+        last_entry = matching_entries.max_by(&:date)
+
+        # Recalculate variance from all occurrences (including identical amounts)
+        recurring.update!(
+          expected_amount_min: matching_amounts.min,
+          expected_amount_max: matching_amounts.max,
+          expected_amount_avg: matching_amounts.sum / matching_amounts.size,
+          occurrence_count: matching_amounts.size,
+          last_occurrence_date: last_entry.date,
+          next_expected_date: calculate_next_expected_date(last_entry.date, recurring.expected_day_of_month)
+        )
+      end
+    end
+
+    # Update variance for a manual recurring transaction when pattern is found
+    def update_manual_recurring_variance(recurring_transaction, pattern)
+      # Check if this transaction's date is more recent
+      if pattern[:last_occurrence_date] > recurring_transaction.last_occurrence_date
+        # Find all matching transactions to recalculate variance
+        matching_entries = RecurringTransaction.find_matching_transaction_entries(
+          family: family,
+          merchant_id: recurring_transaction.merchant_id,
+          name: recurring_transaction.name,
+          currency: recurring_transaction.currency,
+          expected_day: recurring_transaction.expected_day_of_month,
+          lookback_months: 6
+        )
+
+        # Update if we have any matching transactions
+        if matching_entries.any?
+          matching_amounts = matching_entries.map(&:amount)
+
+          recurring_transaction.update!(
+            expected_amount_min: matching_amounts.min,
+            expected_amount_max: matching_amounts.max,
+            expected_amount_avg: matching_amounts.sum / matching_amounts.size,
+            occurrence_count: matching_amounts.size,
+            last_occurrence_date: pattern[:last_occurrence_date],
+            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], recurring_transaction.expected_day_of_month),
+            status: "active"
+          )
+        end
+      end
     end
 
     private

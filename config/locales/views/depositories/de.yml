@@ -1,0 +1,10 @@
+---
+de:
+  depositories:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      none: Keine
+      subtype_prompt: Kontotyp auswählen
+    new:
+      title: Kontostand eingeben
