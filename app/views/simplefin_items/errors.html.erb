@@ -1,34 +1,29 @@
-<%# locals: none; uses @stats, @error_buckets, @errors %>
+<%# Modal: Show SimpleFIN sync errors for a connection %>
 <%= turbo_frame_tag "modal" do %>
-  <div class="p-4 space-y-4">
-    <div class="flex items-center justify-between">
-      <h3 class="text-primary font-medium">SimpleFin Sync Errors</h3>
-      <%= link_to "Close", "#", data: { action: "modal#close" }, class: "text-secondary text-sm" %>
-    </div>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "SimpleFIN sync errors") %>
 
-    <% if @error_buckets.present? %>
-      <div class="text-sm text-secondary">
-        <span class="font-medium text-primary">Categories:</span>
-        <%= @error_buckets.map { |k,v| "#{k}: #{v}" }.join(", ") %>
-      </div>
+    <% dialog.with_body do %>
+      <% if @errors.present? %>
+        <div class="p-2 text-sm text-secondary space-y-2">
+          <p>We found the following errors in the latest sync:</p>
+          <ul class="list-disc list-inside space-y-1">
+            <% @errors.each do |msg| %>
+              <li class="text-primary"><%= msg %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <div class="p-4 text-sm text-secondary">
+          <p>No errors were recorded for the latest sync.</p>
+        </div>
+      <% end %>
     <% end %>
 
-    <% if @errors.any? %>
-      <div class="divide-y divide-gray-200 rounded-md border border-gray-200">
-        <% @errors.each do |e| %>
-          <div class="p-3">
-            <div class="flex items-center justify-between">
-              <div class="font-medium text-primary"><%= e[:name].presence || e[:account_id] || "Unknown account" %></div>
-              <% if e[:category].present? %>
-                <span class="text-xs text-secondary uppercase"><%= e[:category] %></span>
-              <% end %>
-            </div>
-            <div class="text-sm text-secondary mt-1"><%= e[:message] %></div>
-          </div>
-        <% end %>
+    <% dialog.with_footer do %>
+      <div class="flex items-center justify-end gap-2">
+        <%= render DS::Link.new(text: "Close", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
       </div>
-    <% else %>
-      <p class="text-secondary text-sm">No recent per-account errors.</p>
     <% end %>
-  </div>
+  <% end %>
 <% end %>

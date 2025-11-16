@@ -363,16 +363,40 @@ class SimplefinItemsController < ApplicationController
     end
   end
 
+  def errors
+    # Find the latest sync to surface its error messages in a lightweight modal
+    latest_sync = if @simplefin_item.syncs.loaded?
+      @simplefin_item.syncs.max_by(&:created_at)
+    else
+      @simplefin_item.syncs.ordered.first
+    end
+
+    stats = (latest_sync&.sync_stats || {})
+    raw_errors = Array(stats["errors"]) # may contain strings or hashes with message keys
+
+    @errors = raw_errors.map { |e|
+      if e.is_a?(Hash)
+        e["message"] || e[:message] || e.to_s
+      else
+        e.to_s
+      end
+    }.compact
+
+    # Fall back to simplefin_item.sync_error if present and not already included
+    if @simplefin_item.respond_to?(:sync_error) && @simplefin_item.sync_error.present?
+      @errors << @simplefin_item.sync_error
+    end
+
+    # De-duplicate and keep non-empty messages
+    @errors = @errors.map(&:to_s).map(&:strip).reject(&:blank?).uniq
+
+    render layout: false
+  end
+
   private
 
     NAME_NORM_RE = /\s+/.freeze
 
-    def compute_unlinked_count(item)
-      item.simplefin_accounts
-          .left_joins(:account, :account_provider)
-          .where(accounts: { id: nil }, account_providers: { id: nil })
-          .count
-    end
 
     def normalize_name(str)
       s = str.to_s.downcase.strip
