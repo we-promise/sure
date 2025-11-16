@@ -3,7 +3,7 @@ module Family::AutoTransferMatchable
     Entry.select([
       "inflow_candidates.entryable_id AS inflow_transaction_id",
       "outflow_candidates.entryable_id AS outflow_transaction_id",
-      "ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff"
+      "ABS(inflow_candidates.date - outflow_candidates.date) as date_diff"
     ]).from("entries inflow_candidates")
       .joins("
         JOIN entries outflow_candidates ON (
