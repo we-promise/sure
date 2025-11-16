@@ -10,6 +10,7 @@
   class="h-full text-primary overflow-hidden font-sans <%= @os %>">
   <head>
     <%= render "layouts/shared/head" %>
+    <meta name="turbo-cache-control" content="no-cache">
     <%= yield :head %>
   </head>
 

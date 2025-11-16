@@ -58,7 +58,6 @@
                     <%= render DS::Tooltip.new(text: tooltip_text, icon: "alert-octagon", size: "sm", color: "warning") %>
                   <% end %>
                   <%= render DS::Link.new(text: "View errors", icon: "alert-octagon", variant: "secondary", href: errors_simplefin_item_path(simplefin_item), frame: "modal") %>
-                  <%= render DS::Link.new(text: "Link existing accounts", icon: "link-2", variant: "secondary", href: manual_relink_simplefin_item_path(simplefin_item), frame: "modal") %>
                 <% end %>
 
                 <% if stats["total_accounts"].to_i > 0 %>
@@ -127,19 +126,6 @@
           ) %>
         <% end %>
 
-        <%# CTA logic precedence:
-           # - If there are unlinked SimpleFin accounts, we guide the user to Set up accounts first.
-           # - Only show "Link existing accounts" when there are zero unlinked SFAs AND there are manual accounts to link.
-        %>
-        <% if (@simplefin_show_relink_map || {})[simplefin_item.id] %>
-          <%= render DS::Link.new(
-            text: "Link existing accounts",
-            icon: "link-2",
-            variant: "secondary",
-            href: manual_relink_simplefin_item_path(simplefin_item),
-            frame: "modal"
-          ) %>
-        <% end %>
 
 
         <%= render DS::Menu.new do |menu| %>

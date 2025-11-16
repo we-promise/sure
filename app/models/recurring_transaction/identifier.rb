@@ -46,6 +46,9 @@ class RecurringTransaction
           # Unpack identifier - either [:merchant, id] or [:name, name_string]
           identifier_type, identifier_value = identifier
 
+          # Support both merchant-based and name-based recurring patterns (main-parity)
+          identifier_type, identifier_value = identifier
+
           pattern = {
             amount: amount,
             currency: currency,
@@ -55,7 +58,6 @@ class RecurringTransaction
             entries: entries
           }
 
-          # Set either merchant_id or name based on identifier type
           if identifier_type == :merchant
             pattern[:merchant_id] = identifier_value
           else

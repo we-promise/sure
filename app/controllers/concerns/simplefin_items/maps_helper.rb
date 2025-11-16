@@ -19,8 +19,7 @@ module SimplefinItems
       # Batch-check if ANY family has manual accounts (same result for all items from same family)
       family_ids = items.map { |i| i.family_id }.uniq
       families_with_manuals = Account
-        .left_joins(:account_providers)
-        .where(account_providers: { id: nil })
+        .visible_manual
         .where(family_id: family_ids)
         .distinct
         .pluck(:family_id)

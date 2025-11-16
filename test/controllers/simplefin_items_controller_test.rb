@@ -50,7 +50,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to accounts_path
-    assert_match(/updated successfully/, flash[:notice])
+    assert_equal "SimpleFin connection updated.", flash[:notice]
     @simplefin_item.reload
     assert @simplefin_item.scheduled_for_deletion?
   end
@@ -63,7 +63,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_includes response.body, "Please enter a SimpleFin setup token"
+    assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFin setup token")
   end
 
   test "should transfer accounts when updating simplefin item token" do
@@ -140,7 +140,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to accounts_path
-    assert_match(/updated successfully/, flash[:notice])
+    assert_equal "SimpleFin connection updated.", flash[:notice]
 
     # Verify accounts were transferred to new SimpleFin accounts
     assert Account.exists?(maybe_account1.id), "maybe_account1 should still exist"
@@ -224,12 +224,12 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert @simplefin_item.scheduled_for_deletion?
   end
 
-  test "select_existing_account redirects when no available simplefin accounts" do
+  test "select_existing_account renders empty-state modal when no available simplefin accounts" do
     account = accounts(:depository)
 
     get select_existing_account_simplefin_items_url(account_id: account.id)
-    assert_redirected_to account_path(account)
-    assert_equal "No available SimpleFIN accounts to link. Please connect a new SimpleFIN account first.", flash[:alert]
+    assert_response :success
+    assert_includes @response.body, "All SimpleFIN accounts appear to be linked already."
   end
   test "destroy should unlink provider links and legacy fk" do
     # Create SFA and linked Account with AccountProvider
@@ -245,29 +245,6 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, AccountProvider.where(provider_type: "SimplefinAccount", provider_id: sfa.id).count
   end
 
-  test "apply_relink links pairs in one pass and avoids duplicates" do
-    # Manual account existing
-    manual = Account.create!(family: @family, name: "Quicksilver", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
-
-    # SimpleFin account with same name (candidate by name)
-    sfa = @simplefin_item.simplefin_accounts.create!(
-      name: "Quicksilver", account_id: "sf_qs_1", currency: "USD", current_balance: -10, account_type: "credit"
-    )
-
-    # Simulate provider-linked duplicate account that should be removed after relink
-    dup_acct = Account.create!(family: @family, name: "Quicksilver (dup)", currency: "USD", balance: 0, accountable_type: "CreditCard", accountable: CreditCard.create!)
-    AccountProvider.create!(account: dup_acct, provider_type: "SimplefinAccount", provider_id: sfa.id)
-
-    post apply_relink_simplefin_item_url(@simplefin_item), params: {
-      pairs: [ { sfa_id: sfa.id, manual_id: manual.id, checked: "1" } ]
-    }, as: :json
-    assert_response :success
-
-    # Provider link should now point to manual, and duplicate account should be gone after cleanup
-    ap = AccountProvider.find_by(provider_type: "SimplefinAccount", provider_id: sfa.id)
-    assert_equal manual.id, ap.account_id
-    assert_raises(ActiveRecord::RecordNotFound) { dup_acct.reload }
-  end
 
   test "complete_account_setup creates accounts only for truly unlinked SFAs" do
     # Linked SFA (should be ignored by setup)
@@ -295,7 +272,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     # The newly created account for the unlinked SFA should now exist
     assert_not_nil unlinked_sfa.account_id
   end
-  test "update auto-opens relink modal when unlinked SFAs present" do
+  test "update redirects to accounts after setup without forcing a modal" do
     @simplefin_item.update!(status: :requires_update)
 
     # Mock provider to return one account so updated_item creates SFAs
@@ -313,9 +290,6 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     uri = URI(response.redirect_url)
     assert_equal "/accounts", uri.path
-    # Expect open_relink_for param present when there are unlinked SFAs
-    q = Rack::Utils.parse_nested_query(uri.query)
-    assert q.key?("open_relink_for"), "expected open_relink_for param to trigger auto-open modal"
   end
 
   test "create does not auto-open when no candidates or unlinked" do
@@ -348,10 +322,5 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "/accounts", uri.path
     q = Rack::Utils.parse_nested_query(uri.query)
     assert !q.key?("open_relink_for"), "did not expect auto-open when update produced no SFAs/candidates"
-  end
-  test "manual_relink renders modal content" do
-    get manual_relink_simplefin_item_url(@simplefin_item)
-    assert_response :success
-    assert_includes @response.body, "Link existing accounts"
   end
 end

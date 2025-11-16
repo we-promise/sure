@@ -3,7 +3,9 @@ class AccountsController < ApplicationController
   include Periodable
 
   def index
-    @manual_accounts = family.accounts.manual.alphabetically
+    @manual_accounts = family.accounts
+          .visible_manual
+          .order(:name)
     @plaid_items = family.plaid_items.ordered
     @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
     @lunchflow_items = family.lunchflow_items.ordered
@@ -16,8 +18,7 @@ class AccountsController < ApplicationController
       latest_sync = item.syncs.ordered.first
       @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
       @simplefin_has_unlinked_map[item.id] = item.family.accounts
-        .left_joins(:account_providers)
-        .where(account_providers: { id: nil })
+        .visible_manual
         .exists?
     end
 
@@ -49,6 +50,8 @@ class AccountsController < ApplicationController
       end
     end
 
+    # Prevent Turbo Drive from caching this page to ensure fresh account lists
+    expires_now
     render layout: "settings"
   end
 

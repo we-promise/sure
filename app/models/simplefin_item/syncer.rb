@@ -57,7 +57,9 @@ class SimplefinItem::Syncer
       sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
       total_accounts = simplefin_item.simplefin_accounts.count
       linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
-      unlinked_accounts = simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
+      unlinked_accounts = simplefin_item.simplefin_accounts
+        .left_joins(:account, :account_provider)
+        .where(accounts: { id: nil }, account_providers: { id: nil })
 
       if unlinked_accounts.any?
         simplefin_item.update!(pending_account_setup: true)
@@ -133,15 +135,19 @@ class SimplefinItem::Syncer
         # Also refresh the Manual Accounts group so duplicates clear without a full page reload
         begin
           manual_accounts = simplefin_item.family.accounts
-            .left_joins(:account_providers)
-            .where(account_providers: { id: nil })
+            .visible_manual
             .order(:name)
-          manual_html = ApplicationController.render(
-            partial: "accounts/index/manual_accounts",
-            formats: [ :html ],
-            locals: { accounts: manual_accounts }
-          )
-          Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: "manual-accounts", html: manual_html)
+          if manual_accounts.any?
+            manual_html = ApplicationController.render(
+              partial: "accounts/index/manual_accounts",
+              formats: [ :html ],
+              locals: { accounts: manual_accounts }
+            )
+            Turbo::StreamsChannel.broadcast_update_to(simplefin_item.family, target: "manual-accounts", html: manual_html)
+          else
+            manual_html = ApplicationController.render(inline: '<div id="manual-accounts"></div>')
+            Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: "manual-accounts", html: manual_html)
+          end
         rescue => inner
           Rails.logger.warn("SimplefinItem::Syncer manual-accounts broadcast failed: #{inner.class} - #{inner.message}")
         end

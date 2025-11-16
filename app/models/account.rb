@@ -28,6 +28,10 @@ class Account < ApplicationRecord
       .where(plaid_account_id: nil, simplefin_account_id: nil)
   }
 
+  scope :visible_manual, -> {
+    visible.manual
+  }
+
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy

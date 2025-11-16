@@ -2,15 +2,6 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
-  resources :simplefin_items do
-    member do
-      get :errors
-      post :balances
-      get :relink
-      post :apply_relink
-      get :prelink
-    end
-  end
   use_doorkeeper
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -313,9 +304,6 @@ Rails.application.routes.draw do
       post :sync
       post :balances
       get :errors
-      get :relink
-      get :manual_relink
-      post :apply_relink
       get :setup_accounts
       post :complete_account_setup
     end

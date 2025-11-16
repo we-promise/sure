@@ -164,11 +164,11 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     assert_response :success
     # Expect setup link present
     assert_includes @response.body, setup_accounts_simplefin_item_path(item)
-    # Relink should be hidden until setup is done
-    refute_includes @response.body, manual_relink_simplefin_item_path(item)
+    # Relink modal (SimpleFin-specific) should not be present anymore
+    refute_includes @response.body, "Link existing accounts"
   end
 
-  test "when SFAs exist and none unlinked and manuals exist, shows relink button" do
+  test "when SFAs exist and none unlinked and manuals exist, no relink modal is shown (unified flow)" do
     item = SimplefinItem.create!(family: @family, name: "Conn2", access_url: "https://example.com/access")
     # Create a manual linked to SFA so unlinked count == 0
     sfa = item.simplefin_accounts.create!(name: "B", account_id: "sf_b", currency: "USD", current_balance: 1, account_type: "depository")
@@ -181,10 +181,8 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
 
     get accounts_path
     assert_response :success
-    # Expect relink link present
-    assert_includes @response.body, manual_relink_simplefin_item_path(item)
-    # Setup link should be absent because unlinked == 0
-    refute_includes @response.body, setup_accounts_simplefin_item_path(item)
+    # The SimpleFin-specific relink modal is removed in favor of unified provider flow
+    refute_includes @response.body, "Link existing accounts"
   end
 
   test "when no SFAs exist, shows neither CTA" do
@@ -193,6 +191,6 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     get accounts_path
     assert_response :success
     refute_includes @response.body, setup_accounts_simplefin_item_path(item)
-    refute_includes @response.body, manual_relink_simplefin_item_path(item)
+    refute_includes @response.body, "Link existing accounts"
   end
 end

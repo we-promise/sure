@@ -39,15 +39,19 @@ class SimplefinItem::BalancesOnlyJob < ApplicationJob
       # Also refresh Manual Accounts so the CTA state and duplicates clear without refresh
       begin
         manual_accounts = item.family.accounts
-          .left_joins(:account_providers)
-          .where(account_providers: { id: nil })
+          .visible_manual
           .order(:name)
-        manual_html = ApplicationController.render(
-          partial: "accounts/index/manual_accounts",
-          formats: [ :html ],
-          locals: { accounts: manual_accounts }
-        )
-        Turbo::StreamsChannel.broadcast_replace_to(item.family, target: "manual-accounts", html: manual_html)
+        if manual_accounts.any?
+          manual_html = ApplicationController.render(
+            partial: "accounts/index/manual_accounts",
+            formats: [ :html ],
+            locals: { accounts: manual_accounts }
+          )
+          Turbo::StreamsChannel.broadcast_update_to(item.family, target: "manual-accounts", html: manual_html)
+        else
+          manual_html = ApplicationController.render(inline: '<div id="manual-accounts"></div>')
+          Turbo::StreamsChannel.broadcast_replace_to(item.family, target: "manual-accounts", html: manual_html)
+        end
       rescue => inner
         Rails.logger.warn("SimpleFin BalancesOnlyJob manual-accounts broadcast failed: #{inner.class} - #{inner.message}")
       end

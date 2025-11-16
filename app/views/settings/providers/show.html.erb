@@ -20,11 +20,4 @@
     </turbo-frame>
   <% end %>
 
-  <%# Auto-open the SimpleFin relink modal after creation when requested %>
-  <% if params[:open_relink_for].present? %>
-    <div
-      data-controller="auto-relink"
-      data-auto-relink-url-value="<%= relink_simplefin_item_path(params[:open_relink_for]) %>"
-    ></div>
-  <% end %>
 </div>
