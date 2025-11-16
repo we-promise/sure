@@ -10,10 +10,12 @@ class FamilyResetJobTest < ActiveJob::TestCase
   test "resets family data successfully" do
     initial_account_count = @family.accounts.count
     initial_category_count = @family.categories.count
+    initial_recurring_count = @family.recurring_transactions.count
 
     # Family should have existing data
     assert initial_account_count > 0
     assert initial_category_count > 0
+    assert initial_recurring_count > 0
 
     # Don't expect Plaid removal calls since we're using fixtures without setup
     @plaid_provider.stubs(:remove_item)
@@ -23,6 +25,7 @@ class FamilyResetJobTest < ActiveJob::TestCase
     # All data should be removed
     assert_equal 0, @family.accounts.reload.count
     assert_equal 0, @family.categories.reload.count
+    assert_equal 0, @family.recurring_transactions.reload.count
   end
 
   test "resets family data even when Plaid credentials are invalid" do
