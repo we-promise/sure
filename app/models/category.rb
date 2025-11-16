@@ -48,20 +48,18 @@ class Category < ApplicationRecord
   class << self
     def icon_codes
       %w[
-        ambulance apple award baby banknote barcode bath battery bed-single beer bike
-        bluetooth bone book-open briefcase building bus cake calculator camera
-        car cat circle-dollar-sign coffee coins compass cookie cooking-pot credit-card
-        dices dog drama drill droplet drum dumbbell film flame flower fuel gamepad-2
-        gift glasses globe graduation-cap hammer hand-helping headphones heart
-        heart-pulse home ice-cream-cone key landmark laptop leaf lightbulb line-chart
-        luggage mail map-pin mic monitor moon music package palette paw-print
-        pencil percent phone pie-chart piggy-bank pill pizza plane plug power printer
-        puzzle receipt receipt-text ribbon scale scissors settings shield shirt
-        shopping-bag
-        shopping-cart smartphone sparkles sprout stethoscope store sun tag target
-        tent thermometer ticket train trees trophy truck tv umbrella users utensils
-        video wallet wallet-cards waves wifi wine wrench zap
-        badge-dollar-sign bar-chart-3 calendar-range
+        ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3
+        bath battery bed-single beer bike bluetooth bone book-open briefcase building
+        bus cake calculator calendar-range camera car cat circle-dollar-sign coffee
+        coins compass cookie cooking-pot credit-card dices dog drama drill droplet
+        drum dumbbell film flame flower fuel gamepad-2 gift glasses globe graduation-cap
+        hammer hand-helping headphones heart heart-pulse home ice-cream-cone key
+        landmark laptop leaf lightbulb line-chart luggage mail map-pin mic monitor moon
+        music package palette paw-print pencil percent phone pie-chart piggy-bank pill
+        pizza plane plug power printer puzzle receipt receipt-text ribbon scale scissors
+        settings shield shirt shopping-bag shopping-cart smartphone sparkles sprout
+        stethoscope store sun tag target tent thermometer ticket train trees trophy truck
+        tv umbrella users utensils video wallet wallet-cards waves wifi wine wrench zap
       ]
     end
 
