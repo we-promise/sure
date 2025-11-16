@@ -1,6 +1,6 @@
 class SimplefinItemsController < ApplicationController
   include SimplefinItems::MapsHelper
-  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup, :errors ]
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :errors ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered

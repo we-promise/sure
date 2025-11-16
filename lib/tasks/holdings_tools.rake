@@ -76,7 +76,7 @@ namespace :sure do
       h.destroy!
       puts({ ok: true, removed: id }.to_json)
     rescue => e
-      puts({ ok: false, error: "usage", message: "Provide snapshot_id" }.to_json)
+      puts({ ok: false, error: e.class.name, message: e.message }.to_json)
       exit 1
     end
   end
