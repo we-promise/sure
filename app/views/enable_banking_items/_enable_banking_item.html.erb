@@ -70,6 +70,12 @@
             as_button: true,
             href: sync_enable_banking_item_path(enable_banking_item)
           ) %>
+        <% elsif Rails.env.development? %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_enable_banking_item_path(enable_banking_item)
+          ) %>
         <% end %>
 
         <%= render DS::Menu.new do |menu| %>
