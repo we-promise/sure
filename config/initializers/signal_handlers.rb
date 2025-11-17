@@ -1,91 +1,81 @@
-# Signal handlers for web and worker processes
+# Signal handlers for worker processes (Sidekiq)
 #
 # SIGUSR1: Dump current settings array values (masked) to Rails.log
+#
+# Note: For web processes (Puma), the signal handler is configured in config/puma.rb
+# using on_worker_boot to avoid conflicts with Puma's master process signal handling
 Rails.application.config.after_initialize do
-  # Helper lambda to mask sensitive values
-  mask_sensitive_value = lambda do |field_name, value|
-    return nil if value.nil?
+  # Only set up signal handler for Sidekiq worker processes
+  # Puma workers get their handler set up in config/puma.rb
+  if defined?(Sidekiq) && Sidekiq.server?
+    Signal.trap("USR1") do
+      Thread.new do
+        begin
+          Rails.logger.info "=" * 80
+          Rails.logger.info "SIGUSR1 received in Sidekiq worker - Dumping application settings"
+          Rails.logger.info "Process: #{$PROGRAM_NAME} (PID: #{Process.pid})"
+          Rails.logger.info "=" * 80
 
-    # Check if field name contains sensitive patterns
-    sensitive_patterns = [
-      /key/i,
-      /token/i,
-      /secret/i,
-      /password/i,
-      /api/i,
-      /credentials?/i,
-      /auth/i
-    ]
+          # Get all declared fields from Setting model
+          declared_fields = Setting.singleton_class.instance_methods(false)
+            .map(&:to_s)
+            .reject { |m| m.end_with?("=") || m.start_with?("raw_") || %w[[] []= key? delete dynamic_keys validate_onboarding_state! validate_openai_config!].include?(m) }
+            .sort
 
-    is_sensitive = sensitive_patterns.any? { |pattern| field_name.match?(pattern) }
+          # Get all dynamic fields
+          dynamic_fields = Setting.dynamic_keys.sort
 
-    if is_sensitive && value.present?
-      case value
-      when String
-        # Show first 4 chars and mask the rest
-        if value.length <= 4
-          "[MASKED]"
-        else
-          "#{value[0..3]}#{'*' * [value.length - 4, 8].min}"
-        end
-      when TrueClass, FalseClass
-        value # Don't mask booleans
-      else
-        "[MASKED]"
-      end
-    else
-      value
-    end
-  end
+          # Helper to mask sensitive values
+          mask_value = lambda do |field_name, value|
+            return nil if value.nil?
 
-  Signal.trap("USR1") do
-    # Run in a new thread to avoid signal handler restrictions
-    Thread.new do
-      begin
-        Rails.logger.info "=" * 80
-        Rails.logger.info "SIGUSR1 received - Dumping application settings"
-        Rails.logger.info "Process: #{$PROGRAM_NAME} (PID: #{Process.pid})"
-        Rails.logger.info "=" * 80
+            sensitive = [/key/i, /token/i, /secret/i, /password/i, /api/i, /credentials?/i, /auth/i]
+            is_sensitive = sensitive.any? { |pattern| field_name.match?(pattern) }
 
-        # Get all declared fields from Setting model
-        # Find all field methods (getters) defined on the Setting singleton class
-        declared_fields = Setting.singleton_class.instance_methods(false)
-          .map(&:to_s)
-          .reject { |m| m.end_with?("=") || m.start_with?("raw_") || %w[[] []= key? delete dynamic_keys validate_onboarding_state! validate_openai_config!].include?(m) }
-          .sort
-
-        # Get all dynamic fields
-        dynamic_fields = Setting.dynamic_keys.sort
-
-        # Dump declared fields
-        unless declared_fields.empty?
-          Rails.logger.info "\n--- Declared Settings ---"
-          declared_fields.each do |field|
-            value = Setting.public_send(field)
-            masked_value = mask_sensitive_value.call(field, value)
-            Rails.logger.info "  #{field}: #{masked_value.inspect}"
+            if is_sensitive && value.present?
+              case value
+              when String
+                value.length <= 4 ? "[MASKED]" : "#{value[0..3]}#{'*' * [value.length - 4, 8].min}"
+              when TrueClass, FalseClass
+                value
+              else
+                "[MASKED]"
+              end
+            else
+              value
+            end
           end
-        end
 
-        # Dump dynamic fields
-        unless dynamic_fields.empty?
-          Rails.logger.info "\n--- Dynamic Settings ---"
-          dynamic_fields.each do |field|
-            value = Setting[field]
-            masked_value = mask_sensitive_value.call(field, value)
-            Rails.logger.info "  #{field}: #{masked_value.inspect}"
+          # Dump declared fields
+          unless declared_fields.empty?
+            Rails.logger.info "\n--- Declared Settings ---"
+            declared_fields.each do |field|
+              value = Setting.public_send(field)
+              masked_value = mask_value.call(field, value)
+              Rails.logger.info "  #{field}: #{masked_value.inspect}"
+            end
           end
-        end
 
-        Rails.logger.info "\n" + "=" * 80
-        Rails.logger.info "Settings dump complete (#{declared_fields.size} declared, #{dynamic_fields.size} dynamic)"
-        Rails.logger.info "=" * 80
-      rescue => e
-        Rails.logger.error "Error dumping settings: #{e.class} - #{e.message}"
-        Rails.logger.error e.backtrace.join("\n")
+          # Dump dynamic fields
+          unless dynamic_fields.empty?
+            Rails.logger.info "\n--- Dynamic Settings ---"
+            dynamic_fields.each do |field|
+              value = Setting[field]
+              masked_value = mask_value.call(field, value)
+              Rails.logger.info "  #{field}: #{masked_value.inspect}"
+            end
+          end
+
+          Rails.logger.info "\n" + "=" * 80
+          Rails.logger.info "Settings dump complete (#{declared_fields.size} declared, #{dynamic_fields.size} dynamic)"
+          Rails.logger.info "=" * 80
+        rescue => e
+          Rails.logger.error "Error dumping settings: #{e.class} - #{e.message}"
+          Rails.logger.error e.backtrace.join("\n")
+        end
       end
     end
-  end
 
-  Rails.logger.info "Signal handlers initialized (SIGUSR1 -> dump settings)"
+    Rails.logger.info "Signal handlers initialized for Sidekiq worker (SIGUSR1 -> dump settings)"
+  end
 end
