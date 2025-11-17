@@ -14,6 +14,10 @@ class Setting < RailsSettings::Base
   field :enable_banking_application_id, type: :string, default: ENV["ENABLE_BANKING_APPLICATION_ID"]
   field :enable_banking_certificate, type: :text, default: ENV["ENABLE_BANKING_CERTIFICATE"]
 
+  # Provider selection
+  field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
+  field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
+
   # Dynamic fields are now stored as individual entries with "dynamic:" prefix
   # This prevents race conditions and ensures each field is independently managed
 
