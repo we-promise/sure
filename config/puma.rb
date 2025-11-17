@@ -80,13 +80,13 @@ on_worker_boot do
         mask_value = lambda do |field_name, value|
           return nil if value.nil?
 
-          sensitive = [/key/i, /token/i, /secret/i, /password/i, /api/i, /credentials?/i, /auth/i]
+          sensitive = [ /key/i, /token/i, /secret/i, /password/i, /api/i, /credentials?/i, /auth/i ]
           is_sensitive = sensitive.any? { |pattern| field_name.match?(pattern) }
 
           if is_sensitive && value.present?
             case value
             when String
-              value.length <= 4 ? "[MASKED]" : "#{value[0..3]}#{'*' * [value.length - 4, 8].min}"
+              value.length <= 4 ? "[MASKED]" : "#{value[0..3]}#{'*' * [ value.length - 4, 8 ].min}"
             when TrueClass, FalseClass
               value
             else
