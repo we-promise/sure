@@ -74,7 +74,7 @@ class Provider::TwelveData < Provider
       data.map do |resp|
         rate = resp.dig("close")
         date = resp.dig("datetime")
-        if rate.nil?
+        if rate.nil? || rate.to_f <= 0
           Rails.logger.warn("#{self.class.name} returned invalid rate data for pair from: #{from} to: #{to} on: #{date}.  Rate data: #{rate.inspect}")
           next
         end
@@ -178,7 +178,7 @@ class Provider::TwelveData < Provider
       values.map do |resp|
         price = resp.dig("close")
         date = resp.dig("datetime")
-        if price.nil?
+        if price.nil? || price.to_f <= 0
           Rails.logger.warn("#{self.class.name} returned invalid price data for security #{symbol} on: #{date}.  Price data: #{price.inspect}")
           next
         end
