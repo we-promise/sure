@@ -1,5 +1,5 @@
 require "sidekiq/web"
-require Rails.root.join("lib/settings_signal_dumper")
+require Rails.root.join("lib/settings_log_dump")
 
 if Rails.env.production?
   Sidekiq::Web.use(Rack::Auth::Basic) do |username, password|
