@@ -45,12 +45,8 @@
     </div>
 
     <div class="col-span-2 text-right">
-      <%# Prefer Day Change (vs previous snapshot) when available; otherwise show Unrealized G/L only when cost basis (trades) exists %>
-      <% day_change = holding.day_change %>
-      <% if day_change %>
-        <%= tag.p format_money(day_change.value), style: "color: #{day_change.color};" %>
-        <%= tag.p "(#{number_to_percentage(day_change.percent, precision: 1)})", style: "color: #{day_change.color};" %>
-      <% elsif holding.trades.any? && holding.trend %>
+      <%# Show Total Return (unrealized G/L) when cost basis exists %>
+      <% if holding.trades.any? && holding.trend %>
         <%= tag.p format_money(holding.trend.value), style: "color: #{holding.trend.color};" %>
         <%= tag.p "(#{number_to_percentage(holding.trend.percent, precision: 1)})", style: "color: #{holding.trend.color};" %>
       <% else %>
