@@ -98,7 +98,7 @@ class RecurringTransaction
           last_occurrence_date: pattern[:last_occurrence_date],
           next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
           occurrence_count: pattern[:occurrence_count],
-          status: "active"
+          status: recurring_transaction.new_record? ? "active" : recurring_transaction.status
         )
 
         recurring_transaction.save!
