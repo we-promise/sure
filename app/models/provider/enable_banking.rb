@@ -1,4 +1,5 @@
 class Provider::EnableBanking < Provider
+
   # Subclass so errors caught in this provider are raised as Provider::EnableBanking::Error
   Error = Class.new(Provider::Error)
 
@@ -14,11 +15,11 @@ class Provider::EnableBanking < Provider
       JSON.parse(response.body).dig("redirect_urls")
     end
     if result.success?
-      result.data
-    else
-      Rails.logger.warn("Could not fetch redirect URLs. Provider error: #{result.error.message}")
-      raise result.error
-    end
+        result.data
+      else
+        Rails.logger.warn("Could not fetch redirect URLs. Provider error: #{result.error.message}")
+        Sentry.capture_exception(Error.new("Could not fetch redirect URLs"), level: :warning)
+      end
   end
 
   def get_available_aspsps(country_code: @country_code)
@@ -33,22 +34,19 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not fetch available ASPSPS for country #{country_code}. Provider error: #{result.error.message}")
-      raise result.error
+      Sentry.capture_exception(Error.new("Could not fetch available ASPSPS"), level: :warning)
     end
   end
 
-  def generate_authorization_url(aspsp_name, country_code, enable_banking_id)
-    country_code ||= @country_code
+  def generate_authorization_url(aspsp_name, country_code: @country_code)
     redirect_urls = get_redirect_urls
-    redirect_url = redirect_urls&.first
-    raise Error.new("No redirect URL configured") if redirect_url.blank?
-    valid_until = Time.current + 90.days
+    valid_until = Time.now + 2*7*24*60*60 # 2 weeks
     result = with_provider_response do
       body = {
         access: { valid_until: valid_until.utc.iso8601 },
         aspsp: { name: aspsp_name, country: country_code },
-        state: enable_banking_id || SecureRandom.uuid,
-        redirect_url: redirect_url
+        state: "random",
+        redirect_url: redirect_urls[0]
       }
       response = client.post("#{base_url}/auth", body.to_json)
       JSON.parse(response.body).dig("url")
@@ -57,7 +55,7 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not generate authorization URL. Provider error: #{result.error.message}")
-      raise result.error
+      Sentry.capture_exception(Error.new("Could not generate authorization URL"), level: :warning)
     end
   end
 
@@ -71,7 +69,7 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not create session. Provider error: #{result.error.message}")
-      raise result.error
+      Sentry.capture_exception(Error.new("Could not create session"), level: :warning)
     end
   end
 
@@ -81,11 +79,11 @@ class Provider::EnableBanking < Provider
       JSON.parse(response.body)
     end
     if result.success?
-      result.data
-    else
-      Rails.logger.warn("Could not fetch account details. Provider error: #{result.error.message}")
-      raise result.error
-    end
+        result.data
+      else
+        Rails.logger.warn("Could not fetch account details. Provider error: #{result.error.message}")
+        Sentry.capture_exception(Error.new("Could not fetch account details"), level: :warning)
+      end
   end
 
   def get_account_balances(account_id)
@@ -97,7 +95,7 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not fetch account balances. Provider error: #{result.error.message}")
-      raise result.error
+      Sentry.capture_exception(Error.new("Could not fetch account balances"), level: :warning)
     end
   end
 
@@ -105,26 +103,21 @@ class Provider::EnableBanking < Provider
     balances = get_account_balances(account_id)
     balances = [] if balances.nil?
     balances_by_type = balances.group_by { |balance| balance["balance_type"] }
-    available_balance = balances_by_type["ITAV"]&.first || balances_by_type["CLAV"]&.first
-    current_balance = balances_by_type["ITBD"]&.first || balances_by_type["CLBD"]&.first
+    available_balance = balances_by_type["ITAV"]&.first
+    current_balance = balances_by_type["ITBD"]&.first
     {
       "available" => available_balance&.dig("balance_amount", "amount") || 0,
       "current" => current_balance&.dig("balance_amount", "amount") || 0
     }
   end
 
-  def get_account_transactions(account_id, fetch_all, continuation_key: nil)
+  def get_account_transactions(account_id, date_from, continuation_key: nil)
     result = with_provider_response do
       response = client.get("#{base_url}/accounts/#{account_id}/transactions") do |req|
-        if !fetch_all
-          req.params["date_from"] = 7.days.ago.to_date.iso8601
-        else
-          req.params["strategy"] = "longest"
-        end
+        req.params["date_from"] = date_from
         if continuation_key
           req.params["continuation_key"] = continuation_key
         end
-        req.params["transaction_status"] = "BOOK"
       end
       JSON.parse(response.body)
     end
@@ -132,18 +125,18 @@ class Provider::EnableBanking < Provider
       result.data
     else
       Rails.logger.warn("Could not fetch account transactions. Provider error: #{result.error.message}")
-      raise result.error
+      Sentry.capture_exception(Error.new("Could not fetch account transactions"), level: :warning)
     end
   end
 
-  def get_transactions(account_id, fetch_all)
+  def get_transactions(account_id, date_from)
     transactions = []
     continuation_key = nil
     loop do
-      transaction_data = get_account_transactions(account_id, fetch_all, continuation_key: continuation_key)
-      transactions.concat(transaction_data["transactions"] || [])
-      continuation_key = transaction_data["continuation_key"]
-      break if continuation_key.blank?
+      transaction_data = get_account_transactions(account_id, date_from, continuation_key: continuation_key)
+      transactions += transaction_data.dig("transactions") || []
+      break unless transaction_data.has_key?("continuation_key") and transaction_data["continuation_key"]
+        continuation_key = transaction_data["continuation_key"]
     end
     transactions
   end
@@ -159,19 +152,13 @@ class Provider::EnableBanking < Provider
     def generate_jwt
       rsa_key = OpenSSL::PKey::RSA.new(certificate.gsub("\\n", "\n"))
       iat = Time.now.to_i
-      exp = iat + 3600
       jwt_header = { typ: "JWT", alg: "RS256", kid: application_id }
-      jwt_body = { iss: "enablebanking.com", aud: "api.enablebanking.com", iat: iat, exp: exp }
-      token = JWT.encode(jwt_body, rsa_key, "RS256", jwt_header)
-      @jwt_expires_at = Time.at(exp)
-      token
+      jwt_body = { iss: "enablebanking.com", aud: "api.enablebanking.com", iat: iat, exp: iat + 3600 }
+      JWT.encode(jwt_body, rsa_key, 'RS256', jwt_header)
     end
 
     def jwt
-      if @jwt.nil? || Time.current >= (@jwt_expires_at - 60.seconds)
-        @jwt = generate_jwt
-      end
-      @jwt
+      @jwt ||= generate_jwt
     end
 
     def client
@@ -186,7 +173,8 @@ class Provider::EnableBanking < Provider
         faraday.request :json
         faraday.response :raise_error
         faraday.headers["Content-Type"] = "application/json"
-        faraday.request :authorization, "Bearer", -> { jwt }
+        faraday.headers["Authorization"] = "Bearer #{jwt}"
       end
     end
+
 end

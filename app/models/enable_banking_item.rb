@@ -7,7 +7,7 @@ class EnableBankingItem < ApplicationRecord
     encrypts :session_id, deterministic: true
   end
 
-  validates :aspsp_name, :aspsp_country, :session_id, :valid_until, presence: true
+  validates :name, :session_id, :valid_until, presence: true
 
   belongs_to :family
   has_one_attached :logo
@@ -22,10 +22,6 @@ class EnableBankingItem < ApplicationRecord
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
-  end
-
-  def is_session_valid?
-    valid_until > Time.current && !requires_update?
   end
 
   def import_latest_data
@@ -51,4 +47,5 @@ class EnableBankingItem < ApplicationRecord
       )
     end
   end
+
 end

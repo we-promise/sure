@@ -1,6 +1,9 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: t(".new_connection")) %>
+  <% dialog.with_header(title: "New Enable Banking connection") %>
   <% dialog.with_body do %>
-    <%= render "new_connection_form", enable_banking_item: @enable_banking_item %>
+    <% if @error_message.present? %>
+      <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+    <% end %>
+    <%= render "enable_banking_items/new_connection_form", enable_banking_item: @enable_banking_item %>
   <% end %>
 <% end %>

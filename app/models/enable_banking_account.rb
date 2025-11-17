@@ -4,14 +4,13 @@ class EnableBankingAccount < ApplicationRecord
   has_one :account, dependent: :destroy
 
   validates :name, :currency, presence: true
-  validates :account_id, presence: true, uniqueness: { scope: :enable_banking_item_id }
   validate :has_balance
 
   def upsert_enable_banking_snapshot!(account_snapshot)
     assign_attributes(
       account_id: account_snapshot["uid"],
-      current_balance: account_snapshot.dig("balances", "current"),
-      available_balance: account_snapshot.dig("balances", "available"),
+      current_balance: account_snapshot["balances"]["current"],
+      available_balance: account_snapshot["balances"]["available"],
       currency: account_snapshot["currency"],
       name: account_snapshot["name"],
       account_type: account_snapshot["account_type"],

@@ -1,4 +1,5 @@
 class EnableBankingAccount::Importer
+  
   def initialize(enable_banking_account, account_snapshot:)
     @enable_banking_account = enable_banking_account
     @account_snapshot = account_snapshot
@@ -19,4 +20,5 @@ class EnableBankingAccount::Importer
     def import_transactions
       enable_banking_account.upsert_enable_banking_transactions_snapshot!(account_snapshot["transactions_data"])
     end
+    
 end

@@ -1,5 +1,5 @@
 class Family < ApplicationRecord
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, Syncable, AutoTransferMatchable, Subscribeable
+  include PlaidConnectable, SimplefinConnectable, EnableBankingConnectable, LunchflowConnectable, Syncable, AutoTransferMatchable, Subscribeable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],

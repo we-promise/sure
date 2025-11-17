@@ -81,6 +81,16 @@ class Provider::Registry
       def yahoo_finance
         Provider::YahooFinance.new
       end
+
+      def enable_banking
+        application_id = ENV["ENABLE_BANKING_APPLICATION_ID"]
+        certificate = ENV["ENABLE_BANKING_CERTIFICATE"]
+        country_code = ENV["ENABLE_BANKING_COUNTRY"]
+        
+        return nil unless application_id.present? && certificate.present? && country_code.present?
+
+        Provider::EnableBanking.new(application_id:, certificate:, country_code:)
+      end
   end
 
   def initialize(concept)

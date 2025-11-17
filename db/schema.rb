@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_25_224717) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -39,7 +39,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
     t.uuid "accountable_id"
     t.decimal "balance", precision: 19, scale: 4
     t.string "currency"
-    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY ((ARRAY['Loan'::character varying, 'CreditCard'::character varying, 'OtherLiability'::character varying])::text[])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
     t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
@@ -254,10 +254,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
   create_table "enable_banking_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "session_id"
-    t.datetime "valid_until", precision: nil
+    t.datetime "valid_until"
     t.string "name"
-    t.string "aspsp_name"
-    t.string "aspsp_country"
     t.string "status", default: "good"
     t.string "logo_url"
     t.boolean "scheduled_for_deletion", default: false
@@ -1034,6 +1032,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
+  add_foreign_key "accounts", "enable_banking_accounts"
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
@@ -1047,6 +1046,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_11_094448) do
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
+  add_foreign_key "enable_banking_accounts", "enable_banking_items"
+  add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "imports"
   add_foreign_key "family_exports", "families"

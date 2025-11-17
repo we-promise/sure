@@ -7,15 +7,14 @@ class EnableBankingEntry::Processor
 
   def process
     EnableBankingAccount.transaction do
-      entry = account.entries.find_or_initialize_by(plaid_id: enable_banking_id) do |e|
+      entry = account.entries.find_or_initialize_by(plaid_id: enable_banking_id) do |e| #TODO change plaid_id to enable_banking_id?
         e.entryable = Transaction.new
       end
 
       entry.assign_attributes(
-        amount: calculate_signed_amount,
+        amount: amount,
         currency: currency,
-        date: date,
-        notes: notes
+        date: date
       )
 
       entry.enrich_attribute(
@@ -24,13 +23,6 @@ class EnableBankingEntry::Processor
         source: "enable_banking"
       )
 
-      if merchant
-        entry.transaction.enrich_attribute(
-          :merchant_id,
-          merchant.id,
-          source: "enable_banking"
-        )
-      end
     end
   end
 
@@ -42,44 +34,22 @@ class EnableBankingEntry::Processor
     end
 
     def enable_banking_id
-      enable_banking_transaction.dig("entry_reference")
+      enable_banking_transaction["entry_reference"]
     end
 
     def name
-      enable_banking_transaction.dig("bank_transaction_code", "description") || enable_banking_transaction.dig("remittance_information")&.first
+      enable_banking_transaction["remittance_information"].join(" ")
     end
 
-    def notes
-      Array(enable_banking_transaction.dig("remittance_information")).join(" ")
-    end
-
-    def credit_debit_indicator
-      enable_banking_transaction.dig("credit_debit_indicator")
-    end
-
-    def calculate_signed_amount
-      amt = enable_banking_transaction.dig("transaction_amount", "amount").to_d
-      credit_debit_indicator == "CRDT" ? -amt : amt
+    def amount
+      enable_banking_transaction["transaction_amount"]["amount"]
     end
 
     def currency
-      enable_banking_transaction.dig("transaction_amount", "currency")
+      enable_banking_transaction["transaction_amount"]["currency"]
     end
 
     def date
-      enable_banking_transaction.dig("value_date")
-    end
-
-    def merchant
-      merchant_name = enable_banking_transaction.dig("creditor", "name")
-
-      return nil unless merchant_name.present?
-
-      ProviderMerchant.find_or_create_by!(
-        source: "enable_banking",
-        name: merchant_name,
-      ) do |m|
-        m.provider_merchant_id = merchant_name # There is no ID available in Enable Banking API, using name instead
-      end
+      enable_banking_transaction["booking_date"]
     end
 end

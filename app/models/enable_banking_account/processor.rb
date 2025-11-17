@@ -60,15 +60,13 @@ class EnableBankingAccount::Processor
 
       transactions_data = enable_banking_account.raw_transactions_payload
       transactions_data&.each do |transaction|
-        begin
-          EnableBankingEntry::Processor.new(
-            transaction,
-            enable_banking_account: enable_banking_account
-          ).process
-        rescue => e
-          report_exception(e)
-        end
+        EnableBankingEntry::Processor.new(
+          transaction,
+          enable_banking_account: enable_banking_account
+        ).process
       end
+    rescue => e
+      report_exception(e)
     end
 
     def balance_calculator
@@ -85,4 +83,5 @@ class EnableBankingAccount::Processor
         scope.set_tags(enable_banking_account_id: enable_banking_account.id)
       end
     end
+
 end

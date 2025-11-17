@@ -1,26 +1,20 @@
 class EnableBankingItemsController < ApplicationController
-  before_action :set_enable_banking_item, only: %i[edit destroy sync update_connection]
+  before_action :set_enable_banking_item, only: %i[edit destroy sync]
 
   def index
     @enable_banking_items = Current.family.enable_banking_items.active.ordered
-    @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Bank Sync", settings_bank_sync_path ],
-      [ "Enable Banking", nil ]
-    ]
     render layout: "settings"
   end
 
   def new
     @enable_banking_item = Current.family.enable_banking_items.build
     available_aspsps = enable_banking_provider.get_available_aspsps
-    @aspsps = available_aspsps
-      .sort_by { |aspsp| aspsp["name"].to_s.downcase }
-      .map do |aspsp|
-      [ aspsp["name"], aspsp["name"] ]
+    @aspsps = available_aspsps.map do |aspsp|
+      [aspsp["name"], aspsp["name"]]
     end
   rescue => error
-    @enable_banking_item.errors.add(:base, t(".aspsp_error"))
+    Sentry.capture_exception(error)
+    render json: { error: "#{error.message}" }, status: :bad_request
   end
 
   def edit
@@ -32,39 +26,29 @@ class EnableBankingItemsController < ApplicationController
   end
 
   def authorization
-    aspsp_name = params[:aspsp_name]
-    auth_url = generate_authorization_url(aspsp_name)
-    redirect_to auth_url, allow_other_host: true, status: :see_other
+    aspsp_name = params[:aspsps_name]
+    auth_url = enable_banking_provider.generate_authorization_url(aspsp_name)
+    render json: { url: auth_url }
   rescue => error
-    redirect_to enable_banking_items_path, alert: t(".authorization_error")
-  end
-
-  def update_connection
-    enable_banking_item = EnableBankingItem.find_by(id: params[:id])
-    auth_url = generate_authorization_url(@enable_banking_item.aspsp_name, @enable_banking_item.aspsp_country, enable_banking_item.id)
-    redirect_to auth_url, allow_other_host: true, status: :see_other
-  rescue => error
-    redirect_to enable_banking_items_path, alert: t(".authorization_error")
+    Sentry.capture_exception(error)
+    render json: { error: "#{error.message}" }, status: :bad_request
   end
 
   def auth_callback
-    if params[:error].present?
-      Rails.logger.warn("Enable Banking auth error: #{params[:error]}")
-      return redirect_to enable_banking_items_path, alert: t(".auth_failed")
-    end
-
     code = params[:code]
-    if code.blank?
+    if code.nil?
       Rails.logger.error("Failed to retrieve code from authentication callback parameters")
-      redirect_to enable_banking_items_path, alert: t(".auth_failed")
+      redirect_to enable_banking_items_path, alert: "Authentication failed. Please try again."
     else
-      enable_banking_id = params[:state]
-      Current.family.create_enable_banking_item!(
-        enable_banking_id: enable_banking_id,
-        session_id: code
+      session = enable_banking_provider.create_session(code)
+      @enable_banking_item = Current.family.create_enable_banking_item!(
+        session_id: session["session_id"],
+        valid_until: session["access"]["valid_until"],
+        item_name: session["aspsp"]["name"],
+        logo_url: "https://enablebanking.com/brands/#{session['aspsp']['country']}/#{session['aspsp']['name']}",
+        raw_payload: session.to_json
       )
-
-      redirect_to accounts_path, notice: t(".success")
+      redirect_to enable_banking_items_path, notice: "Enable Banking connection added successfully! Your accounts will appear shortly as they sync in the background."
     end
   end
 
@@ -83,12 +67,8 @@ class EnableBankingItemsController < ApplicationController
     def enable_banking_provider
       @enable_banking_provider ||= Provider::Registry.get_provider(:enable_banking)
     end
-
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
     end
 
-    def generate_authorization_url(aspsp_name, country_code = nil, enable_banking_id = nil)
-      enable_banking_provider.generate_authorization_url(aspsp_name, country_code, enable_banking_id)
-    end
 end

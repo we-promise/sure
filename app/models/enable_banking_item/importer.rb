@@ -1,4 +1,6 @@
 class EnableBankingItem::Importer
+  attr_reader :enable_banking_item, :enable_banking_provider
+
   def initialize(enable_banking_item, enable_banking_provider:)
     @enable_banking_item = enable_banking_item
     @enable_banking_provider = enable_banking_provider
@@ -6,33 +8,12 @@ class EnableBankingItem::Importer
 
   def import
     fetch_and_import_accounts_data
-  rescue Provider::EnableBanking::Error => e
-    handle_enable_banking_error(e)
   end
 
   private
-    attr_reader :enable_banking_item, :enable_banking_provider
-
-    # All errors that should halt the import should be re-raised after handling
-    # These errors will propagate up to the Sync record and mark it as failed.
-    def handle_enable_banking_error(error)
-      error_body = JSON.parse(error.details) rescue {}
-      code = (error_body["code"] || error_body.dig("error", "code")).to_i
-      case code
-      when 401, 403
-        enable_banking_item.update!(status: :requires_update)
-      else
-        raise error
-      end
-    end
 
     def fetch_and_import_accounts_data
-      payload = JSON.parse(enable_banking_item.raw_payload) rescue nil
-      unless payload.is_a?(Hash)
-        Rails.logger.warn("EnableBankingItem::Importer: invalid JSON payload for item ID #{enable_banking_item.id}")
-        return
-      end
-      accounts = payload["accounts"]
+      accounts = JSON.parse(enable_banking_item.raw_payload).dig("accounts")
       unless accounts.is_a?(Array)
         Rails.logger.warn("EnableBankingItem::Importer: 'accounts' is not an Array in payload for item ID #{enable_banking_item.id}")
         return
@@ -45,13 +26,13 @@ class EnableBankingItem::Importer
         )
 
         account_details = enable_banking_provider.get_account_details(account_id)
-        transactions = enable_banking_provider.get_transactions(account_id, enable_banking_account.new_record?)
+        transactions = enable_banking_provider.get_transactions(account_id, 30.days.ago.to_date.iso8601) # TODO: use different date
 
         raw_account["name"] = extract_account_name(account_details)
         raw_account["account_type"] = account_details["cash_account_type"]
         raw_account["balances"] = enable_banking_provider.get_current_available_balance(account_id)
         raw_account["transactions_data"] = transactions
-
+        
         EnableBankingAccount::Importer.new(
           enable_banking_account,
           account_snapshot: raw_account
@@ -60,13 +41,15 @@ class EnableBankingItem::Importer
     end
 
     def extract_account_name(raw_account)
-      if raw_account["product"].present?
-        return raw_account["product"]
+      if raw_account["name"].present?
+        return raw_account["name"]
       end
       if raw_account.dig("account_id", "iban").present?
         return raw_account.dig("account_id", "iban")
       end
       identification = raw_account.dig("account_id", "other", "identification")
-      identification
+      return identification if identification
+      nil
     end
+
 end

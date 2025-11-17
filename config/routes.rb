@@ -307,6 +307,16 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :enable_banking_items, only: %i[index new create show destroy] do
+    member do
+      post :sync
+    end
+
+    collection do 
+      post :authorization
+    end
+  end
+
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
     collection do
       get :select_accounts
@@ -339,7 +349,7 @@ Rails.application.routes.draw do
   get "privacy", to: redirect("about:blank")
   get "terms", to: redirect("about:blank")
 
-  get "enable_banking_auth_callback", to: "enable_banking_items#auth_callback"
+  get 'enable_banking_auth_callback', to: 'enable_banking_items#auth_callback'
 
   # Defines the root path route ("/")
   root "pages#dashboard"
