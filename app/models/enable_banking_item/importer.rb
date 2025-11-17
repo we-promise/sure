@@ -41,15 +41,14 @@ class EnableBankingItem::Importer
     end
 
     def extract_account_name(raw_account)
-      if raw_account["name"].present?
-        return raw_account["name"]
+      if raw_account["product"].present?
+        return raw_account["product"]
       end
       if raw_account.dig("account_id", "iban").present?
         return raw_account.dig("account_id", "iban")
       end
       identification = raw_account.dig("account_id", "other", "identification")
-      return identification if identification
-      nil
+      return identification
     end
 
 end

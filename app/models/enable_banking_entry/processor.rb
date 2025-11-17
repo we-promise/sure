@@ -12,9 +12,10 @@ class EnableBankingEntry::Processor
       end
 
       entry.assign_attributes(
-        amount: amount,
+        amount: calculate_signed_amount,
         currency: currency,
-        date: date
+        date: date,
+        notes: notes
       )
 
       entry.enrich_attribute(
@@ -34,22 +35,33 @@ class EnableBankingEntry::Processor
     end
 
     def enable_banking_id
-      enable_banking_transaction["entry_reference"]
+      enable_banking_transaction.dig("entry_reference")
     end
 
     def name
-      enable_banking_transaction["remittance_information"].join(" ")
+      enable_banking_transaction.dig("bank_transaction_code", "description")
     end
 
-    def amount
-      enable_banking_transaction["transaction_amount"]["amount"]
+    def notes
+      enable_banking_transaction.dig("remittance_information").join(" ")
+    end
+
+    def credit_debit_indicator
+      enable_banking_transaction.dig("credit_debit_indicator")
+    end
+
+    def calculate_signed_amount
+      amount = enable_banking_transaction.dig("transaction_amount", "amount").to_f
+      credit_debit_indicator = enable_banking_transaction.dig("credit_debit_indicator")
+      signed_amount = credit_debit_indicator == "CRDT" ? amount.to_d * -1 : amount.to_d
+      signed_amount
     end
 
     def currency
-      enable_banking_transaction["transaction_amount"]["currency"]
+      enable_banking_transaction.dig("transaction_amount", "currency")
     end
 
     def date
-      enable_banking_transaction["booking_date"]
+      enable_banking_transaction.dig("value_date")
     end
 end
