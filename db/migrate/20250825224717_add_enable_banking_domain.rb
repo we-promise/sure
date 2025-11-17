@@ -29,6 +29,5 @@ class AddEnableBankingDomain < ActiveRecord::Migration[7.2]
     end
 
     add_reference :accounts, :enable_banking_account, null: true, foreign_key: true, type: :uuid
-
   end
 end
