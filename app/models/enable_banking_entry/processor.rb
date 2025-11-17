@@ -24,6 +24,14 @@ class EnableBankingEntry::Processor
         source: "enable_banking"
       )
 
+      if merchant
+        entry.transaction.enrich_attribute(
+          :merchant_id,
+          merchant.id,
+          source: "enable_banking"
+        )
+      end
+
     end
   end
 
@@ -63,5 +71,18 @@ class EnableBankingEntry::Processor
 
     def date
       enable_banking_transaction.dig("value_date")
+    end
+
+    def merchant
+      merchant_name = enable_banking_transaction.dig("creditor", "name")
+
+      return nil unless merchant_name.present?
+
+      ProviderMerchant.find_or_create_by!(
+        source: "enable_banking",
+        name: merchant_name,
+      ) do |m|
+        m.provider_merchant_id = merchant_name # There is no ID available in Enable Banking API, using name instead
+      end
     end
 end
