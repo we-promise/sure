@@ -99,7 +99,7 @@ module SettingsSignalDumper
         elsif value.length <= 4
           "[MASKED]"
         else
-          "#{value[0..3]}#{'*' * [value.length - 4, 8].min}"
+          "#{value[0..3]}#{'*' * [ value.length - 4, 8 ].min}"
         end
       when TrueClass, FalseClass
         value
