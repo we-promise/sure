@@ -24,3 +24,8 @@ en:
       status_never: Requires data sync
       syncing: Syncing...
       update: Update connection
+    select_existing_account:
+      title: "Link %{account_name} to Plaid"
+      description: Select a Plaid account to link to your existing account
+      cancel: Cancel
+      link_account: Link account

@@ -1,0 +1,35 @@
+---
+de:
+  holdings:
+    cash:
+      brokerage_cash: Depotguthaben
+    destroy:
+      success: Position gelöscht
+    holding:
+      per_share: pro Anteil
+      shares: "%{qty} Anteile"
+    index:
+      average_cost: Durchschnittlicher Einstandspreis
+      holdings: Positionen
+      name: Name
+      new_holding: Neue Transaktion
+      no_holdings: Keine Positionen vorhanden
+      return: Gesamtrendite
+      weight: Gewichtung
+    missing_price_tooltip:
+      description: Diese Investition enthält fehlende Werte, daher konnten Rendite und Wert nicht berechnet werden
+      missing_data: Fehlende Daten
+    show:
+      avg_cost_label: Durchschnittlicher Einstandspreis
+      current_market_price_label: Aktueller Marktpreis
+      delete: Löschen
+      delete_subtitle: Dadurch wird die Position und alle zugehörigen Trades auf diesem Konto gelöscht Diese Aktion kann nicht rückgängig gemacht werden
+      delete_title: Position löschen
+      history: Verlauf
+      overview: Übersicht
+      portfolio_weight_label: Portfolio-Gewichtung
+      settings: Einstellungen
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} Anteile von %{security} zu %{price}"
+      total_return_label: Gesamtrendite
+      unknown: Unbekannt

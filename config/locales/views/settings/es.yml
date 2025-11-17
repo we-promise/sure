@@ -69,16 +69,16 @@ es:
         reset_account_with_sample_data_warning: Elimina todos tus datos existentes y luego carga nuevos datos de ejemplo para que puedas explorar con un entorno prellenado.
         email: Correo electrónico
         first_name: Nombre
-        household_form_input_placeholder: Introduce el nombre del hogar
-        household_form_label: Nombre del hogar
-        household_subtitle: Invita a miembros de la familia, socios y otras personas. Los invitados pueden iniciar sesión en tu hogar y acceder a tus cuentas compartidas.
-        household_title: Hogar
+        household_form_input_placeholder: Introduce el nombre del grupo familiar
+        household_form_label: Nombre del grupo familiar
+        household_subtitle: Invita a miembros de la familia, socios y otras personas. Los invitados pueden entrar en la cuenta y acceder a las cuentas compartidas.
+        household_title: Grupo Familiar
         invitation_link: Enlace de invitación
         invite_member: Añadir miembro
         last_name: Apellido
         page_title: Información del Perfil
         pending: Pendiente
-        profile_subtitle: Personaliza cómo apareces en %{product}
+        profile_subtitle: Personaliza cómo apareces en %{product_name}
         profile_title: Personal
         remove_invitation: Eliminar Invitación
         remove_member: Eliminar Miembro

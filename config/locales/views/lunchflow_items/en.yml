@@ -39,7 +39,7 @@ en:
       api_error: "API error: %{message}"
       cancel: Cancel
       configure_name_in_lunchflow: Cannot import - please configure account name in Lunchflow
-      description: Select the accounts you want to link to your Sure account.
+      description: Select the accounts you want to link to your %{product_name} account.
       link_accounts: Link selected accounts
       no_accounts_found: No accounts found. Please check your API key configuration.
       no_api_key: Lunch Flow API key is not configured. Please configure it in Settings.

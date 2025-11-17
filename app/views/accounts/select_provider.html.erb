@@ -1,0 +1,23 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("accounts.select_provider.title")) %>
+
+  <% dialog.with_body do %>
+    <p class="text-secondary text-sm mb-4">
+      <%= t("accounts.select_provider.description", account_name: @account.name) %>
+    </p>
+
+    <div class="space-y-2">
+      <% @available_providers.each do |provider| %>
+        <%= link_to provider[:path], data: { turbo_frame: :modal }, class: "block p-4 border border-primary rounded-lg hover:bg-container-hover transition-colors" do %>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-primary"><%= provider[:name] %></p>
+              <p class="text-sm text-secondary"><%= provider[:description] %></p>
+            </div>
+            <%= icon("chevron-right", size: "sm", class: "text-secondary") %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

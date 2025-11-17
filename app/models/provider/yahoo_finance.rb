@@ -248,18 +248,21 @@ class Provider::YahooFinance < Provider
       closes = quotes["close"] || []
 
       # Get currency from metadata
-      currency = chart_data.dig("meta", "currency") || "USD"
+      raw_currency = chart_data.dig("meta", "currency") || "USD"
 
       prices = []
       timestamps.each_with_index do |timestamp, index|
         close_price = closes[index]
         next if close_price.nil? # Skip days with no data (weekends, holidays)
 
+        # Normalize currency and price to handle minor units
+        normalized_currency, normalized_price = normalize_currency_and_price(raw_currency, close_price.to_f)
+
         prices << Price.new(
           symbol: symbol,
           date: Time.at(timestamp).to_date,
-          price: close_price.to_f,
-          currency: currency,
+          price: normalized_price,
+          currency: normalized_currency,
           exchange_operating_mic: exchange_operating_mic
         )
       end
@@ -275,6 +278,29 @@ class Provider::YahooFinance < Provider
 
     def base_url
       ENV["YAHOO_FINANCE_URL"] || "https://query1.finance.yahoo.com"
+    end
+
+    # ================================
+    #      Currency Normalization
+    # ================================
+
+    # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
+    # This is not part of ISO 4217 but is a convention used by financial data providers
+    # Mapping of Yahoo Finance minor unit codes to standard currency codes and conversion multipliers
+    MINOR_CURRENCY_CONVERSIONS = {
+      "GBp" => { currency: "GBP", multiplier: 0.01 },  # British pence to pounds (eg. https://finance.yahoo.com/quote/IITU.L/)
+      "ZAc" => { currency: "ZAR", multiplier: 0.01 }   # South African cents to rand (eg. https://finance.yahoo.com/quote/JSE.JO)
+    }.freeze
+
+    # Normalizes Yahoo Finance currency codes and prices
+    # Returns [currency_code, price] with currency converted to standard ISO code
+    # and price converted from minor units to major units if applicable
+    def normalize_currency_and_price(currency, price)
+      if conversion = MINOR_CURRENCY_CONVERSIONS[currency]
+        [ conversion[:currency], price * conversion[:multiplier] ]
+      else
+        [ currency, price ]
+      end
     end
 
     # ================================

@@ -6,7 +6,6 @@ es:
       no_account: ¿Nuevo en %{product_name}?
       sign_in: Iniciar sesión
       sign_up: Crear cuenta
-      your_account: Tu cuenta
     shared:
       footer:
         privacy_policy: Política de privacidad

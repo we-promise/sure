@@ -30,7 +30,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       click_button "Logout"
 
       # Trigger Capybara's wait mechanism to avoid timing issues with logout
-      find("h2", text: "Sign in to your account")
+      find("a", text: "Sign in")
     end
 
     def within_testid(testid)

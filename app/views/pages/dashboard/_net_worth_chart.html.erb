@@ -6,7 +6,7 @@
     <div class="space-y-2">
       <div class="space-y-2">
         <div class="flex items-center gap-2">
-          <p class="text-sm text-secondary font-medium"><%= t(".title") %></p>
+          <h2 class="text-lg font-medium"><%= t(".title") %></h2>
         </div>
 
         <p class="text-primary -space-x-0.5 text-3xl font-medium <%= "animate-pulse" if balance_sheet.syncing? %>">
@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form" } do |form| %>
+    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
       <%= form.select :period,
                     Period.as_options,
                     { selected: period.key },

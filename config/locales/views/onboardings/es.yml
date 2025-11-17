@@ -15,7 +15,7 @@ es:
     profile:
       country: País
       first_name: Nombre
-      household_name: Nombre del hogar
+      household_name: Nombre del grupo familiar
       last_name: Apellidos
       profile_image: Imagen de perfil
       submit: Continuar
