@@ -1,4 +1,5 @@
 require "sidekiq/web"
+require Rails.root.join("lib/settings_signal_dumper")
 
 if Rails.env.production?
   Sidekiq::Web.use(Rack::Auth::Basic) do |username, password|
@@ -13,4 +14,8 @@ end
 Sidekiq::Cron.configure do |config|
   # 10 min "catch-up" window in case worker process is re-deploying when cron tick occurs
   config.reschedule_grace_period = 600
+end
+
+Sidekiq.configure_server do |_config|
+  SettingsLogDump.install_usr1_trap(process_label: "Sidekiq worker")
 end
