@@ -10,10 +10,26 @@ class Settings::HostingsController < ApplicationController
       [ "Home", root_path ],
       [ "Self-Hosting", nil ]
     ]
-    twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
-    @twelve_data_usage = twelve_data_provider&.usage
 
-    @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+    # Determine which providers are currently selected
+    exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+    securities_provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
+
+    # Show Twelve Data settings if either provider is set to twelve_data
+    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || securities_provider == "twelve_data"
+
+    # Show Yahoo Finance settings if either provider is set to yahoo_finance
+    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || securities_provider == "yahoo_finance"
+
+    # Only fetch provider data if we're showing the section
+    if @show_twelve_data_settings
+      twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
+      @twelve_data_usage = twelve_data_provider&.usage
+    end
+
+    if @show_yahoo_finance_settings
+      @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+    end
   end
 
   def update
@@ -32,6 +48,14 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:twelve_data_api_key)
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
+    end
+
+    if hosting_params.key?(:exchange_rate_provider)
+      Setting.exchange_rate_provider = hosting_params[:exchange_rate_provider]
+    end
+
+    if hosting_params.key?(:securities_provider)
+      Setting.securities_provider = hosting_params[:securities_provider]
     end
 
     if hosting_params.key?(:openai_access_token)
@@ -71,7 +95,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :exchange_rate_provider, :securities_provider)
     end
 
     def ensure_admin
