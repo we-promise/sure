@@ -133,10 +133,10 @@ class Provider::EnableBanking < Provider
     transactions = []
     continuation_key = nil
     loop do
-      transaction_data = get_account_transactions(account_id, date_from, continuation_key: continuation_key)
-      transactions += transaction_data.dig("transactions") || []
-      break unless transaction_data.has_key?("continuation_key") and transaction_data["continuation_key"]
-        continuation_key = transaction_data["continuation_key"]
+      transaction_data = get_account_transactions(account_id, fetch_all, continuation_key: continuation_key)
+      transactions.concat(transaction_data["transactions"] || [])
+      continuation_key = transaction_data["continuation_key"]
+      break if continuation_key.blank?
     end
     transactions
   end
@@ -152,13 +152,19 @@ class Provider::EnableBanking < Provider
     def generate_jwt
       rsa_key = OpenSSL::PKey::RSA.new(certificate.gsub("\\n", "\n"))
       iat = Time.now.to_i
+      exp = iat + 3600
       jwt_header = { typ: "JWT", alg: "RS256", kid: application_id }
-      jwt_body = { iss: "enablebanking.com", aud: "api.enablebanking.com", iat: iat, exp: iat + 3600 }
-      JWT.encode(jwt_body, rsa_key, 'RS256', jwt_header)
+      jwt_body = { iss: "enablebanking.com", aud: "api.enablebanking.com", iat: iat, exp: exp }
+      token = JWT.encode(jwt_body, rsa_key, "RS256", jwt_header)
+      @jwt_expires_at = Time.at(exp)
+      token
     end
 
     def jwt
-      @jwt ||= generate_jwt
+      if @jwt.nil? || Time.current >= (@jwt_expires_at - 60.seconds)
+        @jwt = generate_jwt
+      end
+      @jwt
     end
 
     def client

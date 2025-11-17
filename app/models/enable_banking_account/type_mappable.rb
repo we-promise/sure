@@ -4,8 +4,9 @@ module EnableBankingAccount::TypeMappable
   UnknownAccountTypeError = Class.new(StandardError)
 
   def map_accountable(enable_banking_account_type)
+    key = enable_banking_account_type.to_s.upcase.to_sym
     accountable_class = TYPE_MAPPING.dig(
-      enable_banking_account_type.to_sym,
+      key,
       :accountable
     )
 

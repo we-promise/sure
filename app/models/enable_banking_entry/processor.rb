@@ -51,7 +51,7 @@ class EnableBankingEntry::Processor
     end
 
     def notes
-      enable_banking_transaction.dig("remittance_information").join(" ")
+      Array(enable_banking_transaction.dig("remittance_information")).join(" ")
     end
 
     def credit_debit_indicator
@@ -59,10 +59,8 @@ class EnableBankingEntry::Processor
     end
 
     def calculate_signed_amount
-      amount = enable_banking_transaction.dig("transaction_amount", "amount").to_f
-      credit_debit_indicator = enable_banking_transaction.dig("credit_debit_indicator")
-      signed_amount = credit_debit_indicator == "CRDT" ? amount.to_d * -1 : amount.to_d
-      signed_amount
+      amt = enable_banking_transaction.dig("transaction_amount", "amount").to_d
+      credit_debit_indicator == "CRDT" ? -amt : amt
     end
 
     def currency

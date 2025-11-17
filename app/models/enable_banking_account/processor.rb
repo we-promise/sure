@@ -60,13 +60,15 @@ class EnableBankingAccount::Processor
 
       transactions_data = enable_banking_account.raw_transactions_payload
       transactions_data&.each do |transaction|
-        EnableBankingEntry::Processor.new(
-          transaction,
-          enable_banking_account: enable_banking_account
-        ).process
+        begin
+          EnableBankingEntry::Processor.new(
+            transaction,
+            enable_banking_account: enable_banking_account
+          ).process
+        rescue => e
+          report_exception(e)
+        end
       end
-    rescue => e
-      report_exception(e)
     end
 
     def balance_calculator

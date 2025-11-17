@@ -1,5 +1,5 @@
 class EnableBankingItemsController < ApplicationController
-  before_action :set_enable_banking_item, only: %i[edit destroy sync]
+  before_action :set_enable_banking_item, only: %i[edit destroy sync update_connection]
 
   def index
     @enable_banking_items = Current.family.enable_banking_items.active.ordered
@@ -26,17 +26,29 @@ class EnableBankingItemsController < ApplicationController
   end
 
   def authorization
-    aspsp_name = params[:aspsps_name]
-    auth_url = enable_banking_provider.generate_authorization_url(aspsp_name)
-    render json: { url: auth_url }
+    aspsp_name = params[:aspsp_name]
+    auth_url = generate_authorization_url(aspsp_name)
+    redirect_to auth_url, allow_other_host: true, status: :see_other
   rescue => error
-    Sentry.capture_exception(error)
-    render json: { error: "#{error.message}" }, status: :bad_request
+    redirect_to enable_banking_items_path, alert: t(".authorization_error")
+  end
+
+  def update_connection
+    enable_banking_item = EnableBankingItem.find_by(id: params[:id])
+    auth_url = generate_authorization_url(@enable_banking_item.aspsp_name, @enable_banking_item.aspsp_country, @enable_banking_item.id)
+    redirect_to auth_url, allow_other_host: true, status: :see_other
+  rescue => error
+    redirect_to enable_banking_items_path, alert: t(".authorization_error")
   end
 
   def auth_callback
+    if params[:error].present?
+      Rails.logger.warn("Enable Banking auth error: #{params[:error]}")
+      return redirect_to enable_banking_items_path, alert: t(".auth_failed")
+    end
+
     code = params[:code]
-    if code.nil?
+    if code.blank?
       Rails.logger.error("Failed to retrieve code from authentication callback parameters")
       redirect_to enable_banking_items_path, alert: "Authentication failed. Please try again."
     else
