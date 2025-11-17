@@ -45,13 +45,10 @@
     </div>
 
     <div class="col-span-2 text-right">
-      <%# Show Total Return (unrealized G/L) when cost basis exists, otherwise show day change %>
+      <%# Show Total Return (unrealized G/L) when cost basis exists %>
       <% if holding.trades.any? && holding.trend %>
         <%= tag.p format_money(holding.trend.value), style: "color: #{holding.trend.color};" %>
         <%= tag.p "(#{number_to_percentage(holding.trend.percent, precision: 1)})", style: "color: #{holding.trend.color};" %>
-      <% elsif holding.day_change %>
-        <%= tag.p format_money(holding.day_change.value), style: "color: #{holding.day_change.color};" %>
-        <%= tag.p "(#{number_to_percentage(holding.day_change.percent, precision: 1)})", style: "color: #{holding.day_change.color};" %>
       <% else %>
         <%= tag.p "--", class: "text-secondary mb-4" %>
       <% end %>
