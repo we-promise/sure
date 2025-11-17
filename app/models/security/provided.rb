@@ -5,7 +5,7 @@ module Security::Provided
 
   class_methods do
     def provider
-      provider = ENV["SECURITIES_PROVIDER"] || "twelve_data"
+      provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
       registry = Provider::Registry.for_concept(:securities)
       registry.get_provider(provider.to_sym)
     end

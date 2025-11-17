@@ -1,45 +1,40 @@
+<%# Modal: Link an existing manual account to a SimpleFIN account %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
+    <% dialog.with_header(title: "Link SimpleFIN account") %>
 
     <% dialog.with_body do %>
-      <div class="space-y-4">
-        <p class="text-sm text-secondary">
-          <%= t(".description") %>
-        </p>
-
-        <form action="<%= link_existing_account_simplefin_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
-          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+      <% if @available_simplefin_accounts.blank? %>
+        <div class="p-4 text-sm text-secondary">
+          <p class="mb-2">All SimpleFIN accounts appear to be linked already.</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>If you just connected or synced, try again after the sync completes.</li>
+            <li>To link a different account, first unlink it from the account’s actions menu.</li>
+          </ul>
+        </div>
+      <% else %>
+        <%= form_with url: link_existing_account_simplefin_items_path, method: :post, class: "space-y-4" do %>
           <%= hidden_field_tag :account_id, @account.id %>
-
-          <div class="space-y-2">
-            <% @available_simplefin_accounts.each do |simplefin_account| %>
-              <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-subtle cursor-pointer transition-colors">
-                <%= radio_button_tag "simplefin_account_id", simplefin_account.id, false, class: "mt-1" %>
-                <div class="flex-1">
-                  <div class="font-medium text-sm text-primary">
-                    <%= simplefin_account.name %>
-                  </div>
-                  <div class="text-xs text-secondary mt-1">
-                    <% if simplefin_account.org_data&.dig("name").present? %>
-                      <%= simplefin_account.org_data["name"] %> •
-                    <% end %>
-                    <%= simplefin_account.simplefin_item.name %> • <%= simplefin_account.currency %>
-                  </div>
+          <div class="space-y-2 max-h-64 overflow-auto">
+            <% @available_simplefin_accounts.each do |sfa| %>
+              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+                <%= radio_button_tag :simplefin_account_id, sfa.id, false %>
+                <div class="flex flex-col">
+                  <span class="text-sm text-primary font-medium"><%= sfa.name.presence || sfa.account_id %></span>
+                  <span class="text-xs text-secondary">
+                    <%= sfa.currency %> • Balance: <%= number_to_currency((sfa.current_balance || sfa.available_balance || 0), unit: sfa.currency) %>
+                  </span>
                 </div>
               </label>
             <% end %>
           </div>
 
-          <div class="flex gap-2 justify-end pt-4">
-            <%= link_to t(".cancel"), accounts_path,
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
-            <%= submit_tag t(".link_account"),
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
+          <div class="flex items-center justify-end gap-2">
+            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
           </div>
-        </form>
-      </div>
+        <% end %>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

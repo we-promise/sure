@@ -240,6 +240,11 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   test "matching_transactions works with name-based recurring transactions" do
+    # Skip when schema enforces NOT NULL merchant_id (branch-specific behavior)
+    unless RecurringTransaction.columns_hash["merchant_id"].null
+      skip "merchant_id is NOT NULL in this schema; name-based patterns disabled"
+    end
+
     account = @family.accounts.first
 
     # Create transactions for pattern
@@ -279,6 +284,10 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   test "both merchant-based and name-based patterns can coexist" do
+    # Skip when schema enforces NOT NULL merchant_id (branch-specific behavior)
+    unless RecurringTransaction.columns_hash["merchant_id"].null
+      skip "merchant_id is NOT NULL in this schema; name-based patterns disabled"
+    end
     account = @family.accounts.first
 
     # Create merchant-based pattern

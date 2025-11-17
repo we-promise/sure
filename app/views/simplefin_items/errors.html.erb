@@ -1,0 +1,29 @@
+<%# Modal: Show SimpleFIN sync errors for a connection %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "SimpleFIN sync errors") %>
+
+    <% dialog.with_body do %>
+      <% if @errors.present? %>
+        <div class="p-2 text-sm text-secondary space-y-2">
+          <p>We found the following errors in the latest sync:</p>
+          <ul class="list-disc list-inside space-y-1">
+            <% @errors.each do |msg| %>
+              <li class="text-primary"><%= msg %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <div class="p-4 text-sm text-secondary">
+          <p>No errors were recorded for the latest sync.</p>
+        </div>
+      <% end %>
+    <% end %>
+
+    <% dialog.with_footer do %>
+      <div class="flex items-center justify-end gap-2">
+        <%= render DS::Link.new(text: "Close", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

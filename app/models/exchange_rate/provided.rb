@@ -3,7 +3,7 @@ module ExchangeRate::Provided
 
   class_methods do
     def provider
-      provider = ENV["EXCHANGE_RATE_PROVIDER"] || "twelve_data"
+      provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
       registry = Provider::Registry.for_concept(:exchange_rates)
       registry.get_provider(provider.to_sym)
     end
