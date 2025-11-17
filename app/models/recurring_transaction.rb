@@ -15,10 +15,21 @@ class RecurringTransaction < ApplicationRecord
   validates :currency, presence: true
   validates :expected_day_of_month, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 31 }
   validate :merchant_or_name_present
+  validate :amount_variance_consistency
 
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
       errors.add(:base, "Either merchant or name must be present")
+    end
+  end
+
+  def amount_variance_consistency
+    return unless manual?
+
+    if expected_amount_min.present? && expected_amount_max.present?
+      if expected_amount_min > expected_amount_max
+        errors.add(:expected_amount_min, "cannot be greater than expected_amount_max")
+      end
     end
   end
 
@@ -102,13 +113,13 @@ class RecurringTransaction < ApplicationRecord
 
     # Filter by merchant or name
     if merchant_id.present?
-      # Match by merchant through the entryable (Transaction)
-      entries.select do |entry|
-        entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
-      end
+      # Join with transactions table to filter by merchant_id in SQL (avoids N+1)
+      entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+        .where(transactions: { merchant_id: merchant_id })
+        .to_a
     else
-      # Match by entry name
-      entries.where(name: name)
+      entries.where(name: name).to_a
     end
   end
 

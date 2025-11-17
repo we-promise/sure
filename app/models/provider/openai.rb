@@ -8,6 +8,13 @@ class Provider::Openai < Provider
   DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
   DEFAULT_MODEL = "gpt-4.1"
 
+  # Returns the effective model that would be used by the provider
+  # Uses the same logic as Provider::Registry and the initializer
+  def self.effective_model
+    configured_model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
+    configured_model.presence || DEFAULT_MODEL
+  end
+
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
@@ -26,10 +33,6 @@ class Provider::Openai < Provider
 
     # Otherwise, check if model starts with any supported OpenAI prefix
     DEFAULT_OPENAI_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
-  end
-
-  def custom_provider?
-    @uri_base.present?
   end
 
   def provider_name
@@ -64,20 +67,14 @@ class Provider::Openai < Provider
         input: { transactions: transactions, user_categories: user_categories }
       )
 
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "openai.auto_categorize",
-        input: { transactions: transactions, user_categories: user_categories }
-      )
-
       result = AutoCategorizer.new(
         client,
         model: effective_model,
         transactions: transactions,
         user_categories: user_categories,
         custom_provider: custom_provider?,
-        langfuse_trace: trace
+        langfuse_trace: trace,
+        family: family
       ).auto_categorize
 
       trace&.update(output: result.map(&:to_h))
@@ -103,7 +100,8 @@ class Provider::Openai < Provider
         transactions: transactions,
         user_merchants: user_merchants,
         custom_provider: custom_provider?,
-        langfuse_trace: trace
+        langfuse_trace: trace,
+        family: family
       ).auto_detect_merchants
 
       trace&.update(output: result.map(&:to_h))
@@ -133,7 +131,8 @@ class Provider::Openai < Provider
         function_results: function_results,
         streamer: streamer,
         session_id: session_id,
-        user_identifier: user_identifier
+        user_identifier: user_identifier,
+        family: family
       )
     else
       native_chat_response(
@@ -145,7 +144,8 @@ class Provider::Openai < Provider
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: session_id,
-        user_identifier: user_identifier
+        user_identifier: user_identifier,
+        family: family
       )
     end
   end
@@ -162,7 +162,8 @@ class Provider::Openai < Provider
       streamer: nil,
       previous_response_id: nil,
       session_id: nil,
-      user_identifier: nil
+      user_identifier: nil,
+      family: nil
     )
       with_provider_response do
         chat_config = ChatConfig.new(
@@ -204,6 +205,7 @@ class Provider::Openai < Provider
             response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
             response = response_chunk.data
             usage = response_chunk.usage
+            Rails.logger.debug("Stream response usage: #{usage.inspect}")
             log_langfuse_generation(
               name: "chat_response",
               model: model,
@@ -213,9 +215,11 @@ class Provider::Openai < Provider
               session_id: session_id,
               user_identifier: user_identifier
             )
+            record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
             response
           else
             parsed = ChatParser.new(raw_response).parsed
+            Rails.logger.debug("Non-stream raw_response['usage']: #{raw_response['usage'].inspect}")
             log_langfuse_generation(
               name: "chat_response",
               model: model,
@@ -225,6 +229,7 @@ class Provider::Openai < Provider
               session_id: session_id,
               user_identifier: user_identifier
             )
+            record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
             parsed
           end
         rescue => e
@@ -249,7 +254,8 @@ class Provider::Openai < Provider
       function_results: [],
       streamer: nil,
       session_id: nil,
-      user_identifier: nil
+      user_identifier: nil,
+      family: nil
     )
       with_provider_response do
         messages = build_generic_messages(
@@ -281,6 +287,8 @@ class Provider::Openai < Provider
             session_id: session_id,
             user_identifier: user_identifier
           )
+
+          record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
 
           # If a streamer was provided, manually call it with the parsed response
           # to maintain the same contract as the streaming version

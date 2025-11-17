@@ -11,9 +11,7 @@ class Settings::ProvidersController < ApplicationController
       [ "Bank Sync Providers", nil ]
     ]
 
-    # Load all provider configurations
-    Provider::Factory.ensure_adapters_loaded
-    @provider_configurations = Provider::ConfigurationRegistry.all
+    prepare_show_context
   end
 
   def update
@@ -74,6 +72,7 @@ class Settings::ProvidersController < ApplicationController
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.message}")
     flash.now[:alert] = "Failed to update provider settings: #{error.message}"
+    prepare_show_context
     render :show, status: :unprocessable_entity
   end
 
@@ -117,5 +116,15 @@ class Settings::ProvidersController < ApplicationController
         adapter_class = Provider::ConfigurationRegistry.get_adapter_class(provider_key)
         adapter_class&.reload_configuration
       end
+    end
+
+    # Prepares instance vars needed by the show view and partials
+    def prepare_show_context
+      # Load all provider configurations (exclude SimpleFin, which has its own unified panel below)
+      Provider::Factory.ensure_adapters_loaded
+      @provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp("simplefin").zero? }
+
+      # Providers page only needs to know whether any SimpleFin connections exist
+      @simplefin_items = Current.family.simplefin_items.ordered.select(:id)
     end
 end

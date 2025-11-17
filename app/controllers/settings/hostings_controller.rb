@@ -59,21 +59,6 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:openai_access_token)
-      Setting.openai_access_token = hosting_params[:openai_access_token]
-    end
-
-    if hosting_params.key?(:enable_banking_country)
-      Setting.enable_banking_country = hosting_params[:enable_banking_country]
-    end
-
-    if hosting_params.key?(:enable_banking_application_id)
-      Setting.enable_banking_application_id = hosting_params[:enable_banking_application_id]
-    end
-
-    if hosting_params.key?(:enable_banking_certificate)
-      Setting.enable_banking_certificate = hosting_params[:enable_banking_certificate]
-    end
-    if hosting_params.key?(:openai_access_token)
       token_param = hosting_params[:openai_access_token].to_s.strip
       # Ignore blanks and redaction placeholders to prevent accidental overwrite
       unless token_param.blank? || token_param == "********"

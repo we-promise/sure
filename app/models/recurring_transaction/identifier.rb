@@ -55,7 +55,6 @@ class RecurringTransaction
             entries: entries
           }
 
-          # Set either merchant_id or name based on identifier type
           if identifier_type == :merchant
             pattern[:merchant_id] = identifier_value
           else
@@ -84,6 +83,13 @@ class RecurringTransaction
 
         recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
 
+        # Handle manual recurring transactions specially
+        if recurring_transaction.persisted? && recurring_transaction.manual?
+          # Update variance for manual recurring transactions
+          update_manual_recurring_variance(recurring_transaction, pattern)
+          next
+        end
+
         # Set the name or merchant_id on new records
         if recurring_transaction.new_record?
           if pattern[:merchant_id].present?
@@ -91,6 +97,8 @@ class RecurringTransaction
           else
             recurring_transaction.name = pattern[:name]
           end
+          # New auto-detected recurring transactions are not manual
+          recurring_transaction.manual = false
         end
 
         recurring_transaction.assign_attributes(

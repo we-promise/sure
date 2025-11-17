@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_09_03_015009) do
+ActiveRecord::Schema[7.2].define(version: 2025_11_15_194500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -727,8 +727,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_03_015009) do
     t.decimal "expected_amount_min", precision: 19, scale: 4
     t.decimal "expected_amount_max", precision: 19, scale: 4
     t.decimal "expected_amount_avg", precision: 19, scale: 4
-    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_merchant", unique: true, where: "(merchant_id IS NOT NULL)"
-    t.index ["family_id", "name", "amount", "currency"], name: "idx_recurring_txns_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL))"
+    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_on_family_merchant_amount_currency", unique: true
     t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
     t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
     t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
@@ -847,6 +846,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_03_015009) do
     t.jsonb "org_data"
     t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
+    t.index ["simplefin_item_id", "account_id"], name: "idx_unique_sfa_per_item_and_upstream", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
   end
 
@@ -960,8 +960,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_03_015009) do
     t.jsonb "locked_attributes", default: {}
     t.string "kind", default: "standard", null: false
     t.string "external_id"
+    t.jsonb "extra", default: {}, null: false
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
+    t.index ["extra"], name: "index_transactions_on_extra", using: :gin
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
   end
@@ -1032,7 +1034,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_03_015009) do
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
-  add_foreign_key "accounts", "enable_banking_accounts"
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
@@ -1046,8 +1047,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_03_015009) do
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
-  add_foreign_key "enable_banking_accounts", "enable_banking_items"
-  add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "imports"
   add_foreign_key "family_exports", "families"

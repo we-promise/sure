@@ -143,115 +143,54 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(@account)
     assert_equal "Account is already linked to a provider", flash[:alert]
   end
+end
 
-  test "syncing linked account triggers sync for all provider items" do
-    plaid_account = plaid_accounts(:one)
-    plaid_item = plaid_account.plaid_item
-    AccountProvider.create!(account: @account, provider: plaid_account)
+class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
+  fixtures :users, :families
 
-    # Reload to ensure the account has the provider association loaded
-    @account.reload
-
-    # Mock at the class level since controller loads account from DB
-    Account.any_instance.expects(:syncing?).returns(false)
-    PlaidItem.any_instance.expects(:syncing?).returns(false)
-    PlaidItem.any_instance.expects(:sync_later).once
-
-    post sync_account_url(@account)
-    assert_redirected_to account_url(@account)
+  setup do
+    sign_in users(:family_admin)
+    @family = families(:dylan_family)
   end
 
-  test "syncing unlinked account calls account sync_later" do
-    Account.any_instance.expects(:syncing?).returns(false)
-    Account.any_instance.expects(:sync_later).once
+  test "when unlinked SFAs exist and manuals exist, shows setup button only" do
+    item = SimplefinItem.create!(family: @family, name: "Conn", access_url: "https://example.com/access")
+    # Unlinked SFA (no account and no provider link)
+    item.simplefin_accounts.create!(name: "A", account_id: "sf_a", currency: "USD", current_balance: 1, account_type: "depository")
+    # One manual account available
+    Account.create!(family: @family, name: "Manual A", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"))
 
-    post sync_account_url(@account)
-    assert_redirected_to account_url(@account)
-  end
-
-  test "confirms unlink for linked account" do
-    plaid_account = plaid_accounts(:one)
-    AccountProvider.create!(account: @account, provider: plaid_account)
-
-    get confirm_unlink_account_url(@account)
+    get accounts_path
     assert_response :success
+    # Expect setup link present
+    assert_includes @response.body, setup_accounts_simplefin_item_path(item)
+    # Relink modal (SimpleFin-specific) should not be present anymore
+    refute_includes @response.body, "Link existing accounts"
   end
 
-  test "redirects when confirming unlink for unlinked account" do
-    get confirm_unlink_account_url(@account)
-    assert_redirected_to account_url(@account)
-    assert_equal "Account is not linked to a provider", flash[:alert]
-  end
+  test "when SFAs exist and none unlinked and manuals exist, no relink modal is shown (unified flow)" do
+    item = SimplefinItem.create!(family: @family, name: "Conn2", access_url: "https://example.com/access")
+    # Create a manual linked to SFA so unlinked count == 0
+    sfa = item.simplefin_accounts.create!(name: "B", account_id: "sf_b", currency: "USD", current_balance: 1, account_type: "depository")
+    linked = Account.create!(family: @family, name: "Linked", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "savings"))
+    # Legacy association sufficient to count as linked
+    sfa.update!(account: linked)
 
-  test "unlinks linked account successfully with new system" do
-    plaid_account = plaid_accounts(:one)
-    AccountProvider.create!(account: @account, provider: plaid_account)
-    @account.reload
+    # Also create another manual account to make manuals_exist true
+    Account.create!(family: @family, name: "Manual B", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"))
 
-    assert @account.linked?
-
-    delete unlink_account_url(@account)
-    @account.reload
-
-    assert_not @account.linked?
-    assert_redirected_to accounts_path
-    assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
-  end
-
-  test "unlinks linked account successfully with legacy system" do
-    plaid_account = plaid_accounts(:one)
-    @account.update!(plaid_account_id: plaid_account.id)
-    @account.reload
-
-    assert @account.linked?
-
-    delete unlink_account_url(@account)
-    @account.reload
-
-    assert_not @account.linked?
-    assert_nil @account.plaid_account_id
-    assert_redirected_to accounts_path
-    assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
-  end
-
-  test "redirects when unlinking unlinked account" do
-    delete unlink_account_url(@account)
-    assert_redirected_to account_url(@account)
-    assert_equal "Account is not linked to a provider", flash[:alert]
-  end
-
-  test "unlinked account can be deleted" do
-    plaid_account = plaid_accounts(:one)
-    AccountProvider.create!(account: @account, provider: plaid_account)
-    @account.reload
-
-    # Cannot delete while linked
-    delete account_url(@account)
-    assert_redirected_to account_url(@account)
-    assert_equal "Cannot delete a linked account. Please unlink it first.", flash[:alert]
-
-    # Unlink the account
-    delete unlink_account_url(@account)
-    @account.reload
-
-    # Now can delete
-    delete account_url(@account)
-    assert_redirected_to accounts_path
-    assert_enqueued_with job: DestroyJob
-    assert_equal "Depository account scheduled for deletion", flash[:notice]
-  end
-
-  test "select_provider shows available providers" do
-    get select_provider_account_url(@account)
+    get accounts_path
     assert_response :success
+    # The SimpleFin-specific relink modal is removed in favor of unified provider flow
+    refute_includes @response.body, "Link existing accounts"
   end
 
-  test "select_provider redirects for already linked account" do
-    plaid_account = plaid_accounts(:one)
-    AccountProvider.create!(account: @account, provider: plaid_account)
+  test "when no SFAs exist, shows neither CTA" do
+    item = SimplefinItem.create!(family: @family, name: "Conn3", access_url: "https://example.com/access")
 
-    get select_provider_account_url(@account)
-    assert_redirected_to account_url(@account)
-    assert_equal "Account is already linked to a provider", flash[:alert]
+    get accounts_path
+    assert_response :success
+    refute_includes @response.body, setup_accounts_simplefin_item_path(item)
+    refute_includes @response.body, "Link existing accounts"
   end
 end

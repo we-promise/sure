@@ -15,8 +15,10 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param category_id [Integer, nil] Optional category ID
   # @param merchant [Merchant, nil] Optional merchant object
+  # @param notes [String, nil] Optional transaction notes/memo
+  # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, extra: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -25,6 +27,20 @@ class Account::ProviderImportAdapter
       # This allows multiple providers to sync same account with separate entries
       entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
         e.entryable = Transaction.new
+      end
+
+      # If this is a new entry, check for potential duplicates from manual/CSV imports
+      # This handles the case where a user manually created or CSV imported a transaction
+      # before linking their account to a provider
+      # Note: We don't pass name here to allow matching even when provider formats names differently
+      if entry.new_record?
+        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
+        if duplicate
+          # "Claim" the duplicate by updating its external_id and source
+          # This prevents future duplicate checks from matching it again
+          entry = duplicate
+          entry.assign_attributes(external_id: external_id, source: source)
+        end
       end
 
       # Validate entryable type matches to prevent external_id collisions
@@ -50,6 +66,16 @@ class Account::ProviderImportAdapter
         entry.transaction.enrich_attribute(:merchant_id, merchant.id, source: source)
       end
 
+      if notes.present? && entry.respond_to?(:enrich_attribute)
+        entry.enrich_attribute(:notes, notes, source: source)
+      end
+
+      # Persist extra provider metadata on the transaction (non-enriched; always merged)
+      if extra.present? && entry.entryable.is_a?(Transaction)
+        existing = entry.transaction.extra || {}
+        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+        entry.transaction.extra = existing.deep_merge(incoming)
+      end
       entry.save!
       entry
     end
@@ -251,5 +277,43 @@ class Account::ProviderImportAdapter
   rescue => e
     Rails.logger.error("Failed to update #{account.accountable_type} attributes from #{source}: #{e.message}")
     false
+  end
+
+  # Finds a potential duplicate transaction from manual entry or CSV import
+  # Matches on date, amount, currency, and optionally name
+  # Only matches transactions without external_id (manual/CSV imported)
+  #
+  # @param date [Date, String] Transaction date
+  # @param amount [BigDecimal, Numeric] Transaction amount
+  # @param currency [String] Currency code
+  # @param name [String, nil] Optional transaction name for more accurate matching
+  # @param exclude_entry_ids [Set, Array, nil] Entry IDs to exclude from the search (e.g., already claimed entries)
+  # @return [Entry, nil] The duplicate entry or nil if not found
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil)
+    # Convert date to Date object if it's a string
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+
+    # Look for entries on the same account with:
+    # 1. Same date
+    # 2. Same amount (exact match)
+    # 3. Same currency
+    # 4. No external_id (manual/CSV imported transactions)
+    # 5. Entry type is Transaction (not Trade or Valuation)
+    # 6. Optionally same name (if name parameter is provided)
+    # 7. Not in the excluded IDs list (if provided)
+    query = account.entries
+                   .where(entryable_type: "Transaction")
+                   .where(date: date)
+                   .where(amount: amount)
+                   .where(currency: currency)
+                   .where(external_id: nil)
+
+    # Add name filter if provided
+    query = query.where(name: name) if name.present?
+
+    # Exclude already claimed entries if provided
+    query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
+
+    query.order(created_at: :asc).first
   end
 end

@@ -1,11 +1,16 @@
 class Provider::Openai::AutoCategorizer
-  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil)
+  include Provider::Openai::Concerns::UsageRecorder
+
+  attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family
+
+  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil)
     @client = client
     @model = model
     @transactions = transactions
     @user_categories = user_categories
     @custom_provider = custom_provider
     @langfuse_trace = langfuse_trace
+    @family = family
   end
 
   def auto_categorize
@@ -64,6 +69,16 @@ class Provider::Openai::AutoCategorizer
       categorizations = extract_categorizations_native(response)
       result = build_response(categorizations)
 
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_categorize",
+        metadata: {
+          transaction_count: transactions.size,
+          category_count: user_categories.size
+        }
+      )
+
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
     rescue => e
@@ -99,14 +114,22 @@ class Provider::Openai::AutoCategorizer
       categorizations = extract_categorizations_generic(response)
       result = build_response(categorizations)
 
+      record_usage(
+        model.presence || Provider::Openai::DEFAULT_MODEL,
+        response.dig("usage"),
+        operation: "auto_categorize",
+        metadata: {
+          transaction_count: transactions.size,
+          category_count: user_categories.size
+        }
+      )
+
       span&.end(output: result.map(&:to_h), usage: response.dig("usage"))
       result
     rescue => e
       span&.end(output: { error: e.message }, level: "ERROR")
       raise
     end
-
-    attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace
 
     AutoCategorization = Provider::LlmConcept::AutoCategorization
 

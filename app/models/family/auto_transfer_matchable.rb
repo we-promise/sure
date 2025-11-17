@@ -60,10 +60,14 @@ module Family::AutoTransferMatchable
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
-        Transfer.find_or_create_by!(
-          inflow_transaction_id: match.inflow_transaction_id,
-          outflow_transaction_id: match.outflow_transaction_id,
-        )
+        begin
+          Transfer.find_or_create_by!(
+            inflow_transaction_id: match.inflow_transaction_id,
+            outflow_transaction_id: match.outflow_transaction_id,
+          )
+        rescue ActiveRecord::RecordNotUnique
+          # Another concurrent job created the transfer; safe to ignore
+        end
 
         Transaction.find(match.inflow_transaction_id).update!(kind: "funds_movement")
         Transaction.find(match.outflow_transaction_id).update!(kind: Transfer.kind_for_account(Transaction.find(match.outflow_transaction_id).entry.account))

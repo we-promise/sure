@@ -9,6 +9,43 @@ class LunchflowItemsController < ApplicationController
   def show
   end
 
+  # Preload Lunchflow accounts in background (async, non-blocking)
+  def preload_accounts
+    begin
+      cache_key = "lunchflow_accounts_#{Current.family.id}"
+
+      # Check if already cached
+      cached_accounts = Rails.cache.read(cache_key)
+
+      if cached_accounts.present?
+        render json: { success: true, has_accounts: cached_accounts.any?, cached: true }
+        return
+      end
+
+      # Fetch from API
+      lunchflow_provider = Provider::LunchflowAdapter.build_provider
+
+      unless lunchflow_provider.present?
+        render json: { success: false, error: "no_api_key", has_accounts: false }
+        return
+      end
+
+      accounts_data = lunchflow_provider.get_accounts
+      available_accounts = accounts_data[:accounts] || []
+
+      # Cache the accounts for 5 minutes
+      Rails.cache.write(cache_key, available_accounts, expires_in: 5.minutes)
+
+      render json: { success: true, has_accounts: available_accounts.any?, cached: false }
+    rescue Provider::Lunchflow::LunchflowError => e
+      Rails.logger.error("Lunchflow preload error: #{e.message}")
+      render json: { success: false, error: e.message, has_accounts: false }
+    rescue StandardError => e
+      Rails.logger.error("Unexpected error preloading Lunchflow accounts: #{e.class}: #{e.message}")
+      render json: { success: false, error: "unexpected_error", has_accounts: false }
+    end
+  end
+
   # Fetch available accounts from Lunchflow API and show selection UI
   def select_accounts
     begin
@@ -75,11 +112,19 @@ class LunchflowItemsController < ApplicationController
 
     created_accounts = []
     already_linked_accounts = []
+    invalid_accounts = []
 
     selected_account_ids.each do |account_id|
       # Find the account data from API response
       account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == account_id.to_s }
       next unless account_data
+
+      # Validate account name is not blank (required by Account model)
+      if account_data[:name].blank?
+        invalid_accounts << account_id
+        Rails.logger.warn "LunchflowItemsController - Skipping account #{account_id} with blank name"
+        next
+      end
 
       # Create or find lunchflow_account
       lunchflow_account = lunchflow_item.lunchflow_accounts.find_or_initialize_by(
@@ -117,7 +162,17 @@ class LunchflowItemsController < ApplicationController
     lunchflow_item.sync_later if created_accounts.any?
 
     # Build appropriate flash message
-    if created_accounts.any? && already_linked_accounts.any?
+    if invalid_accounts.any? && created_accounts.empty? && already_linked_accounts.empty?
+      # All selected accounts were invalid (blank names)
+      redirect_to new_account_path, alert: t(".invalid_account_names", count: invalid_accounts.count)
+    elsif invalid_accounts.any? && (created_accounts.any? || already_linked_accounts.any?)
+      # Some accounts were created/already linked, but some had invalid names
+      redirect_to return_to || accounts_path,
+                  alert: t(".partial_invalid",
+                           created_count: created_accounts.count,
+                           already_linked_count: already_linked_accounts.count,
+                           invalid_count: invalid_accounts.count)
+    elsif created_accounts.any? && already_linked_accounts.any?
       redirect_to return_to || accounts_path,
                   notice: t(".partial_success",
                            created_count: created_accounts.count,

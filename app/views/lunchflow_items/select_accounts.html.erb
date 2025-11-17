@@ -5,7 +5,7 @@
     <% dialog.with_body do %>
       <div class="space-y-4">
         <p class="text-sm text-secondary">
-          <%= t(".description") %>
+          <%= t(".description", product_name: product_name) %>
         </p>
 
         <form action="<%= link_accounts_lunchflow_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
@@ -27,8 +27,16 @@
                     <% end %>
                   </div>
                   <div class="text-xs text-secondary mt-1">
+                    <% if account[:iban].present? %>
+                      <%= account[:iban] %> •
+                    <% end %>
                     <%= account[:institution_name] %> • <%= account[:currency] %> • <%= account[:status] %>
                   </div>
+                  <% if has_blank_name %>
+                    <div class="text-xs text-error mt-1">
+                      <%= t(".configure_name_in_lunchflow") %>
+                    </div>
+                  <% end %>
                 </div>
               </label>
             <% end %>
@@ -37,7 +45,7 @@
           <div class="flex gap-2 justify-end pt-4">
             <%= link_to t(".cancel"), @return_to || new_account_path,
                 class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                data: { turbo_frame: "_top" } %>
+                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
             <%= submit_tag t(".link_accounts"),
                 class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
           </div>

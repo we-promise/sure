@@ -3,12 +3,56 @@ class AccountsController < ApplicationController
   include Periodable
 
   def index
-    @manual_accounts = family.accounts.manual.alphabetically
+    @manual_accounts = family.accounts
+          .visible_manual
+          .order(:name)
     @plaid_items = family.plaid_items.ordered
-    @simplefin_items = family.simplefin_items.ordered
+    @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
     @enable_banking_items = family.enable_banking_items.ordered
     @lunchflow_items = family.lunchflow_items.ordered
 
+    # Precompute per-item maps to avoid queries in the view
+    @simplefin_sync_stats_map = {}
+    @simplefin_has_unlinked_map = {}
+
+    @simplefin_items.each do |item|
+      latest_sync = item.syncs.ordered.first
+      @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
+      @simplefin_has_unlinked_map[item.id] = item.family.accounts
+        .visible_manual
+        .exists?
+    end
+
+    # Count of SimpleFin accounts that are not linked (no legacy account and no AccountProvider)
+    @simplefin_unlinked_count_map = {}
+    @simplefin_items.each do |item|
+      count = item.simplefin_accounts
+        .left_joins(:account, :account_provider)
+        .where(accounts: { id: nil }, account_providers: { id: nil })
+        .count
+      @simplefin_unlinked_count_map[item.id] = count
+    end
+
+    # Compute CTA visibility map used by the simplefin_item partial
+    @simplefin_show_relink_map = {}
+    @simplefin_items.each do |item|
+      begin
+        unlinked_count = @simplefin_unlinked_count_map[item.id] || 0
+        manuals_exist = @simplefin_has_unlinked_map[item.id]
+        sfa_any = if item.simplefin_accounts.loaded?
+          item.simplefin_accounts.any?
+        else
+          item.simplefin_accounts.exists?
+        end
+        @simplefin_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
+      rescue => e
+        Rails.logger.warn("SimpleFin card: CTA computation failed for item #{item.id}: #{e.class} - #{e.message}")
+        @simplefin_show_relink_map[item.id] = false
+      end
+    end
+
+    # Prevent Turbo Drive from caching this page to ensure fresh account lists
+    expires_now
     render layout: "settings"
   end
 
