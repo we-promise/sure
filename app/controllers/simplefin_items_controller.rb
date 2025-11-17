@@ -257,13 +257,12 @@ class SimplefinItemsController < ApplicationController
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
 
-    # Family SFAs, excluding the no-op case (already linked to this account),
-    # ordered newest-first for clarity. We intentionally keep SFAs that are linked
-    # to other accounts to allow reassignment in the unified flow.
+    # Filter out SimpleFIN accounts that are already linked to any account
+    # (either via account_provider or legacy account association)
     @available_simplefin_accounts = Current.family.simplefin_items
       .includes(:simplefin_accounts)
       .flat_map(&:simplefin_accounts)
-      .reject { |sfa| sfa.account_provider&.account_id == @account.id }
+      .reject { |sfa| sfa.account_provider.present? || sfa.account.present? }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
