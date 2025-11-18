@@ -19,6 +19,23 @@ class RulesController < ApplicationController
     @rule = Current.family.rules.build(
       resource_type: params[:resource_type] || "transaction",
     )
+
+    # Pre-populate action if provided
+    if params[:action_type].present? && params[:action_value].present?
+      @rule.actions.build(
+        action_type: params[:action_type],
+        value: params[:action_value]
+      )
+    end
+
+    # Pre-populate condition if provided
+    if params[:condition_type].present? && params[:condition_operator].present? && params[:condition_value].present?
+      @rule.conditions.build(
+        condition_type: params[:condition_type],
+        operator: params[:condition_operator],
+        value: params[:condition_value]
+      )
+    end
   end
 
   def create
