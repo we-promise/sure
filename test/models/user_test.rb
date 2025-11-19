@@ -152,4 +152,77 @@ class UserTest < ActiveSupport::TestCase
   ensure
     Setting.openai_access_token = previous
   end
+
+  test "update_dashboard_preferences handles concurrent updates atomically" do
+    @user.update!(preferences: {})
+
+    # Simulate concurrent updates from multiple requests
+    # Each thread collapses a different section simultaneously
+    threads = []
+    sections = %w[net_worth_chart outflows_donut cashflow_sankey balance_sheet]
+
+    sections.each_with_index do |section, index|
+      threads << Thread.new do
+        # Small staggered delays to increase chance of race conditions
+        sleep(index * 0.01)
+
+        # Each thread loads its own instance and updates
+        user = User.find(@user.id)
+        user.update_dashboard_preferences({
+          "collapsed_sections" => { section => true }
+        })
+      end
+    end
+
+    # Wait for all threads to complete
+    threads.each(&:join)
+
+    # Verify all updates persisted (no data loss from race conditions)
+    @user.reload
+    sections.each do |section|
+      assert @user.dashboard_section_collapsed?(section),
+        "Expected #{section} to be collapsed, but it was not. " \
+        "Preferences: #{@user.preferences.inspect}"
+    end
+
+    # Verify all sections are in the preferences hash
+    assert_equal sections.sort,
+      @user.preferences.dig("collapsed_sections")&.keys&.sort,
+      "Expected all sections to be in preferences"
+  end
+
+  test "update_dashboard_preferences merges nested hashes correctly" do
+    @user.update!(preferences: {})
+
+    # First update: collapse net_worth
+    @user.update_dashboard_preferences({
+      "collapsed_sections" => { "net_worth_chart" => true }
+    })
+    @user.reload
+
+    assert @user.dashboard_section_collapsed?("net_worth_chart")
+    assert_not @user.dashboard_section_collapsed?("outflows_donut")
+
+    # Second update: collapse outflows (should preserve net_worth)
+    @user.update_dashboard_preferences({
+      "collapsed_sections" => { "outflows_donut" => true }
+    })
+    @user.reload
+
+    assert @user.dashboard_section_collapsed?("net_worth_chart"),
+      "First collapsed section should still be collapsed"
+    assert @user.dashboard_section_collapsed?("outflows_donut"),
+      "Second collapsed section should be collapsed"
+  end
+
+  test "update_dashboard_preferences handles section_order updates" do
+    @user.update!(preferences: {})
+
+    # Set initial order
+    new_order = %w[outflows_donut net_worth_chart cashflow_sankey balance_sheet]
+    @user.update_dashboard_preferences({ "section_order" => new_order })
+    @user.reload
+
+    assert_equal new_order, @user.dashboard_section_order
+  end
 end
