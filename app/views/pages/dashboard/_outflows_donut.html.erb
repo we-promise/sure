@@ -1,10 +1,6 @@
 <%# locals: (outflows_data:, period:) %>
 <div id="outflows-donut-section">
-  <div class="flex justify-between items-center gap-4 px-4 mb-4">
-    <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
-      <%= t("pages.dashboard.outflows_donut.title") %>
-    </h2>
-
+  <div class="flex justify-end items-center gap-4 px-4 mb-4">
     <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
       <%= form.select :period,
                 Period.as_options,
