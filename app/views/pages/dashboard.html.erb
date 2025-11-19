@@ -27,34 +27,44 @@
   </div>
 <% end %>
 
-<div class="w-full space-y-6 pb-24">
+<div class="w-full space-y-6 pb-24" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop">
   <% if Current.family.accounts.any? %>
-    <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
-      <%= render partial: "pages/dashboard/cashflow_sankey", locals: {
-        sankey_data: @cashflow_sankey_data,
-        period: @period
-      } %>
-    </section>
-
-    <% if @outflows_data[:categories].present? %>
-      <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
-        <%= render partial: "pages/dashboard/outflows_donut", locals: {
-          outflows_data: @outflows_data,
-          period: @period
-        } %>
+    <% @dashboard_sections.each do |section| %>
+      <% next unless section[:visible] %>
+      <section
+        class="bg-container rounded-xl shadow-border-xs transition-all"
+        data-dashboard-sortable-target="section"
+        data-section-key="<%= section[:key] %>"
+        data-controller="dashboard-section"
+        data-dashboard-section-section-key-value="<%= section[:key] %>"
+        data-dashboard-section-collapsed-value="<%= Current.user.dashboard_section_collapsed?(section[:key]) %>"
+        draggable="true"
+        data-action="dragstart->dashboard-sortable#dragStart dragend->dashboard-sortable#dragEnd">
+        <div class="px-4 py-3 flex items-center justify-between border-b border-secondary">
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-1"
+              aria-label="<%= t("pages.dashboard.drag_to_reorder") %>">
+              <%= icon("grip-vertical", size: "sm") %>
+            </button>
+            <h2 class="text-lg font-medium">
+              <%= t(section[:title]) %>
+            </h2>
+          </div>
+          <button
+            type="button"
+            class="text-secondary hover:text-primary transition-colors p-1"
+            data-action="click->dashboard-section#toggle"
+            aria-label="<%= t("pages.dashboard.toggle_section") %>">
+            <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { dashboard_section_target: "chevron" }) %>
+          </button>
+        </div>
+        <div class="py-4" data-dashboard-section-target="content">
+          <%= render partial: section[:partial], locals: section[:locals] %>
+        </div>
       </section>
     <% end %>
-
-    <section class="bg-container py-4 rounded-xl shadow-border-xs">
-      <%= render partial: "pages/dashboard/net_worth_chart", locals: {
-        balance_sheet: @balance_sheet,
-        period: @period
-      } %>
-    </section>
-
-    <section>
-      <%= render "pages/dashboard/balance_sheet", balance_sheet: @balance_sheet %>
-    </section>
   <% else %>
     <section>
       <%= render "pages/dashboard/no_accounts_graph_placeholder" %>
