@@ -187,7 +187,7 @@ class Provider::TwelveData < Provider
           symbol: symbol,
           date: date.to_date,
           price: price,
-          currency: parsed.dig("currency"),
+          currency: parsed.dig("meta", "currency") || parsed.dig("currency"),
           exchange_operating_mic: exchange_operating_mic
         )
       end.compact
