@@ -92,7 +92,7 @@
       <% @reports_sections.each do |section| %>
         <% next unless section[:visible] %>
         <section
-          class="bg-container rounded-xl shadow-border-xs transition-all mb-6"
+          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group"
           data-reports-sortable-target="section"
           data-section-key="<%= section[:key] %>"
           data-controller="reports-section"
@@ -100,24 +100,24 @@
           data-reports-section-collapsed-value="<%= Current.user.reports_section_collapsed?(section[:key]) %>"
           draggable="true"
           data-action="dragstart->reports-sortable#dragStart dragend->reports-sortable#dragEnd">
-          <div class="px-4 py-3 flex items-center justify-between border-b border-secondary">
-            <div class="flex items-center gap-3">
+          <div class="px-4 py-2 flex items-center justify-between">
+            <div class="flex items-center gap-2">
               <button
                 type="button"
-                class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-1"
-                aria-label="<%= t("reports.index.drag_to_reorder") %>">
-                <%= icon("grip-vertical", size: "sm") %>
+                class="text-secondary hover:text-primary transition-colors p-0.5"
+                data-action="click->reports-section#toggle"
+                aria-label="<%= t("reports.index.toggle_section") %>">
+                <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { reports_section_target: "chevron" }) %>
               </button>
-              <h2 class="text-lg font-medium">
+              <h2 class="text-base font-medium">
                 <%= t(section[:title]) %>
               </h2>
             </div>
             <button
               type="button"
-              class="text-secondary hover:text-primary transition-colors p-1"
-              data-action="click->reports-section#toggle"
-              aria-label="<%= t("reports.index.toggle_section") %>">
-              <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { reports_section_target: "chevron" }) %>
+              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
+              aria-label="<%= t("reports.index.drag_to_reorder") %>">
+              <%= icon("grip-vertical", size: "sm") %>
             </button>
           </div>
           <div class="py-4 px-6" data-reports-section-target="content">
