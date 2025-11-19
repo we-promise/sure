@@ -99,14 +99,14 @@ export default class extends Controller {
       (section) => section.dataset.sectionKey,
     );
 
-    fetch("/dashboard/preferences", {
+    fetch("/reports/update_preferences", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
           .content,
       },
-      body: JSON.stringify({ preferences: { section_order: order } }),
+      body: JSON.stringify({ preferences: { reports_section_order: order } }),
     });
   }
 }
