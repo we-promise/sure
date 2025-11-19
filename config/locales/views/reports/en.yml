@@ -5,6 +5,8 @@ en:
       title: Reports
       subtitle: Comprehensive insights into your financial health
       export: Export CSV
+      drag_to_reorder: "Drag to reorder section"
+      toggle_section: "Toggle section visibility"
       periods:
         monthly: Monthly
         quarterly: Quarterly

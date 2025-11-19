@@ -206,9 +206,41 @@ class User < ApplicationRecord
     end
   end
 
+  # Reports preferences management
+  def reports_section_collapsed?(section_key)
+    preferences.dig("reports_collapsed_sections", section_key) == true
+  end
+
+  def reports_section_order
+    preferences["reports_section_order"] || default_reports_section_order
+  end
+
+  def update_reports_preferences(prefs)
+    # Use pessimistic locking to ensure atomic read-modify-write
+    transaction do
+      lock!
+
+      updated_prefs = preferences.deep_dup
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          updated_prefs[key] ||= {}
+          updated_prefs[key] = updated_prefs[key].merge(value)
+        else
+          updated_prefs[key] = value
+        end
+      end
+
+      update!(preferences: updated_prefs)
+    end
+  end
+
   private
     def default_dashboard_section_order
       %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
+    end
+
+    def default_reports_section_order
+      %w[trends_insights transactions_breakdown]
     end
     def ensure_valid_profile_image
       return unless profile_image.attached?

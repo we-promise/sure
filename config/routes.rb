@@ -105,6 +105,7 @@ Rails.application.routes.draw do
   end
 
   resources :reports, only: %i[index] do
+    patch :update_preferences, on: :collection
     get :export_transactions, on: :collection
     get :google_sheets_instructions, on: :collection
   end
