@@ -20,7 +20,7 @@ run_security_health_checks:
   description: "Runs security health checks to detect issues with security data"
 
 sync_all_accounts:
-  cron: "0 */6 * * *" # every 6 hours
+  cron: "22 2 * * *" # every 24 hours at 2:22am
   class: "SyncAllJob"
   queue: "scheduled"
   description: "Syncs all accounts for all families"
