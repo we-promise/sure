@@ -4,7 +4,7 @@ class AccountsController < ApplicationController
 
   def index
     @manual_accounts = family.accounts
-          .visible_manual
+          .listable_manual
           .order(:name)
     @plaid_items = family.plaid_items.ordered
     @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
@@ -18,7 +18,7 @@ class AccountsController < ApplicationController
       latest_sync = item.syncs.ordered.first
       @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
       @simplefin_has_unlinked_map[item.id] = item.family.accounts
-        .visible_manual
+        .listable_manual
         .exists?
     end
 

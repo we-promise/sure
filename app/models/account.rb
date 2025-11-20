@@ -32,6 +32,10 @@ class Account < ApplicationRecord
     visible.manual
   }
 
+  scope :listable_manual, -> {
+    manual.where.not(status: :pending_deletion)
+  }
+
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy

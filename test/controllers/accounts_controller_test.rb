@@ -130,6 +130,28 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Depository account scheduled for deletion", flash[:notice]
   end
 
+  test "disabling an account keeps it visible on index" do
+    @account.disable!
+
+    get accounts_path
+
+    assert_response :success
+    assert_includes @response.body, @account.name
+    assert_includes @response.body, "account_#{@account.id}_active"
+  end
+
+  test "toggle_active disables and re-enables an account" do
+    patch toggle_active_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert @account.disabled?
+
+    patch toggle_active_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert @account.active?
+  end
+
   test "select_provider shows available providers" do
     get select_provider_account_url(@account)
     assert_response :success
