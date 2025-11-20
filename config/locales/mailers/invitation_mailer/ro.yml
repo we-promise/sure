@@ -1,0 +1,5 @@
+---
+ro:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} te-a invitat să te alături gospodăriei sale pe %{product_name}!"

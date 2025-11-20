@@ -1,0 +1,7 @@
+---
+ro:
+  other_liabilities:
+    edit:
+      edit: Editează %{account}
+    new:
+      title: Introdu detaliile datoriei

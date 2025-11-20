@@ -1,0 +1,6 @@
+---
+ro:
+  invite_codes:
+    index:
+      invite_code_description: Generează un cod nou pentru a-l vedea afișat aici. Codurile generate care au fost utilizate nu vor mai fi afișate.
+      no_invite_codes: Nu există coduri de afișat
