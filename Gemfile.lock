@@ -603,6 +603,10 @@ GEM
       fugit (~> 1.8, >= 1.11.1)
       globalid (>= 1.0.1)
       sidekiq (>= 6.5.0)
+    sidekiq-unique-jobs (8.0.11)
+      concurrent-ruby (~> 1.0, >= 1.0.5)
+      sidekiq (>= 7.0.0, < 9.0.0)
+      thor (>= 1.0, < 3.0)
     simplecov (0.22.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
@@ -759,6 +763,7 @@ DEPENDENCIES
   sentry-sidekiq
   sidekiq
   sidekiq-cron
+  sidekiq-unique-jobs
   simplecov
   skylight
   stackprof
