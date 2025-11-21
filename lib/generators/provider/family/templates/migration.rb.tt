@@ -1,4 +1,4 @@
-class Create<%= class_name %>TablesAndAccounts < ActiveRecord::Migration<%= migration_version %>
+class Create<%= class_name %>ItemsAndAccounts < ActiveRecord::Migration<%= migration_version %>
   def change
     # Create provider items table (stores per-family connection credentials)
     create_table :<%= table_name %>, id: :uuid do |t|
@@ -32,7 +32,6 @@ class Create<%= class_name %>TablesAndAccounts < ActiveRecord::Migration<%= migr
       t.timestamps
     end
 
-    add_index :<%= table_name %>, :family_id
     add_index :<%= table_name %>, :status
 
     # Create provider accounts table (stores individual account data from provider)
@@ -59,6 +58,5 @@ class Create<%= class_name %>TablesAndAccounts < ActiveRecord::Migration<%= migr
     end
 
     add_index :<%= file_name %>_accounts, :account_id
-    add_index :<%= file_name %>_accounts, :<%= file_name %>_item_id
   end
 end
