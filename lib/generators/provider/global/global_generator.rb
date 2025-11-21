@@ -174,54 +174,54 @@ class Provider::GlobalGenerator < Rails::Generators::NamedBase
 
   private
 
-  def table_name
-    "#{file_name}_items"
-  end
-
-  def migration_version
-    "[#{Rails::VERSION::MAJOR}.#{Rails::VERSION::MINOR}]"
-  end
-
-  def parsed_fields
-    @parsed_fields ||= fields.map do |field_def|
-      parts = field_def.split(":")
-      name = parts[0]
-      type = parts[1] || "string"
-      secret = parts.include?("secret")
-      default = extract_default(parts)
-
-      {
-        name: name,
-        type: type,
-        secret: secret,
-        default: default,
-        env_key: "#{file_name.upcase}_#{name.upcase}"
-      }
+    def table_name
+      "#{file_name}_items"
     end
-  end
 
-  def extract_default(parts)
-    default_part = parts.find { |p| p.start_with?("default=") }
-    default_part&.sub("default=", "")
-  end
+    def migration_version
+      "[#{Rails::VERSION::MAJOR}.#{Rails::VERSION::MINOR}]"
+    end
 
-  def configure_block_content
-    return "" if parsed_fields.empty?
+    def parsed_fields
+      @parsed_fields ||= fields.map do |field_def|
+        parts = field_def.split(":")
+        name = parts[0]
+        type = parts[1] || "string"
+        secret = parts.include?("secret")
+        default = extract_default(parts)
 
-    fields_code = parsed_fields.map do |field|
-      field_attrs = [
-        "label: \"#{field[:name].titleize}\"",
-        ("required: true" if field[:secret]),
-        ("secret: true" if field[:secret]),
-        "env_key: \"#{field[:env_key]}\"",
-        ("default: \"#{field[:default]}\"" if field[:default]),
-        "description: \"Your #{class_name} #{field[:name].humanize.downcase}\""
-      ].compact.join(",\n          ")
+        {
+          name: name,
+          type: type,
+          secret: secret,
+          default: default,
+          env_key: "#{file_name.upcase}_#{name.upcase}"
+        }
+      end
+    end
 
-      "    field :#{field[:name]},\n          #{field_attrs}\n"
-    end.join("\n")
+    def extract_default(parts)
+      default_part = parts.find { |p| p.start_with?("default=") }
+      default_part&.sub("default=", "")
+    end
 
-    <<~RUBY
+    def configure_block_content
+      return "" if parsed_fields.empty?
+
+      fields_code = parsed_fields.map do |field|
+        field_attrs = [
+          "label: \"#{field[:name].titleize}\"",
+          ("required: true" if field[:secret]),
+          ("secret: true" if field[:secret]),
+          "env_key: \"#{field[:env_key]}\"",
+          ("default: \"#{field[:default]}\"" if field[:default]),
+          "description: \"Your #{class_name} #{field[:name].humanize.downcase}\""
+        ].compact.join(",\n          ")
+
+        "    field :#{field[:name]},\n          #{field_attrs}\n"
+      end.join("\n")
+
+      <<~RUBY
 
       configure do
         description <<~DESC
@@ -238,5 +238,5 @@ class Provider::GlobalGenerator < Rails::Generators::NamedBase
       end
 
     RUBY
-  end
+    end
 end
