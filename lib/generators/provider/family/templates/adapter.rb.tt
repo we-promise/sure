@@ -1,31 +1,9 @@
 class Provider::<%= class_name %>Adapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
-  include Provider::PerFamilyConfigurable
 
   # Register this adapter with the factory
   Provider::Factory.register("<%= class_name %>Account", self)
-
-  configure_per_family do
-    description <<~DESC
-      Setup instructions for <%= class_name %>:
-      1. Visit your <%= class_name %> dashboard to get your credentials
-      2. Enter your credentials below to enable <%= class_name %> sync
-      3. After successful configuration, go to the Accounts tab to link accounts
-    DESC
-
-<% parsed_fields.each do |field| -%>
-    field :<%= field[:name] %>,
-          label: "<%= field[:name].titleize %>",
-          type: :<%= field[:type] %>,
-<% if field[:secret] -%>
-          secret: true,
-          required: true,
-<% end -%>
-          description: "Your <%= class_name %> <%= field[:name].humanize.downcase %>"
-
-<% end -%>
-  end
 
   def provider_name
     "<%= file_name %>"

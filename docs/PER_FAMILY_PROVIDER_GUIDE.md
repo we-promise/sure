@@ -79,16 +79,16 @@ rails g provider:family my_bank \
 This single command generates:
 - ✅ Migration for `my_bank_items` and `my_bank_accounts` tables **with credential fields**
 - ✅ Models: `MyBankItem`, `MyBankAccount`, and `MyBankItem::Provided` concern
-- ✅ Adapter with `Provider::PerFamilyConfigurable`
-- ✅ Panel view for provider settings
-- ✅ Controller with CRUD actions
+- ✅ Adapter class for provider integration
+- ✅ Simple manual panel view for provider settings
+- ✅ Controller with CRUD actions and Turbo Stream support
 - ✅ Routes
 - ✅ Updates to settings controller and view
 
 ### Key Characteristics
 - **Credentials**: Stored in `my_bank_items` table (encrypted)
 - **Isolation**: Each family has completely separate credentials
-- **UI**: Custom panel at `/settings/providers`
+- **UI**: Manual form panel at `/settings/providers`
 - **Configuration**: Per-family, self-service
 
 ---
@@ -143,8 +143,8 @@ This single command generates:
 | **Family isolation** | ✅ Complete (each family has own credentials) | ❌ None (all families share) |
 | **Files generated** | 9+ files | 5 files |
 | **Migration includes credentials** | ✅ Yes | ❌ No |
-| **Controller** | ✅ Yes | ❌ No |
-| **View** | ✅ Custom panel | ❌ Auto-generated |
+| **Controller** | ✅ Yes (simple CRUD) | ❌ No |
+| **View** | ✅ Manual form panel | ❌ Auto-generated |
 | **Routes** | ✅ Yes | ❌ No |
 | **UI location** | `/settings/providers` (always) | `/settings/providers` (self-hosted only) |
 | **ENV variable support** | ❌ No (per-family can't use ENV) | ✅ Yes (fallback) |
@@ -237,7 +237,6 @@ The item model stores per-family connection credentials:
 ```ruby
 class MyBankItem < ApplicationRecord
   include Syncable, Provided
-  include Provider::PerFamilyItem
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -257,6 +256,12 @@ class MyBankItem < ApplicationRecord
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
+  scope :needs_update, -> { where(status: :requires_update) }
+
+  def destroy_later
+    update!(scheduled_for_deletion: true)
+    DestroyJob.perform_later(self)
+  end
 
   def credentials_configured?
     api_key.present? && refresh_token.present?
@@ -323,43 +328,64 @@ end
 
 ```ruby
 class Provider::MyBankAdapter < Provider::Base
-  include Provider::PerFamilyConfigurable
+  include Provider::Syncable
+  include Provider::InstitutionMetadata
 
-  configure_per_family do
-    description <<~DESC
-      Setup instructions for My Bank:
-      1. Visit your My Bank dashboard to get your credentials
-      2. Enter your credentials below to enable My Bank sync
-      3. After successful configuration, go to the Accounts tab to link accounts
-    DESC
+  # Register this adapter with the factory
+  Provider::Factory.register("MyBankAccount", self)
 
-    field :api_key,
-          label: "API Key",
-          type: :text,
-          secret: true,
-          required: true,
-          description: "Your My Bank API key"
-
-    field :base_url,
-          label: "Base URL",
-          type: :string,
-          description: "Your My Bank base url"
-
-    field :refresh_token,
-          label: "Refresh Token",
-          type: :text,
-          secret: true,
-          required: true,
-          description: "Your My Bank refresh token"
+  def provider_name
+    "my_bank"
   end
 
+  # Build a My Bank provider instance with family-specific credentials
   def self.build_provider(family:)
     return nil unless family.present?
-    item = family.my_bank_items.where.not(api_key: nil).first
-    return nil unless item&.credentials_configured?
+
+    # Get family-specific credentials
+    my_bank_item = family.my_bank_items.where.not(api_key: nil).first
+    return nil unless my_bank_item&.credentials_configured?
 
     # TODO: Implement provider initialization
-    Provider::MyBank.new(item.api_key)
+    Provider::MyBank.new(
+      my_bank_item.api_key,
+      base_url: my_bank_item.effective_base_url,
+      refresh_token: my_bank_item.refresh_token
+    )
+  end
+
+  def sync_path
+    Rails.application.routes.url_helpers.sync_my_bank_item_path(item)
+  end
+
+  def item
+    provider_account.my_bank_item
+  end
+
+  def can_delete_holdings?
+    false
+  end
+
+  def institution_domain
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+    metadata["domain"]
+  end
+
+  def institution_name
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+    metadata["name"] || item&.institution_name
+  end
+
+  def institution_url
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+    metadata["url"] || item&.institution_url
+  end
+
+  def institution_color
+    item&.institution_color
   end
 end
 ```
@@ -368,24 +394,180 @@ end
 
 **File:** `app/views/settings/providers/_my_bank_panel.html.erb`
 
+A simple manual form for configuring My Bank credentials:
+
 ```erb
-<%# Auto-generated panel using PerFamilyConfigurable configuration %>
-<%= render_per_family_provider_panel(:my_bank, error_message: @error_message) %>
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>Visit your My Bank dashboard to get your credentials</li>
+      <li>Enter your credentials below and click the Save button</li>
+      <li>After a successful connection, go to the Accounts tab to set up new accounts</li>
+    </ol>
+
+    <p class="text-primary font-medium">Field descriptions:</p>
+    <ul>
+      <li><strong>API Key:</strong> Your My Bank API key (required)</li>
+      <li><strong>Base URL:</strong> Your My Bank base URL (optional, defaults to https://api.mybank.com)</li>
+      <li><strong>Refresh Token:</strong> Your My Bank refresh token (required)</li>
+    </ul>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
+      <%= error_msg %>
+    </div>
+  <% end %>
+
+  <%
+    # Get or initialize a my_bank_item for this family
+    my_bank_item = Current.family.my_bank_items.first_or_initialize(name: "My Bank Connection")
+    is_new_record = my_bank_item.new_record?
+  %>
+
+  <%= styled_form_with model: my_bank_item,
+                       url: is_new_record ? my_bank_items_path : my_bank_item_path(my_bank_item),
+                       scope: :my_bank_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :api_key,
+                        label: "API Key",
+                        type: :password %>
+
+    <%= form.text_field :base_url,
+                        label: "Base URL (Optional)",
+                        placeholder: "https://api.mybank.com (default)",
+                        value: my_bank_item.base_url %>
+
+    <%= form.text_field :refresh_token,
+                        label: "Refresh Token",
+                        type: :password %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:my_bank_items] || @my_bank_items || Current.family.my_bank_items.where.not(api_key: nil) %>
+  <% if items&.any? %>
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+    </div>
+  <% end %>
+</div>
 ```
 
 ### 5. Controller
 
 **File:** `app/controllers/my_bank_items_controller.rb`
 
+A simple controller with CRUD actions and Turbo Stream support:
+
 ```ruby
 class MyBankItemsController < ApplicationController
-  include Provider::PerFamilyItemController
+  before_action :set_my_bank_item, only: [:update, :destroy, :sync]
 
-  # Provides standard CRUD actions:
-  # - create (POST /my_bank_items)
-  # - update (PATCH /my_bank_items/:id)
-  # - destroy (DELETE /my_bank_items/:id)
-  # - sync (POST /my_bank_items/:id/sync)
+  def create
+    @my_bank_item = Current.family.my_bank_items.build(my_bank_item_params)
+    @my_bank_item.name ||= "My Bank Connection"
+
+    if @my_bank_item.save
+      if turbo_frame_request?
+        flash.now[:notice] = t(".success", default: "Successfully configured My Bank.")
+        @my_bank_items = Current.family.my_bank_items.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "my-bank-providers-panel",
+            partial: "settings/providers/my_bank_panel",
+            locals: { my_bank_items: @my_bank_items }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
+      end
+    else
+      @error_message = @my_bank_item.errors.full_messages.join(", ")
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "my-bank-providers-panel",
+          partial: "settings/providers/my_bank_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+      end
+    end
+  end
+
+  def update
+    if @my_bank_item.update(my_bank_item_params)
+      if turbo_frame_request?
+        flash.now[:notice] = t(".success", default: "Successfully updated My Bank configuration.")
+        @my_bank_items = Current.family.my_bank_items.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "my-bank-providers-panel",
+            partial: "settings/providers/my_bank_panel",
+            locals: { my_bank_items: @my_bank_items }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
+      end
+    else
+      @error_message = @my_bank_item.errors.full_messages.join(", ")
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "my-bank-providers-panel",
+          partial: "settings/providers/my_bank_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+      end
+    end
+  end
+
+  def destroy
+    @my_bank_item.destroy_later
+    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled My Bank connection for deletion.")
+  end
+
+  def sync
+    unless @my_bank_item.syncing?
+      @my_bank_item.sync_later
+    end
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { head :ok }
+    end
+  end
+
+  private
+
+  def set_my_bank_item
+    @my_bank_item = Current.family.my_bank_items.find(params[:id])
+  end
+
+  def my_bank_item_params
+    params.require(:my_bank_item).permit(
+      :name,
+      :sync_start_date,
+      :api_key,
+      :base_url,
+      :refresh_token
+    )
+  end
 end
 ```
 
@@ -412,173 +594,82 @@ end
 
 ---
 
-## How It Works
-
-### The Magic: Provider::PerFamilyConfigurable
-
-The `configure_per_family` DSL block defines the fields your provider needs. This configuration is used to:
-
-1. **Auto-generate forms** - The panel view automatically renders form fields
-2. **Document requirements** - Clear description and field labels
-3. **Handle encryption** - Secret fields are marked for password input
-4. **Validate requirements** - Required fields are marked
-
-### Field Types
-
-```ruby
-field :field_name,
-      label: "Human-readable Label",
-      type: :text | :string | :integer | :boolean,
-      required: true | false,
-      secret: true | false,  # Will use password input and be encrypted
-      default: "default value",
-      description: "Help text for the field",
-      placeholder: "Placeholder text"
-```
-
-### Auto-Generated Forms
-
-The `render_per_family_provider_panel` helper reads the configuration and generates:
-- Setup instructions (from description)
-- Form fields (from field definitions)
-- Field descriptions
-- Submit button
-- Success indicator
-
----
-
 ## Customization
 
-### Customize the Adapter
+After generation, you'll typically want to customize three files:
 
-After generation, edit `app/models/provider/my_bank_adapter.rb`:
+### 1. Customize the Adapter
+
+Implement the `build_provider` method in `app/models/provider/my_bank_adapter.rb`:
 
 ```ruby
-# Update the configure_per_family block
-configure_per_family do
-  description <<~DESC
-    **Custom instructions:**
-    1. Go to Settings > API in your My Bank dashboard
-    2. Generate a new API key
-    3. Copy the key and paste it below
-
-    **Important:** Keep your API key secure!
-  DESC
-
-  field :api_key,
-        label: "API Key",
-        type: :text,
-        secret: true,
-        required: true,
-        description: "Your unique API key from My Bank dashboard",
-        placeholder: "Enter your API key"
-end
-
-# Implement the build_provider method
 def self.build_provider(family:)
   return nil unless family.present?
 
-  item = family.my_bank_items.where.not(api_key: nil).first
-  return nil unless item&.credentials_configured?
+  # Get the family's credentials
+  my_bank_item = family.my_bank_items.where.not(api_key: nil).first
+  return nil unless my_bank_item&.credentials_configured?
 
+  # Initialize your provider SDK with the credentials
   Provider::MyBank.new(
-    item.api_key,
-    base_url: item.effective_base_url,
-    refresh_token: item.refresh_token
+    my_bank_item.api_key,
+    base_url: my_bank_item.effective_base_url,
+    refresh_token: my_bank_item.refresh_token
   )
 end
 ```
 
-### Update the Model
+### 2. Update the Model
 
-**File:** `app/models/my_bank_item.rb`
-
-Add encryption, validations, and helper methods:
+Add custom validations, helper methods, and business logic in `app/models/my_bank_item.rb`:
 
 ```ruby
 class MyBankItem < ApplicationRecord
   include Syncable, Provided
-  include Provider::PerFamilyItem
 
   belongs_to :family
 
-  # Encryption for secret fields
-  if Rails.application.credentials.active_record_encryption.present?
-    encrypts :api_key, :refresh_token, deterministic: true
-  end
-
-  # Validations
+  # Validations (the generator adds basic ones, customize as needed)
   validates :name, presence: true
   validates :api_key, presence: true, on: :create
   validates :refresh_token, presence: true, on: :create
+  validates :base_url, format: { with: URI::DEFAULT_PARSER.make_regexp }, allow_blank: true
 
-  # Helper methods
-  def credentials_configured?
-    api_key.present? && refresh_token.present?
+  # Add custom business logic
+  def refresh_oauth_token!
+    # Implement OAuth token refresh logic
+    provider = my_bank_provider
+    return false unless provider
+
+    new_token = provider.refresh_token!(refresh_token)
+    update(refresh_token: new_token)
+  rescue Provider::MyBank::AuthenticationError
+    update(status: :requires_update)
+    false
   end
 
+  # Override effective methods for better defaults
   def effective_base_url
     base_url.presence || "https://api.mybank.com"
   end
 end
 ```
 
-### Customize the Controller
+### 3. Customize the View
 
-If you need custom logic beyond basic CRUD:
-
-```ruby
-class MyBankItemsController < ApplicationController
-  include Provider::PerFamilyItemController
-
-  # Override to add custom behavior
-  def handle_successful_save(action)
-    super
-
-    # Trigger initial sync after creation
-    @item.sync_later if action == :create
-  end
-
-  # Add custom actions
-  def refresh_token
-    @item = Current.family.my_bank_items.find(params[:id])
-
-    if @item.refresh_oauth_token!
-      redirect_to settings_providers_path, notice: "Token refreshed successfully"
-    else
-      redirect_to settings_providers_path, alert: "Failed to refresh token"
-    end
-  end
-
-  private
-
-  # Customize permitted params
-  def permitted_params
-    params.require(:my_bank_item).permit(
-      :name, :api_key, :base_url, :refresh_token, :sync_start_date
-    )
-  end
-end
-```
-
-### Customize the View
-
-If you need more than the auto-generated panel, create a custom partial:
-
-**File:** `app/views/settings/providers/_my_bank_panel.html.erb`
+Edit the generated panel view `app/views/settings/providers/_my_bank_panel.html.erb` to add custom content:
 
 ```erb
 <div class="space-y-4">
-  <%# Custom header %>
+  <%# Add custom header %>
   <div class="flex items-center gap-3">
     <%= image_tag "my_bank_logo.svg", class: "w-8 h-8" %>
     <h3 class="text-lg font-semibold">My Bank Integration</h3>
   </div>
 
-  <%# Use helper for most of the form %>
-  <%= render_per_family_provider_panel(:my_bank, error_message: @error_message) %>
+  <%# The generated form content goes here... %>
 
-  <%# Add custom content %>
+  <%# Add custom help section %>
   <div class="mt-4 p-4 bg-subtle rounded-lg">
     <p class="text-sm text-secondary">
       Need help? Visit <a href="https://help.mybank.com" class="link">My Bank Help Center</a>
@@ -672,13 +763,9 @@ rails db:migrate
 Provider::Factory.adapters
 # => { ... "MyBankAccount" => Provider::MyBankAdapter, ... }
 
-# Check configuration
-Provider::MyBankAdapter.per_family_configuration.fields
-# => [#<Provider::PerFamilyConfigurable::PerFamilyConfigField...>]
-
 # Test provider building
 family = Family.first
-item = family.my_bank_items.create!(name: "Test", api_key: "test_key")
+item = family.my_bank_items.create!(name: "Test", api_key: "test_key", refresh_token: "test_refresh")
 provider = Provider::MyBankAdapter.build_provider(family: family)
 ```
 
@@ -772,13 +859,7 @@ end
    rails routes | grep my_bank
    ```
 
-2. Check controller includes the concern:
-   ```ruby
-   class MyBankItemsController < ApplicationController
-     include Provider::PerFamilyItemController
-   ```
-
-3. Check turbo frame ID matches:
+2. Check turbo frame ID matches:
    - View: `<turbo-frame id="my-bank-providers-panel">`
    - Controller: Uses `"my-bank-providers-panel"` in turbo_stream.replace
 

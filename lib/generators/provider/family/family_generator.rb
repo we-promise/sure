@@ -19,9 +19,9 @@ require "rails/generators/active_record"
 # This generates:
 #   - Migration creating complete provider_items and provider_accounts tables
 #   - Models for items, accounts, and provided concern
-#   - Adapter class with PerFamilyConfigurable
-#   - Panel view for provider settings
-#   - Controller with PerFamilyItemController concern
+#   - Adapter class
+#   - Manual panel view for provider settings
+#   - Simple controller for CRUD operations
 #   - Routes
 class Provider::FamilyGenerator < Rails::Generators::NamedBase
   include Rails::Generators::Migration
@@ -57,23 +57,13 @@ end
                            migration_version: migration_version
       end
 
-      def update_or_create_adapter
+      def create_adapter
         return if options[:skip_adapter]
 
         adapter_path = "app/models/provider/#{file_name}_adapter.rb"
 
         if File.exist?(adapter_path)
-          # Update existing adapter
-          insert_into_file adapter_path, after: "class Provider::#{class_name}Adapter < Provider::Base\n" do
-            "  include Provider::PerFamilyConfigurable\n\n"
-          end
-
-          # Add configure block before the last 'end'
-          insert_into_file adapter_path, before: /^end\s*$/ do
-            configure_block_content
-          end
-
-          say "Updated existing adapter: #{adapter_path}", :green
+          say "Adapter already exists: #{adapter_path}", :skip
         else
           # Create new adapter
           template "adapter.rb.tt", adapter_path
@@ -85,16 +75,7 @@ end
         # Create item model
         item_model_path = "app/models/#{file_name}_item.rb"
         if File.exist?(item_model_path)
-          # Check if concern is already included
-          if File.read(item_model_path).include?("Provider::PerFamilyItem")
-            say "Model already includes Provider::PerFamilyItem: #{item_model_path}", :skip
-          else
-            # Add concern to existing model
-            insert_into_file item_model_path, after: "class #{class_name}Item < ApplicationRecord\n" do
-              "  include Provider::PerFamilyItem\n\n"
-            end
-            say "Updated existing model: #{item_model_path}", :green
-          end
+          say "Item model already exists: #{item_model_path}", :skip
         else
           template "item_model.rb.tt", item_model_path
           say "Created item model: #{item_model_path}", :green
@@ -122,27 +103,18 @@ end
       def create_panel_view
         return if options[:skip_view]
 
-        # Create a simple panel that uses the helper
+        # Create a simple manual panel view
         template "panel.html.erb.tt",
                  "app/views/settings/providers/_#{file_name}_panel.html.erb"
       end
 
-      def create_or_update_controller
+      def create_controller
         return if options[:skip_controller]
 
         controller_path = "app/controllers/#{file_name}_items_controller.rb"
 
         if File.exist?(controller_path)
-          # Check if concern is already included
-          if File.read(controller_path).include?("Provider::PerFamilyItemController")
-            say "Controller already includes Provider::PerFamilyItemController: #{controller_path}", :skip
-          else
-            # Add concern to existing controller
-            insert_into_file controller_path, after: "class #{class_name}ItemsController < ApplicationController\n" do
-              "  include Provider::PerFamilyItemController\n\n"
-            end
-            say "Updated existing controller: #{controller_path}", :green
-          end
+          say "Controller already exists: #{controller_path}", :skip
         else
           # Create new controller
           template "controller.rb.tt", controller_path
@@ -305,40 +277,20 @@ end
       def parsed_fields
         @parsed_fields ||= fields.map do |field_def|
           parts = field_def.split(":")
-          {
+          field = {
             name: parts[0],
-            type: parts[1] || "string",
-            secret: parts[2] == "secret" || parts.include?("secret")
+            type: (parts[1] || "string").to_sym,
+            secret: parts.include?("secret")
           }
-        end
-      end
 
-      def configure_block_content
-        return "" if parsed_fields.empty?
-
-        fields_code = parsed_fields.map do |field|
-          field_attrs = [
-            "label: \"#{field[:name].titleize}\"",
-            "type: :#{field[:type]}",
-            ("secret: true" if field[:secret]),
-            ("required: true" if field[:secret]) # Assume secret fields are required
-          ].compact.join(",\n              ")
-
-          "    field :#{field[:name]},\n          #{field_attrs}\n"
-        end.join("\n")
-
-        <<~RUBY
-
-          configure_per_family do
-            description <<~DESC
-              Setup instructions for #{class_name}:
-              1. Visit your #{class_name} dashboard to get your credentials
-              2. Enter your credentials below to enable #{class_name} sync
-            DESC
-
-        #{fields_code}
+          # Extract default value if present (format: field:type:default=value)
+          parts.each do |part|
+            if part.start_with?("default=")
+              field[:default] = part.sub("default=", "")
+            end
           end
 
-        RUBY
+          field
+        end
       end
 end

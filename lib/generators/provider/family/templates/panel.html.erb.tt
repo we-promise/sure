@@ -1,1 +1,59 @@
-<%%= render_per_family_provider_panel(:<%= file_name %>, error_message: @error_message) %>
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>Visit your <%= class_name %> dashboard to get your credentials</li>
+      <li>Enter your credentials below and click the Save button</li>
+      <li>After a successful connection, go to the Accounts tab to set up new accounts</li>
+    </ol>
+
+    <p class="text-primary font-medium">Field descriptions:</p>
+    <ul>
+<% parsed_fields.each do |field| -%>
+      <li><strong><%= field[:name].titleize %>:</strong> Your <%= class_name %> <%= field[:name].humanize.downcase %><%= field[:secret] ? ' (required)' : '' %></li>
+<% end -%>
+    </ul>
+  </div>
+
+  <%% error_msg = local_assigns[:error_message] || @error_message %>
+  <%% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
+      <%%= error_msg %>
+    </div>
+  <%% end %>
+
+  <%%
+    # Get or initialize a <%= file_name %>_item for this family
+    <%= file_name %>_item = Current.family.<%= file_name %>_items.first_or_initialize(name: "<%= class_name %> Connection")
+    is_new_record = <%= file_name %>_item.new_record?
+  %>
+
+  <%%= styled_form_with model: <%= file_name %>_item,
+                       url: is_new_record ? <%= file_name %>_items_path : <%= file_name %>_item_path(<%= file_name %>_item),
+                       scope: :<%= file_name %>_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+<% parsed_fields.each do |field| -%>
+    <%%= form.<%= field[:type] == :text || field[:type] == :string ? 'text_field' : 'number_field' %> :<%= field[:name] %>,
+                        label: "<%= field[:name].titleize %>",
+<% if field[:secret] -%>
+                        type: :password,
+<% end -%>
+                        placeholder: <%= field[:default] ? "\"#{field[:default]} (default)\"" : "is_new_record ? \"Enter #{field[:name].humanize.downcase}\" : \"Enter new #{field[:name].humanize.downcase} to update\"" %><%= field[:secret] ? '' : ",\n                        value: #{file_name}_item.#{field[:name]}" %> %>
+
+<% end -%>
+    <div class="flex justify-end">
+      <%%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <%% end %>
+
+  <%% items = local_assigns[:<%= file_name %>_items] || @<%= file_name %>_items || Current.family.<%= file_name %>_items.where.not(<%= parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || 'api_key' %>: nil) %>
+  <%% if items&.any? %>
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+    </div>
+  <%% end %>
+</div>
