@@ -6,7 +6,6 @@ ca:
       no_account: Nou a %{product_name}?
       sign_in: Inicia sessió
       sign_up: Crea un compte
-      your_account: El teu compte
     shared:
       footer:
         privacy_policy: Política de privacitat

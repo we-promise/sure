@@ -45,11 +45,13 @@
     </div>
 
     <div class="col-span-2 text-right">
-      <% if holding.trend %>
+      <%# Show Total Return (unrealized G/L) when cost basis exists %>
+      <% if holding.trades.any? && holding.trend %>
         <%= tag.p format_money(holding.trend.value), style: "color: #{holding.trend.color};" %>
         <%= tag.p "(#{number_to_percentage(holding.trend.percent, precision: 1)})", style: "color: #{holding.trend.color};" %>
       <% else %>
-        <%= tag.p "--", class: "text-secondary mb-4" %>
+        <%= tag.p "--", class: "text-secondary" %>
+        <%= tag.p "No cost basis", class: "text-xs text-secondary" %>
       <% end %>
     </div>
   </div>

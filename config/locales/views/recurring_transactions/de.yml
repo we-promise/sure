@@ -1,0 +1,37 @@
+de:
+  recurring_transactions:
+    title: Wiederkehrende Transaktionen
+    upcoming: Anstehende wiederkehrende Transaktionen
+    projected: Prognostiziert
+    recurring: Wiederkehrend
+    expected_on: Erwartet am %{date}
+    day_of_month: Tag %{day} des Monats
+    identify_patterns: Muster erkennen
+    cleanup_stale: Alte Einträge bereinigen
+    info:
+      title: Automatische Mustererkennung
+      manual_description: Du kannst Muster manuell erkennen oder alte wiederkehrende Transaktionen mit den obigen Schaltflächen bereinigen.
+      automatic_description: "Die automatische Erkennung wird außerdem ausgeführt nach:"
+      triggers:
+        - Abschluss von CSV-Importen (Transaktionen, Trades, Konten usw.)
+        - Abschluss einer Anbieter-Synchronisierung (Plaid, SimpleFIN usw.)
+    identified: "%{count} wiederkehrende Transaktionsmuster erkannt"
+    cleaned_up: "%{count} alte wiederkehrende Transaktionen bereinigt"
+    marked_inactive: Wiederkehrende Transaktion als inaktiv markiert
+    marked_active: Wiederkehrende Transaktion als aktiv markiert
+    deleted: Wiederkehrende Transaktion gelöscht
+    confirm_delete: Bist du sicher, dass du diese wiederkehrende Transaktion löschen möchtest?
+    empty:
+      title: Keine wiederkehrenden Transaktionen gefunden
+      description: Klicke auf „Muster erkennen“, um automatisch wiederkehrende Transaktionen aus deinem Verlauf zu erkennen.
+    table:
+      merchant: Händler
+      amount: Betrag
+      expected_day: Erwarteter Tag
+      next_date: Nächstes Datum
+      last_occurrence: Letztes Auftreten
+      status: Status
+      actions: Aktionen
+    status:
+      active: Aktiv
+      inactive: Inaktiv

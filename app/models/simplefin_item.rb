@@ -1,5 +1,6 @@
 class SimplefinItem < ApplicationRecord
   include Syncable, Provided
+  include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -10,6 +11,15 @@ class SimplefinItem < ApplicationRecord
     encrypts :access_url, deterministic: true
   end
 
+  # Helper to detect if ActiveRecord Encryption is configured for this app
+  def self.encryption_ready?
+    creds_ready = Rails.application.credentials.active_record_encryption.present?
+    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+    creds_ready || env_ready
+  end
+
   validates :name, :access_url, presence: true
 
   before_destroy :remove_simplefin_item
@@ -18,19 +28,29 @@ class SimplefinItem < ApplicationRecord
   has_one_attached :logo
 
   has_many :simplefin_accounts, dependent: :destroy
-  has_many :accounts, through: :simplefin_accounts
+  has_many :legacy_accounts, through: :simplefin_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+
+  # Get accounts from both new and legacy systems
+  def accounts
+    # Preload associations to avoid N+1 queries
+    simplefin_accounts
+      .includes(:account, account_provider: :account)
+      .map(&:current_account)
+      .compact
+      .uniq
+  end
 
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
-  def import_latest_simplefin_data
-    SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider).import
+  def import_latest_simplefin_data(sync: nil)
+    SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider, sync: sync).import
   end
 
   def process_accounts
@@ -147,6 +167,8 @@ class SimplefinItem < ApplicationRecord
       "#{institutions.count} institutions"
     end
   end
+
+
 
   # Detect a recent rate-limited sync and return a friendly message, else nil
   def rate_limited_message

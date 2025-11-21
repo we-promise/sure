@@ -11,9 +11,7 @@ class Settings::ProvidersController < ApplicationController
       [ "Bank Sync Providers", nil ]
     ]
 
-    # Load all provider configurations
-    Provider::Factory.ensure_adapters_loaded
-    @provider_configurations = Provider::ConfigurationRegistry.all
+    prepare_show_context
   end
 
   def update
@@ -27,9 +25,6 @@ class Settings::ProvidersController < ApplicationController
     end
 
     updated_fields = []
-
-    # This hash will store only the updates for dynamic (non-declared) fields
-    dynamic_updates = {}
 
     # Perform all updates within a transaction for consistency
     Setting.transaction do
@@ -57,31 +52,12 @@ class Settings::ProvidersController < ApplicationController
           # This is safe and uses the proper setter.
           Setting.public_send("#{key_str}=", value)
         else
-          # If it's a dynamic field, add it to our batch hash
-          # to avoid the Read-Modify-Write conflict.
-          dynamic_updates[key_str] = value
+          # If it's a dynamic field, set it as an individual entry
+          # Each field is stored independently, preventing race conditions
+          Setting[key_str] = value
         end
 
         updated_fields << param_key
-      end
-
-      # Now, if we have any dynamic updates, apply them all at once
-      if dynamic_updates.any?
-        # 1. READ the current hash once
-        current_dynamic = Setting.dynamic_fields.dup
-
-        # 2. MODIFY by merging changes
-        # Treat nil values as deletions to keep the hash clean
-        dynamic_updates.each do |key, value|
-          if value.nil?
-            current_dynamic.delete(key)
-          else
-            current_dynamic[key] = value
-          end
-        end
-
-        # 3. WRITE the complete, merged hash back once
-        Setting.dynamic_fields = current_dynamic
       end
     end
 
@@ -96,9 +72,7 @@ class Settings::ProvidersController < ApplicationController
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.message}")
     flash.now[:alert] = "Failed to update provider settings: #{error.message}"
-    # Set @provider_configurations so the view can render properly
-    Provider::Factory.ensure_adapters_loaded
-    @provider_configurations = Provider::ConfigurationRegistry.all
+    prepare_show_context
     render :show, status: :unprocessable_entity
   end
 
@@ -142,5 +116,15 @@ class Settings::ProvidersController < ApplicationController
         adapter_class = Provider::ConfigurationRegistry.get_adapter_class(provider_key)
         adapter_class&.reload_configuration
       end
+    end
+
+    # Prepares instance vars needed by the show view and partials
+    def prepare_show_context
+      # Load all provider configurations (exclude SimpleFin, which has its own unified panel below)
+      Provider::Factory.ensure_adapters_loaded
+      @provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp("simplefin").zero? }
+
+      # Providers page only needs to know whether any SimpleFin connections exist
+      @simplefin_items = Current.family.simplefin_items.ordered.select(:id)
     end
 end

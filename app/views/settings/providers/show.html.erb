@@ -8,8 +8,16 @@
   </div>
 
   <% @provider_configurations.each do |config| %>
+    <% next if config.provider_key.to_s.casecmp("simplefin").zero? %>
     <%= settings_section title: config.provider_key.titleize do %>
       <%= render "settings/providers/provider_form", configuration: config %>
     <% end %>
   <% end %>
+
+  <%= settings_section title: "Simplefin" do %>
+    <turbo-frame id="simplefin-providers-panel">
+      <%= render "settings/providers/simplefin_panel" %>
+    </turbo-frame>
+  <% end %>
+
 </div>

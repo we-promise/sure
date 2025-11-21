@@ -190,4 +190,97 @@ end
     get transactions_url(q: { categories: [ "Food" ], types: [ "expense" ] })
     assert_response :success
   end
+
+  test "mark_as_recurring creates a manual recurring transaction" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    transaction = entry.entryable
+
+    assert_difference "family.recurring_transactions.count", 1 do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Transaction marked as recurring", flash[:notice]
+
+    recurring = family.recurring_transactions.last
+    assert_equal true, recurring.manual, "Expected recurring transaction to be manual"
+    assert_equal merchant.id, recurring.merchant_id
+    assert_equal entry.currency, recurring.currency
+    assert_equal entry.date.day, recurring.expected_day_of_month
+  end
+
+  test "mark_as_recurring shows alert if recurring transaction already exists" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    transaction = entry.entryable
+
+    # Create existing recurring transaction
+    family.recurring_transactions.create!(
+      merchant: merchant,
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+  end
+
+  test "mark_as_recurring handles validation errors gracefully" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    transaction = entry.entryable
+
+    # Stub create_from_transaction to raise a validation error
+    RecurringTransaction.expects(:create_from_transaction).raises(
+      ActiveRecord::RecordInvalid.new(
+        RecurringTransaction.new.tap { |rt| rt.errors.add(:base, "Test validation error") }
+      )
+    )
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Failed to create recurring transaction. Please check the transaction details and try again.", flash[:alert]
+  end
+
+  test "mark_as_recurring handles unexpected errors gracefully" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    transaction = entry.entryable
+
+    # Stub create_from_transaction to raise an unexpected error
+    RecurringTransaction.expects(:create_from_transaction).raises(StandardError.new("Unexpected error"))
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "An unexpected error occurred while creating the recurring transaction", flash[:alert]
+  end
 end

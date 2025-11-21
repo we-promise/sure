@@ -1,0 +1,25 @@
+---
+de:
+  vehicles:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      make: Marke
+      make_placeholder: Toyota
+      mileage: Kilometerstand
+      mileage_placeholder: '15000'
+      mileage_unit: Einheit
+      model: Modell
+      model_placeholder: Camry
+      year: Baujahr
+      year_placeholder: '2023'
+    new:
+      title: Fahrzeugdetails eingeben
+    overview:
+      current_price: Aktueller Preis
+      make_model: Marke und Modell
+      mileage: Kilometerstand
+      purchase_price: Kaufpreis
+      trend: Entwicklung
+      unknown: Unbekannt
+      year: Baujahr

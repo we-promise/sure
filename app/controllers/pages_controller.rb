@@ -7,40 +7,14 @@ class PagesController < ApplicationController
     @balance_sheet = Current.family.balance_sheet
     @accounts = Current.family.accounts.visible.with_attached_logo
 
-    # Handle cashflow period
-    cashflow_period_param = params[:cashflow_period]
-    @cashflow_period = if cashflow_period_param.present?
-      begin
-        Period.from_key(cashflow_period_param)
-      rescue Period::InvalidKeyError
-        Period.last_30_days
-      end
-    else
-      Period.last_30_days
-    end
-
-    # Handle outflows period
-    outflows_period_param = params[:outflows_period]
-    @outflows_period = if outflows_period_param.present?
-      begin
-        Period.from_key(outflows_period_param)
-      rescue Period::InvalidKeyError
-        Period.last_30_days
-      end
-    else
-      Period.last_30_days
-    end
-
     family_currency = Current.family.currency
 
-    # Get data for cashflow section
-    income_totals = Current.family.income_statement.income_totals(period: @cashflow_period)
-    cashflow_expense_totals = Current.family.income_statement.expense_totals(period: @cashflow_period)
-    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, cashflow_expense_totals, family_currency)
+    # Use the same period for all widgets (set by Periodable concern)
+    income_totals = Current.family.income_statement.income_totals(period: @period)
+    expense_totals = Current.family.income_statement.expense_totals(period: @period)
 
-    # Get data for outflows section (using its own period)
-    outflows_expense_totals = Current.family.income_statement.expense_totals(period: @outflows_period)
-    @outflows_data = build_outflows_donut_data(outflows_expense_totals)
+    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
+    @outflows_data = build_outflows_donut_data(expense_totals)
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
   end

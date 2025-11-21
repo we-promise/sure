@@ -1,0 +1,30 @@
+---
+de:
+  valuations:
+    form:
+      amount: Betrag
+      submit: Kontostand aktualisieren
+    header:
+      balance: Kontostand
+    index:
+      change: Änderung
+      date: Datum
+      new_entry: Neuer Eintrag
+      no_valuations: Für dieses Konto sind noch keine Bewertungen vorhanden
+      valuations: Wert
+      value: Wert
+    new:
+      title: Neuer Kontostand
+    show:
+      amount: Betrag
+      date_label: Datum
+      delete: Löschen
+      delete_subtitle: Diese Aktion kann nicht rückgängig gemacht werden
+      delete_title: Eintrag löschen
+      details: Details
+      name_label: Name
+      name_placeholder: Gib einen Namen für diesen Eintrag ein
+      note_label: Notizen
+      note_placeholder: Füge zusätzliche Details zu diesem Eintrag hinzu
+      overview: Übersicht
+      settings: Einstellungen

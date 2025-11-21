@@ -77,23 +77,45 @@
               <tr class="border-b border-subdued hover:bg-surface-hover <%= "opacity-60" unless recurring_transaction.active? %>">
                 <td class="py-3 px-2 text-sm">
                   <div class="flex items-center gap-2">
-                    <% if recurring_transaction.merchant&.logo_url.present? %>
-                      <%= image_tag recurring_transaction.merchant.logo_url,
-                          class: "w-6 h-6 rounded-full",
-                          loading: "lazy" %>
+                    <% if recurring_transaction.merchant.present? %>
+                      <% if recurring_transaction.merchant.logo_url.present? %>
+                        <%= image_tag recurring_transaction.merchant.logo_url,
+                            class: "w-6 h-6 rounded-full",
+                            loading: "lazy" %>
+                      <% else %>
+                        <%= render DS::FilledIcon.new(
+                          variant: :text,
+                          text: recurring_transaction.merchant.name,
+                          size: "sm",
+                          rounded: true
+                        ) %>
+                      <% end %>
+                      <span class="text-primary font-medium"><%= recurring_transaction.merchant.name %></span>
                     <% else %>
                       <%= render DS::FilledIcon.new(
                         variant: :text,
-                        text: recurring_transaction.merchant.name,
+                        text: recurring_transaction.name,
                         size: "sm",
                         rounded: true
                       ) %>
+                      <span class="text-primary font-medium"><%= recurring_transaction.name %></span>
                     <% end %>
-                    <span class="text-primary font-medium"><%= recurring_transaction.merchant.name %></span>
+                    <% if recurring_transaction.manual? %>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
+                        <%= t("recurring_transactions.badges.manual") %>
+                      </span>
+                    <% end %>
                   </div>
                 </td>
                 <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
-                  <%= format_money(-recurring_transaction.amount_money) %>
+                  <% if recurring_transaction.manual? && recurring_transaction.has_amount_variance? %>
+                    <div class="inline-flex items-center gap-1 cursor-help group" title="<%= t('recurring_transactions.amount_range', min: format_money(-recurring_transaction.expected_amount_min_money), max: format_money(-recurring_transaction.expected_amount_max_money)) %>">
+                      <span class="text-xs text-secondary group-hover:text-primary transition-colors">~</span>
+                      <span class="border-b border-dashed border-subdued group-hover:border-primary transition-colors"><%= format_money(-recurring_transaction.expected_amount_avg_money) %></span>
+                    </div>
+                  <% else %>
+                    <%= format_money(-recurring_transaction.amount_money) %>
+                  <% end %>
                 </td>
                 <td class="py-3 px-2 text-sm text-secondary">
                   <%= t("recurring_transactions.day_of_month", day: recurring_transaction.expected_day_of_month) %>

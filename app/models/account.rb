@@ -22,7 +22,15 @@ class Account < ApplicationRecord
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
-  scope :manual, -> { left_joins(:account_providers).where(account_providers: { id: nil }) }
+  scope :manual, -> {
+    left_joins(:account_providers)
+      .where(account_providers: { id: nil })
+      .where(plaid_account_id: nil, simplefin_account_id: nil)
+  }
+
+  scope :visible_manual, -> {
+    visible.manual
+  }
 
   has_one_attached :logo
 
@@ -159,14 +167,15 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    holdings.where(currency: currency)
-            .where.not(qty: 0)
-            .where(
-              id: holdings.select("DISTINCT ON (security_id) id")
-                          .where(currency: currency)
-                          .order(:security_id, date: :desc)
-            )
-            .order(amount: :desc)
+    holdings
+      .where(currency: currency)
+      .where.not(qty: 0)
+      .where(
+        id: holdings.select("DISTINCT ON (security_id) id")
+                    .where(currency: currency)
+                    .order(:security_id, date: :desc)
+      )
+      .order(amount: :desc)
   end
 
   def start_date

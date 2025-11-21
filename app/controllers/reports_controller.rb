@@ -25,9 +25,6 @@ class ReportsController < ApplicationController
     # Calculate summary metrics
     @summary_metrics = build_summary_metrics
 
-    # Build comparison data
-    @comparison_data = build_comparison_data
-
     # Build trend data (last 6 months)
     @trends_data = build_trends_data
 
@@ -195,25 +192,6 @@ class ReportsController < ApplicationController
       nil
     end
 
-    def build_comparison_data
-      currency_symbol = Money::Currency.new(Current.family.currency).symbol
-
-      # Totals are BigDecimal amounts in dollars - pass directly to Money.new()
-      {
-        current: {
-          income: @current_income_totals.total,
-          expenses: @current_expense_totals.total,
-          net: @current_income_totals.total - @current_expense_totals.total
-        },
-        previous: {
-          income: @previous_income_totals.total,
-          expenses: @previous_expense_totals.total,
-          net: @previous_income_totals.total - @previous_expense_totals.total
-        },
-        currency_symbol: currency_symbol
-      }
-    end
-
     def build_trends_data
       # Generate month-by-month data based on the current period filter
       trends = []
@@ -304,11 +282,13 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown
       # Base query: all transactions in the period
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .where.not(kind: [ "funds_movement", "one_time", "cc_payment" ])
         .includes(entry: :account, category: [])
 
       # Apply filters
@@ -397,11 +377,13 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .where.not(kind: [ "funds_movement", "one_time", "cc_payment" ])
         .includes(entry: :account, category: [])
 
       transactions = apply_transaction_filters(transactions)
@@ -432,11 +414,13 @@ class ReportsController < ApplicationController
       end
 
       # Get all transactions in the period
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .where.not(kind: [ "funds_movement", "one_time", "cc_payment" ])
         .includes(entry: :account, category: [])
 
       transactions = apply_transaction_filters(transactions)

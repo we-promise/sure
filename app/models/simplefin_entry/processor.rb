@@ -1,6 +1,7 @@
 require "digest/md5"
 
 class SimplefinEntry::Processor
+  include CurrencyNormalizable
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   def initialize(simplefin_transaction, simplefin_account:)
     @simplefin_transaction = simplefin_transaction
@@ -15,12 +16,27 @@ class SimplefinEntry::Processor
       date: date,
       name: name,
       source: "simplefin",
-      merchant: merchant
+      merchant: merchant,
+      notes: notes,
+      extra: extra_metadata
     )
   end
 
   private
     attr_reader :simplefin_transaction, :simplefin_account
+
+    def extra_metadata
+      sf = {}
+      # Preserve raw strings from provider so nothing is lost
+      sf["payee"] = data[:payee] if data.key?(:payee)
+      sf["memo"] = data[:memo] if data.key?(:memo)
+      sf["description"] = data[:description] if data.key?(:description)
+      # Include provider-supplied extra hash if present
+      sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
+
+      return nil if sf.empty?
+      { "simplefin" => sf }
+    end
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
@@ -77,29 +93,44 @@ class SimplefinEntry::Processor
     end
 
     def currency
-      data[:currency] || account.currency
+      parse_currency(data[:currency]) || account.currency
     end
 
+    def log_invalid_currency(currency_value)
+      Rails.logger.warn("Invalid currency code '#{currency_value}' in SimpleFIN transaction #{external_id}, falling back to account currency")
+    end
+
+    # UI/entry date selection by account type:
+    # - Credit cards/loans: prefer transaction date (matches statements), then posted
+    # - Others: prefer posted date, then transaction date
+    # Epochs parsed as UTC timestamps via DateUtils
     def date
-      case data[:posted]
-      when String
-        Date.parse(data[:posted])
-      when Integer, Float
-        # Unix timestamp
-        Time.at(data[:posted]).to_date
-      when Time, DateTime
-        data[:posted].to_date
-      when Date
-        data[:posted]
+      # Prefer transaction date for revolving debt (credit cards/loans); otherwise prefer posted date
+      acct_type = simplefin_account&.account_type.to_s.strip.downcase.tr(" ", "_")
+      if %w[credit_card credit loan mortgage].include?(acct_type)
+        t = transacted_date
+        return t if t
+        p = posted_date
+        return p if p
       else
-        Rails.logger.error("SimpleFin transaction has invalid date value: #{data[:posted].inspect}")
-        raise ArgumentError, "Invalid date format: #{data[:posted].inspect}"
+        p = posted_date
+        return p if p
+        t = transacted_date
+        return t if t
       end
-    rescue ArgumentError, TypeError => e
-      Rails.logger.error("Failed to parse SimpleFin transaction date '#{data[:posted]}': #{e.message}")
-      raise ArgumentError, "Unable to parse transaction date: #{data[:posted].inspect}"
+      Rails.logger.error("SimpleFin transaction missing posted/transacted date: #{data.inspect}")
+      raise ArgumentError, "Invalid date format: #{data[:posted].inspect} / #{data[:transacted_at].inspect}"
     end
 
+    def posted_date
+      val = data[:posted]
+      Simplefin::DateUtils.parse_provider_date(val)
+    end
+
+    def transacted_date
+      val = data[:transacted_at]
+      Simplefin::DateUtils.parse_provider_date(val)
+    end
 
     def merchant
       # Use SimpleFin's clean payee data for merchant detection
@@ -119,5 +150,19 @@ class SimplefinEntry::Processor
     def generate_merchant_id(merchant_name)
       # Generate a consistent ID for merchants without explicit IDs
       "simplefin_#{Digest::MD5.hexdigest(merchant_name.downcase)}"
+    end
+
+    def notes
+      # Prefer memo if present; include payee when it differs from description for richer context
+      memo = data[:memo].to_s.strip
+      payee = data[:payee].to_s.strip
+      description = data[:description].to_s.strip
+
+      parts = []
+      parts << memo if memo.present?
+      if payee.present? && payee != description
+        parts << "Payee: #{payee}"
+      end
+      parts.presence&.join(" | ")
     end
 end

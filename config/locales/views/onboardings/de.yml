@@ -1,0 +1,27 @@
+---
+de:
+  onboardings:
+    header:
+      sign_out: Abmelden
+    preferences:
+      currency: Währung
+      date_format: Datumsformat
+      example: Beispielkonto
+      locale: Sprache
+      preview: Vorschau wie deine Daten basierend auf den Einstellungen angezeigt werden
+      submit: Abschließen
+      subtitle: Lass uns deine Einstellungen konfigurieren
+      title: Einstellungen konfigurieren
+    profile:
+      country: Land
+      first_name: Vorname
+      household_name: Haushaltsname
+      last_name: Nachname
+      profile_image: Profilbild
+      submit: Weiter
+      subtitle: Lass uns dein Profil vervollständigen
+      title: Lass uns die Grundlagen einrichten
+    show:
+      message: Wir freuen uns sehr dass du hier bist Im nächsten Schritt stellen wir dir ein paar Fragen um dein Profil zu vervollständigen und alles für dich einzurichten
+      setup: Konto einrichten
+      title: Willkommen bei %{product_name}

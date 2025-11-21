@@ -1,0 +1,120 @@
+de:
+  settings:
+    ai_prompts:
+      show:
+        page_title: KI-Eingabeaufforderungen
+        openai_label: OpenAI
+        disable_ai: KI-Assistent deaktivieren
+        prompt_instructions: Prompt-Anweisungen
+        main_system_prompt:
+          title: Hauptsystem-Prompt
+          subtitle: Zentrale Anweisungen, die definieren, wie sich der KI-Assistent in allen Chat-Gesprächen verhält
+        transaction_categorizer:
+          title: Transaktionskategorisierung
+          subtitle: Die KI kategorisiert deine Transaktionen automatisch basierend auf deinen definierten Kategorien
+        merchant_detector:
+          title: Händlererkennung
+          subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+    billings:
+      show:
+        page_title: Abrechnung
+        subscription_subtitle: Aktualisiere dein Abonnement und deine Rechnungsdetails
+        subscription_title: Abonnement verwalten
+    preferences:
+      show:
+        country: Land
+        currency: Währung
+        date_format: Datumsformat
+        general_subtitle: Konfiguriere deine Einstellungen
+        general_title: Allgemein
+        default_period: Standardzeitraum
+        default_account_order: Standardreihenfolge der Konten
+        language: Sprache
+        page_title: Einstellungen
+        theme_dark: Dunkel
+        theme_light: Hell
+        theme_subtitle: Wähle ein bevorzugtes Design für die App
+        theme_system: System
+        theme_title: Design
+        timezone: Zeitzone
+    profiles:
+      destroy:
+        cannot_remove_self: Du kannst dich nicht selbst aus dem Konto entfernen.
+        member_removal_failed: Beim Entfernen des Mitglieds ist ein Problem aufgetreten.
+        member_removed: Mitglied wurde erfolgreich entfernt.
+        not_authorized: Du bist nicht berechtigt, Mitglieder zu entfernen.
+      show:
+        confirm_delete:
+          body: Bist du sicher, dass du dein Konto dauerhaft löschen möchtest? Diese Aktion ist unwiderruflich.
+          title: Konto löschen?
+        confirm_reset:
+          body: Bist du sicher, dass du dein Konto zurücksetzen möchtest? Dadurch werden alle Konten, Kategorien, Händler, Tags und andere Daten gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+          title: Konto zurücksetzen?
+        confirm_reset_with_sample_data:
+          body: Bist du sicher, dass du dein Konto zurücksetzen und Beispieldaten laden möchtest? Dadurch werden deine vorhandenen Daten gelöscht und durch Demo-Daten ersetzt, sodass du Sure sicher erkunden kannst.
+          title: Konto zurücksetzen und Beispieldaten laden?
+        confirm_remove_invitation:
+          body: Bist du sicher, dass du die Einladung für %{email} entfernen möchtest?
+          title: Einladung entfernen
+        confirm_remove_member:
+          body: Bist du sicher, dass du %{name} aus deinem Konto entfernen möchtest?
+          title: Mitglied entfernen
+        danger_zone_title: Gefahrenbereich
+        delete_account: Konto löschen
+        delete_account_warning: Das Löschen deines Kontos entfernt dauerhaft alle deine Daten und kann nicht rückgängig gemacht werden.
+        reset_account: Konto zurücksetzen
+        reset_account_warning: Das Zurücksetzen deines Kontos löscht alle Konten, Kategorien, Händler, Tags und andere Daten, behält aber dein Benutzerkonto bei.
+        reset_account_with_sample_data: Zurücksetzen und Beispieldaten laden
+        reset_account_with_sample_data_warning: Löscht alle vorhandenen Daten und lädt anschließend neue Beispieldaten, um eine vorbefüllte Umgebung zu erkunden.
+        email: E-Mail
+        first_name: Vorname
+        household_form_input_placeholder: Haushaltsnamen eingeben
+        household_form_label: Haushaltsname
+        household_subtitle: Lade Familienmitglieder, Partner oder andere Personen ein. Eingeladene können sich in deinen Haushalt einloggen und auf gemeinsame Konten zugreifen.
+        household_title: Haushalt
+        invitation_link: Einladungslink
+        invite_member: Mitglied hinzufügen
+        last_name: Nachname
+        page_title: Profilinformationen
+        pending: Ausstehend
+        profile_subtitle: Passe an, wie du in %{product_name} erscheinst.
+        profile_title: Persönlich
+        remove_invitation: Einladung entfernen
+        remove_member: Mitglied entfernen
+        save: Speichern
+    securities:
+      show:
+        page_title: Sicherheit
+    settings_nav:
+      accounts_label: Konten
+      advanced_section_title: Erweitert
+      ai_prompts_label: KI-Eingabeaufforderungen
+      api_key_label: API-Schlüssel
+      billing_label: Abrechnung
+      categories_label: Kategorien
+      feedback_label: Feedback
+      general_section_title: Allgemein
+      imports_label: Import/Export
+      logout: Abmelden
+      merchants_label: Händler
+      guides_label: Anleitungen
+      other_section_title: Mehr
+      preferences_label: Einstellungen
+      profile_label: Profilinformationen
+      recurring_transactions_label: Wiederkehrend
+      rules_label: Regeln
+      security_label: Sicherheit
+      self_hosting_label: Self-Hosting
+      tags_label: Tags
+      transactions_section_title: Transaktionen
+      whats_new_label: Was ist neu
+      api_keys_label: API-Schlüssel
+      bank_sync_label: Banksynchronisierung
+    settings_nav_link_large:
+      next: Weiter
+      previous: Zurück
+    user_avatar_field:
+      accepted_formats: JPG oder PNG, maximal 5 MB
+      choose: Foto hochladen
+      choose_label: (optional)
+      change: Foto ändern

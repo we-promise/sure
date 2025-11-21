@@ -1,0 +1,10 @@
+---
+es:
+  settings:
+    securities:
+      show:
+        disable_mfa: Deshabilitar 2FA
+        disable_mfa_confirm: ¿Estás seguro de que deseas deshabilitar la autenticación de 2FA? Esto hará que tu cuenta sea menos segura.
+        enable_mfa: Habilitar 2FA
+        mfa_description: Agrega una capa adicional de seguridad a tu cuenta al requerir un código de tu aplicación de autenticación al iniciar sesión
+        mfa_title: Autenticación de 2FA

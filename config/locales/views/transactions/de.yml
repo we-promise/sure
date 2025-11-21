@@ -1,0 +1,82 @@
+---
+de:
+  transactions:
+    form:
+      account: Konto
+      account_prompt: Konto auswählen
+      amount: Betrag
+      category: Kategorie
+      category_prompt: Kategorie auswählen
+      date: Datum
+      description: Beschreibung
+      description_placeholder: Transaktion beschreiben
+      expense: Ausgabe
+      income: Einnahme
+      none: (keine)
+      note_label: Notizen
+      note_placeholder: Notiz eingeben
+      submit: Transaktion hinzufügen
+      tags_label: Tags
+      transfer: Überweisung
+    new:
+      new_transaction: Neue Transaktion
+    show:
+      account_label: Konto
+      amount: Betrag
+      category_label: Kategorie
+      date_label: Datum
+      delete: Löschen
+      delete_subtitle: Diese Aktion löscht die Transaktion dauerhaft, beeinflusst deine bisherigen Kontostände und kann nicht rückgängig gemacht werden.
+      delete_title: Transaktion löschen
+      details: Details
+      merchant_label: Händler
+      name_label: Name
+      nature: Typ
+      none: (keine)
+      note_label: Notizen
+      note_placeholder: Notiz eingeben
+      overview: Übersicht
+      settings: Einstellungen
+      tags_label: Tags
+      uncategorized: (ohne Kategorie)
+    header:
+      edit_categories: Kategorien bearbeiten
+      edit_imports: Importe bearbeiten
+      edit_merchants: Händler bearbeiten
+      edit_tags: Tags bearbeiten
+      import: Importieren
+    index:
+      transaction: Transaktion
+      transactions: Transaktionen
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Gleich
+          greater_than: Größer als
+          less_than: Kleiner als
+          placeholder: '0'
+        badge:
+          expense: Ausgabe
+          income: Einnahme
+          on_or_after: am oder nach %{date}
+          on_or_before: am oder vor %{date}
+          transfer: Überweisung
+        type_filter:
+          expense: Ausgabe
+          income: Einnahme
+          transfer: Überweisung
+      menu:
+        account_filter: Konto
+        amount_filter: Betrag
+        apply: Anwenden
+        cancel: Abbrechen
+        category_filter: Kategorie
+        clear_filters: Filter löschen
+        date_filter: Datum
+        merchant_filter: Händler
+        tag_filter: Tag
+        type_filter: Typ
+      search:
+        equal_to: gleich
+        greater_than: größer als
+        less_than: kleiner als
