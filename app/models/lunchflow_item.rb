@@ -3,11 +3,6 @@ class LunchflowItem < ApplicationRecord
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
-  # Encrypt sensitive credentials if ActiveRecord encryption is configured
-  if Rails.application.credentials.active_record_encryption.present?
-    encrypts :api_key, deterministic: true
-  end
-
   # Helper to detect if ActiveRecord Encryption is configured for this app
   def self.encryption_ready?
     creds_ready = Rails.application.credentials.active_record_encryption.present?
@@ -17,8 +12,13 @@ class LunchflowItem < ApplicationRecord
     creds_ready || env_ready
   end
 
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
+  if encryption_ready?
+    encrypts :api_key, deterministic: true
+  end
+
   validates :name, presence: true
-  validates :api_key, presence: true
+  validates :api_key, presence: true, on: :create
 
   belongs_to :family
   has_one_attached :logo
