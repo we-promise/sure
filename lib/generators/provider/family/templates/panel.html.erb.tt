@@ -35,7 +35,7 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
 <% parsed_fields.each do |field| -%>
-    <%%= form.<%= field[:type] == :text || field[:type] == :string ? 'text_field' : 'number_field' %> :<%= field[:name] %>,
+    <%%= form.<%= %w[text string].include?(field[:type]) ? 'text_field' : 'number_field' %> :<%= field[:name] %>,
                         label: "<%= field[:name].titleize %>",
 <% if field[:secret] -%>
                         type: :password,

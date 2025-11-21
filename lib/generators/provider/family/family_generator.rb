@@ -279,7 +279,7 @@ end
           parts = field_def.split(":")
           field = {
             name: parts[0],
-            type: (parts[1] || "string").to_sym,
+            type: parts[1] || "string",
             secret: parts.include?("secret")
           }
 
