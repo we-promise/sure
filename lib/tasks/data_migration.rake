@@ -178,7 +178,7 @@ namespace :data_migration do
   # can have their own Lunchflow credentials instead of sharing global ones.
   task migrate_provider_settings_to_family: :environment do
     puts "==> Migrating global provider settings to family-specific..."
-    puts "NOTE: Global Lunchflow/SimpleFin credentials are NO LONGER SUPPORTED after this migration."
+    puts "NOTE: Global Lunch flow/SimpleFIN credentials are NO LONGER SUPPORTED after this migration."
     puts
 
     # Check if global Lunchflow API key exists

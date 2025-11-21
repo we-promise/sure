@@ -66,7 +66,7 @@ class LunchflowItemsController < ApplicationController
           # Redirect for regular requests
           redirect_to settings_providers_path,
                      alert: t(".no_credentials_configured",
-                            default: "Please configure your Lunchflow API key first in Provider Settings.")
+                            default: "Please configure your Lunch flow API key first in Provider Settings.")
         end
         return
       end
@@ -82,7 +82,7 @@ class LunchflowItemsController < ApplicationController
 
         unless lunchflow_provider.present?
           redirect_to settings_providers_path, alert: t(".no_api_key",
-                                                        default: "Lunchflow API key not found. Please configure it in Provider Settings.")
+                                                        default: "Lunch flow API key not found. Please configure it in Provider Settings.")
           return
         end
 
@@ -111,7 +111,7 @@ class LunchflowItemsController < ApplicationController
 
       render layout: false
     rescue Provider::Lunchflow::LunchflowError => e
-      Rails.logger.error("Lunchflow API error in select_accounts: #{e.message}")
+      Rails.logger.error("Lunch flow API error in select_accounts: #{e.message}")
       @error_message = e.message
       @return_path = safe_return_to_path
       render partial: "lunchflow_items/api_error",
@@ -261,7 +261,7 @@ class LunchflowItemsController < ApplicationController
         # Redirect for regular requests
         redirect_to settings_providers_path,
                    alert: t(".no_credentials_configured",
-                          default: "Please configure your Lunchflow API key first in Provider Settings.")
+                          default: "Please configure your Lunch flow API key first in Provider Settings.")
       end
       return
     end
@@ -278,7 +278,7 @@ class LunchflowItemsController < ApplicationController
 
         unless lunchflow_provider.present?
           redirect_to settings_providers_path, alert: t(".no_api_key",
-                                                        default: "Lunchflow API key not found. Please configure it in Provider Settings.")
+                                                        default: "Lunch flow API key not found. Please configure it in Provider Settings.")
           return
         end
 
@@ -311,7 +311,7 @@ class LunchflowItemsController < ApplicationController
 
       render layout: false
     rescue Provider::Lunchflow::LunchflowError => e
-      Rails.logger.error("Lunchflow API error in select_existing_account: #{e.message}")
+      Rails.logger.error("Lunch flow API error in select_existing_account: #{e.message}")
       @error_message = e.message
       render partial: "lunchflow_items/api_error",
              locals: { error_message: @error_message, return_path: accounts_path },
