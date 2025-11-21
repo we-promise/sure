@@ -93,12 +93,16 @@ class SimplefinItemsController < ApplicationController
       )
 
       if turbo_frame_request?
+        flash.now[:notice] = "SimpleFin configuration saved successfully"
         @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "simplefin-providers-panel",
-          partial: "settings/providers/simplefin_panel",
-          locals: { simplefin_items: @simplefin_items }
-        )
+        render turbo_stream: [
+          turbo_stream.replace(
+            "simplefin-providers-panel",
+            partial: "settings/providers/simplefin_panel",
+            locals: { simplefin_items: @simplefin_items }
+          ),
+          *flash_notification_stream_items
+        ]
       else
         redirect_to accounts_path, notice: t(".success"), status: :see_other
       end

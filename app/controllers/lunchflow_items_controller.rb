@@ -421,12 +421,16 @@ class LunchflowItemsController < ApplicationController
       @lunchflow_item.sync_later
 
       if turbo_frame_request?
+        flash.now[:notice] = "Lunchflow configuration saved successfully"
         @lunchflow_items = Current.family.lunchflow_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "lunchflow-providers-panel",
-          partial: "settings/providers/lunchflow_panel",
-          locals: { lunchflow_items: @lunchflow_items }
-        )
+        render turbo_stream: [
+          turbo_stream.replace(
+            "lunchflow-providers-panel",
+            partial: "settings/providers/lunchflow_panel",
+            locals: { lunchflow_items: @lunchflow_items }
+          ),
+          *flash_notification_stream_items
+        ]
       else
         redirect_to accounts_path, notice: t(".success"), status: :see_other
       end
@@ -451,12 +455,16 @@ class LunchflowItemsController < ApplicationController
   def update
     if @lunchflow_item.update(lunchflow_params)
       if turbo_frame_request?
+        flash.now[:notice] = "Lunchflow configuration updated successfully"
         @lunchflow_items = Current.family.lunchflow_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "lunchflow-providers-panel",
-          partial: "settings/providers/lunchflow_panel",
-          locals: { lunchflow_items: @lunchflow_items }
-        )
+        render turbo_stream: [
+          turbo_stream.replace(
+            "lunchflow-providers-panel",
+            partial: "settings/providers/lunchflow_panel",
+            locals: { lunchflow_items: @lunchflow_items }
+          ),
+          *flash_notification_stream_items
+        ]
       else
         redirect_to accounts_path, notice: t(".success"), status: :see_other
       end
