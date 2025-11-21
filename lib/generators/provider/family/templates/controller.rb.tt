@@ -1,41 +1,98 @@
 class <%= class_name %>ItemsController < ApplicationController
-  include Provider::PerFamilyItemController
+  before_action :set_<%= file_name %>_item, only: [:update, :destroy, :sync]
 
-  # The PerFamilyItemController concern provides all the standard CRUD actions:
-  # - create: POST /<%= file_name %>_items
-  # - update: PATCH /<%= file_name %>_items/:id
-  # - destroy: DELETE /<%= file_name %>_items/:id
-  # - sync: POST /<%= file_name %>_items/:id/sync
-  #
-  # You can override these methods or add custom actions as needed.
-  #
-  # The concern automatically handles:
-  # - Turbo stream responses for inline updates
-  # - Flash messages
-  # - Error handling
-  # - Parameter permitting based on configure_per_family fields
+  def create
+    @<%= file_name %>_item = Current.family.<%= table_name %>.build(<%= file_name %>_item_params)
+    @<%= file_name %>_item.name ||= "<%= class_name %> Connection"
 
-  # Uncomment to add custom actions:
-  #
-  # def custom_action
-  #   @item = Current.family.<%= file_name %>_items.find(params[:id])
-  #   # Your custom logic here
-  # end
+    if @<%= file_name %>_item.save
+      if turbo_frame_request?
+        flash.now[:notice] = t(".success", default: "Successfully configured <%= class_name %>.")
+        @<%= table_name %> = Current.family.<%= table_name %>.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "<%= file_name %>-providers-panel",
+            partial: "settings/providers/<%= file_name %>_panel",
+            locals: { <%= file_name %>_items: @<%= table_name %> }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
+      end
+    else
+      @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "<%= file_name %>-providers-panel",
+          partial: "settings/providers/<%= file_name %>_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+      end
+    end
+  end
+
+  def update
+    if @<%= file_name %>_item.update(<%= file_name %>_item_params)
+      if turbo_frame_request?
+        flash.now[:notice] = t(".success", default: "Successfully updated <%= class_name %> configuration.")
+        @<%= table_name %> = Current.family.<%= table_name %>.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "<%= file_name %>-providers-panel",
+            partial: "settings/providers/<%= file_name %>_panel",
+            locals: { <%= file_name %>_items: @<%= table_name %> }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
+      end
+    else
+      @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "<%= file_name %>-providers-panel",
+          partial: "settings/providers/<%= file_name %>_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+      end
+    end
+  end
+
+  def destroy
+    @<%= file_name %>_item.destroy_later
+    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled <%= class_name %> connection for deletion.")
+  end
+
+  def sync
+    unless @<%= file_name %>_item.syncing?
+      @<%= file_name %>_item.sync_later
+    end
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { head :ok }
+    end
+  end
 
   private
 
-  # Uncomment to customize permitted parameters beyond the configured fields:
-  #
-  # def permitted_params
-  #   super.merge(
-  #     params.require(:<%= file_name %>_item).permit(:custom_field)
-  #   )
-  # end
+  def set_<%= file_name %>_item
+    @<%= file_name %>_item = Current.family.<%= table_name %>.find(params[:id])
+  end
 
-  # Uncomment to add custom behavior after successful save:
-  #
-  # def handle_successful_save(action)
-  #   super
-  #   # Your custom logic here (e.g., trigger initial sync)
-  # end
+  def <%= file_name %>_item_params
+    params.require(:<%= file_name %>_item).permit(
+      :name,
+      :sync_start_date<% parsed_fields.each do |field| %>,
+      :<%= field[:name] %><% end %>
+    )
+  end
 end

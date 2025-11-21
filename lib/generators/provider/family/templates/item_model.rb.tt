@@ -1,6 +1,5 @@
 class <%= class_name %>Item < ApplicationRecord
   include Syncable, Provided
-  include Provider::PerFamilyItem
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
