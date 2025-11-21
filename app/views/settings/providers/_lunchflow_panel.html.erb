@@ -3,7 +3,7 @@
     <p class="text-primary font-medium">Setup instructions:</p>
     <ol>
       <li>Visit <a href="https://www.lunchflow.app" target="_blank" rel="noopener noreferrer" class="link">Lunch Flow</a> to get your API key</li>
-      <li>Paste your API key below (auto-saves when you click outside the field or press Enter)</li>
+      <li>Paste your API key below and click the Save button</li>
       <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
     </ol>
 
@@ -34,19 +34,22 @@
                        url: is_new_record ? lunchflow_items_path : lunchflow_item_path(lunchflow_item),
                        scope: :lunchflow_item,
                        method: is_new_record ? :post : :patch,
-                       data: { controller: "auto-submit-form", turbo: true },
+                       data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :api_key,
                         label: "API Key",
-                        placeholder: is_new_record ? "Paste API key here (auto-saves on blur)" : "Enter new API key to update (auto-saves on blur)",
-                        type: :password,
-                        data: { auto_submit_form_target: "auto", autosubmit_debounce_timeout: "0" } %>
+                        placeholder: is_new_record ? "Paste API key here" : "Enter new API key to update",
+                        type: :password %>
 
     <%= form.text_field :base_url,
                         label: "Base URL (Optional)",
                         placeholder: "https://lunchflow.app/api/v1 (default)",
-                        value: lunchflow_item.base_url,
-                        data: { auto_submit_form_target: "auto", autosubmit_debounce_timeout: "0" } %>
+                        value: lunchflow_item.base_url %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
   <% end %>
 
   <% items = local_assigns[:lunchflow_items] || @lunchflow_items || Current.family.lunchflow_items.where.not(api_key: nil) %>

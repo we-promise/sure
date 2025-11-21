@@ -3,7 +3,7 @@
     <p class="text-primary font-medium">Setup instructions:</p>
     <ol>
       <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFin Bridge</a> to get your one-time setup token</li>
-      <li>Paste the token below to enable SimpleFin bank data sync</li>
+      <li>Paste the token below and click the Save button to enable SimpleFin bank data sync</li>
       <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
     </ol>
 
@@ -23,13 +23,17 @@
                        url: simplefin_items_path,
                        scope: :simplefin_item,
                        method: :post,
-                       data: { controller: "auto-submit-form", turbo: true },
+                       data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :setup_token,
                         label: "Setup Token",
-                        placeholder: "Paste SimpleFin setup token and press Enter",
-                        type: :password,
-                        data: { auto_submit_form_target: "auto" } %>
+                        placeholder: "Paste SimpleFin setup token",
+                        type: :password %>
+
+    <div class="flex justify-end">
+      <%= form.submit "Save Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
   <% end %>
 
   <% if @simplefin_items&.any? %>
