@@ -21,44 +21,32 @@
     </div>
   <% end %>
 
-  <% lunchflow_item = Current.family.lunchflow_items.where.not(api_key: nil).first %>
-  <% if lunchflow_item.nil? %>
-    <%= styled_form_with model: LunchflowItem.new,
-                         url: lunchflow_items_path,
-                         scope: :lunchflow_item,
-                         method: :post,
-                         data: { controller: "auto-submit-form", turbo: true },
-                         class: "space-y-3" do |form| %>
-      <%= form.text_field :api_key,
-                          label: "API Key",
-                          placeholder: "Paste API key here (auto-saves on blur)",
-                          type: :password,
-                          data: { auto_submit_form_target: "auto" } %>
+  <%
+    # Get or initialize a lunchflow_item for this family
+    # - If family has an item WITH credentials, use it (for updates)
+    # - If family has an item WITHOUT credentials, use it (to add credentials)
+    # - If family has no items at all, create a new one
+    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunchflow Connection")
+    is_new_record = lunchflow_item.new_record?
+  %>
 
-      <%= form.text_field :base_url,
-                          label: "Base URL (Optional)",
-                          placeholder: "https://lunchflow.app/api/v1 (default)",
-                          data: { auto_submit_form_target: "auto" } %>
-    <% end %>
-  <% else %>
-    <%= styled_form_with model: lunchflow_item,
-                         url: lunchflow_item_path(lunchflow_item),
-                         scope: :lunchflow_item,
-                         method: :patch,
-                         data: { controller: "auto-submit-form", turbo: true },
-                         class: "space-y-3" do |form| %>
-      <%= form.text_field :api_key,
-                          label: "API Key",
-                          placeholder: "Enter new API key to update (auto-saves on blur)",
-                          type: :password,
-                          data: { auto_submit_form_target: "auto" } %>
+  <%= styled_form_with model: lunchflow_item,
+                       url: is_new_record ? lunchflow_items_path : lunchflow_item_path(lunchflow_item),
+                       scope: :lunchflow_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { controller: "auto-submit-form", turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :api_key,
+                        label: "API Key",
+                        placeholder: is_new_record ? "Paste API key here (auto-saves on blur)" : "Enter new API key to update (auto-saves on blur)",
+                        type: :password,
+                        data: { auto_submit_form_target: "auto", autosubmit_debounce_timeout: "0" } %>
 
-      <%= form.text_field :base_url,
-                          label: "Base URL (Optional)",
-                          placeholder: "https://lunchflow.app/api/v1 (default)",
-                          value: lunchflow_item.base_url,
-                          data: { auto_submit_form_target: "auto" } %>
-    <% end %>
+    <%= form.text_field :base_url,
+                        label: "Base URL (Optional)",
+                        placeholder: "https://lunchflow.app/api/v1 (default)",
+                        value: lunchflow_item.base_url,
+                        data: { auto_submit_form_target: "auto", autosubmit_debounce_timeout: "0" } %>
   <% end %>
 
   <% items = local_assigns[:lunchflow_items] || @lunchflow_items || Current.family.lunchflow_items.where.not(api_key: nil) %>

@@ -12,6 +12,12 @@ class LunchflowItemsController < ApplicationController
   # Preload Lunchflow accounts in background (async, non-blocking)
   def preload_accounts
     begin
+      # Check if family has credentials
+      unless Current.family.has_lunchflow_credentials?
+        render json: { success: false, error: "no_credentials", has_accounts: false }
+        return
+      end
+
       cache_key = "lunchflow_accounts_#{Current.family.id}"
 
       # Check if already cached
@@ -39,16 +45,36 @@ class LunchflowItemsController < ApplicationController
       render json: { success: true, has_accounts: available_accounts.any?, cached: false }
     rescue Provider::Lunchflow::LunchflowError => e
       Rails.logger.error("Lunchflow preload error: #{e.message}")
-      render json: { success: false, error: e.message, has_accounts: false }
+      # API error (bad key, network issue, etc) - keep button visible, show error when clicked
+      render json: { success: false, error: "api_error", error_message: e.message, has_accounts: nil }
     rescue StandardError => e
       Rails.logger.error("Unexpected error preloading Lunchflow accounts: #{e.class}: #{e.message}")
-      render json: { success: false, error: "unexpected_error", has_accounts: false }
+      # Unexpected error - keep button visible, show error when clicked
+      render json: { success: false, error: "unexpected_error", error_message: e.message, has_accounts: nil }
     end
   end
 
   # Fetch available accounts from Lunchflow API and show selection UI
   def select_accounts
     begin
+      # Check if family has Lunchflow credentials configured
+      unless Current.family.has_lunchflow_credentials?
+        respond_to do |format|
+          format.html do
+            redirect_to settings_providers_path,
+                       alert: t(".no_credentials_configured",
+                              default: "Please configure your Lunchflow API key first in Provider Settings.")
+          end
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.replace(
+              "modal",
+              partial: "lunchflow_items/setup_required"
+            )
+          end
+        end
+        return
+      end
+
       cache_key = "lunchflow_accounts_#{Current.family.id}"
 
       # Try to get cached accounts first
@@ -59,7 +85,8 @@ class LunchflowItemsController < ApplicationController
         lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
 
         unless lunchflow_provider.present?
-          redirect_to new_account_path, alert: t(".no_api_key")
+          redirect_to settings_providers_path, alert: t(".no_api_key",
+                                                        default: "Lunchflow API key not found. Please configure it in Provider Settings.")
           return
         end
 
@@ -69,6 +96,13 @@ class LunchflowItemsController < ApplicationController
 
         # Cache the accounts for 5 minutes
         Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
+      end
+
+      # Filter out already linked accounts
+      lunchflow_item = Current.family.lunchflow_items.first
+      if lunchflow_item
+        linked_account_ids = lunchflow_item.lunchflow_accounts.joins(:account_provider).pluck(:account_id)
+        @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
       end
 
       @accountable_type = params[:accountable_type] || "Depository"
@@ -81,7 +115,19 @@ class LunchflowItemsController < ApplicationController
 
       render layout: false
     rescue Provider::Lunchflow::LunchflowError => e
-      redirect_to new_account_path, alert: t(".api_error", message: e.message)
+      Rails.logger.error("Lunchflow API error in select_accounts: #{e.message}")
+      @error_message = e.message
+      @return_path = safe_return_to_path
+      render partial: "lunchflow_items/api_error",
+             locals: { error_message: @error_message, return_path: @return_path },
+             layout: false
+    rescue StandardError => e
+      Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
+      @error_message = "An unexpected error occurred. Please try again later."
+      @return_path = safe_return_to_path
+      render partial: "lunchflow_items/api_error",
+             locals: { error_message: @error_message, return_path: @return_path },
+             layout: false
     end
   end
 
@@ -210,6 +256,25 @@ class LunchflowItemsController < ApplicationController
       return
     end
 
+    # Check if family has Lunchflow credentials configured
+    unless Current.family.has_lunchflow_credentials?
+      respond_to do |format|
+        format.html do
+          redirect_to settings_providers_path,
+                     alert: t(".no_credentials_configured",
+                            default: "Please configure your Lunchflow API key first in Provider Settings.")
+        end
+        format.turbo_stream do
+          # Render setup message in modal for turbo frame requests
+          render turbo_stream: turbo_stream.update(
+            "modal",
+            partial: "lunchflow_items/setup_required"
+          ), layout: false
+        end
+      end
+      return
+    end
+
     begin
       cache_key = "lunchflow_accounts_#{Current.family.id}"
 
@@ -221,7 +286,8 @@ class LunchflowItemsController < ApplicationController
         lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
 
         unless lunchflow_provider.present?
-          redirect_to accounts_path, alert: t(".no_api_key")
+          redirect_to settings_providers_path, alert: t(".no_api_key",
+                                                        default: "Lunchflow API key not found. Please configure it in Provider Settings.")
           return
         end
 
@@ -254,7 +320,17 @@ class LunchflowItemsController < ApplicationController
 
       render layout: false
     rescue Provider::Lunchflow::LunchflowError => e
-      redirect_to accounts_path, alert: t(".api_error", message: e.message)
+      Rails.logger.error("Lunchflow API error in select_existing_account: #{e.message}")
+      @error_message = e.message
+      render partial: "lunchflow_items/api_error",
+             locals: { error_message: @error_message, return_path: accounts_path },
+             layout: false
+    rescue StandardError => e
+      Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
+      @error_message = "An unexpected error occurred. Please try again later."
+      render partial: "lunchflow_items/api_error",
+             locals: { error_message: @error_message, return_path: accounts_path },
+             layout: false
     end
   end
 

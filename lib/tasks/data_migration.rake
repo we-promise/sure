@@ -173,10 +173,13 @@ namespace :data_migration do
 
   desc "Migrate global provider settings to family-specific"
   # 2025-11-21: Move global Lunchflow API credentials to family-specific lunchflow_items
+  # Global settings are NO LONGER SUPPORTED as of this migration.
   # This improves security and enables proper multi-tenant isolation where each family
   # can have their own Lunchflow credentials instead of sharing global ones.
   task migrate_provider_settings_to_family: :environment do
     puts "==> Migrating global provider settings to family-specific..."
+    puts "NOTE: Global Lunchflow/SimpleFin credentials are NO LONGER SUPPORTED after this migration."
+    puts
 
     # Check if global Lunchflow API key exists
     global_api_key = Setting[:lunchflow_api_key]
@@ -184,6 +187,11 @@ namespace :data_migration do
 
     if global_api_key.blank?
       puts "No global Lunchflow API key found. Nothing to migrate."
+      puts
+      puts "ℹ️  If you need to configure Lunchflow:"
+      puts "   1. Go to /settings/providers"
+      puts "   2. Configure Lunchflow credentials per-family"
+      puts
       puts "✅  Migration complete."
       return
     end
@@ -220,15 +228,20 @@ namespace :data_migration do
       end
     end
 
-    puts "\nMigration Summary:"
+    puts
+    puts "Migration Summary:"
     puts "  Families with Lunchflow items: #{families_with_items}"
     puts "  Families with existing credentials: #{families_with_existing}"
     puts "  Families updated with global credentials: #{families_updated}"
+    puts
 
     if families_updated > 0
-      puts "\n⚠️  Global credentials have been copied to #{families_updated} families."
-      puts "   You can now remove the global settings by running:"
+      puts "✅  Global credentials have been copied to #{families_updated} families."
+      puts
+      puts "⚠️  IMPORTANT: You should now remove the global settings:"
       puts "   rails runner \"Setting[:lunchflow_api_key] = nil; Setting[:lunchflow_base_url] = nil\""
+      puts
+      puts "   Global credentials are NO LONGER USED by the application."
     end
 
     puts "✅  Provider settings migration complete."
