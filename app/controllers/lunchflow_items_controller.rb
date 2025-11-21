@@ -421,7 +421,7 @@ class LunchflowItemsController < ApplicationController
       @lunchflow_item.sync_later
 
       if turbo_frame_request?
-        flash.now[:notice] = "Lunchflow configuration saved successfully"
+        flash.now[:notice] = t(".success")
         @lunchflow_items = Current.family.lunchflow_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
@@ -455,7 +455,7 @@ class LunchflowItemsController < ApplicationController
   def update
     if @lunchflow_item.update(lunchflow_params)
       if turbo_frame_request?
-        flash.now[:notice] = "Lunchflow configuration updated successfully"
+        flash.now[:notice] = t(".success")
         @lunchflow_items = Current.family.lunchflow_items.ordered
         render turbo_stream: [
           turbo_stream.replace(

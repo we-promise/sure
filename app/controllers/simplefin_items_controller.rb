@@ -93,7 +93,7 @@ class SimplefinItemsController < ApplicationController
       )
 
       if turbo_frame_request?
-        flash.now[:notice] = "SimpleFin configuration saved successfully"
+        flash.now[:notice] = t(".success")
         @simplefin_items = Current.family.simplefin_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
