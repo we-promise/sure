@@ -1,0 +1,41 @@
+class <%= class_name %>ItemsController < ApplicationController
+  include Provider::PerFamilyItemController
+
+  # The PerFamilyItemController concern provides all the standard CRUD actions:
+  # - create: POST /<%= file_name %>_items
+  # - update: PATCH /<%= file_name %>_items/:id
+  # - destroy: DELETE /<%= file_name %>_items/:id
+  # - sync: POST /<%= file_name %>_items/:id/sync
+  #
+  # You can override these methods or add custom actions as needed.
+  #
+  # The concern automatically handles:
+  # - Turbo stream responses for inline updates
+  # - Flash messages
+  # - Error handling
+  # - Parameter permitting based on configure_per_family fields
+
+  # Uncomment to add custom actions:
+  #
+  # def custom_action
+  #   @item = Current.family.<%= file_name %>_items.find(params[:id])
+  #   # Your custom logic here
+  # end
+
+  private
+
+  # Uncomment to customize permitted parameters beyond the configured fields:
+  #
+  # def permitted_params
+  #   super.merge(
+  #     params.require(:<%= file_name %>_item).permit(:custom_field)
+  #   )
+  # end
+
+  # Uncomment to add custom behavior after successful save:
+  #
+  # def handle_successful_save(action)
+  #   super
+  #   # Your custom logic here (e.g., trigger initial sync)
+  # end
+end

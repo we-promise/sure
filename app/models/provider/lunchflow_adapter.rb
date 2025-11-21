@@ -1,6 +1,7 @@
 class Provider::LunchflowAdapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
+  include Provider::PerFamilyConfigurable
 
   # Register this adapter with the factory
   Provider::Factory.register("LunchflowAccount", self)
@@ -31,6 +32,30 @@ class Provider::LunchflowAdapter < Provider::Base
         )
       }
     } ]
+  end
+
+  configure_per_family do
+    description <<~DESC
+      Setup instructions:
+      1. Visit [Lunch Flow](https://www.lunchflow.app) to get your API key
+      2. Paste your API key below to enable Lunch Flow bank data sync
+      3. After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones
+    DESC
+
+    field :api_key,
+          label: "API Key",
+          type: :text,
+          required: true,
+          secret: true,
+          description: "Your Lunch Flow API key for authentication"
+
+    field :base_url,
+          label: "Base URL (Optional)",
+          type: :string,
+          required: false,
+          default: "https://lunchflow.app/api/v1",
+          description: "Base URL for Lunch Flow API (defaults to https://lunchflow.app/api/v1)",
+          placeholder: "https://lunchflow.app/api/v1 (default)"
   end
 
   def provider_name

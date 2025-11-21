@@ -1,0 +1,1 @@
+<%%= render_per_family_provider_panel(:<%= file_name %>, error_message: @error_message) %>

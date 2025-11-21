@@ -1,0 +1,7 @@
+class AddCredentialsTo<%= table_name.camelize %> < ActiveRecord::Migration<%= migration_version %>
+  def change
+<% parsed_fields.each do |field| -%>
+    add_column :<%= table_name %>, :<%= field[:name] %>, :<%= field[:type] %>
+<% end -%>
+  end
+end
