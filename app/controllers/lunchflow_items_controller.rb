@@ -59,18 +59,14 @@ class LunchflowItemsController < ApplicationController
     begin
       # Check if family has Lunchflow credentials configured
       unless Current.family.has_lunchflow_credentials?
-        respond_to do |format|
-          format.html do
-            redirect_to settings_providers_path,
-                       alert: t(".no_credentials_configured",
-                              default: "Please configure your Lunchflow API key first in Provider Settings.")
-          end
-          format.turbo_stream do
-            render turbo_stream: turbo_stream.replace(
-              "modal",
-              partial: "lunchflow_items/setup_required"
-            )
-          end
+        if turbo_frame_request?
+          # Render setup modal for turbo frame requests
+          render partial: "lunchflow_items/setup_required", layout: false
+        else
+          # Redirect for regular requests
+          redirect_to settings_providers_path,
+                     alert: t(".no_credentials_configured",
+                            default: "Please configure your Lunchflow API key first in Provider Settings.")
         end
         return
       end
@@ -258,19 +254,14 @@ class LunchflowItemsController < ApplicationController
 
     # Check if family has Lunchflow credentials configured
     unless Current.family.has_lunchflow_credentials?
-      respond_to do |format|
-        format.html do
-          redirect_to settings_providers_path,
-                     alert: t(".no_credentials_configured",
-                            default: "Please configure your Lunchflow API key first in Provider Settings.")
-        end
-        format.turbo_stream do
-          # Render setup message in modal for turbo frame requests
-          render turbo_stream: turbo_stream.update(
-            "modal",
-            partial: "lunchflow_items/setup_required"
-          ), layout: false
-        end
+      if turbo_frame_request?
+        # Render setup modal for turbo frame requests
+        render partial: "lunchflow_items/setup_required", layout: false
+      else
+        # Redirect for regular requests
+        redirect_to settings_providers_path,
+                   alert: t(".no_credentials_configured",
+                          default: "Please configure your Lunchflow API key first in Provider Settings.")
       end
       return
     end
