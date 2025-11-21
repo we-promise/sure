@@ -52,7 +52,7 @@ module Provider
         return if options[:skip_migration]
 
         migration_template "migration.rb.tt",
-                           "db/migrate/add_credentials_to_#{table_name}.rb",
+                           "db/migrate/create_#{table_name}_and_accounts.rb",
                            migration_version: migration_version
       end
 
@@ -80,22 +80,41 @@ module Provider
         end
       end
 
-      def update_or_create_model
-        model_path = "app/models/#{file_name}_item.rb"
-
-        if File.exist?(model_path)
+      def create_models
+        # Create item model
+        item_model_path = "app/models/#{file_name}_item.rb"
+        if File.exist?(item_model_path)
           # Check if concern is already included
-          if File.read(model_path).include?("Provider::PerFamilyItem")
-            say "Model already includes Provider::PerFamilyItem: #{model_path}", :skip
+          if File.read(item_model_path).include?("Provider::PerFamilyItem")
+            say "Model already includes Provider::PerFamilyItem: #{item_model_path}", :skip
           else
             # Add concern to existing model
-            insert_into_file model_path, after: "class #{class_name}Item < ApplicationRecord\n" do
+            insert_into_file item_model_path, after: "class #{class_name}Item < ApplicationRecord\n" do
               "  include Provider::PerFamilyItem\n\n"
             end
-            say "Updated existing model: #{model_path}", :green
+            say "Updated existing model: #{item_model_path}", :green
           end
         else
-          say "Model does not exist: #{model_path}. Please create it manually or use a model generator.", :yellow
+          template "item_model.rb.tt", item_model_path
+          say "Created item model: #{item_model_path}", :green
+        end
+
+        # Create account model
+        account_model_path = "app/models/#{file_name}_account.rb"
+        if File.exist?(account_model_path)
+          say "Account model already exists: #{account_model_path}", :skip
+        else
+          template "account_model.rb.tt", account_model_path
+          say "Created account model: #{account_model_path}", :green
+        end
+
+        # Create Provided concern
+        provided_concern_path = "app/models/#{file_name}_item/provided.rb"
+        if File.exist?(provided_concern_path)
+          say "Provided concern already exists: #{provided_concern_path}", :skip
+        else
+          template "provided_concern.rb.tt", provided_concern_path
+          say "Created Provided concern: #{provided_concern_path}", :green
         end
       end
 
@@ -217,20 +236,54 @@ module Provider
         say "Successfully generated per-family provider: #{class_name}", :green
         say "=" * 80, :green
 
-        say "\nNext steps:", :yellow
-        say "  1. Run migrations: rails db:migrate"
-        say "  2. Customize the adapter's configure_per_family block if needed"
-        say "  3. Add any custom business logic to #{class_name}Item model"
-        say "  4. Implement the build_provider method in the adapter"
-        say "  5. Test the integration at /settings/providers"
+        say "\nGenerated files:", :cyan
+        say "  📋 Migration: db/migrate/xxx_create_#{table_name}_and_accounts.rb"
+        say "  📦 Models:"
+        say "     - app/models/#{file_name}_item.rb"
+        say "     - app/models/#{file_name}_account.rb"
+        say "     - app/models/#{file_name}_item/provided.rb"
+        say "  🔌 Adapter: app/models/provider/#{file_name}_adapter.rb"
+        say "  🎮 Controller: app/controllers/#{file_name}_items_controller.rb"
+        say "  🖼️  View: app/views/settings/providers/_#{file_name}_panel.html.erb"
+        say "  🛣️  Routes: Updated config/routes.rb"
+        say "  ⚙️  Settings: Updated controllers and views"
 
         if parsed_fields.any?
-          say "\nGenerated fields:", :cyan
+          say "\nCredential fields:", :cyan
           parsed_fields.each do |field|
-            secret_flag = field[:secret] ? " (encrypted)" : ""
-            say "  - #{field[:name]}: #{field[:type]}#{secret_flag}"
+            secret_flag = field[:secret] ? " 🔒 (encrypted)" : ""
+            default_flag = field[:default] ? " [default: #{field[:default]}]" : ""
+            say "  - #{field[:name]}: #{field[:type]}#{secret_flag}#{default_flag}"
           end
         end
+
+        say "\nDatabase tables created:", :cyan
+        say "  - #{table_name} (stores per-family credentials)"
+        say "  - #{file_name}_accounts (stores individual account data)"
+
+        say "\nNext steps:", :yellow
+        say "  1. Run migrations:"
+        say "     rails db:migrate"
+        say ""
+        say "  2. Implement the provider SDK in:"
+        say "     app/models/provider/#{file_name}.rb"
+        say ""
+        say "  3. Update #{class_name}Item::Provided concern:"
+        say "     app/models/#{file_name}_item/provided.rb"
+        say "     Implement the #{file_name}_provider method"
+        say ""
+        say "  4. Customize the adapter's build_provider method:"
+        say "     app/models/provider/#{file_name}_adapter.rb"
+        say ""
+        say "  5. Add any custom business logic:"
+        say "     - Import methods in #{class_name}Item"
+        say "     - Processing logic for accounts"
+        say "     - Sync strategies"
+        say ""
+        say "  6. Test the integration:"
+        say "     Visit /settings/providers and configure credentials"
+        say ""
+        say "  📚 See docs/PER_FAMILY_PROVIDER_GUIDE.md for detailed documentation"
       end
 
       private

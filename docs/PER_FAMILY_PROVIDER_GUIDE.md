@@ -29,7 +29,8 @@ rails g provider:family my_bank \
 ```
 
 This single command generates:
-- ✅ Migration for `my_bank_items` table
+- ✅ Migration for `my_bank_items` and `my_bank_accounts` tables
+- ✅ Models: `MyBankItem`, `MyBankAccount`, and `MyBankItem::Provided` concern
 - ✅ Adapter with `Provider::PerFamilyConfigurable`
 - ✅ Panel view for provider settings
 - ✅ Controller with CRUD actions
@@ -42,19 +43,167 @@ This single command generates:
 
 ### 1. Migration
 
-**File:** `db/migrate/xxx_add_credentials_to_my_bank_items.rb`
+**File:** `db/migrate/xxx_create_my_bank_tables_and_accounts.rb`
+
+Creates two complete tables with all necessary fields:
 
 ```ruby
-class AddCredentialsToMyBankItems < ActiveRecord::Migration[7.2]
+class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[7.2]
   def change
-    add_column :my_bank_items, :api_key, :text
-    add_column :my_bank_items, :base_url, :string
-    add_column :my_bank_items, :refresh_token, :text
+    # Create provider items table (stores per-family connection credentials)
+    create_table :my_bank_items, id: :uuid do |t|
+      t.references :family, null: false, foreign_key: true, type: :uuid
+      t.string :name
+
+      # Institution metadata
+      t.string :institution_id
+      t.string :institution_name
+      t.string :institution_domain
+      t.string :institution_url
+      t.string :institution_color
+
+      # Status and lifecycle
+      t.string :status, default: "good"
+      t.boolean :scheduled_for_deletion, default: false
+      t.boolean :pending_account_setup, default: false
+
+      # Sync settings
+      t.datetime :sync_start_date
+
+      # Raw data storage
+      t.jsonb :raw_payload
+      t.jsonb :raw_institution_payload
+
+      # Provider-specific credential fields
+      t.text :api_key
+      t.string :base_url
+      t.text :refresh_token
+
+      t.timestamps
+    end
+
+    add_index :my_bank_items, :family_id
+    add_index :my_bank_items, :status
+
+    # Create provider accounts table (stores individual account data from provider)
+    create_table :my_bank_accounts, id: :uuid do |t|
+      t.references :my_bank_item, null: false, foreign_key: true, type: :uuid
+
+      # Account identification
+      t.string :name
+      t.string :account_id
+
+      # Account details
+      t.string :currency
+      t.decimal :current_balance, precision: 19, scale: 4
+      t.string :account_status
+      t.string :account_type
+      t.string :provider
+
+      # Metadata and raw data
+      t.jsonb :institution_metadata
+      t.jsonb :raw_payload
+      t.jsonb :raw_transactions_payload
+
+      t.timestamps
+    end
+
+    add_index :my_bank_accounts, :account_id
+    add_index :my_bank_accounts, :my_bank_item_id
   end
 end
 ```
 
-### 2. Adapter
+### 2. Models
+
+**File:** `app/models/my_bank_item.rb`
+
+The item model stores per-family connection credentials:
+
+```ruby
+class MyBankItem < ApplicationRecord
+  include Syncable, Provided
+  include Provider::PerFamilyItem
+
+  enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+
+  # Encryption for secret fields
+  if Rails.application.credentials.active_record_encryption.present?
+    encrypts :api_key, :refresh_token, deterministic: true
+  end
+
+  validates :name, presence: true
+  validates :api_key, presence: true, on: :create
+  validates :refresh_token, presence: true, on: :create
+
+  belongs_to :family
+  has_one_attached :logo
+  has_many :my_bank_accounts, dependent: :destroy
+  has_many :accounts, through: :my_bank_accounts
+
+  scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :ordered, -> { order(created_at: :desc) }
+
+  def credentials_configured?
+    api_key.present? && refresh_token.present?
+  end
+
+  def effective_base_url
+    base_url.presence || "https://api.mybank.com"
+  end
+end
+```
+
+**File:** `app/models/my_bank_account.rb`
+
+The account model stores individual account data from the provider:
+
+```ruby
+class MyBankAccount < ApplicationRecord
+  include CurrencyNormalizable
+
+  belongs_to :my_bank_item
+
+  # Association through account_providers for linking to internal accounts
+  has_one :account_provider, as: :provider, dependent: :destroy
+  has_one :account, through: :account_provider, source: :account
+
+  validates :name, :currency, presence: true
+
+  def upsert_my_bank_snapshot!(account_snapshot)
+    update!(
+      current_balance: account_snapshot[:balance],
+      currency: parse_currency(account_snapshot[:currency]) || "USD",
+      name: account_snapshot[:name],
+      account_id: account_snapshot[:id]&.to_s,
+      account_status: account_snapshot[:status],
+      raw_payload: account_snapshot
+    )
+  end
+end
+```
+
+**File:** `app/models/my_bank_item/provided.rb`
+
+The Provided concern connects the item to its provider SDK:
+
+```ruby
+module MyBankItem::Provided
+  extend ActiveSupport::Concern
+
+  def my_bank_provider
+    return nil unless credentials_configured?
+
+    Provider::MyBank.new(
+      api_key,
+      base_url: effective_base_url,
+      refresh_token: refresh_token
+    )
+  end
+end
+```
+
+### 3. Adapter
 
 **File:** `app/models/provider/my_bank_adapter.rb`
 
@@ -101,7 +250,7 @@ class Provider::MyBankAdapter < Provider::Base
 end
 ```
 
-###3. Panel View
+### 4. Panel View
 
 **File:** `app/views/settings/providers/_my_bank_panel.html.erb`
 
@@ -110,7 +259,7 @@ end
 <%= render_per_family_provider_panel(:my_bank, error_message: @error_message) %>
 ```
 
-### 4. Controller
+### 5. Controller
 
 **File:** `app/controllers/my_bank_items_controller.rb`
 
@@ -126,7 +275,7 @@ class MyBankItemsController < ApplicationController
 end
 ```
 
-### 5. Routes
+### 6. Routes
 
 **File:** `config/routes.rb` (updated)
 
@@ -138,7 +287,7 @@ resources :my_bank_items, only: [:create, :update, :destroy] do
 end
 ```
 
-### 6. Settings Updates
+### 7. Settings Updates
 
 **File:** `app/controllers/settings/providers_controller.rb` (updated)
 - Excludes `my_bank` from global provider configurations

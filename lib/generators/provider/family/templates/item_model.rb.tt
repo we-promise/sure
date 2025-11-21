@@ -1,0 +1,62 @@
+class <%= class_name %>Item < ApplicationRecord
+  include Syncable, Provided
+  include Provider::PerFamilyItem
+
+  enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+
+  # Helper to detect if ActiveRecord Encryption is configured for this app
+  def self.encryption_ready?
+    creds_ready = Rails.application.credentials.active_record_encryption.present?
+    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+    creds_ready || env_ready
+  end
+
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured
+  if encryption_ready?
+<% parsed_fields.select { |f| f[:secret] }.each do |field| -%>
+    encrypts :<%= field[:name] %>, deterministic: true
+<% end -%>
+  end
+
+  validates :name, presence: true
+<% parsed_fields.select { |f| f[:secret] }.each do |field| -%>
+  validates :<%= field[:name] %>, presence: true, on: :create
+<% end -%>
+
+  belongs_to :family
+  has_one_attached :logo
+
+  has_many :<%= file_name %>_accounts, dependent: :destroy
+  has_many :accounts, through: :<%= file_name %>_accounts
+
+  scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :ordered, -> { order(created_at: :desc) }
+  scope :needs_update, -> { where(status: :requires_update) }
+
+  def destroy_later
+    update!(scheduled_for_deletion: true)
+    DestroyJob.perform_later(self)
+  end
+
+  def credentials_configured?
+<% if parsed_fields.select { |f| f[:secret] }.any? -%>
+    <%= parsed_fields.select { |f| f[:secret] }.map { |f| "#{f[:name]}.present?" }.join(" && ") %>
+<% else -%>
+    true
+<% end -%>
+  end
+
+<% parsed_fields.select { |f| f[:default] }.each do |field| -%>
+  def effective_<%= field[:name] %>
+    <%= field[:name] %>.presence || "<%= field[:default] %>"
+  end
+
+<% end -%>
+  # TODO: Implement provider-specific methods
+  # - import_latest_<%= file_name %>_data
+  # - process_accounts
+  # - schedule_account_syncs
+  # - <%= file_name %>_provider (returns Provider::<%= class_name %> instance)
+end
