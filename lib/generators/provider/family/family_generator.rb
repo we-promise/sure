@@ -1,50 +1,51 @@
 require "rails/generators"
 require "rails/generators/active_record"
 
-module Provider
-  module Generators
-    # Generator for creating per-family provider integrations
-    #
-    # Usage:
-    #   rails g provider:family NAME field:type:secret field:type ...
-    #
-    # Examples:
-    #   rails g provider:family lunchflow api_key:text:secret base_url:string
-    #   rails g provider:family my_bank access_token:text:secret refresh_token:text:secret
-    #
-    # Field format:
-    #   name:type[:secret]
-    #   - name: Field name (e.g., api_key)
-    #   - type: Database column type (text, string, integer, boolean)
-    #   - secret: Optional flag indicating this field should be encrypted
-    #
-    # This generates:
-    #   - Migration adding credential columns to provider_items table
-    #   - Updated adapter class with PerFamilyConfigurable
-    #   - Panel view for provider settings
-    #   - Controller with PerFamilyItemController concern
-    #   - Routes
-    class FamilyGenerator < Rails::Generators::NamedBase
-      source_root File.expand_path("templates", __dir__)
+# Generator for creating per-family provider integrations
+#
+# Usage:
+#   rails g provider:family NAME field:type:secret field:type ...
+#
+# Examples:
+#   rails g provider:family lunchflow api_key:text:secret base_url:string
+#   rails g provider:family my_bank access_token:text:secret refresh_token:text:secret
+#
+# Field format:
+#   name:type[:secret]
+#   - name: Field name (e.g., api_key)
+#   - type: Database column type (text, string, integer, boolean)
+#   - secret: Optional flag indicating this field should be encrypted
+#
+# This generates:
+#   - Migration creating complete provider_items and provider_accounts tables
+#   - Models for items, accounts, and provided concern
+#   - Adapter class with PerFamilyConfigurable
+#   - Panel view for provider settings
+#   - Controller with PerFamilyItemController concern
+#   - Routes
+class Provider::FamilyGenerator < Rails::Generators::NamedBase
+  include Rails::Generators::Migration
 
-      argument :fields, type: :array, default: [], banner: "field:type[:secret] field:type[:secret]"
+  source_root File.expand_path("templates", __dir__)
 
-      class_option :skip_migration, type: :boolean, default: false, desc: "Skip generating migration"
-      class_option :skip_routes, type: :boolean, default: false, desc: "Skip adding routes"
-      class_option :skip_view, type: :boolean, default: false, desc: "Skip generating view"
-      class_option :skip_controller, type: :boolean, default: false, desc: "Skip generating controller"
-      class_option :skip_adapter, type: :boolean, default: false, desc: "Skip generating adapter"
+  argument :fields, type: :array, default: [], banner: "field:type[:secret] field:type[:secret]"
 
-      def validate_fields
-        if parsed_fields.empty?
-          say "Warning: No fields specified. You'll need to add them manually later.", :yellow
-        end
+  class_option :skip_migration, type: :boolean, default: false, desc: "Skip generating migration"
+  class_option :skip_routes, type: :boolean, default: false, desc: "Skip adding routes"
+  class_option :skip_view, type: :boolean, default: false, desc: "Skip generating view"
+  class_option :skip_controller, type: :boolean, default: false, desc: "Skip generating controller"
+  class_option :skip_adapter, type: :boolean, default: false, desc: "Skip generating adapter"
 
-        # Validate field types
-        parsed_fields.each do |field|
-          unless %w[text string integer boolean].include?(field[:type])
-            raise Thor::Error, "Invalid field type '#{field[:type]}' for #{field[:name]}. Must be one of: text, string, integer, boolean"
-          end
+  def validate_fields
+    if parsed_fields.empty?
+    say "Warning: No fields specified. You'll need to add them manually later.", :yellow
+  end
+
+  # Validate field types
+  parsed_fields.each do |field|
+  unless %w[text string integer boolean].include?(field[:type])
+  raise Thor::Error, "Invalid field type '#{field[:type]}' for #{field[:name]}. Must be one of: text, string, integer, boolean"
+end
         end
       end
 
@@ -286,7 +287,12 @@ module Provider
         say "  📚 See docs/PER_FAMILY_PROVIDER_GUIDE.md for detailed documentation"
       end
 
-      private
+  # Required for Rails::Generators::Migration
+  def self.next_migration_number(dirname)
+    ActiveRecord::Generators::Base.next_migration_number(dirname)
+  end
+
+  private
 
       def table_name
         "#{file_name}_items"
@@ -335,6 +341,4 @@ module Provider
 
         RUBY
       end
-    end
-  end
 end
