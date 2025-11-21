@@ -1093,10 +1093,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_06_131244) do
     t.jsonb "locked_attributes", default: {}
     t.string "kind", default: "standard", null: false
     t.string "external_id"
-    t.jsonb "extra", default: {}, null: false
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
-    t.index ["extra"], name: "index_transactions_on_extra", using: :gin
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
   end
