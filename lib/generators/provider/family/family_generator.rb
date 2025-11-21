@@ -1,0 +1,287 @@
+require "rails/generators"
+require "rails/generators/active_record"
+
+module Provider
+  module Generators
+    # Generator for creating per-family provider integrations
+    #
+    # Usage:
+    #   rails g provider:family NAME field:type:secret field:type ...
+    #
+    # Examples:
+    #   rails g provider:family lunchflow api_key:text:secret base_url:string
+    #   rails g provider:family my_bank access_token:text:secret refresh_token:text:secret
+    #
+    # Field format:
+    #   name:type[:secret]
+    #   - name: Field name (e.g., api_key)
+    #   - type: Database column type (text, string, integer, boolean)
+    #   - secret: Optional flag indicating this field should be encrypted
+    #
+    # This generates:
+    #   - Migration adding credential columns to provider_items table
+    #   - Updated adapter class with PerFamilyConfigurable
+    #   - Panel view for provider settings
+    #   - Controller with PerFamilyItemController concern
+    #   - Routes
+    class FamilyGenerator < Rails::Generators::NamedBase
+      source_root File.expand_path("templates", __dir__)
+
+      argument :fields, type: :array, default: [], banner: "field:type[:secret] field:type[:secret]"
+
+      class_option :skip_migration, type: :boolean, default: false, desc: "Skip generating migration"
+      class_option :skip_routes, type: :boolean, default: false, desc: "Skip adding routes"
+      class_option :skip_view, type: :boolean, default: false, desc: "Skip generating view"
+      class_option :skip_controller, type: :boolean, default: false, desc: "Skip generating controller"
+      class_option :skip_adapter, type: :boolean, default: false, desc: "Skip generating adapter"
+
+      def validate_fields
+        if parsed_fields.empty?
+          say "Warning: No fields specified. You'll need to add them manually later.", :yellow
+        end
+
+        # Validate field types
+        parsed_fields.each do |field|
+          unless %w[text string integer boolean].include?(field[:type])
+            raise Thor::Error, "Invalid field type '#{field[:type]}' for #{field[:name]}. Must be one of: text, string, integer, boolean"
+          end
+        end
+      end
+
+      def generate_migration
+        return if options[:skip_migration]
+
+        migration_template "migration.rb.tt",
+                           "db/migrate/add_credentials_to_#{table_name}.rb",
+                           migration_version: migration_version
+      end
+
+      def update_or_create_adapter
+        return if options[:skip_adapter]
+
+        adapter_path = "app/models/provider/#{file_name}_adapter.rb"
+
+        if File.exist?(adapter_path)
+          # Update existing adapter
+          insert_into_file adapter_path, after: "class Provider::#{class_name}Adapter < Provider::Base\n" do
+            "  include Provider::PerFamilyConfigurable\n\n"
+          end
+
+          # Add configure block before the last 'end'
+          insert_into_file adapter_path, before: /^end\s*$/ do
+            configure_block_content
+          end
+
+          say "Updated existing adapter: #{adapter_path}", :green
+        else
+          # Create new adapter
+          template "adapter.rb.tt", adapter_path
+          say "Created new adapter: #{adapter_path}", :green
+        end
+      end
+
+      def update_or_create_model
+        model_path = "app/models/#{file_name}_item.rb"
+
+        if File.exist?(model_path)
+          # Check if concern is already included
+          if File.read(model_path).include?("Provider::PerFamilyItem")
+            say "Model already includes Provider::PerFamilyItem: #{model_path}", :skip
+          else
+            # Add concern to existing model
+            insert_into_file model_path, after: "class #{class_name}Item < ApplicationRecord\n" do
+              "  include Provider::PerFamilyItem\n\n"
+            end
+            say "Updated existing model: #{model_path}", :green
+          end
+        else
+          say "Model does not exist: #{model_path}. Please create it manually or use a model generator.", :yellow
+        end
+      end
+
+      def create_panel_view
+        return if options[:skip_view]
+
+        # Create a simple panel that uses the helper
+        template "panel.html.erb.tt",
+                 "app/views/settings/providers/_#{file_name}_panel.html.erb"
+      end
+
+      def create_or_update_controller
+        return if options[:skip_controller]
+
+        controller_path = "app/controllers/#{file_name}_items_controller.rb"
+
+        if File.exist?(controller_path)
+          # Check if concern is already included
+          if File.read(controller_path).include?("Provider::PerFamilyItemController")
+            say "Controller already includes Provider::PerFamilyItemController: #{controller_path}", :skip
+          else
+            # Add concern to existing controller
+            insert_into_file controller_path, after: "class #{class_name}ItemsController < ApplicationController\n" do
+              "  include Provider::PerFamilyItemController\n\n"
+            end
+            say "Updated existing controller: #{controller_path}", :green
+          end
+        else
+          # Create new controller
+          template "controller.rb.tt", controller_path
+          say "Created new controller: #{controller_path}", :green
+        end
+      end
+
+      def add_routes
+        return if options[:skip_routes]
+
+        route_content = <<~RUBY.strip
+          resources :#{file_name}_items, only: [:create, :update, :destroy] do
+            member do
+              post :sync
+            end
+          end
+        RUBY
+
+        # Check if routes already exist
+        routes_file = "config/routes.rb"
+        if File.read(routes_file).include?("resources :#{file_name}_items")
+          say "Routes already exist for :#{file_name}_items", :skip
+        else
+          route route_content
+          say "Added routes for :#{file_name}_items", :green
+        end
+      end
+
+      def update_settings_controller
+        controller_path = "app/controllers/settings/providers_controller.rb"
+        return unless File.exist?(controller_path)
+
+        content = File.read(controller_path)
+
+        # Check if provider is already excluded
+        if content.include?("config.provider_key.to_s.casecmp(\"#{file_name}\").zero?")
+          say "Settings controller already excludes #{file_name}", :skip
+        else
+          # Add to the rejection list in prepare_show_context
+          if content.include?("reject do |config|")
+            # Add to existing reject block
+            insert_into_file controller_path,
+                             after: /reject do \|config\|\n(.*\n)*?.*config.provider_key/ do
+              " || \\\n        config.provider_key.to_s.casecmp(\"#{file_name}\").zero?"
+            end
+          else
+            # Create new reject block
+            gsub_file controller_path,
+                      /@provider_configurations = Provider::ConfigurationRegistry\.all/,
+                      "@provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp(\"#{file_name}\").zero? }"
+          end
+
+          # Add instance variable for items
+          insert_into_file controller_path,
+                           before: "    end\n  end" do
+            "      @#{file_name}_items = Current.family.#{file_name}_items.ordered.select(:id)\n"
+          end
+
+          say "Updated settings controller to exclude #{file_name} from global configs", :green
+        end
+      end
+
+      def update_providers_view
+        return if options[:skip_view]
+
+        view_path = "app/views/settings/providers/show.html.erb"
+        return unless File.exist?(view_path)
+
+        content = File.read(view_path)
+
+        # Check if section already exists
+        if content.include?("#{class_name}")
+          say "Providers view already has #{class_name} section", :skip
+        else
+          # Add section before the last closing div
+          section_content = <<~ERB
+
+            <%= settings_section title: "#{class_name}" do %>
+              <turbo-frame id="#{file_name}-providers-panel">
+                <%= render "settings/providers/#{file_name}_panel" %>
+              </turbo-frame>
+            <% end %>
+          ERB
+
+          insert_into_file view_path, section_content, before: "</div>\n"
+          say "Added #{class_name} section to providers view", :green
+        end
+      end
+
+      def show_summary
+        say "\n" + "=" * 80, :green
+        say "Successfully generated per-family provider: #{class_name}", :green
+        say "=" * 80, :green
+
+        say "\nNext steps:", :yellow
+        say "  1. Run migrations: rails db:migrate"
+        say "  2. Customize the adapter's configure_per_family block if needed"
+        say "  3. Add any custom business logic to #{class_name}Item model"
+        say "  4. Implement the build_provider method in the adapter"
+        say "  5. Test the integration at /settings/providers"
+
+        if parsed_fields.any?
+          say "\nGenerated fields:", :cyan
+          parsed_fields.each do |field|
+            secret_flag = field[:secret] ? " (encrypted)" : ""
+            say "  - #{field[:name]}: #{field[:type]}#{secret_flag}"
+          end
+        end
+      end
+
+      private
+
+      def table_name
+        "#{file_name}_items"
+      end
+
+      def migration_version
+        "[#{Rails::VERSION::MAJOR}.#{Rails::VERSION::MINOR}]"
+      end
+
+      def parsed_fields
+        @parsed_fields ||= fields.map do |field_def|
+          parts = field_def.split(":")
+          {
+            name: parts[0],
+            type: parts[1] || "string",
+            secret: parts[2] == "secret" || parts.include?("secret")
+          }
+        end
+      end
+
+      def configure_block_content
+        return "" if parsed_fields.empty?
+
+        fields_code = parsed_fields.map do |field|
+          field_attrs = [
+            "label: \"#{field[:name].titleize}\"",
+            "type: :#{field[:type]}",
+            ("secret: true" if field[:secret]),
+            ("required: true" if field[:secret]) # Assume secret fields are required
+          ].compact.join(",\n              ")
+
+          "    field :#{field[:name]},\n          #{field_attrs}\n"
+        end.join("\n")
+
+        <<~RUBY
+
+          configure_per_family do
+            description <<~DESC
+              Setup instructions for #{class_name}:
+              1. Visit your #{class_name} dashboard to get your credentials
+              2. Enter your credentials below to enable #{class_name} sync
+            DESC
+
+        #{fields_code}
+          end
+
+        RUBY
+      end
+    end
+  end
+end
