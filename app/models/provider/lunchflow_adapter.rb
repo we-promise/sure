@@ -35,13 +35,30 @@ class Provider::LunchflowAdapter < Provider::Base
   end
 
   # Build a Lunch Flow provider instance with configured credentials
+  # @param family [Family, nil] The family to get credentials for (uses family-specific credentials if provided)
   # @return [Provider::Lunchflow, nil] Returns nil if API key is not configured
-  def self.build_provider
-    api_key = config_value(:api_key)
-    return nil unless api_key.present?
+  def self.build_provider(family: nil)
+    # Try family-specific credentials first if family is provided
+    if family.present?
+      lunchflow_item = family.lunchflow_items.where.not(api_key: nil).first
+      if lunchflow_item&.credentials_configured?
+        return Provider::Lunchflow.new(
+          lunchflow_item.api_key,
+          base_url: lunchflow_item.effective_base_url
+        )
+      end
+    end
 
-    base_url = config_value(:base_url).presence || "https://lunchflow.app/api/v1"
-    Provider::Lunchflow.new(api_key, base_url: base_url)
+    # Fallback to global settings (deprecated)
+    api_key = config_value(:api_key)
+    if api_key.present?
+      Rails.logger.warn("DEPRECATION WARNING: Using global Lunchflow API key. Please configure family-specific credentials.")
+      base_url = config_value(:base_url).presence || "https://lunchflow.app/api/v1"
+      return Provider::Lunchflow.new(api_key, base_url: base_url)
+    end
+
+    # No credentials found
+    nil
   end
 
   # Reload Lunchflow configuration when settings are updated

@@ -170,4 +170,67 @@ namespace :data_migration do
 
     puts "✅  Balance component migration complete."
   end
+
+  desc "Migrate global provider settings to family-specific"
+  # 2025-11-21: Move global Lunchflow API credentials to family-specific lunchflow_items
+  # This improves security and enables proper multi-tenant isolation where each family
+  # can have their own Lunchflow credentials instead of sharing global ones.
+  task migrate_provider_settings_to_family: :environment do
+    puts "==> Migrating global provider settings to family-specific..."
+
+    # Check if global Lunchflow API key exists
+    global_api_key = Setting[:lunchflow_api_key]
+    global_base_url = Setting[:lunchflow_base_url]
+
+    if global_api_key.blank?
+      puts "No global Lunchflow API key found. Nothing to migrate."
+      puts "✅  Migration complete."
+      return
+    end
+
+    puts "Found global Lunchflow API key. Migrating to family-specific settings..."
+
+    families_updated = 0
+    families_with_existing = 0
+    families_with_items = 0
+
+    Family.find_each do |family|
+      # Check if this family has any lunchflow_items
+      has_lunchflow_items = family.lunchflow_items.exists?
+
+      if has_lunchflow_items
+        families_with_items += 1
+
+        # Check if any of the family's lunchflow_items already have credentials
+        has_credentials = family.lunchflow_items.where.not(api_key: nil).exists?
+
+        if has_credentials
+          families_with_existing += 1
+          puts "  Family #{family.id} (#{family.name}): Already has credentials, skipping"
+        else
+          # Assign global credentials to the first lunchflow_item
+          lunchflow_item = family.lunchflow_items.first
+          lunchflow_item.update!(
+            api_key: global_api_key,
+            base_url: global_base_url
+          )
+          families_updated += 1
+          puts "  Family #{family.id} (#{family.name}): Migrated credentials to lunchflow_item #{lunchflow_item.id}"
+        end
+      end
+    end
+
+    puts "\nMigration Summary:"
+    puts "  Families with Lunchflow items: #{families_with_items}"
+    puts "  Families with existing credentials: #{families_with_existing}"
+    puts "  Families updated with global credentials: #{families_updated}"
+
+    if families_updated > 0
+      puts "\n⚠️  Global credentials have been copied to #{families_updated} families."
+      puts "   You can now remove the global settings by running:"
+      puts "   rails runner \"Setting[:lunchflow_api_key] = nil; Setting[:lunchflow_base_url] = nil\""
+    end
+
+    puts "✅  Provider settings migration complete."
+  end
 end

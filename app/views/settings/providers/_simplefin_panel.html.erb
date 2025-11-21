@@ -23,13 +23,13 @@
                        url: simplefin_items_path,
                        scope: :simplefin_item,
                        method: :post,
-                       data: { controller: "auto-submit", action: "keydown.enter->auto-submit#submit blur->auto-submit#submit", turbo: true },
+                       data: { controller: "auto-submit-form", turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :setup_token,
                         label: "Setup Token",
                         placeholder: "Paste SimpleFin setup token and press Enter",
                         type: :password,
-                        data: { auto_submit_target: "input" } %>
+                        data: { auto_submit_form_target: "auto" } %>
   <% end %>
 
   <% if @simplefin_items&.any? %>

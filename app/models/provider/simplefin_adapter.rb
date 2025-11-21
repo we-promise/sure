@@ -7,19 +7,23 @@ class Provider::SimplefinAdapter < Provider::Base
   Provider::Factory.register("SimplefinAccount", self)
 
   # Configuration for SimpleFIN
+  # NOTE: Global setup_token is DEPRECATED. Families should configure their own SimpleFIN connections.
   configure do
     description <<~DESC
-      Setup instructions:
-      1. Visit [SimpleFIN Bridge](https://bridge.simplefin.org/simplefin/create) to get a setup token
-      2. This token is optional and only needed if you want to provide a default setup token for users
+      **DEPRECATED:** Global SimpleFIN setup token configuration is deprecated.
+
+      SimpleFIN connections are now configured per-family for better security and multi-tenancy support.
+      Each family should configure their own SimpleFIN connection with their own setup token.
+
+      This global configuration is maintained for backward compatibility only and will be removed in a future version.
     DESC
 
     field :setup_token,
-          label: "Setup Token",
+          label: "Setup Token (Deprecated)",
           required: false,
           secret: true,
           env_key: "SIMPLEFIN_SETUP_TOKEN",
-          description: "Optional: SimpleFIN setup token from your SimpleFIN Bridge account (one-time use)"
+          description: "DEPRECATED: Global setup token. Use family-specific SimpleFIN connections instead."
   end
 
   def provider_name

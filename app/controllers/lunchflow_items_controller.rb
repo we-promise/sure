@@ -23,7 +23,7 @@ class LunchflowItemsController < ApplicationController
       end
 
       # Fetch from API
-      lunchflow_provider = Provider::LunchflowAdapter.build_provider
+      lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
 
       unless lunchflow_provider.present?
         render json: { success: false, error: "no_api_key", has_accounts: false }
@@ -56,7 +56,7 @@ class LunchflowItemsController < ApplicationController
 
       # If not cached, fetch from API
       if @available_accounts.nil?
-        lunchflow_provider = Provider::LunchflowAdapter.build_provider
+        lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
 
         unless lunchflow_provider.present?
           redirect_to new_account_path, alert: t(".no_api_key")
@@ -102,7 +102,7 @@ class LunchflowItemsController < ApplicationController
     )
 
     # Fetch account details from API
-    lunchflow_provider = Provider::LunchflowAdapter.build_provider
+    lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
     unless lunchflow_provider.present?
       redirect_to new_account_path, alert: t(".no_api_key")
       return
@@ -218,7 +218,7 @@ class LunchflowItemsController < ApplicationController
 
       # If not cached, fetch from API
       if @available_accounts.nil?
-        lunchflow_provider = Provider::LunchflowAdapter.build_provider
+        lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
 
         unless lunchflow_provider.present?
           redirect_to accounts_path, alert: t(".no_api_key")
@@ -283,7 +283,7 @@ class LunchflowItemsController < ApplicationController
     )
 
     # Fetch account details from API
-    lunchflow_provider = Provider::LunchflowAdapter.build_provider
+    lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
     unless lunchflow_provider.present?
       redirect_to accounts_path, alert: t(".no_api_key")
       return
@@ -338,16 +338,34 @@ class LunchflowItemsController < ApplicationController
 
   def create
     @lunchflow_item = Current.family.lunchflow_items.build(lunchflow_params)
-    @lunchflow_item.name = "Lunch Flow Connection"
+    @lunchflow_item.name ||= "Lunchflow Connection"
 
     if @lunchflow_item.save
       # Trigger initial sync to fetch accounts
       @lunchflow_item.sync_later
 
-      redirect_to accounts_path, notice: t(".success")
+      if turbo_frame_request?
+        @lunchflow_items = Current.family.lunchflow_items.ordered
+        render turbo_stream: turbo_stream.replace(
+          "lunchflow-providers-panel",
+          partial: "settings/providers/lunchflow_panel",
+          locals: { lunchflow_items: @lunchflow_items }
+        )
+      else
+        redirect_to accounts_path, notice: t(".success"), status: :see_other
+      end
     else
       @error_message = @lunchflow_item.errors.full_messages.join(", ")
-      render :new, status: :unprocessable_entity
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "lunchflow-providers-panel",
+          partial: "settings/providers/lunchflow_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        render :new, status: :unprocessable_entity
+      end
     end
   end
 
@@ -356,10 +374,28 @@ class LunchflowItemsController < ApplicationController
 
   def update
     if @lunchflow_item.update(lunchflow_params)
-      redirect_to accounts_path, notice: t(".success")
+      if turbo_frame_request?
+        @lunchflow_items = Current.family.lunchflow_items.ordered
+        render turbo_stream: turbo_stream.replace(
+          "lunchflow-providers-panel",
+          partial: "settings/providers/lunchflow_panel",
+          locals: { lunchflow_items: @lunchflow_items }
+        )
+      else
+        redirect_to accounts_path, notice: t(".success"), status: :see_other
+      end
     else
       @error_message = @lunchflow_item.errors.full_messages.join(", ")
-      render :edit, status: :unprocessable_entity
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "lunchflow-providers-panel",
+          partial: "settings/providers/lunchflow_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        render :edit, status: :unprocessable_entity
+      end
     end
   end
 
@@ -385,7 +421,7 @@ class LunchflowItemsController < ApplicationController
     end
 
     def lunchflow_params
-      params.require(:lunchflow_item).permit(:name, :sync_start_date)
+      params.require(:lunchflow_item).permit(:name, :sync_start_date, :api_key, :base_url)
     end
 
     # Sanitize return_to parameter to prevent XSS attacks
