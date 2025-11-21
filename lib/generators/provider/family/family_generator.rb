@@ -155,22 +155,29 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     else
       # Add to the rejection list in prepare_show_context
       if content.include?("reject do |config|")
-        # Add to existing reject block
-        insert_into_file controller_path,
-                         after: /reject do \|config\|\n(.*\n)*?.*config.provider_key/ do
-          " || \\\n        config.provider_key.to_s.casecmp(\"#{file_name}\").zero?"
-        end
+        # Add to existing reject block - find last .zero? and append new condition
+        gsub_file controller_path,
+                  /(config\.provider_key\.to_s\.casecmp\("[^"]+"\)\.zero\?)(\s*$)/,
+                  "\\1 || \\\\\n        config.provider_key.to_s.casecmp(\"#{file_name}\").zero?\\2"
       else
         # Create new reject block
         gsub_file controller_path,
-                  /@provider_configurations = Provider::ConfigurationRegistry\.all/,
+                  /@provider_configurations = Provider::ConfigurationRegistry\.all$/,
                   "@provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp(\"#{file_name}\").zero? }"
       end
 
-      # Add instance variable for items
-      insert_into_file controller_path,
-                       before: "    end\n  end" do
-        "      @#{file_name}_items = Current.family.#{file_name}_items.ordered.select(:id)\n"
+      # Add instance variable for items - find last similar line and add after it
+      if content =~ /@\w+_items = Current\.family\.\w+_items\.ordered\.select\(:id\)/
+        insert_into_file controller_path,
+                         after: /@\w+_items = Current\.family\.\w+_items\.ordered\.select\(:id\)\n/ do
+          "      @#{file_name}_items = Current.family.#{file_name}_items.ordered.select(:id)\n"
+        end
+      else
+        # Fallback: insert before end of prepare_show_context method
+        insert_into_file controller_path,
+                         before: /^    end\n  end\nend/ do
+          "      @#{file_name}_items = Current.family.#{file_name}_items.ordered.select(:id)\n"
+        end
       end
 
       say "Updated settings controller to exclude #{file_name} from global configs", :green
@@ -186,20 +193,21 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     content = File.read(view_path)
 
     # Check if section already exists
-    if content.include?("#{class_name}")
+    if content.include?("\"#{file_name}-providers-panel\"")
       say "Providers view already has #{class_name} section", :skip
     else
-      # Add section before the last closing div
+      # Add section before the last closing div (at end of file)
       section_content = <<~ERB
 
-            <%= settings_section title: "#{class_name}" do %>
-              <turbo-frame id="#{file_name}-providers-panel">
-                <%= render "settings/providers/#{file_name}_panel" %>
-              </turbo-frame>
-            <% end %>
-          ERB
+  <%= settings_section title: "#{class_name}" do %>
+    <turbo-frame id="#{file_name}-providers-panel">
+      <%= render "settings/providers/#{file_name}_panel" %>
+    </turbo-frame>
+  <% end %>
+      ERB
 
-      insert_into_file view_path, section_content, before: "</div>\n"
+      # Insert before the final </div> at the end of file
+      insert_into_file view_path, section_content, before: /^<\/div>\s*\z/
       say "Added #{class_name} section to providers view", :green
     end
   end
