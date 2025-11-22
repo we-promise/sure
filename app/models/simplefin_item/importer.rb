@@ -1,3 +1,4 @@
+require "set"
 class SimplefinItem::Importer
   class RateLimitedError < StandardError; end
   attr_reader :simplefin_item, :simplefin_provider, :sync
@@ -54,13 +55,8 @@ class SimplefinItem::Importer
         import_account_minimal_and_balance(account_data)
       rescue => e
         stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-        stats["errors"] ||= []
-        stats["total_errors"] = stats.fetch("total_errors", 0) + 1
         cat = classify_error(e)
-        buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
-        buckets[cat] = buckets.fetch(cat, 0) + 1
-        stats["errors"] << { account_id: account_data[:id], name: account_data[:name], message: e.message.to_s, category: cat }
-        stats["errors"] = stats["errors"].last(5)
+        register_error(message: e.message, category: cat, account_id: account_data[:id], name: account_data[:name])
       ensure
         persist_stats!
       end
@@ -90,15 +86,11 @@ class SimplefinItem::Importer
       rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
         # Surface a friendly duplicate/validation signal in sync stats and continue
         stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-        stats["errors"] ||= []
-        stats["total_errors"] = stats.fetch("total_errors", 0) + 1
-        cat = "other"
         msg = e.message.to_s
         if msg.downcase.include?("already been taken") || msg.downcase.include?("unique")
           msg = "Duplicate upstream account detected for SimpleFin (account_id=#{account_id}). Try relinking to an existing manual account."
         end
-        stats["errors"] << { account_id: account_id, name: account_data[:name], message: msg, category: cat }
-        stats["errors"] = stats["errors"].last(5)
+        register_error(message: msg, category: "other", account_id: account_id, name: account_data[:name])
         persist_stats!
         return
       end
@@ -115,6 +107,49 @@ class SimplefinItem::Importer
     end
     def stats
       @stats ||= {}
+    end
+
+    # Track seen error fingerprints during a single importer run to avoid double counting
+    def seen_errors
+      @seen_errors ||= Set.new
+    end
+
+    # Register an error into stats with de-duplication and bucketing
+    def register_error(message:, category:, account_id: nil, name: nil)
+      msg = message.to_s.strip
+      cat = (category.presence || "other").to_s
+      fp = [ account_id.to_s.presence, cat, msg ].compact.join("|")
+      first_time = !seen_errors.include?(fp)
+      seen_errors.add(fp)
+
+      if first_time
+        Rails.logger.warn(
+          "SimpleFin sync error (unique this run): category=#{cat} account_id=#{account_id.inspect} name=#{name.inspect} msg=#{msg}"
+        )
+        # Emit an instrumentation event for observability dashboards
+        ActiveSupport::Notifications.instrument(
+          "simplefin.error",
+          item_id: simplefin_item.id,
+          account_id: account_id,
+          account_name: name,
+          category: cat,
+          message: msg
+        )
+      else
+        # Keep logs tame; don't spam on repeats in the same run
+      end
+
+      stats["errors"] ||= []
+      buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
+      if first_time
+        stats["total_errors"] = stats.fetch("total_errors", 0) + 1
+        buckets[cat] = buckets.fetch(cat, 0) + 1
+      end
+
+      # Maintain a small rolling sample (not de-duped so users can see most recent context)
+      stats["errors"] << { account_id: account_id, name: name, message: msg, category: cat }
+      stats["errors"] = stats["errors"].last(5)
+      persist_stats!
     end
 
     def persist_stats!
@@ -196,21 +231,9 @@ class SimplefinItem::Importer
           rescue => e
             stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
             # Collect lightweight error info for UI stats
-            stats["errors"] ||= []
-            stats["total_errors"] = stats.fetch("total_errors", 0) + 1
             cat = classify_error(e)
-            buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
-            buckets[cat] = buckets.fetch(cat, 0) + 1
             begin
-              err_item = {
-                account_id: account_data[:id],
-                name: account_data[:name],
-                message: e.message.to_s,
-                category: cat
-              }
-              stats["errors"] << err_item
-              # Keep only a small sample for UI (avoid blowing up sync_stats)
-              stats["errors"] = stats["errors"].last(5)
+              register_error(message: e.message.to_s, category: cat, account_id: account_data[:id], name: account_data[:name])
             rescue
               # no-op if account_data is missing keys
             end
@@ -255,19 +278,9 @@ class SimplefinItem::Importer
           import_account(account_data)
         rescue => e
           stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-          stats["errors"] ||= []
-          stats["total_errors"] = stats.fetch("total_errors", 0) + 1
           cat = classify_error(e)
-          buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
-          buckets[cat] = buckets.fetch(cat, 0) + 1
           begin
-            stats["errors"] << {
-              account_id: account_data[:id],
-              name: account_data[:name],
-              message: e.message.to_s,
-              category: cat
-            }
-            stats["errors"] = stats["errors"].last(5)
+            register_error(message: e.message.to_s, category: cat, account_id: account_data[:id], name: account_data[:name])
           rescue
             # no-op if account_data is missing keys
           end
@@ -308,19 +321,9 @@ class SimplefinItem::Importer
             import_account(account_data)
           rescue => e
             stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-            stats["errors"] ||= []
-            stats["total_errors"] = stats.fetch("total_errors", 0) + 1
             cat = classify_error(e)
-            buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
-            buckets[cat] = buckets.fetch(cat, 0) + 1
             begin
-              stats["errors"] << {
-                account_id: account_data[:id],
-                name: account_data[:name],
-                message: e.message.to_s,
-                category: cat
-              }
-              stats["errors"] = stats["errors"].last(5)
+              register_error(message: e.message.to_s, category: cat, account_id: account_data[:id], name: account_data[:name])
             rescue
               # no-op if account_data is missing keys
             end
@@ -464,15 +467,11 @@ class SimplefinItem::Importer
       rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
         # Treat duplicates/validation failures as partial success: count and surface friendly error, then continue
         stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-        stats["errors"] ||= []
-        stats["total_errors"] = stats.fetch("total_errors", 0) + 1
-        cat = "other"
         msg = e.message.to_s
         if msg.downcase.include?("already been taken") || msg.downcase.include?("unique")
           msg = "Duplicate upstream account detected for SimpleFin (account_id=#{account_id}). Try relinking to an existing manual account."
         end
-        stats["errors"] << { account_id: account_id, name: account_data[:name], message: msg, category: cat }
-        stats["errors"] = stats["errors"].last(5)
+        register_error(message: msg, category: "other", account_id: account_id, name: account_data[:name])
         persist_stats!
         nil
       end
@@ -498,11 +497,23 @@ class SimplefinItem::Importer
         end
       end
 
-      simplefin_item.update!(status: :requires_update) if needs_update
+      if needs_update
+        Rails.logger.warn("SimpleFin: marking item ##{simplefin_item.id} requires_update due to auth-related provider errors")
+        simplefin_item.update!(status: :requires_update)
+        ActiveSupport::Notifications.instrument(
+          "simplefin.item_requires_update",
+          item_id: simplefin_item.id,
+          reason: "provider_errors_partial",
+          count: arr.size
+        )
+      end
 
-      stats["errors"] ||= []
-      stats["total_errors"] = stats.fetch("total_errors", 0) + arr.size
-      buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
+      Rails.logger.info("SimpleFin: recording #{arr.size} non-fatal provider error(s) with partial data present")
+      ActiveSupport::Notifications.instrument(
+        "simplefin.provider_errors",
+        item_id: simplefin_item.id,
+        count: arr.size
+      )
 
       arr.each do |error|
         msg = if error.is_a?(String)
@@ -520,14 +531,8 @@ class SimplefinItem::Importer
         else
           "other"
         end
-        buckets[category] = buckets.fetch(category, 0) + 1
-        stats["errors"] << { message: msg, category: category }
+        register_error(message: msg, category: category)
       end
-
-      # Keep error sample small for UI
-      stats["errors"] = stats["errors"].last(5)
-
-      persist_stats!
     end
 
     def handle_errors(errors)
@@ -544,17 +549,31 @@ class SimplefinItem::Importer
       end
 
       if needs_update
+        Rails.logger.warn("SimpleFin: marking item ##{simplefin_item.id} requires_update due to fatal auth error(s): #{error_messages}")
         simplefin_item.update!(status: :requires_update)
       end
 
+      down = error_messages.downcase
       # Detect and surface rate-limit specifically with a friendlier exception
-      if error_messages.downcase.include?("make fewer requests") ||
-         error_messages.downcase.include?("only refreshed once every 24 hours") ||
-         error_messages.downcase.include?("rate limit")
+      if down.include?("make fewer requests") ||
+         down.include?("only refreshed once every 24 hours") ||
+         down.include?("rate limit")
+        Rails.logger.info("SimpleFin: raising RateLimitedError for item ##{simplefin_item.id}: #{error_messages}")
+        ActiveSupport::Notifications.instrument(
+          "simplefin.rate_limited",
+          item_id: simplefin_item.id,
+          message: error_messages
+        )
         raise RateLimitedError, "SimpleFin rate limit: data refreshes at most once every 24 hours. Try again later."
       end
 
       # Fall back to generic SimpleFin error classified as :api_error
+      Rails.logger.error("SimpleFin fatal API error for item ##{simplefin_item.id}: #{error_messages}")
+      ActiveSupport::Notifications.instrument(
+        "simplefin.fatal_error",
+        item_id: simplefin_item.id,
+        message: error_messages
+      )
       raise Provider::Simplefin::SimplefinError.new(
         "SimpleFin API errors: #{error_messages}",
         :api_error

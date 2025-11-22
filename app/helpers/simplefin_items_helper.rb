@@ -18,11 +18,15 @@ module SimplefinItemsHelper
     total_errors = stats["total_errors"].to_i
     return nil if total_errors.zero?
 
-    sample = Array(stats["errors"]).map do |e|
+    # Build a small, de-duplicated sample of messages with counts
+    grouped = Array(stats["errors"]).map { |e|
       name = (e[:name] || e["name"]).to_s
       msg  = (e[:message] || e["message"]).to_s
-      name.present? ? "#{name}: #{msg}" : msg
-    end.compact.first(2).join(" • ")
+      text = name.present? ? "#{name}: #{msg}" : msg
+      text.strip
+    }.reject(&:blank?).tally
+
+    sample = grouped.first(2).map { |text, count| count > 1 ? "#{text} (×#{count})" : text }.join(" • ")
 
     buckets = stats["error_buckets"] || {}
     bucket_text = if buckets.present?
