@@ -26,7 +26,7 @@
     # - If family has an item WITH credentials, use it (for updates)
     # - If family has an item WITHOUT credentials, use it (to add credentials)
     # - If family has no items at all, create a new one
-    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunchflow Connection")
+    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunch Flow Connection")
     is_new_record = lunchflow_item.new_record?
   %>
 

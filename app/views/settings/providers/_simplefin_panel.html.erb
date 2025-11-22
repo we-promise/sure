@@ -2,14 +2,14 @@
   <div class="prose prose-sm text-secondary">
     <p class="text-primary font-medium">Setup instructions:</p>
     <ol>
-      <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFin Bridge</a> to get your one-time setup token</li>
-      <li>Paste the token below and click the Save button to enable SimpleFin bank data sync</li>
+      <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFIN Bridge</a> to get your one-time setup token</li>
+      <li>Paste the token below and click the Save button to enable SimpleFIN bank data sync</li>
       <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
     </ol>
 
     <p class="text-primary font-medium">Field descriptions:</p>
     <ul>
-      <li><strong>Setup Token:</strong> Your SimpleFin one-time setup token from SimpleFin Bridge (consumed on first use)</li>
+      <li><strong>Setup Token:</strong> Your SimpleFIN one-time setup token from SimpleFIN Bridge (consumed on first use)</li>
     </ul>
   </div>
 
@@ -27,7 +27,7 @@
                        class: "space-y-3" do |form| %>
     <%= form.text_field :setup_token,
                         label: "Setup Token",
-                        placeholder: "Paste SimpleFin setup token",
+                        placeholder: "Paste SimpleFIN setup token",
                         type: :password %>
 
     <div class="flex justify-end">
@@ -42,6 +42,6 @@
       <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
     </div>
   <% else %>
-    <div class="text-sm text-secondary">No SimpleFin connections yet.</div>
+    <div class="text-sm text-secondary">No SimpleFIN connections yet.</div>
   <% end %>
 </div>

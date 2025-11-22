@@ -66,7 +66,7 @@ class LunchflowItemsController < ApplicationController
           # Redirect for regular requests
           redirect_to settings_providers_path,
                      alert: t(".no_credentials_configured",
-                            default: "Please configure your Lunch flow API key first in Provider Settings.")
+                            default: "Please configure your Lunch Flow API key first in Provider Settings.")
         end
         return
       end
@@ -82,7 +82,7 @@ class LunchflowItemsController < ApplicationController
 
         unless lunchflow_provider.present?
           redirect_to settings_providers_path, alert: t(".no_api_key",
-                                                        default: "Lunch flow API key not found. Please configure it in Provider Settings.")
+                                                        default: "Lunch Flow API key not found. Please configure it in Provider Settings.")
           return
         end
 
@@ -261,7 +261,7 @@ class LunchflowItemsController < ApplicationController
         # Redirect for regular requests
         redirect_to settings_providers_path,
                    alert: t(".no_credentials_configured",
-                          default: "Please configure your Lunch flow API key first in Provider Settings.")
+                          default: "Please configure your Lunch Flow API key first in Provider Settings.")
       end
       return
     end
@@ -278,7 +278,7 @@ class LunchflowItemsController < ApplicationController
 
         unless lunchflow_provider.present?
           redirect_to settings_providers_path, alert: t(".no_api_key",
-                                                        default: "Lunch flow API key not found. Please configure it in Provider Settings.")
+                                                        default: "Lunch Flow API key not found. Please configure it in Provider Settings.")
           return
         end
 
@@ -405,7 +405,7 @@ class LunchflowItemsController < ApplicationController
 
   def create
     @lunchflow_item = Current.family.lunchflow_items.build(lunchflow_params)
-    @lunchflow_item.name ||= "Lunchflow Connection"
+    @lunchflow_item.name ||= "Lunch Flow Connection"
 
     if @lunchflow_item.save
       # Trigger initial sync to fetch accounts
