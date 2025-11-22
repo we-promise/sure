@@ -1,0 +1,23 @@
+---
+ro:
+  tags:
+    create:
+      created: Etichetă creată
+      error: 'Eroare la crearea etichetei: %{error}'
+    destroy:
+      deleted: Etichetă ștearsă
+    edit:
+      edit: Editează eticheta
+    form:
+      placeholder: Numele etichetei
+    index:
+      empty: Nu există etichete încă
+      new: Etichetă nouă
+      tags: Etichete
+    new:
+      new: Etichetă nouă
+    tag:
+      delete: Șterge
+      edit: Editează
+    update:
+      updated: Etichetă actualizată

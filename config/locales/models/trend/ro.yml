@@ -1,0 +1,12 @@
+ro:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: trebuie să fie de același tip ca cel anterior
+              must_be_of_type_money_numeric_or_nil: trebuie să fie de tip Monedă, Numeric sau nil
+            previous:
+              must_be_of_the_same_type_as_current: trebuie să fie de același tip ca cel curent
+              must_be_of_type_money_numeric_or_nil: trebuie să fie de tip Monedă, Numeric sau nil

@@ -1,0 +1,4 @@
+---
+ro:
+  subscriptions:
+    self_hosted_alert: "%{product_name} nu este disponibil în modul self-hosted."

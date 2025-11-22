@@ -1,0 +1,78 @@
+---
+ro:
+  import:
+    cleans:
+      show:
+        description: Editează datele tale în tabelul de mai jos. Celulele roșii sunt invalide.
+        errors_notice: Ai erori în datele tale. Trece cu mouse-ul peste eroare pentru a vedea detalii.
+        errors_notice_mobile: Ai erori în datele tale. Atinge tooltip-ul erorii pentru a vedea detalii.
+        title: Curăță-ți datele
+    configurations:
+      mint_import:
+        date_format_label: Format dată
+      show:
+        description: Selectează coloanele care corespund fiecărui câmp din CSV-ul tău.
+        title: Configurează importul
+      trade_import:
+        date_format_label: Format dată
+      transaction_import:
+        date_format_label: Format dată
+    confirms:
+      mappings:
+        create_account: Creează cont
+        csv_mapping_label: "%{mapping} în CSV"
+        sure_mapping_label: "%{mapping} în %{product_name}"
+        no_accounts: Nu ai încă niciun cont. Te rugăm să creezi un cont pe care să-l putem folosi pentru rândurile (neasignate) din CSV-ul tău sau să te întorci la pasul de Curățare și să furnizezi un nume de cont pe care să-l putem folosi.
+        rows_label: Rânduri
+        unassigned_account: Trebuie să creezi un cont nou pentru rândurile neasignate?
+      show:
+        account_mapping_description: Asignează toate conturile din fișierul tău importat conturilor existente din Maybe. Poți adăuga și conturi noi sau le poți lăsa necategorizate.
+        account_mapping_title: Asignează-ți conturile
+        account_type_mapping_description: Asignează toate tipurile de cont din fișierul tău importat celor din Maybe.
+        account_type_mapping_title: Asignează-ți tipurile de cont
+        category_mapping_description: Asignează toate categoriile din fișierul tău importat categoriilor existente din Maybe. Poți adăuga și categorii noi sau le poți lăsa necategorizate.
+        category_mapping_title: Asignează-ți categoriile
+        tag_mapping_description: Asignează toate etichetele din fișierul tău importat etichetelor existente din Maybe. Poți adăuga și etichete noi sau le poți lăsa necategorizate.
+        tag_mapping_title: Asignează-ți etichetele
+    uploads:
+      show:
+        description: Lipește sau încarcă fișierul tău CSV mai jos. Te rugăm să revizuiești instrucțiunile din tabelul de mai jos înainte de a începe.
+        instructions_1: Mai jos este un exemplu de CSV cu coloane disponibile pentru import.
+        instructions_2: CSV-ul tău trebuie să aibă un rând de antet.
+        instructions_3: Poți denumi coloanele cum dorești. Le vei mapa într-un pas ulterior.
+        instructions_4: Coloanele marcate cu un asterisc (*) sunt date obligatorii.
+        instructions_5: Fără virgule, fără simboluri monetare și fără paranteze în numere.
+        title: Importă-ți datele
+  imports:
+    empty:
+      message: Nu există încă importuri.
+      new: Import nou
+    import:
+      complete: Finalizat
+      delete: Șterge
+      failed: Eșuat
+      in_progress: În curs
+      label: "%{type}: %{datetime}"
+      revert_failed: Anulare eșuată
+      reverting: Se anulează
+      uploading: Se procesează rândurile
+      view: Vezi
+    index:
+      imports: Importuri
+      new: Import nou
+      title: Import/Export
+      exports: Exporturi
+      new_export: Export nou
+      no_exports: Nu există încă exporturi.
+    new:
+      description: Poți importa manual diverse tipuri de date prin CSV sau poți folosi unul dintre șabloanele noastre de import, cum ar fi Mint.
+      import_accounts: Importă conturi
+      import_mint: Importă din Mint
+      import_portfolio: Importă investiții
+      import_transactions: Importă tranzacții
+      resume: Reia %{type}
+      sources: Surse
+      title: Import CSV nou
+    ready:
+      description: Iată un rezumat al elementelor noi care vor fi adăugate contului tău odată ce vei publica acest import.
+      title: Confirmă datele importate

@@ -1,0 +1,13 @@
+---
+ro:
+  password_resets:
+    edit:
+      title: Resetează parola
+    new:
+      requested: Te rugăm să-ți verifici emailul pentru un link de resetare a parolei.
+      submit: Resetează parola
+      title: Resetează parola
+      back: Înapoi
+    update:
+      invalid_token: Token invalid.
+      success: Parola ta a fost resetată.

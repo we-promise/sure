@@ -1,0 +1,15 @@
+---
+ro:
+  impersonation_sessions:
+    approve:
+      success: Solicitare aprobată
+    complete:
+      success: Sesiune finalizată
+    create:
+      success: Solicitare trimisă utilizatorului. Se așteaptă aprobarea.
+    join:
+      success: Sesiune alăturată
+    leave:
+      success: Sesiune părăsită
+    reject:
+      success: Solicitare respinsă

@@ -1,0 +1,7 @@
+---
+ro:
+  family_exports:
+    list:
+      in_progress: În curs de desfășurare
+      complete: Finalizat
+      failed: Eșuat

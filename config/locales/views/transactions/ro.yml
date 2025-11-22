@@ -1,0 +1,82 @@
+---
+ro:
+  transactions:
+    form:
+      account: Cont
+      account_prompt: Selectează un cont
+      amount: Sumă
+      category: Categorie
+      category_prompt: Selectează o categorie
+      date: Dată
+      description: Descriere
+      description_placeholder: Descrie tranzacția
+      expense: Cheltuială
+      income: Venit
+      none: (niciunul)
+      note_label: Notițe
+      note_placeholder: Introdu o notiță
+      submit: Adaugă tranzacție
+      tags_label: Etichete
+      transfer: Transfer
+    new:
+      new_transaction: Tranzacție nouă
+    show:
+      account_label: Cont
+      amount: Sumă
+      category_label: Categorie
+      date_label: Dată
+      delete: Șterge
+      delete_subtitle: Aceasta șterge permanent tranzacția, afectează soldurile tale istorice și nu poate fi anulată.
+      delete_title: Șterge tranzacția
+      details: Detalii
+      merchant_label: Comerciant
+      name_label: Nume
+      nature: Tip
+      none: "(niciunul)"
+      note_label: Notițe
+      note_placeholder: Introdu o notiță
+      overview: Prezentare generală
+      settings: Setări
+      tags_label: Etichete
+      uncategorized: "(necategorizat)"
+    header:
+      edit_categories: Editează categorii
+      edit_imports: Editează importuri
+      edit_merchants: Editează comercianți
+      edit_tags: Editează etichete
+      import: Importă
+    index:
+      transaction: tranzacție
+      transactions: tranzacții
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Egal cu
+          greater_than: Mai mare decât
+          less_than: Mai mic decât
+          placeholder: '0'
+        badge:
+          expense: Cheltuială
+          income: Venit
+          on_or_after: pe sau după %{date}
+          on_or_before: pe sau înainte de %{date}
+          transfer: Transfer
+        type_filter:
+          expense: Cheltuială
+          income: Venit
+          transfer: Transfer
+      menu:
+        account_filter: Cont
+        amount_filter: Sumă
+        apply: Aplică
+        cancel: Anulează
+        category_filter: Categorie
+        clear_filters: Șterge filtrele
+        date_filter: Dată
+        merchant_filter: Comerciant
+        tag_filter: Etichetă
+        type_filter: Tip
+      search:
+        equal_to: egal cu
+        greater_than: mai mare decât
+        less_than: mai mic decât

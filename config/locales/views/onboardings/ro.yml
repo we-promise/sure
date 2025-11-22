@@ -1,0 +1,27 @@
+---
+ro:
+  onboardings:
+    header:
+      sign_out: Deconectare
+    preferences:
+      currency: Monedă
+      date_format: Format dată
+      example: Cont exemplu
+      locale: Limbă
+      preview: Previzualizează cum sunt afișate datele în funcție de preferințe.
+      submit: Finalizează
+      subtitle: Să configurăm preferințele tale.
+      title: Configurează-ți preferințele
+    profile:
+      country: Țară
+      first_name: Prenume
+      household_name: Numele gospodăriei
+      last_name: Nume de familie
+      profile_image: Imagine de profil
+      submit: Continuă
+      subtitle: Să-ți completăm profilul.
+      title: Să configurăm elementele de bază
+    show:
+      message: Suntem încântați că ești aici. În pasul următor îți vom pune câteva întrebări pentru a-ți completa profilul și apoi te vom pregăti.
+      setup: Configurează contul
+      title: Fă cunoștință cu %{product_name}

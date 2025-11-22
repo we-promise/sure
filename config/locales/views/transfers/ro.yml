@@ -1,0 +1,30 @@
+---
+ro:
+  transfers:
+    create:
+      success: Transfer creat
+    destroy:
+      success: Transfer eliminat
+    form:
+      amount: Sumă
+      date: Dată
+      expense: Cheltuială
+      from: De la
+      income: Venit
+      select_account: Selectează cont
+      submit: Creează transfer
+      to: Către
+      transfer: Transfer
+    new:
+      title: Transfer nou
+    show:
+      delete: Elimină transfer
+      delete_subtitle: Aceasta elimină transferul. Nu va șterge tranzacțiile subiacente.
+      delete_title: Elimini transferul?
+      details: Detalii
+      note_label: Notițe
+      note_placeholder: Adaugă o notiță la acest transfer
+      overview: Prezentare generală
+      settings: Setări
+    update:
+      success: Transfer actualizat

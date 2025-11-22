@@ -1,0 +1,10 @@
+ro:
+  address:
+    attributes:
+      country: Țară
+      line1: Adresă rândul 1
+      line2: Adresă rândul 2
+      locality: Localitate
+      postal_code: Cod poștal
+      region: Regiune
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

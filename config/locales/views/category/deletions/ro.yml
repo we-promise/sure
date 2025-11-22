@@ -1,0 +1,13 @@
+---
+ro:
+  category:
+    deletions:
+      create:
+        success: Categoria de tranzacții a fost ștearsă cu succes
+      new:
+        category: Categorie
+        delete_and_leave_uncategorized: Șterge "%{category_name}" și lasă necategorizat
+        delete_and_recategorize: Șterge "%{category_name}" și atribuie o nouă categorie
+        delete_category: Ștergi categoria?
+        explanation: Prin ștergerea acestei categorii, fiecare tranzacție care are categoria "%{category_name}" va fi necategorizată. În loc să le lași necategorizate, poți atribui și o nouă categorie mai jos.
+        replacement_category_prompt: Selectează categoria

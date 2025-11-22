@@ -1,0 +1,31 @@
+---
+ro:
+  pages:
+    changelog:
+      title: Ce e nou
+    dashboard:
+      welcome: "Bun venit, %{name}"
+      subtitle: "Iată ce se întâmplă cu finanțele tale"
+      new: "Nou"
+      net_worth_chart:
+        data_not_available: Date indisponibile pentru perioada selectată
+        title: Avere netă
+      no_account_empty_state:
+        new_account: Cont nou
+        no_account_subtitle: Deoarece nu au fost adăugate conturi, nu există date de afișat. Adaugă primele tale conturi pentru a începe să vezi datele din tabloul de bord.
+        no_account_title: Niciun cont încă
+      balance_sheet:
+        no_items: "Niciun %{name} încă"
+        add_accounts: "Adaugă conturile tale de %{name} pentru a vedea o defalcare completă"
+      cashflow_sankey:
+        title: "Flux de numerar"
+        no_data_title: "Nu există date despre fluxul de numerar pentru această perioadă"
+        no_data_description: "Adaugă tranzacții pentru a afișa datele despre fluxul de numerar sau extinde perioada de timp"
+        add_transaction: "Adaugă tranzacție"
+      no_accounts:
+        title: "Niciun cont încă"
+        description: "Adaugă conturi pentru a afișa datele despre averea netă"
+        add_account: "Adaugă cont"
+      outflows_donut:
+        title: "Ieșiri"
+        total_outflows: "Total ieșiri"

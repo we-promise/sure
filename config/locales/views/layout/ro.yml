@@ -1,0 +1,13 @@
+---
+ro:
+  layouts:
+    auth:
+      existing_account: Ai deja un cont?
+      no_account: Ești nou pe %{product_name}?
+      sign_in: Conectează-te
+      sign_up: Creează cont
+      your_account: Contul tău
+    shared:
+      footer:
+        privacy_policy: Politica de confidențialitate
+        terms_of_service: Termeni și condiții

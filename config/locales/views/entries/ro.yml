@@ -1,0 +1,14 @@
+---
+ro:
+  entries:
+    create:
+      success: Înregistrare creată
+    destroy:
+      success: Înregistrare ștearsă
+    empty:
+      description: Încearcă să adaugi o înregistrare, să editezi filtrele sau să rafinezi căutarea
+      title: Nicio înregistrare găsită
+    loading:
+      loading: Se încarcă înregistrările...
+    update:
+      success: Înregistrare actualizată

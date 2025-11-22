@@ -1,0 +1,37 @@
+---
+ro:
+  holdings:
+    cash:
+      brokerage_cash: Numerar de brokeraj
+    destroy:
+      success: Deținerea a fost ștearsă
+    holding:
+      per_share: per acțiune
+      shares: "%{qty} acțiuni"
+    index:
+      average_cost: Cost mediu
+      holdings: Dețineri
+      name: Nume
+      new_holding: Tranzacție nouă
+      no_holdings: Nu există dețineri de afișat.
+      return: Randament total
+      weight: Pondere
+    missing_price_tooltip:
+      description: Această investiție are valori lipsă și nu am putut calcula
+        randamentele sau valoarea sa.
+      missing_data: Date lipsă
+    show:
+      avg_cost_label: Cost mediu
+      current_market_price_label: Preț curent de piață
+      delete: Șterge
+      delete_subtitle: Aceasta va șterge deținerea și toate tranzacțiile asociate
+        din acest cont. Această acțiune nu poate fi anulată.
+      delete_title: Șterge deținerea
+      history: Istoric
+      overview: Prezentare generală
+      portfolio_weight_label: Ponderea portofoliului
+      settings: Setări
+      ticker_label: Simbol bursier
+      trade_history_entry: "%{qty} acțiuni din %{security} la %{price}"
+      total_return_label: Randament total
+      unknown: Necunoscut

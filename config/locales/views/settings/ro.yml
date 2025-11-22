@@ -1,0 +1,124 @@
+---
+ro:
+  settings:
+    ai_prompts:
+      show:
+        page_title: Prompturi AI
+        openai_label: OpenAI
+        disable_ai: Dezactivează Asistentul AI
+        prompt_instructions: Instrucțiuni pentru prompturi
+        main_system_prompt:
+          title: Promptul principal de sistem
+          subtitle: Instrucțiuni de bază care definesc modul în care asistentul AI se comportă în toate conversațiile de chat
+        transaction_categorizer:
+          title: Categorizator de tranzacții
+          subtitle: AI categorizează automat tranzacțiile tale pe baza categoriilor definite
+        merchant_detector:
+          title: Detector de comercianți
+          subtitle: AI identifică și îmbogățește datele tranzacțiilor cu informații despre comercianți
+    billings:
+      show:
+        page_title: Facturare
+        subscription_subtitle: Actualizează-ți abonamentul și detaliile de facturare
+        subscription_title: Gestionează abonamentul
+    preferences:
+      show:
+        country: Țară
+        currency: Monedă
+        date_format: Format dată
+        general_subtitle: Configurează-ți preferințele
+        general_title: General
+        default_period: Perioadă implicită
+        default_account_order: Ordine implicită conturi
+        language: Limbă
+        page_title: Preferințe
+        theme_dark: Întunecat
+        theme_light: Luminos
+        theme_subtitle: Alege o temă preferată pentru aplicație
+        theme_system: Sistem
+        theme_title: Temă
+        timezone: Fus orar
+    profiles:
+      destroy:
+        cannot_remove_self: Nu te poți elimina singur din cont.
+        member_removal_failed: A apărut o problemă la eliminarea membrului.
+        member_removed: Membrul a fost eliminat cu succes.
+        not_authorized: Nu ești autorizat să elimini membri.
+      show:
+        confirm_delete:
+          body: Ești sigur că vrei să ștergi definitiv contul tău? Această acțiune
+            este ireversibilă.
+          title: Ștergi contul?
+        confirm_reset:
+          body: Ești sigur că vrei să-ți resetezi contul? Aceasta va șterge toate conturile, categoriile, comercianții, etichetele și alte date. Această acțiune nu poate fi anulată.
+          title: Resetezi contul?
+        confirm_reset_with_sample_data:
+          body: Ești sigur că vrei să-ți resetezi contul și să încarci date eșantion? Aceasta va șterge datele existente și le va înlocui cu date demo, astfel încât să poți explora Sure în siguranță.
+          title: Resetezi contul și încarci date eșantion?
+        confirm_remove_invitation:
+          body: Ești sigur că vrei să anulezi invitația pentru %{email}?
+          title: Anulează invitația
+        confirm_remove_member:
+          body: Ești sigur că vrei să elimini %{name} din contul tău?
+          title: Elimină membrul
+        danger_zone_title: Zonă de pericol
+        delete_account: Șterge contul
+        delete_account_warning: Ștergerea contului tău va elimina definitiv toate
+          datele tale și nu poate fi anulată.
+        reset_account: Resetează contul
+        reset_account_warning: Resetarea contului tău va șterge toate conturile, categoriile, comercianții, etichetele și alte date, dar îți va păstra contul de utilizator intact.
+        reset_account_with_sample_data: Resetează și preîncarcă
+        reset_account_with_sample_data_warning: Șterge toate datele existente și apoi încarcă date eșantion noi, astfel încât să poți explora într-un mediu pre-completat.
+        email: Email
+        first_name: Prenume
+        household_form_input_placeholder: Introdu numele gospodăriei
+        household_form_label: Numele gospodăriei
+        household_subtitle: Invită membri ai familiei, parteneri și alte persoane. Invitații
+          se pot conecta la gospodăria ta și pot accesa conturile tale partajate.
+        household_title: Gospodărie
+        invitation_link: Link de invitație
+        invite_member: Adaugă membru
+        last_name: Nume de familie
+        page_title: Informații profil
+        pending: În așteptare
+        profile_subtitle: Personalizează-ți aspectul pe %{product}
+        profile_title: Personal
+        remove_invitation: Anulează invitația
+        remove_member: Elimină membrul
+        save: Salvează
+    securities:
+      show:
+        page_title: Securitate
+    settings_nav:
+      accounts_label: Conturi
+      advanced_section_title: Avansat
+      ai_prompts_label: Prompturi AI
+      api_key_label: Cheie API
+      billing_label: Facturare
+      categories_label: Categorii
+      feedback_label: Feedback
+      general_section_title: General
+      imports_label: Import/Export
+      logout: Logout
+      merchants_label: Comercianți
+      guides_label: Ghiduri
+      other_section_title: Mai multe
+      preferences_label: Preferințe
+      profile_label: Informații profil
+      recurring_transactions_label: Recurente
+      rules_label: Reguli
+      security_label: Securitate
+      self_hosting_label: Găzduire proprie
+      tags_label: Etichete
+      transactions_section_title: Tranzacții
+      whats_new_label: Noutăți
+      api_keys_label: Cheie API
+      bank_sync_label: Sincronizare bancară
+    settings_nav_link_large:
+      next: Următorul
+      previous: Înapoi
+    user_avatar_field:
+      accepted_formats: JPG sau PNG. Max. 5MB.
+      choose: Încarcă fotografie
+      choose_label: (opțional)
+      change: Schimbă fotografia

@@ -1,0 +1,17 @@
+ro:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: Tranzacția de intrare nu poate face parte din mai multe transferuri
+              must_be_from_different_accounts: Transferul trebuie să aibă conturi diferite
+              must_be_from_same_family: Transferul trebuie să fie din aceeași familie
+              must_be_within_date_range: Datele tranzacțiilor de transfer trebuie să fie la cel mult 4 zile distanță
+              must_have_opposite_amounts: Tranzacțiile de transfer trebuie să aibă sume opuse
+              must_have_single_currency: Transferul trebuie să aibă o singură monedă
+              outflow_cannot_be_in_multiple_transfers: Tranzacția de ieșire nu poate face parte din mai multe transferuri
+  transfer:
+    name: Transfer către %{to_account}
+    payment_name: Plată către %{to_account}

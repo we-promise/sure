@@ -1,0 +1,20 @@
+ro:
+  activerecord:
+    attributes:
+      account:
+        balance: Sold
+        currency: Monedă
+        family: Familie
+        family_id: Familie
+        name: Nume
+        subtype: Subtip
+    models:
+      account: Cont
+      account/credit: Card de credit
+      account/depository: Cont bancar
+      account/investment: Investiție
+      account/loan: Împrumut
+      account/other_asset: Alt activ
+      account/other_liability: Altă datorie
+      account/property: Imobiliare
+      account/vehicle: Vehicul
