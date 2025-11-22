@@ -14,6 +14,12 @@
     <% end %>
   <% end %>
 
+  <%= settings_section title: "Lunchflow" do %>
+    <turbo-frame id="lunchflow-providers-panel">
+      <%= render "settings/providers/lunchflow_panel" %>
+    </turbo-frame>
+  <% end %>
+
   <%= settings_section title: "Simplefin" do %>
     <turbo-frame id="simplefin-providers-panel">
       <%= render "settings/providers/simplefin_panel" %>

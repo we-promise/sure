@@ -1,7 +1,7 @@
 class Provider::Lunchflow
   include HTTParty
 
-  headers "User-Agent" => "Sure Finance Lunchflow Client"
+  headers "User-Agent" => "Sure Finance Lunch Flow Client"
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
 
   attr_reader :api_key, :base_url
@@ -94,7 +94,7 @@ class Provider::Lunchflow
         JSON.parse(response.body, symbolize_names: true)
       when 400
         Rails.logger.error "Lunch Flow API: Bad request - #{response.body}"
-        raise LunchflowError.new("Bad request to Lunchflow API: #{response.body}", :bad_request)
+        raise LunchflowError.new("Bad request to Lunch Flow API: #{response.body}", :bad_request)
       when 401
         raise LunchflowError.new("Invalid API key", :unauthorized)
       when 403

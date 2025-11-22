@@ -1,0 +1,10 @@
+module <%= class_name %>Item::Provided
+  extend ActiveSupport::Concern
+
+  # Returns a <%= class_name %> provider instance using GLOBAL credentials
+  # Credentials are configured in /settings/providers (self-hosted) or ENV variables
+  def <%= file_name %>_provider
+    # Use the adapter's build_provider method which reads from global settings
+    Provider::<%= class_name %>Adapter.build_provider
+  end
+end

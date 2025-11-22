@@ -120,11 +120,14 @@ class Settings::ProvidersController < ApplicationController
 
     # Prepares instance vars needed by the show view and partials
     def prepare_show_context
-      # Load all provider configurations (exclude SimpleFin, which has its own unified panel below)
+      # Load all provider configurations (exclude SimpleFin and Lunchflow, which have their own family-specific panels below)
       Provider::Factory.ensure_adapters_loaded
-      @provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp("simplefin").zero? }
+      @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
+        config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero?
+      end
 
-      # Providers page only needs to know whether any SimpleFin connections exist
+      # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist
       @simplefin_items = Current.family.simplefin_items.ordered.select(:id)
+      @lunchflow_items = Current.family.lunchflow_items.ordered.select(:id)
     end
 end
