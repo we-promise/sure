@@ -34,8 +34,9 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal "https://cdn.brandfetch.io/chipotle.com/icon/fallback/lettermark/w/40/h/40?c=123", txn2.reload.merchant.logo_url
     assert_nil txn3.reload.merchant
 
-    # After auto-detection, all transactions are locked and no longer enrichable
-    assert_equal 0, @account.transactions.reload.enrichable(:merchant_id).count
+    # After auto-detection, only successfully detected transactions are locked
+    # txn3 remains enrichable since it didn't get a merchant (allows retry)
+    assert_equal 1, @account.transactions.reload.enrichable(:merchant_id).count
   end
 
   private

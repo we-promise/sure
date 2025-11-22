@@ -57,6 +57,7 @@ class Series
   end
 
   def trend
+    return nil if values.blank?
     @trend ||= Trend.new(
       current: values.last&.value,
       previous: values.first&.value,

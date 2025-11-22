@@ -93,12 +93,16 @@ class SimplefinItemsController < ApplicationController
       )
 
       if turbo_frame_request?
+        flash.now[:notice] = t(".success")
         @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "simplefin-providers-panel",
-          partial: "settings/providers/simplefin_panel",
-          locals: { simplefin_items: @simplefin_items }
-        )
+        render turbo_stream: [
+          turbo_stream.replace(
+            "simplefin-providers-panel",
+            partial: "settings/providers/simplefin_panel",
+            locals: { simplefin_items: @simplefin_items }
+          ),
+          *flash_notification_stream_items
+        ]
       else
         redirect_to accounts_path, notice: t(".success"), status: :see_other
       end
@@ -515,6 +519,17 @@ class SimplefinItemsController < ApplicationController
         @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
       end
       @error_message = message
-      render context, status: :unprocessable_entity
+
+      if turbo_frame_request?
+        # Re-render the SimpleFIN providers panel in place to avoid "Content missing"
+        @simplefin_items = Current.family.simplefin_items.ordered
+        render turbo_stream: turbo_stream.replace(
+          "simplefin-providers-panel",
+          partial: "settings/providers/simplefin_panel",
+          locals: { simplefin_items: @simplefin_items }
+        ), status: :unprocessable_entity
+      else
+        render context, status: :unprocessable_entity
+      end
     end
 end

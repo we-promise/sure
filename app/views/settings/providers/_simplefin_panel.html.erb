@@ -2,14 +2,14 @@
   <div class="prose prose-sm text-secondary">
     <p class="text-primary font-medium">Setup instructions:</p>
     <ol>
-      <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFin Bridge</a> to get your one-time setup token</li>
-      <li>Paste the token below to enable SimpleFin bank data sync</li>
+      <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFIN Bridge</a> to get your one-time setup token</li>
+      <li>Paste the token below and click the Save button to enable SimpleFIN bank data sync</li>
       <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
     </ol>
 
     <p class="text-primary font-medium">Field descriptions:</p>
     <ul>
-      <li><strong>Setup Token:</strong> Your SimpleFin one-time setup token from SimpleFin Bridge (consumed on first use)</li>
+      <li><strong>Setup Token:</strong> Your SimpleFIN one-time setup token from SimpleFIN Bridge (consumed on first use)</li>
     </ul>
   </div>
 
@@ -23,13 +23,17 @@
                        url: simplefin_items_path,
                        scope: :simplefin_item,
                        method: :post,
-                       data: { controller: "auto-submit", action: "keydown.enter->auto-submit#submit blur->auto-submit#submit", turbo: true },
+                       data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :setup_token,
                         label: "Setup Token",
-                        placeholder: "Paste SimpleFin setup token and press Enter",
-                        type: :password,
-                        data: { auto_submit_target: "input" } %>
+                        placeholder: "Paste SimpleFIN setup token",
+                        type: :password %>
+
+    <div class="flex justify-end">
+      <%= form.submit "Save Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
   <% end %>
 
   <% if @simplefin_items&.any? %>
@@ -38,6 +42,6 @@
       <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
     </div>
   <% else %>
-    <div class="text-sm text-secondary">No SimpleFin connections yet.</div>
+    <div class="text-sm text-secondary">No SimpleFIN connections yet.</div>
   <% end %>
 </div>

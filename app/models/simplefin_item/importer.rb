@@ -377,14 +377,24 @@ class SimplefinItem::Importer
 
       # Handle errors if present in response
       if accounts_data[:errors] && accounts_data[:errors].any?
-        handle_errors(accounts_data[:errors])
-        return nil
+        if accounts_data[:accounts].to_a.any?
+          # Partial failure: record errors for visibility but continue processing accounts
+          record_errors(accounts_data[:errors])
+        else
+          # Global failure: no accounts were returned; treat as fatal
+          handle_errors(accounts_data[:errors])
+          return nil
+        end
       end
 
       # Some servers return a top-level message/string rather than an errors array
       if accounts_data[:error].present?
-        handle_errors([ accounts_data[:error] ])
-        return nil
+        if accounts_data[:accounts].to_a.any?
+          record_errors([ accounts_data[:error] ])
+        else
+          handle_errors([ accounts_data[:error] ])
+          return nil
+        end
       end
 
       accounts_data
@@ -468,6 +478,57 @@ class SimplefinItem::Importer
       end
     end
 
+
+    # Record non-fatal provider errors into sync stats without raising, so the
+    # rest of the accounts can continue to import. This is used when the
+    # response contains both :accounts and :errors.
+    def record_errors(errors)
+      arr = Array(errors)
+      return if arr.empty?
+
+      # Determine if these errors indicate the item needs an update (e.g. 2FA)
+      needs_update = arr.any? do |error|
+        if error.is_a?(String)
+          down = error.downcase
+          down.include?("reauth") || down.include?("auth") || down.include?("two-factor") || down.include?("2fa") || down.include?("forbidden") || down.include?("unauthorized")
+        else
+          code = error[:code].to_s.downcase
+          type = error[:type].to_s.downcase
+          code.include?("auth") || code.include?("token") || type.include?("auth")
+        end
+      end
+
+      simplefin_item.update!(status: :requires_update) if needs_update
+
+      stats["errors"] ||= []
+      stats["total_errors"] = stats.fetch("total_errors", 0) + arr.size
+      buckets = stats["error_buckets"] ||= { "auth" => 0, "api" => 0, "network" => 0, "other" => 0 }
+
+      arr.each do |error|
+        msg = if error.is_a?(String)
+          error
+        else
+          error[:description] || error[:message] || error[:error] || error.to_s
+        end
+        down = msg.to_s.downcase
+        category = if down.include?("timeout") || down.include?("timed out")
+          "network"
+        elsif down.include?("auth") || down.include?("reauth") || down.include?("forbidden") || down.include?("unauthorized") || down.include?("2fa") || down.include?("two-factor")
+          "auth"
+        elsif down.include?("429") || down.include?("rate limit")
+          "api"
+        else
+          "other"
+        end
+        buckets[category] = buckets.fetch(category, 0) + 1
+        stats["errors"] << { message: msg, category: category }
+      end
+
+      # Keep error sample small for UI
+      stats["errors"] = stats["errors"].last(5)
+
+      persist_stats!
+    end
 
     def handle_errors(errors)
       error_messages = errors.map { |error| error.is_a?(String) ? error : (error[:description] || error[:message]) }.join(", ")

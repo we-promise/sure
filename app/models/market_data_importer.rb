@@ -76,6 +76,9 @@ class MarketDataImporter
            .each do |(source, target), date|
         key = [ source, target ]
         pair_dates[key] = [ pair_dates[key], date ].compact.min
+
+        inverse_key = [ target, source ]
+        pair_dates[inverse_key] = [ pair_dates[inverse_key], date ].compact.min
       end
 
       # 2. ACCOUNT-BASED PAIRS – use the account's oldest entry date
@@ -91,6 +94,9 @@ class MarketDataImporter
 
         key = [ account.source, account.target ]
         pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
+
+        inverse_key = [ account.target, account.source ]
+        pair_dates[inverse_key] = [ pair_dates[inverse_key], chosen_date ].compact.min
       end
 
       # Convert to array of hashes for ease of use

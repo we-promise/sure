@@ -35,6 +35,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     # Seed a rate for the first required day so that the importer only needs the next day forward
     existing_date = account.start_date
     ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: existing_date, rate: 2.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: existing_date, rate: 0.5)
 
     expected_start_date = (existing_date + 1.day) - PROVIDER_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
@@ -48,11 +49,20 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
                OpenStruct.new(from: "CAD", to: "USD", date: existing_date, rate: 1.5)
              ]))
 
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD",
+                   to: "CAD",
+                   start_date: expected_start_date,
+                   end_date: end_date)
+             .returns(provider_success_response([
+               OpenStruct.new(from: "USD", to: "CAD", date: existing_date, rate: 0.67)
+             ]))
+
     before = ExchangeRate.count
     Account::MarketDataImporter.new(account).import_all
     after  = ExchangeRate.count
 
-    assert_operator after, :>, before, "Should insert at least one new exchange-rate row"
+    assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows"
   end
 
   test "syncs security prices for securities traded by the account" do
@@ -169,6 +179,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     # Seed a rate for the first required day
     existing_date = account.start_date
     ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: existing_date, rate: 2.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: existing_date, rate: 0.5)
 
     expected_start_date = (existing_date + 1.day) - PROVIDER_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
@@ -177,6 +188,15 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     @provider.expects(:fetch_exchange_rates)
              .with(from: "CAD",
                    to: "USD",
+                   start_date: expected_start_date,
+                   end_date: end_date)
+             .returns(provider_error_response(
+               Provider::TwelveData::Error.new("Rate limit exceeded", details: { code: 429, message: "Rate limit exceeded" })
+             ))
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD",
+                   to: "CAD",
                    start_date: expected_start_date,
                    end_date: end_date)
              .returns(provider_error_response(
