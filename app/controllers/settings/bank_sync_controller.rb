@@ -23,6 +23,11 @@ class Settings::BankSyncController < ApplicationController
         path: "https://beta-bridge.simplefin.org",
         target: "_blank",
         rel: "noopener noreferrer"
+      },
+      {
+        name: "Enable Banking",
+        description: "Bank connections via Enable Banking APIs.",
+        path: enable_banking_items_path
       }
     ]
   end

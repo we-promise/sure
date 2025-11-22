@@ -1,0 +1,53 @@
+<div class="space-y-4">
+  <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+  <div>
+      <% if ENV["ENABLE_BANKING_COUNTRY"].present? %>
+        <p class="text-sm text-secondary">You have successfully configured your Enable Banking country through the ENABLE_BANKING_COUNTRY environment variable.</p>
+      <% else %>
+        <p class="text-secondary text-sm mb-4"><%= t(".country_description") %></p>
+      <% end %>
+    </div>
+  <%= styled_form_with model: Setting.new,
+                       class: "space-y-4",
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.select :enable_banking_country,
+            country_options,
+            { label: t(".enable_banking_country"), selected: ENV.fetch("ENABLE_BANKING_COUNTRY", Setting.enable_banking_country) },
+            { 
+              disabled: ENV["ENABLE_BANKING_COUNTRY"].present?, 
+              data: { "auto-submit-form-target": "auto" } 
+            } %>
+    <div>
+      <% if ENV["ENABLE_BANKING_APPLICATION_ID"].present? %>
+        <p class="text-sm text-secondary">You have successfully configured your Enable Banking application ID through the ENABLE_BANKING_APPLICATION_ID environment variable.</p>
+      <% else %>
+        <p class="text-secondary text-sm mb-4"><%= t(".application_id_description") %></p>
+      <% end %>
+    </div>
+    <%= form.text_field :enable_banking_application_id,
+                        label: t(".enable_banking_application_id"),
+                        type: "password",
+                        placeholder: t(".placeholder_application_id"),
+                        value: ENV.fetch("ENABLE_BANKING_APPLICATION_ID", Setting.enable_banking_application_id),
+                        disabled: ENV["ENABLE_BANKING_APPLICATION_ID"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+    <div>
+      <% if ENV["ENABLE_BANKING_CERTIFICATE"].present? %>
+        <p class="text-sm text-secondary">You have successfully configured your Enable Banking certificate through the ENABLE_BANKING_CERTIFICATE environment variable.</p>
+      <% else %>
+        <p class="text-secondary text-sm mb-4"><%= t(".certificate_description") %></p>
+      <% end %>
+    </div>
+    <%= form.text_area :enable_banking_certificate,
+                       rows: 10,
+                       placeholder: t(".placeholder_certificate"),
+                       value: ENV.fetch("ENABLE_BANKING_CERTIFICATE", Setting.enable_banking_certificate),
+                       disabled: ENV["ENABLE_BANKING_CERTIFICATE"].present?,
+                       "data-auto-submit-form-target": "auto" %>
+  <% end %>
+</div>

@@ -8,6 +8,7 @@ class AccountsController < ApplicationController
           .order(:name)
     @plaid_items = family.plaid_items.ordered
     @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
+    @enable_banking_items = family.enable_banking_items.ordered
     @lunchflow_items = family.lunchflow_items.ordered
 
     # Precompute per-item maps to avoid queries in the view

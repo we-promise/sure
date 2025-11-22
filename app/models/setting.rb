@@ -10,6 +10,9 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
+  field :enable_banking_country, type: :string, default: ENV["ENABLE_BANKING_COUNTRY"]
+  field :enable_banking_application_id, type: :string, default: ENV["ENABLE_BANKING_APPLICATION_ID"]
+  field :enable_banking_certificate, type: :text, default: ENV["ENABLE_BANKING_CERTIFICATE"]
 
   # Provider selection
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")

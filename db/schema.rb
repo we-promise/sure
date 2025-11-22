@@ -46,9 +46,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_15_194500) do
     t.jsonb "locked_attributes", default: {}
     t.string "status", default: "active"
     t.uuid "simplefin_account_id"
+    t.uuid "enable_banking_account_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
+    t.index ["enable_banking_account_id"], name: "index_accounts_on_enable_banking_account_id"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "id"], name: "index_accounts_on_family_id_and_id"
     t.index ["family_id", "status"], name: "index_accounts_on_family_id_and_status"
@@ -231,6 +233,36 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_15_194500) do
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "enable_banking_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "enable_banking_item_id", null: false
+    t.string "account_id"
+    t.string "account_type"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.string "currency"
+    t.string "name"
+    t.string "mask"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
+  end
+
+  create_table "enable_banking_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "session_id"
+    t.datetime "valid_until"
+    t.string "name"
+    t.string "status", default: "good"
+    t.string "logo_url"
+    t.boolean "scheduled_for_deletion", default: false
+    t.jsonb "raw_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
   end
 
   create_table "entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
