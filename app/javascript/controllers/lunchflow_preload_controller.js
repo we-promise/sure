@@ -57,19 +57,16 @@ export default class extends Controller {
         if (this.hasLinkTarget) {
           this.hideLoading();
         }
-        console.log("Lunchflow credentials not configured - user will be prompted to set up");
       } else if (data.has_accounts === false) {
         // Credentials configured and API works, but no accounts available - hide the link
         if (this.hasLinkTarget) {
           this.linkTarget.style.display = "none";
         }
-        console.log("Lunchflow has no accounts available");
       } else if (data.has_accounts === null || data.error === "api_error" || data.error === "unexpected_error") {
         // API error (bad credentials, network issue, etc) - keep link visible, user will see error when clicked
         if (this.hasLinkTarget) {
           this.hideLoading();
         }
-        console.warn("Lunchflow API error:", data.error_message || data.error);
       } else {
         // Other error - keep link visible
         if (this.hasLinkTarget) {
