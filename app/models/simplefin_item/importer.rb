@@ -122,7 +122,8 @@ class SimplefinItem::Importer
       balance = payload[:balance]
       avail = payload[:"available-balance"]
       holdings = payload[:holdings]
-      zeroish_balance = [ balance, avail ].compact.all? { |x| x.to_d.zero? rescue false }
+      amounts = [ balance, avail ].compact
+      zeroish_balance = amounts.any? && amounts.all? { |x| x.to_d.zero? rescue false }
       no_holdings = !(holdings.is_a?(Array) && holdings.any?)
 
       stats["zero_runs"] ||= {}

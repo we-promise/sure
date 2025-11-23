@@ -46,3 +46,17 @@ class SimplefinItem::ImporterInactiveTest < ActiveSupport::TestCase
     assert_equal false, stats.dig("inactive", "a3")
   end
 end
+
+
+# Additional regression: no balances present should not increment zero_runs or mark inactive
+class SimplefinItem::ImporterInactiveTest < ActiveSupport::TestCase
+  test "does not count zero run when both balances are missing and no holdings" do
+    account_data = { id: "a4", name: "Unknown", currency: "USD" } # no balance keys, no holdings
+
+    importer.send(:import_account, account_data)
+    stats = @sync.reload.sync_stats
+
+    assert_equal 0, stats.dig("zero_runs", "a4").to_i
+    assert_equal false, stats.dig("inactive", "a4")
+  end
+end
