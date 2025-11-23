@@ -14,7 +14,7 @@ ro:
       locality: Oraș
       locality_placeholder: București
       none: Niciunul
-      postal_code: ZIP/Postal code
+      postal_code: Cod Poștal
       postal_code_placeholder: '94105'
       region: Județ/Provincie
       region_placeholder: B

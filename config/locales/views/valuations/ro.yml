@@ -4,8 +4,6 @@ ro:
     form:
       amount: Sumă
       submit: Adaugă actualizare sold
-    header:
-      balance: Sold
     index:
       change: modificare
       date: dată
@@ -22,8 +20,6 @@ ro:
       delete_subtitle: Această acțiune nu poate fi anulată
       delete_title: Șterge înregistrarea
       details: Detalii
-      name_label: Nume
-      name_placeholder: Introdu un nume pentru această înregistrare
       note_label: Notițe
       note_placeholder: Adaugă orice detalii suplimentare despre această înregistrare
       overview: Prezentare generală

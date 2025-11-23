@@ -14,7 +14,7 @@ ro:
     header:
       buy: Cumpără
       current_market_price_label: Preț curent de piață
-      overview: Overview
+      overview: Prezentare generală
       purchase_price_label: Preț de achiziție
       purchase_qty_label: Cantitate achiziționată
       sell: Vinde
