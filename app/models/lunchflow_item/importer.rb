@@ -100,10 +100,10 @@ class LunchflowItem::Importer
             Rails.logger.error "LunchflowItem::Importer - Failed to update item status: #{update_error.message}"
           end
         end
-        Rails.logger.error "LunchflowItem::Importer - Lunchflow API error: #{e.message}"
+        Rails.logger.error "LunchflowItem::Importer - Lunch flow API error: #{e.message}"
         return nil
       rescue JSON::ParserError => e
-        Rails.logger.error "LunchflowItem::Importer - Failed to parse Lunchflow API response: #{e.message}"
+        Rails.logger.error "LunchflowItem::Importer - Failed to parse Lunch flow API response: #{e.message}"
         return nil
       rescue => e
         Rails.logger.error "LunchflowItem::Importer - Unexpected error fetching accounts: #{e.class} - #{e.message}"

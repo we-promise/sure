@@ -28,6 +28,14 @@ class Account < ApplicationRecord
       .where(plaid_account_id: nil, simplefin_account_id: nil)
   }
 
+  scope :visible_manual, -> {
+    visible.manual
+  }
+
+  scope :listable_manual, -> {
+    manual.where.not(status: :pending_deletion)
+  }
+
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
@@ -163,14 +171,15 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    holdings.where(currency: currency)
-            .where.not(qty: 0)
-            .where(
-              id: holdings.select("DISTINCT ON (security_id) id")
-                          .where(currency: currency)
-                          .order(:security_id, date: :desc)
-            )
-            .order(amount: :desc)
+    holdings
+      .where(currency: currency)
+      .where.not(qty: 0)
+      .where(
+        id: holdings.select("DISTINCT ON (security_id) id")
+                    .where(currency: currency)
+                    .order(:security_id, date: :desc)
+      )
+      .order(amount: :desc)
   end
 
   def start_date

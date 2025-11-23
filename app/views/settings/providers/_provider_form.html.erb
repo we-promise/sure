@@ -32,11 +32,7 @@
 
   <%= styled_form_with model: Setting.new,
                        url: settings_providers_path,
-                       method: :patch,
-                       data: {
-                         controller: "auto-submit-form",
-                         "auto-submit-form-trigger-event-value": "blur"
-                       } do |form| %>
+                       method: :patch do |form| %>
     <div class="space-y-4">
       <% configuration.fields.each do |field| %>
         <%
@@ -67,16 +63,20 @@
                             type: input_type,
                             placeholder: field.default || (field.required ? "" : "Optional"),
                             value: display_value,
-                            disabled: disabled,
-                            data: { "auto-submit-form-target": "auto" } %>
+                            disabled: disabled %>
       <% end %>
+
+      <div class="flex justify-end">
+        <%= form.submit "Save Configuration",
+                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+      </div>
     </div>
   <% end %>
 
   <%# Show configuration status %>
   <% if configuration.configured? %>
     <div class="flex items-center gap-2 mt-4">
-      <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
       <p class="text-sm text-secondary">Configured and ready to use</p>
     </div>
   <% end %>

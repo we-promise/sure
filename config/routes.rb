@@ -302,6 +302,7 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      post :balances
       get :setup_accounts
       post :complete_account_setup
     end

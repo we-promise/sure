@@ -55,7 +55,6 @@ class RecurringTransaction
             entries: entries
           }
 
-          # Set either merchant_id or name based on identifier type
           if identifier_type == :merchant
             pattern[:merchant_id] = identifier_value
           else
@@ -107,7 +106,7 @@ class RecurringTransaction
           last_occurrence_date: pattern[:last_occurrence_date],
           next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
           occurrence_count: pattern[:occurrence_count],
-          status: "active"
+          status: recurring_transaction.new_record? ? "active" : recurring_transaction.status
         )
 
         recurring_transaction.save!
@@ -174,8 +173,7 @@ class RecurringTransaction
             expected_amount_avg: matching_amounts.sum / matching_amounts.size,
             occurrence_count: matching_amounts.size,
             last_occurrence_date: pattern[:last_occurrence_date],
-            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], recurring_transaction.expected_day_of_month),
-            status: "active"
+            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], recurring_transaction.expected_day_of_month)
           )
         end
       end

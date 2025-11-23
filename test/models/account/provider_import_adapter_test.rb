@@ -310,7 +310,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.today - 10.days,
       price: 150,
       source: "plaid",
       account_provider_id: account_provider.id
@@ -330,7 +330,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 30.days,
       price: 150
     )
 
@@ -381,7 +381,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 120.days,
       price: 150,
       account_provider_id: provider.id
     )
@@ -405,7 +405,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.today - 10.days,
       price: 150,
       source: "plaid",
       account_provider_id: provider.id,
@@ -428,7 +428,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 121.days,
       price: 150
     )
 

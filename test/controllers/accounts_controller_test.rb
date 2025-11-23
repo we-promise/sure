@@ -130,6 +130,28 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Depository account scheduled for deletion", flash[:notice]
   end
 
+  test "disabling an account keeps it visible on index" do
+    @account.disable!
+
+    get accounts_path
+
+    assert_response :success
+    assert_includes @response.body, @account.name
+    assert_includes @response.body, "account_#{@account.id}_active"
+  end
+
+  test "toggle_active disables and re-enables an account" do
+    patch toggle_active_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert @account.disabled?
+
+    patch toggle_active_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert @account.active?
+  end
+
   test "select_provider shows available providers" do
     get select_provider_account_url(@account)
     assert_response :success
@@ -142,5 +164,55 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get select_provider_account_url(@account)
     assert_redirected_to account_url(@account)
     assert_equal "Account is already linked to a provider", flash[:alert]
+  end
+end
+
+class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
+  fixtures :users, :families
+
+  setup do
+    sign_in users(:family_admin)
+    @family = families(:dylan_family)
+  end
+
+  test "when unlinked SFAs exist and manuals exist, shows setup button only" do
+    item = SimplefinItem.create!(family: @family, name: "Conn", access_url: "https://example.com/access")
+    # Unlinked SFA (no account and no provider link)
+    item.simplefin_accounts.create!(name: "A", account_id: "sf_a", currency: "USD", current_balance: 1, account_type: "depository")
+    # One manual account available
+    Account.create!(family: @family, name: "Manual A", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"))
+
+    get accounts_path
+    assert_response :success
+    # Expect setup link present
+    assert_includes @response.body, setup_accounts_simplefin_item_path(item)
+    # Relink modal (SimpleFin-specific) should not be present anymore
+    refute_includes @response.body, "Link existing accounts"
+  end
+
+  test "when SFAs exist and none unlinked and manuals exist, no relink modal is shown (unified flow)" do
+    item = SimplefinItem.create!(family: @family, name: "Conn2", access_url: "https://example.com/access")
+    # Create a manual linked to SFA so unlinked count == 0
+    sfa = item.simplefin_accounts.create!(name: "B", account_id: "sf_b", currency: "USD", current_balance: 1, account_type: "depository")
+    linked = Account.create!(family: @family, name: "Linked", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "savings"))
+    # Legacy association sufficient to count as linked
+    sfa.update!(account: linked)
+
+    # Also create another manual account to make manuals_exist true
+    Account.create!(family: @family, name: "Manual B", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"))
+
+    get accounts_path
+    assert_response :success
+    # The SimpleFin-specific relink modal is removed in favor of unified provider flow
+    refute_includes @response.body, "Link existing accounts"
+  end
+
+  test "when no SFAs exist, shows neither CTA" do
+    item = SimplefinItem.create!(family: @family, name: "Conn3", access_url: "https://example.com/access")
+
+    get accounts_path
+    assert_response :success
+    refute_includes @response.body, setup_accounts_simplefin_item_path(item)
+    refute_includes @response.body, "Link existing accounts"
   end
 end

@@ -38,7 +38,12 @@
     <% end %>
 
     <% if @manual_accounts.any? %>
-      <%= render "accounts/index/manual_accounts", accounts: @manual_accounts %>
+      <div id="manual-accounts">
+        <%= render "accounts/index/manual_accounts", accounts: @manual_accounts %>
+      </div>
+    <% else %>
+      <div id="manual-accounts"></div>
     <% end %>
   </div>
 <% end %>
+

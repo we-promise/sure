@@ -3,7 +3,22 @@ class LunchflowItem < ApplicationRecord
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
+  # Helper to detect if ActiveRecord Encryption is configured for this app
+  def self.encryption_ready?
+    creds_ready = Rails.application.credentials.active_record_encryption.present?
+    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+    creds_ready || env_ready
+  end
+
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
+  if encryption_ready?
+    encrypts :api_key, deterministic: true
+  end
+
   validates :name, presence: true
+  validates :api_key, presence: true, on: :create
 
   belongs_to :family
   has_one_attached :logo
@@ -145,5 +160,13 @@ class LunchflowItem < ApplicationRecord
     else
       "#{institutions.count} institutions"
     end
+  end
+
+  def credentials_configured?
+    api_key.present?
+  end
+
+  def effective_base_url
+    base_url.presence || "https://lunchflow.app/api/v1"
   end
 end

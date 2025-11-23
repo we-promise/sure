@@ -1,5 +1,6 @@
 class SimplefinItemsController < ApplicationController
-  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  include SimplefinItems::MapsHelper
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -50,7 +51,16 @@ class SimplefinItemsController < ApplicationController
       # Clear any requires_update status on new item
       updated_item.update!(status: :good)
 
-      redirect_to accounts_path, notice: t(".success")
+      if turbo_frame_request?
+        @simplefin_items = Current.family.simplefin_items.ordered
+        render turbo_stream: turbo_stream.replace(
+          "simplefin-providers-panel",
+          partial: "settings/providers/simplefin_panel",
+          locals: { simplefin_items: @simplefin_items }
+        )
+      else
+        redirect_to accounts_path, notice: t(".success"), status: :see_other
+      end
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token, context: :edit)
     rescue Provider::Simplefin::SimplefinError => e
@@ -79,10 +89,23 @@ class SimplefinItemsController < ApplicationController
     begin
       @simplefin_item = Current.family.create_simplefin_item!(
         setup_token: setup_token,
-        item_name: "SimpleFin Connection"
+        item_name: "SimpleFIN Connection"
       )
 
-      redirect_to accounts_path, notice: t(".success")
+      if turbo_frame_request?
+        flash.now[:notice] = t(".success")
+        @simplefin_items = Current.family.simplefin_items.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "simplefin-providers-panel",
+            partial: "settings/providers/simplefin_panel",
+            locals: { simplefin_items: @simplefin_items }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to accounts_path, notice: t(".success"), status: :see_other
+      end
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
@@ -100,8 +123,14 @@ class SimplefinItemsController < ApplicationController
   end
 
   def destroy
+    # Ensure we detach provider links and legacy associations before scheduling deletion
+    begin
+      @simplefin_item.unlink_all!(dry_run: false)
+    rescue => e
+      Rails.logger.warn("SimpleFin unlink during destroy failed: #{e.class} - #{e.message}")
+    end
     @simplefin_item.destroy_later
-    redirect_to accounts_path, notice: t(".success")
+    redirect_to accounts_path, notice: t(".success"), status: :see_other
   end
 
   def sync
@@ -112,6 +141,17 @@ class SimplefinItemsController < ApplicationController
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
       format.json { head :ok }
+    end
+  end
+
+  # Starts a balances-only sync for this SimpleFin item
+  def balances
+    sync = @simplefin_item.syncs.create!(status: :pending, sync_stats: { "balances_only" => true })
+    SimplefinItem::Syncer.new(@simplefin_item).perform_sync(sync)
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { render json: { ok: true, sync_id: sync.id } }
     end
   end
 
@@ -183,50 +223,256 @@ class SimplefinItemsController < ApplicationController
     # Trigger a sync to process the imported SimpleFin data (transactions and holdings)
     @simplefin_item.sync_later
 
-    redirect_to accounts_path, notice: t(".success")
+    flash[:notice] = t(".success")
+    if turbo_frame_request?
+      # Recompute data needed by Accounts#index partials
+      @manual_accounts = Account.uncached {
+        Current.family.accounts
+          .visible_manual
+          .order(:name)
+          .to_a
+      }
+      @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
+      build_simplefin_maps_for(@simplefin_items)
+
+      manual_accounts_stream = if @manual_accounts.any?
+        turbo_stream.update(
+          "manual-accounts",
+          partial: "accounts/index/manual_accounts",
+          locals: { accounts: @manual_accounts }
+        )
+      else
+        turbo_stream.replace("manual-accounts", view_context.tag.div(id: "manual-accounts"))
+      end
+
+      render turbo_stream: [
+        manual_accounts_stream,
+        turbo_stream.replace(
+          ActionView::RecordIdentifier.dom_id(@simplefin_item),
+          partial: "simplefin_items/simplefin_item",
+          locals: { simplefin_item: @simplefin_item }
+        )
+      ] + Array(flash_notification_stream_items)
+    else
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
+    end
   end
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
 
-    # Get all SimpleFIN accounts from this family's SimpleFIN items
-    # that are not yet linked to any account
+    # Filter out SimpleFIN accounts that are already linked to any account
+    # (either via account_provider or legacy account association)
     @available_simplefin_accounts = Current.family.simplefin_items
       .includes(:simplefin_accounts)
       .flat_map(&:simplefin_accounts)
-      .select { |sa| sa.account_provider.nil? && sa.account.nil? } # Not linked via new or legacy system
+      .reject { |sfa| sfa.account_provider.present? || sfa.account.present? }
+      .sort_by { |sfa| sfa.updated_at || sfa.created_at }
+      .reverse
 
-    if @available_simplefin_accounts.empty?
-      redirect_to account_path(@account), alert: "No available SimpleFIN accounts to link. Please connect a new SimpleFIN account first."
-    end
+    # Always render a modal: either choices or a helpful empty-state
+    render :select_existing_account, layout: false
   end
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
     simplefin_account = SimplefinAccount.find(params[:simplefin_account_id])
 
+    # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
+    if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
+      flash[:alert] = "Only manual accounts can be linked"
+      if turbo_frame_request?
+        return render turbo_stream: Array(flash_notification_stream_items)
+      else
+        return redirect_to account_path(@account), alert: flash[:alert]
+      end
+    end
+
     # Verify the SimpleFIN account belongs to this family's SimpleFIN items
     unless Current.family.simplefin_items.include?(simplefin_account.simplefin_item)
-      redirect_to account_path(@account), alert: "Invalid SimpleFIN account selected"
+      flash[:alert] = "Invalid SimpleFIN account selected"
+      if turbo_frame_request?
+        render turbo_stream: Array(flash_notification_stream_items)
+      else
+        redirect_to account_path(@account), alert: flash[:alert]
+      end
       return
     end
 
-    # Verify the SimpleFIN account is not already linked
-    if simplefin_account.account_provider.present? || simplefin_account.account.present?
-      redirect_to account_path(@account), alert: "This SimpleFIN account is already linked"
-      return
+    # Relink behavior: detach any legacy link and point provider link at the chosen account
+    Account.transaction do
+      simplefin_account.lock!
+      # Clear legacy association if present
+      if simplefin_account.account_id.present?
+        simplefin_account.update!(account_id: nil)
+      end
+
+      # Upsert the AccountProvider mapping deterministically
+      ap = AccountProvider.find_or_initialize_by(provider: simplefin_account)
+      previous_account = ap.account
+      ap.account_id = @account.id
+      ap.save!
+
+      # If the provider was previously linked to a different account in this family,
+      # and that account is now orphaned, quietly disable it so it disappears from the
+      # visible manual list. This mirrors the unified flow expectation that the provider
+      # follows the chosen account.
+      if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
+        previous_account.disable! rescue nil
+      end
     end
 
-    # Create the link via AccountProvider
-    AccountProvider.create!(
-      account: @account,
-      provider: simplefin_account
-    )
+    if turbo_frame_request?
+      # Reload the item to ensure associations are fresh
+      simplefin_account.reload
+      item = simplefin_account.simplefin_item
+      item.reload
 
-    redirect_to accounts_path, notice: "Account successfully linked to SimpleFIN"
+      # Recompute data needed by Accounts#index partials
+      @manual_accounts = Account.uncached {
+        Current.family.accounts
+          .visible_manual
+          .order(:name)
+          .to_a
+      }
+      @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
+      build_simplefin_maps_for(@simplefin_items)
+
+      flash[:notice] = "Account successfully linked to SimpleFIN"
+      @account.reload
+      manual_accounts_stream = if @manual_accounts.any?
+        turbo_stream.update(
+          "manual-accounts",
+          partial: "accounts/index/manual_accounts",
+          locals: { accounts: @manual_accounts }
+        )
+      else
+        turbo_stream.replace("manual-accounts", view_context.tag.div(id: "manual-accounts"))
+      end
+
+      render turbo_stream: [
+        # Optimistic removal of the specific account row if it exists in the DOM
+        turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
+        manual_accounts_stream,
+        turbo_stream.replace(
+          ActionView::RecordIdentifier.dom_id(item),
+          partial: "simplefin_items/simplefin_item",
+          locals: { simplefin_item: item }
+        ),
+        turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
+      ] + Array(flash_notification_stream_items)
+    else
+      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: "Account successfully linked to SimpleFIN", status: :see_other
+    end
   end
 
+
   private
+
+    NAME_NORM_RE = /\s+/.freeze
+
+
+    def normalize_name(str)
+      s = str.to_s.downcase.strip
+      return s if s.empty?
+      s.gsub(NAME_NORM_RE, " ")
+    end
+
+    def compute_relink_candidates
+      # Best-effort dedup before building candidates
+      @simplefin_item.dedup_simplefin_accounts! rescue nil
+
+      family = @simplefin_item.family
+      manuals = Account.visible_manual.where(family_id: family.id).to_a
+
+      # Evaluate only one SimpleFin account per upstream account_id (prefer linked, else newest)
+      grouped = @simplefin_item.simplefin_accounts.group_by(&:account_id)
+      sfas = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
+
+      Rails.logger.info("SimpleFin compute_relink_candidates: manuals=#{manuals.size} sfas=#{sfas.size} (item_id=#{@simplefin_item.id})")
+
+      used_manual_ids = Set.new
+      pairs = []
+
+      sfas.each do |sfa|
+        next if sfa.name.blank?
+        # Heuristics (with ambiguity guards): last4 > balance ±0.01 > name
+        raw = (sfa.raw_payload || {}).with_indifferent_access
+        sfa_last4 = raw[:mask] || raw[:last4] || raw[:"last-4"] || raw[:"account_number_last4"]
+        sfa_last4 = sfa_last4.to_s.strip.presence
+        sfa_balance = (sfa.current_balance || sfa.available_balance).to_d rescue 0.to_d
+
+        chosen = nil
+        reason = nil
+
+        # 1) last4 match: compute all candidates not yet used
+        if sfa_last4.present?
+          last4_matches = manuals.reject { |a| used_manual_ids.include?(a.id) }.select do |a|
+            a_last4 = nil
+            %i[mask last4 number_last4 account_number_last4].each do |k|
+              if a.respond_to?(k)
+                val = a.public_send(k)
+                a_last4 = val.to_s.strip.presence if val.present?
+                break if a_last4
+              end
+            end
+            a_last4.present? && a_last4 == sfa_last4
+          end
+          # Ambiguity guard: skip if multiple matches
+          if last4_matches.size == 1
+            cand = last4_matches.first
+            # Conflict guard: if both have balances and differ wildly, skip
+            begin
+              ab = (cand.balance || cand.cash_balance || 0).to_d
+              if sfa_balance.nonzero? && ab.nonzero? && (ab - sfa_balance).abs > BigDecimal("1.00")
+                cand = nil
+              end
+            rescue
+              # ignore balance parsing errors
+            end
+            if cand
+              chosen = cand
+              reason = "last4"
+            end
+          end
+        end
+
+        # 2) balance proximity
+        if chosen.nil? && sfa_balance.nonzero?
+          balance_matches = manuals.reject { |a| used_manual_ids.include?(a.id) }.select do |a|
+            begin
+              ab = (a.balance || a.cash_balance || 0).to_d
+              (ab - sfa_balance).abs <= BigDecimal("0.01")
+            rescue
+              false
+            end
+          end
+          if balance_matches.size == 1
+            chosen = balance_matches.first
+            reason = "balance"
+          end
+        end
+
+        # 3) exact normalized name
+        if chosen.nil?
+          name_matches = manuals.reject { |a| used_manual_ids.include?(a.id) }.select { |a| normalize_name(a.name) == normalize_name(sfa.name) }
+          if name_matches.size == 1
+            chosen = name_matches.first
+            reason = "name"
+          end
+        end
+
+        if chosen
+          used_manual_ids << chosen.id
+          pairs << { sfa_id: sfa.id, sfa_name: sfa.name, manual_id: chosen.id, manual_name: chosen.name, reason: reason }
+        end
+      end
+
+      Rails.logger.info("SimpleFin compute_relink_candidates: built #{pairs.size} pairs (item_id=#{@simplefin_item.id})")
+
+      # Return without the reason field to the view
+      pairs.map { |p| p.slice(:sfa_id, :sfa_name, :manual_id, :manual_name) }
+    end
 
     def set_simplefin_item
       @simplefin_item = Current.family.simplefin_items.find(params[:id])
@@ -244,6 +490,17 @@ class SimplefinItemsController < ApplicationController
         @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
       end
       @error_message = message
-      render context, status: :unprocessable_entity
+
+      if turbo_frame_request?
+        # Re-render the SimpleFIN providers panel in place to avoid "Content missing"
+        @simplefin_items = Current.family.simplefin_items.ordered
+        render turbo_stream: turbo_stream.replace(
+          "simplefin-providers-panel",
+          partial: "settings/providers/simplefin_panel",
+          locals: { simplefin_items: @simplefin_items }
+        ), status: :unprocessable_entity
+      else
+        render context, status: :unprocessable_entity
+      end
     end
 end

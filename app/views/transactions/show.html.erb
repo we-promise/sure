@@ -97,6 +97,54 @@
       </div>
     <% end %>
 
+    <% if (details = build_transaction_extra_details(@entry)) %>
+      <% dialog.with_section(title: "Additional details", open: false) do %>
+        <div class="px-3 py-2 space-y-3">
+          <% if details[:kind] == :simplefin %>
+            <% sf = details[:simplefin] %>
+            <% if sf.present? %>
+              <dl class="space-y-2">
+                <% if sf[:payee].present? %>
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-secondary text-sm">Payee</dt>
+                    <dd class="text-sm text-primary"><%= sf[:payee] %></dd>
+                  </div>
+                <% end %>
+                <% if sf[:description].present? %>
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-secondary text-sm">Description</dt>
+                    <dd class="text-sm text-primary"><%= sf[:description] %></dd>
+                  </div>
+                <% end %>
+                <% if sf[:memo].present? %>
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-secondary text-sm">Memo</dt>
+                    <dd class="text-sm text-primary"><%= sf[:memo] %></dd>
+                  </div>
+                <% end %>
+              </dl>
+            <% end %>
+
+            <% if details[:provider_extras].present? %>
+              <div class="pt-2">
+                <h4 class="text-sm text-secondary mb-1">Provider extras</h4>
+                <dl class="space-y-2">
+                  <% details[:provider_extras].each do |ex| %>
+                    <div class="flex items-center justify-between gap-2">
+                      <dt class="text-secondary text-sm"><%= ex[:key] %></dt>
+                      <dd class="text-sm text-primary truncate max-w-[60%]" title="<%= ex[:title] %>"><%= ex[:value] %></dd>
+                    </div>
+                  <% end %>
+                </dl>
+              </div>
+            <% end %>
+          <% else %>
+            <pre class="text-xs text-secondary bg-surface-inset rounded p-2 overflow-auto"><%= details[:raw] %></pre>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+
     <% dialog.with_section(title: t(".settings")) do %>
       <div class="pb-4">
         <%= styled_form_with model: @entry,

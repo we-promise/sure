@@ -117,7 +117,7 @@
           </thead>
           <tbody class="divide-y divide-gray-100">
             <% @llm_usages.each do |usage| %>
-              <tr>
+              <tr class="<%= 'bg-red-50 theme-dark:bg-red-950/30' if usage.failed? %>">
                 <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
                   <%= usage.created_at.strftime("%b %d, %Y %I:%M %p") %>
                 </td>
@@ -128,10 +128,27 @@
                   <%= usage.model %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
-                  <%= number_with_delimiter(usage.total_tokens) %>
-                  <span class="text-xs text-secondary">
-                    (<%= number_with_delimiter(usage.prompt_tokens) %>/<%= number_with_delimiter(usage.completion_tokens) %>)
-                  </span>
+                  <% if usage.failed? %>
+                    <div data-controller="tooltip" class="inline-flex justify-end">
+                      <div class="inline-flex items-center gap-1 cursor-help">
+                        <%= icon "alert-circle", class: "w-4 h-4 text-red-600 theme-dark:text-red-400" %>
+                        <span class="text-red-600 theme-dark:text-red-400 font-medium">Failed</span>
+                      </div>
+                      <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-gray-800 text-sm p-3 rounded w-72 text-left break-words whitespace-normal shadow-lg hidden">
+                        <div class="text-white">
+                          <% if usage.http_status_code.present? %>
+                            <p class="text-xs mt-1 text-gray-300">HTTP Status: <%= usage.http_status_code %></p>
+                          <% end %>
+                          <p class="text-xs"><%= usage.error_message %></p>
+                        </div>
+                      </div>
+                    </div>
+                  <% else %>
+                    <%= number_with_delimiter(usage.total_tokens) %>
+                    <span class="text-xs text-secondary">
+                      (<%= number_with_delimiter(usage.prompt_tokens) %>/<%= number_with_delimiter(usage.completion_tokens) %>)
+                    </span>
+                  <% end %>
                 </td>
                 <td class="px-4 py-3 text-sm font-medium text-primary text-right whitespace-nowrap">
                   <%= usage.formatted_cost %>

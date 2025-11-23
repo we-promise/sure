@@ -1,6 +1,9 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
-    <%= render "form", account: @account, url: other_assets_path %>
+    <div class="space-y-2">
+      <%= render DS::Alert.new(message: t(".balance_tracking_info"), variant: :info) %>
+      <%= render "form", account: @account, url: other_assets_path %>
+    </div>
   <% end %>
 <% end %>
