@@ -1,0 +1,175 @@
+---
+description: Guidelines for internationalization (i18n) and community localization contributions
+globs: config/locales/**/*.yml,app/views/**/*.erb,app/components/**/*.erb,app/helpers/languages_helper.rb
+alwaysApply: true
+---
+
+# Internationalization & Localization Rules
+
+## Core i18n Principles
+
+- **Always use `t()` helper** for user-facing strings
+  - ✅ DO: `<%= t("accounts.index.title") %>`
+  - ❌ DON'T: `<%= "My Accounts" %>`
+
+- **Key Organization**: Use hierarchical keys by feature
+  - Pattern: `feature.component.key`
+  - Examples: `accounts.index.title`, `transactions.form.amount_label`, `components.button.save`
+
+- **Interpolation**: Preserve variables exactly as they appear
+  - ✅ DO: `t("users.greeting", name: user.name)` → `"Hello, %{name}"`
+  - ❌ DON'T: Modify or remove interpolation variables
+
+- **Pluralization**: Use Rails pluralization
+  - ✅ DO: `t("transactions.count", count: @transactions.count)`
+  - Locale files should include `one`, `other`, and language-specific plural forms
+
+- **Update English first**: Always add new keys to `config/locales/en.yml` before using them
+
+## Adding Community Translations
+
+We welcome community-contributed localizations! Follow these steps:
+
+### 1. Create Locale Directory Structure
+```
+config/locales/[language_code]/
+├── accounts.yml
+├── transactions.yml
+├── settings.yml
+└── ...
+```
+
+Example for French: `config/locales/fr/`
+
+### 2. Mirror English Structure
+- Copy file structure from `config/locales/en/`
+- Maintain same nesting depth and hierarchy
+- Include all translation keys, even if values are similar to English
+
+### 3. **CRITICAL: Update SUPPORTED_LOCALES**
+
+After creating locale files, you **MUST** update `app/helpers/languages_helper.rb`:
+
+```ruby
+# Add to SUPPORTED_LOCALES array
+SUPPORTED_LOCALES = [
+  "en",   # English
+  "de",   # German
+  "es",   # Spanish
+  "fr",   # French <- ADD NEW LANGUAGE HERE
+  # ...
+].freeze
+```
+
+Also ensure the language appears in `LANGUAGE_MAPPING`:
+
+```ruby
+LANGUAGE_MAPPING = {
+  # ...
+  fr: "French",  # ADD IF MISSING
+  # ...
+}.freeze
+```
+
+**Without this step, the language will NOT appear in the UI language selector!**
+
+### 4. Translation Quality Standards
+
+- **Consistency**: Maintain consistent terminology across all files
+- **Variables**: Preserve interpolation variables exactly: `%{name}`, `%{count}`, etc.
+- **Pluralization**: Respect pluralization rules for target language
+- **Formatting**: Keep HTML tags, links, and formatting characters intact
+- **Context**: Translate meaning, not just words - consider context
+
+### 5. Testing Translations
+
+Before submitting:
+- Switch your user account to the new language in settings
+- Navigate through all major features to verify translations
+- Check for missing keys (will show as translation path like `accounts.index.title` in development)
+- Verify number, date, and currency formatting is appropriate for the locale
+- Test pluralization with different counts (0, 1, 2, many)
+
+### 6. Locale File Format
+
+```yaml
+# config/locales/fr/accounts.yml
+fr:
+  accounts:
+    index:
+      title: "Mes comptes"
+      new_account: "Nouveau compte"
+    show:
+      balance: "Solde"
+      transactions_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+```
+
+## Supported vs Community Locales
+
+- **Supported Locales** (in `SUPPORTED_LOCALES`): Have extensive (50+ files) translations and are fully tested
+- **Community Locales**: May have partial coverage but are still valuable
+- When adding a new locale, aim for complete coverage of core features:
+  1. Accounts
+  2. Transactions
+  3. Settings
+  4. Authentication
+  5. Navigation
+
+## Common Pitfalls to Avoid
+
+- ❌ Forgetting to add language to `SUPPORTED_LOCALES` in `languages_helper.rb`
+- ❌ Modifying interpolation variable names (`%{name}` → `%{nom}`)
+- ❌ Inconsistent terminology across files
+- ❌ Missing pluralization forms
+- ❌ Not testing in actual UI before submitting
+- ❌ Hardcoding strings instead of using `t()` helper
+- ❌ Creating flat key structures instead of hierarchical
+
+## When Working on Views/Components
+
+Always localize:
+- Page titles and headings
+- Button and link text
+- Form labels and placeholders
+- Error and success messages
+- Navigation items
+- Help text and tooltips
+
+Don't localize:
+- Code/variable names
+- Database values (unless they're user-facing labels)
+- URLs and paths
+- Technical identifiers
+
+## Example: Adding a New Feature with i18n
+
+```erb
+<!-- app/views/accounts/index.html.erb -->
+<h1><%= t("accounts.index.title") %></h1>
+
+<%= link_to t("accounts.index.new_account"),
+            new_account_path,
+            class: "btn-primary" %>
+
+<p><%= t("accounts.index.count", count: @accounts.count) %></p>
+```
+
+```yaml
+# config/locales/en/accounts.yml
+en:
+  accounts:
+    index:
+      title: "My Accounts"
+      new_account: "New Account"
+      count:
+        one: "You have %{count} account"
+        other: "You have %{count} accounts"
+```
+
+## References
+
+- [languages_helper.rb](mdc:app/helpers/languages_helper.rb) - Language configuration
+- [view_conventions.mdc](mdc:.cursor/rules/view_conventions.mdc) - View best practices
+- Rails i18n Guide: https://guides.rubyonrails.org/i18n.html

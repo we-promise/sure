@@ -1,8 +1,83 @@
 # Sure Project — Junie Guidelines (Persistent Context)
 
-This single file provides optional, persistent context for JetBrains Junie/RubyMine users. It is a direct, verbatim port of the project’s `.cursor/rules/*.mdc` guidelines into one document, with only path normalization for links and cross-references updated to point to sections below. It does not alter or interfere with Cursor/Codex workflows.
+This single file provides optional, persistent context for JetBrains Junie/RubyMine users. It is a direct, verbatim port of the project's `.cursor/rules/*.mdc` guidelines into one document, with only path normalization for links and cross-references updated to point to sections below. It does not alter or interfere with Cursor/Codex workflows.
 
 Self-hosted emphasis: the Sure project primarily operates in self-hosted mode; if references to managed mode exist in the original text below, they are preserved as-is for accuracy.
+
+---
+
+## 🌍 Internationalization & Community Localization
+
+### Critical Rule: All User-Facing Strings Must Be Localized
+
+**Always use the `t()` helper for user-facing text** - never hardcode strings in views or components.
+
+```erb
+<!-- ✅ CORRECT -->
+<h1><%= t("accounts.index.title") %></h1>
+<%= link_to t("accounts.new"), new_account_path %>
+
+<!-- ❌ WRONG -->
+<h1>My Accounts</h1>
+<%= link_to "New Account", new_account_path %>
+```
+
+### Adding Community Translations
+
+We welcome community-contributed localizations! When adding a new language:
+
+1. **Create locale directory**: `config/locales/[language_code]/` (e.g., `config/locales/fr/`)
+2. **Mirror English structure**: Copy file organization from `config/locales/en/`
+3. **Translate consistently**: Preserve interpolation variables (`%{name}`, `%{count}`)
+4. **Update SUPPORTED_LOCALES**: **CRITICAL** - Add language code to `app/helpers/languages_helper.rb`
+
+**CRITICAL STEP**: New languages must be added to `SUPPORTED_LOCALES` array in `app/helpers/languages_helper.rb`:
+
+```ruby
+# app/helpers/languages_helper.rb
+SUPPORTED_LOCALES = [
+  "en",   # English
+  "de",   # German
+  "es",   # Spanish
+  "fr",   # French <- ADD NEW LANGUAGE HERE
+  # ...
+].freeze
+
+# Also ensure it's in LANGUAGE_MAPPING
+LANGUAGE_MAPPING = {
+  # ...
+  fr: "French",  # ADD IF MISSING
+  # ...
+}.freeze
+```
+
+**Without updating SUPPORTED_LOCALES, the language will NOT appear in the UI!**
+
+### Translation Guidelines
+
+- **Key Organization**: Hierarchical by feature: `accounts.index.title`, `transactions.form.amount_label`
+- **Interpolation**: Preserve variables exactly: `%{name}`, `%{count}`, `%{amount}`
+- **Pluralization**: Use Rails pluralization with `one`/`other` keys
+- **Testing**: Switch language in settings and verify all major features
+- **Quality**: Translate meaning in context, not just words
+
+### Locale File Structure Example
+
+```yaml
+# config/locales/fr/accounts.yml
+fr:
+  accounts:
+    index:
+      title: "Mes comptes"
+      new_account: "Nouveau compte"
+    show:
+      balance: "Solde"
+      transactions_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+```
+
+For complete localization guidelines, see [.cursor/rules/localization.mdc](.cursor/rules/localization.mdc).
 
 ---
 

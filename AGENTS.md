@@ -33,3 +33,29 @@
 ## Security & Configuration Tips
 - Never commit secrets. Start from `.env.local.example`; use `.env.local` for development only.
 - Run `bin/brakeman` before major PRs. Prefer environment variables over hard-coded values.
+
+## Internationalization & Localization
+
+### Adding Community Translations
+We welcome community-contributed localizations! Follow these steps:
+
+1. **Create locale directory**: `config/locales/[language_code]/` (e.g., `config/locales/fr/`)
+2. **Mirror English structure**: Copy file structure from `config/locales/en/`
+3. **Translate consistently**: Maintain terminology and preserve interpolation variables
+4. **Update SUPPORTED_LOCALES**: Add language code to `SUPPORTED_LOCALES` array in `app/helpers/languages_helper.rb`
+5. **Update LANGUAGE_MAPPING**: Ensure language appears in `LANGUAGE_MAPPING` hash in same file
+6. **Test thoroughly**: Switch language in settings and verify all major features
+
+### Translation Guidelines
+- Always use `t()` helper for user-facing strings
+- Organize keys hierarchically: `feature.component.key`
+- Preserve variables exactly: `%{name}`, `%{count}`, etc.
+- Respect pluralization rules for target language
+- Keep HTML tags and formatting intact
+- Test in context, not isolation
+
+### Quality Standards
+- Complete core features before peripheral ones
+- Document incomplete sections in PR
+- Verify number/date/currency formatting for locale
+- Check for missing keys in development mode

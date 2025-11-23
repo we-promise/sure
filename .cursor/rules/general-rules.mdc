@@ -11,7 +11,9 @@ alwaysApply: true
   - Read [project-design.mdc](mdc:.cursor/rules/project-design.mdc) to understand the codebase
   - Read [project-conventions.mdc](mdc:.cursor/rules/project-conventions.mdc) to understand _how_ to write code for the codebase
   - Read [ui-ux-design-guidelines.mdc](mdc:.cursor/rules/ui-ux-design-guidelines.mdc) to understand how to implement frontend code specifically
+  - Read [localization.mdc](mdc:.cursor/rules/localization.mdc) when working with user-facing strings or adding translations
 - ActiveRecord migrations must inherit from `ActiveRecord::Migration[7.2]`. Do **not** use version 8.0 yet.
+- **All user-facing strings must use i18n** - use the `t()` helper, never hardcode text
 
 ## Prohibited actions
 

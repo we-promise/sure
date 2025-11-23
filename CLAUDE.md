@@ -121,6 +121,41 @@ Sidekiq handles asynchronous tasks:
 - **Locale Files**: Update `config/locales/en.yml` for new strings
 - **Missing Translations**: Configure to raise errors in development for missing keys
 
+### Community Localization
+We welcome community-contributed translations! When adding or updating localizations:
+
+- **Adding New Languages**:
+  1. Create locale files in `config/locales/[language_code]/` (e.g., `config/locales/fr/`)
+  2. Follow the same hierarchical structure as English locale files
+  3. **CRITICAL**: Add the language code to `SUPPORTED_LOCALES` in `app/helpers/languages_helper.rb` to make it available in the UI
+  4. Ensure the language is also present in `LANGUAGE_MAPPING` in the same file
+  5. Test the language thoroughly in the UI before submitting
+
+- **Translation Quality Standards**:
+  - Maintain consistent terminology across all files
+  - Preserve interpolation variables exactly as they appear (e.g., `%{name}`, `%{count}`)
+  - Respect pluralization rules for your language
+  - Keep formatting characters and HTML tags intact
+  - Test all translations in context, not just isolated strings
+
+- **File Organization**:
+  - Mirror the English locale structure exactly
+  - One feature per file (e.g., `accounts.yml`, `transactions.yml`)
+  - Use the same nesting depth as the English version
+  - Include all translation keys, even if some values are identical to English
+
+- **Testing Translations**:
+  - Switch your user account to the new language in settings
+  - Navigate through all major features to verify translations
+  - Check for missing keys (will show as translation path in development)
+  - Verify number, date, and currency formatting is appropriate for the locale
+
+- **Supported vs Community Locales**:
+  - Languages in `SUPPORTED_LOCALES` have extensive (50+ files) translations
+  - Community locales may have partial coverage but are still valuable
+  - When adding a new locale, aim for complete coverage of core features first
+  - Document any incomplete sections in your pull request
+
 ### Multi-Currency Support
 - All monetary values stored in base currency (user's primary currency)
 - `Money` objects handle currency conversion and formatting

@@ -99,3 +99,10 @@ Use this rule to learn how to write ERB views, partials, and Stimulus controller
   - **Shared partials**: Place in `app/views/shared/` directory for reusable content
   - **Context-specific partials**: Place in relevant controller view directory (e.g., `accounts/_account_sidebar_tabs.html.erb`)
 
+- **Internationalization (i18n)**
+  - **ALL user-facing strings must use the `t()` helper**
+  - Never hardcode text in views - always use locale keys
+  - Refer to [localization.mdc](mdc:.cursor/rules/localization.mdc) for complete i18n guidelines
+  - Example: `<%= t("accounts.index.title") %>` instead of `<%= "My Accounts" %>`
+  - Update `config/locales/en.yml` when adding new strings
+
