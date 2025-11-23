@@ -161,7 +161,7 @@ module LanguagesHelper
     "tr",   # Turkish - 57 translation files
     "nb",   # Norwegian Bokmål - 56 translation files
     "ca",   # Catalan - 56 translation files
-    "ro"    # Romaninan - 61 translation files
+    "ro"    # Romanian - 61 translation files
   ].freeze
 
   COUNTRY_MAPPING = {
