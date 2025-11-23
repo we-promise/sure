@@ -165,6 +165,20 @@ class SimplefinItemsController < ApplicationController
       [ "Other Asset", "OtherAsset" ]
     ]
 
+    # Compute UI-only suggestions (preselect only when high confidence)
+    @inferred_map = {}
+    @simplefin_accounts.each do |sfa|
+      holdings = sfa.raw_holdings_payload.presence || sfa.raw_payload.to_h["holdings"]
+      inf = Simplefin::AccountTypeMapper.infer(
+        name: sfa.name,
+        holdings: holdings,
+        extra: sfa.extra,
+        balance: sfa.current_balance,
+        available_balance: sfa.available_balance
+      )
+      @inferred_map[sfa.id] = { type: inf.accountable_type, subtype: inf.subtype, confidence: inf.confidence }
+    end
+
     # Subtype options for each account type
     @subtype_options = {
       "Depository" => {

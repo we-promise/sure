@@ -87,6 +87,12 @@ class Account < ApplicationRecord
 
 
     def create_from_simplefin_account(simplefin_account, account_type, subtype = nil)
+      # Respect user choice when provided; otherwise infer a sensible default
+      # Require an explicit account_type; do not infer on the backend
+      if account_type.blank? || account_type.to_s == "unknown"
+        raise ArgumentError, "account_type is required when creating an account from SimpleFIN"
+      end
+
       # Get the balance from SimpleFin
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 

@@ -75,7 +75,7 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:openai_uri_base)
-      Setting.openai_uri_base = hosting_params[:openai_uri_base]
+      Setting.openai_uri_base = hosting_params[:openai_uri_base].presence
     end
 
     if hosting_params.key?(:openai_model)
