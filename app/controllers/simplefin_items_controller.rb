@@ -169,12 +169,20 @@ class SimplefinItemsController < ApplicationController
     @inferred_map = {}
     @simplefin_accounts.each do |sfa|
       holdings = sfa.raw_holdings_payload.presence || sfa.raw_payload.to_h["holdings"]
+      institution_name = nil
+      begin
+        od = sfa.org_data
+        institution_name = od["name"] if od.is_a?(Hash)
+      rescue
+        institution_name = nil
+      end
       inf = Simplefin::AccountTypeMapper.infer(
         name: sfa.name,
         holdings: holdings,
         extra: sfa.extra,
         balance: sfa.current_balance,
-        available_balance: sfa.available_balance
+        available_balance: sfa.available_balance,
+        institution: institution_name
       )
       @inferred_map[sfa.id] = { type: inf.accountable_type, subtype: inf.subtype, confidence: inf.confidence }
     end

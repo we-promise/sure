@@ -5,7 +5,19 @@
     <% selected_value = "" %>
     <% if account_type == "Depository" %>
       <% n = simplefin_account.name.to_s.downcase %>
-      <% selected_value = n.include?("checking") ? "checking" : (n.include?("savings") ? "savings" : "") %>
+      <% selected_value = "" %>
+      <% if n =~ /\bchecking\b|\bchequing\b|\bck\b|demand\s+deposit/ %>
+        <% selected_value = "checking" %>
+      <% elsif n =~ /\bsavings\b|\bsv\b/ %>
+        <% selected_value = "savings" %>
+      <% elsif n =~ /money\s+market|\bmm\b/ %>
+        <% selected_value = "money_market" %>
+      <% end %>
+    <% elsif account_type == "Investment" %>
+      <% inferred = @inferred_map&.dig(simplefin_account.id) || {} %>
+      <% if inferred[:confidence] == :high && inferred[:type] == "Investment" && inferred[:subtype].present? %>
+        <% selected_value = inferred[:subtype] %>
+      <% end %>
     <% end %>
     <%= select_tag "account_subtypes[#{simplefin_account.id}]",
                   options_for_select([["Select #{account_type == 'Depository' ? 'subtype' : 'type'}", ""]] + subtype_config[:options], selected_value),
