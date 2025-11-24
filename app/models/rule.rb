@@ -4,6 +4,7 @@ class Rule < ApplicationRecord
   belongs_to :family
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
+  has_many :rule_runs, dependent: :destroy
 
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
