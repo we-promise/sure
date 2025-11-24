@@ -19,7 +19,7 @@ module ExchangeRate::Provided
       return nil unless response.success? # Provider error
 
       rate = response.data
-      ExchangeRate.find_or_create_by!(
+      ExchangeRate.create_or_find_by(
         from_currency: rate.from,
         to_currency: rate.to,
         date: rate.date
