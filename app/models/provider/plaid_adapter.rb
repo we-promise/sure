@@ -17,6 +17,63 @@ class Provider::PlaidAdapter < Provider::Base
   # Register this adapter with the factory for ALL PlaidAccount instances
   Provider::Factory.register("PlaidAccount", self)
 
+  # Define which account types this provider supports (US region)
+  def self.supported_account_types
+    %w[Depository CreditCard Loan Investment]
+  end
+
+  # Returns connection configurations for this provider
+  # Plaid can return multiple configs (US and EU) depending on family setup
+  def self.connection_configs(family:)
+    configs = []
+
+    # US configuration
+    if family.can_connect_plaid_us?
+      configs << {
+        key: "plaid_us",
+        name: "Plaid",
+        description: "Connect to your US bank via Plaid",
+        can_connect: true,
+        new_account_path: ->(accountable_type, return_to) {
+          Rails.application.routes.url_helpers.new_plaid_item_path(
+            region: "us",
+            accountable_type: accountable_type
+          )
+        },
+        existing_account_path: ->(account_id) {
+          Rails.application.routes.url_helpers.select_existing_account_plaid_items_path(
+            account_id: account_id,
+            region: "us"
+          )
+        }
+      }
+    end
+
+    # EU configuration
+    if family.can_connect_plaid_eu?
+      configs << {
+        key: "plaid_eu",
+        name: "Plaid (EU)",
+        description: "Connect to your EU bank via Plaid",
+        can_connect: true,
+        new_account_path: ->(accountable_type, return_to) {
+          Rails.application.routes.url_helpers.new_plaid_item_path(
+            region: "eu",
+            accountable_type: accountable_type
+          )
+        },
+        existing_account_path: ->(account_id) {
+          Rails.application.routes.url_helpers.select_existing_account_plaid_items_path(
+            account_id: account_id,
+            region: "eu"
+          )
+        }
+      }
+    end
+
+    configs
+  end
+
   # Mutex for thread-safe configuration loading
   # Initialized at class load time to avoid race conditions on mutex creation
   @config_mutex = Mutex.new

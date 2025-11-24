@@ -63,6 +63,39 @@ class Provider::Factory
       find_adapter_class(provider_type).present?
     end
 
+    # Get all registered adapter classes
+    # @return [Array<Class>] List of registered adapter classes
+    def registered_adapters
+      ensure_adapters_loaded
+      registry.values.uniq
+    end
+
+    # Get adapters that support a specific account type
+    # @param account_type [String] The account type class name (e.g., "Depository", "CreditCard")
+    # @return [Array<Class>] List of adapter classes that support this account type
+    def adapters_for_account_type(account_type)
+      registered_adapters.select do |adapter_class|
+        adapter_class.supported_account_types.include?(account_type)
+      end
+    end
+
+    # Check if any provider supports a given account type
+    # @param account_type [String] The account type class name
+    # @return [Boolean]
+    def supports_account_type?(account_type)
+      adapters_for_account_type(account_type).any?
+    end
+
+    # Get all available provider connection configs for a given account type
+    # @param account_type [String] The account type class name (e.g., "Depository")
+    # @param family [Family] The family to check connection availability for
+    # @return [Array<Hash>] Array of connection configurations from all providers
+    def connection_configs_for_account_type(account_type:, family:)
+      adapters_for_account_type(account_type).flat_map do |adapter_class|
+        adapter_class.connection_configs(family: family)
+      end
+    end
+
     # Clear all registered adapters (useful for testing)
     def clear_registry!
       @registry = {}

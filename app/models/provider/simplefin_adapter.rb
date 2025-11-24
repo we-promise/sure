@@ -5,6 +5,33 @@ class Provider::SimplefinAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("SimplefinAccount", self)
 
+  # Define which account types this provider supports
+  def self.supported_account_types
+    %w[Depository CreditCard Loan Investment]
+  end
+
+  # Returns connection configurations for this provider
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_simplefin?
+
+    [{
+      key: "simplefin",
+      name: "SimpleFIN",
+      description: "Connect to your bank via SimpleFIN",
+      can_connect: true,
+      new_account_path: ->(accountable_type, return_to) {
+        Rails.application.routes.url_helpers.new_simplefin_item_path(
+          accountable_type: accountable_type
+        )
+      },
+      existing_account_path: ->(account_id) {
+        Rails.application.routes.url_helpers.select_existing_account_simplefin_items_path(
+          account_id: account_id
+        )
+      }
+    }]
+  end
+
   def provider_name
     "simplefin"
   end
