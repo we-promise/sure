@@ -86,15 +86,5 @@ module Simplefin
       # 5) Default
       Inference.new(accountable_type: "Depository", confidence: :low)
     end
-
-    def self.retirement_hint?(name, extra)
-      return true if RETIREMENT_KEYWORDS.match?(name.to_s)
-
-      # sometimes providers include hints in extra payload
-      x = (extra || {}).with_indifferent_access
-      candidate = [ x[:account_subtype], x[:type], x[:subtype], x[:category] ].compact.join(" ")
-      RETIREMENT_KEYWORDS.match?(candidate)
-    end
-    private_class_method :retirement_hint?
   end
 end
