@@ -225,19 +225,43 @@ export default class extends Controller {
     });
   }
 
-  saveOrder() {
+  async saveOrder() {
     const order = this.sectionTargets.map(
       (section) => section.dataset.sectionKey,
     );
 
-    fetch("/reports/update_preferences", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
-          .content,
-      },
-      body: JSON.stringify({ preferences: { reports_section_order: order } }),
-    });
+    // Safely obtain CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+      console.error(
+        "[Reports Sortable] CSRF token not found. Cannot save section order.",
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch("/reports/update_preferences", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken.content,
+        },
+        body: JSON.stringify({ preferences: { reports_section_order: order } }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(
+          "[Reports Sortable] Failed to save section order:",
+          response.status,
+          errorData,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[Reports Sortable] Network error saving section order:",
+        error,
+      );
+    }
   }
 }

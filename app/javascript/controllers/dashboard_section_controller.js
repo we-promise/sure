@@ -53,21 +53,45 @@ export default class extends Controller {
     this.savePreference(false);
   }
 
-  savePreference(collapsed) {
+  async savePreference(collapsed) {
     const preferences = {
       collapsed_sections: {
         [this.sectionKeyValue]: collapsed,
       },
     };
 
-    fetch("/dashboard/preferences", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
-          .content,
-      },
-      body: JSON.stringify({ preferences }),
-    });
+    // Safely obtain CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+      console.error(
+        "[Dashboard Section] CSRF token not found. Cannot save preferences.",
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch("/dashboard/preferences", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken.content,
+        },
+        body: JSON.stringify({ preferences }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(
+          "[Dashboard Section] Failed to save preferences:",
+          response.status,
+          errorData,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[Dashboard Section] Network error saving preferences:",
+        error,
+      );
+    }
   }
 }
