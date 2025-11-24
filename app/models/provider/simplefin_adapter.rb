@@ -14,7 +14,7 @@ class Provider::SimplefinAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_simplefin?
 
-    [{
+    [ {
       key: "simplefin",
       name: "SimpleFIN",
       description: "Connect to your bank via SimpleFIN",
@@ -29,7 +29,7 @@ class Provider::SimplefinAdapter < Provider::Base
           account_id: account_id
         )
       }
-    }]
+    } ]
   end
 
   def provider_name

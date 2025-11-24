@@ -14,7 +14,7 @@ class Provider::LunchflowAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_lunchflow?
 
-    [{
+    [ {
       key: "lunchflow",
       name: "Lunch Flow",
       description: "Connect to your bank via Lunch Flow",
@@ -30,7 +30,7 @@ class Provider::LunchflowAdapter < Provider::Base
           account_id: account_id
         )
       }
-    }]
+    } ]
   end
 
   def provider_name
