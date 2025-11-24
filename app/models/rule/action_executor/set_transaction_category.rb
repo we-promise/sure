@@ -7,7 +7,7 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
     family.categories.alphabetically.pluck(:name, :id)
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     category = family.categories.find_by_id(value)
 
     scope = transaction_scope

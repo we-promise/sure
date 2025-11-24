@@ -130,9 +130,19 @@
               </td>
               <td class="px-4 py-3 text-sm">
                 <div class="flex items-center gap-2">
-                  <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.success? ? 'bg-green-50 text-green-700 theme-dark:bg-green-950/30 theme-dark:text-green-400' : 'bg-red-50 text-red-700 theme-dark:bg-red-950/30 theme-dark:text-red-400' %>">
-                    <%= t("rules.recent_runs.statuses.#{run.status}") %>
-                  </span>
+                  <% if run.pending? %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700 theme-dark:bg-yellow-950/30 theme-dark:text-yellow-400">
+                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                    </span>
+                  <% elsif run.success? %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 theme-dark:bg-green-950/30 theme-dark:text-green-400">
+                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                    </span>
+                  <% else %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 theme-dark:bg-red-950/30 theme-dark:text-red-400">
+                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                    </span>
+                  <% end %>
                   <% if run.failed? && run.error_message.present? %>
                     <div data-controller="tooltip" data-tooltip-content-value="<%= run.error_message %>">
                       <%= icon("info", size: "sm", class: "text-red-500") %>

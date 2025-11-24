@@ -6,37 +6,74 @@ class RuleJob < ApplicationJob
     transactions_queued = 0
     transactions_processed = 0
     transactions_modified = 0
+    pending_jobs_count = 0
     status = "success"
     error_message = nil
+    rule_run = nil
 
     begin
       # Count matching transactions before processing (queued count)
       transactions_queued = rule.affected_resource_count
 
-      # Apply the rule and get the count of actually modified transactions
-      modifications_count = rule.apply(ignore_attribute_locks: ignore_attribute_locks)
+      # Create the RuleRun record first with pending status
+      # We'll update it after we know if there are async jobs
+      rule_run = RuleRun.create!(
+        rule: rule,
+        execution_type: execution_type,
+        status: "pending",  # Start as pending, will be updated
+        transactions_queued: transactions_queued,
+        transactions_processed: 0,
+        transactions_modified: 0,
+        pending_jobs_count: 0,
+        executed_at: executed_at
+      )
 
-      # For synchronous executors: processed = modified (actual changes)
-      # For async executors (AI): the count represents transactions queued for background processing
-      transactions_processed = modifications_count
-      transactions_modified = modifications_count
+      # Apply the rule and get the result
+      result = rule.apply(ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+
+      if result.is_a?(Hash) && result[:async]
+        # Async actions were executed
+        transactions_processed = result[:modified_count]
+        pending_jobs_count = result[:jobs_count]
+        status = "pending"
+      else
+        # Only synchronous actions were executed
+        transactions_processed = result
+        transactions_modified = result
+        status = "success"
+      end
+
+      # Update the rule run with final counts
+      rule_run.update!(
+        status: status,
+        transactions_processed: transactions_processed,
+        transactions_modified: transactions_modified,
+        pending_jobs_count: pending_jobs_count
+      )
     rescue => e
       status = "failed"
       error_message = "#{e.class}: #{e.message}"
       Rails.logger.error("RuleJob failed for rule #{rule.id}: #{error_message}")
+
+      # Update the rule run as failed if it was created
+      if rule_run
+        rule_run.update(status: "failed", error_message: error_message)
+      else
+        # Create a failed rule run if we hadn't created one yet
+        RuleRun.create!(
+          rule: rule,
+          execution_type: execution_type,
+          status: "failed",
+          transactions_queued: transactions_queued,
+          transactions_processed: 0,
+          transactions_modified: 0,
+          pending_jobs_count: 0,
+          executed_at: executed_at,
+          error_message: error_message
+        )
+      end
+
       raise # Re-raise to mark job as failed in Sidekiq
-    ensure
-      # Record the rule run
-      RuleRun.create!(
-        rule: rule,
-        execution_type: execution_type,
-        status: status,
-        transactions_queued: transactions_queued,
-        transactions_processed: transactions_processed,
-        transactions_modified: transactions_modified,
-        executed_at: executed_at,
-        error_message: error_message
-      )
     end
   end
 end

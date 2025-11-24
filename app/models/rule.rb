@@ -40,13 +40,28 @@ class Rule < ApplicationRecord
     matching_resources_scope.count
   end
 
-  def apply(ignore_attribute_locks: false)
+  def apply(ignore_attribute_locks: false, rule_run: nil)
     total_modified = 0
+    total_async_jobs = 0
+    has_async = false
+
     actions.each do |action|
-      count = action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks)
-      total_modified += count if count.is_a?(Integer)
+      result = action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+
+      if result.is_a?(Hash) && result[:async]
+        has_async = true
+        total_async_jobs += result[:jobs_count] || 0
+        total_modified += result[:queued_count] || 0
+      elsif result.is_a?(Integer)
+        total_modified += result
+      end
     end
-    total_modified
+
+    if has_async
+      { modified_count: total_modified, async: true, jobs_count: total_async_jobs }
+    else
+      total_modified
+    end
   end
 
   def apply_later(ignore_attribute_locks: false)

@@ -17,5 +17,6 @@ en:
         manual: Manual
         scheduled: Scheduled
       statuses:
+        pending: Pending
         success: Success
         failed: Failed

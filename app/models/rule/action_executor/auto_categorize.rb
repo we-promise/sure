@@ -29,7 +29,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     end
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     enrichable_transactions = transaction_scope.enrichable(:category_id)
 
     if enrichable_transactions.empty?
@@ -37,12 +37,20 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       return 0
     end
 
-    enrichable_transactions.in_batches(of: 20).each_with_index do |transactions, idx|
+    batch_size = 20
+    jobs_count = 0
+
+    enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
       Rails.logger.info("Scheduling auto-categorization for batch #{idx + 1} of #{enrichable_transactions.count}")
-      rule.family.auto_categorize_transactions_later(transactions)
+      rule.family.auto_categorize_transactions_later(transactions, rule_run_id: rule_run&.id)
+      jobs_count += 1
     end
 
-    # Return count of transactions queued for processing
-    enrichable_transactions.count
+    # Return metadata about async jobs
+    {
+      async: true,
+      queued_count: enrichable_transactions.count,
+      jobs_count: jobs_count
+    }
   end
 end

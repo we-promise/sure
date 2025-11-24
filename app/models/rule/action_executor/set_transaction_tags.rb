@@ -7,7 +7,7 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
     family.tags.alphabetically.pluck(:name, :id)
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     tag = family.tags.find_by_id(value)
 
     scope = transaction_scope

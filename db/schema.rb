@@ -754,6 +754,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_24_000001) do
     t.integer "transactions_queued", default: 0, null: false
     t.integer "transactions_processed", default: 0, null: false
     t.integer "transactions_modified", default: 0, null: false
+    t.integer "pending_jobs_count", default: 0, null: false
     t.datetime "executed_at", null: false
     t.text "error_message"
     t.datetime "created_at", null: false
