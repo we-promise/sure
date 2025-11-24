@@ -18,7 +18,6 @@ export default class extends Controller {
     this.draggedElement.classList.add("opacity-50");
     this.draggedElement.setAttribute("aria-grabbed", "true");
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/html", this.draggedElement.innerHTML);
   }
 
   dragEnd(event) {
