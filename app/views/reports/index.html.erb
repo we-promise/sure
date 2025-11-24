@@ -92,7 +92,7 @@
       <% @reports_sections.each do |section| %>
         <% next unless section[:visible] %>
         <section
-          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none"
+          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
           data-reports-sortable-target="section"
           data-section-key="<%= section[:key] %>"
           data-controller="reports-section"
