@@ -13,6 +13,6 @@ class CreateRuleRuns < ActiveRecord::Migration[7.2]
     end
 
     add_index :rule_runs, :executed_at
-    add_index :rule_runs, [:rule_id, :executed_at]
+    add_index :rule_runs, [ :rule_id, :executed_at ]
   end
 end
