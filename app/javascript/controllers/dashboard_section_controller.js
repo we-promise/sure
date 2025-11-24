@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["content", "chevron", "container"];
+  static targets = ["content", "chevron", "container", "button"];
   static values = {
     sectionKey: String,
     collapsed: Boolean,
@@ -22,10 +22,22 @@ export default class extends Controller {
     }
   }
 
+  handleToggleKeydown(event) {
+    // Handle Enter and Space keys for keyboard accessibility
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      event.stopPropagation(); // Prevent section's keyboard handler from firing
+      this.toggle(event);
+    }
+  }
+
   collapse(persist = true) {
     this.contentTarget.classList.add("hidden");
     this.chevronTarget.classList.add("rotate-180");
     this.collapsedValue = true;
+    if (this.hasButtonTarget) {
+      this.buttonTarget.setAttribute("aria-expanded", "false");
+    }
     if (persist) {
       this.savePreference(true);
     }
@@ -35,6 +47,9 @@ export default class extends Controller {
     this.contentTarget.classList.remove("hidden");
     this.chevronTarget.classList.remove("rotate-180");
     this.collapsedValue = false;
+    if (this.hasButtonTarget) {
+      this.buttonTarget.setAttribute("aria-expanded", "true");
+    }
     this.savePreference(false);
   }
 

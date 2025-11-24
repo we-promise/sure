@@ -55,8 +55,10 @@
             <button
               type="button"
               class="text-secondary hover:text-primary transition-colors p-0.5"
-              data-action="click->dashboard-section#toggle"
-              aria-label="<%= t("pages.dashboard.toggle_section") %>">
+              data-action="click->dashboard-section#toggle keydown->dashboard-section#handleToggleKeydown"
+              data-dashboard-section-target="button"
+              aria-label="<%= t("pages.dashboard.toggle_section") %>"
+              aria-expanded="<%= !Current.user.dashboard_section_collapsed?(section[:key]) %>">
               <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { dashboard_section_target: "chevron" }) %>
             </button>
             <h2 class="text-base font-medium">

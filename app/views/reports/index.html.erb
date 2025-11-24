@@ -115,8 +115,10 @@
               <button
                 type="button"
                 class="text-secondary hover:text-primary transition-colors p-0.5"
-                data-action="click->reports-section#toggle"
-                aria-label="<%= t("reports.index.toggle_section") %>">
+                data-action="click->reports-section#toggle keydown->reports-section#handleToggleKeydown"
+                data-reports-section-target="button"
+                aria-label="<%= t("reports.index.toggle_section") %>"
+                aria-expanded="<%= !Current.user.reports_section_collapsed?(section[:key]) %>">
                 <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { reports_section_target: "chevron" }) %>
               </button>
               <h2 class="text-base font-medium">
