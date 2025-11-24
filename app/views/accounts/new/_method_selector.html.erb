@@ -34,13 +34,13 @@
         </span>
         <% if is_lunchflow %>
           <span class="flex items-center gap-2">
-            <%= config[:name] %>
+            <%= t("accounts.new.method_selector.link_with_provider", provider: config[:name]) %>
             <span data-lunchflow-preload-target="spinner" class="hidden">
               <%= icon("loader-2", class: "animate-spin") %>
             </span>
           </span>
         <% else %>
-          <%= config[:name] %>
+          <%= t("accounts.new.method_selector.link_with_provider", provider: config[:name]) %>
         <% end %>
       <% end %>
     <% end %>

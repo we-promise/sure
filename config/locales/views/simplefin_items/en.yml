@@ -1,6 +1,12 @@
 ---
 en:
   simplefin_items:
+    new:
+      title: Connect SimpleFin
+      setup_token: Setup token
+      setup_token_placeholder: paste your SimpleFin setup token
+      connect: Connect
+      cancel: Cancel
     create:
       success: SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background.
       errors:

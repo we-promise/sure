@@ -28,6 +28,7 @@ nb:
       method_selector:
         connected_entry: Koble til konto
         connected_entry_eu: Koble til EU-konto
+        link_with_provider: "Koble til %{provider}"
         manual_entry: Angi kontobalanse
         title: Hvordan vil du legge den til?
       title: Hva vil du legge til?
