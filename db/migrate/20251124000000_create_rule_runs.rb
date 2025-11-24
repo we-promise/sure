@@ -4,8 +4,10 @@ class CreateRuleRuns < ActiveRecord::Migration[7.2]
       t.references :rule, null: false, foreign_key: true, type: :uuid
       t.string :execution_type, null: false # 'manual' or 'scheduled'
       t.string :status, null: false # 'success' or 'failed'
+      t.integer :transactions_queued, null: false, default: 0
       t.integer :transactions_processed, null: false, default: 0
       t.integer :transactions_modified, null: false, default: 0
+      t.integer :pending_jobs_count, null: false, default: 0
       t.datetime :executed_at, null: false
       t.text :error_message
 
