@@ -22,8 +22,9 @@ module Simplefin
       /\b529\s*plan\b|\b529\b/i => "529_plan",
       /\bhsa\b|\bhealth\s+savings\s+account\b/i => "hsa",
       /\bpension\b/i => "pension",
-      /\bmutual\s+fund\b/i => "mutual_fund"
-      # Note: 403(b) and TSP not currently in Investment::SUBTYPES; if added later, extend here
+      /\bmutual\s+fund\b/i => "mutual_fund",
+      /\b403b\b|\b403\(b\)\b/i => "403b",
+      /\btsp\b/i => "tsp"
     }.freeze
 
     # Public API
