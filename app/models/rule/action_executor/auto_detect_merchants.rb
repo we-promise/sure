@@ -12,12 +12,15 @@ class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
 
     if enrichable_transactions.empty?
       Rails.logger.info("No transactions to auto-detect merchants for #{rule.id}")
-      return
+      return 0
     end
 
     enrichable_transactions.in_batches(of: 20).each_with_index do |transactions, idx|
       Rails.logger.info("Scheduling auto-merchant-enrichment for batch #{idx + 1} of #{enrichable_transactions.count}")
       rule.family.auto_detect_transaction_merchants_later(transactions)
     end
+
+    # Return count of transactions queued for processing
+    enrichable_transactions.count
   end
 end

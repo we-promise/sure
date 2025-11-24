@@ -16,7 +16,7 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
       scope = scope.enrichable(:category_id)
     end
 
-    scope.each do |txn|
+    count_modified_resources(scope) do |txn|
       txn.enrich_attribute(
         :category_id,
         category.id,

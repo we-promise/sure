@@ -10,6 +10,7 @@ en:
         execution_type: Execution Type
         status: Status
         rule_name: Rule Name
+        transactions_queued: Transactions Queued
         transactions_processed: Transactions Processed
         transactions_modified: Transactions Modified
       execution_types:

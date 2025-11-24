@@ -34,12 +34,15 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
 
     if enrichable_transactions.empty?
       Rails.logger.info("No transactions to auto-categorize for #{rule.id}")
-      return
+      return 0
     end
 
     enrichable_transactions.in_batches(of: 20).each_with_index do |transactions, idx|
       Rails.logger.info("Scheduling auto-categorization for batch #{idx + 1} of #{enrichable_transactions.count}")
       rule.family.auto_categorize_transactions_later(transactions)
     end
+
+    # Return count of transactions queued for processing
+    enrichable_transactions.count
   end
 end

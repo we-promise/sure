@@ -107,6 +107,9 @@
               <%= t("rules.recent_runs.columns.rule_name") %>
             </th>
             <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase tracking-wider">
+              <%= t("rules.recent_runs.columns.transactions_queued") %>
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase tracking-wider">
               <%= t("rules.recent_runs.columns.transactions_processed") %>
             </th>
             <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase tracking-wider">
@@ -139,6 +142,9 @@
               </td>
               <td class="px-4 py-3 text-sm text-primary">
                 <%= run.rule.name.presence || t("rules.recent_runs.unnamed_rule") %>
+              </td>
+              <td class="px-4 py-3 text-sm text-primary text-right tabular-nums">
+                <%= number_with_delimiter(run.transactions_queued) %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-right tabular-nums">
                 <%= number_with_delimiter(run.transactions_processed) %>

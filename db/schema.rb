@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_11_24_000000) do
+ActiveRecord::Schema[7.2].define(version: 2025_11_24_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -751,6 +751,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_24_000000) do
     t.uuid "rule_id", null: false
     t.string "execution_type", null: false
     t.string "status", null: false
+    t.integer "transactions_queued", default: 0, null: false
     t.integer "transactions_processed", default: 0, null: false
     t.integer "transactions_modified", default: 0, null: false
     t.datetime "executed_at", null: false

@@ -16,7 +16,7 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
       scope = scope.enrichable(:tag_ids)
     end
 
-    rows = scope.each do |txn|
+    count_modified_resources(scope) do |txn|
       txn.enrich_attribute(
         :tag_ids,
         [ tag.id ],

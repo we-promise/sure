@@ -4,6 +4,7 @@ class RuleRun < ApplicationRecord
   validates :execution_type, inclusion: { in: %w[manual scheduled] }
   validates :status, inclusion: { in: %w[success failed] }
   validates :executed_at, presence: true
+  validates :transactions_queued, numericality: { greater_than_or_equal_to: 0 }
   validates :transactions_processed, numericality: { greater_than_or_equal_to: 0 }
   validates :transactions_modified, numericality: { greater_than_or_equal_to: 0 }
 

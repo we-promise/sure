@@ -41,9 +41,12 @@ class Rule < ApplicationRecord
   end
 
   def apply(ignore_attribute_locks: false)
+    total_modified = 0
     actions.each do |action|
-      action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks)
+      count = action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks)
+      total_modified += count if count.is_a?(Integer)
     end
+    total_modified
   end
 
   def apply_later(ignore_attribute_locks: false)
