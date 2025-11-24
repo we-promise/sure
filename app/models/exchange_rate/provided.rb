@@ -22,9 +22,10 @@ module ExchangeRate::Provided
       ExchangeRate.find_or_create_by!(
         from_currency: rate.from,
         to_currency: rate.to,
-        date: rate.date,
-        rate: rate.rate
-      ) if cache
+        date: rate.date
+      ) do |exchange_rate|
+        exchange_rate.rate = rate.rate
+      end if cache
       rate
     end
 
