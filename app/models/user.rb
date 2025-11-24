@@ -179,11 +179,11 @@ class User < ApplicationRecord
 
   # Dashboard preferences management
   def dashboard_section_collapsed?(section_key)
-    preferences.dig("collapsed_sections", section_key) == true
+    preferences&.dig("collapsed_sections", section_key) == true
   end
 
   def dashboard_section_order
-    preferences["section_order"] || default_dashboard_section_order
+    preferences&.[]("section_order") || default_dashboard_section_order
   end
 
   def update_dashboard_preferences(prefs)
@@ -192,7 +192,7 @@ class User < ApplicationRecord
     transaction do
       lock! # Acquire row-level lock (SELECT FOR UPDATE)
 
-      updated_prefs = preferences.deep_dup
+      updated_prefs = (preferences || {}).deep_dup
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
@@ -208,11 +208,11 @@ class User < ApplicationRecord
 
   # Reports preferences management
   def reports_section_collapsed?(section_key)
-    preferences.dig("reports_collapsed_sections", section_key) == true
+    preferences&.dig("reports_collapsed_sections", section_key) == true
   end
 
   def reports_section_order
-    preferences["reports_section_order"] || default_reports_section_order
+    preferences&.[]("reports_section_order") || default_reports_section_order
   end
 
   def update_reports_preferences(prefs)
@@ -220,7 +220,7 @@ class User < ApplicationRecord
     transaction do
       lock!
 
-      updated_prefs = preferences.deep_dup
+      updated_prefs = (preferences || {}).deep_dup
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}

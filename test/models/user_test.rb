@@ -225,4 +225,55 @@ class UserTest < ActiveSupport::TestCase
 
     assert_equal new_order, @user.dashboard_section_order
   end
+
+  test "handles empty preferences gracefully for dashboard methods" do
+    @user.update!(preferences: {})
+
+    # dashboard_section_collapsed? should return false when key is missing
+    assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
+      "Should return false when collapsed_sections key is missing"
+
+    # dashboard_section_order should return default order when key is missing
+    assert_equal %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet],
+      @user.dashboard_section_order,
+      "Should return default order when section_order key is missing"
+
+    # update_dashboard_preferences should work with empty preferences
+    @user.update_dashboard_preferences({ "section_order" => %w[balance_sheet] })
+    @user.reload
+
+    assert_equal %w[balance_sheet], @user.preferences["section_order"]
+  end
+
+  test "handles empty preferences gracefully for reports methods" do
+    @user.update!(preferences: {})
+
+    # reports_section_collapsed? should return false when key is missing
+    assert_not @user.reports_section_collapsed?("trends_insights"),
+      "Should return false when reports_collapsed_sections key is missing"
+
+    # reports_section_order should return default order when key is missing
+    assert_equal %w[trends_insights transactions_breakdown],
+      @user.reports_section_order,
+      "Should return default order when reports_section_order key is missing"
+
+    # update_reports_preferences should work with empty preferences
+    @user.update_reports_preferences({ "reports_section_order" => %w[transactions_breakdown] })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown], @user.preferences["reports_section_order"]
+  end
+
+  test "handles missing nested keys in preferences for collapsed sections" do
+    @user.update!(preferences: { "section_order" => %w[cashflow] })
+
+    # Should return false when collapsed_sections key is missing entirely
+    assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
+      "Should return false when collapsed_sections key is missing"
+
+    # Should return false when section_key is missing from collapsed_sections
+    @user.update!(preferences: { "collapsed_sections" => {} })
+    assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
+      "Should return false when section key is missing from collapsed_sections"
+  end
 end
