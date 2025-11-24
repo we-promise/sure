@@ -7,11 +7,15 @@ class Simplefin::AccountTypeMapperTest < ActiveSupport::TestCase
     assert_nil inf.subtype
   end
 
-  test "retirement inferred when name includes IRA/401k/Roth" do
-    [ "My Roth IRA", "401k Fidelity" ].each do |name|
+  test "explicit retirement tokens map to exact subtypes" do
+    cases = {
+      "My Roth IRA" => "roth_ira",
+      "401k Fidelity" => "401k"
+    }
+    cases.each do |name, expected_subtype|
       inf = Simplefin::AccountTypeMapper.infer(name: name, holdings: [ { symbol: "VTI" } ])
       assert_equal "Investment", inf.accountable_type
-      assert_equal "retirement", inf.subtype
+      assert_equal expected_subtype, inf.subtype
     end
   end
 
