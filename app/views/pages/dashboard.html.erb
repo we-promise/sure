@@ -32,7 +32,8 @@
     <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
       <%= render partial: "pages/dashboard/cashflow_sankey", locals: {
         sankey_data: @cashflow_sankey_data,
-        period: @period
+        period: @period,
+        include_investments: @include_investments
       } %>
     </section>
 
@@ -40,6 +41,15 @@
       <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
         <%= render partial: "pages/dashboard/outflows_donut", locals: {
           outflows_data: @outflows_data,
+          period: @period
+        } %>
+      </section>
+    <% end %>
+
+    <% if @investment_statement.investment_accounts.any? %>
+      <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+        <%= render partial: "pages/dashboard/investment_summary", locals: {
+          investment_statement: @investment_statement,
           period: @period
         } %>
       </section>

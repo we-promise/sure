@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bin/rails test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

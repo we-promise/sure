@@ -69,6 +69,10 @@ class Family < ApplicationRecord
     @income_statement ||= IncomeStatement.new(self)
   end
 
+  def investment_statement
+    @investment_statement ||= InvestmentStatement.new(self)
+  end
+
   def eu?
     country != "US" && country != "CA"
   end
