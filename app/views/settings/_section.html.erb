@@ -1,7 +1,7 @@
 <%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true) %>
 <% if collapsible %>
   <details <%= "open" if open %> class="group bg-container shadow-border-xs rounded-xl p-4">
-    <summary class="flex items-center justify-between gap-2 cursor-pointer focus-visible:outline-hidden list-none [&::-webkit-details-marker]:hidden">
+    <summary class="flex items-center justify-between gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 rounded-lg list-none [&::-webkit-details-marker]:hidden">
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "text-secondary group-open:transform group-open:rotate-90 transition-transform" %>
         <div>
