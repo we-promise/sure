@@ -79,6 +79,42 @@
         </div>
       </section>
     <% end %>
+    <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+      <%= render partial: "pages/dashboard/cashflow_sankey", locals: {
+        sankey_data: @cashflow_sankey_data,
+        period: @period,
+        include_investments: @include_investments
+      } %>
+    </section>
+
+    <% if @outflows_data[:categories].present? %>
+      <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+        <%= render partial: "pages/dashboard/outflows_donut", locals: {
+          outflows_data: @outflows_data,
+          period: @period
+        } %>
+      </section>
+    <% end %>
+
+    <% if @investment_statement.investment_accounts.any? %>
+      <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+        <%= render partial: "pages/dashboard/investment_summary", locals: {
+          investment_statement: @investment_statement,
+          period: @period
+        } %>
+      </section>
+    <% end %>
+
+    <section class="bg-container py-4 rounded-xl shadow-border-xs">
+      <%= render partial: "pages/dashboard/net_worth_chart", locals: {
+        balance_sheet: @balance_sheet,
+        period: @period
+      } %>
+    </section>
+
+    <section>
+      <%= render "pages/dashboard/balance_sheet", balance_sheet: @balance_sheet %>
+    </section>
   <% else %>
     <section>
       <%= render "pages/dashboard/no_accounts_graph_placeholder" %>

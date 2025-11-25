@@ -108,6 +108,18 @@ en:
         showing: Showing %{count} transactions
         previous: Previous
         next: Next
+    investment_performance:
+      title: Investment Performance
+      portfolio_value: Portfolio Value
+      total_return: Total Return
+      contributions: Period Contributions
+      withdrawals: Period Withdrawals
+      top_holdings: Top Holdings
+      holding: Holding
+      weight: Weight
+      value: Value
+      return: Return
+      accounts: Investment Accounts
     google_sheets_instructions:
       title_with_key: "✅ Copy URL for Google Sheets"
       title_no_key: "⚠️ API Key Required"

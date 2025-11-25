@@ -5,7 +5,9 @@ class PagesController < ApplicationController
 
   def dashboard
     @balance_sheet = Current.family.balance_sheet
+    @investment_statement = Current.family.investment_statement
     @accounts = Current.family.accounts.visible.with_attached_logo
+    @include_investments = params[:include_investments] == "true"
 
     family_currency = Current.family.currency
 
@@ -13,7 +15,10 @@ class PagesController < ApplicationController
     income_totals = Current.family.income_statement.income_totals(period: @period)
     expense_totals = Current.family.income_statement.expense_totals(period: @period)
 
-    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
+    # Get investment totals if include_investments is enabled
+    investment_totals = @include_investments ? @investment_statement.totals(period: @period) : nil
+
+    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency, investment_totals: investment_totals)
     @outflows_data = build_outflows_donut_data(expense_totals, family_currency)
 
     @dashboard_sections = build_dashboard_sections
@@ -117,7 +122,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(income_totals, expense_totals, currency_symbol)
+    def build_cashflow_sankey_data(income_totals, expense_totals, currency_symbol, investment_totals: nil)
       nodes = []
       links = []
       node_indices = {} # Memoize node indices by a unique key: "type_categoryid"
@@ -133,8 +138,17 @@ class PagesController < ApplicationController
       total_income_val = income_totals.total.to_f.round(2)
       total_expense_val = expense_totals.total.to_f.round(2)
 
+      # Add investment flows if enabled
+      investment_contributions = investment_totals&.contributions&.amount&.to_f&.round(2) || 0
+      investment_withdrawals = investment_totals&.withdrawals&.amount&.to_f&.round(2) || 0
+
+      # Investment withdrawals are like income (cash coming in from selling)
+      # Investment contributions are like expenses (cash going out to buy)
+      total_income_with_investments = total_income_val + investment_withdrawals
+      total_expense_with_investments = total_expense_val + investment_contributions
+
       # --- Create Central Cash Flow Node ---
-      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income_val, 0, "var(--color-success)")
+      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income_with_investments, 0, "var(--color-success)")
 
       # --- Process Income Side (Top-level categories only) ---
       income_totals.category_totals.each do |ct|
@@ -144,7 +158,7 @@ class PagesController < ApplicationController
         val = ct.total.to_f.round(2)
         next if val.zero?
 
-        percentage_of_total_income = total_income_val.zero? ? 0 : (val / total_income_val * 100).round(1)
+        percentage_of_total_income = total_income_with_investments.zero? ? 0 : (val / total_income_with_investments * 100).round(1)
 
         node_display_name = ct.category.name
         node_color = ct.category.color.presence || Category::COLORS.sample
@@ -166,6 +180,26 @@ class PagesController < ApplicationController
         }
       end
 
+      # --- Add Investment Withdrawals (Liquidations) as Income ---
+      if investment_withdrawals.positive?
+        percentage = total_income_with_investments.zero? ? 0 : (investment_withdrawals / total_income_with_investments * 100).round(1)
+        inv_income_idx = add_node.call(
+          "investment_liquidations",
+          "Investment Liquidations",
+          investment_withdrawals,
+          percentage,
+          Category::INVESTMENT_COLOR
+        )
+
+        links << {
+          source: inv_income_idx,
+          target: cash_flow_idx,
+          value: investment_withdrawals,
+          color: Category::INVESTMENT_COLOR,
+          percentage: percentage
+        }
+      end
+
       # --- Process Expense Side (Top-level categories only) ---
       expense_totals.category_totals.each do |ct|
         # Skip subcategories – only include root expense categories to keep Sankey shallow
@@ -174,7 +208,7 @@ class PagesController < ApplicationController
         val = ct.total.to_f.round(2)
         next if val.zero?
 
-        percentage_of_total_expense = total_expense_val.zero? ? 0 : (val / total_expense_val * 100).round(1)
+        percentage_of_total_expense = total_expense_with_investments.zero? ? 0 : (val / total_expense_with_investments * 100).round(1)
 
         node_display_name = ct.category.name
         node_color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
@@ -196,10 +230,30 @@ class PagesController < ApplicationController
         }
       end
 
+      # --- Add Investment Contributions as Expense ---
+      if investment_contributions.positive?
+        percentage = total_expense_with_investments.zero? ? 0 : (investment_contributions / total_expense_with_investments * 100).round(1)
+        inv_expense_idx = add_node.call(
+          "investment_contributions",
+          "Investment Contributions",
+          investment_contributions,
+          percentage,
+          Category::INVESTMENT_COLOR
+        )
+
+        links << {
+          source: cash_flow_idx,
+          target: inv_expense_idx,
+          value: investment_contributions,
+          color: Category::INVESTMENT_COLOR,
+          percentage: percentage
+        }
+      end
+
       # --- Process Surplus ---
-      leftover = (total_income_val - total_expense_val).round(2)
+      leftover = (total_income_with_investments - total_expense_with_investments).round(2)
       if leftover.positive?
-        percentage_of_total_income_for_surplus = total_income_val.zero? ? 0 : (leftover / total_income_val * 100).round(1)
+        percentage_of_total_income_for_surplus = total_income_with_investments.zero? ? 0 : (leftover / total_income_with_investments * 100).round(1)
         surplus_idx = add_node.call("surplus_node", "Surplus", leftover, percentage_of_total_income_for_surplus, "var(--color-success)")
         links << { source: cash_flow_idx, target: surplus_idx, value: leftover, color: "var(--color-success)", percentage: percentage_of_total_income_for_surplus }
       end
