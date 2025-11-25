@@ -21,23 +21,30 @@
                   class: "space-y-6" do |form| %>
 
       <div class="space-y-4">
-        <div class="bg-surface border border-primary p-4 rounded-lg">
-          <div class="flex items-start gap-3">
-            <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
-            <div>
-              <p class="text-sm text-primary mb-2">
-                <strong><%= t(".choose_account_type") %></strong>
-              </p>
-              <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
-                <% @account_type_options.each do |label, type| %>
-                  <li><strong><%= label %></strong></li>
-                <% end %>
-              </ul>
+        <% if @lunchflow_accounts.empty? %>
+          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
+            <%= icon "check-circle", size: "lg", class: "text-success" %>
+            <p class="text-primary font-medium"><%= t(".no_accounts_to_setup") %></p>
+            <p class="text-secondary text-sm"><%= t(".all_accounts_linked") %></p>
+          </div>
+        <% else %>
+          <div class="bg-surface border border-primary p-4 rounded-lg">
+            <div class="flex items-start gap-3">
+              <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+              <div>
+                <p class="text-sm text-primary mb-2">
+                  <strong><%= t(".choose_account_type") %></strong>
+                </p>
+                <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+                  <% @account_type_options.reject { |_, type| type == "skip" }.each do |label, type| %>
+                    <li><strong><%= label %></strong></li>
+                  <% end %>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
 
-        <% @lunchflow_accounts.each do |lunchflow_account| %>
+          <% @lunchflow_accounts.each do |lunchflow_account| %>
           <div class="border border-primary rounded-lg p-4">
             <div class="flex items-center justify-between mb-3">
               <div>
@@ -73,6 +80,7 @@
               </div>
             </div>
           </div>
+          <% end %>
         <% end %>
       </div>
 

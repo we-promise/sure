@@ -75,6 +75,8 @@ en:
       success: "Successfully linked %{account_name} with Lunch Flow"
     setup_accounts:
       account_type_label: "Account Type:"
+      all_accounts_linked: "All your Lunch Flow accounts have already been set up."
+      no_accounts_to_setup: "No Accounts to Set Up"
       account_types:
         credit_card: Credit Card
         credit_card_description: Credit card accounts
@@ -97,9 +99,9 @@ en:
       sync_start_date_label: "Start syncing transactions from:"
       title: Set Up Your Lunch Flow Accounts
     complete_account_setup:
-      success:
-        one: "Successfully created %{count} account"
-        other: "Successfully created %{count} accounts"
+      all_skipped: "All accounts were skipped. No accounts were created."
+      no_accounts: "No accounts to set up."
+      success: "Successfully created %{count} account(s)."
     sync:
       success: Sync started
     update:

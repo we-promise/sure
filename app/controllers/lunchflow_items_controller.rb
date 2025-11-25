@@ -549,13 +549,38 @@ class LunchflowItemsController < ApplicationController
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
 
+    # Valid account types for this provider
+    valid_types = Provider::LunchflowAdapter.supported_account_types
+
     created_accounts = []
+    skipped_count = 0
 
     account_types.each do |lunchflow_account_id, selected_type|
       # Skip accounts marked as "skip"
-      next if selected_type == "skip"
+      if selected_type == "skip" || selected_type.blank?
+        skipped_count += 1
+        next
+      end
 
-      lunchflow_account = @lunchflow_item.lunchflow_accounts.find(lunchflow_account_id)
+      # Validate account type is supported
+      unless valid_types.include?(selected_type)
+        Rails.logger.warn("Invalid account type '#{selected_type}' submitted for LunchFlow account #{lunchflow_account_id}")
+        next
+      end
+
+      # Find account - scoped to this item to prevent cross-item manipulation
+      lunchflow_account = @lunchflow_item.lunchflow_accounts.find_by(id: lunchflow_account_id)
+      unless lunchflow_account
+        Rails.logger.warn("LunchFlow account #{lunchflow_account_id} not found for item #{@lunchflow_item.id}")
+        next
+      end
+
+      # Skip if already linked (race condition protection)
+      if lunchflow_account.account_provider.present?
+        Rails.logger.info("LunchFlow account #{lunchflow_account_id} already linked, skipping")
+        next
+      end
+
       selected_subtype = account_subtypes[lunchflow_account_id]
 
       # Default subtype for CreditCard since it only has one option
@@ -583,7 +608,14 @@ class LunchflowItemsController < ApplicationController
     # Trigger a sync to process transactions
     @lunchflow_item.sync_later if created_accounts.any?
 
-    flash[:notice] = t(".success", count: created_accounts.count)
+    # Set appropriate flash message
+    if created_accounts.any?
+      flash[:notice] = t(".success", count: created_accounts.count)
+    elsif skipped_count > 0
+      flash[:notice] = t(".all_skipped")
+    else
+      flash[:notice] = t(".no_accounts")
+    end
 
     if turbo_frame_request?
       # Recompute data needed by Accounts#index partials
@@ -614,7 +646,7 @@ class LunchflowItemsController < ApplicationController
         )
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path, notice: t(".success", count: created_accounts.count), status: :see_other
+      redirect_to accounts_path, status: :see_other
     end
   end
 
