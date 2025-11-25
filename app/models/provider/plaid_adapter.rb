@@ -106,6 +106,9 @@ class Provider::PlaidAdapter < Provider::Base
           env_key: "PLAID_ENV",
           default: "sandbox",
           description: "Plaid environment: sandbox, development, or production"
+
+    # Plaid requires both client_id and secret to be configured
+    configured_check { get_value(:client_id).present? && get_value(:secret).present? }
   end
 
   def provider_name

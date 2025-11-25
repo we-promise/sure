@@ -126,8 +126,8 @@ class Settings::ProvidersController < ApplicationController
         config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero?
       end
 
-      # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist
-      @simplefin_items = Current.family.simplefin_items.ordered.select(:id)
-      @lunchflow_items = Current.family.lunchflow_items.ordered.select(:id)
+      # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
+      @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
+      @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
     end
 end

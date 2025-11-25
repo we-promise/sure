@@ -74,10 +74,13 @@
   <% end %>
 
   <%# Show configuration status %>
-  <% if configuration.configured? %>
-    <div class="flex items-center gap-2 mt-4">
+  <div class="flex items-center gap-2 mt-4">
+    <% if configuration.configured? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
       <p class="text-sm text-secondary">Configured and ready to use</p>
-    </div>
-  <% end %>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
 </div>
