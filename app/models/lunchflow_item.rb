@@ -104,10 +104,10 @@ class LunchflowItem < ApplicationRecord
   end
 
   def sync_status_summary
-    # Always use real-time counts for accuracy
-    total_accounts = lunchflow_accounts.count
-    linked_count = lunchflow_accounts.joins(:account_provider).count
-    unlinked_count = total_accounts - linked_count
+    # Use centralized count helper methods for consistency
+    total_accounts = total_accounts_count
+    linked_count = linked_accounts_count
+    unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
       "No accounts found"

@@ -499,7 +499,7 @@ class LunchflowItemsController < ApplicationController
   # Show unlinked Lunchflow accounts for setup (similar to SimpleFIN setup_accounts)
   def setup_accounts
     # First, ensure we have the latest accounts from the API
-    ensure_lunchflow_accounts_imported
+    @api_error = fetch_lunchflow_accounts_from_api
 
     # Get Lunchflow accounts that are not linked (no AccountProvider)
     @lunchflow_accounts = @lunchflow_item.lunchflow_accounts
@@ -509,42 +509,52 @@ class LunchflowItemsController < ApplicationController
     # Get supported account types from the adapter
     supported_types = Provider::LunchflowAdapter.supported_account_types
 
-    # All possible account type options
-    all_account_type_options = [
-      [ "Checking or Savings Account", "Depository" ],
-      [ "Credit Card", "CreditCard" ],
-      [ "Investment Account", "Investment" ],
-      [ "Loan or Mortgage", "Loan" ],
-      [ "Other Asset", "OtherAsset" ]
-    ]
+    # Map of account type keys to their internal values
+    account_type_keys = {
+      "depository" => "Depository",
+      "credit_card" => "CreditCard",
+      "investment" => "Investment",
+      "loan" => "Loan",
+      "other_asset" => "OtherAsset"
+    }
 
-    # Filter to only supported types and add "Skip" option at the beginning
-    @account_type_options = [ [ "Skip this account", "skip" ] ] +
-      all_account_type_options.select { |_, type| supported_types.include?(type) }
+    # Build account type options using i18n, filtering to supported types
+    all_account_type_options = account_type_keys.filter_map do |key, type|
+      next unless supported_types.include?(type)
+      [ t(".account_types.#{key}"), type ]
+    end
+
+    # Add "Skip" option at the beginning
+    @account_type_options = [ [ t(".account_types.skip"), "skip" ] ] + all_account_type_options
+
+    # Helper to translate subtype options
+    translate_subtypes = ->(type_key, subtypes_hash) {
+      subtypes_hash.keys.map { |k| [ t(".subtypes.#{type_key}.#{k}"), k ] }
+    }
 
     # Subtype options for each account type (only include supported types)
     all_subtype_options = {
       "Depository" => {
-        label: "Account Subtype:",
-        options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t(".subtype_labels.depository"),
+        options: translate_subtypes.call("depository", Depository::SUBTYPES)
       },
       "CreditCard" => {
-        label: "",
+        label: t(".subtype_labels.credit_card"),
         options: [],
-        message: "Credit cards will be automatically set up as credit card accounts."
+        message: t(".subtype_messages.credit_card")
       },
       "Investment" => {
-        label: "Investment Type:",
-        options: Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t(".subtype_labels.investment"),
+        options: translate_subtypes.call("investment", Investment::SUBTYPES)
       },
       "Loan" => {
-        label: "Loan Type:",
-        options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t(".subtype_labels.loan"),
+        options: translate_subtypes.call("loan", Loan::SUBTYPES)
       },
       "OtherAsset" => {
-        label: nil,
+        label: t(".subtype_labels.other_asset").presence,
         options: [],
-        message: "No additional options needed for Other Assets."
+        message: t(".subtype_messages.other_asset")
       }
     }
 
@@ -674,16 +684,31 @@ class LunchflowItemsController < ApplicationController
 
   private
 
-    # Ensure Lunchflow accounts are imported from the API
-    def ensure_lunchflow_accounts_imported
-      return unless @lunchflow_item.lunchflow_accounts.empty?
+    # Fetch Lunchflow accounts from the API and store them locally
+    # Returns nil on success, or an error message string on failure
+    def fetch_lunchflow_accounts_from_api
+      # Skip if we already have accounts cached
+      return nil unless @lunchflow_item.lunchflow_accounts.empty?
+
+      # Validate API key is configured
+      unless @lunchflow_item.credentials_configured?
+        return t("lunchflow_items.setup_accounts.no_api_key")
+      end
+
+      # Use the specific lunchflow_item's provider (scoped to this family's item)
+      lunchflow_provider = @lunchflow_item.lunchflow_provider
+      unless lunchflow_provider.present?
+        return t("lunchflow_items.setup_accounts.no_api_key")
+      end
 
       begin
-        lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
-        return unless lunchflow_provider.present?
-
         accounts_data = lunchflow_provider.get_accounts
         available_accounts = accounts_data[:accounts] || []
+
+        if available_accounts.empty?
+          Rails.logger.info("LunchFlow API returned no accounts for item #{@lunchflow_item.id}")
+          return nil
+        end
 
         available_accounts.each do |account_data|
           next if account_data[:name].blank?
@@ -694,10 +719,14 @@ class LunchflowItemsController < ApplicationController
           lunchflow_account.upsert_lunchflow_snapshot!(account_data)
           lunchflow_account.save!
         end
+
+        nil # Success
       rescue Provider::Lunchflow::LunchflowError => e
-        Rails.logger.error("LunchFlow API error in ensure_lunchflow_accounts_imported: #{e.message}")
+        Rails.logger.error("LunchFlow API error: #{e.message}")
+        t("lunchflow_items.setup_accounts.api_error", message: e.message)
       rescue StandardError => e
-        Rails.logger.error("Unexpected error in ensure_lunchflow_accounts_imported: #{e.class}: #{e.message}")
+        Rails.logger.error("Unexpected error fetching LunchFlow accounts: #{e.class}: #{e.message}")
+        t("lunchflow_items.setup_accounts.api_error", message: e.message)
       end
     end
     def set_lunchflow_item

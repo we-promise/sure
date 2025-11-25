@@ -76,18 +76,52 @@ en:
     setup_accounts:
       account_type_label: "Account Type:"
       all_accounts_linked: "All your Lunch Flow accounts have already been set up."
+      api_error: "API error: %{message}"
+      fetch_failed: "Failed to Fetch Accounts"
       no_accounts_to_setup: "No Accounts to Set Up"
+      no_api_key: "Lunch Flow API key is not configured. Please check your connection settings."
       account_types:
+        skip: Skip this account
+        depository: Checking or Savings Account
         credit_card: Credit Card
-        credit_card_description: Credit card accounts
-        depository: Checking or Savings
-        depository_description: Regular bank accounts
-        investment: Investment
-        investment_description: Brokerage, 401(k), IRA accounts
+        investment: Investment Account
         loan: Loan or Mortgage
-        loan_description: Debt accounts
         other_asset: Other Asset
-        other_asset_description: Everything else
+      subtype_labels:
+        depository: "Account Subtype:"
+        credit_card: ""
+        investment: "Investment Type:"
+        loan: "Loan Type:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Credit cards will be automatically set up as credit card accounts."
+        other_asset: "No additional options needed for Other Assets."
+      subtypes:
+        depository:
+          checking: Checking
+          savings: Savings
+          hsa: Health Savings Account
+          cd: Certificate of Deposit
+          money_market: Money Market
+        investment:
+          brokerage: Brokerage
+          pension: Pension
+          retirement: Retirement
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Health Savings Account
+          mutual_fund: Mutual Fund
+          ira: Traditional IRA
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Mortgage
+          student: Student Loan
+          auto: Auto Loan
+          other: Other Loan
       balance: Balance
       cancel: Cancel
       choose_account_type: "Choose the correct account type for each Lunch Flow account:"

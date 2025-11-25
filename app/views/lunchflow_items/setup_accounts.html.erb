@@ -21,7 +21,13 @@
                   class: "space-y-6" do |form| %>
 
       <div class="space-y-4">
-        <% if @lunchflow_accounts.empty? %>
+        <% if @api_error.present? %>
+          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
+            <%= icon "alert-circle", size: "lg", class: "text-destructive" %>
+            <p class="text-primary font-medium"><%= t(".fetch_failed") %></p>
+            <p class="text-destructive text-sm"><%= @api_error %></p>
+          </div>
+        <% elsif @lunchflow_accounts.empty? %>
           <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
             <%= icon "check-circle", size: "lg", class: "text-success" %>
             <p class="text-primary font-medium"><%= t(".no_accounts_to_setup") %></p>
@@ -91,6 +97,7 @@
           icon: "plus",
           type: "submit",
           class: "flex-1",
+          disabled: @api_error.present? || @lunchflow_accounts.empty?,
           data: { loading_button_target: "button" }
         ) %>
         <%= render DS::Link.new(
