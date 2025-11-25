@@ -1,5 +1,5 @@
 class LunchflowItemsController < ApplicationController
-  before_action :set_lunchflow_item, only: [ :show, :edit, :update, :destroy, :sync ]
+  before_action :set_lunchflow_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @lunchflow_items = Current.family.lunchflow_items.active.ordered
@@ -490,7 +490,162 @@ class LunchflowItemsController < ApplicationController
     end
   end
 
+  # Show unlinked Lunchflow accounts for setup (similar to SimpleFIN setup_accounts)
+  def setup_accounts
+    # First, ensure we have the latest accounts from the API
+    ensure_lunchflow_accounts_imported
+
+    # Get Lunchflow accounts that are not linked (no AccountProvider)
+    @lunchflow_accounts = @lunchflow_item.lunchflow_accounts
+      .left_joins(:account_provider)
+      .where(account_providers: { id: nil })
+
+    # Get supported account types from the adapter
+    supported_types = Provider::LunchflowAdapter.supported_account_types
+
+    # All possible account type options
+    all_account_type_options = [
+      [ "Checking or Savings Account", "Depository" ],
+      [ "Credit Card", "CreditCard" ],
+      [ "Investment Account", "Investment" ],
+      [ "Loan or Mortgage", "Loan" ],
+      [ "Other Asset", "OtherAsset" ]
+    ]
+
+    # Filter to only supported types and add "Skip" option at the beginning
+    @account_type_options = [ [ "Skip this account", "skip" ] ] +
+      all_account_type_options.select { |_, type| supported_types.include?(type) }
+
+    # Subtype options for each account type (only include supported types)
+    all_subtype_options = {
+      "Depository" => {
+        label: "Account Subtype:",
+        options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "CreditCard" => {
+        label: "",
+        options: [],
+        message: "Credit cards will be automatically set up as credit card accounts."
+      },
+      "Investment" => {
+        label: "Investment Type:",
+        options: Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "Loan" => {
+        label: "Loan Type:",
+        options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "OtherAsset" => {
+        label: nil,
+        options: [],
+        message: "No additional options needed for Other Assets."
+      }
+    }
+
+    @subtype_options = all_subtype_options.slice(*supported_types)
+  end
+
+  def complete_account_setup
+    account_types = params[:account_types] || {}
+    account_subtypes = params[:account_subtypes] || {}
+
+    created_accounts = []
+
+    account_types.each do |lunchflow_account_id, selected_type|
+      # Skip accounts marked as "skip"
+      next if selected_type == "skip"
+
+      lunchflow_account = @lunchflow_item.lunchflow_accounts.find(lunchflow_account_id)
+      selected_subtype = account_subtypes[lunchflow_account_id]
+
+      # Default subtype for CreditCard since it only has one option
+      selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
+
+      # Create account with user-selected type and subtype
+      account = Account.create_and_sync(
+        family: Current.family,
+        name: lunchflow_account.name,
+        balance: lunchflow_account.current_balance || 0,
+        currency: lunchflow_account.currency || "USD",
+        accountable_type: selected_type,
+        accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
+      )
+
+      # Link account to lunchflow_account via account_providers join table
+      AccountProvider.create!(
+        account: account,
+        provider: lunchflow_account
+      )
+
+      created_accounts << account
+    end
+
+    # Trigger a sync to process transactions
+    @lunchflow_item.sync_later if created_accounts.any?
+
+    flash[:notice] = t(".success", count: created_accounts.count)
+
+    if turbo_frame_request?
+      # Recompute data needed by Accounts#index partials
+      @manual_accounts = Account.uncached {
+        Current.family.accounts
+          .visible_manual
+          .order(:name)
+          .to_a
+      }
+      @lunchflow_items = Current.family.lunchflow_items.ordered
+
+      manual_accounts_stream = if @manual_accounts.any?
+        turbo_stream.update(
+          "manual-accounts",
+          partial: "accounts/index/manual_accounts",
+          locals: { accounts: @manual_accounts }
+        )
+      else
+        turbo_stream.replace("manual-accounts", view_context.tag.div(id: "manual-accounts"))
+      end
+
+      render turbo_stream: [
+        manual_accounts_stream,
+        turbo_stream.replace(
+          ActionView::RecordIdentifier.dom_id(@lunchflow_item),
+          partial: "lunchflow_items/lunchflow_item",
+          locals: { lunchflow_item: @lunchflow_item }
+        )
+      ] + Array(flash_notification_stream_items)
+    else
+      redirect_to accounts_path, notice: t(".success", count: created_accounts.count), status: :see_other
+    end
+  end
+
   private
+
+    # Ensure Lunchflow accounts are imported from the API
+    def ensure_lunchflow_accounts_imported
+      return unless @lunchflow_item.lunchflow_accounts.empty?
+
+      begin
+        lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
+        return unless lunchflow_provider.present?
+
+        accounts_data = lunchflow_provider.get_accounts
+        available_accounts = accounts_data[:accounts] || []
+
+        available_accounts.each do |account_data|
+          next if account_data[:name].blank?
+
+          lunchflow_account = @lunchflow_item.lunchflow_accounts.find_or_initialize_by(
+            account_id: account_data[:id].to_s
+          )
+          lunchflow_account.upsert_lunchflow_snapshot!(account_data)
+          lunchflow_account.save!
+        end
+      rescue Provider::Lunchflow::LunchflowError => e
+        Rails.logger.error("LunchFlow API error in ensure_lunchflow_accounts_imported: #{e.message}")
+      rescue StandardError => e
+        Rails.logger.error("Unexpected error in ensure_lunchflow_accounts_imported: #{e.class}: #{e.message}")
+      end
+    end
     def set_lunchflow_item
       @lunchflow_item = Current.family.lunchflow_items.find(params[:id])
     end

@@ -23,6 +23,11 @@
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
+          <% if lunchflow_item.accounts.any? %>
+            <p class="text-xs text-secondary">
+              <%= lunchflow_item.institution_summary %>
+            </p>
+          <% end %>
           <% if lunchflow_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>
@@ -35,7 +40,15 @@
             </div>
           <% else %>
             <p class="text-secondary">
-              <%= lunchflow_item.last_synced_at ? t(".status", timestamp: time_ago_in_words(lunchflow_item.last_synced_at)) : t(".status_never") %>
+              <% if lunchflow_item.last_synced_at %>
+                <% if lunchflow_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(lunchflow_item.last_synced_at), summary: lunchflow_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(lunchflow_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
             </p>
           <% end %>
         </div>
@@ -67,7 +80,26 @@
       <div class="space-y-4 mt-4">
         <% if lunchflow_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: lunchflow_item.accounts %>
-        <% else %>
+        <% end %>
+
+        <%# Use model methods for consistent counts %>
+        <% unlinked_count = lunchflow_item.unlinked_accounts_count %>
+        <% linked_count = lunchflow_item.linked_accounts_count %>
+        <% total_count = lunchflow_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked_count, total: total_count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_lunchflow_item_path(lunchflow_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif lunchflow_item.accounts.empty? && total_count == 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
             <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>

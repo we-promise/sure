@@ -158,6 +158,7 @@ class SimplefinItemsController < ApplicationController
   def setup_accounts
     @simplefin_accounts = @simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
     @account_type_options = [
+      [ "Skip this account", "skip" ],
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
@@ -224,6 +225,9 @@ class SimplefinItemsController < ApplicationController
     end
 
     account_types.each do |simplefin_account_id, selected_type|
+      # Skip accounts marked as "skip"
+      next if selected_type == "skip"
+
       simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
       selected_subtype = account_subtypes[simplefin_account_id]
 

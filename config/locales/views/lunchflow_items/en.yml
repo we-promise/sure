@@ -26,14 +26,21 @@ en:
         one: "Successfully linked %{count} account"
         other: "Successfully linked %{count} accounts"
     lunchflow_item:
+      accounts_need_setup: Accounts need setup
       delete: Delete connection
       deletion_in_progress: deletion in progress...
       error: Error
       no_accounts_description: This connection has no linked accounts yet.
       no_accounts_title: No accounts
+      setup_action: Set Up New Accounts
+      setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Lunch Flow accounts."
+      setup_needed: New accounts ready to set up
       status: "Synced %{timestamp} ago"
       status_never: Never synced
+      status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
+      total: Total
+      unlinked: Unlinked
     select_accounts:
       accounts_selected: accounts selected
       api_error: "API error: %{message}"
@@ -66,6 +73,33 @@ en:
       lunchflow_account_not_found: Lunch Flow account not found
       missing_parameters: Missing required parameters
       success: "Successfully linked %{account_name} with Lunch Flow"
+    setup_accounts:
+      account_type_label: "Account Type:"
+      account_types:
+        credit_card: Credit Card
+        credit_card_description: Credit card accounts
+        depository: Checking or Savings
+        depository_description: Regular bank accounts
+        investment: Investment
+        investment_description: Brokerage, 401(k), IRA accounts
+        loan: Loan or Mortgage
+        loan_description: Debt accounts
+        other_asset: Other Asset
+        other_asset_description: Everything else
+      balance: Balance
+      cancel: Cancel
+      choose_account_type: "Choose the correct account type for each Lunch Flow account:"
+      create_accounts: Create Accounts
+      creating_accounts: Creating Accounts...
+      historical_data_range: "Historical Data Range:"
+      subtitle: Choose the correct account types for your imported accounts
+      sync_start_date_help: Select how far back you want to sync transaction history. Maximum 3 years of history available.
+      sync_start_date_label: "Start syncing transactions from:"
+      title: Set Up Your Lunch Flow Accounts
+    complete_account_setup:
+      success:
+        one: "Successfully created %{count} account"
+        other: "Successfully created %{count} accounts"
     sync:
       success: Sync started
     update:
