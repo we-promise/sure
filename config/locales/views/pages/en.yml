@@ -25,7 +25,6 @@ en:
         no_data_title: "No cash flow data for this time period"
         no_data_description: "Add transactions to display cash flow data or expand the time period"
         add_transaction: "Add transaction"
-        include_investments: "Include investments"
       no_accounts:
         title: "No accounts yet"
         description: "Add accounts to display net worth data"

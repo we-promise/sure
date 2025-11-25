@@ -73,10 +73,6 @@ class Family < ApplicationRecord
     @investment_statement ||= InvestmentStatement.new(self)
   end
 
-  def cashflow_statement(period: Period.current_month)
-    CashflowStatement.new(self, period: period)
-  end
-
   def eu?
     country != "US" && country != "CA"
   end
