@@ -475,6 +475,12 @@ class LunchflowItemsController < ApplicationController
   end
 
   def destroy
+    # Ensure we detach provider links before scheduling deletion
+    begin
+      @lunchflow_item.unlink_all!(dry_run: false)
+    rescue => e
+      Rails.logger.warn("LunchFlow unlink during destroy failed: #{e.class} - #{e.message}")
+    end
     @lunchflow_item.destroy_later
     redirect_to accounts_path, notice: t(".success")
   end

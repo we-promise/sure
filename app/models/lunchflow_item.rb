@@ -1,5 +1,5 @@
 class LunchflowItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
