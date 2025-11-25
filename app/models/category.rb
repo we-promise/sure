@@ -27,8 +27,6 @@ class Category < ApplicationRecord
   scope :roots, -> { where(parent_id: nil) }
   scope :incomes, -> { where(classification: "income") }
   scope :expenses, -> { where(classification: "expense") }
-  scope :investments, -> { where(name: INVESTMENT_CATEGORY_NAMES) }
-  scope :non_investment, -> { where.not(name: INVESTMENT_CATEGORY_NAMES) }
 
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
@@ -37,13 +35,6 @@ class Category < ApplicationRecord
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
   INVESTMENT_COLOR = "#0d9488"
-
-  INVESTMENT_CATEGORY_NAMES = [
-    "Investment Contributions",
-    "Dividends",
-    "Capital Gains",
-    "Investment Interest"
-  ].freeze
 
   class Group
     attr_reader :category, :subcategories
@@ -122,11 +113,7 @@ class Category < ApplicationRecord
           [ "Services", "#7c3aed", "briefcase", "expense" ],
           [ "Fees", "#6b7280", "receipt", "expense" ],
           [ "Savings & Investments", "#059669", "piggy-bank", "expense" ],
-          # Investment-specific categories
-          [ "Investment Contributions", "#0d9488", "trending-up", "expense" ],
-          [ "Dividends", "#16a34a", "banknote", "income" ],
-          [ "Capital Gains", "#15803d", "trophy", "income" ],
-          [ "Investment Interest", "#22c55e", "percent", "income" ]
+          [ "Investment Contributions", "#0d9488", "trending-up", "expense" ]
         ]
       end
   end
