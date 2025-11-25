@@ -43,6 +43,12 @@ class LunchflowAccount::Processor
       # - Positive balance = debt (you owe money)
       # - Negative balance = credit balance (bank owes you, e.g., overpayment)
       # No sign conversion needed - pass through as-is (same as Plaid)
+      #
+      # Exception: CreditCard and Loan accounts return inverted signs
+      # Provider returns negative for positive balance, so we negate it
+      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
+        balance = -balance
+      end
 
       # Normalize currency with fallback chain: parsed lunchflow currency -> existing account currency -> USD
       currency = parse_currency(lunchflow_account.currency) || account.currency || "USD"
