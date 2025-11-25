@@ -561,54 +561,70 @@ class LunchflowItemsController < ApplicationController
     created_accounts = []
     skipped_count = 0
 
-    account_types.each do |lunchflow_account_id, selected_type|
-      # Skip accounts marked as "skip"
-      if selected_type == "skip" || selected_type.blank?
-        skipped_count += 1
-        next
+    begin
+      ActiveRecord::Base.transaction do
+        account_types.each do |lunchflow_account_id, selected_type|
+          # Skip accounts marked as "skip"
+          if selected_type == "skip" || selected_type.blank?
+            skipped_count += 1
+            next
+          end
+
+          # Validate account type is supported
+          unless valid_types.include?(selected_type)
+            Rails.logger.warn("Invalid account type '#{selected_type}' submitted for LunchFlow account #{lunchflow_account_id}")
+            next
+          end
+
+          # Find account - scoped to this item to prevent cross-item manipulation
+          lunchflow_account = @lunchflow_item.lunchflow_accounts.find_by(id: lunchflow_account_id)
+          unless lunchflow_account
+            Rails.logger.warn("LunchFlow account #{lunchflow_account_id} not found for item #{@lunchflow_item.id}")
+            next
+          end
+
+          # Skip if already linked (race condition protection)
+          if lunchflow_account.account_provider.present?
+            Rails.logger.info("LunchFlow account #{lunchflow_account_id} already linked, skipping")
+            next
+          end
+
+          selected_subtype = account_subtypes[lunchflow_account_id]
+
+          # Default subtype for CreditCard since it only has one option
+          selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
+
+          # Create account with user-selected type and subtype (raises on failure)
+          account = Account.create_and_sync(
+            family: Current.family,
+            name: lunchflow_account.name,
+            balance: lunchflow_account.current_balance || 0,
+            currency: lunchflow_account.currency || "USD",
+            accountable_type: selected_type,
+            accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
+          )
+
+          # Link account to lunchflow_account via account_providers join table (raises on failure)
+          AccountProvider.create!(
+            account: account,
+            provider: lunchflow_account
+          )
+
+          created_accounts << account
+        end
       end
-
-      # Validate account type is supported
-      unless valid_types.include?(selected_type)
-        Rails.logger.warn("Invalid account type '#{selected_type}' submitted for LunchFlow account #{lunchflow_account_id}")
-        next
-      end
-
-      # Find account - scoped to this item to prevent cross-item manipulation
-      lunchflow_account = @lunchflow_item.lunchflow_accounts.find_by(id: lunchflow_account_id)
-      unless lunchflow_account
-        Rails.logger.warn("LunchFlow account #{lunchflow_account_id} not found for item #{@lunchflow_item.id}")
-        next
-      end
-
-      # Skip if already linked (race condition protection)
-      if lunchflow_account.account_provider.present?
-        Rails.logger.info("LunchFlow account #{lunchflow_account_id} already linked, skipping")
-        next
-      end
-
-      selected_subtype = account_subtypes[lunchflow_account_id]
-
-      # Default subtype for CreditCard since it only has one option
-      selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
-
-      # Create account with user-selected type and subtype
-      account = Account.create_and_sync(
-        family: Current.family,
-        name: lunchflow_account.name,
-        balance: lunchflow_account.current_balance || 0,
-        currency: lunchflow_account.currency || "USD",
-        accountable_type: selected_type,
-        accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
-      )
-
-      # Link account to lunchflow_account via account_providers join table
-      AccountProvider.create!(
-        account: account,
-        provider: lunchflow_account
-      )
-
-      created_accounts << account
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      Rails.logger.error("LunchFlow account setup failed: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace.first(10).join("\n"))
+      flash[:alert] = t(".creation_failed", error: e.message)
+      redirect_to accounts_path, status: :see_other
+      return
+    rescue StandardError => e
+      Rails.logger.error("LunchFlow account setup failed unexpectedly: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace.first(10).join("\n"))
+      flash[:alert] = t(".creation_failed", error: "An unexpected error occurred")
+      redirect_to accounts_path, status: :see_other
+      return
     end
 
     # Trigger a sync to process transactions

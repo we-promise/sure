@@ -100,6 +100,7 @@ en:
       title: Set Up Your Lunch Flow Accounts
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
+      creation_failed: "Failed to create accounts: %{error}"
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
     sync:
