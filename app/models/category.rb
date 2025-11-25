@@ -1,5 +1,6 @@
 class Category < ApplicationRecord
   has_many :transactions, dependent: :nullify, class_name: "Transaction"
+  has_many :trades, dependent: :nullify
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
 
   belongs_to :family

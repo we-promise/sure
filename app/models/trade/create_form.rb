@@ -41,7 +41,8 @@ class Trade::CreateForm
           qty: signed_qty,
           price: price,
           currency: currency,
-          security: security
+          security: security,
+          category: investment_category_for(type)
         )
       )
 
@@ -51,6 +52,15 @@ class Trade::CreateForm
       end
 
       trade_entry
+    end
+
+    def investment_category_for(trade_type)
+      # Buy trades are categorized as "Investment Contributions" (expense)
+      # Sell trades could be "Capital Gains" but we leave uncategorized for now
+      # since gains/losses are complex to calculate
+      return nil unless trade_type == "buy"
+
+      account.family.categories.find_by(name: "Investment Contributions")
     end
 
     def create_interest_income
