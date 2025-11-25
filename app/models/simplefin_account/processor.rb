@@ -41,11 +41,10 @@ class SimplefinAccount::Processor
       account = simplefin_account.current_account
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
-      # SimpleFin returns negative balances for credit cards (liabilities)
-      # But Maybe expects positive balances for liabilities
-      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = balance.abs
-      end
+      # SimpleFIN balance convention matches our app convention:
+      # - Positive balance = debt (you owe money)
+      # - Negative balance = credit balance (bank owes you, e.g., overpayment)
+      # No sign conversion needed - pass through as-is (same as Plaid)
 
       # Calculate cash balance correctly for investment accounts
       cash_balance = if account.accountable_type == "Investment"
