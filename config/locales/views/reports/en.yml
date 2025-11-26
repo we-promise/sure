@@ -15,6 +15,7 @@ en:
         from: From
         to: To
       showing_period: "Showing data from %{start} to %{end}"
+    invalid_date_range: "End date cannot be before start date. The dates have been swapped."
     summary:
       total_income: Total Income
       total_expenses: Total Expenses

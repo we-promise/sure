@@ -156,10 +156,12 @@ module LanguagesHelper
   # Locales with complete/extensive translations
   SUPPORTED_LOCALES = [
     "en",   # English - 61 translation files
+    "de",   # German - 62 translation files
     "es",   # Spanish - 60 translation files
     "tr",   # Turkish - 57 translation files
     "nb",   # Norwegian Bokmål - 56 translation files
-    "ca"    # Catalan - 56 translation files
+    "ca",   # Catalan - 56 translation files
+    "ro"    # Romanian - 61 translation files
   ].freeze
 
   COUNTRY_MAPPING = {

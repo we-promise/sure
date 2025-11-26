@@ -78,7 +78,7 @@ es:
         last_name: Apellido
         page_title: Información del Perfil
         pending: Pendiente
-        profile_subtitle: Personaliza cómo apareces en %{product}
+        profile_subtitle: Personaliza cómo apareces en %{product_name}
         profile_title: Personal
         remove_invitation: Eliminar Invitación
         remove_member: Eliminar Miembro

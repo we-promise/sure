@@ -9,11 +9,19 @@ class SimplefinAccount::Processor
   # Processing the account is the first step and if it fails, we halt
   # Each subsequent step can fail independently, but we continue processing
   def process
+    # If the account is missing (e.g., user deleted the connection and re‑linked later),
+    # do not auto‑link. Relinking is now a manual, user‑confirmed flow via the Relink modal.
     unless simplefin_account.current_account.present?
       return
     end
 
     process_account!
+    # Ensure provider link exists after processing the account/balance
+    begin
+      simplefin_account.ensure_account_provider!
+    rescue => e
+      Rails.logger.warn("SimpleFin provider link ensure failed for #{simplefin_account.id}: #{e.class} - #{e.message}")
+    end
     process_transactions
     process_investments
     process_liabilities
@@ -33,11 +41,10 @@ class SimplefinAccount::Processor
       account = simplefin_account.current_account
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
-      # SimpleFin returns negative balances for credit cards (liabilities)
-      # But Maybe expects positive balances for liabilities
-      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = balance.abs
-      end
+      # SimpleFIN balance convention matches our app convention:
+      # - Positive balance = debt (you owe money)
+      # - Negative balance = credit balance (bank owes you, e.g., overpayment)
+      # No sign conversion needed - pass through as-is (same as Plaid)
 
       # Calculate cash balance correctly for investment accounts
       cash_balance = if account.accountable_type == "Investment"

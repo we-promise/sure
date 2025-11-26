@@ -43,7 +43,8 @@ class ExchangeRate::Importer
       end
 
       # Gapfill with LOCF strategy (last observation carried forward)
-      if chosen_rate.nil?
+      # Treat nil or zero rates as invalid and use previous rate
+      if chosen_rate.nil? || chosen_rate.to_f <= 0
         chosen_rate = prev_rate_value
       end
 

@@ -1,0 +1,155 @@
+ro:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Nume'
+        redirect_uri: 'URI de redirecționare'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'nu poate conține un fragment.'
+              invalid_uri: 'trebuie să fie un URI valid.'
+              unspecified_scheme: 'trebuie să specifice o schemă.'
+              relative_uri: 'trebuie să fie un URI absolut.'
+              secured_uri: 'trebuie să fie un URI HTTPS/SSL.'
+              forbidden_uri: 'este interzis de server.'
+            scopes:
+              not_match_configured: "nu se potrivește cu configurația serverului."
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Ești sigur?'
+      buttons:
+        edit: 'Editează'
+        destroy: 'Șterge'
+        submit: 'Trimite'
+        cancel: 'Anulează'
+        authorize: 'Autorizează'
+      form:
+        error: 'Hopa! Verifică formularul pentru posibile erori'
+      help:
+        confidential: 'Aplicația va fi utilizată acolo unde secretul clientului poate fi păstrat confidențial. Aplicațiile mobile native și aplicațiile Single Page sunt considerate neconfidențiale.'
+        redirect_uri: 'Folosește o linie pentru fiecare URI'
+        blank_redirect_uri: "Lasă gol dacă ai configurat furnizorul să folosească credentialele de client, credentialele proprietarului de resurese sau orice alt tip de acordare care nu necesită URI de redirecționare."
+        scopes: 'Separă domeniile (scopes) prin spații. Lasă gol pentru a folosi domeniile implicite.'
+      edit:
+        title: 'Editează aplicația'
+      index:
+        title: 'Aplicațiile tale'
+        new: 'Aplicație nouă'
+        name: 'Nume'
+        callback_url: 'URL de callback'
+        confidential: 'Confidențial?'
+        actions: 'Acțiuni'
+        confidentiality:
+          'yes': 'Da'
+          'no': 'Nu'
+      new:
+        title: 'Aplicație nouă'
+      show:
+        title: 'Aplicație: %{name}'
+        application_id: 'UID'
+        secret: 'Secret'
+        secret_hashed: 'Secret (hashed)'
+        scopes: 'Domenii (Scopes)'
+        confidential: 'Confidențial'
+        callback_urls: 'URL-uri de callback'
+        actions: 'Acțiuni'
+        not_defined: 'Nedefinit'
+
+    authorizations:
+      buttons:
+        authorize: 'Autorizează'
+        deny: 'Refuză'
+      error:
+        title: 'A apărut o eroare'
+      new:
+        title: 'Autorizare necesară'
+        prompt: 'Autorizezi %{client_name} să îți folosească contul?'
+        able_to: 'Această aplicație va putea să'
+      show:
+        title: 'Cod de autorizare'
+      form_post:
+        title: 'Trimite acest formular'
+
+    authorized_applications:
+      confirmations:
+        revoke: 'Ești sigur?'
+      buttons:
+        revoke: 'Revocă'
+      index:
+        title: 'Aplicațiile tale autorizate'
+        application: 'Aplicație'
+        created_at: 'Creat la'
+        date_format: '%d-%m-%Y %H:%M:%S'
+
+    pre_authorization:
+      status: 'Pre-autorizare'
+
+    errors:
+      messages:
+        # Common error messages
+        invalid_request:
+          unknown: 'Solicitării îi lipsește un parametru obligatoriu, include o valoare de parametru neacceptată sau este malformată.'
+          missing_param: 'Lipsește parametrul obligatoriu: %{value}.'
+          request_not_authorized: 'Solicitarea trebuie autorizată. Parametrul necesar pentru autorizarea solicitării lipsește sau este invalid.'
+          invalid_code_challenge: 'Code challenge este obligatoriu.'
+        invalid_redirect_uri: "URI-ul de redirecționare solicitat este malformat sau nu se potrivește cu URI-ul de redirecționare al clientului."
+        unauthorized_client: 'Clientul nu este autorizat să efectueze această solicitare folosind această metodă.'
+        access_denied: 'Proprietarul resursei sau serverul de autorizare a refuzat solicitarea.'
+        invalid_scope: 'Domeniul (scope) solicitat este invalid, necunoscut sau malformat.'
+        invalid_code_challenge_method:
+          zero: 'Serverul de autorizare nu acceptă PKCE deoarece nu există valori code_challenge_method acceptate.'
+          one: 'Valoarea code_challenge_method trebuie să fie %{challenge_methods}.'
+          other: 'Valoarea code_challenge_method trebuie să fie una dintre %{challenge_methods}.'
+        server_error: 'Serverul de autorizare a întâmpinat o condiție neașteptată care l-a împiedicat să îndeplinească solicitarea.'
+        temporarily_unavailable: 'Serverul de autorizare este momentan incapabil să gestioneze solicitarea din cauza unei supraîncărcări temporare sau a unei mentenanțe.'
+
+        # Configuration error messages
+        credential_flow_not_configured: 'Fluxul Resource Owner Password Credentials a eșuat deoarece Doorkeeper.configure.resource_owner_from_credentials nu este configurat.'
+        resource_owner_authenticator_not_configured: 'Căutarea Resource Owner a eșuat deoarece Doorkeeper.configure.resource_owner_authenticator nu este configurat.'
+        admin_authenticator_not_configured: 'Accesul la panoul de administrare este interzis deoarece Doorkeeper.configure.admin_authenticator nu este configurat.'
+
+        # Access grant errors
+        unsupported_response_type: 'Serverul de autorizare nu acceptă acest tip de răspuns.'
+        unsupported_response_mode: 'Serverul de autorizare nu acceptă acest mod de răspuns.'
+
+        # Access token errors
+        invalid_client: 'Autentificarea clientului a eșuat din cauza unui client necunoscut, lipsei autentificării clientului sau a unei metode de autentificare neacceptate.'
+        invalid_grant: 'Acordul de autorizare furnizat este invalid, expirat, revocat, nu se potrivește cu URI-ul de redirecționare utilizat în solicitarea de autorizare sau a fost emis unui alt client.'
+        unsupported_grant_type: 'Tipul de acordare a autorizării nu este acceptat de serverul de autorizare.'
+
+        invalid_token:
+          revoked: "Token-ul de acces a fost revocat"
+          expired: "Token-ul de acces a expirat"
+          unknown: "Token-ul de acces este invalid"
+        revoke:
+          unauthorized: "Nu ești autorizat să revoci acest token"
+
+        forbidden_token:
+          missing_scope: 'Accesul la această resursă necesită domeniul (scope) "%{oauth_scopes}".'
+
+    flash:
+      applications:
+        create:
+          notice: 'Aplicația a fost creată.'
+        destroy:
+          notice: 'Aplicația a fost ștearsă.'
+        update:
+          notice: 'Aplicația a fost actualizată.'
+      authorized_applications:
+        destroy:
+          notice: 'Aplicația a fost revocată.'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'Furnizor OAuth2'
+          applications: 'Aplicații'
+          home: 'Acasă'
+      application:
+        title: 'Este necesară autorizarea OAuth'

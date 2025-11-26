@@ -29,24 +29,20 @@
 
 <div class="w-full space-y-6 pb-24">
   <% if Current.family.accounts.any? %>
-    <%= turbo_frame_tag "cashflow_sankey_section" do %>
-      <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
-        <%= render partial: "pages/dashboard/cashflow_sankey", locals: {
-          sankey_data: @cashflow_sankey_data,
-          period: @cashflow_period
-        } %>
-      </section>
-    <% end %>
+    <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+      <%= render partial: "pages/dashboard/cashflow_sankey", locals: {
+        sankey_data: @cashflow_sankey_data,
+        period: @period
+      } %>
+    </section>
 
     <% if @outflows_data[:categories].present? %>
-      <%= turbo_frame_tag "outflows_donut_section" do %>
-        <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
-          <%= render partial: "pages/dashboard/outflows_donut", locals: {
-            outflows_data: @outflows_data,
-            period: @outflows_period
-          } %>
-        </section>
-      <% end %>
+      <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+        <%= render partial: "pages/dashboard/outflows_donut", locals: {
+          outflows_data: @outflows_data,
+          period: @period
+        } %>
+      </section>
     <% end %>
 
     <section class="bg-container py-4 rounded-xl shadow-border-xs">

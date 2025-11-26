@@ -1,0 +1,48 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFIN Bridge</a> to get your one-time setup token</li>
+      <li>Paste the token below and click the Save button to enable SimpleFIN bank data sync</li>
+      <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
+    </ol>
+
+    <p class="text-primary font-medium">Field descriptions:</p>
+    <ul>
+      <li><strong>Setup Token:</strong> Your SimpleFIN one-time setup token from SimpleFIN Bridge (consumed on first use)</li>
+    </ul>
+  </div>
+
+  <% if defined?(@error_message) && @error_message.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
+      <%= @error_message %>
+    </div>
+  <% end %>
+
+  <%= styled_form_with model: SimplefinItem.new,
+                       url: simplefin_items_path,
+                       scope: :simplefin_item,
+                       method: :post,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :setup_token,
+                        label: "Setup Token",
+                        placeholder: "Paste SimpleFIN setup token",
+                        type: :password %>
+
+    <div class="flex justify-end">
+      <%= form.submit "Save Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <% end %>
+
+  <div class="flex items-center gap-2">
+    <% if @simplefin_items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
+</div>

@@ -1,0 +1,138 @@
+---
+de:
+  reports:
+    index:
+      title: Berichte
+      subtitle: Umfassende Einblicke in deine finanzielle Situation
+      export: CSV exportieren
+      periods:
+        monthly: Monatlich
+        quarterly: Vierteljährlich
+        ytd: Jahr bis heute
+        last_6_months: Letzte 6 Monate
+        custom: Benutzerdefinierter Zeitraum
+      date_range:
+        from: Von
+        to: Bis
+      showing_period: "Zeitraum: %{start} bis %{end}"
+    invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
+    summary:
+      total_income: Gesamteinnahmen
+      total_expenses: Gesamtausgaben
+      net_savings: Nettoersparnis
+      budget_performance: Budgetleistung
+      vs_previous: im Vergleich zum vorherigen Zeitraum
+      income_minus_expenses: Einnahmen minus Ausgaben
+      of_budget_used: des Budgets genutzt
+      no_budget_data: Keine Budgetdaten für diesen Zeitraum
+    comparison:
+      title: Zeitraumvergleich
+      currency: "Währung: %{symbol}"
+      income: Einnahmen
+      expenses: Ausgaben
+      net_savings: Nettoersparnis
+      current: Aktueller Zeitraum
+      previous: Vorheriger Zeitraum
+      no_data: Keine Daten verfügbar
+      status:
+        improved: Verbessert
+        decreased: Verringert
+        reduced: Reduziert
+        increased: Gestiegen
+    budget_performance:
+      title: Budgetleistung
+      spent: Ausgegeben
+      budgeted: Budgetiert
+      remaining: Verbleibend
+      over_by: Überschritten um
+      suggested_daily: "%{amount} pro Tag empfohlen für %{days} verbleibende Tage"
+      no_budgets: Keine Budgetkategorien für diesen Monat eingerichtet
+      status:
+        good: Im Plan
+        warning: Nahe am Limit
+        over: Budget überschritten
+    trends:
+      title: Trends & Einblicke
+      monthly_breakdown: Monatliche Aufschlüsselung
+      month: Monat
+      income: Einnahmen
+      expenses: Ausgaben
+      net: Netto
+      savings_rate: Sparquote
+      current: aktuell
+      avg_monthly_income: Durchschnittliche Monatseinnahmen
+      avg_monthly_expenses: Durchschnittliche Monatsausgaben
+      avg_monthly_savings: Durchschnittliche monatliche Ersparnis
+      no_data: Keine Trenddaten verfügbar
+      spending_patterns: Ausgabemuster
+      weekday_spending: Ausgaben unter der Woche
+      weekend_spending: Ausgaben am Wochenende
+      total: Gesamt
+      avg_per_transaction: Durchschnitt pro Transaktion
+      transactions: Transaktionen
+      insight_title: Erkenntnis
+      insight_higher_weekend: "Du gibst %{percent}% mehr pro Transaktion am Wochenende als unter der Woche aus"
+      insight_higher_weekday: "Du gibst %{percent}% mehr pro Transaktion unter der Woche als am Wochenende aus"
+      insight_similar: "Deine Ausgaben pro Transaktion sind an Wochentagen und Wochenenden ähnlich"
+      no_spending_data: Keine Ausgabendaten für diesen Zeitraum verfügbar
+    empty_state:
+      title: Keine Daten verfügbar
+      description: Erfasse deine Finanzen, indem du Transaktionen hinzufügst oder deine Konten verbindest, um umfassende Berichte zu sehen
+      add_transaction: Transaktion hinzufügen
+      add_account: Konto hinzufügen
+    transactions_breakdown:
+      title: Transaktionsübersicht
+      no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
+      filters:
+        title: Filter
+        category: Kategorie
+        account: Konto
+        tag: Tag
+        amount_min: Mindestbetrag
+        amount_max: Höchstbetrag
+        date_range: Zeitraum
+        all_categories: Alle Kategorien
+        all_accounts: Alle Konten
+        all_tags: Alle Tags
+        apply: Filter anwenden
+        clear: Filter zurücksetzen
+      sort:
+        label: Sortieren nach
+        date_desc: Datum (neueste zuerst)
+        amount_desc: Betrag (hoch zu niedrig)
+        amount_asc: Betrag (niedrig zu hoch)
+      export:
+        label: Exportieren
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: In Google Sheets öffnen
+      table:
+        category: Kategorie
+        amount: Betrag
+        type: Typ
+        expense: Ausgaben
+        income: Einnahmen
+        uncategorized: Ohne Kategorie
+        transactions: Transaktionen
+        percentage: "% des Gesamtbetrags"
+      pagination:
+        showing: Zeige %{count} Transaktionen
+        previous: Zurück
+        next: Weiter
+    google_sheets_instructions:
+      title_with_key: "✅ URL für Google Sheets kopieren"
+      title_no_key: "⚠️ API-Schlüssel erforderlich"
+      ready: Deine CSV-URL (mit API-Schlüssel) ist bereit.
+      steps: "So importierst du in Google Sheets:\n1. Erstelle ein neues Google Sheet\n2. Gib in Zelle A1 die unten angezeigte Formel ein\n3. Drücke Enter"
+      security_warning: "Diese URL enthält deinen API-Schlüssel. Bewahre sie sicher auf!"
+      need_key: Um Daten in Google Sheets zu importieren, benötigst du einen API-Schlüssel.
+      step1: "Gehe zu Einstellungen → API-Schlüssel"
+      step2: "Erstelle einen neuen API-Schlüssel mit Lesezugriff"
+      step3: Kopiere den API-Schlüssel
+      step4: "Füge ihn an diese URL an: ?api_key=DEIN_SCHLÜSSEL"
+      example: Beispiel
+      then_use: Verwende dann die vollständige URL mit =IMPORTDATA() in Google Sheets.
+      open_sheets: Google Sheets öffnen
+      go_to_api_keys: Zu den API-Schlüsseln
+      close: Verstanden

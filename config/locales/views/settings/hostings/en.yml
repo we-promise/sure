@@ -25,6 +25,15 @@ en:
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+      provider_selection:
+        title: Provider Selection
+        description: Choose which service to use for fetching exchange rates and security prices. Yahoo Finance is free and doesn't require an API key. Twelve Data requires a free API key but may offer more data coverage.
+        exchange_rate_provider_label: Exchange Rate Provider
+        securities_provider_label: Securities (Stock Prices) Provider
+        env_configured_message: Provider selection is disabled because environment variables (EXCHANGE_RATE_PROVIDER or SECURITIES_PROVIDER) are set. To enable selection here, remove these environment variables from your configuration.
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
       brand_fetch_settings:
         description: Enter the Client ID provided by Brand Fetch
         label: Client ID

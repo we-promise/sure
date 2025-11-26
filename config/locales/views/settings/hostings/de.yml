@@ -1,0 +1,63 @@
+---
+de:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Lege fest, wie sich neue Benutzer für deine %{product}-Instanz registrieren können.
+        email_confirmation_description: Wenn aktiviert, müssen Benutzer ihre E-Mail-Adresse bestätigen, wenn sie diese ändern.
+        email_confirmation_title: E-Mail-Bestätigung erforderlich
+        generate_tokens: Neue Codes generieren
+        generated_tokens: Generierte Codes
+        title: Onboarding
+        states:
+          open: Offen
+          closed: Geschlossen
+          invite_only: Nur mit Einladung
+      show:
+        general: Allgemeine Einstellungen
+        financial_data_providers: Finanzdatenanbieter
+        invites: Einladungscodes
+        title: Self-Hosting
+        danger_zone: Gefahrenbereich
+        clear_cache: Daten-Cache leeren
+        clear_cache_warning: Das Leeren des Daten-Caches entfernt alle Wechselkurse, Wertpapierpreise, Kontostände und andere zwischengespeicherte Daten. Dies löscht keine Konten, Transaktionen, Kategorien oder andere benutzereigenen Daten.
+        confirm_clear_cache:
+          title: Daten-Cache leeren?
+          body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
+      brand_fetch_settings:
+        description: Gib die von Brand Fetch bereitgestellte Client-ID ein.
+        label: Client-ID
+        placeholder: Gib hier deine Client-ID ein
+        title: Brand Fetch Einstellungen
+      openai_settings:
+        description: Gib dein Zugriffstoken ein und konfiguriere optional einen benutzerdefinierten, OpenAI-kompatiblen Anbieter.
+        env_configured_message: Erfolgreich über Umgebungsvariablen konfiguriert.
+        access_token_label: Zugriffstoken
+        access_token_placeholder: Gib hier dein Zugriffstoken ein
+        uri_base_label: API-Basis-URL (optional)
+        uri_base_placeholder: "https://api.openai.com/v1 (Standard)"
+        model_label: Modell (optional)
+        model_placeholder: "gpt-4.1 (Standard)"
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance bietet kostenlosen Zugriff auf Aktienkurse, Wechselkurse und Finanzdaten – ganz ohne API-Schlüssel.
+        status_active: Yahoo Finance ist aktiv und funktionsfähig
+        status_inactive: Verbindung zu Yahoo Finance fehlgeschlagen
+        connection_failed: Verbindung zu Yahoo Finance konnte nicht hergestellt werden
+        troubleshooting: Überprüfe deine Internetverbindung und Firewall-Einstellungen. Yahoo Finance könnte vorübergehend nicht verfügbar sein.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} API-Aufrufe heute genutzt (%{percentage})"
+        description: Gib den von Twelve Data bereitgestellten API-Schlüssel ein.
+        env_configured_message: Erfolgreich über die Umgebungsvariable TWELVE_DATA_API_KEY konfiguriert.
+        label: API-Schlüssel
+        placeholder: Gib hier deinen API-Schlüssel ein
+        plan: "%{plan}-Tarif"
+        title: Twelve Data
+      update:
+        failure: Ungültiger Einstellungswert
+        success: Einstellungen aktualisiert
+        invalid_onboarding_state: Ungültiger Onboarding-Status
+      clear_cache:
+        cache_cleared: Daten-Cache wurde geleert. Dies kann einige Augenblicke dauern.
+      not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.

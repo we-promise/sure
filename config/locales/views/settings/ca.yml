@@ -78,7 +78,7 @@ ca:
         last_name: Cognom
         page_title: Informació del perfil
         pending: Pendent
-        profile_subtitle: Personalitza com apareixes a %{product}
+        profile_subtitle: Personalitza com apareixes a %{product_name}
         profile_title: Personal
         remove_invitation: Elimina invitació
         remove_member: Elimina membre

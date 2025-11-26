@@ -1,0 +1,26 @@
+---
+ro:
+  plaid_items:
+    create:
+      success: Contul a fost conectat cu succes. Te rugăm să aștepți sincronizarea conturilor.
+    destroy:
+      success: Conturile sunt programate pentru ștergere.
+    plaid_item:
+      add_new: Adaugă o conexiune nouă
+      confirm_accept: Șterge instituția
+      confirm_body: Aceasta va șterge permanent toate conturile din acest grup și
+        toate datele asociate.
+      confirm_title: Ștergi instituția?
+      connection_lost: Conexiune pierdută
+      connection_lost_description: Această conexiune nu mai este validă. Va trebui
+        să ștergi această conexiune și să o adaugi din nou pentru a continua sincronizarea datelor.
+      delete: Șterge
+      error: A apărut o eroare la sincronizarea datelor
+      no_accounts_description: Nu am putut încărca niciun cont de la această instituție
+        financiară.
+      no_accounts_title: Nu s-au găsit conturi
+      requires_update: Necesită reautentificare
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Necesită sincronizarea datelor
+      syncing: Se sincronizează...
+      update: Actualizează conexiunea

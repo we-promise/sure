@@ -196,6 +196,9 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      get :select_provider
+      get :confirm_unlink
+      delete :unlink
     end
 
     collection do
@@ -281,14 +284,25 @@ Rails.application.routes.draw do
   end
 
   resources :plaid_items, only: %i[new edit create destroy] do
+    collection do
+      get :select_existing_account
+      post :link_existing_account
+    end
+
     member do
       post :sync
     end
   end
 
   resources :simplefin_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :select_existing_account
+      post :link_existing_account
+    end
+
     member do
       post :sync
+      post :balances
       get :setup_accounts
       post :complete_account_setup
     end
@@ -305,6 +319,8 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      get :setup_accounts
+      post :complete_account_setup
     end
   end
 

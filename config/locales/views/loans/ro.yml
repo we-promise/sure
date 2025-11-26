@@ -1,0 +1,23 @@
+---
+ro:
+  loans:
+    edit:
+      edit: Editează %{account}
+    form:
+      interest_rate: Rata dobânzii
+      interest_rate_placeholder: '5.25'
+      initial_balance: Soldul inițial al împrumutului
+      rate_type: Tipul ratei
+      term_months: Termen (luni)
+      term_months_placeholder: '360'
+    new:
+      title: Introdu detaliile împrumutului
+    overview:
+      interest_rate: Rata dobânzii
+      monthly_payment: Plată lunară
+      not_applicable: N/A
+      original_principal: Principalul inițial
+      remaining_principal: Principalul rămas
+      term: Termen
+      type: Tip
+      unknown: Necunoscut

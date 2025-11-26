@@ -1,0 +1,6 @@
+---
+de:
+  invite_codes:
+    index:
+      invite_code_description: Erstelle einen neuen Code damit er hier angezeigt wird Bereits verwendete Codes werden nicht mehr angezeigt
+      no_invite_codes: Keine Codes vorhanden

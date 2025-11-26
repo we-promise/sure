@@ -9,13 +9,12 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "cannot access when self hosting is disabled" do
-    with_env_overrides SELF_HOSTED: "false" do
-      get settings_providers_url
-      assert_response :forbidden
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    get settings_providers_url
+    assert_response :forbidden
 
-      patch settings_providers_url, params: { setting: { plaid_client_id: "test123" } }
-      assert_response :forbidden
-    end
+    patch settings_providers_url, params: { setting: { plaid_client_id: "test123" } }
+    assert_response :forbidden
   end
 
   test "should get show when self hosting is enabled" do
@@ -88,15 +87,13 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       Setting["plaid_secret"] = nil
       Setting["plaid_eu_client_id"] = nil
       Setting["plaid_eu_secret"] = nil
-      Setting["simplefin_setup_token"] = nil
 
       patch settings_providers_url, params: {
         setting: {
           plaid_client_id: "plaid_client",
           plaid_secret: "plaid_secret",
           plaid_eu_client_id: "plaid_eu_client",
-          plaid_eu_secret: "plaid_eu_secret",
-          simplefin_setup_token: "simplefin_token"
+          plaid_eu_secret: "plaid_eu_secret"
         }
       }
 
@@ -107,7 +104,6 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_equal "plaid_secret", Setting["plaid_secret"]
       assert_equal "plaid_eu_client", Setting["plaid_eu_client_id"]
       assert_equal "plaid_eu_secret", Setting["plaid_eu_secret"]
-      assert_equal "simplefin_token", Setting["simplefin_setup_token"]
     end
   end
 
@@ -203,10 +199,10 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_equal "client_id_1", Setting["plaid_client_id"]
       assert_equal "secret_1", Setting["plaid_secret"]
 
-      # Simulate second request updating simplefin fields
+      # Simulate second request updating different plaid fields
       patch settings_providers_url, params: {
         setting: {
-          simplefin_setup_token: "token_1"
+          plaid_environment: "production"
         }
       }
 
@@ -214,7 +210,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_equal "existing_value", Setting["existing_field"]
       assert_equal "client_id_1", Setting["plaid_client_id"]
       assert_equal "secret_1", Setting["plaid_secret"]
-      assert_equal "token_1", Setting["simplefin_setup_token"]
+      assert_equal "production", Setting["plaid_environment"]
     end
   end
 
@@ -253,14 +249,14 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "reloads configuration for multiple providers when updated" do
     with_self_hosting do
-      # Both providers should have their configuration reloaded
+      # Both Plaid providers (US and EU) should have their configuration reloaded
       Provider::PlaidAdapter.expects(:reload_configuration).once
-      Provider::SimplefinAdapter.expects(:reload_configuration).once
+      Provider::PlaidEuAdapter.expects(:reload_configuration).once
 
       patch settings_providers_url, params: {
         setting: {
           plaid_client_id: "plaid_client",
-          simplefin_setup_token: "simplefin_token"
+          plaid_eu_client_id: "plaid_eu_client"
         }
       }
 

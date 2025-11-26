@@ -1,0 +1,14 @@
+---
+de:
+  entries:
+    create:
+      success: Buchung erstellt
+    destroy:
+      success: Buchung gelöscht
+    empty:
+      description: Versuche eine Buchung hinzuzufügen, Filter anzupassen oder deine Suche zu verfeinern
+      title: Keine Buchungen gefunden
+    loading:
+      loading: Buchungen werden geladen...
+    update:
+      success: Buchung aktualisiert

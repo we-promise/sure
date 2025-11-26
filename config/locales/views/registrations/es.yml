@@ -22,5 +22,5 @@ es:
       title: Crea tu cuenta
       welcome_body: Para comenzar, debes registrarte para obtener una nueva cuenta. Luego podrás
         configurar ajustes adicionales dentro de la aplicación.
-      welcome_title: ¡Bienvenido a Self Hosted Maybe!
+      welcome_title: ¡Bienvenido a Self Hosted %{product_name}!
       password_placeholder: Introduce tu contraseña

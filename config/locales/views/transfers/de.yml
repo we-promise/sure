@@ -1,0 +1,30 @@
+---
+de:
+  transfers:
+    create:
+      success: Überweisung erstellt
+    destroy:
+      success: Überweisung entfernt
+    form:
+      amount: Betrag
+      date: Datum
+      expense: Ausgabe
+      from: Von
+      income: Einnahme
+      select_account: Konto auswählen
+      submit: Überweisung erstellen
+      to: An
+      transfer: Überweisung
+    new:
+      title: Neue Überweisung
+    show:
+      delete: Überweisung entfernen
+      delete_subtitle: Dadurch wird die Überweisung entfernt. Die zugrunde liegenden Transaktionen bleiben erhalten.
+      delete_title: Überweisung entfernen?
+      details: Details
+      note_label: Notizen
+      note_placeholder: Füge dieser Überweisung eine Notiz hinzu …
+      overview: Übersicht
+      settings: Einstellungen
+    update:
+      success: Überweisung aktualisiert

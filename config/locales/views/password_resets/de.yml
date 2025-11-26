@@ -1,0 +1,13 @@
+---
+de:
+  password_resets:
+    edit:
+      title: Passwort zurücksetzen
+    new:
+      requested: Bitte überprüfe deine E-Mails auf einen Link zum Zurücksetzen deines Passworts.
+      submit: Passwort zurücksetzen
+      title: Passwort zurücksetzen
+      back: Zurück
+    update:
+      invalid_token: Ungültiger Token.
+      success: Dein Passwort wurde zurückgesetzt.
