@@ -269,6 +269,7 @@ class EnableBankingItemsController < ApplicationController
       .where(account_providers: { id: nil })
 
     @account_type_options = [
+      [ "Skip this account", "skip" ],
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
@@ -314,7 +315,16 @@ class EnableBankingItemsController < ApplicationController
       @enable_banking_item.update!(sync_start_date: params[:sync_start_date])
     end
 
+    created_count = 0
+    skipped_count = 0
+
     account_types.each do |enable_banking_account_id, selected_type|
+      # Skip accounts marked as "skip"
+      if selected_type == "skip" || selected_type.blank?
+        skipped_count += 1
+        next
+      end
+
       enable_banking_account = @enable_banking_item.enable_banking_accounts.find(enable_banking_account_id)
       selected_subtype = account_subtypes[enable_banking_account_id]
 
@@ -333,15 +343,24 @@ class EnableBankingItemsController < ApplicationController
         account: account,
         provider: enable_banking_account
       )
+
+      created_count += 1
     end
 
     # Clear pending status and mark as complete
     @enable_banking_item.update!(pending_account_setup: false)
 
-    # Trigger a sync to process the imported data
-    @enable_banking_item.sync_later
+    # Trigger a sync to process the imported data if accounts were created
+    @enable_banking_item.sync_later if created_count > 0
 
-    flash[:notice] = t(".success", default: "Accounts created successfully!")
+    if created_count > 0
+      flash[:notice] = t(".success", default: "%{count} account(s) created successfully!", count: created_count)
+    elsif skipped_count > 0
+      flash[:notice] = t(".all_skipped", default: "All accounts were skipped. You can set them up later from the accounts page.")
+    else
+      flash[:notice] = t(".no_accounts", default: "No accounts to set up.")
+    end
+
     redirect_to accounts_path, status: :see_other
   end
 
