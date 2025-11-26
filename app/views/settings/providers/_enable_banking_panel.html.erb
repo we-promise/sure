@@ -26,6 +26,8 @@
   <%
     enable_banking_item = Current.family.enable_banking_items.first_or_initialize(name: "Enable Banking Connection")
     is_new_record = enable_banking_item.new_record?
+    # Check if there are any authenticated connections (have session_id)
+    has_authenticated_connections = Current.family.enable_banking_items.where.not(session_id: nil).exists?
   %>
 
   <%= styled_form_with model: enable_banking_item,
@@ -34,6 +36,13 @@
                        method: is_new_record ? :post : :patch,
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
+    <% if has_authenticated_connections && !is_new_record %>
+      <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
+        <p class="font-medium">Configuration locked</p>
+        <p class="text-xs mt-1">Credentials cannot be changed while you have active bank connections. Remove all connections first to update credentials.</p>
+      </div>
+    <% end %>
+
     <div class="grid grid-cols-2 gap-3">
       <%= form.select :country_code,
                       options_for_select([
@@ -70,28 +79,38 @@
                         ["United Kingdom (GB)", "GB"]
                       ], enable_banking_item.country_code),
                       { include_blank: "Select country..." },
-                      { label: "Country", class: "form-select" } %>
+                      { label: "Country", class: "form-select", disabled: has_authenticated_connections && !is_new_record } %>
 
       <%= form.text_field :application_id,
                           label: "Application ID",
                           placeholder: is_new_record ? "Enter application ID" : "Enter new ID to update",
-                          value: enable_banking_item.application_id %>
+                          value: enable_banking_item.application_id,
+                          disabled: has_authenticated_connections && !is_new_record %>
     </div>
 
     <%= form.text_area :client_certificate,
                         label: "Client Certificate (with Private Key)",
                         placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
                         rows: 6,
-                        class: "font-mono text-xs" %>
+                        class: "font-mono text-xs",
+                        disabled: has_authenticated_connections && !is_new_record %>
 
-    <div class="flex justify-end">
-      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
-    </div>
+    <% unless has_authenticated_connections && !is_new_record %>
+      <div class="flex justify-end">
+        <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+      </div>
+    <% end %>
   <% end %>
 
   <% items = local_assigns[:enable_banking_items] || @enable_banking_items || Current.family.enable_banking_items.where.not(client_certificate: nil) %>
   <% if items&.any? %>
+    <%
+      # Find the first item with valid session to use for "Add Connection" button
+      item_for_new_connection = items.find(&:session_valid?)
+      # Check if any item needs initial connection (configured but no session yet)
+      item_needing_connection = items.find { |i| !i.session_valid? && !i.session_expired? }
+    %>
     <div class="border-t border-primary pt-4 space-y-3">
       <% items.each do |item| %>
         <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
@@ -138,7 +157,7 @@
               <%= link_to select_bank_enable_banking_item_path(item),
                           class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
                           data: { turbo_frame: "modal" } do %>
-                Add Connection
+                Connect Bank
               <% end %>
             <% end %>
 
@@ -149,6 +168,19 @@
               Remove
             <% end %>
           </div>
+        </div>
+      <% end %>
+
+      <%# Add Connection button below the list - only show if we have a valid session to copy credentials from %>
+      <% if item_for_new_connection %>
+        <div class="flex justify-center pt-2">
+          <%= button_to new_connection_enable_banking_item_path(item_for_new_connection),
+                        method: :post,
+                        class: "inline-flex items-center gap-2 justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
+                        data: { turbo_frame: "modal" } do %>
+            <%= icon "plus", size: "sm" %>
+            Add Connection
+          <% end %>
         </div>
       <% end %>
     </div>

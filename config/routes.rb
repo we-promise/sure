@@ -14,6 +14,7 @@ Rails.application.routes.draw do
       post :reauthorize
       get :setup_accounts
       post :complete_account_setup
+      post :new_connection
     end
   end
   use_doorkeeper

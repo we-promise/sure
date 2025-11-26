@@ -1,5 +1,5 @@
 class EnableBankingItemsController < ApplicationController
-  before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup ]
+  before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
 
   def create
@@ -171,6 +171,18 @@ class EnableBankingItemsController < ApplicationController
       Rails.logger.error "Unexpected error in callback: #{e.class}: #{e.message}"
       redirect_to settings_providers_path, alert: t(".unexpected_error", default: "An unexpected error occurred. Please try again.")
     end
+  end
+
+  # Create a new connection using credentials from an existing item
+  def new_connection
+    new_item = Current.family.enable_banking_items.create!(
+      name: "Enable Banking Connection",
+      country_code: @enable_banking_item.country_code,
+      application_id: @enable_banking_item.application_id,
+      client_certificate: @enable_banking_item.client_certificate
+    )
+
+    redirect_to select_bank_enable_banking_item_path(new_item), data: { turbo_frame: "modal" }
   end
 
   # Re-authorize an expired session

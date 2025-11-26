@@ -23,11 +23,7 @@
               <p class="text-destructive text-sm animate-pulse">Deletion in progress</p>
             <% end %>
           </div>
-          <% if enable_banking_item.accounts.any? %>
-            <p class="text-xs text-secondary">
-              <%= enable_banking_item.institution_summary %>
-            </p>
-          <% end %>
+          <p class="text-xs text-secondary">Enable Banking</p>
           <% if enable_banking_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>
