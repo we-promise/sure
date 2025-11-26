@@ -1,24 +1,26 @@
-<header class="flex items-center gap-2 mb-4">
-  <h1 class="text-xl text-primary font-medium">Connect SimpleFin</h1>
-</header>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
 
-<% if @error_message.present? %>
-  <div class="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-    <%= @error_message %>
-  </div>
-<% end %>
+    <% dialog.with_body do %>
+      <% if @error_message.present? %>
+        <div class="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+          <%= @error_message %>
+        </div>
+      <% end %>
 
-<div class="bg-container p-4 rounded-lg shadow-border-xs">
-  <%= form_with model: @simplefin_item, url: simplefin_items_path, method: :post, data: { turbo: true } do |f| %>
-    <div class="space-y-3">
-      <div>
-        <%= f.label :setup_token, "Setup token", class: "text-sm text-secondary block mb-1" %>
-        <%= f.text_field :setup_token, class: "input", placeholder: "paste your SimpleFin setup token" %>
-      </div>
-      <div class="flex items-center gap-2">
-        <%= f.submit "Connect", class: "btn btn--primary" %>
-        <%= link_to "Cancel", accounts_path, class: "btn" %>
-      </div>
-    </div>
+      <%= form_with model: @simplefin_item, url: simplefin_items_path, method: :post, data: { turbo: true, turbo_frame: "_top" } do |f| %>
+        <div class="space-y-3">
+          <div>
+            <%= f.label :setup_token, t(".setup_token"), class: "text-sm text-secondary block mb-1" %>
+            <%= f.text_field :setup_token, class: "input", placeholder: t(".setup_token_placeholder") %>
+          </div>
+          <div class="flex items-center gap-2 justify-end pt-2">
+            <%= link_to t(".cancel"), accounts_path, class: "btn", data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+            <%= f.submit t(".connect"), class: "btn btn--primary" %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
   <% end %>
-</div>
+<% end %>

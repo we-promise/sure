@@ -136,18 +136,61 @@ class Account::ProviderImportAdapter
       # Two strategies for finding/creating holdings:
       # 1. By external_id (SimpleFin approach) - tracks each holding uniquely
       # 2. By security+date+currency (Plaid approach) - overwrites holdings for same security/date
-      holding = if external_id.present?
-        account.holdings.find_or_initialize_by(external_id: external_id) do |h|
-          h.security = security
-          h.date = date
-          h.currency = currency
+      holding = nil
+
+      if external_id.present?
+        # Preferred path: match by provider's external_id
+        holding = account.holdings.find_by(external_id: external_id)
+
+        unless holding
+          # Fallback path: match by (security, date, currency) — and when provided,
+          # also scope by account_provider_id to avoid cross‑provider claiming.
+          # This keeps behavior symmetric with deletion logic below which filters
+          # by account_provider_id when present.
+          find_by_attrs = {
+            security: security,
+            date: date,
+            currency: currency
+          }
+          if account_provider_id.present?
+            find_by_attrs[:account_provider_id] = account_provider_id
+          end
+
+          holding = account.holdings.find_by(find_by_attrs)
         end
+
+        holding ||= account.holdings.new(
+          security: security,
+          date: date,
+          currency: currency,
+          account_provider_id: account_provider_id
+        )
       else
-        account.holdings.find_or_initialize_by(
+        holding = account.holdings.find_or_initialize_by(
           security: security,
           date: date,
           currency: currency
         )
+      end
+
+      # Early cross-provider composite-key conflict guard: avoid attempting a write
+      # that would violate a unique index on (account_id, security_id, date, currency).
+      if external_id.present?
+        existing_composite = account.holdings.find_by(
+          security: security,
+          date: date,
+          currency: currency
+        )
+
+        if existing_composite &&
+           account_provider_id.present? &&
+           existing_composite.account_provider_id.present? &&
+           existing_composite.account_provider_id != account_provider_id
+          Rails.logger.warn(
+            "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing_composite.id}"
+          )
+          return existing_composite
+        end
       end
 
       holding.assign_attributes(
@@ -158,10 +201,66 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         cost_basis: cost_basis,
-        account_provider_id: account_provider_id
+        account_provider_id: account_provider_id,
+        external_id: external_id
       )
 
-      holding.save!
+      begin
+        Holding.transaction(requires_new: true) do
+          holding.save!
+        end
+      rescue ActiveRecord::RecordNotUnique => e
+        # Handle unique index collisions on (account_id, security_id, date, currency)
+        # that can occur when another provider (or concurrent import) already
+        # created a row for this composite key. Use the existing row and keep
+        # the outer transaction valid by isolating the error in a savepoint.
+        existing = account.holdings.find_by(
+          security: security,
+          date: date,
+          currency: currency
+        )
+
+        if existing
+          # If an existing row belongs to a different provider, do NOT claim it.
+          # Keep cross-provider isolation symmetrical with deletion logic.
+          if account_provider_id.present? && existing.account_provider_id.present? && existing.account_provider_id != account_provider_id
+            Rails.logger.warn(
+              "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing.id}"
+            )
+            holding = existing
+          else
+            # Same provider (or unowned). Apply latest snapshot and attach external_id for idempotency.
+            updates = {
+              qty: quantity,
+              price: price,
+              amount: amount,
+              cost_basis: cost_basis
+            }
+
+            # Adopt the row to this provider if it’s currently unowned
+            if account_provider_id.present? && existing.account_provider_id.nil?
+              updates[:account_provider_id] = account_provider_id
+            end
+
+            # Attach external_id if provided and missing
+            if external_id.present? && existing.external_id.blank?
+              updates[:external_id] = external_id
+            end
+
+            begin
+              # Use update_columns to avoid validations and keep this collision handler best-effort.
+              existing.update_columns(updates.compact)
+            rescue => _
+              # Best-effort only; avoid raising in collision handler
+            end
+
+            holding = existing
+          end
+        else
+          # Could not find an existing row; re-raise original error
+          raise e
+        end
+      end
 
       # Optionally delete future holdings for this security (Plaid behavior)
       # Only delete if ALL providers allow deletion (cross-provider check)

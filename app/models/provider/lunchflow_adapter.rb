@@ -5,6 +5,34 @@ class Provider::LunchflowAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("LunchflowAccount", self)
 
+  # Define which account types this provider supports
+  def self.supported_account_types
+    %w[Depository CreditCard Loan]
+  end
+
+  # Returns connection configurations for this provider
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_lunchflow?
+
+    [ {
+      key: "lunchflow",
+      name: "Lunch Flow",
+      description: "Connect to your bank via Lunch Flow",
+      can_connect: true,
+      new_account_path: ->(accountable_type, return_to) {
+        Rails.application.routes.url_helpers.select_accounts_lunchflow_items_path(
+          accountable_type: accountable_type,
+          return_to: return_to
+        )
+      },
+      existing_account_path: ->(account_id) {
+        Rails.application.routes.url_helpers.select_existing_account_lunchflow_items_path(
+          account_id: account_id
+        )
+      }
+    } ]
+  end
+
   def provider_name
     "lunchflow"
   end

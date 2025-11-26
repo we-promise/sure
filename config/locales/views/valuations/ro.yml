@@ -1,0 +1,26 @@
+---
+ro:
+  valuations:
+    form:
+      amount: Sumă
+      submit: Adaugă actualizare sold
+    index:
+      change: modificare
+      date: dată
+      new_entry: Intrare nouă
+      no_valuations: Nu există încă evaluări pentru acest cont
+      valuations: Valoare
+      value: valoare
+    new:
+      title: Sold nou
+    show:
+      amount: Sumă
+      date_label: Dată
+      delete: Șterge
+      delete_subtitle: Această acțiune nu poate fi anulată
+      delete_title: Șterge înregistrarea
+      details: Detalii
+      note_label: Notițe
+      note_placeholder: Adaugă orice detalii suplimentare despre această înregistrare
+      overview: Prezentare generală
+      settings: Setări

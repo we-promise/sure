@@ -1,12 +1,31 @@
-<%# locals: (title:, subtitle: nil, content:) %>
-<section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
-  <div>
-    <h2 class="text-lg font-medium text-primary"><%= title %></h2>
-    <% if subtitle.present? %>
-      <p class="text-secondary text-sm mt-1"><%= subtitle %></p>
-    <% end %>
-  </div>
-  <div class="space-y-4">
-    <%= content %>
-  </div>
-</section>
+<%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true) %>
+<% if collapsible %>
+  <details <%= "open" if open %> class="group bg-container shadow-border-xs rounded-xl p-4">
+    <summary class="flex items-center justify-between gap-2 cursor-pointer rounded-lg list-none [&::-webkit-details-marker]:hidden">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "text-secondary group-open:transform group-open:rotate-90 transition-transform" %>
+        <div>
+          <h2 class="text-lg font-medium text-primary"><%= title %></h2>
+          <% if subtitle.present? %>
+            <p class="text-secondary text-sm"><%= subtitle %></p>
+          <% end %>
+        </div>
+      </div>
+    </summary>
+    <div class="space-y-4 mt-4">
+      <%= content %>
+    </div>
+  </details>
+<% else %>
+  <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
+    <div>
+      <h2 class="text-lg font-medium text-primary"><%= title %></h2>
+      <% if subtitle.present? %>
+        <p class="text-secondary text-sm mt-1"><%= subtitle %></p>
+      <% end %>
+    </div>
+    <div class="space-y-4">
+      <%= content %>
+    </div>
+  </section>
+<% end %>

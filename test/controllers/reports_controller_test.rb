@@ -92,6 +92,25 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok # Should not crash, uses defaults
   end
 
+  test "index swaps dates when end_date is before start_date" do
+    start_date = Date.current
+    end_date = 1.month.ago.to_date
+
+    get reports_path(
+      period_type: :custom,
+      start_date: start_date.to_s,
+      end_date: end_date.to_s
+    )
+
+    assert_response :ok
+    # Should show flash message about invalid date range
+    assert flash[:alert].present?, "Flash alert should be present"
+    assert_match /End date cannot be before start date/, flash[:alert]
+    # Verify the response body contains the swapped date range in the correct order
+    assert_includes @response.body, end_date.strftime("%b %-d, %Y")
+    assert_includes @response.body, start_date.strftime("%b %-d, %Y")
+  end
+
   test "spending patterns returns data when expense transactions exist" do
     # Create expense category
     expense_category = @family.categories.create!(
@@ -184,5 +203,22 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok, "Export should work with session auth. Response: #{@response.body}"
     assert_equal "text/csv", @response.media_type
+  end
+
+  test "export transactions swaps dates when end_date is before start_date" do
+    start_date = Date.current
+    end_date = 1.month.ago.to_date
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :custom,
+      start_date: start_date.to_s,
+      end_date: end_date.to_s
+    )
+
+    assert_response :ok
+    assert_equal "text/csv", @response.media_type
+    # Verify the CSV content is generated (should not crash)
+    assert_not_nil @response.body
   end
 end

@@ -1,0 +1,19 @@
+---
+ro:
+  invitations:
+    create:
+      failure: Invitația nu a putut fi trimisă
+      success: Invitația a fost trimisă cu succes
+    destroy:
+      failure: A apărut o problemă la eliminarea invitației.
+      not_authorized: Nu sunteți autorizat să gestionați invitațiile.
+      success: Invitația a fost eliminată cu succes.
+    new:
+      email_label: Adresă de email
+      email_placeholder: Introduceți adresa de email
+      role_admin: Administrator
+      role_label: Rol
+      role_member: Membru
+      submit: Trimite invitația
+      subtitle: Trimite o invitație pentru a te alătura contului tău de familie pe Maybe
+      title: Invită pe cineva
