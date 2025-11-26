@@ -31,6 +31,27 @@ class Provider::Base
     raise NotImplementedError, "#{self.class} must implement #provider_name"
   end
 
+  # Defines which account types this provider supports
+  # Override in subclasses to specify supported account types
+  # @return [Array<String>] Array of account type class names (e.g., ["Depository", "CreditCard"])
+  def self.supported_account_types
+    []
+  end
+
+  # Returns provider connection configurations
+  # Override in subclasses to provide connection metadata for UI
+  # @param family [Family] The family to check connection availability for
+  # @return [Array<Hash>] Array of connection configurations with keys:
+  #   - key: Unique identifier (e.g., "lunchflow", "plaid_us")
+  #   - name: Display name (e.g., "Lunch Flow", "Plaid")
+  #   - description: User-facing description
+  #   - can_connect: Boolean, whether family can connect to this provider
+  #   - new_account_path: Proc that generates path for new account flow
+  #   - existing_account_path: Proc that generates path for linking existing account
+  def self.connection_configs(family:)
+    []
+  end
+
   # Returns the provider type (class name)
   # @return [String] The provider account class name
   def provider_type

@@ -29,6 +29,7 @@ es:
       method_selector:
         connected_entry: Vincular cuenta
         connected_entry_eu: Vincular cuenta de la UE
+        link_with_provider: "Vincular con %{provider}"
         lunchflow_entry: Vincular cuenta de Lunch Flow
         manual_entry: Introducir saldo de la cuenta
         title: ¿Cómo te gustaría añadirla?

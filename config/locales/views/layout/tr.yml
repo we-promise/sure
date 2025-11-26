@@ -6,7 +6,6 @@ tr:
       no_account: "%{product_name}'ye yeni misiniz?"
       sign_in: Giriş yap
       sign_up: Hesap oluştur
-      your_account: Hesabınız
     shared:
       footer:
         privacy_policy: Gizlilik Politikası

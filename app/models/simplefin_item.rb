@@ -1,16 +1,28 @@
 class SimplefinItem < ApplicationRecord
   include Syncable, Provided
+  include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Virtual attribute for the setup token form field
   attr_accessor :setup_token
 
-  if Rails.application.credentials.active_record_encryption.present?
+  # Helper to detect if ActiveRecord Encryption is configured for this app
+  def self.encryption_ready?
+    creds_ready = Rails.application.credentials.active_record_encryption.present?
+    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+    creds_ready || env_ready
+  end
+
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
+  if encryption_ready?
     encrypts :access_url, deterministic: true
   end
 
-  validates :name, :access_url, presence: true
+  validates :name, presence: true
+  validates :access_url, presence: true, on: :create
 
   before_destroy :remove_simplefin_item
 
@@ -39,8 +51,8 @@ class SimplefinItem < ApplicationRecord
     DestroyJob.perform_later(self)
   end
 
-  def import_latest_simplefin_data
-    SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider).import
+  def import_latest_simplefin_data(sync: nil)
+    SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider, sync: sync).import
   end
 
   def process_accounts
@@ -157,6 +169,8 @@ class SimplefinItem < ApplicationRecord
       "#{institutions.count} institutions"
     end
   end
+
+
 
   # Detect a recent rate-limited sync and return a friendly message, else nil
   def rate_limited_message

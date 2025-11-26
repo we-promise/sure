@@ -1,0 +1,65 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>Visit <a href="https://www.lunchflow.app" target="_blank" rel="noopener noreferrer" class="link">Lunch Flow</a> to get your API key</li>
+      <li>Paste your API key below and click the Save button</li>
+      <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
+    </ol>
+
+    <p class="text-primary font-medium">Field descriptions:</p>
+    <ul>
+      <li><strong>API Key:</strong> Your Lunch Flow API key for authentication (required)</li>
+      <li><strong>Base URL:</strong> Base URL for Lunch Flow API (optional, defaults to https://lunchflow.app/api/v1)</li>
+    </ul>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
+      <%= error_msg %>
+    </div>
+  <% end %>
+
+  <%
+    # Get or initialize a lunchflow_item for this family
+    # - If family has an item WITH credentials, use it (for updates)
+    # - If family has an item WITHOUT credentials, use it (to add credentials)
+    # - If family has no items at all, create a new one
+    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunch Flow Connection")
+    is_new_record = lunchflow_item.new_record?
+  %>
+
+  <%= styled_form_with model: lunchflow_item,
+                       url: is_new_record ? lunchflow_items_path : lunchflow_item_path(lunchflow_item),
+                       scope: :lunchflow_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :api_key,
+                        label: "API Key",
+                        placeholder: is_new_record ? "Paste API key here" : "Enter new API key to update",
+                        type: :password %>
+
+    <%= form.text_field :base_url,
+                        label: "Base URL (Optional)",
+                        placeholder: "https://lunchflow.app/api/v1 (default)",
+                        value: lunchflow_item.base_url %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:lunchflow_items] || @lunchflow_items || Current.family.lunchflow_items.where.not(api_key: [nil, ""]) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+---
+ro:
+  recurring_transactions:
+    title: Tranzacții recurente
+    upcoming: Tranzacții recurente viitoare
+    projected: Proiectat
+    recurring: Recurent
+    expected_on: Așteptat pe %{date}
+    day_of_month: Ziua %{day} a lunii
+    identify_patterns: Identifică tipare
+    cleanup_stale: Curăță cele învechite
+    info:
+      title: Detecție automată a tiparelor
+      manual_description: Poți identifica manual tipare sau curăța tranzacțiile recurente învechite folosind butoanele de mai sus.
+      automatic_description: "Identificarea automată rulează și după:"
+      triggers:
+        - Importurile CSV sunt complete (tranzacții, tranzacții bursiere, conturi etc.)
+        - Orice sincronizare a furnizorului este completă (Plaid, SimpleFIN etc.)
+    identified: Au fost identificate %{count} tipare de tranzacții recurente
+    cleaned_up: Au fost curățate %{count} tranzacții recurente învechite
+    marked_inactive: Tranzacție recurentă marcată ca inactivă
+    marked_active: Tranzacție recurentă marcată ca activă
+    deleted: Tranzacție recurentă ștearsă
+    confirm_delete: Ești sigur că vrei să ștergi această tranzacție recurentă?
+    empty:
+      title: Nu s-au găsit tranzacții recurente
+      description: Apasă "Identifică tipare" pentru a detecta automat tranzacțiile recurente din istoricul tău de tranzacții.
+    table:
+      merchant: Comerciant
+      amount: Sumă
+      expected_day: Ziua așteptată
+      next_date: Data următoare
+      last_occurrence: Ultima apariție
+      status: Stare
+      actions: Acțiuni
+    status:
+      active: Activ
+      inactive: Inactiv

@@ -28,6 +28,7 @@ tr:
       method_selector:
         connected_entry: Hesabı bağla
         connected_entry_eu: AB hesabı bağla
+        link_with_provider: "%{provider} ile bağla"
         manual_entry: Hesap bakiyesi gir
         title: Nasıl eklemek istersiniz?
       title: Ne eklemek istersiniz?

@@ -1,0 +1,8 @@
+---
+ro:
+  invitation_mailer:
+    invite_email:
+      accept_button: Acceptă invitația
+      body: "%{inviter} te-a invitat să te alături familiei %{family} pe %{product_name}!"
+      expiry_notice: Această invitație va expira în %{days} zile
+      greeting: Bun venit la %{product_name}!

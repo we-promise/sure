@@ -1,0 +1,27 @@
+---
+ro:
+  family_merchants:
+    create:
+      error: 'Eroare la crearea comerciantului: %{error}'
+      success: Comerciant nou creat cu succes
+    destroy:
+      success: Comerciant șters cu succes
+    edit:
+      title: Editează comerciantul
+    form:
+      name_placeholder: Nume comerciant
+    index:
+      empty: Niciun comerciant încă
+      new: Comerciant nou
+      title: Comercianți
+    merchant:
+      confirm_accept: Șterge comerciantul
+      confirm_body: Ești sigur că vrei să ștergi acest comerciant? Eliminarea acestui comerciant
+        va deconecta toate tranzacțiile asociate și poate afecta raportarea.
+      confirm_title: Ștergi comerciantul?
+      delete: Șterge comerciantul
+      edit: Editează comerciantul
+    new:
+      title: Comerciant nou
+    update:
+      success: Comerciant actualizat cu succes

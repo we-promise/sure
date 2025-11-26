@@ -28,6 +28,7 @@ ca:
       method_selector:
         connected_entry: Enllaça el compte
         connected_entry_eu: Enllaça el compte de la UE
+        link_with_provider: "Enllaça amb %{provider}"
         manual_entry: Introdueix el saldo del compte
         title: Com vols afegir-lo?
       title: Què vols afegir?
