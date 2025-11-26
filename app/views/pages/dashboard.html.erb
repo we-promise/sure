@@ -45,6 +45,15 @@
       </section>
     <% end %>
 
+    <% if @investment_statement.investment_accounts.any? %>
+      <section class="bg-container py-4 rounded-xl shadow-border-xs mb-6">
+        <%= render partial: "pages/dashboard/investment_summary", locals: {
+          investment_statement: @investment_statement,
+          period: @period
+        } %>
+      </section>
+    <% end %>
+
     <section class="bg-container py-4 rounded-xl shadow-border-xs">
       <%= render partial: "pages/dashboard/net_worth_chart", locals: {
         balance_sheet: @balance_sheet,

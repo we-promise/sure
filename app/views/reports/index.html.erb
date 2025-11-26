@@ -102,6 +102,15 @@
       } %>
     </section>
 
+    <%# Investment Performance %>
+    <% if @investment_metrics[:has_investments] %>
+      <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
+        <%= render partial: "reports/investment_performance", locals: {
+          investment_metrics: @investment_metrics
+        } %>
+      </section>
+    <% end %>
+
     <%# Transactions Breakdown %>
     <section class="bg-container py-4 px-6 rounded-xl shadow-border-xs">
       <%= render partial: "reports/transactions_breakdown", locals: {

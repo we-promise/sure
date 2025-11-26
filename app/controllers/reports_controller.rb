@@ -37,6 +37,9 @@ class ReportsController < ApplicationController
     # Transactions breakdown
     @transactions = build_transactions_breakdown
 
+    # Investment metrics
+    @investment_metrics = build_investment_metrics
+
     @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
   end
 
@@ -348,6 +351,25 @@ class ReportsController < ApplicationController
       else
         result.sort_by { |g| -g[:total] }
       end
+    end
+
+    def build_investment_metrics
+      investment_statement = Current.family.investment_statement
+      investment_accounts = investment_statement.investment_accounts
+
+      return { has_investments: false } unless investment_accounts.any?
+
+      period_totals = investment_statement.totals(period: @period)
+
+      {
+        has_investments: true,
+        portfolio_value: investment_statement.portfolio_value_money,
+        unrealized_trend: investment_statement.unrealized_gains_trend,
+        period_contributions: period_totals.contributions,
+        period_withdrawals: period_totals.withdrawals,
+        top_holdings: investment_statement.top_holdings(limit: 5),
+        accounts: investment_accounts.to_a
+      }
     end
 
     def apply_transaction_filters(transactions)
