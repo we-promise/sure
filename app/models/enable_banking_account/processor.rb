@@ -40,7 +40,7 @@ class EnableBankingAccount::Processor
 
       # For liability accounts, ensure positive balances
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = balance.abs
+        balance = -balance
       end
 
       currency = parse_currency(enable_banking_account.currency) || account.currency || "EUR"

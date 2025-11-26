@@ -133,9 +133,10 @@ class EnableBankingEntry::Processor
     end
 
     def amount
-      # Enable Banking uses standard convention: negative = outflow, positive = inflow
-      # Sure expects expenses as positive, income as negative
-      -amount_value
+      # Enable Banking uses PSD2 Berlin Group convention: negative = debit (outflow), positive = credit (inflow)
+      # Sure uses the same convention: negative = expense, positive = income
+      # Therefore, use the amount as-is from the API without inversion
+      amount_value
     end
 
     def currency
