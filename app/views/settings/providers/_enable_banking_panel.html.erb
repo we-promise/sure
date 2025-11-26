@@ -1,0 +1,156 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>Visit your <a href="https://enablebanking.com" target="_blank" rel="noopener noreferrer" class="link">Enable Banking</a> developer account to get your credentials</li>
+      <li>Select your country code from the dropdown below</li>
+      <li>Enter your Application ID and paste your Client Certificate (including the private key)</li>
+      <li>Click Save Configuration, then use "Add Connection" to link your bank</li>
+    </ol>
+
+    <p class="text-primary font-medium">Field descriptions:</p>
+    <ul>
+      <li><strong>Country Code:</strong> ISO 3166-1 alpha-2 country code (e.g., GB, DE, FR) - determines available banks</li>
+      <li><strong>Application ID:</strong> The ID generated in your Enable Banking developer account</li>
+      <li><strong>Client Certificate:</strong> The certificate generated when you created your application (must include the private key)</li>
+    </ul>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
+      <%= error_msg %>
+    </div>
+  <% end %>
+
+  <%
+    enable_banking_item = Current.family.enable_banking_items.first_or_initialize(name: "Enable Banking Connection")
+    is_new_record = enable_banking_item.new_record?
+  %>
+
+  <%= styled_form_with model: enable_banking_item,
+                       url: is_new_record ? enable_banking_items_path : enable_banking_item_path(enable_banking_item),
+                       scope: :enable_banking_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <div class="grid grid-cols-2 gap-3">
+      <%= form.select :country_code,
+                      options_for_select([
+                        ["Austria (AT)", "AT"],
+                        ["Belgium (BE)", "BE"],
+                        ["Bulgaria (BG)", "BG"],
+                        ["Croatia (HR)", "HR"],
+                        ["Cyprus (CY)", "CY"],
+                        ["Czech Republic (CZ)", "CZ"],
+                        ["Denmark (DK)", "DK"],
+                        ["Estonia (EE)", "EE"],
+                        ["Finland (FI)", "FI"],
+                        ["France (FR)", "FR"],
+                        ["Germany (DE)", "DE"],
+                        ["Greece (GR)", "GR"],
+                        ["Hungary (HU)", "HU"],
+                        ["Iceland (IS)", "IS"],
+                        ["Ireland (IE)", "IE"],
+                        ["Italy (IT)", "IT"],
+                        ["Latvia (LV)", "LV"],
+                        ["Liechtenstein (LI)", "LI"],
+                        ["Lithuania (LT)", "LT"],
+                        ["Luxembourg (LU)", "LU"],
+                        ["Malta (MT)", "MT"],
+                        ["Netherlands (NL)", "NL"],
+                        ["Norway (NO)", "NO"],
+                        ["Poland (PL)", "PL"],
+                        ["Portugal (PT)", "PT"],
+                        ["Romania (RO)", "RO"],
+                        ["Slovakia (SK)", "SK"],
+                        ["Slovenia (SI)", "SI"],
+                        ["Spain (ES)", "ES"],
+                        ["Sweden (SE)", "SE"],
+                        ["United Kingdom (GB)", "GB"]
+                      ], enable_banking_item.country_code),
+                      { include_blank: "Select country..." },
+                      { label: "Country", class: "form-select" } %>
+
+      <%= form.text_field :application_id,
+                          label: "Application ID",
+                          placeholder: is_new_record ? "Enter application ID" : "Enter new ID to update",
+                          value: enable_banking_item.application_id %>
+    </div>
+
+    <%= form.text_area :client_certificate,
+                        label: "Client Certificate (with Private Key)",
+                        placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+                        rows: 6,
+                        class: "font-mono text-xs" %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:enable_banking_items] || @enable_banking_items || Current.family.enable_banking_items.where.not(client_certificate: nil) %>
+  <% if items&.any? %>
+    <div class="border-t border-primary pt-4 space-y-3">
+      <% items.each do |item| %>
+        <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
+          <div class="flex items-center gap-3">
+            <% if item.session_valid? %>
+              <div class="w-2 h-2 bg-success rounded-full"></div>
+              <div>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connected Bank" %></p>
+                <p class="text-xs text-secondary">
+                  Session expires: <%= item.session_expires_at&.strftime("%b %d, %Y") || "Unknown" %>
+                </p>
+              </div>
+            <% elsif item.session_expired? %>
+              <div class="w-2 h-2 bg-warning rounded-full"></div>
+              <div>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connection" %></p>
+                <p class="text-xs text-destructive">Session expired - re-authorization required</p>
+              </div>
+            <% else %>
+              <div class="w-2 h-2 bg-secondary rounded-full"></div>
+              <div>
+                <p class="text-sm font-medium text-primary">Configured</p>
+                <p class="text-xs text-secondary">Ready to connect a bank</p>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <% if item.session_valid? %>
+              <%= button_to sync_enable_banking_item_path(item),
+                            method: :post,
+                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-gray-50 transition-colors",
+                            data: { turbo: false } do %>
+                Sync
+              <% end %>
+            <% elsif item.session_expired? %>
+              <%= button_to reauthorize_enable_banking_item_path(item),
+                            method: :post,
+                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-warning hover:opacity-90 transition-colors",
+                            data: { turbo: false } do %>
+                Re-authorize
+              <% end %>
+            <% else %>
+              <%= link_to select_bank_enable_banking_item_path(item),
+                          class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
+                          data: { turbo_frame: "modal" } do %>
+                Add Connection
+              <% end %>
+            <% end %>
+
+            <%= button_to enable_banking_item_path(item),
+                          method: :delete,
+                          class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
+                          data: { turbo_confirm: "Are you sure you want to remove this connection?" } do %>
+              Remove
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,57 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", default: "Select Your Bank")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description", default: "Choose the bank you want to connect to your account.") %>
+        </p>
+
+        <% if @error_message.present? %>
+          <div class="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            <%= @error_message %>
+          </div>
+        <% end %>
+
+        <% if @aspsps.present? %>
+          <div class="space-y-2 max-h-80 overflow-y-auto">
+            <% @aspsps.each do |aspsp| %>
+              <%= button_to authorize_enable_banking_item_path(@enable_banking_item),
+                            method: :post,
+                            params: { aspsp_name: aspsp[:name] },
+                            class: "w-full flex items-center gap-4 p-3 rounded-lg border border-primary bg-container hover:bg-subtle transition-colors text-left",
+                            data: { turbo: false } do %>
+                <% if aspsp[:logo].present? %>
+                  <img src="<%= aspsp[:logo] %>" alt="<%= aspsp[:name] %>" class="w-10 h-10 rounded object-contain">
+                <% else %>
+                  <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
+                    <%= icon "building-bank", class: "w-5 h-5 text-gray-400" %>
+                  </div>
+                <% end %>
+                <div class="flex-1">
+                  <p class="font-medium text-sm text-primary"><%= aspsp[:name] %></p>
+                  <% if aspsp[:bic].present? %>
+                    <p class="text-xs text-secondary">BIC: <%= aspsp[:bic] %></p>
+                  <% end %>
+                </div>
+                <%= icon "chevron-right", class: "w-5 h-5 text-secondary" %>
+              <% end %>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-8">
+            <p class="text-secondary"><%= t(".no_banks", default: "No banks available for this country.") %></p>
+            <p class="text-sm text-secondary mt-2"><%= t(".check_country", default: "Please check your country code setting.") %></p>
+          </div>
+        <% end %>
+
+        <div class="flex justify-end pt-4">
+          <%= link_to t(".cancel", default: "Cancel"), settings_providers_path,
+              class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+              data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
