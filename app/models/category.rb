@@ -17,6 +17,12 @@ class Category < ApplicationRecord
   before_save :inherit_color_from_parent
 
   scope :alphabetically, -> { order(:name) }
+  scope :alphabetically_by_hierarchy, -> {
+    left_joins(:parent)
+      .order(Arel.sql("COALESCE(parents_categories.name, categories.name)"))
+      .order(Arel.sql("parents_categories.name IS NOT NULL"))
+      .order(:name)
+  }
   scope :roots, -> { where(parent_id: nil) }
   scope :incomes, -> { where(classification: "income") }
   scope :expenses, -> { where(classification: "expense") }
@@ -128,6 +134,10 @@ class Category < ApplicationRecord
 
   def subcategory?
     parent.present?
+  end
+
+  def name_with_parent
+    subcategory? ? "#{parent.name} > #{name}" : name
   end
 
   private
