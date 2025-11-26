@@ -16,6 +16,32 @@ class EnableBankingAccount < ApplicationRecord
     account
   end
 
+  # Map PSD2 cash_account_type codes to user-friendly names
+  # Based on ISO 20022 External Cash Account Type codes
+  def account_type_display
+    return nil unless account_type.present?
+
+    type_mappings = {
+      "CACC" => "Current/Checking Account",
+      "SVGS" => "Savings Account",
+      "CARD" => "Card Account",
+      "CRCD" => "Credit Card",
+      "LOAN" => "Loan Account",
+      "MORT" => "Mortgage Account",
+      "ODFT" => "Overdraft Account",
+      "CASH" => "Cash Account",
+      "TRAN" => "Transacting Account",
+      "SALA" => "Salary Account",
+      "MOMA" => "Money Market Account",
+      "NREX" => "Non-Resident External Account",
+      "TAXE" => "Tax Account",
+      "TRAS" => "Cash Trading Account",
+      "ONDP" => "Overnight Deposit"
+    }
+
+    type_mappings[account_type.upcase] || account_type.titleize
+  end
+
   def upsert_enable_banking_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
     snapshot = account_snapshot.with_indifferent_access

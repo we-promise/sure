@@ -66,9 +66,14 @@
                     <span class="text-secondary">• <%= enable_banking_account.iban.last(4) %></span>
                   <% end %>
                 </h3>
-                <p class="text-sm text-secondary">
-                  Balance: <%= number_to_currency(enable_banking_account.current_balance || 0, unit: enable_banking_account.currency) %>
-                </p>
+                <div class="text-sm text-secondary space-y-0.5">
+                  <% if enable_banking_account.account_type_display.present? %>
+                    <p><%= enable_banking_account.account_type_display %></p>
+                  <% end %>
+                  <% if enable_banking_account.current_balance.present? %>
+                    <p>Balance: <%= number_to_currency(enable_banking_account.current_balance, unit: enable_banking_account.currency) %></p>
+                  <% end %>
+                </div>
               </div>
             </div>
 
