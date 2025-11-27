@@ -47,6 +47,7 @@
 .vscode/*
 !.vscode/extensions.json
 !.vscode/*.code-snippets
+*.code-workspace
 
 # Ignore macOS specific files
 */.DS_Store
@@ -68,10 +69,9 @@ coverage
 
 # Ignore node related files
 node_modules
-
 compose.yml
-
 plaid_test_accounts/
+*.lock
 
 # Added by Claude Task Master
 # Logs
@@ -107,4 +107,3 @@ scripts/
 .windsurfrules
 .cursor/rules/dev_workflow.mdc
 .cursor/rules/taskmaster.mdc
-
