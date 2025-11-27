@@ -23,10 +23,10 @@ class LunchflowAccount < ApplicationRecord
     # Lunchflow API returns: { id, name, institution_name, institution_logo, provider, currency, status }
     # Build display name: "Institution Name - Account Name" if institution is present
     display_name = if snapshot[:institution_name].present?
-                     "#{snapshot[:institution_name]} - #{snapshot[:name]}"
-                   else
-                     snapshot[:name]
-                   end
+      "#{snapshot[:institution_name]} - #{snapshot[:name]}"
+    else
+      snapshot[:name]
+    end
 
     update!(
       current_balance: nil, # Balance not provided by accounts endpoint
