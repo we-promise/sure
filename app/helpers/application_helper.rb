@@ -61,6 +61,7 @@ module ApplicationHelper
     [
       nav_item("Home", root_path, "pie-chart"),
       nav_item("Transactions", transactions_path, "credit-card"),
+      nav_item("Reports", reports_path, "chart-bar"),
       nav_item("Budgets", budgets_path, "map"),
       nav_item("Assistant", chats_path, "icon-assistant", icon_custom: true, mobile_only: true)
     ]
