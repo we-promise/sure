@@ -5,6 +5,7 @@ class Holding < ApplicationRecord
 
   belongs_to :account
   belongs_to :security
+  belongs_to :account_provider, optional: true
 
   validates :qty, :currency, :date, :price, :amount, presence: true
   validates :qty, :price, :amount, numericality: { greater_than_or_equal_to: 0 }
@@ -28,7 +29,7 @@ class Holding < ApplicationRecord
 
   # Basic approximation of cost-basis
   def avg_cost
-    avg_cost = account.trades
+    trades = account.trades
       .with_entry
       .joins(ActiveRecord::Base.sanitize_sql_array([
         "LEFT JOIN exchange_rates ON (
@@ -39,13 +40,41 @@ class Holding < ApplicationRecord
       ]))
       .where(security_id: security.id)
       .where("trades.qty > 0 AND entries.date <= ?", date)
-      .average("trades.price * COALESCE(exchange_rates.rate, 1)")
 
-    Money.new(avg_cost || price, currency)
+    total_cost, total_qty = trades.pick(
+      Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
+      Arel.sql("SUM(trades.qty)")
+    )
+
+    weighted_avg =
+      if total_qty && total_qty > 0
+        total_cost / total_qty
+      else
+        price
+      end
+
+    Money.new(weighted_avg || price, currency)
   end
 
   def trend
     @trend ||= calculate_trend
+  end
+
+  # Day change based on previous holding snapshot (same account/security/currency)
+  # Returns a Trend struct similar to other trend usages or nil if no prior snapshot.
+  def day_change
+    # Memoize even when nil to avoid repeated queries during a request lifecycle
+    return @day_change if instance_variable_defined?(:@day_change)
+
+    return (@day_change = nil) unless amount_money
+
+    prev = account.holdings
+                 .where(security_id: security_id, currency: currency)
+                 .where("date < ?", date)
+                 .order(date: :desc)
+                 .first
+
+    @day_change = prev&.amount_money ? Trend.new(current: amount_money, previous: prev.amount_money) : nil
   end
 
   def trades

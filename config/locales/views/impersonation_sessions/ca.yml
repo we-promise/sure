@@ -1,0 +1,16 @@
+---
+ca:
+  impersonation_sessions:
+    approve:
+      success: Sol·licitud aprovada
+    complete:
+      success: Sessió completada
+    create:
+      success: Sol·licitud enviada a l'usuari. Esperant aprovació.
+    join:
+      success: Sessió iniciada
+    leave:
+      success: Has sortit de la sessió
+    reject:
+      success: Sol·licitud rebutjada
+

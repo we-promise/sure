@@ -16,7 +16,7 @@
 # Sure: The personal finance app for everyone
 
 <b>Get
-involved: [Discord](https://discord.gg/36ZGBsxYEK) • [(archived) Website](https://web.archive.org/web/20250715182050/https://maybefinance.com/) • [Issues](https://github.com/we-promise/sure/issues)</b>
+involved: [Discord](https://discord.gg/36ZGBsxYEK) • [Website](https://sure.am) • [Issues](https://github.com/we-promise/sure/issues)</b>
 
 > [!IMPORTANT]
 > This repository is a community fork of the now-abandoned Maybe Finance project. <br />
@@ -60,6 +60,7 @@ The instructions below are for developers to get started with contributing to th
 
 - See `.ruby-version` file for required Ruby version
 - PostgreSQL >9.3 (latest stable version recommended)
+- Redis > 5.4 (latest stable version recommended)
 
 ### Getting Started
 ```sh
@@ -86,7 +87,9 @@ For further instructions, see guides below.
 - [Windows dev setup](https://github.com/we-promise/sure/wiki/Windows-Dev-Setup-Guide)
 - Dev containers - visit [this guide](https://code.visualstudio.com/docs/devcontainers/containers)
 
-### One click deploys
+### One-click
+
+[![Run on PikaPods](https://www.pikapods.com/static/run-button.svg)](https://www.pikapods.com/pods?run=maybe)
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 

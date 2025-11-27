@@ -32,6 +32,7 @@ Rails.application.routes.draw do
 
   get "changelog", to: "pages#changelog"
   get "feedback", to: "pages#feedback"
+  patch "dashboard/preferences", to: "pages#update_preferences"
 
   resource :current_session, only: %i[update]
 
@@ -53,6 +54,7 @@ Rails.application.routes.draw do
     delete :reset, on: :member
     delete :reset_with_sample_data, on: :member
     patch :rule_prompt_settings, on: :member
+    get :resend_confirmation_email, on: :member
   end
 
   resource :onboarding, only: :show do
@@ -76,6 +78,7 @@ Rails.application.routes.draw do
     resource :llm_usage, only: :show
     resource :guides, only: :show
     resource :bank_sync, only: :show, controller: "bank_sync"
+    resource :providers, only: %i[show update]
   end
 
   resource :subscription, only: %i[new show create] do
@@ -99,6 +102,12 @@ Rails.application.routes.draw do
 
     post :bootstrap, on: :collection
     delete :destroy_all, on: :collection
+  end
+
+  resources :reports, only: %i[index] do
+    patch :update_preferences, on: :collection
+    get :export_transactions, on: :collection
+    get :google_sheets_instructions, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
@@ -146,6 +155,21 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
     end
+
+    member do
+      post :mark_as_recurring
+    end
+  end
+
+  resources :recurring_transactions, only: %i[index destroy] do
+    collection do
+      match :identify, via: [ :get, :post ]
+      match :cleanup, via: [ :get, :post ]
+    end
+
+    member do
+      match :toggle_status, via: [ :get, :post ]
+    end
   end
 
   resources :accountable_sparklines, only: :show, param: :accountable_type
@@ -174,6 +198,9 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      get :select_provider
+      get :confirm_unlink
+      delete :unlink
     end
 
     collection do
@@ -259,12 +286,39 @@ Rails.application.routes.draw do
   end
 
   resources :plaid_items, only: %i[new edit create destroy] do
+    collection do
+      get :select_existing_account
+      post :link_existing_account
+    end
+
     member do
       post :sync
     end
   end
 
   resources :simplefin_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :balances
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :lunchflow_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
     member do
       post :sync
       get :setup_accounts

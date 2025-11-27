@@ -1,0 +1,89 @@
+---
+ca:
+  accounts:
+    account:
+      troubleshoot: Resolució de problemes
+    chart:
+      data_not_available: Dades no disponibles per al període seleccionat
+    create:
+      success: "Compte %{type} creat"
+    destroy:
+      success: "El compte %{type} s'ha programat per a l'eliminació"
+    empty:
+      empty_message: Afegeix un compte mitjançant connexió, importació o introducció manual.
+      new_account: Nou compte
+      no_accounts: Encara no hi ha cap compte
+    form:
+      balance: Saldo actual
+      name_label: Nom del compte
+      name_placeholder: Exemple de nom de compte
+    index:
+      accounts: Comptes
+      manual_accounts:
+        other_accounts: Altres comptes
+      new_account: Nou compte
+      sync: Sincronitza-ho tot
+    new:
+      import_accounts: Importa comptes
+      method_selector:
+        connected_entry: Enllaça el compte
+        connected_entry_eu: Enllaça el compte de la UE
+        link_with_provider: "Enllaça amb %{provider}"
+        manual_entry: Introdueix el saldo del compte
+        title: Com vols afegir-lo?
+      title: Què vols afegir?
+    show:
+      activity:
+        amount: Import
+        balance: Saldo
+        date: Data
+        entries: entrades
+        entry: entrada
+        new: Nou
+        new_balance: Nou saldo
+        new_transaction: Nova transacció
+        no_entries: No s'han trobat entrades
+        search:
+          placeholder: Cerca entrades per nom
+        title: Activitat
+      chart:
+        balance: Saldo
+        owed: Import degut
+      menu:
+        confirm_accept: Elimina "%{name}"
+        confirm_body_html: "<p>En eliminar aquest compte, s’esborrarà l’historial de valors,
+          afectant diversos aspectes del teu compte global. Aquesta acció tindrà un impacte
+          directe en el càlcul del teu patrimoni net i els gràfics dels comptes.</p><br /> <p>Després de l’eliminació,
+          no hi haurà manera de restaurar la informació del compte perquè hauràs d’afegir-lo com un compte nou.</p>"
+        confirm_title: Vols eliminar el compte?
+        edit: Edita
+        import: Importa transaccions
+        manage: Gestiona els comptes
+    update:
+      success: "Compte %{type} actualitzat"
+    sidebar:
+      missing_data: Falten dades històriques
+      missing_data_description: "%{product} utilitza proveïdors externs per obtenir tipus de canvi històrics, preus de valors i més. Aquestes dades són necessàries per calcular saldos històrics precisos dels comptes."
+      configure_providers: Configura els teus proveïdors aquí.
+      tabs:
+        all: Tots
+        assets: Actius
+        debts: Deutes
+      new_asset: Nou actiu
+      new_debt: Nou deute
+      new_account: Nou compte
+      new_account_group: "Nou %{account_group}"
+    types:
+      depository: Efectiu
+      investment: Inversió
+      crypto: Cripto
+      property: Propietat
+      vehicle: Vehicle
+      other_asset: Altre actiu
+      credit_card: Targeta de crèdit
+      loan: Préstec
+      other_liability: Altra passiu
+  email_confirmations:
+    new:
+      invalid_token: L'enllaç de confirmació no és vàlid o ha caducat.
+      success_login: El teu correu electrònic ha estat confirmat. Inicia sessió amb la nova adreça electrònica.

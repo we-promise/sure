@@ -1,0 +1,89 @@
+---
+es:
+  accounts:
+    account:
+      link_lunchflow: Vincular con Lunch Flow
+      troubleshoot: Solucionar problemas
+    chart:
+      data_not_available: Datos no disponibles para el período seleccionado
+    create:
+      success: "Cuenta %{type} creada"
+    destroy:
+      success: "Cuenta %{type} programada para eliminación"
+    empty:
+      empty_message: Añade una cuenta mediante conexión, importación o introducción manual.
+      new_account: Nueva cuenta
+      no_accounts: Aún no hay cuentas
+    form:
+      balance: Saldo actual
+      name_label: Nombre de la cuenta
+      name_placeholder: Ejemplo de nombre de cuenta
+    index:
+      accounts: Cuentas
+      manual_accounts:
+        other_accounts: Otras cuentas
+      new_account: Nueva cuenta
+      sync: Sincronizar todo
+    new:
+      import_accounts: Importar cuentas
+      method_selector:
+        connected_entry: Vincular cuenta
+        connected_entry_eu: Vincular cuenta de la UE
+        link_with_provider: "Vincular con %{provider}"
+        lunchflow_entry: Vincular cuenta de Lunch Flow
+        manual_entry: Introducir saldo de la cuenta
+        title: ¿Cómo te gustaría añadirla?
+      title: ¿Qué te gustaría añadir?
+    show:
+      activity:
+        amount: Cantidad
+        balance: Saldo
+        date: Fecha
+        entries: entradas
+        entry: entrada
+        new: Nuevo
+        new_balance: Nuevo saldo
+        new_transaction: Nueva transacción
+        no_entries: No se encontraron entradas
+        search:
+          placeholder: Buscar entradas por nombre
+        title: Actividad
+      chart:
+        balance: Saldo
+        owed: Cantidad adeudada
+      menu:
+        confirm_accept: Eliminar "%{name}"
+        confirm_body_html: "<p>Al eliminar esta cuenta, borrarás su historial de valores, afectando varios aspectos de tu cuenta general. Esta acción tendrá un impacto directo en los cálculos de tu patrimonio neto y en los gráficos de la cuenta.</p><br /> <p>Después de la eliminación, no podrás restaurar la información de la cuenta, ya que tendrás que añadirla como una nueva cuenta.</p>"
+        confirm_title: ¿Eliminar cuenta?
+        edit: Editar
+        import: Importar transacciones
+        manage: Gestionar cuentas
+    update:
+      success: "Cuenta %{type} actualizada"
+    sidebar:
+      missing_data: Faltan datos históricos
+      missing_data_description: "%{product} utiliza proveedores externos para obtener tipos de cambio históricos, precios de valores y más. Estos datos son necesarios para calcular saldos históricos precisos de las cuentas."
+      configure_providers: Configura tus proveedores aquí.
+      tabs:
+        all: Todo
+        assets: Activos
+        debts: Deudas
+      new_asset: Nuevo activo
+      new_debt: Nueva deuda
+      new_account: Nueva cuenta
+      new_account_group: "Nuevo %{account_group}"
+    types:
+      depository: Efectivo
+      investment: Inversión
+      crypto: Cripto
+      property: Propiedad
+      vehicle: Vehículo
+      other_asset: Otro activo
+      credit_card: Tarjeta de crédito
+      loan: Préstamo
+      other_liability: Otra deuda
+
+  email_confirmations:
+    new:
+      invalid_token: Enlace de confirmación inválido o caducado.
+      success_login: Tu correo electrónico ha sido confirmado. Por favor, inicia sesión con tu nueva dirección de correo electrónico.

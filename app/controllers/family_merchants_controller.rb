@@ -4,6 +4,7 @@ class FamilyMerchantsController < ApplicationController
   def index
     @breadcrumbs = [ [ "Home", root_path ], [ "Merchants", nil ] ]
 
+    # Show all merchants for this family
     @family_merchants = Current.family.merchants.alphabetically
 
     render layout: "settings"

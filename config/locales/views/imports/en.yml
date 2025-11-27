@@ -10,6 +10,11 @@ en:
           details.
         title: Clean your data
     configurations:
+      category_import:
+        button_label: Continue
+        description: Upload a simple CSV file (like the one we generate when you
+          export your data). We'll automatically map the columns for you.
+        instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
       show:
@@ -80,6 +85,7 @@ en:
       description: You can manually import various types of data via CSV or use one
         of our import templates like Mint.
       import_accounts: Import accounts
+      import_categories: Import categories
       import_mint: Import from Mint
       import_portfolio: Import investments
       import_transactions: Import transactions

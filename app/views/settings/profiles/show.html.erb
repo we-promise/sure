@@ -1,6 +1,6 @@
 <%= content_for :page_title, t(".page_title") %>
 
-<%= settings_section title: t(".profile_title"), subtitle: t(".profile_subtitle", product: product_name) do %>
+<%= settings_section title: t(".profile_title"), subtitle: t(".profile_subtitle", product_name: product_name) do %>
   <%= styled_form_with model: @user, url: user_path(@user), class: "space-y-4" do |form| %>
     <%= render "settings/user_avatar_field", form: form, user: @user %>
 
@@ -9,7 +9,7 @@
 
       <% if @user.unconfirmed_email.present? %>
         <p class="mt-2 text-sm text-gray-600">
-          You have requested to change your email to <%= @user.unconfirmed_email %>. Please go to your email and confirm for the change to take effect.
+          You have requested to change your email to <%= @user.unconfirmed_email %>. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or <%= link_to "request a new confirmation email", resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary" %>.
         </p>
       <% end %>
 

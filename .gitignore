@@ -30,6 +30,7 @@
 /tmp/storage/*
 !/tmp/storage/
 !/tmp/storage/.keep
+/db/development.sqlite3
 
 /public/assets
 
@@ -106,3 +107,4 @@ scripts/
 .windsurfrules
 .cursor/rules/dev_workflow.mdc
 .cursor/rules/taskmaster.mdc
+

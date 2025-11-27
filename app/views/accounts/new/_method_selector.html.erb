@@ -1,7 +1,15 @@
-<%# locals: (path:, accountable_type:, show_us_link: true, show_eu_link: true) %>
+<%# locals: (path:, accountable_type:, provider_configs:) %>
 
 <%= render layout: "accounts/new/container", locals: { title: t(".title"), back_path: new_account_path } do %>
-  <div class="text-sm">
+  <div class="text-sm"
+       <% if provider_configs.any? { |c| c[:key] == "lunchflow" } %>
+         data-controller="lunchflow-preload"
+         data-lunchflow-preload-accountable-type-value="<%= h(accountable_type) %>"
+         <% if params[:return_to] %>
+           data-lunchflow-preload-return-to-value="<%= h(params[:return_to]) %>"
+         <% end %>
+       <% end %>>
+    <%# Manual entry option %>
     <%= link_to path, class: "flex items-center gap-4 w-full text-center text-primary focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-gray-200 px-2 hover:bg-surface rounded-lg p-2" do %>
       <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
         <%= icon("keyboard") %>
@@ -9,27 +17,31 @@
       <%= t("accounts.new.method_selector.manual_entry") %>
     <% end %>
 
-    <% if show_us_link %>
-      <%# Default US-only Link %>
-      <%= link_to new_plaid_item_path(region: "us", accountable_type: accountable_type),
-                  class: "text-primary flex items-center gap-4 w-full text-center focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-primary px-2 hover:bg-surface rounded-lg p-2",
-                  data: { turbo_frame: "modal" } do %>
-        <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
-          <%= icon("link-2") %>
-        </span>
-        <%= t("accounts.new.method_selector.connected_entry") %>
-      <% end %>
-    <% end %>
+    <%# Dynamic provider links %>
+    <% provider_configs.each do |config| %>
+      <% link_path = config[:new_account_path].call(accountable_type, params[:return_to]) %>
+      <% is_lunchflow = config[:key] == "lunchflow" %>
 
-    <%# EU Link %>
-    <% if show_eu_link %>
-      <%= link_to new_plaid_item_path(region: "eu", accountable_type: accountable_type),
+      <%= link_to link_path,
                   class: "text-primary flex items-center gap-4 w-full text-center focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-primary px-2 hover:bg-surface rounded-lg p-2",
-                  data: { turbo_frame: "modal" } do %>
+                  data: is_lunchflow ? {
+                    turbo_frame: "modal",
+                    turbo_action: "advance",
+                    lunchflow_preload_target: "link"
+                  } : { turbo_frame: "modal" } do %>
         <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
           <%= icon("link-2") %>
         </span>
-        <%= t("accounts.new.method_selector.connected_entry_eu") %>
+        <% if is_lunchflow %>
+          <span class="flex items-center gap-2">
+            <%= t("accounts.new.method_selector.link_with_provider", provider: config[:name]) %>
+            <span data-lunchflow-preload-target="spinner" class="hidden">
+              <%= icon("loader-2", class: "animate-spin") %>
+            </span>
+          </span>
+        <% else %>
+          <%= t("accounts.new.method_selector.link_with_provider", provider: config[:name]) %>
+        <% end %>
       <% end %>
     <% end %>
 

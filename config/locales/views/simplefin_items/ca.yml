@@ -1,0 +1,54 @@
+---
+ca:
+  simplefin_items:
+    new:
+      title: Connecta SimpleFin
+      setup_token: Token de configuració
+      setup_token_placeholder: enganxa el teu token de configuració SimpleFin
+      connect: Connecta
+      cancel: Cancel·la
+    create:
+      success: Connexió SimpleFin afegida correctament! Els teus comptes apareixeran en breu mentre es sincronitzen en segon pla.
+      errors:
+        blank_token: Introdueix un token de configuració SimpleFin.
+        invalid_token: Token de configuració invàlid. Comprova que has copiat el token complet des de SimpleFin Bridge.
+        token_compromised: El token de configuració pot estar compromès, caducat o ja utilitzat. Crea'n un de nou.
+        create_failed: "No s'ha pogut connectar: %{message}"
+        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta amb el suport.
+    destroy:
+      success: La connexió SimpleFin s'eliminarà
+    update:
+      success: Connexió SimpleFin actualitzada correctament! Els teus comptes s'estan tornant a connectar.
+      errors:
+        blank_token: Introdueix un token de configuració SimpleFin.
+        invalid_token: Token de configuració invàlid. Comprova que has copiat el token complet des de SimpleFin Bridge.
+        token_compromised: El token de configuració pot estar compromès, caducat o ja utilitzat. Crea'n un de nou.
+        update_failed: "No s'ha pogut actualitzar la connexió: %{message}"
+        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta amb el suport.
+    edit:
+      setup_token:
+        label: "Token de configuració SimpleFin:"
+        placeholder: "Enganxa aquí el teu token de configuració SimpleFin..."
+        help_text: "El token ha de ser una cadena llarga que comenci amb lletres i números"
+    complete_account_setup:
+      success: Els comptes SimpleFin s'han configurat correctament! Les teves transaccions i posicions s'estan important en segon pla.
+    simplefin_item:
+      add_new: Afegeix nova connexió
+      confirm_accept: Elimina la connexió
+      confirm_body: Això eliminarà permanentment tots els comptes d'aquest grup i totes les dades associades.
+      confirm_title: Vols eliminar la connexió SimpleFin?
+      delete: Elimina
+      deletion_in_progress: "(eliminació en curs...)"
+      error: S'ha produït un error en sincronitzar les dades
+      no_accounts_description: Aquesta connexió encara no té cap compte sincronitzat.
+      no_accounts_title: No s'han trobat comptes
+      requires_update: Cal tornar a autenticar
+      setup_needed: Nous comptes llestos per configurar
+      setup_description: Tria els tipus de compte per als teus nous comptes SimpleFin importats.
+      setup_action: Configura nous comptes
+      status: Darrera sincronització fa %{timestamp}
+      status_never: Mai sincronitzat
+      status_with_summary: "Darrera sincronització fa %{timestamp} • %{summary}"
+      syncing: Sincronitzant...
+      update: Actualitza la connexió
+

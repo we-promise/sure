@@ -7,6 +7,8 @@ class Investment < ApplicationRecord
     "retirement" => { short: "Retirement", long: "Retirement" },
     "401k" => { short: "401(k)", long: "401(k)" },
     "roth_401k" => { short: "Roth 401(k)", long: "Roth 401(k)" },
+    "403b" => { short: "403(b)", long: "403(b)" },
+    "tsp" => { short: "TSP", long: "Thrift Savings Plan" },
     "529_plan" => { short: "529 Plan", long: "529 Plan" },
     "hsa" => { short: "HSA", long: "Health Savings Account" },
     "mutual_fund" => { short: "Mutual Fund", long: "Mutual Fund" },

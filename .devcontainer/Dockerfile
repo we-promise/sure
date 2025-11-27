@@ -1,5 +1,5 @@
-ARG RUBY_VERSION=3.4.4
-FROM ruby:${RUBY_VERSION}-slim-bullseye
+ARG RUBY_VERSION=3.4.7
+FROM ruby:${RUBY_VERSION}-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -17,6 +17,7 @@ RUN apt-get update -qq \
     openssh-client \
     postgresql-client \
     vim \
+    procps \
   && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 RUN gem install bundler foreman

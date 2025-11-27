@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
-ARG RUBY_VERSION=3.4.4
+ARG RUBY_VERSION=3.4.7
 FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim AS base
 
 # Rails app lives here
@@ -9,7 +9,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq \
-    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 \
+    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment

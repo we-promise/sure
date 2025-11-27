@@ -1,0 +1,25 @@
+---
+ca:
+  helpers:
+    label:
+      user:
+        invite_code: Codi d'invitació
+    submit:
+      user:
+        create: Continua
+  registrations:
+    create:
+      failure: Hi ha hagut un problema en registrar-te.
+      invalid_invite_code: Codi d'invitació invàlid, torna-ho a provar.
+      success: T'has registrat correctament.
+    new:
+      invitation_message: "%{inviter} t'ha convidat a unir-te com a %{role}"
+      join_family_title: Uneix-te a %{family}
+      role_admin: administrador/a
+      role_member: membre
+      submit: Crea el compte
+      title: Crea el teu compte
+      welcome_body: Per començar, has de registrar un compte nou. Després podràs configurar opcions addicionals dins l'aplicació.
+      welcome_title: Benvingut/da a Self Hosted %{product_name}!
+      password_placeholder: Introdueix la teva contrasenya
+

@@ -2,13 +2,15 @@
   "name": "Sure",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
+  "runServices": [
+    "db",
+    "redis"
+  ],
   "workspaceFolder": "/workspace",
   "containerEnv": {
     "GIT_EDITOR": "code --wait",
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
-    "GITHUB_USER": "${localEnv:GITHUB_USER}",
-    "PLAID_CLIENT_ID": "foo",
-    "PLAID_SECRET": "bar"
+    "GITHUB_USER": "${localEnv:GITHUB_USER}"
   },
   "remoteEnv": {
     "PATH": "/workspace/bin:${containerEnv:PATH}"

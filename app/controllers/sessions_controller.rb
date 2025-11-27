@@ -5,6 +5,22 @@ class SessionsController < ApplicationController
   layout "auth"
 
   def new
+    begin
+      demo = Rails.application.config_for(:demo)
+      @prefill_demo_credentials = demo_host_match?(demo)
+      if @prefill_demo_credentials
+        @email = params[:email].presence || demo["email"]
+        @password = params[:password].presence || demo["password"]
+      else
+        @email = params[:email]
+        @password = params[:password]
+      end
+    rescue RuntimeError, Errno::ENOENT, Psych::SyntaxError
+      # Demo config file missing or malformed - disable demo credential prefilling
+      @prefill_demo_credentials = false
+      @email = params[:email]
+      @password = params[:password]
+    end
   end
 
   def create
@@ -75,5 +91,11 @@ class SessionsController < ApplicationController
   private
     def set_session
       @session = Current.user.sessions.find(params[:id])
+    end
+
+    def demo_host_match?(demo)
+      return false unless demo.present? && demo["hosts"].present?
+
+      demo["hosts"].include?(request.host)
     end
 end

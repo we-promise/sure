@@ -1,0 +1,20 @@
+---
+ca:
+  invitations:
+    create:
+      failure: No s'ha pogut enviar la invitació
+      success: Invitació enviada correctament
+    destroy:
+      failure: Hi ha hagut un problema en eliminar la invitació.
+      not_authorized: No estàs autoritzat/da a gestionar invitacions.
+      success: La invitació s'ha eliminat correctament.
+    new:
+      email_label: Correu electrònic
+      email_placeholder: Introdueix el correu electrònic
+      role_admin: Administrador/a
+      role_label: Rol
+      role_member: Membre
+      submit: Envia invitació
+      subtitle: Envia una invitació per unir-te al teu compte familiar a %{product_name}
+      title: Convida algú
+

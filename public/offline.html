@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
+  <title>Offline - Maybe</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #F9F9F9;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 120px;
+      height: auto;
+      margin: 0 auto 32px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #1a1a1a;
+    }
+
+    p {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .reload-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #62a446;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+
+    .reload-button:hover {
+      background: #528938;
+    }
+
+    .reload-button:active {
+      background: #467730;
+    }
+
+    .reload-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #1a1a1a;
+        color: #f9f9f9;
+      }
+
+      h1 {
+        color: #f9f9f9;
+      }
+
+      p {
+        color: #999;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="/logo-offline.svg" alt="Logo" class="logo">
+
+    <h1>We're experiencing <br/> technical difficulties</h1>
+    <p>It looks like you're offline or we can't reach our servers right now. Please check your connection and try again.</p>
+
+    <button class="reload-button" onclick="window.location.reload()">
+      <svg class="reload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
+      Reload
+    </button>
+  </div>
+
+  <script>
+    // Automatically reload when connection is restored
+    window.addEventListener('online', function() {
+      setTimeout(function() {
+        window.location.reload();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

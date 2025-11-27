@@ -9,11 +9,11 @@ class HoldingsController < ApplicationController
   end
 
   def destroy
-    if @holding.account.plaid_account_id.present?
-      flash[:alert] = "You cannot delete this holding"
-    else
+    if @holding.account.can_delete_holdings?
       @holding.destroy_holding_and_entries!
       flash[:notice] = t(".success")
+    else
+      flash[:alert] = "You cannot delete this holding"
     end
 
     respond_to do |format|

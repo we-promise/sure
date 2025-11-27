@@ -1,6 +1,7 @@
 <% content_for :title, "Update SimpleFin Connection" %>
 
-<%= render DS::Dialog.new do |dialog| %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: "Update SimpleFin Connection") do %>
     <div class="flex items-center gap-2">
       <%= icon "building-2", class: "text-primary" %>
@@ -58,5 +59,6 @@
         ) %>
       </div>
     <% end %>
+  <% end %>
   <% end %>
 <% end %>

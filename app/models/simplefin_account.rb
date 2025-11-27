@@ -1,10 +1,38 @@
 class SimplefinAccount < ApplicationRecord
   belongs_to :simplefin_item
 
-  has_one :account, dependent: :destroy
+  # Legacy association via foreign key (will be removed after migration)
+  has_one :account, dependent: :nullify, foreign_key: :simplefin_account_id
+
+  # New association through account_providers
+  has_one :account_provider, as: :provider, dependent: :destroy
+  has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :account_type, :currency, presence: true
+  validates :account_id, uniqueness: { scope: :simplefin_item_id, allow_nil: true }
   validate :has_balance
+
+  # Helper to get account using new system first, falling back to legacy
+  def current_account
+    linked_account || account
+  end
+
+  # Ensure there is an AccountProvider link for this SimpleFin account and its current Account.
+  # Safe and idempotent; returns the AccountProvider or nil if no account is associated yet.
+  def ensure_account_provider!
+    acct = current_account
+    return nil unless acct
+
+    AccountProvider
+      .find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: id)
+      .tap do |provider|
+        provider.account = acct
+        provider.save!
+      end
+  rescue => e
+    Rails.logger.warn("SimplefinAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
+    nil
+  end
 
   def upsert_simplefin_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys

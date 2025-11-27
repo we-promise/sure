@@ -34,11 +34,17 @@ class Period
       label: "Current Month",
       comparison_label: "vs. start of month"
     },
+    "last_month" => {
+      date_range: -> { [ 1.month.ago.beginning_of_month.to_date, 1.month.ago.end_of_month.to_date ] },
+      label_short: "LM",
+      label: "Last Month",
+      comparison_label: "vs. last month"
+    },
     "last_30_days" => {
       date_range: -> { [ 30.days.ago.to_date, Date.current ] },
       label_short: "30D",
       label: "Last 30 Days",
-      comparison_label: "vs. last month"
+      comparison_label: "vs. last 30 days"
     },
     "last_90_days" => {
       date_range: -> { [ 90.days.ago.to_date, Date.current ] },
@@ -69,6 +75,22 @@ class Period
       label_short: "10Y",
       label: "Last 10 Years",
       comparison_label: "vs. 10 years ago"
+    },
+    "all_time" => {
+      date_range: -> {
+        oldest_date = Current.family&.oldest_entry_date
+        # If no family or no entries exist, use a reasonable historical fallback
+        # to ensure "All Time" represents a meaningful range, not just today
+        start_date = if oldest_date && oldest_date < Date.current
+          oldest_date
+        else
+          5.years.ago.to_date
+        end
+        [ start_date, Date.current ]
+      },
+      label_short: "All",
+      label: "All Time",
+      comparison_label: "vs. beginning"
     }
   }
 

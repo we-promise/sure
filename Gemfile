@@ -33,6 +33,7 @@ gem "hotwire_combobox"
 # Background Jobs
 gem "sidekiq"
 gem "sidekiq-cron"
+gem "sidekiq-unique-jobs"
 
 # Monitoring
 gem "vernier"
@@ -40,6 +41,7 @@ gem "rack-mini-profiler"
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "sentry-sidekiq"
+gem "posthog-ruby"
 gem "logtail-rails"
 gem "skylight", groups: [ :production ]
 

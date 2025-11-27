@@ -1,8 +1,7 @@
 <% if params[:step] == "method_select" %>
   <%= render "accounts/new/method_selector",
              path: new_credit_card_path(return_to: params[:return_to]),
-             show_us_link: @show_us_link,
-             show_eu_link: @show_eu_link,
+             provider_configs: @provider_configs,
              accountable_type: "CreditCard" %>
 <% else %>
   <%= render DS::Dialog.new do |dialog| %>

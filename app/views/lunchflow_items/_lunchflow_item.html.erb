@@ -1,0 +1,118 @@
+<%# locals: (lunchflow_item:) %>
+
+<%= tag.div id: dom_id(lunchflow_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 bg-orange-600/10 rounded-full">
+          <% if lunchflow_item.logo.attached? %>
+            <%= image_tag lunchflow_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
+          <% else %>
+            <div class="flex items-center justify-center">
+              <%= tag.p lunchflow_item.name.first.upcase, class: "text-orange-600 text-xs font-medium" %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p lunchflow_item.name, class: "font-medium text-primary" %>
+            <% if lunchflow_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <% if lunchflow_item.accounts.any? %>
+            <p class="text-xs text-secondary">
+              <%= lunchflow_item.institution_summary %>
+            </p>
+          <% end %>
+          <% if lunchflow_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif lunchflow_item.sync_error.present? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= render DS::Tooltip.new(text: lunchflow_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
+              <%= tag.span t(".error"), class: "text-destructive" %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if lunchflow_item.last_synced_at %>
+                <% if lunchflow_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(lunchflow_item.last_synced_at), summary: lunchflow_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(lunchflow_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if Rails.env.development? %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_lunchflow_item_path(lunchflow_item)
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: lunchflow_item_path(lunchflow_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(lunchflow_item.name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+
+    <% unless lunchflow_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if lunchflow_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: lunchflow_item.accounts %>
+        <% end %>
+
+        <%# Use model methods for consistent counts %>
+        <% unlinked_count = lunchflow_item.unlinked_accounts_count %>
+        <% linked_count = lunchflow_item.linked_accounts_count %>
+        <% total_count = lunchflow_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked_count, total: total_count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_lunchflow_item_path(lunchflow_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif lunchflow_item.accounts.empty? && total_count == 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_lunchflow_item_path(lunchflow_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

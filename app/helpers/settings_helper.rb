@@ -12,12 +12,15 @@ module SettingsHelper
     { name: "Tags", path: :tags_path },
     { name: "Rules", path: :rules_path },
     { name: "Merchants", path: :family_merchants_path },
+    { name: "Recurring", path: :recurring_transactions_path },
     # Advanced section
-    { name: "AI Prompts", path: :settings_ai_prompts_path },
-    { name: "API Key", path: :settings_api_key_path },
-    { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted? },
-    { name: "Imports", path: :imports_path },
-    { name: "SimpleFin", path: :simplefin_items_path },
+    { name: "AI Prompts", path: :settings_ai_prompts_path, condition: :admin_user? },
+    { name: "LLM Usage", path: :settings_llm_usage_path, condition: :admin_user? },
+    { name: "API Key", path: :settings_api_key_path, condition: :admin_user? },
+    { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
+    { name: "Providers", path: :settings_providers_path, condition: :admin_user? },
+    { name: "Imports", path: :imports_path, condition: :admin_user? },
+    { name: "SimpleFin", path: :simplefin_items_path, condition: :admin_user? },
     # More section
     { name: "Guides", path: :settings_guides_path },
     { name: "What's new", path: :changelog_path },
@@ -41,9 +44,9 @@ module SettingsHelper
     }
   end
 
-  def settings_section(title:, subtitle: nil, &block)
+  def settings_section(title:, subtitle: nil, collapsible: false, open: true, &block)
     content = capture(&block)
-    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content }
+    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open }
   end
 
   def settings_nav_footer
@@ -69,5 +72,14 @@ module SettingsHelper
   private
     def not_self_hosted?
       !self_hosted?
+    end
+
+    # Helper used by SETTINGS_ORDER conditions
+    def admin_user?
+      Current.user&.admin?
+    end
+
+    def self_hosted_and_admin?
+      self_hosted? && admin_user?
     end
 end

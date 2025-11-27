@@ -1,0 +1,34 @@
+---
+ro:
+  categories:
+    bootstrap:
+      success: Categoriile implicite au fost create cu succes
+    category:
+      delete: Șterge categoria
+      edit: Editează categoria
+    create:
+      success: Categoria a fost creată cu succes
+    destroy:
+      success: Categoria a fost ștearsă cu succes
+    edit:
+      edit: Editează categoria
+    form:
+      placeholder: Nume categorie
+    index:
+      bootstrap: Folosește valorile implicite (recomandat)
+      categories: Categorii
+      categories_expenses: Categorii de cheltuieli
+      categories_incomes: Categorii de venituri
+      empty: Nicio categorie găsită
+      new: Categorie nouă
+    menu:
+      loading: Se încarcă...
+    new:
+      new_category: Categorie nouă
+    update:
+      success: Categoria a fost actualizată cu succes
+  category:
+    dropdowns:
+      show:
+        bootstrap: Generează categoriile implicite
+        empty: Nicio categorie găsită

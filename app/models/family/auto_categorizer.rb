@@ -16,9 +16,16 @@ class Family::AutoCategorizer
       Rails.logger.info("Auto-categorizing #{scope.count} transactions for family #{family.id}")
     end
 
+    categories_input = user_categories_input
+
+    if categories_input.empty?
+      Rails.logger.error("Cannot auto-categorize transactions for family #{family.id}: no categories available")
+      return
+    end
+
     result = llm_provider.auto_categorize(
       transactions: transactions_input,
-      user_categories: user_categories_input,
+      user_categories: categories_input,
       family: family
     )
 
@@ -30,7 +37,7 @@ class Family::AutoCategorizer
     scope.each do |transaction|
       auto_categorization = result.data.find { |c| c.transaction_id == transaction.id }
 
-      category_id = user_categories_input.find { |c| c[:name] == auto_categorization&.category_name }&.dig(:id)
+      category_id = categories_input.find { |c| c[:name] == auto_categorization&.category_name }&.dig(:id)
 
       if category_id.present?
         transaction.enrich_attribute(
@@ -38,9 +45,8 @@ class Family::AutoCategorizer
           category_id,
           source: "ai"
         )
+        transaction.lock_attr!(:category_id)
       end
-
-      transaction.lock_attr!(:category_id)
     end
   end
 

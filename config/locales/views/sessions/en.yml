@@ -15,7 +15,9 @@ en:
       forgot_password: Forgot your password?
       password: Password
       submit: Log in
-      title: Sign in to your account
+      title: Sure
       password_placeholder: Enter your password
       openid_connect: Sign in with OpenID Connect
       google_auth_connect: Sign in with Google
+      demo_banner_title: "Demo Mode Active"
+      demo_banner_message: "This is a demonstration environment. Login credentials have been pre-filled for your convenience. Please do not enter real or sensitive information."

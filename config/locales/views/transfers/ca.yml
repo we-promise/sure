@@ -1,0 +1,30 @@
+---
+ca:
+  transfers:
+    create:
+      success: Transferència creada
+    destroy:
+      success: Transferència eliminada
+    form:
+      amount: Import
+      date: Data
+      expense: Despesa
+      from: Des de
+      income: Ingrés
+      select_account: Selecciona un compte
+      submit: Crea transferència
+      to: Fins a
+      transfer: Transferència
+    new:
+      title: Nova transferència
+    show:
+      delete: Elimina transferència
+      delete_subtitle: Això eliminarà la transferència. No s'eliminaran les transaccions associades.
+      delete_title: Vols eliminar la transferència?
+      details: Detalls
+      note_label: Notes
+      note_placeholder: Afegeix una nota a aquesta transferència
+      overview: Resum
+      settings: Configuració
+    update:
+      success: Transferència actualitzada

@@ -2,6 +2,9 @@
 en:
   accounts:
     account:
+      link_lunchflow: Link with Lunch Flow
+      link_provider: Link with provider
+      unlink_provider: Unlink from provider
       troubleshoot: Troubleshoot
     chart:
       data_not_available: Data not available for the selected period
@@ -9,6 +12,7 @@ en:
       success: "%{type} account created"
     destroy:
       success: "%{type} account scheduled for deletion"
+      cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
     empty:
       empty_message: Add an account either via connection, importing or entering manually.
       new_account: New account
@@ -23,11 +27,15 @@ en:
         other_accounts: Other accounts
       new_account: New account
       sync: Sync all
+    sync_all:
+      syncing: "Syncing accounts..."
     new:
       import_accounts: Import accounts
       method_selector:
         connected_entry: Link account
         connected_entry_eu: Link EU account
+        link_with_provider: "Link with %{provider}"
+        lunchflow_entry: Link Lunch Flow account
         manual_entry: Enter account balance
         title: How would you like to add it?
       title: What would you like to add?
@@ -42,6 +50,8 @@ en:
         new_balance: New balance
         new_transaction: New transaction
         no_entries: No entries found
+        search:
+          placeholder: Search entries by name
         title: Activity
       chart:
         balance: Balance
@@ -59,6 +69,48 @@ en:
         manage: Manage accounts
     update:
       success: "%{type} account updated"
+    sidebar:
+      missing_data: Missing historical data
+      missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
+      configure_providers: Configure your providers here.
+      tabs:
+        all: All
+        assets: Assets
+        debts: Debts
+      new_asset: New asset
+      new_debt: New debt
+      new_account: New account
+      new_account_group: "New %{account_group}"
+    types:
+      depository: Cash
+      investment: Investment
+      crypto: Crypto
+      property: Property
+      vehicle: Vehicle
+      other_asset: Other Asset
+      credit_card: Credit Card
+      loan: Loan
+      other_liability: Other Liability
+    confirm_unlink:
+      title: Unlink account from provider?
+      description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."
+      warning_title: What this means
+      warning_no_sync: The account will no longer sync automatically with your bank
+      warning_manual_updates: You will need to add transactions and update balances manually
+      warning_transactions_kept: All existing transactions and balances will be preserved
+      warning_can_delete: After unlinking, you will be able to delete the account if needed
+      confirm_button: Confirm and unlink
+    unlink:
+      success: "Account unlinked successfully. It is now a manual account."
+      not_linked: "Account is not linked to a provider"
+      error: "Failed to unlink account: %{error}"
+      generic_error: "An unexpected error occurred. Please try again."
+    select_provider:
+      title: Select a provider to link
+      description: "Choose which provider you want to use to link %{account_name}"
+      already_linked: "Account is already linked to a provider"
+      no_providers: "No providers are currently configured"
+
   email_confirmations:
     new:
       invalid_token: Invalid or expired confirmation link.

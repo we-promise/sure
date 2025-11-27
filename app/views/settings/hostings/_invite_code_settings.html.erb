@@ -9,7 +9,19 @@
                          url: settings_hosting_path,
                          method: :patch,
                          data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
-      <%= form.toggle :require_invite_for_signup, { data: { auto_submit_form_target: "auto" } } %>
+      <div class="form-field w-fit">
+        <%= form.select :onboarding_state,
+                        options_for_select(
+                          [
+                            [ t(".states.open"), "open" ],
+                            [ t(".states.closed"), "closed" ],
+                            [ t(".states.invite_only"), "invite_only" ]
+                          ],
+                          Setting.onboarding_state
+                        ),
+                        { label: false },
+                        { data: { auto_submit_form_target: "auto" } } %>
+      </div>
     <% end %>
   </div>
 
@@ -27,7 +39,7 @@
     <% end %>
   </div>
 
-  <% if Setting.require_invite_for_signup %>
+  <% if Setting.onboarding_state == "invite_only" %>
     <div class="flex items-center justify-between mb-4">
       <div>
         <span class="text-primary text-base font-medium"><%= t(".generated_tokens") %></span>

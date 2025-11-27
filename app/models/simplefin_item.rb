@@ -1,16 +1,28 @@
 class SimplefinItem < ApplicationRecord
   include Syncable, Provided
+  include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Virtual attribute for the setup token form field
   attr_accessor :setup_token
 
-  if Rails.application.credentials.active_record_encryption.present?
+  # Helper to detect if ActiveRecord Encryption is configured for this app
+  def self.encryption_ready?
+    creds_ready = Rails.application.credentials.active_record_encryption.present?
+    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+    creds_ready || env_ready
+  end
+
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
+  if encryption_ready?
     encrypts :access_url, deterministic: true
   end
 
-  validates :name, :access_url, presence: true
+  validates :name, presence: true
+  validates :access_url, presence: true, on: :create
 
   before_destroy :remove_simplefin_item
 
@@ -18,19 +30,29 @@ class SimplefinItem < ApplicationRecord
   has_one_attached :logo
 
   has_many :simplefin_accounts, dependent: :destroy
-  has_many :accounts, through: :simplefin_accounts
+  has_many :legacy_accounts, through: :simplefin_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+
+  # Get accounts from both new and legacy systems
+  def accounts
+    # Preload associations to avoid N+1 queries
+    simplefin_accounts
+      .includes(:account, account_provider: :account)
+      .map(&:current_account)
+      .compact
+      .uniq
+  end
 
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
-  def import_latest_simplefin_data
-    SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider).import
+  def import_latest_simplefin_data(sync: nil)
+    SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider, sync: sync).import
   end
 
   def process_accounts
@@ -54,13 +76,8 @@ class SimplefinItem < ApplicationRecord
       raw_payload: accounts_snapshot,
     )
 
-    # Extract institution data from the first account if available
-    snapshot = accounts_snapshot.to_h.with_indifferent_access
-    if snapshot[:accounts].present?
-      first_account = snapshot[:accounts].first
-      org = first_account[:org]
-      upsert_institution_data!(org) if org.present?
-    end
+    # Do not populate item-level institution fields from account data.
+    # Institution metadata belongs to each simplefin_account (in org_data).
 
     save!
   end
@@ -150,6 +167,28 @@ class SimplefinItem < ApplicationRecord
       institutions.first["name"] || institutions.first["domain"] || "1 institution"
     else
       "#{institutions.count} institutions"
+    end
+  end
+
+
+
+  # Detect a recent rate-limited sync and return a friendly message, else nil
+  def rate_limited_message
+    latest = latest_sync
+    return nil unless latest
+
+    # Some Sync records may not have a status_text column; guard with respond_to?
+    parts = []
+    parts << latest.error if latest.respond_to?(:error)
+    parts << latest.status_text if latest.respond_to?(:status_text)
+    msg = parts.compact.join(" — ")
+    return nil if msg.blank?
+
+    down = msg.downcase
+    if down.include?("make fewer requests") || down.include?("only refreshed once every 24 hours") || down.include?("rate limit")
+      "You've hit SimpleFin's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+    else
+      nil
     end
   end
 

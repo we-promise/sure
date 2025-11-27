@@ -21,7 +21,7 @@
   </div>
 </header>
 
-<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? %>
+<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? %>
   <%= render "empty" %>
 <% else %>
   <div class="space-y-2">
@@ -33,8 +33,17 @@
       <%= render @simplefin_items.sort_by(&:created_at) %>
     <% end %>
 
+    <% if @lunchflow_items.any? %>
+      <%= render @lunchflow_items.sort_by(&:created_at) %>
+    <% end %>
+
     <% if @manual_accounts.any? %>
-      <%= render "accounts/index/manual_accounts", accounts: @manual_accounts %>
+      <div id="manual-accounts">
+        <%= render "accounts/index/manual_accounts", accounts: @manual_accounts %>
+      </div>
+    <% else %>
+      <div id="manual-accounts"></div>
     <% end %>
   </div>
 <% end %>
+

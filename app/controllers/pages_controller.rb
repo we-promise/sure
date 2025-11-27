@@ -7,42 +7,26 @@ class PagesController < ApplicationController
     @balance_sheet = Current.family.balance_sheet
     @accounts = Current.family.accounts.visible.with_attached_logo
 
-    # Handle cashflow period
-    cashflow_period_param = params[:cashflow_period]
-    @cashflow_period = if cashflow_period_param.present?
-      begin
-        Period.from_key(cashflow_period_param)
-      rescue Period::InvalidKeyError
-        Period.last_30_days
-      end
-    else
-      Period.last_30_days
-    end
-
-    # Handle outflows period
-    outflows_period_param = params[:outflows_period]
-    @outflows_period = if outflows_period_param.present?
-      begin
-        Period.from_key(outflows_period_param)
-      rescue Period::InvalidKeyError
-        Period.last_30_days
-      end
-    else
-      Period.last_30_days
-    end
-
     family_currency = Current.family.currency
 
-    # Get data for cashflow section
-    income_totals = Current.family.income_statement.income_totals(period: @cashflow_period)
-    cashflow_expense_totals = Current.family.income_statement.expense_totals(period: @cashflow_period)
-    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, cashflow_expense_totals, family_currency)
+    # Use the same period for all widgets (set by Periodable concern)
+    income_totals = Current.family.income_statement.income_totals(period: @period)
+    expense_totals = Current.family.income_statement.expense_totals(period: @period)
 
-    # Get data for outflows section (using its own period)
-    outflows_expense_totals = Current.family.income_statement.expense_totals(period: @outflows_period)
-    @outflows_data = build_outflows_donut_data(outflows_expense_totals)
+    @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
+    @outflows_data = build_outflows_donut_data(expense_totals)
+
+    @dashboard_sections = build_dashboard_sections
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+  end
+
+  def update_preferences
+    if Current.user.update_dashboard_preferences(preferences_params)
+      head :ok
+    else
+      head :unprocessable_entity
+    end
   end
 
   def changelog
@@ -71,6 +55,64 @@ class PagesController < ApplicationController
   end
 
   private
+    def preferences_params
+      prefs = params.require(:preferences)
+      {}.tap do |permitted|
+        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections]
+        permitted["section_order"] = prefs[:section_order] if prefs[:section_order]
+      end
+    end
+
+    def build_dashboard_sections
+      all_sections = [
+        {
+          key: "cashflow_sankey",
+          title: "pages.dashboard.cashflow_sankey.title",
+          partial: "pages/dashboard/cashflow_sankey",
+          locals: { sankey_data: @cashflow_sankey_data, period: @period },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "outflows_donut",
+          title: "pages.dashboard.outflows_donut.title",
+          partial: "pages/dashboard/outflows_donut",
+          locals: { outflows_data: @outflows_data, period: @period },
+          visible: Current.family.accounts.any? && @outflows_data[:categories].present?,
+          collapsible: true
+        },
+        {
+          key: "net_worth_chart",
+          title: "pages.dashboard.net_worth_chart.title",
+          partial: "pages/dashboard/net_worth_chart",
+          locals: { balance_sheet: @balance_sheet, period: @period },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "balance_sheet",
+          title: "pages.dashboard.balance_sheet.title",
+          partial: "pages/dashboard/balance_sheet",
+          locals: { balance_sheet: @balance_sheet },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        }
+      ]
+
+      # Order sections according to user preference
+      section_order = Current.user.dashboard_section_order
+      ordered_sections = section_order.map do |key|
+        all_sections.find { |s| s[:key] == key }
+      end.compact
+
+      # Add any new sections that aren't in the saved order (future-proofing)
+      all_sections.each do |section|
+        ordered_sections << section unless ordered_sections.include?(section)
+      end
+
+      ordered_sections
+    end
+
     def github_provider
       Provider::Registry.get_provider(:github)
     end

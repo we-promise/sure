@@ -1,0 +1,13 @@
+---
+ca:
+  layouts:
+    auth:
+      existing_account: Ja tens un compte?
+      no_account: Nou a %{product_name}?
+      sign_in: Inicia sessió
+      sign_up: Crea un compte
+    shared:
+      footer:
+        privacy_policy: Política de privacitat
+        terms_of_service: Termes del servei
+

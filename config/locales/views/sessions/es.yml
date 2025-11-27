@@ -1,0 +1,21 @@
+---
+es:
+  sessions:
+    create:
+      invalid_credentials: Correo electrónico o contraseña inválidos.
+    destroy:
+      logout_successful: Has cerrado sesión con éxito.
+    openid_connect:
+      failed: No se pudo autenticar a través de OpenID Connect.
+    failure:
+      failed: No se pudo autenticar.
+    new:
+      email: Dirección de correo electrónico
+      email_placeholder: tu@ejemplo.com
+      forgot_password: ¿Olvidaste tu contraseña?
+      password: Contraseña
+      submit: Iniciar sesión
+      title: Inicia sesión en tu cuenta
+      password_placeholder: Introduce tu contraseña
+      openid_connect: Inicia sesión con OpenID Connect
+      google_auth_connect: Inicia sesión con Google

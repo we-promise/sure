@@ -125,7 +125,7 @@ GEM
     bindex (0.8.1)
     bootsnap (1.18.6)
       msgpack (~> 1.2)
-    brakeman (7.1.0)
+    brakeman (7.1.1)
       racc
     builder (3.3.0)
     capybara (3.40.0)
@@ -425,6 +425,8 @@ GEM
     platform_agent (1.0.1)
       activesupport (>= 5.2.0)
       useragent (~> 0.16.3)
+    posthog-ruby (3.3.3)
+      concurrent-ruby (~> 1)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -601,6 +603,10 @@ GEM
       fugit (~> 1.8, >= 1.11.1)
       globalid (>= 1.0.1)
       sidekiq (>= 6.5.0)
+    sidekiq-unique-jobs (8.0.11)
+      concurrent-ruby (~> 1.0, >= 1.0.5)
+      sidekiq (>= 7.0.0, < 9.0.0)
+      thor (>= 1.0, < 3.0)
     simplecov (0.22.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
@@ -736,6 +742,7 @@ DEPENDENCIES
   pagy
   pg (~> 1.5)
   plaid
+  posthog-ruby
   propshaft
   puma (>= 5.0)
   rack-attack (~> 6.6)
@@ -756,6 +763,7 @@ DEPENDENCIES
   sentry-sidekiq
   sidekiq
   sidekiq-cron
+  sidekiq-unique-jobs
   simplecov
   skylight
   stackprof
@@ -771,7 +779,7 @@ DEPENDENCIES
   webmock
 
 RUBY VERSION
-   ruby 3.4.4p34
+   ruby 3.4.7p58
 
 BUNDLED WITH
    2.6.7

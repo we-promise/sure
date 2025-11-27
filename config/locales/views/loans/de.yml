@@ -1,0 +1,23 @@
+---
+de:
+  loans:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      interest_rate: Zinssatz
+      interest_rate_placeholder: '5,25'
+      initial_balance: Ursprünglicher Kreditbetrag
+      rate_type: Zinssatztyp
+      term_months: Laufzeit (Monate)
+      term_months_placeholder: '360'
+    new:
+      title: Kreditdetails eingeben
+    overview:
+      interest_rate: Zinssatz
+      monthly_payment: Monatliche Zahlung
+      not_applicable: Nicht zutreffend
+      original_principal: Ursprünglicher Kreditbetrag
+      remaining_principal: Verbleibender Kreditbetrag
+      term: Laufzeit
+      type: Typ
+      unknown: Unbekannt
