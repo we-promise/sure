@@ -86,9 +86,12 @@ class EnableBankingEntry::Processor
       bank_tx_description = data.dig(:bank_transaction_code, :description)
       return bank_tx_description if bank_tx_description.present?
 
-      # Last resort: use remittance_information
+      # Fall back to remittance_information
       remittance = data[:remittance_information]
-      remittance&.first&.truncate(100)
+      return remittance.first.truncate(100) if remittance.is_a?(Array) && remittance.first.present?
+
+      # Final fallback: use transaction type indicator
+      credit_debit_indicator == "CRDT" ? "Incoming Transfer" : "Outgoing Transfer"
     end
 
     def merchant
@@ -142,7 +145,7 @@ class EnableBankingEntry::Processor
 
         # CRDT (credit) = money coming in = positive
         # DBIT (debit) = money going out = negative
-        credit_debit_indicator == "CRDT" ? absolute_amount : -absolute_amount
+        credit_debit_indicator == "CRDT" ? -absolute_amount : absolute_amount
       rescue ArgumentError => e
         Rails.logger.error "Failed to parse Enable Banking transaction amount: #{raw_amount.inspect} - #{e.message}"
         raise
