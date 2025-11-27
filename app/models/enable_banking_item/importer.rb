@@ -38,10 +38,11 @@ class EnableBankingItem::Importer
       # We need to handle both array of strings and array of hashes
       session_data[:accounts].each do |account_data|
         # Handle both string UIDs and hash objects
+        # Use identification_hash as the stable identifier across sessions
         uid = if account_data.is_a?(String)
           account_data
         elsif account_data.is_a?(Hash)
-          (account_data[:uid] || account_data["uid"])&.to_s
+          (account_data[:identification_hash] || account_data[:uid] || account_data["identification_hash"] || account_data["uid"])&.to_s
         else
           nil
         end
@@ -112,7 +113,8 @@ class EnableBankingItem::Importer
     end
 
     def import_account(account_data)
-      uid = account_data[:uid]
+      # Use identification_hash as the stable identifier across sessions
+      uid = account_data[:identification_hash] || account_data[:uid]
 
       enable_banking_account = enable_banking_item.enable_banking_accounts.find_by(uid: uid.to_s)
       return unless enable_banking_account

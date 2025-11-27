@@ -260,7 +260,8 @@ class EnableBankingItem < ApplicationRecord
       return if accounts_data.blank?
 
       accounts_data.each do |account_data|
-        uid = account_data[:uid]
+        # Use identification_hash as the stable identifier across sessions
+        uid = account_data[:identification_hash] || account_data[:uid]
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)

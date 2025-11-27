@@ -63,8 +63,9 @@ class EnableBankingAccount < ApplicationRecord
       current_balance: nil, # Balance fetched separately via /accounts/{uid}/balances
       currency: parse_currency(snapshot[:currency]) || "EUR",
       name: build_account_name(snapshot),
-      account_id: snapshot[:uid],
-      uid: snapshot[:uid],
+      account_id: snapshot[:identification_hash] || snapshot[:uid],
+      # Use identification_hash as the stable identifier across sessions
+      uid: snapshot[:identification_hash] || snapshot[:uid],
       iban: account_id_data[:iban] || snapshot[:iban],
       account_type: snapshot[:cash_account_type] || snapshot[:account_type],
       account_status: "active",
