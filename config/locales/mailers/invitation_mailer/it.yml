@@ -1,0 +1,5 @@
+---
+en:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} ti ha invitato a unirti alla sua famiglia su %{product_name}!"

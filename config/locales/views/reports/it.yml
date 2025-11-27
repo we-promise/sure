@@ -1,0 +1,123 @@
+it:
+  reports:
+    index:
+      title: Report
+      subtitle: Analisi complete sul tuo stato finanziario
+      export: Esporta CSV
+      periods:
+        monthly: Mensile
+        quarterly: Trimestrale
+        ytd: Da inizio anno
+        last_6_months: Ultimi 6 mesi
+        custom: Intervallo personalizzato
+      date_range:
+        from: Da
+        to: A
+      showing_period: "Stai visulizzando i dati dal %{start} al %{end}"
+    invalid_date_range: "La data di fine non può essere precedente alla data di inizio. Le date sono state invertite."
+    summary:
+      total_income: Entrate totali
+      total_expenses: Spese totali
+      net_savings: Risparmio netto
+      budget_performance: Performance del budget
+      vs_previous: rispetto al periodo precedente
+      income_minus_expenses: Entrate meno spese
+      of_budget_used: del budget utilizzato
+      no_budget_data: Nessun dato sul budget per questo periodo
+    budget_performance:
+      title: Performance del budget
+      spent: Speso
+      budgeted: Budget assegnato
+      remaining: Rimanente
+      over_by: Oltre di
+      suggested_daily: "%{amount} suggeriti al giorno per i %{days} giorni rimanenti"
+      no_budgets: Nessuna categoria di budget impostata per questo mese
+      status:
+        good: In linea
+        warning: Vicino al limite
+        over: Fuori budget
+    trends:
+      title: Andamenti e approfondimenti
+      monthly_breakdown: Dettaglio mensile
+      month: Mese
+      income: Entrate
+      expenses: Spese
+      net: Netto
+      savings_rate: Tasso di risparmio
+      current: attuale
+      avg_monthly_income: Entrate medie mensili
+      avg_monthly_expenses: Spese medie mensili
+      avg_monthly_savings: Risparmio medio mensile
+      no_data: Nessun dato disponibile sull'andamento
+      spending_patterns: Modelli di spesa
+      weekday_spending: Spesa nei giorni feriali
+      weekend_spending: Spesa nei weekend
+      total: Totale
+      avg_per_transaction: Media per movimento
+      transactions: Movimenti
+      insight_title: Approfondimento
+      insight_higher_weekend: "Spendi il %{percent}% in più per movimento nei weekend rispetto ai giorni feriali"
+      insight_higher_weekday: "Spendi il %{percent}% in più per movimento nei giorni feriali rispetto ai weekend"
+      insight_similar: "La tua spesa media per movimento è simile tra giorni feriali e weekend"
+      no_spending_data: Nessun dato di spesa disponibile per questo periodo
+    empty_state:
+      title: Nessun dato disponibile
+      description: Inizia a monitorare le tue finanze aggiungendo movimenti o collegando i tuoi account per visualizzare report completi.
+      add_transaction: Aggiungi movimento
+      add_account: Aggiungi account
+    transactions_breakdown:
+      title: Dettaglio movimenti
+      no_transactions: Nessun movimento trovato per il periodo e i filtri selezionati
+      filters:
+        title: Filtri
+        category: Categoria
+        account: Account
+        tag: Tag
+        amount_min: Importo minimo
+        amount_max: Importo massimo
+        date_range: Intervallo date
+        all_categories: Tutte le categorie
+        all_accounts: Tutti gli account
+        all_tags: Tutti i tag
+        apply: Applica filtri
+        clear: Cancella filtri
+      sort:
+        label: Ordina per
+        date_desc: Data (dalla più recente)
+        amount_desc: Importo (dal più alto)
+        amount_asc: Importo (dal più basso)
+      export:
+        label: Esporta
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Apri in Fogli Google
+      table:
+        category: Categoria
+        amount: Importo
+        type: Tipo
+        expense: Spese
+        income: Entrate
+        uncategorized: Senza categoria
+        transactions: transazioni
+        percentage: "% del totale"
+      pagination:
+        showing: Mostrando %{count} transazioni
+        previous: Precedente
+        next: Successiva
+    google_sheets_instructions:
+      title_with_key: "✅ Copia l’URL per Fogli Google"
+      title_no_key: "⚠️ Chiave API richiesta"
+      ready: Il tuo URL CSV (con chiave API) è pronto.
+      steps: "Per importare in Fogli Google:\n1. Crea un nuovo Fogli Google\n2. Nella cella A1 inserisci la formula mostrata qui sotto\n3. Premi Invio"
+      security_warning: "Questo URL include la tua chiave API. Conservala in modo sicuro!"
+      need_key: Per importare i dati in Fogli Google, è necessaria una chiave API.
+      step1: "Vai su Impostazioni → Chiavi API"
+      step2: "Crea una nuova chiave API con permesso \"read\""
+      step3: Copia la chiave API
+      step4: "Aggiungila a questo URL come: ?api_key=YOUR_KEY"
+      example: Esempio
+      then_use: Successivamente usa l’URL completo con =IMPORTDATA() in Fogli Google.
+      open_sheets: Apri Fogli Google
+      go_to_api_keys: Vai a Chiavi API
+      close: Ho capito

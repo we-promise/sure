@@ -1,0 +1,13 @@
+---
+it:
+  password_resets:
+    edit:
+      title: Reimposta la tua password
+    new:
+      requested: Controlla la tua email per il link di reimpostazione della password.
+      submit: Reimposta password
+      title: Reimposta la password
+      back: Indietro
+    update:
+      invalid_token: Token di reimpostazione della password non valido.
+      success: La tua password è stata reimpostata.

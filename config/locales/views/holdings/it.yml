@@ -1,0 +1,35 @@
+---
+it:
+  holdings:
+    cash:
+      brokerage_cash: Saldo conto broker
+    destroy:
+      success: Posizione eliminata
+    holding:
+      per_share: per azione
+      shares: "%{qty} azioni"
+    index:
+      average_cost: Costo medio
+      holdings: Posizioni
+      name: Nome
+      new_holding: Nuova posizione
+      no_holdings: Non hai posizioni da mostrare.
+      return: Ritorno totale
+      weight: Peso nel portafoglio
+    missing_price_tooltip:
+      description: Questo investimento presenta valori mancanti e non siamo riusciti a calcolarne i rendimenti o il valore.
+      missing_data: Dati mancanti
+    show:
+      avg_cost_label: Costo medio
+      current_market_price_label: Prezzo corrente di mercato
+      delete: Canella
+      delete_subtitle: Questo cancellerà le posizioni e tutte le operazioni associate su questo conto. Questa azione non può essere annullata.
+      delete_title: Cancella posizioni
+      history: Storico
+      overview: Panoramica
+      portfolio_weight_label: Peso nel portafoglio
+      settings: Impostazioni
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} azioni di %{security} a %{price}"
+      total_return_label: Ritorno Totale
+      unknown: Sconosciuto

@@ -1,0 +1,34 @@
+---
+it:
+  mfa:
+    backup_codes:
+      backup_codes_description: Ogni codice può essere utilizzato una sola volta. Conserva questi codici in un luogo sicuro.
+      backup_codes_title: I tuoi codici di backup
+      continue: Torna alle impostazioni di sicurezza
+      description: Conserva questi codici di backup in un luogo sicuro, ti serviranno se perdi l’accesso alla tua app di autenticazione.
+      page_title: Codici di backup
+      title: Salva i tuoi codici di backup
+    create:
+      invalid_code: Codice di verifica non valido. Riprova.
+    disable:
+      success: L’autenticazione a due fattori è stata disattivata
+    new:
+      code_label: Codice di verifica
+      code_placeholder: Inserisci il codice a 6 cifre
+      description: Migliora la sicurezza del tuo account configurando l’autenticazione a due fattori.
+      page_title: Configurazione autenticazione a due fattori
+      scan_description: Usa un’app di autenticazione come Google Authenticator o 1Password per scansionare questo QR code.
+      scan_title: 1. Scansiona il QR code
+      secret_description: Se non puoi scansionare il QR code, inserisci manualmente questa chiave segreta nella tua app di autenticazione.
+      secret_title: Codice per inserimento manuale
+      title: Configura l’autenticazione a due fattori
+      verify_button: Verifica e attiva 2FA
+      verify_description: Inserisci il codice a 6 cifre dalla tua app di autenticazione.
+      verify_title: 2. Inserisci il codice di verifica
+    verify:
+      description: Inserisci il codice dalla tua app di autenticazione per continuare.
+      page_title: Verifica autenticazione a due fattori
+      title: Autenticazione a due fattori
+      verify_button: Verifica
+    verify_code:
+      invalid_code: Codice di autenticazione non valido. Riprova.

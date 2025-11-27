@@ -1,0 +1,88 @@
+---
+it:
+  import:
+    cleans:
+      show:
+        description: Modifica i tuoi dati nella tabella sottostante. Le celle in rosso non sono valide.
+        errors_notice: Ci sono degli errori nei tuoi dati. Passa il mouse sull'errore per vedere
+          i dettagli.
+        errors_notice_mobile: Ci sono degli errori nei tuoi dati.  Tocca il tooltip dell'errore per vedere
+          i dettagli.
+        title: Correggi i tuoi dati
+    configurations:
+      category_import:
+        button_label: Continua
+        description: Carica un semplice CSV (come quello che generiamo quando
+          esporti i tuoi dati). Mapperemo automaticamente le colonne per te.
+        instructions: Seleziona continua per analizzare il tuo CSV e passare alla fase di correzione.
+      mint_import:
+        date_format_label: Formato della data
+      show:
+        description: Seleziona le colonne che corrispondono a ciascun campo nel tuo CSV.
+        title: Configura la tua importazione
+      trade_import:
+        date_format_label: Formato della data
+      transaction_import:
+        date_format_label: Formato della data
+    confirms:
+      mappings:
+        create_account: Crea conto
+        csv_mapping_label: "%{mapping} in CSV"
+        sure_mapping_label: "%{mapping} in %{product_name}"
+        no_accounts: Non hai ancora creato alcun conto. Crea un conto da usare per le righe non assegnate del tuo CSV, oppure torna alla fase di correzione e indica un nome conto da utilizzare.
+        rows_label: Righe
+        unassigned_account: È necessario creare un nuovo conto per le righe non assegnate?
+      show:
+        account_mapping_description: Assegna tutti i conti del tuo file importato ai
+          conti esistenti. Puoi anche aggiungere nuovi conti o lasciarli senza.
+        account_mapping_title: Assegna i tuoi conti
+        account_type_mapping_description: Assegna tutti i conti del tuo file importato ai conti esistenti. Puoi aggiungerne di nuovi o lasciare i movimenti senza conto.
+        account_type_mapping_title: Assegna i tuoi tipi di conto
+        category_mapping_description: Assegna tutte le categorie del tuo file importato alle categorie esistenti. Puoi aggiungerne di nuove o lasciare i movimenti senza categoria.
+        category_mapping_title: Assegna le tue categorie
+        tag_mapping_description: Assegna tutti i tag del tuo file importato ai tag esistenti. Puoi aggiungerne di nuovi o lasciare i movimenti senza tag.
+        tag_mapping_title: Assegna i tuoi tag
+    uploads:
+      show:
+        description: Incolla o carica il tuo file CSV qui sotto. Prima di iniziare, leggi le istruzioni nella tabella sottostante.
+        instructions_1: Di seguito è riportato un esempio di file CSV con le colonne disponibili per l'importazione.
+        instructions_2: Il tuo CSV deve avere una riga di intestazione
+        instructions_3: Puoi dare alle colonne il nome che preferisci. Le assegnerai correttamente nel prossimo step
+        instructions_4: Le colonne segnate con asterisco (*) devono essere compilate.
+        instructions_5: No virgole, no simboli di valuta, e nessuna parentesi nei numeri.
+        title: Importa i tuoi movimenti
+  imports:
+    empty:
+      message: Ancora nessuna importazione.
+      new: Nuova importazione
+    import:
+      complete: Comletata
+      delete: Elimina
+      failed: Fallita
+      in_progress: In corso
+      label: "%{type}: %{datetime}"
+      revert_failed: Ripristino non riuscito
+      reverting: Ripristino 
+      uploading: Elaborazione delle righe
+      view: Visualizza
+    index:
+      imports: Importazioni
+      new: Nuova Importazione
+      title: Impostazioni/Esportazioni
+      exports: Esportazioni
+      new_export: Nuova Esportazione
+      no_exports: Ancora nessuna esportazione.
+    new:
+      description: È possibile importare manualmente vari tipi di dati tramite CSV o utilizzare uno
+        dei nostri modelli di importazione.
+      import_accounts: Importa conti
+      import_categories: Importa categorie
+      import_mint: Importa da Mint
+      import_portfolio: Importa investimenti
+      import_transactions: Importa movimenti
+      resume: Riprendi %{type}
+      sources: Sorgente
+      title: Nuova importazione CSV
+    ready:
+      description: Ecco il riepilogo delle voci che verranno aggiunte al tuo account dopo la conferma dell’importazione.
+      title: Conferma i dati da importare

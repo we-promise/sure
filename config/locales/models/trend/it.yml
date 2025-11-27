@@ -1,0 +1,13 @@
+---
+it:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: deve essere dello stesso tipo del valore precedente
+              must_be_of_type_money_numeric_or_nil: deve essere di tipo valuta, numerico o nullo
+            previous:
+              must_be_of_the_same_type_as_current: deve essere dello stesso tipo del valore attuale
+              must_be_of_type_money_numeric_or_nil: deve essere di tipo valuta, numerico o nullo

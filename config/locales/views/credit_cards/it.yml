@@ -1,0 +1,25 @@
+---
+it:
+  credit_cards:
+    edit:
+      edit: Modifica %{account}
+    form:
+      annual_fee: Costo annuale
+      annual_fee_placeholder: '99'
+      apr: TAEG
+      apr_placeholder: '15.99'
+      available_credit: Credito disponibile
+      available_credit_placeholder: '10000'
+      expiration_date: Data di scadenza
+      minimum_payment: Pagamento minimo
+      minimum_payment_placeholder: '100'
+    new:
+      title: Inserisci i dati della carta di credito
+    overview:
+      amount_owed: Importo dovuto
+      annual_fee: Costo annuale
+      apr: TAEG
+      available_credit: Credito disponibile
+      expiration_date: Data di scadenza
+      minimum_payment: Pagamento minimo
+      unknown: Sconosciuto

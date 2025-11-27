@@ -1,0 +1,10 @@
+---
+en:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: Recentemente hai richiesto di modificare il tuo indirizzo e-mail. Clicca il bottone
+        sottostante per confermare il cambio.
+      cta: Conferma cambio e-mail
+      expiry_notice: Questo link scade tra %{hours} ore.
+      greeting: Ciao!
+      subject: '%{product_name}: Conferma il cambio e-mail'

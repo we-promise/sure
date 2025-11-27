@@ -1,0 +1,30 @@
+---
+it:
+  transfers:
+    create:
+      success: Trasferimento creato
+    destroy:
+      success: Trasferimento rimosso
+    form:
+      amount: Importo
+      date: Data
+      expense: Spesa
+      from: Da
+      income: Entrata
+      select_account: Seleziona un conto
+      submit: Crea trasferimento
+      to: A
+      transfer: Trasferimento
+    new:
+      title: Nuovo trasferimento
+    show:
+      delete: Rimuovi trasferimento
+      delete_subtitle: Questo rimuove il trasferimento. Non cancellerà i movimenti associati.
+      delete_title: Rimuovi trasferimento?
+      details: Dettagli
+      note_label: Note
+      note_placeholder: Inserisci una nota
+      overview: Panoramica
+      settings: Impostazioni
+    update:
+      success: Trasferimento aggiornato

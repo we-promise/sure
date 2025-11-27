@@ -1,0 +1,8 @@
+---
+it:
+  password_mailer:
+    password_reset:
+      cta: Reimposta la password
+      ignore_if_not_requested: Se non hai richiesto questo reset, puoi ignorare questa email.
+      request_made: È stata effettuata una richiesta per reimpostare la password del tuo %{product_name}. Clicca sul link per procedere.
+      subject: '%{product_name}: Reimposta la tua password'

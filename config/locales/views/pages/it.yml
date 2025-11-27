@@ -1,0 +1,34 @@
+---
+it:
+  pages:
+    changelog:
+      title: Cosa c'è di nuovo
+    dashboard:
+      welcome: "Bentornato/a, %{name}"
+      subtitle: "Ecco cosa sta succedendo con le tue finanze"
+      new: "Nuovo"
+      net_worth_chart:
+        data_not_available: Dati non disponibili per il periodo selezionato
+        title: Patrimonio netto
+      no_account_empty_state:
+        new_account: Nuovo conto
+        no_account_subtitle: Poiché non hai ancora aggiunto alcun conto, non ci sono dati da visualizzare. Aggiungi il tuo primo conto per iniziare a vedere i dati nel dashboard.
+        no_account_title: Ancora nessun conto
+      balance_sheet:
+        no_items: "Ancora nessun %{name}"
+        add_accounts: "Aggiunti i tuoi %{name} per visualizzare un riepilogo completo"
+      cashflow_sankey:
+        title: "Flusso di cassa"
+        no_data_title: "Nessun dato per il flusso di casssa per questo period"
+        no_data_description: "Aggiungi transazioni per visualizzare i dati del flusso di cassa oppure estendi il periodo"
+        add_transaction: "Aggiungi trasazione"
+      no_accounts:
+        title: "Ancora nessun conto"
+        description: "Aggiungi account per visualizzare i dati del patrimonio netto"
+        add_account: "Aggiungi conto"
+      outflows_donut:
+        title: "Uscite"
+        total_outflows: "Uscite totali"
+        categories: "Categorie"
+        value: "Valore"
+        weight: "Peso"

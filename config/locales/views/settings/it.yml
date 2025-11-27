@@ -1,0 +1,121 @@
+---
+it:
+  settings:
+    ai_prompts:
+      show:
+        page_title: Prompt AI
+        openai_label: OpenAI
+        disable_ai: Disattiva assistente AI
+        prompt_instructions: Istruzioni del prompt
+        main_system_prompt:
+          title: Prompt di sistema principale
+          subtitle: Istruzioni fondamentali che definiscono il comportamento dell’assistente AI in tutte le conversazioni
+        transaction_categorizer:
+          title: Categorizzatore transazioni
+          subtitle: L’AI categorizza automaticamente le tue transazioni in base alle categorie definite
+        merchant_detector:
+          title: Rilevatore commerciante
+          subtitle: L’AI identifica e arricchisce le transazioni con informazioni sul commerciante
+    billings:
+      show:
+        page_title: Fatturazione
+        subscription_subtitle: Aggiorna il tuo abbonamento e i dettagli di fatturazione
+        subscription_title: Gestisci abbonamento
+    preferences:
+      show:
+        country: Paese
+        currency: Valuta
+        date_format: Formato data
+        general_subtitle: Configura le tue preferenze
+        general_title: Generale
+        default_period: Periodo predefinito
+        default_account_order: Ordine account predefinito
+        language: Lingua
+        page_title: Preferenze
+        theme_dark: Scuro
+        theme_light: Chiaro
+        theme_subtitle: Scegli il tema preferito per l’app
+        theme_system: Sistema
+        theme_title: Tema
+        timezone: Fuso orario
+    profiles:
+      destroy:
+        cannot_remove_self: Non puoi rimuovere te stesso dall’account.
+        member_removal_failed: Si è verificato un problema durante la rimozione del membro.
+        member_removed: Membro rimosso con successo.
+        not_authorized: Non sei autorizzato a rimuovere membri.
+      show:
+        confirm_delete:
+          body: Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione è irreversibile.
+          title: Eliminare l’account?
+        confirm_reset:
+          body: Sei sicuro di voler reimpostare il tuo account? Verranno eliminati tutti i tuoi account, categorie, commercianti, tag e altri dati. Questa azione non può essere annullata.
+          title: Reimpostare l’account?
+        confirm_reset_with_sample_data:
+          body: Sei sicuro di voler reimpostare il tuo account e caricare dati di esempio? I tuoi dati attuali verranno eliminati e sostituiti con dati demo per esplorare Sure in sicurezza.
+          title: Reimpostare l’account e caricare dati di esempio?
+        confirm_remove_invitation:
+          body: Sei sicuro di voler rimuovere l’invito per %{email}?
+          title: Rimuovere invito
+        confirm_remove_member:
+          body: Sei sicuro di voler rimuovere %{name} dal tuo account?
+          title: Rimuovere membro
+        danger_zone_title: Zona pericolosa
+        delete_account: Elimina account
+        delete_account_warning: Eliminando il tuo account verranno rimossi definitivamente tutti i tuoi dati. Questa azione non può essere annullata.
+        reset_account: Reimposta account
+        reset_account_warning: La reimpostazione eliminerà tutti i tuoi account, categorie, commercianti, tag e altri dati, mantenendo intatto solo il tuo profilo utente.
+        reset_account_with_sample_data: Reimposta e carica dati demo
+        reset_account_with_sample_data_warning: Elimina tutti i dati esistenti e carica un nuovo set di dati di esempio per esplorare l’app con un ambiente precompilato.
+        email: Email
+        first_name: Nome
+        household_form_input_placeholder: Inserisci il nome della famiglia
+        household_form_label: Nome della famiglia
+        household_subtitle: Invita familiari, partner e altre persone. Gli invitati possono accedere alla tua famiglia e vedere gli account condivisi.
+        household_title: Famiglia
+        invitation_link: Link di invito
+        invite_member: Aggiungi membro
+        last_name: Cognome
+        page_title: Informazioni profilo
+        pending: In sospeso
+        profile_subtitle: Personalizza come appari su %{product_name}
+        profile_title: Personale
+        remove_invitation: Rimuovi invito
+        remove_member: Rimuovi membro
+        save: Salva
+    securities:
+      show:
+        page_title: Sicurezza
+    settings_nav:
+      accounts_label: Account
+      advanced_section_title: Avanzate
+      ai_prompts_label: Prompt AI
+      api_key_label: Chiave API
+      billing_label: Fatturazione
+      categories_label: Categorie
+      feedback_label: Feedback
+      general_section_title: Generale
+      imports_label: Import/Export
+      logout: Esci
+      merchants_label: Membri della famiglia
+      guides_label: Guide
+      other_section_title: Altro
+      preferences_label: Preferenze
+      profile_label: Informazioni profilo
+      recurring_transactions_label: Ricorrenti
+      rules_label: Regole
+      security_label: Sicurezza
+      self_hosting_label: Self-Hosting
+      tags_label: Tag
+      transactions_section_title: Movimenti
+      whats_new_label: Novità
+      api_keys_label: Chiave API
+      bank_sync_label: Sincronizzazione bancaria
+    settings_nav_link_large:
+      next: Avanti
+      previous: Indietro
+    user_avatar_field:
+      accepted_formats: JPG o PNG. Max 5MB.
+      choose: Carica foto
+      choose_label: (opzionale)
+      change: Cambia foto

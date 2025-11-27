@@ -1,0 +1,116 @@
+---
+it:
+  accounts:
+    account:
+      link_lunchflow: Collega con Lunch Flow
+      link_provider: Collega provider
+      unlink_provider: Scollega da provider
+      troubleshoot: Risoluzione dei problemi
+    chart:
+      data_not_available: Dati non disponibili per il periodo selezionato
+    create:
+      success: "Conto %{type} creato"
+    destroy:
+      success: "Conto %{type} scheduled for deletion"
+      cannot_delete_linked: "Non è possibile eliminare un conto collegato. È necessario prima scollegarlo."
+    empty:
+      empty_message: Aggiungi un conto tramite connessione, importazione o inserimento manuale.
+      new_account: Nuovo conto
+      no_accounts: Ancora nessun conto
+    form:
+      balance: Saldo corrente
+      name_label: Nome conto
+      name_placeholder: es. Contanti, Nome Banca, Conto risparmio...
+    index:
+      accounts: Conti
+      manual_accounts:
+        other_accounts: Altri conti
+      new_account: Nuovo conto
+      sync: Sincronizza tutti
+    sync_all:
+      syncing: "Sincronizzazione conti..."
+    new:
+      import_accounts: Importa conti
+      method_selector:
+        connected_entry: Collega conto
+        connected_entry_eu: Collega conto EU
+        lunchflow_entry: Collega con Lunch Flow
+        manual_entry: Inserimento manuale
+        title: Come desideri inserirlo?
+      title: Cosa vorresti inserire?
+    show:
+      activity:
+        amount: Importo
+        balance: Saldo
+        date: Data
+        entries: movimenti
+        entry: movimento
+        new: Nuovo
+        new_balance: Nuovo saldo
+        new_transaction: Nuovo movimento
+        no_entries: Nessun movimento trovata
+        search:
+          placeholder: Cerca movimento per nome
+        title: Attività
+      chart:
+        balance: Saldo
+        owed: Importo dovuto
+      menu:
+        confirm_accept: Elimina "%{name}"
+        confirm_body_html: "<p>Eliminando questo conto, eliminerai anche tutta la sua
+          cronologia, influenzando vari aspetti del tuo saldo complessivo. Questa azione
+          avrà un impatto diretto sui calcoli del tuo patrimonio netto e sui grafici.</p>
+          <br /> <p>Dopo la cancellazione, non sarà possibile ripristinare
+          le informazioni del conto perché sarà necessario aggiungerlo come nuovo.</p>"
+        confirm_title: Eliminare il conto?
+        edit: Modifica
+        import: Importa movimenti
+        manage: Gestisci conti
+    update:
+      success: "Conto %{type} aggiornato"
+    sidebar:
+      missing_data: Dati storici mancanti
+      missing_data_description: "%{product} utilizza fornitori terzi per recuperare i tassi di cambio storici, i prezzi dei titoli e altro ancora. Questi dati sono necessari per calcolare con precisione i saldi storici dei conti."
+      configure_providers: Configura qui i tuoi provider.
+      tabs:
+        all: Tutti
+        assets: Attività
+        debts: Passività
+      new_asset: Nuova attività
+      new_debt: Nuova passività
+      new_account: Nuovo conto
+      new_account_group: "Nuovo %{account_group}"
+    types:
+      depository: Conto
+      investment: Investimento
+      crypto: Crypto
+      property: Immobile
+      vehicle: Veicolo
+      other_asset: Altro bene
+      credit_card: Carta di credito
+      loan: Prestito
+      other_liability: Altra passività
+    confirm_unlink:
+      title: Disassocia conto dal provider?
+      description_html: "Stai per scollegare <strong>%{account_name}</strong> da <strong>%{provider_name}</strong>. Verrà trasformato in conto manuale."
+      warning_title: Cosa significa
+      warning_no_sync: Il conto non verrà più sincronizzato automaticamente con la tua banca
+      warning_manual_updates: Dovrai aggiungere i movimenti e aggiornare i saldi manualmente.
+      warning_transactions_kept: Tutte i movimenti e i saldi esistenti saranno conservati.
+      warning_can_delete: Dopo aver annullato il collegamento, potrai eliminare il conto se necessario.
+      confirm_button: Conferma e scollega
+    unlink:
+      success: "Conto scollegato con successo. Ora è un conto manuale."
+      not_linked: "Conto non collegato a un provider"
+      error: "Errore nello scollegare il conto: %{error}"
+      generic_error: "Si è verificato un errore imprevisto. Riprova."
+    select_provider:
+      title: Seleziona un provider da collegare
+      description: "Scegli il provider che desideri utilizzare per il collegamento %{account_name}"
+      already_linked: "Questo conto è già collegato a un provider"
+      no_providers: "Al momento non ci sono provider configurati"
+
+  email_confirmations:
+    new:
+      invalid_token: Link di conferma non valido o scaduto.
+      success_login: La tua email è stata confermata. Effettua il login con il tuo nuovo indirizzo email.

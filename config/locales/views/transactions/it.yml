@@ -1,0 +1,85 @@
+---
+it:
+  transactions:
+    form:
+      account: Conto
+      account_prompt: Seleziona un conto
+      amount: Importo
+      category: Categoria
+      category_prompt: Seleziona una categoria
+      date: Data
+      description: Descrizione
+      description_placeholder: Descrivi il movimento
+      expense: Spesa
+      income: Entrata
+      none: (nessuno)
+      note_label: Note
+      note_placeholder: Inserisci una nota
+      submit: Aggiungi movimento
+      tags_label: Tag
+      transfer: Trasferimento
+    new:
+      new_transaction: Nuovo movimento
+    show:
+      account_label: Conto
+      amount: Importo
+      category_label: Categoria
+      date_label: Data
+      delete: Elimina
+      delete_subtitle: Questa azione elimina definitivamente il movimento, modifica i saldi storici e non può essere annullata.
+      delete_title: Elimina movimento
+      details: Dettagli
+      mark_recurring: Segna come ricorrente
+      mark_recurring_subtitle: Imposta questo movimento come ricorrente. La variazione dell’importo viene calcolata automaticamente in base agli ultimi 6 mesi di movimenti simili.
+      mark_recurring_title: Movimento ricorrente
+      merchant_label: Commerciante
+      name_label: Nome
+      nature: Tipo
+      none: "(nessuno)"
+      note_label: Note
+      note_placeholder: Inserisci una nota
+      overview: Panoramica
+      settings: Impostazioni
+      tags_label: Tag
+      uncategorized: "(senza categoria)"
+    header:
+      edit_categories: Modifica categorie
+      edit_imports: Modifica importazioni
+      edit_merchants: Modifica commercianti
+      edit_tags: Modifica tag
+      import: Importa
+    index:
+      transaction: movimento
+      transactions: movimenti
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Uguale a
+          greater_than: Maggiore di
+          less_than: Minore di
+          placeholder: "0"
+        badge:
+          expense: Spesa
+          income: Entrata
+          on_or_after: dal %{date} in poi
+          on_or_before: fino al %{date}
+          transfer: Trasferimento
+        type_filter:
+          expense: Spesa
+          income: Entrata
+          transfer: Trasferimento
+      menu:
+        account_filter: Account
+        amount_filter: Importo
+        apply: Applica
+        cancel: Annulla
+        category_filter: Categoria
+        clear_filters: Cancella filtri
+        date_filter: Data
+        merchant_filter: Commerciante
+        tag_filter: Tag
+        type_filter: Tipo
+      search:
+        equal_to: uguale a
+        greater_than: maggiore di
+        less_than: minore di

@@ -1,0 +1,14 @@
+---
+it:
+  shared:
+    confirm_modal:
+      accept: Conferma
+      body_html: "<p>Questa azione è irreversibile</p>"
+      cancel: Cancella
+      title: Sei sicuro?
+    money_field:
+      label: Importo
+    syncing_notice:
+      syncing: Sincronizzazione dati conti...
+    trend_change:
+      no_change: "nessun cambiamento"

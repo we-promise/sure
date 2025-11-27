@@ -1,0 +1,18 @@
+---
+it:
+  users:
+    destroy:
+      success: Il tuo account è stato eliminato.
+    update:
+      email_change_failed: Impossibile modificare l’indirizzo email.
+      email_change_initiated: Controlla il tuo nuovo indirizzo email per le istruzioni di conferma.
+      success: Il tuo profilo è stato aggiornato.
+    resend_confirmation_email:
+      success: Una nuova email di conferma è stata messa in coda per l’invio.
+      no_pending_change: Nessuna modifica email è attualmente in sospeso!
+    reset:
+      success: Il tuo account è stato reimpostato. I dati verranno eliminati in background tra qualche istante.
+      unauthorized: Non sei autorizzato a eseguire questa azione.
+    reset_with_sample_data:
+      success: Il tuo account è stato reimpostato e i dati di esempio sono in preparazione. Vedrai i dati demo a breve.
+

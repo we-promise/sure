@@ -1,0 +1,6 @@
+---
+it:
+  invite_codes:
+    index:
+      invite_code_description: Genera un nuovo codice per visualizzarlo qui. I codici generati che sono stati utilizzati non saranno più visualizzati.
+      no_invite_codes: Nessun codice da mostrare

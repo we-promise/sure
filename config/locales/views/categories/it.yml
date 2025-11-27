@@ -1,0 +1,34 @@
+---
+it:
+  categories:
+    bootstrap:
+      success: Le categorie predefinite sono state create con successo
+    category:
+      delete: Elimina categoria
+      edit: Modifica categoria
+    create:
+      success: Categoria creata con successo
+    destroy:
+      success: Categoria eliminata con successo
+    edit:
+      edit: Modifica categoria
+    form:
+      placeholder: Nome categoria
+    index:
+      bootstrap: Usa categorie di default (raccomandato)
+      categories: Categorie
+      categories_expenses: Categorie di spesa
+      categories_incomes: Categorie di reddito
+      empty: Nessuna categoria trovata
+      new: Nuova categoria
+    menu:
+      loading: Caricamento...
+    new:
+      new_category: Nuova categoria
+    update:
+      success: Categoria aggiornata con successo
+  category:
+    dropdowns:
+      show:
+        bootstrap: Genera categorie di default
+        empty: Nessuna categoria trovata

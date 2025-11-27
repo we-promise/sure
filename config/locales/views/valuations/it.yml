@@ -1,0 +1,31 @@
+---
+it:
+  valuations:
+    form:
+      amount: Importo
+      submit: Aggiungi aggiornamento saldo
+    header:
+      balance: Saldo
+    index:
+      change: variazione
+      date: data
+      new_entry: Nuova voce
+      no_valuations: Nessuna valutazione per questo account
+      valuations: Valore
+      value: valore
+    new:
+      title: Nuovo saldo
+    show:
+      amount: Importo
+      date_label: Data
+      delete: Elimina
+      delete_subtitle: Questa azione non può essere annullata
+      delete_title: Elimina voce
+      details: Dettagli
+      name_label: Nome
+      name_placeholder: Inserisci un nome per questa voce
+      note_label: Note
+      note_placeholder: Aggiungi eventuali dettagli aggiuntivi per questa voce
+      overview: Panoramica
+      settings: Impostazioni
+

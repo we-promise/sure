@@ -1,0 +1,73 @@
+---
+it:
+  lunchflow_items:
+    create:
+      success: Connessione Lunch Flow creata con successo
+    destroy:
+      success: Connessione Lunch Flow rimossa
+    index:
+      title: Connessioni Lunch Flow
+    loading:
+      loading_message: Caricamento degli account Lunch Flow...
+      loading_title: Caricamento
+    link_accounts:
+      all_already_linked:
+        one: "L’account selezionato (%{names}) è già collegato"
+        other: "Tutti i %{count} account selezionati sono già collegati: %{names}"
+      api_error: "Errore API: %{message}"
+      invalid_account_names:
+        one: "Impossibile collegare un account senza nome"
+        other: "Impossibile collegare %{count} account senza nome"
+      link_failed: Collegamento degli account non riuscito
+      no_accounts_selected: Seleziona almeno un account
+      partial_invalid: "%{created_count} account collegati, %{already_linked_count} già collegati, %{invalid_count} account con nomi non validi"
+      partial_success: "%{created_count} account collegati. %{already_linked_count} erano già collegati: %{already_linked_names}"
+      success:
+        one: "%{count} account collegato con successo"
+        other: "%{count} account collegati con successo"
+    lunchflow_item:
+      delete: Elimina connessione
+      deletion_in_progress: eliminazione in corso...
+      error: Errore
+      no_accounts_description: Questa connessione non ha ancora account collegati.
+      no_accounts_title: Nessun account
+      status: "Sincronizzato %{timestamp} fa"
+      status_never: Mai sincronizzato
+      syncing: Sincronizzazione in corso...
+    select_accounts:
+      accounts_selected: account selezionati
+      api_error: "Errore API: %{message}"
+      cancel: Annulla
+      configure_name_in_lunchflow: Impossibile importare, configura il nome dell’account su Lunchflow
+      description: Seleziona gli account che vuoi collegare al tuo account %{product_name}.
+      link_accounts: Collega gli account selezionati
+      no_accounts_found: Nessun account trovato. Verifica la configurazione della tua API key.
+      no_api_key: La API key di Lunch Flow non è configurata. Configurala nelle Impostazioni.
+      no_name_placeholder: "(Senza nome)"
+      title: Seleziona gli account Lunch Flow
+    select_existing_account:
+      account_already_linked: Questo account è già collegato a un provider
+      all_accounts_already_linked: Tutti gli account Lunch Flow sono già collegati
+      api_error: "Errore API: %{message}"
+      cancel: Annulla
+      configure_name_in_lunchflow: Impossibile importare, configura il nome dell’account su Lunchflow
+      description: Seleziona un account Lunch Flow da collegare a questo account. Le transazioni verranno sincronizzate e deduplicate automaticamente.
+      link_account: Collega account
+      no_account_specified: Nessun account specificato
+      no_accounts_found: Nessun account Lunch Flow trovato. Verifica la configurazione della tua API key.
+      no_api_key: La API key di Lunch Flow non è configurata. Configurala nelle Impostazioni.
+      no_name_placeholder: "(Senza nome)"
+      title: "Collega %{account_name} a Lunch Flow"
+    link_existing_account:
+      account_already_linked: Questo account è già collegato a un provider
+      api_error: "Errore API: %{message}"
+      invalid_account_name: Impossibile collegare un account senza nome
+      lunchflow_account_already_linked: Questo account Lunch Flow è già collegato a un altro account
+      lunchflow_account_not_found: Account Lunch Flow non trovato
+      missing_parameters: Parametri richiesti mancanti
+      success: "%{account_name} è stato collegato a Lunch Flow"
+    sync:
+      success: Sincronizzazione avviata
+    update:
+      success: Connessione Lunch Flow aggiornata
+

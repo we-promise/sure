@@ -1,0 +1,25 @@
+---
+it:
+  vehicles:
+    edit:
+      edit: Modifica %{account}
+    form:
+      make: Marca
+      make_placeholder: Mercedes
+      mileage: Chilometraggio
+      mileage_placeholder: "15000"
+      mileage_unit: Unità
+      model: Modello
+      model_placeholder: Classe A
+      year: Anno
+      year_placeholder: "2023"
+    new:
+      title: Inserisci i dettagli del veicolo
+    overview:
+      current_price: Valore attuale
+      make_model: Marca e modello
+      mileage: Chilometraggio
+      purchase_price: Prezzo di acquisto
+      trend: Andamento
+      unknown: Sconosciuto
+      year: Anno

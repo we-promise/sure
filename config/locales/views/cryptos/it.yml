@@ -1,0 +1,7 @@
+---
+it:
+  cryptos:
+    edit:
+      edit: Modifica %{account}
+    new:
+      title: Insersici il saldo del conto

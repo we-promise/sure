@@ -1,0 +1,26 @@
+---
+it:
+  helpers:
+    label:
+      user:
+        invite_code: Codice di invito
+    submit:
+      user:
+        create: Continua
+  registrations:
+    closed: Le registrazioni sono attualmente chiuse.
+    create:
+      failure: Si è verificato un problema durante la registrazione.
+      invalid_invite_code: Codice di invito non valido, riprova.
+      success: Registrazione completata con successo.
+    new:
+      invitation_message: "%{inviter} ti ha invitato a unirti come %{role}"
+      join_family_title: Unisciti a %{family}
+      role_admin: amministratore
+      role_member: membro
+      submit: Crea account
+      title: Crea il tuo account
+      welcome_body: Per iniziare devi registrare un nuovo account. Potrai poi configurare ulteriori impostazioni dall’app.
+      welcome_title: Benvenuto in %{product_name}!
+      password_placeholder: Inserisci la tua password
+

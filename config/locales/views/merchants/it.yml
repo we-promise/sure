@@ -1,0 +1,27 @@
+---
+it:
+  family_merchants:
+    create:
+      error: 'Errore durante la creazione del nuovo membro: %{error}'
+      success: Nuovo membro creato con successo
+    destroy:
+      success: Membro eliminato con successo
+    edit:
+      title: Modifica membro
+    form:
+      name_placeholder: Nome del membro
+    index:
+      empty: Nessun membro presente
+      new: Nuovo membro
+      title: Membri
+    merchant:
+      confirm_accept: Elimina membro
+      confirm_body: Sei sicuro di voler eliminare questo membro? Rimuoverlo
+        scollegarà tutte le transazioni associate e potrebbe influire sui tuoi report.
+      confirm_title: Eliminare il membro?
+      delete: Elimina membro
+      edit: Modifica membro
+    new:
+      title: Nuovo membro
+    update:
+      success: Membro aggiornato con successo

@@ -1,0 +1,45 @@
+---
+it:
+  recurring_transactions:
+    title: Transazioni ricorrenti
+    upcoming: Prossime transazioni ricorrenti
+    projected: Previsto
+    recurring: Ricorrente
+    expected_on: Prevista per il %{date}
+    day_of_month: Giorno %{day} del mese
+    identify_patterns: Identifica pattern
+    cleanup_stale: Pulisci ricorrenze obsolete
+    info:
+      title: Rilevamento automatico dei pattern
+      manual_description: Puoi identificare manualmente i pattern o pulire le transazioni ricorrenti obsolete utilizzando i pulsanti qui sopra.
+      automatic_description: "L’identificazione automatica viene eseguita anche dopo:"
+      triggers:
+        - Completamento dell’importazione CSV (transazioni, operazioni, account, ecc.)
+        - Completamento della sincronizzazione con qualsiasi provider (Plaid, SimpleFIN, ecc.)
+    identified: Identificati %{count} pattern di transazioni ricorrenti
+    cleaned_up: Pulite %{count} transazioni ricorrenti obsolete
+    marked_inactive: Transazione ricorrente contrassegnata come inattiva
+    marked_active: Transazione ricorrente contrassegnata come attiva
+    deleted: Transazione ricorrente eliminata
+    confirm_delete: Sei sicuro di voler eliminare questa transazione ricorrente?
+    marked_as_recurring: Transazione contrassegnata come ricorrente
+    already_exists: Esiste già una transazione ricorrente manuale per questo pattern
+    creation_failed: Creazione della transazione ricorrente non riuscita. Controlla i dettagli della transazione e riprova.
+    unexpected_error: Si è verificato un errore imprevisto durante la creazione della transazione ricorrente
+    amount_range: "Intervallo: da %{min} a %{max}"
+    empty:
+      title: Nessuna transazione ricorrente trovata
+      description: Clicca su "Identifica pattern" per rilevare automaticamente le transazioni ricorrenti dalla tua cronologia transazioni.
+    table:
+      merchant: Nome
+      amount: Importo
+      expected_day: Giorno previsto
+      next_date: Prossima data
+      last_occurrence: Ultima occorrenza
+      status: Stato
+      actions: Azioni
+    status:
+      active: Attiva
+      inactive: Inattiva
+    badges:
+      manual: Manuale

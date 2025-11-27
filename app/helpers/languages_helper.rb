@@ -162,7 +162,7 @@ module LanguagesHelper
     "nb",   # Norwegian Bokmål - 56 translation files
     "ca",   # Catalan - 56 translation files
     "ro",   # Romanian - 61 translation files
-    "it"    # Italian - 22 translation files
+    "it"    # Italian - 61 translation files
   ].freeze
 
   COUNTRY_MAPPING = {

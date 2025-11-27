@@ -1,0 +1,8 @@
+---
+en:
+  invitation_mailer:
+    invite_email:
+      accept_button: Accetta Invito
+      body: "%{inviter} ti ha invitato a unirti alla famiglia %{family} su %{product_name}!"
+      expiry_notice: Questo invito scadrà tra %{days} giorni
+      greeting: Benvenuto su %{product_name}!

@@ -1,0 +1,73 @@
+---
+it:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Controlla come le nuove persone possono registrarsi alla tua istanza di %{product}.
+        email_confirmation_description: Se abilitato, gli utenti devono confermare il loro indirizzo email quando lo modificano.
+        email_confirmation_title: Richiedi conferma email
+        generate_tokens: Genera nuovo codice
+        generated_tokens: Codici generati
+        title: Onboarding
+        states:
+          open: Aperto
+          closed: Chiuso
+          invite_only: Solo su invito
+      show:
+        general: Impostazioni generali
+        financial_data_providers: Provider dati finanziari
+        invites: Codici di invito
+        title: Self-Hosting
+        danger_zone: Zona pericolosa
+        clear_cache: Svuota cache dati
+        clear_cache_warning: Svuotare la cache dei dati rimuoverà tutti i tassi di cambio, i prezzi dei titoli, i saldi degli account e altri dati. Questa operazione non eliminerà account, transazioni, categorie o altri dati dell’utente.
+        confirm_clear_cache:
+          title: Svuotare la cache dei dati?
+          body: Sei sicuro di voler svuotare la cache dei dati? Verranno rimossi tutti i tassi di cambio, i prezzi dei titoli, i saldi degli account e altri dati. Questa azione non può essere annullata.
+      provider_selection:
+        title: Selezione provider
+        description: Scegli quale servizio utilizzare per recuperare tassi di cambio e prezzi dei titoli. Yahoo Finance è gratuito e non richiede una chiave API. Twelve Data richiede una chiave API gratuita ma può offrire una copertura dati più ampia.
+        exchange_rate_provider_label: Provider tassi di cambio
+        securities_provider_label: Provider prezzi titoli (azioni)
+        env_configured_message: La selezione del provider è disabilitata perché sono impostate le variabili d’ambiente (EXCHANGE_RATE_PROVIDER o SECURITIES_PROVIDER). Per abilitarla qui, rimuovi tali variabili dalla configurazione.
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+      brand_fetch_settings:
+        description: Inserisci il Client ID fornito da Brand Fetch
+        label: Client ID
+        placeholder: Inserisci qui il tuo Client ID
+        title: Impostazioni Brand Fetch
+      openai_settings:
+        description: Inserisci l’access token e, facoltativamente, configura un provider compatibile OpenAI personalizzato
+        env_configured_message: Configurazione completata tramite variabili d’ambiente.
+        access_token_label: Access Token
+        access_token_placeholder: Inserisci qui il tuo access token
+        uri_base_label: Base URL API (Opzionale)
+        uri_base_placeholder: "https://api.openai.com/v1 (predefinito)"
+        model_label: Modello (Opzionale)
+        model_placeholder: "gpt-4.1 (predefinito)"
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance fornisce accesso gratuito a prezzi delle azioni, tassi di cambio e dati finanziari senza richiedere una chiave API.
+        status_active: Yahoo Finance è attivo e funzionante
+        status_inactive: Connessione a Yahoo Finance non riuscita
+        connection_failed: Impossibile connettersi a Yahoo Finance
+        troubleshooting: Controlla la connessione Internet e le impostazioni del firewall. Yahoo Finance potrebbe essere temporaneamente non disponibile.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} chiamate API giornaliere utilizzate (%{percentage})"
+        description: Inserisci la chiave API fornita da Twelve Data
+        env_configured_message: Configurato correttamente tramite la variabile d’ambiente TWELVE_DATA_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API
+        plan: "Piano %{plan}"
+        title: Twelve Data
+      update:
+        failure: Valore di impostazione non valido
+        success: Impostazioni aggiornate
+        invalid_onboarding_state: Stato onboarding non valido
+      clear_cache:
+        cache_cleared: La cache dei dati è stata svuotata. Potrebbero essere necessari alcuni secondi per completare l’operazione.
+      not_authorized: Non sei autorizzato a eseguire questa azione
+
