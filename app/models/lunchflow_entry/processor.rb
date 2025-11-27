@@ -25,7 +25,8 @@ class LunchflowEntry::Processor
         date: date,
         name: name,
         source: "lunchflow",
-        merchant: merchant
+        merchant: merchant,
+        notes: notes
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -65,20 +66,11 @@ class LunchflowEntry::Processor
     end
 
     def name
-      # Use Lunchflow's merchant and description to create informative transaction names
-      merchant_name = data[:merchant]
-      description = data[:description]
+      data[:merchant].presence || "Unknown transaction"
+    end
 
-      # Combine merchant + description when both are present and different
-      if merchant_name.present? && description.present? && merchant_name != description
-        "#{merchant_name} - #{description}"
-      elsif merchant_name.present?
-        merchant_name
-      elsif description.present?
-        description
-      else
-        "Unknown transaction"
-      end
+    def notes
+      data[:description].presence
     end
 
     def merchant

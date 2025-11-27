@@ -56,13 +56,7 @@
               <div>
                 <h3 class="font-medium text-primary">
                   <%= lunchflow_account.name %>
-                  <% if lunchflow_account.institution_metadata.present? && lunchflow_account.institution_metadata['name'].present? %>
-                    <span class="text-secondary">• <%= lunchflow_account.institution_metadata["name"] %></span>
-                  <% end %>
                 </h3>
-                <p class="text-sm text-secondary">
-                  <%= t(".balance") %>: <%= number_to_currency(lunchflow_account.current_balance || 0, unit: lunchflow_account.currency) %>
-                </p>
               </div>
             </div>
 

@@ -34,11 +34,17 @@ class Period
       label: "Current Month",
       comparison_label: "vs. start of month"
     },
+    "last_month" => {
+      date_range: -> { [ 1.month.ago.beginning_of_month.to_date, 1.month.ago.end_of_month.to_date ] },
+      label_short: "LM",
+      label: "Last Month",
+      comparison_label: "vs. last month"
+    },
     "last_30_days" => {
       date_range: -> { [ 30.days.ago.to_date, Date.current ] },
       label_short: "30D",
       label: "Last 30 Days",
-      comparison_label: "vs. last month"
+      comparison_label: "vs. last 30 days"
     },
     "last_90_days" => {
       date_range: -> { [ 90.days.ago.to_date, Date.current ] },
