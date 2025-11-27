@@ -60,7 +60,7 @@ class Category < ApplicationRecord
         coins compass cookie cooking-pot credit-card dices dog drama drill droplet
         drum dumbbell film flame flower fuel gamepad-2 gift glasses globe graduation-cap
         hammer hand-helping headphones heart heart-pulse home ice-cream-cone key
-        landmark laptop leaf lightbulb line-chart luggage mail map-pin mic monitor moon
+        landmark laptop leaf lightbulb chart-line luggage mail map-pin mic monitor moon
         music package palette paw-print pencil percent phone pie-chart piggy-bank pill
         pizza plane plug power printer puzzle receipt receipt-text ribbon scale scissors
         settings shield shirt shopping-bag shopping-cart smartphone sparkles sprout
