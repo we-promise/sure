@@ -29,7 +29,7 @@ class Holding < ApplicationRecord
 
   # Basic approximation of cost-basis
   def avg_cost
-    avg_cost = account.trades
+    trades = account.trades
       .with_entry
       .joins(ActiveRecord::Base.sanitize_sql_array([
         "LEFT JOIN exchange_rates ON (
@@ -40,9 +40,20 @@ class Holding < ApplicationRecord
       ]))
       .where(security_id: security.id)
       .where("trades.qty > 0 AND entries.date <= ?", date)
-      .average("trades.price * COALESCE(exchange_rates.rate, 1)")
 
-    Money.new(avg_cost || price, currency)
+    total_cost, total_qty = trades.pick(
+      Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
+      Arel.sql("SUM(trades.qty)")
+    )
+
+    weighted_avg =
+      if total_qty && total_qty > 0
+        total_cost / total_qty
+      else
+        price
+      end
+
+    Money.new(weighted_avg || price, currency)
   end
 
   def trend

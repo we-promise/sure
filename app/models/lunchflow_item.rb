@@ -1,5 +1,5 @@
 class LunchflowItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -104,37 +104,30 @@ class LunchflowItem < ApplicationRecord
   end
 
   def sync_status_summary
-    latest = latest_sync
-    return nil unless latest
+    # Use centralized count helper methods for consistency
+    total_accounts = total_accounts_count
+    linked_count = linked_accounts_count
+    unlinked_count = unlinked_accounts_count
 
-    # If sync has statistics, use them
-    if latest.sync_stats.present?
-      stats = latest.sync_stats
-      total = stats["total_accounts"] || 0
-      linked = stats["linked_accounts"] || 0
-      unlinked = stats["unlinked_accounts"] || 0
-
-      if total == 0
-        "No accounts found"
-      elsif unlinked == 0
-        "#{linked} #{'account'.pluralize(linked)} synced"
-      else
-        "#{linked} synced, #{unlinked} need setup"
-      end
+    if total_accounts == 0
+      "No accounts found"
+    elsif unlinked_count == 0
+      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
     else
-      # Fallback to current account counts
-      total_accounts = lunchflow_accounts.count
-      linked_count = accounts.count
-      unlinked_count = total_accounts - linked_count
-
-      if total_accounts == 0
-        "No accounts found"
-      elsif unlinked_count == 0
-        "#{linked_count} #{'account'.pluralize(linked_count)} synced"
-      else
-        "#{linked_count} synced, #{unlinked_count} need setup"
-      end
+      "#{linked_count} synced, #{unlinked_count} need setup"
     end
+  end
+
+  def linked_accounts_count
+    lunchflow_accounts.joins(:account_provider).count
+  end
+
+  def unlinked_accounts_count
+    lunchflow_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+  end
+
+  def total_accounts_count
+    lunchflow_accounts.count
   end
 
   def institution_display_name

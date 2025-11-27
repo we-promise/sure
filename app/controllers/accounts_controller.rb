@@ -56,7 +56,10 @@ class AccountsController < ApplicationController
   end
 
   def new
-    @show_lunchflow_link = family.can_connect_lunchflow?
+    # Get all registered providers with any credentials configured
+    @provider_configs = Provider::Factory.registered_adapters.flat_map do |adapter_class|
+      adapter_class.connection_configs(family: family)
+    end
   end
 
   def sync_all
@@ -158,45 +161,21 @@ class AccountsController < ApplicationController
       return
     end
 
-    @available_providers = []
+    account_type_name = @account.accountable_type
 
-    # Check SimpleFIN
-    if family.can_connect_simplefin?
-      @available_providers << {
-        name: "SimpleFIN",
-        key: "simplefin",
-        description: "Connect to your bank via SimpleFIN",
-        path: select_existing_account_simplefin_items_path(account_id: @account.id)
-      }
-    end
+    # Get all available provider configs dynamically for this account type
+    provider_configs = Provider::Factory.connection_configs_for_account_type(
+      account_type: account_type_name,
+      family: family
+    )
 
-    # Check Plaid US
-    if family.can_connect_plaid_us?
-      @available_providers << {
-        name: "Plaid",
-        key: "plaid_us",
-        description: "Connect to your US bank via Plaid",
-        path: select_existing_account_plaid_items_path(account_id: @account.id, region: "us")
-      }
-    end
-
-    # Check Plaid EU
-    if family.can_connect_plaid_eu?
-      @available_providers << {
-        name: "Plaid (EU)",
-        key: "plaid_eu",
-        description: "Connect to your EU bank via Plaid",
-        path: select_existing_account_plaid_items_path(account_id: @account.id, region: "eu")
-      }
-    end
-
-    # Check Lunch Flow
-    if family.can_connect_lunchflow?
-      @available_providers << {
-        name: "Lunch Flow",
-        key: "lunchflow",
-        description: "Connect to your bank via Lunch Flow",
-        path: select_existing_account_lunchflow_items_path(account_id: @account.id)
+    # Build available providers list with paths resolved for this specific account
+    @available_providers = provider_configs.map do |config|
+      {
+        name: config[:name],
+        key: config[:key],
+        description: config[:description],
+        path: config[:existing_account_path].call(@account.id)
       }
     end
 

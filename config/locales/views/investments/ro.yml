@@ -1,0 +1,18 @@
+---
+ro:
+  investments:
+    edit:
+      edit: Editează %{account}
+    form:
+      none: Niciunul
+      subtype_prompt: Selectează tipul de investiție
+    new:
+      title: Introdu soldul contului
+    show:
+      chart_title: Valoare totală
+    value_tooltip:
+      cash: Numerar
+      holdings: Dețineri
+      total: Soldul portofoliului
+      total_value_tooltip: Soldul total al portofoliului este suma numerarului de brokeraj
+        (disponibil pentru tranzacționare) și a valorii de piață curente a deținerilor tale.

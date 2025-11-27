@@ -1,0 +1,32 @@
+---
+ro:
+  properties:
+    edit:
+      edit: Editează %{account}
+    form:
+      address_line1: Adresă stradală
+      address_line1_placeholder: Strada Principală 123
+      area: Suprafață locuibilă
+      area_placeholder: '2000'
+      area_unit: Unitate de măsură
+      country: Țară
+      country_placeholder: RO
+      locality: Oraș
+      locality_placeholder: București
+      none: Niciunul
+      postal_code: Cod Poștal
+      postal_code_placeholder: '94105'
+      region: Județ/Provincie
+      region_placeholder: B
+      subtype_prompt: Selectează tipul proprietății
+      year_built: Anul construcției
+      year_built_placeholder: '2000'
+    new:
+      title: Introdu detalii proprietate
+    overview:
+      living_area: Suprafață locuibilă
+      market_value: Valoare de piață
+      purchase_price: Preț de achiziție
+      trend: Tendință
+      unknown: Necunoscut
+      year_built: Anul construcției
