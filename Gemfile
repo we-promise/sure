@@ -123,4 +123,8 @@ group :test do
   gem "webmock"
   gem "climate_control"
   gem "simplecov", require: false
+  gem "rspec-rails"
+  gem "rswag-api"
+  gem "rswag-specs"
+  gem "rswag-ui"
 end
