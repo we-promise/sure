@@ -235,33 +235,43 @@ class EnableBankingItemsController < ApplicationController
     created_accounts = []
     already_linked_accounts = []
 
-    selected_uids.each do |uid|
-      enable_banking_account = enable_banking_item.enable_banking_accounts.find_by(uid: uid)
-      next unless enable_banking_account
+    # Wrap in transaction so partial failures don't leave orphaned accounts without provider links
+    begin
+      ActiveRecord::Base.transaction do
+        selected_uids.each do |uid|
+          enable_banking_account = enable_banking_item.enable_banking_accounts.find_by(uid: uid)
+          next unless enable_banking_account
 
-      # Check if already linked
-      if enable_banking_account.account_provider.present?
-        already_linked_accounts << enable_banking_account.name
-        next
+          # Check if already linked
+          if enable_banking_account.account_provider.present?
+            already_linked_accounts << enable_banking_account.name
+            next
+          end
+
+          # Create the internal Account (uses save! internally, will raise on failure)
+          account = Account.create_and_sync(
+            family: Current.family,
+            name: enable_banking_account.name,
+            balance: enable_banking_account.current_balance || 0,
+            currency: enable_banking_account.currency || "EUR",
+            accountable_type: accountable_type,
+            accountable_attributes: {}
+          )
+
+          # Link account to enable_banking_account via account_providers
+          # Uses create! so any failure will rollback the entire transaction
+          AccountProvider.create!(
+            account: account,
+            provider: enable_banking_account
+          )
+
+          created_accounts << account
+        end
       end
-
-      # Create the internal Account
-      account = Account.create_and_sync(
-        family: Current.family,
-        name: enable_banking_account.name,
-        balance: enable_banking_account.current_balance || 0,
-        currency: enable_banking_account.currency || "EUR",
-        accountable_type: accountable_type,
-        accountable_attributes: {}
-      )
-
-      # Link account to enable_banking_account via account_providers
-      AccountProvider.create!(
-        account: account,
-        provider: enable_banking_account
-      )
-
-      created_accounts << account
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      Rails.logger.error "Enable Banking link_accounts failed: #{e.class} - #{e.message}"
+      redirect_to accounts_path, alert: t(".link_failed", default: "Failed to link accounts: %{error}", error: e.message)
+      return
     end
 
     # Trigger sync if accounts were created

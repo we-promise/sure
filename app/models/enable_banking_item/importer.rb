@@ -1,4 +1,8 @@
 class EnableBankingItem::Importer
+  # Maximum number of pagination requests to prevent infinite loops
+  # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
+  MAX_PAGINATION_PAGES = 100
+
   attr_reader :enable_banking_item, :enable_banking_provider
 
   def initialize(enable_banking_item, enable_banking_provider:)
@@ -57,8 +61,8 @@ class EnableBankingItem::Importer
           # The account data will be fetched via balances/transactions endpoints
           if account_data.is_a?(Hash)
             import_account(account_data)
+            accounts_updated += 1
           end
-          accounts_updated += 1
         rescue => e
           accounts_failed += 1
           Rails.logger.error "EnableBankingItem::Importer - Failed to update account #{uid}: #{e.message}"
@@ -155,9 +159,23 @@ class EnableBankingItem::Importer
 
       all_transactions = []
       continuation_key = nil
+      previous_continuation_key = nil
+      page_count = 0
 
-      # Paginate through all transactions
+      # Paginate through all transactions with safeguards against infinite loops
       loop do
+        page_count += 1
+
+        # Safeguard: prevent infinite loops from excessive pagination
+        if page_count > MAX_PAGINATION_PAGES
+          Rails.logger.error(
+            "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid}. " \
+            "Stopped after #{MAX_PAGINATION_PAGES} pages (#{all_transactions.count} transactions). " \
+            "Last continuation_key: #{continuation_key.inspect}"
+          )
+          break
+        end
+
         transactions_data = enable_banking_provider.get_account_transactions(
           account_id: enable_banking_account.uid,
           date_from: start_date,
@@ -167,7 +185,19 @@ class EnableBankingItem::Importer
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)
 
+        previous_continuation_key = continuation_key
         continuation_key = transactions_data[:continuation_key]
+
+        # Safeguard: detect repeated continuation_key (provider returning same key)
+        if continuation_key.present? && continuation_key == previous_continuation_key
+          Rails.logger.error(
+            "EnableBankingItem::Importer - Repeated continuation_key detected for account #{enable_banking_account.uid}. " \
+            "Breaking loop after #{page_count} pages (#{all_transactions.count} transactions). " \
+            "Repeated key: #{continuation_key.inspect}, last response had #{transactions.count} transactions"
+          )
+          break
+        end
+
         break if continuation_key.blank?
       end
 
