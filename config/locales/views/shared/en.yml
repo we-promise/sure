@@ -30,3 +30,5 @@ en:
       ai_prompts: AI Prompts
       llm_usage: LLM Usage
       bank_sync: Bank Sync
+      budgets: Budgets
+      budget_categories: Budget Categories

@@ -30,3 +30,5 @@ it:
       ai_prompts: Prompt AI
       llm_usage: Uso LLM
       bank_sync: Sincronizzazione Bancaria
+      budgets: Budget
+      budget_categories: Categorie del Budget
