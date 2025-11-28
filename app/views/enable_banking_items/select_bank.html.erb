@@ -19,7 +19,7 @@
             <% @aspsps.each do |aspsp| %>
               <%= button_to authorize_enable_banking_item_path(@enable_banking_item),
                             method: :post,
-                            params: { aspsp_name: aspsp[:name] },
+                            params: { aspsp_name: aspsp[:name], new_connection: @new_connection },
                             class: "w-full flex items-center gap-4 p-3 rounded-lg border border-primary bg-container hover:bg-subtle transition-colors text-left",
                             data: { turbo: false } do %>
                 <% if aspsp[:logo].present? %>

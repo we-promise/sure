@@ -97,6 +97,9 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
+    # Track if this is for creating a new connection (vs re-authorizing existing)
+    @new_connection = params[:new_connection] == "true"
+
     begin
       provider = @enable_banking_item.enable_banking_provider
       response = provider.get_aspsps(country: @enable_banking_item.country_code)
@@ -121,10 +124,22 @@ class EnableBankingItemsController < ApplicationController
     end
 
     begin
-      redirect_url = @enable_banking_item.start_authorization(
+      # If this is a new connection request, create the item now (when user has selected a bank)
+      target_item = if params[:new_connection] == "true"
+        Current.family.enable_banking_items.create!(
+          name: "Enable Banking Connection",
+          country_code: @enable_banking_item.country_code,
+          application_id: @enable_banking_item.application_id,
+          client_certificate: @enable_banking_item.client_certificate
+        )
+      else
+        @enable_banking_item
+      end
+
+      redirect_url = target_item.start_authorization(
         aspsp_name: aspsp_name,
         redirect_url: enable_banking_callback_url,
-        state: @enable_banking_item.id
+        state: target_item.id
       )
 
       safe_redirect_to_enable_banking(
@@ -183,16 +198,11 @@ class EnableBankingItemsController < ApplicationController
     end
   end
 
-  # Create a new connection using credentials from an existing item
+  # Show bank selection for a new connection using credentials from an existing item
+  # Does NOT create a new item - that happens in authorize when user selects a bank
   def new_connection
-    new_item = Current.family.enable_banking_items.create!(
-      name: "Enable Banking Connection",
-      country_code: @enable_banking_item.country_code,
-      application_id: @enable_banking_item.application_id,
-      client_certificate: @enable_banking_item.client_certificate
-    )
-
-    redirect_to select_bank_enable_banking_item_path(new_item), data: { turbo_frame: "modal" }
+    # Redirect to select_bank with a flag indicating this is for a new connection
+    redirect_to select_bank_enable_banking_item_path(@enable_banking_item, new_connection: true), data: { turbo_frame: "modal" }
   end
 
   # Re-authorize an expired session
