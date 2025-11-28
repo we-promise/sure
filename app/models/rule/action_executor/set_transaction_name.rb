@@ -7,15 +7,15 @@ class Rule::ActionExecutor::SetTransactionName < Rule::ActionExecutor
     nil
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false)
-    return if value.blank?
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+    return 0 if value.blank?
 
     scope = transaction_scope
     unless ignore_attribute_locks
       scope = scope.enrichable(:name)
     end
 
-    scope.each do |txn|
+    count_modified_resources(scope) do |txn|
       txn.entry.enrich_attribute(
         :name,
         value,

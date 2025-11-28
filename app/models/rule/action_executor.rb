@@ -21,9 +21,21 @@ class Rule::ActionExecutor
     nil
   end
 
-  def execute(scope, value: nil, ignore_attribute_locks: false)
+  def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end
+
+  protected
+    # Helper method to track modified count during enrichment
+    def count_modified_resources(scope)
+      modified_count = 0
+      scope.each do |resource|
+        yield resource
+        # Check if the resource was actually modified (has changes)
+        modified_count += 1 if resource.previous_changes.any?
+      end
+      modified_count
+    end
 
   def as_json
     {
