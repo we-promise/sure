@@ -68,6 +68,12 @@ class EnableBankingItemsController < ApplicationController
   end
 
   def destroy
+    # Ensure we detach provider links before scheduling deletion
+    begin
+      @enable_banking_item.unlink_all!(dry_run: false)
+    rescue => e
+      Rails.logger.warn("Enable Banking unlink during destroy failed: #{e.class} - #{e.message}")
+    end
     @enable_banking_item.revoke_session
     @enable_banking_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Enable Banking connection for deletion.")

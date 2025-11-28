@@ -1,5 +1,5 @@
 class EnableBankingItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -164,6 +164,18 @@ class EnableBankingItem < ApplicationRecord
 
   def has_completed_initial_setup?
     accounts.any?
+  end
+
+  def linked_accounts_count
+    enable_banking_accounts.joins(:account_provider).count
+  end
+
+  def unlinked_accounts_count
+    enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+  end
+
+  def total_accounts_count
+    enable_banking_accounts.count
   end
 
   def sync_status_summary
