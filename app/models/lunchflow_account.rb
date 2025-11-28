@@ -28,7 +28,7 @@ class LunchflowAccount < ApplicationRecord
       snapshot[:name]
     end
 
-    update!(
+    assign_attributes(
       current_balance: nil, # Balance not provided by accounts endpoint
       currency: parse_currency(snapshot[:currency]) || "USD",
       name: display_name,
@@ -41,6 +41,8 @@ class LunchflowAccount < ApplicationRecord
       }.compact,
       raw_payload: account_snapshot
     )
+
+    save!
   end
 
   def upsert_lunchflow_transactions_snapshot!(transactions_snapshot)
