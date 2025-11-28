@@ -85,16 +85,10 @@
           <%= render "accounts/index/account_groups", accounts: enable_banking_item.accounts %>
         <% end %>
 
-        <%# Count unlinked Enable Banking accounts %>
-        <% unlinked_count = enable_banking_item.enable_banking_accounts
-             .left_joins(:account_provider)
-             .where(account_providers: { id: nil })
-             .count %>
-
-        <% if unlinked_count.to_i > 0 %>
+        <% if enable_banking_item.unlinked_accounts_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm">Setup needed</p>
-            <p class="text-secondary text-sm"><%= pluralize(unlinked_count, "account") %> imported from Enable Banking need to be set up</p>
+            <p class="text-secondary text-sm"><%= pluralize(enable_banking_item.unlinked_accounts_count, "account") %> imported from Enable Banking need to be set up</p>
             <%= render DS::Link.new(
               text: "Set up accounts",
               icon: "settings",
