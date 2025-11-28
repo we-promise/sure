@@ -127,7 +127,11 @@ class EnableBankingItemsController < ApplicationController
         state: @enable_banking_item.id
       )
 
-      redirect_to redirect_url, allow_other_host: true
+      safe_redirect_to_enable_banking(
+        redirect_url,
+        fallback_path: settings_providers_path,
+        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again or contact support.")
+      )
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "Enable Banking authorization error: #{e.message}"
       redirect_to settings_providers_path, alert: t(".authorization_failed", default: "Failed to start authorization: %{message}", message: e.message)
@@ -200,7 +204,11 @@ class EnableBankingItemsController < ApplicationController
         state: @enable_banking_item.id
       )
 
-      redirect_to redirect_url, allow_other_host: true
+      safe_redirect_to_enable_banking(
+        redirect_url,
+        fallback_path: settings_providers_path,
+        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again or contact support.")
+      )
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "Enable Banking reauthorization error: #{e.message}"
       redirect_to settings_providers_path, alert: t(".reauthorization_failed", default: "Failed to re-authorize: %{message}", message: e.message)
@@ -393,5 +401,44 @@ class EnableBankingItemsController < ApplicationController
       return callback_enable_banking_items_url if Rails.env.production?
 
       ENV.fetch("DEV_WEBHOOKS_URL", root_url.chomp("/")) + "/enable_banking_items/callback"
+    end
+
+    # Validate redirect URLs from Enable Banking API to prevent open redirect attacks
+    # Only allows HTTPS URLs from trusted Enable Banking domains
+    TRUSTED_ENABLE_BANKING_HOSTS = %w[
+      enablebanking.com
+      api.enablebanking.com
+      auth.enablebanking.com
+    ].freeze
+
+    def valid_enable_banking_redirect_url?(url)
+      return false if url.blank?
+
+      begin
+        uri = URI.parse(url)
+
+        # Must be HTTPS
+        return false unless uri.scheme == "https"
+
+        # Host must be present
+        return false if uri.host.blank?
+
+        # Check if host matches or is a subdomain of trusted domains
+        TRUSTED_ENABLE_BANKING_HOSTS.any? do |trusted_host|
+          uri.host == trusted_host || uri.host.end_with?(".#{trusted_host}")
+        end
+      rescue URI::InvalidURIError => e
+        Rails.logger.warn("Enable Banking invalid redirect URL: #{url.inspect} - #{e.message}")
+        false
+      end
+    end
+
+    def safe_redirect_to_enable_banking(redirect_url, fallback_path:, fallback_alert:)
+      if valid_enable_banking_redirect_url?(redirect_url)
+        redirect_to redirect_url, allow_other_host: true
+      else
+        Rails.logger.warn("Enable Banking redirect blocked - invalid URL: #{redirect_url.inspect}")
+        redirect_to fallback_path, alert: fallback_alert
+      end
     end
 end
