@@ -37,7 +37,7 @@ class ReportsController < ApplicationController
     # Transactions breakdown
     @transactions = build_transactions_breakdown
 
-    @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
+    @breadcrumbs = [ [ "Home", root_path ], [ t("shared.breadcrumbs.reports", default: "Reports"), nil ] ]
   end
 
   def export_transactions

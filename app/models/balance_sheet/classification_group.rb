@@ -13,7 +13,9 @@ class BalanceSheet::ClassificationGroup
   end
 
   def name
-    classification.titleize.pluralize
+    I18n.t("pages.dashboard.balance_sheet.#{classification}",
+      default: classification.titleize.pluralize
+    )
   end
 
   def icon
@@ -31,16 +33,16 @@ class BalanceSheet::ClassificationGroup
   # For now, we group by accountable type. This can be extended in the future to support arbitrary user groupings.
   def account_groups
     groups = accounts.group_by(&:accountable_type)
-                     .transform_keys { |at| Accountable.from_type(at) }
-                     .map do |accountable, account_rows|
-                       BalanceSheet::AccountGroup.new(
-                         name: I18n.t("accounts.types.#{accountable.name.underscore}", default: accountable.display_name),
-                         color: accountable.color,
-                         accountable_type: accountable,
-                         accounts: account_rows,
-                         classification_group: self
-                       )
-                     end
+                    .transform_keys { |at| Accountable.from_type(at) }
+                    .map do |accountable, account_rows|
+                      BalanceSheet::AccountGroup.new(
+                        name: I18n.t("accounts.types.#{accountable.name.underscore}", default: accountable.display_name),
+                        color: accountable.color,
+                        accountable_type: accountable,
+                        accounts: account_rows,
+                        classification_group: self
+                      )
+                    end
 
     # Sort the groups using the manual order defined by Accountable::TYPES so that
     # the UI displays account groups in a predictable, domain-specific sequence.

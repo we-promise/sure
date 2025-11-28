@@ -41,7 +41,7 @@ it:
       monthly_breakdown: Dettaglio mensile
       month: Mese
       income: Entrate
-      expenses: Spese
+      expenses: Uscite
       net: Netto
       savings_rate: Tasso di risparmio
       current: attuale
@@ -96,7 +96,7 @@ it:
         category: Categoria
         amount: Importo
         type: Tipo
-        expense: Spese
+        expense: Uscite
         income: Entrate
         uncategorized: Senza categoria
         transactions: transazioni

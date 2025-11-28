@@ -50,10 +50,13 @@ en:
       edit_tags: Edit tags
       import: Import
     index:
-      transaction: transaction
-      transactions: transactions
+      transaction:
+        one: Transaction
+        other: Transactions
     searches:
+      placeholder: Search transactions...
       filters:
+        label: Filter
         amount_filter:
           equal_to: Equal to
           greater_than: Greater than
@@ -84,3 +87,20 @@ en:
         equal_to: equal to
         greater_than: greater than
         less_than: less than
+    dashboard:
+      category: Category
+      amount: Amount
+      total_transaction: Total transactions
+      expense: Expense
+      income: Income
+    menu:
+      new_rule: New rule
+      edit_rules: Edit rules
+      edit_categories: Edit categories
+      edit_tags: Edit tags
+      edit_merchants: Edit merchants
+      edit_imports: Edit imports
+      import: Import
+      new_transaction: New transaction
+    selection_bar:
+      selected: selected

@@ -12,3 +12,21 @@ it:
       syncing: Sincronizzazione dati conti...
     trend_change:
       no_change: "nessun cambiamento"
+    breadcrumbs:
+      merchants: Membri
+      import_export: Importazioni ed Esportazioni
+      reports: Report
+      guides: Guide
+      profile: Informazioni del profilo
+      bank_sync_providers: Providers di Collegamenti Bancari
+      security: Sicurezza
+      preferences: Preferenze
+      transactions: Movimenti
+      rules: Regole
+      accounts: Conti
+      categories: Categorie
+      tags: Tag
+      recurring_transactions: Transazioni Ricorrenti
+      ai_prompts: Prompt AI
+      llm_usage: Uso LLM
+      bank_sync: Sincronizzazione Bancaria

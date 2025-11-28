@@ -10,8 +10,8 @@ it:
       date: Data
       description: Descrizione
       description_placeholder: Descrivi il movimento
-      expense: Spesa
-      income: Entrata
+      expense: Uscite
+      income: Entrate
       none: (nessuno)
       note_label: Note
       note_placeholder: Inserisci una nota
@@ -49,10 +49,13 @@ it:
       edit_tags: Modifica tag
       import: Importa
     index:
-      transaction: movimento
-      transactions: movimenti
+      transaction:
+        one: Movimento
+        other: Movimenti
     searches:
+      placeholder: Cerca movimenti...
       filters:
+        label: Filtra
         amount_filter:
           equal_to: Uguale a
           greater_than: Maggiore di
@@ -83,3 +86,22 @@ it:
         equal_to: uguale a
         greater_than: maggiore di
         less_than: minore di
+    dashboard:
+      category: Categoria
+      amount: Importo
+      total_transaction: Totale movimenti
+      expense: Uscite
+      income: Entrate
+    menu:
+      new_rule: Nuova regola
+      edit_rules: Modifica regole
+      edit_categories: Modifica categorie
+      edit_tags: Modifica tag
+      edit_merchants: Modifica membri
+      edit_imports: Modifica importazioni
+      import: Importa
+      new_transaction: Aggiungi movimento
+    selection_bar:
+      selected:
+        one: selezionato
+        other: selezionati

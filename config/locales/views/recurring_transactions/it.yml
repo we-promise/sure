@@ -1,7 +1,7 @@
 ---
 it:
   recurring_transactions:
-    title: Transazioni ricorrenti
+    title: Movimenti ricorrenti
     upcoming: Prossime transazioni ricorrenti
     projected: Previsto
     recurring: Ricorrente

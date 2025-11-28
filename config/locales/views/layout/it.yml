@@ -12,7 +12,7 @@ it:
         terms_of_service: Termini di servizio
   navigation:
     home: Home
-    transactions: Transazioni
+    transactions: Movimenti
     reports: Report
     budgets: Budget
     assistant: Assistente

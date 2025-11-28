@@ -7,7 +7,7 @@ class Settings::ProfilesController < ApplicationController
     @pending_invitations = Current.family.invitations.pending
     @breadcrumbs = [
       [ "Home", root_path ],
-      [ "Profile Info", nil ]
+      [ t("shared.breadcrumbs.profile", default: "Profile Info"), nil ]
     ]
   end
 
