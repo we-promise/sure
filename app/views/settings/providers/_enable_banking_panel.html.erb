@@ -78,8 +78,8 @@
                         ["Sweden (SE)", "SE"],
                         ["United Kingdom (GB)", "GB"]
                       ], enable_banking_item.country_code),
-                      { include_blank: "Select country..." },
-                      { label: "Country", class: "form-select", disabled: has_authenticated_connections && !is_new_record } %>
+                      { label: true, include_blank: "Select country..." },
+                      { label: "Country", class: "form-field__input", disabled: has_authenticated_connections && !is_new_record } %>
 
       <%= form.text_field :application_id,
                           label: "Application ID",
@@ -92,7 +92,7 @@
                         label: "Client Certificate (with Private Key)",
                         placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
                         rows: 6,
-                        class: "font-mono text-xs",
+                        class: "form-field__input font-mono text-xs",
                         disabled: has_authenticated_connections && !is_new_record %>
 
     <% unless has_authenticated_connections && !is_new_record %>

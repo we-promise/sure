@@ -48,7 +48,7 @@
                     value: @enable_banking_item.sync_start_date || 3.months.ago.to_date,
                     min: 1.year.ago.to_date,
                     max: Date.current,
-                    class: "w-full max-w-xs",
+                    class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
                     help_text: "Select how far back you want to sync transaction history. Maximum 1 year of history available." %>
             </div>
           </div>
