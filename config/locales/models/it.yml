@@ -1,0 +1,48 @@
+---
+it:
+  periods:
+    last_day:
+      label_short: "1G"
+      label: "Ultimo giorno"
+      comparison_label: "vs. ieri"
+    current_week:
+      label_short: "WTD"
+      label: "Settimana corrente"
+      comparison_label: "vs. inizio settimana"
+    last_7_days:
+      label_short: "7G"
+      label: "Ultimi 7 giorni"
+      comparison_label: "vs. settimana scorsa"
+    current_month:
+      label_short: "MTD"
+      label: "Mese corrente"
+      comparison_label: "vs. inizio mese"
+    last_30_days:
+      label_short: "30G"
+      label: "Ultimi 30 giorni"
+      comparison_label: "vs. mese scorso"
+    last_90_days:
+      label_short: "90G"
+      label: "Ultimi 90 giorni"
+      comparison_label: "vs. trimestre scorso"
+    current_year:
+      label_short: "YTD"
+      label: "Anno corrente"
+      comparison_label: "vs. inizio anno"
+    last_365_days:
+      label_short: "365G"
+      label: "Ultimi 365 giorni"
+      comparison_label: "vs. 1 anno fa"
+    last_5_years:
+      label_short: "5A"
+      label: "Ultimi 5 anni"
+      comparison_label: "vs. 5 anni fa"
+    last_10_years:
+      label_short: "10A"
+      label: "Ultimi 10 anni"
+      comparison_label: "vs. 10 anni fa"
+    all_time:
+      label_short: "Tutto"
+      label: "Tutto il periodo"
+      comparison_label: "vs. inizio"
+

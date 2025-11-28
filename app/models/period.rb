@@ -11,83 +11,47 @@ class Period
 
   PERIODS = {
     "last_day" => {
-      date_range: -> { [ 1.day.ago.to_date, Date.current ] },
-      label_short: "1D",
-      label: "Last Day",
-      comparison_label: "vs. yesterday"
+      date_range: -> { [ 1.day.ago.to_date, Date.current ] }
     },
     "current_week" => {
-      date_range: -> { [ Date.current.beginning_of_week, Date.current ] },
-      label_short: "WTD",
-      label: "Current Week",
-      comparison_label: "vs. start of week"
+      date_range: -> { [ Date.current.beginning_of_week, Date.current ] }
     },
     "last_7_days" => {
-      date_range: -> { [ 7.days.ago.to_date, Date.current ] },
-      label_short: "7D",
-      label: "Last 7 Days",
-      comparison_label: "vs. last week"
+      date_range: -> { [ 7.days.ago.to_date, Date.current ] }
     },
     "current_month" => {
-      date_range: -> { [ Date.current.beginning_of_month, Date.current ] },
-      label_short: "MTD",
-      label: "Current Month",
-      comparison_label: "vs. start of month"
+      date_range: -> { [ Date.current.beginning_of_month, Date.current ] }
     },
     "last_30_days" => {
-      date_range: -> { [ 30.days.ago.to_date, Date.current ] },
-      label_short: "30D",
-      label: "Last 30 Days",
-      comparison_label: "vs. last month"
+      date_range: -> { [ 30.days.ago.to_date, Date.current ] }
     },
     "last_90_days" => {
-      date_range: -> { [ 90.days.ago.to_date, Date.current ] },
-      label_short: "90D",
-      label: "Last 90 Days",
-      comparison_label: "vs. last quarter"
+      date_range: -> { [ 90.days.ago.to_date, Date.current ] }
     },
     "current_year" => {
-      date_range: -> { [ Date.current.beginning_of_year, Date.current ] },
-      label_short: "YTD",
-      label: "Current Year",
-      comparison_label: "vs. start of year"
+      date_range: -> { [ Date.current.beginning_of_year, Date.current ] }
     },
     "last_365_days" => {
-      date_range: -> { [ 365.days.ago.to_date, Date.current ] },
-      label_short: "365D",
-      label: "Last 365 Days",
-      comparison_label: "vs. 1 year ago"
+      date_range: -> { [ 365.days.ago.to_date, Date.current ] }
     },
     "last_5_years" => {
-      date_range: -> { [ 5.years.ago.to_date, Date.current ] },
-      label_short: "5Y",
-      label: "Last 5 Years",
-      comparison_label: "vs. 5 years ago"
+      date_range: -> { [ 5.years.ago.to_date, Date.current ] }
     },
     "last_10_years" => {
-      date_range: -> { [ 10.years.ago.to_date, Date.current ] },
-      label_short: "10Y",
-      label: "Last 10 Years",
-      comparison_label: "vs. 10 years ago"
+      date_range: -> { [ 10.years.ago.to_date, Date.current ] }
     },
     "all_time" => {
       date_range: -> {
         oldest_date = Current.family&.oldest_entry_date
-        # If no family or no entries exist, use a reasonable historical fallback
-        # to ensure "All Time" represents a meaningful range, not just today
         start_date = if oldest_date && oldest_date < Date.current
           oldest_date
         else
           5.years.ago.to_date
         end
         [ start_date, Date.current ]
-      },
-      label_short: "All",
-      label: "All Time",
-      comparison_label: "vs. beginning"
+      }
     }
   }
-
   class << self
     def from_key(key)
       unless PERIODS.key?(key)
@@ -150,28 +114,23 @@ class Period
     end
   end
 
+  def i18n_scope
+    "periods.#{key}"
+  end
+
   def label
-    if key_metadata
-      key_metadata.fetch(:label)
-    else
-      "Custom Period"
-    end
+    I18n.t("#{i18n_scope}.label", default: "Custom Period")
   end
 
   def label_short
-    if key_metadata
-      key_metadata.fetch(:label_short)
-    else
-      "Custom"
-    end
+    I18n.t("#{i18n_scope}.label_short", default: "Custom")
   end
 
   def comparison_label
-    if key_metadata
-      key_metadata.fetch(:comparison_label)
-    else
-      "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}"
-    end
+    I18n.t(
+      "#{i18n_scope}.comparison_label",
+      default: "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}"
+    )
   end
 
   private

@@ -14,7 +14,7 @@ it:
       show:
         title: "Gestione chiavi API"
         no_api_key:
-          title: "Chiave API"
+          title: "Chiavi API"
           heading: "Accedi ai tuoi dati in modo programmatico"
           description: "Ottieni accesso programmatico ai dati di Sure tramite una chiave API sicura."
           what_you_can_do: "Cosa puoi fare con l’API:"

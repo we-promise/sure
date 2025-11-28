@@ -10,3 +10,9 @@ en:
       footer:
         privacy_policy: Privacy Policy
         terms_of_service: Terms of Service
+  navigation:
+    home: Home
+    transactions: Transactions
+    reports: Reports
+    budgets: Budgets
+    assistant: Assistant

@@ -90,7 +90,7 @@ it:
       accounts_label: Account
       advanced_section_title: Avanzate
       ai_prompts_label: Prompt AI
-      api_key_label: Chiave API
+      api_key_label: Chiavi API
       billing_label: Fatturazione
       categories_label: Categorie
       feedback_label: Feedback
@@ -109,7 +109,7 @@ it:
       tags_label: Tag
       transactions_section_title: Movimenti
       whats_new_label: Novità
-      api_keys_label: Chiave API
+      api_keys_label: Chiavi API
       bank_sync_label: Sincronizzazione bancaria
     settings_nav_link_large:
       next: Avanti
