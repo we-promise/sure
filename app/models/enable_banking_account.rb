@@ -16,6 +16,19 @@ class EnableBankingAccount < ApplicationRecord
     account
   end
 
+  # Returns the API account ID (UUID) for Enable Banking API calls
+  # The Enable Banking API requires a valid UUID for balance/transaction endpoints
+  # Falls back to raw_payload["uid"] for existing accounts that have the wrong account_id stored
+  def api_account_id
+    # Check if account_id looks like a valid UUID (not an identification_hash)
+    if account_id.present? && account_id.match?(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i)
+      account_id
+    else
+      # Fall back to raw_payload for existing accounts with incorrect account_id
+      raw_payload&.dig("uid") || account_id || uid
+    end
+  end
+
   # Map PSD2 cash_account_type codes to user-friendly names
   # Based on ISO 20022 External Cash Account Type codes
   def account_type_display
@@ -63,8 +76,9 @@ class EnableBankingAccount < ApplicationRecord
       current_balance: nil, # Balance fetched separately via /accounts/{uid}/balances
       currency: parse_currency(snapshot[:currency]) || "EUR",
       name: build_account_name(snapshot),
-      account_id: snapshot[:identification_hash] || snapshot[:uid],
-      # Use identification_hash as the stable identifier across sessions
+      # account_id stores the API UUID for fetching balances/transactions
+      account_id: snapshot[:uid],
+      # uid is the stable identifier (identification_hash) for matching accounts across sessions
       uid: snapshot[:identification_hash] || snapshot[:uid],
       iban: account_id_data[:iban] || snapshot[:iban],
       account_type: snapshot[:cash_account_type] || snapshot[:account_type],

@@ -128,7 +128,7 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_update_balance(enable_banking_account)
-      balance_data = enable_banking_provider.get_account_balances(account_id: enable_banking_account.uid)
+      balance_data = enable_banking_provider.get_account_balances(account_id: enable_banking_account.api_account_id)
 
       # Enable Banking returns an array of balances
       balances = balance_data[:balances] || []
@@ -177,7 +177,7 @@ class EnableBankingItem::Importer
         end
 
         transactions_data = enable_banking_provider.get_account_transactions(
-          account_id: enable_banking_account.uid,
+          account_id: enable_banking_account.api_account_id,
           date_from: start_date,
           continuation_key: continuation_key
         )
