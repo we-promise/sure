@@ -71,3 +71,11 @@ All code should maximize readability and simplicity.
 - ActiveRecord validations _may_ mirror the DB level ones, but not 100% necessary.  These are for convenience when error handling in forms.  Always prefer client-side form validation when possible.
 - Complex validations and business logic should remain in ActiveRecord
 
+### Hotwire Native Prototype Guidance
+
+- Consult [docs/hotwire_native_prototype_plan.md](mdc:docs/hotwire_native_prototype_plan.md) before starting native wrapper work.
+- Create a dedicated branch named `feature/hotwire-native-prototype` from `main` for prototype tasks and keep unrelated changes out.
+- Every change that targets the native wrapper must also be validated in the existing PWA to maintain parity.
+- Turbo Native user agents are auto-detected via `TurboNative::Controller`; rely on the `:turbo_native` layout variant rather than bespoke conditionals in views.
+- Keep navigation definitions in `ApplicationHelper#primary_navigation_items` so both the web layout and the native bridge stay synchronized.
+
