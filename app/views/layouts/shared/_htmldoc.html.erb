@@ -7,13 +7,13 @@
   data-theme="<%= theme %>"
   data-controller="theme"
   data-theme-user-preference-value="<%= Current.user&.theme || "system" %>"
-  class="h-full text-primary overflow-hidden font-sans <%= @os %>">
+  class="h-dvh text-primary overflow-hidden font-sans bg-surface <%= @os %>">
   <head>
     <%= render "layouts/shared/head" %>
     <%= yield :head %>
   </head>
 
-  <body class="h-full overflow-hidden antialiased">
+  <body class="h-dvh overflow-hidden antialiased bg-surface">
     <% if Rails.env.development? %>
       <button hidden data-controller="hotkey" data-hotkey="t t /" data-action="theme#toggle"></button>
     <% end %>
