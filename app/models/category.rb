@@ -17,6 +17,12 @@ class Category < ApplicationRecord
   before_save :inherit_color_from_parent
 
   scope :alphabetically, -> { order(:name) }
+  scope :alphabetically_by_hierarchy, -> {
+    left_joins(:parent)
+      .order(Arel.sql("COALESCE(parents_categories.name, categories.name)"))
+      .order(Arel.sql("parents_categories.name IS NOT NULL"))
+      .order(:name)
+  }
   scope :roots, -> { where(parent_id: nil) }
   scope :incomes, -> { where(classification: "income") }
   scope :expenses, -> { where(classification: "expense") }
@@ -48,18 +54,18 @@ class Category < ApplicationRecord
   class << self
     def icon_codes
       %w[
-        ambulance apple award baby banknote barcode bath battery bed-single beer bike
-        bluetooth bone book book-open briefcase building bus cake calculator camera
-        car cat circle-dollar-sign coffee coins compass cookie cooking-pot credit-card
-        dices dog drama drill droplet drum dumbbell film flame flower fuel gamepad-2
-        gift glasses globe graduation-cap hammer hand-helping headphones heart
-        heart-pulse home house ice-cream-cone key landmark laptop leaf lightbulb
-        luggage mail map-pin mic monitor moon music package palette paw-print pen
-        pencil phone piggy-bank pill pizza plane plug power printer puzzle receipt
-        ribbon scale scissors settings shield shield-plus shirt shopping-bag
-        shopping-cart smartphone sparkles sprout stethoscope store sun tag target
-        tent thermometer ticket train trees trophy truck tv umbrella users utensils
-        video wallet waves wifi wine wrench zap
+        ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3
+        bath battery bed-single beer bike bluetooth bone book-open briefcase building
+        bus cake calculator calendar-range camera car cat circle-dollar-sign coffee
+        coins compass cookie cooking-pot credit-card dices dog drama drill droplet
+        drum dumbbell film flame flower fuel gamepad-2 gift glasses globe graduation-cap
+        hammer hand-helping headphones heart heart-pulse home ice-cream-cone key
+        landmark laptop leaf lightbulb chart-line luggage mail map-pin mic monitor moon
+        music package palette paw-print pencil percent phone pie-chart piggy-bank pill
+        pizza plane plug power printer puzzle receipt receipt-text ribbon scale scissors
+        settings shield shirt shopping-bag shopping-cart smartphone sparkles sprout
+        stethoscope store sun tag target tent thermometer ticket train trees trophy truck
+        tv umbrella users utensils video wallet wallet-cards waves wifi wine wrench zap
       ]
     end
 
@@ -93,7 +99,7 @@ class Category < ApplicationRecord
           [ "Entertainment", "#a855f7", "drama", "expense" ],
           [ "Healthcare", "#4da568", "pill", "expense" ],
           [ "Personal Care", "#14b8a6", "scissors", "expense" ],
-          [ "Home Improvement", "#d97706", "house", "expense" ],
+          [ "Home Improvement", "#d97706", "hammer", "expense" ],
           [ "Mortgage / Rent", "#b45309", "home", "expense" ],
           [ "Utilities", "#eab308", "lightbulb", "expense" ],
           [ "Subscriptions", "#6366f1", "wifi", "expense" ],
@@ -128,6 +134,10 @@ class Category < ApplicationRecord
 
   def subcategory?
     parent.present?
+  end
+
+  def name_with_parent
+    subcategory? ? "#{parent.name} > #{name}" : name
   end
 
   private
