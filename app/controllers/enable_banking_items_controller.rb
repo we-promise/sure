@@ -148,8 +148,13 @@ class EnableBankingItemsController < ApplicationController
         fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again or contact support.")
       )
     rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.error "Enable Banking authorization error: #{e.message}"
-      redirect_to settings_providers_path, alert: t(".authorization_failed", default: "Failed to start authorization: %{message}", message: e.message)
+      if e.message.include?("REDIRECT_URI_NOT_ALLOWED")
+        Rails.logger.error "Enable Banking redirect URI not allowed: #{e.message}"
+        redirect_to settings_providers_path, alert: t(".redirect_uri_not_allowed", default: "Redirect not allowew. Configure `%{callback_url}` in your Enable Banking application settings.", callback_url: enable_banking_callback_url)
+      else
+        Rails.logger.error "Enable Banking authorization error: #{e.message}"
+        redirect_to settings_providers_path, alert: t(".authorization_failed", default: "Failed to start authorization: %{message}", message: e.message)
+      end
     rescue => e
       Rails.logger.error "Unexpected error in authorize: #{e.class}: #{e.message}"
       redirect_to settings_providers_path, alert: t(".unexpected_error", default: "An unexpected error occurred. Please try again.")
