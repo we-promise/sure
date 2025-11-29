@@ -8,7 +8,7 @@
     </div>
   </div>
 
-  <%= tag.p message, class: "text-primary text-sm font-medium" %>
+  <%= tag.p message, class: "text-primary text-sm font-medium line-clamp-3 min-w-0", title: message %>
 
   <div class="ml-auto">
     <%= icon "x", data: { action: "click->element-removal#remove" }, class: "cursor-pointer" %>
