@@ -53,6 +53,19 @@
   <% end %>
 
   <% items = local_assigns[:lunchflow_items] || @lunchflow_items || Current.family.lunchflow_items.where.not(api_key: [nil, ""]) %>
+
+  <% transaction_warnings = local_assigns[:transaction_warnings] %>
+  <% if transaction_warnings&.any? %>
+    <div class="p-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-sm space-y-1">
+      <p class="font-medium">Transaction Data Warnings:</p>
+      <ul class="list-disc list-inside text-xs space-y-0.5">
+        <% transaction_warnings.each do |warning| %>
+          <li><%= warning %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
   <div class="flex items-center gap-2">
     <% if items&.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>

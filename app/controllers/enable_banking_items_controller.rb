@@ -190,8 +190,16 @@ class EnableBankingItemsController < ApplicationController
     begin
       enable_banking_item.complete_authorization(code: code)
 
+      # Fetch transaction counts for validation
+      transaction_warnings = fetch_transaction_counts(enable_banking_item)
+
       # Trigger sync to process accounts
       enable_banking_item.sync_later
+
+      if transaction_warnings.any?
+        # Store warnings in flash for display on accounts page
+        flash[:warning] = "Connected successfully, but some issues were found: #{transaction_warnings.join('; ')}"
+      end
 
       redirect_to accounts_path, notice: t(".success", default: "Successfully connected to your bank. Your accounts are being synced.")
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -417,6 +425,53 @@ class EnableBankingItemsController < ApplicationController
         :application_id,
         :client_certificate
       )
+    end
+
+    # Fetch transaction counts for all accounts in the Enable Banking item
+    # Returns an array of warning messages if any accounts have issues
+    def fetch_transaction_counts(enable_banking_item)
+      warnings = []
+
+      begin
+        provider = enable_banking_item.enable_banking_provider
+        return warnings unless provider
+
+        accounts = enable_banking_item.enable_banking_accounts
+
+        if accounts.empty?
+          warnings << "No bank accounts found after authorization."
+        else
+          # Check transaction counts for each account (last 90 days)
+          accounts.each do |enable_banking_account|
+            account_name = enable_banking_account.name || "Unknown Account"
+            account_uid = enable_banking_account.uid
+
+            begin
+              transactions_data = provider.get_account_transactions(
+                account_id: account_uid,
+                date_from: 90.days.ago,
+                date_to: Date.today
+              )
+              transactions = transactions_data[:transactions] || []
+
+              if transactions.empty?
+                warnings << "Account '#{account_name}' has 0 transactions available in the last 90 days."
+              end
+            rescue Provider::EnableBanking::EnableBankingError => e
+              Rails.logger.warn("Enable Banking transaction count check failed for account #{account_uid}: #{e.message}")
+              warnings << "Unable to fetch transactions for '#{account_name}': #{e.message}"
+            end
+          end
+        end
+      rescue Provider::EnableBanking::EnableBankingError => e
+        Rails.logger.warn("Enable Banking accounts fetch failed: #{e.message}")
+        warnings << "Unable to fetch account information: #{e.message}"
+      rescue => e
+        Rails.logger.warn("Unexpected error checking Enable Banking transactions: #{e.message}")
+        warnings << "Unable to verify transaction availability."
+      end
+
+      warnings
     end
 
     # Generate the callback URL for Enable Banking OAuth

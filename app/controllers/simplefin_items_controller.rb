@@ -92,6 +92,9 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFIN Connection"
       )
 
+      # Fetch transaction counts for validation
+      @transaction_warnings = fetch_transaction_counts(@simplefin_item)
+
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
         @simplefin_items = Current.family.simplefin_items.ordered
@@ -99,7 +102,7 @@ class SimplefinItemsController < ApplicationController
           turbo_stream.replace(
             "simplefin-providers-panel",
             partial: "settings/providers/simplefin_panel",
-            locals: { simplefin_items: @simplefin_items }
+            locals: { simplefin_items: @simplefin_items, transaction_warnings: @transaction_warnings }
           ),
           *flash_notification_stream_items
         ]
@@ -437,6 +440,45 @@ class SimplefinItemsController < ApplicationController
       s = str.to_s.downcase.strip
       return s if s.empty?
       s.gsub(NAME_NORM_RE, " ")
+    end
+
+    # Fetch transaction counts for all accounts in the SimpleFIN item
+    # Returns an array of warning messages if any accounts have issues
+    def fetch_transaction_counts(simplefin_item)
+      warnings = []
+
+      begin
+        # Fetch accounts with a reasonable date range (last 90 days)
+        provider = simplefin_item.simplefin_provider
+        accounts_data = provider.get_accounts(
+          simplefin_item.access_url,
+          start_date: 90.days.ago,
+          end_date: Date.today
+        )
+
+        accounts = accounts_data[:accounts] || []
+
+        if accounts.empty?
+          warnings << "No bank accounts found. Please check your SimpleFIN Bridge setup."
+        else
+          accounts.each do |account_data|
+            account_name = account_data[:name] || "Unknown Account"
+            transactions = account_data[:transactions] || []
+
+            if transactions.empty?
+              warnings << "Account '#{account_name}' has 0 transactions available in the last 90 days."
+            end
+          end
+        end
+      rescue Provider::Simplefin::SimplefinError => e
+        Rails.logger.warn("SimpleFin transaction count check failed: #{e.message}")
+        warnings << "Unable to fetch transaction information: #{e.message}"
+      rescue => e
+        Rails.logger.warn("Unexpected error checking SimpleFin transactions: #{e.message}")
+        warnings << "Unable to verify transaction availability."
+      end
+
+      warnings
     end
 
     def compute_relink_candidates

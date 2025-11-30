@@ -411,6 +411,9 @@ class LunchflowItemsController < ApplicationController
       # Trigger initial sync to fetch accounts
       @lunchflow_item.sync_later
 
+      # Fetch transaction counts for validation
+      @transaction_warnings = fetch_transaction_counts(@lunchflow_item)
+
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
         @lunchflow_items = Current.family.lunchflow_items.ordered
@@ -418,7 +421,7 @@ class LunchflowItemsController < ApplicationController
           turbo_stream.replace(
             "lunchflow-providers-panel",
             partial: "settings/providers/lunchflow_panel",
-            locals: { lunchflow_items: @lunchflow_items }
+            locals: { lunchflow_items: @lunchflow_items, transaction_warnings: @transaction_warnings }
           ),
           *flash_notification_stream_items
         ]
@@ -735,6 +738,54 @@ class LunchflowItemsController < ApplicationController
 
     def lunchflow_params
       params.require(:lunchflow_item).permit(:name, :sync_start_date, :api_key, :base_url)
+    end
+
+    # Fetch transaction counts for all accounts in the Lunchflow item
+    # Returns an array of warning messages if any accounts have issues
+    def fetch_transaction_counts(lunchflow_item)
+      warnings = []
+
+      begin
+        provider = lunchflow_item.lunchflow_provider
+        return warnings unless provider
+
+        accounts_data = provider.get_accounts
+        accounts = accounts_data[:accounts] || []
+
+        if accounts.empty?
+          warnings << "No bank accounts found. Please check your Lunch Flow configuration."
+        else
+          # Check transaction counts for each account (last 90 days)
+          accounts.each do |account_data|
+            account_name = account_data[:name] || "Unknown Account"
+            account_id = account_data[:id]
+
+            begin
+              transactions_data = provider.get_account_transactions(
+                account_id,
+                start_date: 90.days.ago,
+                end_date: Date.today
+              )
+              transactions = transactions_data[:transactions] || []
+
+              if transactions.empty?
+                warnings << "Account '#{account_name}' has 0 transactions available in the last 90 days."
+              end
+            rescue Provider::Lunchflow::LunchflowError => e
+              Rails.logger.warn("Lunchflow transaction count check failed for account #{account_id}: #{e.message}")
+              warnings << "Unable to fetch transactions for '#{account_name}': #{e.message}"
+            end
+          end
+        end
+      rescue Provider::Lunchflow::LunchflowError => e
+        Rails.logger.warn("Lunchflow accounts fetch failed: #{e.message}")
+        warnings << "Unable to fetch account information: #{e.message}"
+      rescue => e
+        Rails.logger.warn("Unexpected error checking Lunchflow transactions: #{e.message}")
+        warnings << "Unable to verify transaction availability."
+      end
+
+      warnings
     end
 
     # Sanitize return_to parameter to prevent XSS attacks
