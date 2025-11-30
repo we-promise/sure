@@ -14,8 +14,8 @@
   </div>
 
   <% if defined?(@error_message) && @error_message.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
-      <%= @error_message %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= @error_message %>"><%= @error_message %></p>
     </div>
   <% end %>
 
