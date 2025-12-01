@@ -26,7 +26,8 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
       end
 
       # Get categories from first sample's context (should be shared)
-      categories = batch_samples.first.categories_context
+      # Symbolize keys since Provider::Openai::AutoCategorizer expects symbol keys
+      categories = batch_samples.first.categories_context.map(&:deep_symbolize_keys)
 
       start_time = Time.current
 
