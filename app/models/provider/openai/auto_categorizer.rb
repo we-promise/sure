@@ -1,9 +1,17 @@
 class Provider::Openai::AutoCategorizer
   include Provider::Openai::Concerns::UsageRecorder
 
-  attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family
+  # JSON response format modes for custom providers
+  # - "strict": Use strict JSON schema (requires full OpenAI API compatibility)
+  # - "json_object": Use json_object response format (broader compatibility)
+  # - "none": No response format constraint (maximum compatibility with local LLMs)
+  JSON_MODE_STRICT = "strict"
+  JSON_MODE_OBJECT = "json_object"
+  JSON_MODE_NONE = "none"
 
-  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil)
+  attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family, :json_mode
+
+  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil)
     @client = client
     @model = model
     @transactions = transactions
@@ -11,6 +19,18 @@ class Provider::Openai::AutoCategorizer
     @custom_provider = custom_provider
     @langfuse_trace = langfuse_trace
     @family = family
+    @json_mode = json_mode || default_json_mode
+  end
+
+  # Determine default JSON mode based on environment and provider type
+  def default_json_mode
+    # Check environment variable first (allows global override)
+    env_mode = ENV["LLM_JSON_MODE"]
+    return env_mode if env_mode.present? && [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE ].include?(env_mode)
+
+    # Custom providers default to no JSON constraints for maximum compatibility
+    # Native OpenAI always uses strict mode (handled in auto_categorize_openai_native)
+    custom_provider ? JSON_MODE_NONE : JSON_MODE_STRICT
   end
 
   def auto_categorize
@@ -22,6 +42,32 @@ class Provider::Openai::AutoCategorizer
   end
 
   def instructions
+    if custom_provider
+      simple_instructions
+    else
+      detailed_instructions
+    end
+  end
+
+  # Simplified instructions for smaller/local LLMs
+  def simple_instructions
+    <<~INSTRUCTIONS.strip_heredoc
+      Categorize transactions into the given categories. Return JSON only.
+
+      Rules:
+      1. Match transaction_id exactly from input
+      2. Use category_name from the provided list, or "null" if unsure
+      3. Match expense transactions to expense categories only
+      4. Match income transactions to income categories only
+      5. Return "null" if uncertain - avoid guessing
+
+      Example output format:
+      {"categorizations": [{"transaction_id": "txn_001", "category_name": "Groceries"}]}
+    INSTRUCTIONS
+  end
+
+  # Detailed instructions for larger models like GPT-4
+  def detailed_instructions
     <<~INSTRUCTIONS.strip_heredoc
       You are an assistant to a consumer personal finance app.  You will be provided a list
       of the user's transactions and a list of the user's categories.  Your job is to auto-categorize
@@ -90,16 +136,23 @@ class Provider::Openai::AutoCategorizer
       span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
-        user_categories: user_categories
+        user_categories: user_categories,
+        json_mode: json_mode
       })
 
-      response = client.chat(parameters: {
+      # Build parameters with configurable JSON response format
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         messages: [
           { role: "system", content: instructions },
-          { role: "user", content: developer_message }
-        ],
-        response_format: {
+          { role: "user", content: developer_message_for_generic }
+        ]
+      }
+
+      # Add response format based on json_mode setting
+      case json_mode
+      when JSON_MODE_STRICT
+        params[:response_format] = {
           type: "json_schema",
           json_schema: {
             name: "auto_categorize_personal_finance_transactions",
@@ -107,7 +160,12 @@ class Provider::Openai::AutoCategorizer
             schema: json_schema
           }
         }
-      })
+      when JSON_MODE_OBJECT
+        params[:response_format] = { type: "json_object" }
+        # JSON_MODE_NONE: no response_format constraint
+      end
+
+      response = client.chat(parameters: params)
 
       Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
 
@@ -143,9 +201,66 @@ class Provider::Openai::AutoCategorizer
     end
 
     def normalize_category_name(category_name)
-      return nil if category_name == "null"
+      return nil if category_name.nil? || category_name == "null" || category_name.downcase == "null"
 
+      # Try exact match first
+      exact_match = user_categories.find { |c| c[:name] == category_name }
+      return exact_match[:name] if exact_match
+
+      # Try case-insensitive match
+      case_insensitive_match = user_categories.find { |c| c[:name].downcase == category_name.downcase }
+      return case_insensitive_match[:name] if case_insensitive_match
+
+      # Try partial/fuzzy match (for common variations)
+      fuzzy_match = find_fuzzy_category_match(category_name)
+      return fuzzy_match if fuzzy_match
+
+      # Return original if no match found (will be treated as uncategorized)
       category_name
+    end
+
+    # Find a fuzzy match for category names with common variations
+    def find_fuzzy_category_match(category_name)
+      normalized_input = category_name.downcase.gsub(/[^a-z0-9]/, "")
+
+      user_categories.each do |cat|
+        normalized_cat = cat[:name].downcase.gsub(/[^a-z0-9]/, "")
+
+        # Check if one contains the other
+        return cat[:name] if normalized_input.include?(normalized_cat) || normalized_cat.include?(normalized_input)
+
+        # Check common abbreviations/variations
+        return cat[:name] if fuzzy_name_match?(category_name, cat[:name])
+      end
+
+      nil
+    end
+
+    # Handle common naming variations
+    def fuzzy_name_match?(input, category)
+      variations = {
+        "gas" => [ "gas & fuel", "gas and fuel", "fuel", "gasoline" ],
+        "restaurants" => [ "restaurant", "dining", "food" ],
+        "groceries" => [ "grocery", "supermarket", "food store" ],
+        "streaming" => [ "streaming services", "streaming service" ],
+        "rideshare" => [ "ride share", "ride-share", "uber", "lyft" ],
+        "coffee" => [ "coffee shops", "coffee shop", "cafe" ],
+        "fast food" => [ "fastfood", "quick service" ],
+        "gym" => [ "gym & fitness", "fitness", "gym and fitness" ],
+        "flights" => [ "flight", "airline", "airlines", "airfare" ],
+        "hotels" => [ "hotel", "lodging", "accommodation" ]
+      }
+
+      input_lower = input.downcase
+      category_lower = category.downcase
+
+      variations.each do |_key, synonyms|
+        if synonyms.include?(input_lower) && synonyms.include?(category_lower)
+          return true
+        end
+      end
+
+      false
     end
 
     def extract_categorizations_native(response)
@@ -162,9 +277,40 @@ class Provider::Openai::AutoCategorizer
 
     def extract_categorizations_generic(response)
       raw = response.dig("choices", 0, "message", "content")
-      JSON.parse(raw).dig("categorizations")
-    rescue JSON::ParserError => e
-      raise Provider::Openai::Error, "Invalid JSON in generic categorization: #{e.message}"
+      parsed = parse_json_flexibly(raw)
+
+      # Handle different response formats from various LLMs
+      categorizations = parsed.dig("categorizations") ||
+                        parsed.dig("results") ||
+                        (parsed.is_a?(Array) ? parsed : nil)
+
+      raise Provider::Openai::Error, "Could not find categorizations in response" if categorizations.nil?
+
+      # Normalize field names (some LLMs use different naming)
+      categorizations.map do |cat|
+        {
+          "transaction_id" => cat["transaction_id"] || cat["id"] || cat["txn_id"],
+          "category_name" => cat["category_name"] || cat["category"] || cat["name"]
+        }
+      end
+    end
+
+    # Flexible JSON parsing that handles common LLM output issues
+    def parse_json_flexibly(raw)
+      return {} if raw.blank?
+
+      # Try direct parse first
+      JSON.parse(raw)
+    rescue JSON::ParserError
+      # Try to extract JSON from markdown code blocks
+      if raw =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
+        JSON.parse($1)
+      # Try to find a JSON object anywhere in the response
+      elsif raw =~ /(\{[\s\S]*\})/m
+        JSON.parse($1)
+      else
+        raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+      end
     end
 
     def json_schema
@@ -212,5 +358,42 @@ class Provider::Openai::AutoCategorizer
         #{transactions.to_json}
         ```
       MESSAGE
+    end
+
+    # Enhanced developer message with few-shot examples for smaller/local LLMs
+    def developer_message_for_generic
+      category_names = user_categories.map { |c| c[:name] }.join(", ")
+
+      <<~MESSAGE.strip_heredoc
+        AVAILABLE CATEGORIES: #{category_names}
+
+        TRANSACTIONS TO CATEGORIZE:
+        #{format_transactions_simply}
+
+        EXAMPLES of correct categorization:
+        - "MCDONALD'S #12345" → "Fast Food"
+        - "STARBUCKS STORE" → "Coffee Shops"
+        - "SHELL OIL 12345" → "Gas & Fuel"
+        - "NETFLIX.COM" → "Streaming Services"
+        - "ACH WITHDRAWAL" → "null" (unknown/generic)
+        - "POS DEBIT 12345" → "null" (unknown/generic)
+        - "DIRECT DEPOSIT PAYROLL" with classification "income" → "Salary"
+
+        IMPORTANT:
+        - Use EXACT category names from the list above
+        - Return "null" (as a string) if you cannot confidently match a category
+        - Match expense transactions only to expense categories
+        - Match income transactions only to income categories
+
+        Respond with ONLY this JSON format (no other text):
+        {"categorizations": [{"transaction_id": "...", "category_name": "..."}]}
+      MESSAGE
+    end
+
+    # Format transactions in a simpler, more readable way for smaller LLMs
+    def format_transactions_simply
+      transactions.map do |t|
+        "- ID: #{t[:id]}, Amount: #{t[:amount]}, Type: #{t[:classification]}, Description: \"#{t[:description]}\""
+      end.join("\n")
     end
 end
