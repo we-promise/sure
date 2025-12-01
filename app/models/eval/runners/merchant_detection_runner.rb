@@ -27,7 +27,8 @@ class Eval::Runners::MerchantDetectionRunner < Eval::Runners::Base
       end
 
       # Get merchants from first sample's context (should be shared)
-      merchants = batch_samples.first.merchants_context
+      # Symbolize keys since Provider::Openai::AutoMerchantDetector expects symbol keys
+      merchants = batch_samples.first.merchants_context.map(&:deep_symbolize_keys)
 
       start_time = Time.current
 
