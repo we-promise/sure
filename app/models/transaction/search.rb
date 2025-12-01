@@ -94,12 +94,22 @@ class Transaction::Search
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: categories).pluck(:id)
 
-      query = query.left_joins(:category).where(
-        "categories.name IN (?) OR categories.parent_id IN (?) OR (
-        categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
-      )",
-        categories, parent_category_ids
-      )
+      # Build condition based on whether parent_category_ids is empty
+      if parent_category_ids.empty?
+        query = query.left_joins(:category).where(
+          "categories.name IN (?) OR (
+          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
+        )",
+          categories
+        )
+      else
+        query = query.left_joins(:category).where(
+          "categories.name IN (?) OR categories.parent_id IN (?) OR (
+          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
+        )",
+          categories, parent_category_ids
+        )
+      end
 
       if categories.exclude?("Uncategorized")
         query = query.where.not(category_id: nil)
