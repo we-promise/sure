@@ -69,14 +69,17 @@ class Eval::Langfuse::Client
 
   # Trace operations
   def create_trace(name:, input: nil, output: nil, metadata: {}, session_id: nil, user_id: nil)
-    response = post("/ingestion", {
+    # Generate trace ID upfront so we can return it
+    trace_id = SecureRandom.uuid
+
+    post("/ingestion", {
       batch: [
         {
           id: SecureRandom.uuid,
           type: "trace-create",
           timestamp: Time.current.iso8601,
           body: {
-            id: SecureRandom.uuid,
+            id: trace_id,
             name: name,
             input: input,
             output: output,
