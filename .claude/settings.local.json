@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(bin/rails generate:*)",
+      "Bash(bin/rails db:migrate:*)",
+      "Bash(bin/rails db:rollback:*)",
+      "Bash(bin/rails db:migrate:redo:*)",
+      "Bash(bin/rails db:drop:*)",
+      "Bash(bin/rails db:migrate:status:*)",
+      "Bash(bin/rails db:schema:load:*)",
+      "Bash(DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rails db:drop:*)",
+      "Bash(bin/rails db:create:*)",
+      "Bash(bin/rails test:*)",
+      "Bash(bin/rubocop:*)",
+      "Bash(bin/brakeman:*)",
+      "Bash(bin/rails evals:import_dataset:*)",
+      "Bash(bin/rails:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
