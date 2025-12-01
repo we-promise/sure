@@ -88,8 +88,8 @@ class Eval::Langfuse::Client
       ]
     })
 
-    # Return the trace ID from the response
-    response.dig("successes", 0, "id")
+    # Return the trace ID we generated
+    trace_id
   end
 
   # Score operations

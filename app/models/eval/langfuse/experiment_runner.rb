@@ -244,7 +244,7 @@ class Eval::Langfuse::ExperimentRunner
     end
 
     def create_trace_for_item(item, output, latency_ms)
-      client.create_trace(
+      trace_id = client.create_trace(
         name: "#{dataset.eval_type}_eval",
         input: item["input"],
         output: output,
@@ -255,6 +255,9 @@ class Eval::Langfuse::ExperimentRunner
           dataset_item_id: item["id"]
         }
       )
+
+      Rails.logger.debug("[Langfuse Experiment] Created trace #{trace_id} for item #{item['id']}")
+      trace_id
     end
 
     def score_result(trace_id, item_id, score_value, correct, actual, expected)
