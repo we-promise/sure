@@ -415,6 +415,186 @@ namespace :evals do
     end
   end
 
+  # =============================================================================
+  # Langfuse Integration
+  # =============================================================================
+
+  namespace :langfuse do
+    desc "Check Langfuse configuration"
+    task check: :environment do
+      begin
+        client = Eval::Langfuse::Client.new
+        puts "✓ Langfuse credentials configured"
+
+        # Try to list datasets to verify connection
+        response = client.list_datasets(limit: 1)
+        puts "✓ Successfully connected to Langfuse"
+        puts "  Region: #{ENV['LANGFUSE_REGION'] || 'us (default)'}"
+      rescue Eval::Langfuse::Client::ConfigurationError => e
+        puts "✗ #{e.message}"
+        exit 1
+      rescue Eval::Langfuse::Client::ApiError => e
+        puts "✗ Failed to connect to Langfuse: #{e.message}"
+        exit 1
+      end
+    end
+
+    desc "Upload dataset to Langfuse"
+    task :upload_dataset, [ :dataset_name ] => :environment do |_t, args|
+      dataset_name = args[:dataset_name] || ENV["DATASET"]
+
+      if dataset_name.blank?
+        puts "Usage: rake evals:langfuse:upload_dataset[dataset_name]"
+        puts "   or: DATASET=name rake evals:langfuse:upload_dataset"
+        exit 1
+      end
+
+      dataset = Eval::Dataset.find_by(name: dataset_name)
+
+      if dataset.nil?
+        puts "Error: Dataset '#{dataset_name}' not found"
+        puts "Available datasets:"
+        Eval::Dataset.pluck(:name).each { |n| puts "  - #{n}" }
+        exit 1
+      end
+
+      puts "=" * 80
+      puts "Uploading Dataset to Langfuse"
+      puts "=" * 80
+      puts "  Dataset: #{dataset.name}"
+      puts "  Type: #{dataset.eval_type}"
+      puts "  Samples: #{dataset.sample_count}"
+      puts
+
+      begin
+        exporter = Eval::Langfuse::DatasetExporter.new(dataset)
+        result = exporter.export
+
+        puts
+        puts "✓ Successfully uploaded dataset to Langfuse"
+        puts "  Langfuse dataset name: #{result[:dataset_name]}"
+        puts "  Items exported: #{result[:items_exported]}"
+        puts
+        puts "View in Langfuse: https://cloud.langfuse.com/project/datasets"
+      rescue Eval::Langfuse::Client::ConfigurationError => e
+        puts "✗ #{e.message}"
+        exit 1
+      rescue Eval::Langfuse::Client::ApiError => e
+        puts "✗ Langfuse API error: #{e.message}"
+        exit 1
+      end
+    end
+
+    desc "Run experiment in Langfuse"
+    task :run_experiment, [ :dataset_name, :model ] => :environment do |_t, args|
+      dataset_name = args[:dataset_name] || ENV["DATASET"]
+      model = args[:model] || ENV["MODEL"] || "gpt-4.1"
+      provider = ENV["PROVIDER"] || "openai"
+      run_name = ENV["RUN_NAME"]
+
+      if dataset_name.blank?
+        puts "Usage: rake evals:langfuse:run_experiment[dataset_name,model]"
+        puts "   or: DATASET=name MODEL=gpt-4.1 rake evals:langfuse:run_experiment"
+        puts
+        puts "Optional environment variables:"
+        puts "  PROVIDER=openai (default)"
+        puts "  RUN_NAME=custom_run_name"
+        exit 1
+      end
+
+      dataset = Eval::Dataset.find_by(name: dataset_name)
+
+      if dataset.nil?
+        puts "Error: Dataset '#{dataset_name}' not found"
+        puts "Available datasets:"
+        Eval::Dataset.pluck(:name).each { |n| puts "  - #{n}" }
+        exit 1
+      end
+
+      puts "=" * 80
+      puts "Running Langfuse Experiment"
+      puts "=" * 80
+      puts "  Dataset: #{dataset.name} (#{dataset.sample_count} samples)"
+      puts "  Type: #{dataset.eval_type}"
+      puts "  Model: #{model}"
+      puts "  Provider: #{provider}"
+      puts
+
+      begin
+        runner = Eval::Langfuse::ExperimentRunner.new(
+          dataset,
+          model: model,
+          provider: provider
+        )
+
+        start_time = Time.current
+        result = runner.run(run_name: run_name)
+        duration = (Time.current - start_time).round(1)
+
+        puts
+        puts "=" * 80
+        puts "Experiment Complete"
+        puts "=" * 80
+        puts "  Run Name: #{result[:run_name]}"
+        puts "  Duration: #{duration}s"
+        puts
+        puts "Results:"
+        puts "  Accuracy: #{result[:metrics][:accuracy]}%"
+        puts "  Correct: #{result[:metrics][:correct]}/#{result[:metrics][:total]}"
+        puts "  Avg Latency: #{result[:metrics][:avg_latency_ms]}ms"
+        puts
+        puts "View in Langfuse:"
+        puts "  Dataset: https://cloud.langfuse.com/project/datasets"
+        puts "  Traces: https://cloud.langfuse.com/project/traces"
+      rescue Eval::Langfuse::Client::ConfigurationError => e
+        puts "✗ #{e.message}"
+        exit 1
+      rescue Eval::Langfuse::Client::ApiError => e
+        puts "✗ Langfuse API error: #{e.message}"
+        exit 1
+      rescue => e
+        puts "✗ Error: #{e.message}"
+        puts e.backtrace.first(5).join("\n") if ENV["DEBUG"]
+        exit 1
+      end
+    end
+
+    desc "List datasets in Langfuse"
+    task list_datasets: :environment do
+      begin
+        client = Eval::Langfuse::Client.new
+        response = client.list_datasets(limit: 100)
+
+        datasets = response["data"] || []
+
+        if datasets.empty?
+          puts "No datasets found in Langfuse."
+          puts "Upload a dataset with: rake evals:langfuse:upload_dataset[dataset_name]"
+          next
+        end
+
+        puts "=" * 80
+        puts "Langfuse Datasets"
+        puts "=" * 80
+        puts
+
+        datasets.each do |ds|
+          puts "  #{ds['name']}"
+          puts "    Description: #{ds['description']}" if ds["description"].present?
+          puts "    Created: #{ds['createdAt']}"
+          puts "    Metadata: #{ds['metadata']}" if ds["metadata"].present?
+          puts
+        end
+      rescue Eval::Langfuse::Client::ConfigurationError => e
+        puts "✗ #{e.message}"
+        exit 1
+      rescue Eval::Langfuse::Client::ApiError => e
+        puts "✗ Langfuse API error: #{e.message}"
+        exit 1
+      end
+    end
+  end
+
   private
 
     def format_metric_value(value)
