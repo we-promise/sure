@@ -67,6 +67,7 @@
         <% unless category.parent? %>
           <%= f.select :parent_id, categories.pluck(:name, :id), { include_blank: "(unassigned)", label: "Parent category (optional)" }, disabled: category.parent?, data: { action: "change->category#handleParentChange" } %>
         <% end %>
+        <%= f.text_area :details, label: "Details (optional)", placeholder: "Details...", rows: 3 %>
       </div>
     </section>
 
