@@ -276,7 +276,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard"
     )
 
-    # Create a transaction with the subcategory (Restaurants is a subcategory of Food & Drink)
+    # Create a transaction with the subcategory (fixture :subcategory has name "Restaurants", parent "Food & Drink")
     subcategory_entry = create_transaction(
       account: @checking_account,
       amount: 75,

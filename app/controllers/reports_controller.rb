@@ -411,8 +411,8 @@ class ReportsController < ApplicationController
       # Filter by category (including subcategories)
       if params[:filter_category_id].present?
         category_id = params[:filter_category_id]
-        # Get subcategory IDs for this category
-        subcategory_ids = Category.where(parent_id: category_id).pluck(:id)
+        # Scope to family's categories to prevent cross-family data access
+        subcategory_ids = Current.family.categories.where(parent_id: category_id).pluck(:id)
         all_category_ids = [ category_id ] + subcategory_ids
         transactions = transactions.where(category_id: all_category_ids)
       end
