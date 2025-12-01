@@ -91,11 +91,14 @@ class Transaction::Search
     def apply_category_filter(query, categories)
       return query unless categories.present?
 
+      # Get parent category IDs for the given category names
+      parent_category_ids = family.categories.where(name: categories).pluck(:id)
+
       query = query.left_joins(:category).where(
-        "categories.name IN (?) OR (
+        "categories.name IN (?) OR categories.parent_id IN (?) OR (
         categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
       )",
-        categories
+        categories, parent_category_ids
       )
 
       if categories.exclude?("Uncategorized")
