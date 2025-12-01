@@ -595,6 +595,132 @@ namespace :evals do
     end
   end
 
+  desc "Export manually categorized transactions as golden data"
+  task :export_manual_categories, [ :family_id ] => :environment do |_t, args|
+    family_id = args[:family_id] || ENV["FAMILY_ID"]
+    output_path = ENV["OUTPUT"] || "db/eval_data/categorization_manual_export.yml"
+    limit = (ENV["LIMIT"] || 500).to_i
+
+    if family_id.blank?
+      puts "Usage: rake evals:export_manual_categories[family_id]"
+      puts "   or: FAMILY_ID=uuid rake evals:export_manual_categories"
+      puts
+      puts "Optional environment variables:"
+      puts "  OUTPUT=path/to/output.yml (default: db/eval_data/categorization_manual_export.yml)"
+      puts "  LIMIT=500 (default: 500)"
+      exit 1
+    end
+
+    family = Family.find_by(id: family_id)
+
+    if family.nil?
+      puts "Error: Family '#{family_id}' not found"
+      exit 1
+    end
+
+    puts "=" * 80
+    puts "Exporting Manually Categorized Transactions"
+    puts "=" * 80
+    puts "  Family: #{family.name}"
+    puts "  Output: #{output_path}"
+    puts "  Limit: #{limit}"
+    puts
+
+    # Find transactions that have:
+    # 1. A category assigned
+    # 2. locked_attributes contains "category_id" (meaning user manually set it)
+    # 3. No DataEnrichment record for category_id (meaning it wasn't set by AI/rules/etc)
+    manually_categorized = Transaction
+      .joins(:entry)
+      .joins("INNER JOIN accounts ON accounts.id = entries.account_id")
+      .where(accounts: { family_id: family_id })
+      .where.not(category_id: nil)
+      .where("transactions.locked_attributes ? 'category_id'")
+      .where.not(
+        id: DataEnrichment
+          .where(enrichable_type: "Transaction", attribute_name: "category_id")
+          .select(:enrichable_id)
+      )
+      .includes(:category, entry: :account)
+      .limit(limit)
+
+    count = manually_categorized.count
+
+    if count == 0
+      puts "No manually categorized transactions found."
+      puts
+      puts "Manually categorized transactions are those where:"
+      puts "  - User set a category manually (locked_attributes contains 'category_id')"
+      puts "  - Category was NOT set by AI, rules, or data enrichment sources"
+      exit 0
+    end
+
+    puts "Found #{count} manually categorized transactions"
+    puts
+
+    # Build category context from family's categories
+    categories = family.categories.includes(:parent).map do |cat|
+      {
+        "id" => cat.id.to_s,
+        "name" => cat.name,
+        "classification" => cat.classification,
+        "is_subcategory" => cat.subcategory?,
+        "parent_id" => cat.parent_id&.to_s
+      }.compact
+    end
+
+    # Build samples
+    samples = manually_categorized.map.with_index do |txn, idx|
+      entry = txn.entry
+      sample_id = "manual_#{idx + 1}"
+
+      {
+        "id" => sample_id,
+        "difficulty" => "custom",
+        "tags" => [ txn.category.name.parameterize.underscore, "manual_export" ],
+        "input" => {
+          "id" => txn.id.to_s,
+          "amount" => entry.amount.to_f.abs,
+          "classification" => entry.classification,
+          "description" => entry.name
+        },
+        "expected" => {
+          "category_name" => txn.category.name
+        }
+      }
+    end
+
+    # Build output structure
+    output = {
+      "name" => "categorization_manual_export",
+      "description" => "Golden dataset exported from manually categorized user transactions",
+      "eval_type" => "categorization",
+      "version" => "1.0",
+      "metadata" => {
+        "created_at" => Time.current.strftime("%Y-%m-%d"),
+        "source" => "manual_export",
+        "family_id" => family_id,
+        "exported_count" => samples.size
+      },
+      "context" => {
+        "categories" => categories
+      },
+      "samples" => samples
+    }
+
+    # Write to file
+    FileUtils.mkdir_p(File.dirname(output_path))
+    File.write(output_path, output.to_yaml)
+
+    puts "✓ Successfully exported #{samples.size} samples"
+    puts "  Difficulty: custom"
+    puts
+    puts "Output written to: #{output_path}"
+    puts
+    puts "To import this dataset, run:"
+    puts "  rake evals:import_dataset[#{output_path}]"
+  end
+
   private
 
     def format_metric_value(value)
