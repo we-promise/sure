@@ -1,7 +1,12 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["section"];
+  static targets = ["section", "handle"];
+
+  // Long press duration in milliseconds for mobile drag activation
+  static values = {
+    longPressDuration: { type: Number, default: 300 },
+  };
 
   connect() {
     this.draggedElement = null;
@@ -10,6 +15,9 @@ export default class extends Controller {
     this.currentTouchY = 0;
     this.isTouching = false;
     this.keyboardGrabbedElement = null;
+    this.longPressTimer = null;
+    this.longPressActivated = false;
+    this.touchStartX = 0;
   }
 
   // ===== Mouse Drag Events =====
@@ -60,19 +68,60 @@ export default class extends Controller {
   }
 
   // ===== Touch Events =====
+  // On mobile, touch events require a long press to activate dragging.
+  // This allows normal scrolling when users swipe on the section content.
+
   touchStart(event) {
-    this.draggedElement = event.currentTarget;
+    // Find the section element (the touch target might be the handle or the section itself)
+    const section = event.currentTarget.closest(
+      "[data-reports-sortable-target='section']",
+    );
+    if (!section) return;
+
+    this.potentialDragElement = section;
     this.touchStartY = event.touches[0].clientY;
+    this.touchStartX = event.touches[0].clientX;
+    this.currentTouchY = this.touchStartY;
+    this.longPressActivated = false;
+
+    // Start long press timer
+    this.longPressTimer = setTimeout(() => {
+      this.activateDrag();
+    }, this.longPressDurationValue);
+  }
+
+  activateDrag() {
+    if (!this.potentialDragElement) return;
+
+    this.longPressActivated = true;
     this.isTouching = true;
-    this.draggedElement.classList.add("opacity-50", "scale-105");
+    this.draggedElement = this.potentialDragElement;
+    this.draggedElement.classList.add("opacity-50", "scale-[1.02]");
     this.draggedElement.setAttribute("aria-grabbed", "true");
+
+    // Vibrate to provide haptic feedback if available
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
   }
 
   touchMove(event) {
-    if (!this.isTouching || !this.draggedElement) return;
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - this.touchStartX);
+    const deltaY = Math.abs(touch.clientY - this.touchStartY);
+
+    // If user moves significantly before long press activates, cancel the drag
+    // This allows normal scrolling
+    if (!this.longPressActivated && (deltaX > 10 || deltaY > 10)) {
+      this.cancelLongPress();
+      return;
+    }
+
+    if (!this.longPressActivated || !this.isTouching || !this.draggedElement)
+      return;
 
     event.preventDefault();
-    this.currentTouchY = event.touches[0].clientY;
+    this.currentTouchY = touch.clientY;
 
     const afterElement = this.getDragAfterElement(this.currentTouchY);
     this.clearPlaceholders();
@@ -84,8 +133,13 @@ export default class extends Controller {
     }
   }
 
-  touchEnd(event) {
-    if (!this.isTouching || !this.draggedElement) return;
+  touchEnd() {
+    this.cancelLongPress();
+
+    if (!this.longPressActivated || !this.isTouching || !this.draggedElement) {
+      this.resetTouchState();
+      return;
+    }
 
     const afterElement = this.getDragAfterElement(this.currentTouchY);
     const container = this.element;
@@ -96,13 +150,26 @@ export default class extends Controller {
       container.insertBefore(this.draggedElement, afterElement);
     }
 
-    this.draggedElement.classList.remove("opacity-50", "scale-105");
+    this.draggedElement.classList.remove("opacity-50", "scale-[1.02]");
     this.draggedElement.setAttribute("aria-grabbed", "false");
     this.clearPlaceholders();
     this.saveOrder();
 
+    this.resetTouchState();
+  }
+
+  cancelLongPress() {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+  }
+
+  resetTouchState() {
     this.isTouching = false;
     this.draggedElement = null;
+    this.potentialDragElement = null;
+    this.longPressActivated = false;
   }
 
   // ===== Keyboard Navigation =====
