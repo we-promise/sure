@@ -3,6 +3,11 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["section", "handle"];
 
+  // Short delay to prevent accidental touches on the grip handle
+  static values = {
+    holdDelay: { type: Number, default: 150 },
+  };
+
   connect() {
     this.draggedElement = null;
     this.placeholder = null;
@@ -10,6 +15,8 @@ export default class extends Controller {
     this.currentTouchY = 0;
     this.isTouching = false;
     this.keyboardGrabbedElement = null;
+    this.holdTimer = null;
+    this.holdActivated = false;
   }
 
   // ===== Mouse Drag Events =====
@@ -60,7 +67,8 @@ export default class extends Controller {
   }
 
   // ===== Touch Events =====
-  // Touch events are bound to the drag handle only, allowing normal scrolling elsewhere.
+  // Touch events are bound to the drag handle only, with a short hold delay
+  // to prevent accidental touches.
 
   touchStart(event) {
     // Find the parent section element from the handle
@@ -69,16 +77,34 @@ export default class extends Controller {
     );
     if (!section) return;
 
-    this.draggedElement = section;
+    this.pendingSection = section;
     this.touchStartY = event.touches[0].clientY;
     this.currentTouchY = this.touchStartY;
+    this.holdActivated = false;
+
+    // Start hold timer
+    this.holdTimer = setTimeout(() => {
+      this.activateDrag();
+    }, this.holdDelayValue);
+  }
+
+  activateDrag() {
+    if (!this.pendingSection) return;
+
+    this.holdActivated = true;
     this.isTouching = true;
+    this.draggedElement = this.pendingSection;
     this.draggedElement.classList.add("opacity-50", "scale-[1.02]");
     this.draggedElement.setAttribute("aria-grabbed", "true");
+
+    // Haptic feedback if available
+    if (navigator.vibrate) {
+      navigator.vibrate(30);
+    }
   }
 
   touchMove(event) {
-    if (!this.isTouching || !this.draggedElement) return;
+    if (!this.holdActivated || !this.isTouching || !this.draggedElement) return;
 
     event.preventDefault();
     this.currentTouchY = event.touches[0].clientY;
@@ -94,7 +120,12 @@ export default class extends Controller {
   }
 
   touchEnd() {
-    if (!this.isTouching || !this.draggedElement) return;
+    this.cancelHold();
+
+    if (!this.holdActivated || !this.isTouching || !this.draggedElement) {
+      this.resetTouchState();
+      return;
+    }
 
     const afterElement = this.getDragAfterElement(this.currentTouchY);
     const container = this.element;
@@ -110,8 +141,21 @@ export default class extends Controller {
     this.clearPlaceholders();
     this.saveOrder();
 
+    this.resetTouchState();
+  }
+
+  cancelHold() {
+    if (this.holdTimer) {
+      clearTimeout(this.holdTimer);
+      this.holdTimer = null;
+    }
+  }
+
+  resetTouchState() {
     this.isTouching = false;
     this.draggedElement = null;
+    this.pendingSection = null;
+    this.holdActivated = false;
   }
 
   // ===== Keyboard Navigation =====
