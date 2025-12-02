@@ -63,4 +63,22 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("50000"), acct.reload.balance
   end
+
+  test "positive provider balance (overpayment) becomes negative for credit card liabilities" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Chase Credit",
+      account_id: "cc_overpay",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("75.00") # provider sends positive for overpayment
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("-75.00"), acct.reload.balance
+  end
 end
