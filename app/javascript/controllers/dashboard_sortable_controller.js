@@ -3,11 +3,6 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["section", "handle"];
 
-  // Long press duration in milliseconds for mobile drag activation
-  static values = {
-    longPressDuration: { type: Number, default: 300 },
-  };
-
   connect() {
     this.draggedElement = null;
     this.placeholder = null;
@@ -15,9 +10,6 @@ export default class extends Controller {
     this.currentTouchY = 0;
     this.isTouching = false;
     this.keyboardGrabbedElement = null;
-    this.longPressTimer = null;
-    this.longPressActivated = false;
-    this.touchStartX = 0;
   }
 
   // ===== Mouse Drag Events =====
@@ -68,60 +60,28 @@ export default class extends Controller {
   }
 
   // ===== Touch Events =====
-  // On mobile, touch events require a long press to activate dragging.
-  // This allows normal scrolling when users swipe on the section content.
+  // Touch events are bound to the drag handle only, allowing normal scrolling elsewhere.
 
   touchStart(event) {
-    // Find the section element (the touch target might be the handle or the section itself)
+    // Find the parent section element from the handle
     const section = event.currentTarget.closest(
       "[data-dashboard-sortable-target='section']",
     );
     if (!section) return;
 
-    this.potentialDragElement = section;
+    this.draggedElement = section;
     this.touchStartY = event.touches[0].clientY;
-    this.touchStartX = event.touches[0].clientX;
     this.currentTouchY = this.touchStartY;
-    this.longPressActivated = false;
-
-    // Start long press timer
-    this.longPressTimer = setTimeout(() => {
-      this.activateDrag();
-    }, this.longPressDurationValue);
-  }
-
-  activateDrag() {
-    if (!this.potentialDragElement) return;
-
-    this.longPressActivated = true;
     this.isTouching = true;
-    this.draggedElement = this.potentialDragElement;
     this.draggedElement.classList.add("opacity-50", "scale-[1.02]");
     this.draggedElement.setAttribute("aria-grabbed", "true");
-
-    // Vibrate to provide haptic feedback if available
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
   }
 
   touchMove(event) {
-    const touch = event.touches[0];
-    const deltaX = Math.abs(touch.clientX - this.touchStartX);
-    const deltaY = Math.abs(touch.clientY - this.touchStartY);
-
-    // If user moves significantly before long press activates, cancel the drag
-    // This allows normal scrolling
-    if (!this.longPressActivated && (deltaX > 10 || deltaY > 10)) {
-      this.cancelLongPress();
-      return;
-    }
-
-    if (!this.longPressActivated || !this.isTouching || !this.draggedElement)
-      return;
+    if (!this.isTouching || !this.draggedElement) return;
 
     event.preventDefault();
-    this.currentTouchY = touch.clientY;
+    this.currentTouchY = event.touches[0].clientY;
 
     const afterElement = this.getDragAfterElement(this.currentTouchY);
     this.clearPlaceholders();
@@ -134,12 +94,7 @@ export default class extends Controller {
   }
 
   touchEnd() {
-    this.cancelLongPress();
-
-    if (!this.longPressActivated || !this.isTouching || !this.draggedElement) {
-      this.resetTouchState();
-      return;
-    }
+    if (!this.isTouching || !this.draggedElement) return;
 
     const afterElement = this.getDragAfterElement(this.currentTouchY);
     const container = this.element;
@@ -155,21 +110,8 @@ export default class extends Controller {
     this.clearPlaceholders();
     this.saveOrder();
 
-    this.resetTouchState();
-  }
-
-  cancelLongPress() {
-    if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
-  }
-
-  resetTouchState() {
     this.isTouching = false;
     this.draggedElement = null;
-    this.potentialDragElement = null;
-    this.longPressActivated = false;
   }
 
   // ===== Keyboard Navigation =====
