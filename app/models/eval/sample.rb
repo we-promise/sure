@@ -5,7 +5,7 @@ class Eval::Sample < ApplicationRecord
   has_many :results, class_name: "Eval::Result", foreign_key: :eval_sample_id, dependent: :destroy
 
   validates :input_data, :expected_output, presence: true
-  validates :difficulty, inclusion: { in: %w[easy medium hard edge_case] }
+  validates :difficulty, inclusion: { in: %w[easy medium hard manual edge_case] }
 
   scope :easy, -> { where(difficulty: "easy") }
   scope :medium, -> { where(difficulty: "medium") }
