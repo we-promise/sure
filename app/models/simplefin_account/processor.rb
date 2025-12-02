@@ -41,10 +41,16 @@ class SimplefinAccount::Processor
       account = simplefin_account.current_account
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
-      # SimpleFIN balance convention matches our app convention:
-      # - Positive balance = debt (you owe money)
-      # - Negative balance = credit balance (bank owes you, e.g., overpayment)
-      # No sign conversion needed - pass through as-is (same as Plaid)
+      # Normalize balances for liabilities (SimpleFIN often reports them as negative)
+      # Our app convention is:
+      # - Liabilities: positive balance means you owe money; negative means provider owes you
+      # - Assets: pass-through
+      # Providers via SimpleFIN report liabilities as negative when you owe money,
+      # so we invert the sign for liability accounts.
+      if [ "CreditCard", "Loan" ].include?(account.accountable_type)
+        # Only invert when provider sends a negative value for debt owed
+        balance = -balance if balance < 0
+      end
 
       # Calculate cash balance correctly for investment accounts
       cash_balance = if account.accountable_type == "Investment"
