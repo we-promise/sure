@@ -676,7 +676,7 @@ namespace :evals do
 
       {
         "id" => sample_id,
-        "difficulty" => "custom",
+        "difficulty" => "manual",
         "tags" => [ txn.category.name.parameterize.underscore, "manual_export" ],
         "input" => {
           "id" => txn.id.to_s,
@@ -713,7 +713,7 @@ namespace :evals do
     File.write(output_path, output.to_yaml)
 
     puts "✓ Successfully exported #{samples.size} samples"
-    puts "  Difficulty: custom"
+    puts "  Difficulty: manual"
     puts
     puts "Output written to: #{output_path}"
     puts
