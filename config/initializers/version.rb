@@ -14,7 +14,7 @@ module Sure
 
     private
       def semver
-        "0.6.6-alpha.1"
+        "0.6.5-hotfix.1"
       end
   end
 end
