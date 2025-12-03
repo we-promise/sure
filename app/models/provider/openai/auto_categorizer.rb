@@ -28,9 +28,10 @@ class Provider::Openai::AutoCategorizer
     env_mode = ENV["LLM_JSON_MODE"]
     return env_mode if env_mode.present? && [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE ].include?(env_mode)
 
-    # Custom providers default to no JSON constraints for maximum compatibility
-    # Native OpenAI always uses strict mode (handled in auto_categorize_openai_native)
-    custom_provider ? JSON_MODE_NONE : JSON_MODE_STRICT
+    # Use strict mode by default - it's faster, uses fewer tokens, and produces cleaner output
+    # Strict mode with enum constraints forces the model to output valid JSON without thinking tags
+    # Falls back to none mode if strict mode fails (see auto_categorize_openai_generic)
+    JSON_MODE_STRICT
   end
 
   def auto_categorize
@@ -141,11 +142,24 @@ class Provider::Openai::AutoCategorizer
     end
 
     def auto_categorize_openai_generic
+      auto_categorize_with_mode(json_mode)
+    rescue Faraday::BadRequestError => e
+      # If strict mode fails (HTTP 400), fall back to none mode
+      # This handles providers that don't support json_schema response format
+      if json_mode == JSON_MODE_STRICT
+        Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
+        auto_categorize_with_mode(JSON_MODE_NONE)
+      else
+        raise
+      end
+    end
+
+    def auto_categorize_with_mode(mode)
       span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
         user_categories: user_categories,
-        json_mode: json_mode
+        json_mode: mode
       })
 
       # Build parameters with configurable JSON response format
@@ -158,7 +172,7 @@ class Provider::Openai::AutoCategorizer
       }
 
       # Add response format based on json_mode setting
-      case json_mode
+      case mode
       when JSON_MODE_STRICT
         params[:response_format] = {
           type: "json_schema",
@@ -175,7 +189,7 @@ class Provider::Openai::AutoCategorizer
 
       response = client.chat(parameters: params)
 
-      Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
+      Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")} (json_mode: #{mode})")
 
       categorizations = extract_categorizations_generic(response)
       result = build_response(categorizations)
@@ -186,7 +200,8 @@ class Provider::Openai::AutoCategorizer
         operation: "auto_categorize",
         metadata: {
           transaction_count: transactions.size,
-          category_count: user_categories.size
+          category_count: user_categories.size,
+          json_mode: mode
         }
       )
 
