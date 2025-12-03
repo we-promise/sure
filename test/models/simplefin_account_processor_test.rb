@@ -81,4 +81,101 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("-75.00"), acct.reload.balance
   end
+
+  test "liability debt with both fields negative becomes positive (you owe)" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "BofA Visa",
+      account_id: "cc_bofa_1",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("-1200"),
+      available_balance: BigDecimal("-5000")
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("1200"), acct.reload.balance
+  end
+
+  test "liability overpayment with both fields positive becomes negative (credit)" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "BofA Visa",
+      account_id: "cc_bofa_2",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("75"),
+      available_balance: BigDecimal("5000")
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("-75"), acct.reload.balance
+  end
+
+  test "mixed signs falls back to invert observed (balance positive, avail negative => negative)" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Chase Freedom",
+      account_id: "cc_chase_1",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("50"),
+      available_balance: BigDecimal("-5000")
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("-50"), acct.reload.balance
+  end
+
+  test "only available-balance present positive → negative (credit) for liability" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Chase Visa",
+      account_id: "cc_chase_2",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: nil,
+      available_balance: BigDecimal("25")
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("-25"), acct.reload.balance
+  end
+
+  test "mislinked as asset but mapper infers credit → normalize as liability" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Visa Signature",
+      account_id: "cc_mislinked",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("100.00"),
+      available_balance: BigDecimal("5000.00")
+    )
+
+    # Link to an asset account intentionally
+    acct = accounts(:depository)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    # Mapper should infer liability from name; final should be negative
+    assert_equal BigDecimal("-100.00"), acct.reload.balance
+  end
 end
