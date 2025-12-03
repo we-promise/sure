@@ -80,6 +80,11 @@ Visit http://localhost:3000 to view the app. You can log in with these demo cred
 
 For further instructions, see guides below.
 
+## API documentation
+
+- [Expenses API](docs/api/expenses.md)
+- [Chat API](docs/api/chats.md)
+
 ### Setup Guides
 
 - [Mac dev setup](https://github.com/we-promise/sure/wiki/Mac-Dev-Setup-Guide)
