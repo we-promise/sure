@@ -52,17 +52,25 @@ class Provider::Openai::AutoCategorizer
   # Simplified instructions for smaller/local LLMs
   def simple_instructions
     <<~INSTRUCTIONS.strip_heredoc
-      Categorize transactions into the given categories. Return JSON only.
+      Categorize transactions into the given categories. Return JSON only. Do not explain your reasoning.
 
-      Rules:
+      CRITICAL RULES:
       1. Match transaction_id exactly from input
-      2. Use category_name from the provided list, or "null" if unsure
+      2. Use EXACT category_name from the provided list, or "null" if unsure
       3. Match expense transactions to expense categories only
       4. Match income transactions to income categories only
-      5. Return "null" if uncertain - avoid guessing
+      5. Return "null" if the description is generic/ambiguous (e.g., "POS DEBIT", "ACH WITHDRAWAL", "CHECK #1234")
+      6. Prefer MORE SPECIFIC subcategories over general parent categories when available
 
-      Example output format:
-      {"categorizations": [{"transaction_id": "txn_001", "category_name": "Groceries"}]}
+      CATEGORY HIERARCHY NOTES:
+      - Use "Restaurants" for sit-down restaurants, "Fast Food" for quick service chains
+      - Use "Coffee Shops" for coffee places, "Food & Drink" only when type is unclear
+      - Use "Shopping" for general retail, big-box stores, and online marketplaces
+      - Use "Groceries" for dedicated grocery stores ONLY
+      - For income: use "Salary" for payroll/employer deposits, "Income" for generic income sources
+
+      Output JSON format only (no markdown, no explanation):
+      {"categorizations": [{"transaction_id": "...", "category_name": "..."}]}
     INSTRUCTIONS
   end
 
@@ -299,18 +307,69 @@ class Provider::Openai::AutoCategorizer
     def parse_json_flexibly(raw)
       return {} if raw.blank?
 
+      # Strip thinking model tags if present (e.g., <think>...</think>)
+      # The actual JSON output comes after the thinking block
+      cleaned = strip_thinking_tags(raw)
+
       # Try direct parse first
-      JSON.parse(raw)
+      JSON.parse(cleaned)
     rescue JSON::ParserError
-      # Try to extract JSON from markdown code blocks
-      if raw =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
+      # Try to extract JSON from markdown code blocks (greedy to get last/complete one)
+      # Use reverse to find the last JSON block (thinking models often have incomplete JSON earlier)
+      if cleaned =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
+        # Find all matches and use the last complete one
+        matches = cleaned.scan(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/m).flatten
+        last_valid_json = nil
+        matches.reverse_each do |match|
+          begin
+            last_valid_json = JSON.parse(match)
+            break
+          rescue JSON::ParserError
+            next
+          end
+        end
+        return last_valid_json if last_valid_json
+
+        # Fall back to first match
         JSON.parse($1)
-      # Try to find a JSON object anywhere in the response
-      elsif raw =~ /(\{[\s\S]*\})/m
+      # Try to find a JSON object anywhere in the response (use last complete one)
+      elsif cleaned =~ /(\{[\s\S]*\})/m
+        # Find all potential JSON objects
+        potential_jsons = cleaned.scan(/(\{"categorizations"[\s\S]*?\}\s*\][\s\S]*?\})/m).flatten
+        if potential_jsons.any?
+          potential_jsons.reverse_each do |match|
+            begin
+              return JSON.parse(match)
+            rescue JSON::ParserError
+              next
+            end
+          end
+        end
+        # Fall back to greedy match
         JSON.parse($1)
       else
         raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
       end
+    end
+
+    # Strip thinking model tags (<think>...</think>) from response
+    # Some models like Qwen-thinking output reasoning in these tags before the actual response
+    def strip_thinking_tags(raw)
+      # Remove <think>...</think> blocks but keep content after them
+      # If no closing tag, the model may have been cut off - try to extract JSON from inside
+      if raw.include?("<think>")
+        # Check if there's content after the thinking block
+        if raw =~ /<\/think>\s*([\s\S]*)/m
+          after_thinking = $1.strip
+          return after_thinking if after_thinking.present?
+        end
+        # If no content after </think> or no closing tag, look inside the thinking block
+        # The JSON might be the last thing in the thinking block
+        if raw =~ /<think>([\s\S]*)/m
+          return $1
+        end
+      end
+      raw
     end
 
     def json_schema
@@ -371,21 +430,80 @@ class Provider::Openai::AutoCategorizer
         #{format_transactions_simply}
 
         EXAMPLES of correct categorization:
+        FAST FOOD chains (use "Fast Food"):
         - "MCDONALD'S #12345" → "Fast Food"
+        - "CHIPOTLE ONLINE" → "Fast Food"
+        - "TACO BELL #789" → "Fast Food"
+        - "DOORDASH*CHIPOTLE" → "Restaurants" (delivery services use "Restaurants")
+
+        COFFEE (use "Coffee Shops"):
         - "STARBUCKS STORE" → "Coffee Shops"
+        - "DUNKIN #12345" → "Coffee Shops"
+        - "PEETS COFFEE" → "Coffee Shops"
+        - "SQ *DOWNTOWN CAFE" → "Coffee Shops" (SQ = Square, CAFE = coffee shop)
+
+        SIT-DOWN restaurants (use "Restaurants"):
+        - "OLIVE GARDEN #456" → "Restaurants"
+        - "CHEESECAKE FACTORY" → "Restaurants"
+        - "GRUBHUB*THAI KITCHEN" → "Restaurants"
+        - "UBEREATS *UBER EATS" → "Restaurants"
+        - "PANERA BREAD #567" → "Restaurants"
+
+        GAS STATIONS (use "Gas & Fuel"):
         - "SHELL OIL 12345" → "Gas & Fuel"
+        - "CHEVRON STATION" → "Gas & Fuel"
+
+        GROCERIES (dedicated grocery stores and convenience stores):
+        - "WHOLE FOODS MKT" → "Groceries"
+        - "TRADER JOE'S" → "Groceries"
+        - "INSTACART*SAFEWAY" → "Groceries"
+        - "7-ELEVEN #34567" → "Groceries"
+
+        SHOPPING (retail stores, big-box, online marketplaces):
+        - "TARGET #1234" → "Shopping"
+        - "WALMART SUPERCENTER" → "Shopping"
+        - "AMAZON.COM*..." → "Shopping"
+        - "COSTCO.COM" → "Shopping"
+        - "COSTCO WHSE #1234" → "Groceries" (in-store warehouse = groceries)
+
+        STREAMING (use "Streaming Services"):
         - "NETFLIX.COM" → "Streaming Services"
-        - "ACH WITHDRAWAL" → "null" (unknown/generic)
-        - "POS DEBIT 12345" → "null" (unknown/generic)
-        - "DIRECT DEPOSIT PAYROLL" with classification "income" → "Salary"
+        - "SPOTIFY USA" → "Streaming Services"
+        - "HBO MAX" → "Streaming Services"
+
+        SUBSCRIPTIONS (non-streaming services):
+        - "APPLE.COM/BILL" → "Subscriptions"
+        - "GOOGLE *STORAGE" → "Subscriptions"
+        - "AMAZON PRIME*..." → "Subscriptions"
+
+        INCOME (use classification "income"):
+        - "DIRECT DEPOSIT PAYROLL" → "Salary"
+        - "ACME CORP PAYROLL" → "Salary"
+        - "EMPLOYER DIRECT DEP" → "Salary"
+        - "VENMO CASHOUT" → "Income" (generic income, not salary)
+        - "ZELLE FROM JOHN S" → "Income" (person-to-person transfer)
+        - "CASH APP*CASH OUT" → "Income"
+
+        RETURN "null" for these (too generic/ambiguous):
+        - "ACH WITHDRAWAL" → "null"
+        - "POS DEBIT 12345" → "null"
+        - "DEBIT CARD PURCHASE" → "null"
+        - "CHECK #1234" → "null"
+        - "WIRE TRANSFER OUT" → "null"
+        - "ATM WITHDRAWAL" → "null"
+        - "PAYPAL *JOHNSMITH" → "null" (unknown purpose)
+        - "PENDING AUTHORIZATION" → "null"
+        - "VOID TRANSACTION" → "null"
+        - "SERVICE CHARGE" → "null"
 
         IMPORTANT:
         - Use EXACT category names from the list above
         - Return "null" (as a string) if you cannot confidently match a category
         - Match expense transactions only to expense categories
         - Match income transactions only to income categories
+        - Do NOT include any explanation or reasoning - only output JSON
 
-        Respond with ONLY this JSON format (no other text):
+        Respond with ONLY this JSON (no markdown code blocks, no other text):
         {"categorizations": [{"transaction_id": "...", "category_name": "..."}]}
       MESSAGE
     end

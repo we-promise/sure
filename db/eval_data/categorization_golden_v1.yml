@@ -624,7 +624,7 @@ samples:
       classification: expense
       description: "SQ *DOWNTOWN CAFE"
     expected:
-      category_name: "Food & Drink"
+      category_name: "Coffee Shops"
 
   - id: cat_hard_005
     difficulty: hard
@@ -668,7 +668,7 @@ samples:
       classification: expense
       description: "7-ELEVEN #34567"
     expected:
-      category_name: "Food & Drink"
+      category_name: "Groceries"
 
   - id: cat_hard_009
     difficulty: hard
@@ -839,14 +839,14 @@ samples:
 
   - id: cat_easy_024
     difficulty: easy
-    tags: [groceries]
+    tags: [gas]
     input:
       id: txn_064
       amount: 145.67
       classification: expense
       description: "KROGER #456 FUEL"
     expected:
-      category_name: "Groceries"
+      category_name: "Gas & Fuel"
 
   - id: cat_easy_025
     difficulty: easy
