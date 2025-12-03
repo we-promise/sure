@@ -32,6 +32,8 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
   private
 
     def process_batch(batch_samples)
+      return if batch_samples.empty?
+
       # Build inputs for the provider
       transactions = batch_samples.map do |sample|
         sample.to_transaction_input.merge(id: sample.id)

@@ -315,6 +315,18 @@ class Eval::Langfuse::ExperimentRunner
 
     def calculate_metrics(results)
       total = results.size
+
+      # Guard against empty results to avoid division by zero
+      if total.zero?
+        return {
+          accuracy: 0.0,
+          total: 0,
+          correct: 0,
+          incorrect: 0,
+          avg_latency_ms: 0
+        }
+      end
+
       correct = results.count { |r| r[:correct] }
       avg_latency = results.sum { |r| r[:latency_ms] } / total.to_f
 

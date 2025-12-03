@@ -266,36 +266,41 @@ class Provider::Openai::AutoCategorizer
     end
 
     def normalize_category_name(category_name)
-      return nil if category_name.nil? || category_name == "null" || category_name.downcase == "null"
+      # Convert to string to handle non-string LLM outputs (numbers, booleans, etc.)
+      normalized = category_name.to_s.strip
+      return nil if normalized.empty? || normalized == "null" || normalized.downcase == "null"
 
       # Try exact match first
-      exact_match = user_categories.find { |c| c[:name] == category_name }
+      exact_match = user_categories.find { |c| c[:name] == normalized }
       return exact_match[:name] if exact_match
 
       # Try case-insensitive match
-      case_insensitive_match = user_categories.find { |c| c[:name].downcase == category_name.downcase }
+      case_insensitive_match = user_categories.find { |c| c[:name].to_s.downcase == normalized.downcase }
       return case_insensitive_match[:name] if case_insensitive_match
 
       # Try partial/fuzzy match (for common variations)
-      fuzzy_match = find_fuzzy_category_match(category_name)
+      fuzzy_match = find_fuzzy_category_match(normalized)
       return fuzzy_match if fuzzy_match
 
-      # Return original if no match found (will be treated as uncategorized)
-      category_name
+      # Return normalized string if no match found (will be treated as uncategorized)
+      normalized
     end
 
     # Find a fuzzy match for category names with common variations
     def find_fuzzy_category_match(category_name)
-      normalized_input = category_name.downcase.gsub(/[^a-z0-9]/, "")
+      # Ensure string input for string operations
+      input_str = category_name.to_s
+      normalized_input = input_str.downcase.gsub(/[^a-z0-9]/, "")
 
       user_categories.each do |cat|
-        normalized_cat = cat[:name].downcase.gsub(/[^a-z0-9]/, "")
+        cat_name_str = cat[:name].to_s
+        normalized_cat = cat_name_str.downcase.gsub(/[^a-z0-9]/, "")
 
         # Check if one contains the other
         return cat[:name] if normalized_input.include?(normalized_cat) || normalized_cat.include?(normalized_input)
 
         # Check common abbreviations/variations
-        return cat[:name] if fuzzy_name_match?(category_name, cat[:name])
+        return cat[:name] if fuzzy_name_match?(input_str, cat_name_str)
       end
 
       nil
@@ -316,8 +321,9 @@ class Provider::Openai::AutoCategorizer
         "hotels" => [ "hotel", "lodging", "accommodation" ]
       }
 
-      input_lower = input.downcase
-      category_lower = category.downcase
+      # Ensure string inputs for string operations
+      input_lower = input.to_s.downcase
+      category_lower = category.to_s.downcase
 
       variations.each do |_key, synonyms|
         if synonyms.include?(input_lower) && synonyms.include?(category_lower)
