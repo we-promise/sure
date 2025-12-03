@@ -329,42 +329,58 @@ class Provider::Openai::AutoCategorizer
       # Try direct parse first
       JSON.parse(cleaned)
     rescue JSON::ParserError
-      # Try to extract JSON from markdown code blocks (greedy to get last/complete one)
-      # Use reverse to find the last JSON block (thinking models often have incomplete JSON earlier)
+      # Try multiple extraction strategies in order of preference
+
+      # Strategy 1: Closed markdown code blocks (```json...```)
       if cleaned =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
-        # Find all matches and use the last complete one
         matches = cleaned.scan(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/m).flatten
-        last_valid_json = nil
         matches.reverse_each do |match|
           begin
-            last_valid_json = JSON.parse(match)
-            break
+            return JSON.parse(match)
           rescue JSON::ParserError
             next
           end
         end
-        return last_valid_json if last_valid_json
+      end
 
-        # Fall back to first match
-        JSON.parse($1)
-      # Try to find a JSON object anywhere in the response (use last complete one)
-      elsif cleaned =~ /(\{[\s\S]*\})/m
-        # Find all potential JSON objects
-        potential_jsons = cleaned.scan(/(\{"categorizations"[\s\S]*?\}\s*\][\s\S]*?\})/m).flatten
-        if potential_jsons.any?
-          potential_jsons.reverse_each do |match|
-            begin
-              return JSON.parse(match)
-            rescue JSON::ParserError
-              next
-            end
+      # Strategy 2: Unclosed markdown code blocks (thinking models often forget to close)
+      # Pattern: ```json followed by JSON that goes to end of string
+      if cleaned =~ /```(?:json)?\s*(\{[\s\S]*\})\s*$/m
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Continue to next strategy
+        end
+      end
+
+      # Strategy 3: Find JSON object with "categorizations" key
+      if cleaned =~ /(\{"categorizations"\s*:\s*\[[\s\S]*\]\s*\})/m
+        matches = cleaned.scan(/(\{"categorizations"\s*:\s*\[[\s\S]*?\]\s*\})/m).flatten
+        matches.reverse_each do |match|
+          begin
+            return JSON.parse(match)
+          rescue JSON::ParserError
+            next
           end
         end
-        # Fall back to greedy match
-        JSON.parse($1)
-      else
-        raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+        # Try greedy match if non-greedy failed
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Continue to next strategy
+        end
       end
+
+      # Strategy 4: Find any JSON object (last resort)
+      if cleaned =~ /(\{[\s\S]*\})/m
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Fall through to error
+        end
+      end
+
+      raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
     end
 
     # Strip thinking model tags (<think>...</think>) from response
