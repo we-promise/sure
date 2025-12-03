@@ -54,6 +54,17 @@ class Eval::Sample < ApplicationRecord
     expected_output.dig("category_name") || expected_output["category_name"]
   end
 
+  # Get acceptable alternative category names (for categorization evals)
+  # These are categories that are also considered correct answers
+  def acceptable_alternatives
+    expected_output.dig("acceptable_alternatives") || expected_output["acceptable_alternatives"] || []
+  end
+
+  # Get all acceptable category names (primary + alternatives)
+  def all_acceptable_categories
+    [expected_category_name, *acceptable_alternatives].compact
+  end
+
   # Get expected merchant info (for merchant detection evals)
   def expected_business_name
     expected_output.dig("business_name") || expected_output["business_name"]

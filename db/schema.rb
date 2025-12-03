@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_12_01_084101) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_03_133213) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -338,6 +338,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_01_084101) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "alternative_match", default: false
     t.index ["eval_run_id", "correct"], name: "index_eval_results_on_eval_run_id_and_correct"
     t.index ["eval_run_id"], name: "index_eval_results_on_eval_run_id"
     t.index ["eval_sample_id"], name: "index_eval_results_on_eval_sample_id"

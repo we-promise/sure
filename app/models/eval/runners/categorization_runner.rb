@@ -76,10 +76,12 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
         actual_category = nil if actual_category == "null"
 
         expected_category = sample.expected_category_name
+        acceptable_categories = sample.all_acceptable_categories
 
-        # Evaluate correctness
-        correct = evaluate_correctness(actual_category, expected_category)
+        # Evaluate correctness - check primary expected and alternatives
+        correct = evaluate_correctness_with_alternatives(actual_category, expected_category, acceptable_categories)
         exact_match = actual_category == expected_category
+        alternative_match = acceptable_categories.include?(actual_category) && !exact_match
         hierarchical = evaluate_hierarchical_match(actual_category, expected_category, sample)
 
         record_result(
@@ -87,6 +89,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
           actual_output: { "category_name" => actual_category },
           correct: correct,
           exact_match: exact_match,
+          alternative_match: alternative_match,
           hierarchical_match: hierarchical,
           null_expected: expected_category.nil?,
           null_returned: actual_category.nil?,
@@ -122,6 +125,17 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
       return false if actual.nil? && expected.present?
       # Compare values
       actual == expected
+    end
+
+    def evaluate_correctness_with_alternatives(actual, expected, acceptable_categories)
+      # Both null = correct
+      return true if actual.nil? && expected.nil?
+      # Expected null but got value = incorrect
+      return false if expected.nil? && actual.present?
+      # Expected value but got null = incorrect
+      return false if actual.nil? && expected.present?
+      # Check if actual matches any acceptable category (primary or alternatives)
+      acceptable_categories.include?(actual)
     end
 
     def evaluate_hierarchical_match(actual, expected, sample)

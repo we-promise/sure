@@ -2,6 +2,8 @@ class Eval::Metrics::CategorizationMetrics < Eval::Metrics::Base
   def calculate
     {
       accuracy: accuracy,
+      exact_match_accuracy: exact_match_accuracy,
+      alternative_match_count: alternative_match_count,
       precision: precision,
       recall: recall,
       f1_score: f1_score,
@@ -18,6 +20,17 @@ class Eval::Metrics::CategorizationMetrics < Eval::Metrics::Base
   end
 
   private
+
+    def exact_match_accuracy
+      # Percentage of results that exactly match the primary expected category
+      return 0.0 if total_count.zero?
+      (results.where(exact_match: true).count.to_f / total_count * 100).round(2)
+    end
+
+    def alternative_match_count
+      # Number of results that matched an alternative (but not primary) category
+      results.where(alternative_match: true).count
+    end
 
     def null_accuracy
       # Accuracy for samples where null was expected

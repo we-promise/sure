@@ -271,6 +271,7 @@ samples:
       description: "BEST BUY 00000456"
     expected:
       category_name: "Electronics"
+      acceptable_alternatives: ["Shopping"]
 
   - id: cat_easy_013
     difficulty: easy
@@ -293,6 +294,7 @@ samples:
       description: "H&M HENNES MAURITZ"
     expected:
       category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
 
   - id: cat_easy_015
     difficulty: easy
@@ -404,6 +406,7 @@ samples:
       description: "SAM'S CLUB #8765"
     expected:
       category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
 
   - id: cat_medium_005
     difficulty: medium
@@ -459,6 +462,7 @@ samples:
       description: "AVALON APARTMENTS RENT"
     expected:
       category_name: "Rent"
+      acceptable_alternatives: ["Housing"]
 
   - id: cat_medium_010
     difficulty: medium
@@ -503,6 +507,7 @@ samples:
       description: "ULTA BEAUTY #567"
     expected:
       category_name: "Personal Care"
+      acceptable_alternatives: ["Shopping"]
 
   - id: cat_medium_014
     difficulty: medium
@@ -547,6 +552,7 @@ samples:
       description: "TICKETMASTER *EVENT"
     expected:
       category_name: "Entertainment"
+      acceptable_alternatives: ["Travel"]
 
   - id: cat_medium_018
     difficulty: medium
@@ -558,6 +564,7 @@ samples:
       description: "HERTZ RENT-A-CAR"
     expected:
       category_name: "Travel"
+      acceptable_alternatives: ["Transportation"]
 
   - id: cat_medium_019
     difficulty: medium
@@ -569,6 +576,7 @@ samples:
       description: "AIRBNB *HMQT5J6QQJ"
     expected:
       category_name: "Hotels"
+      acceptable_alternatives: ["Travel"]
 
   - id: cat_medium_020
     difficulty: medium
@@ -603,6 +611,7 @@ samples:
       description: "WALMART SUPERCENTER"
     expected:
       category_name: "Shopping"
+      acceptable_alternatives: ["Groceries"]
 
   - id: cat_hard_003
     difficulty: hard
@@ -913,6 +922,7 @@ samples:
       description: "APPLE STORE #R123"
     expected:
       category_name: "Electronics"
+      acceptable_alternatives: ["Shopping"]
 
   - id: cat_hard_011
     difficulty: hard
@@ -924,6 +934,7 @@ samples:
       description: "DOORDASH*CHIPOTLE"
     expected:
       category_name: "Restaurants"
+      acceptable_alternatives: ["Fast Food"]
 
   - id: cat_hard_012
     difficulty: hard
