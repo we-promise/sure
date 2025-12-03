@@ -111,12 +111,16 @@ class Eval::Langfuse::ExperimentRunner
       categories = items.first.dig("input", "categories") || []
       categories = categories.map(&:deep_symbolize_keys)
 
+      # Count how many items are expected to return null (for auto mode retry logic)
+      expected_null_count = items.count { |item| item.dig("expectedOutput", "category_name").nil? }
+
       start_time = Time.current
 
       response = llm_provider.auto_categorize(
         transactions: transactions,
         user_categories: categories,
-        model: model
+        model: model,
+        expected_null_count: expected_null_count
       )
 
       latency_ms = ((Time.current - start_time) * 1000).to_i
