@@ -37,11 +37,11 @@ class ReportsController < ApplicationController
     # Transactions breakdown
     @transactions = build_transactions_breakdown
 
+    # Investment metrics (must be before build_reports_sections)
+    @investment_metrics = build_investment_metrics
+
     # Build reports sections for collapsible/reorderable UI
     @reports_sections = build_reports_sections
-
-    # Investment metrics
-    @investment_metrics = build_investment_metrics
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
   end
@@ -130,6 +130,14 @@ class ReportsController < ApplicationController
           partial: "reports/trends_insights",
           locals: { trends_data: @trends_data, spending_patterns: @spending_patterns },
           visible: Current.family.transactions.any?,
+          collapsible: true
+        },
+        {
+          key: "investment_performance",
+          title: "reports.investment_performance.title",
+          partial: "reports/investment_performance",
+          locals: { investment_metrics: @investment_metrics },
+          visible: @investment_metrics[:has_investments],
           collapsible: true
         },
         {
