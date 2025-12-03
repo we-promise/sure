@@ -31,10 +31,10 @@ class Provider::Openai::AutoCategorizer
   # Determine default JSON mode based on configuration hierarchy:
   # 1. Environment variable (LLM_JSON_MODE) - highest priority, for testing/override
   # 2. Setting.openai_json_mode - user-configured in app settings
-  # 3. Default: auto mode for custom providers, strict for native OpenAI
+  # 3. Default: auto mode (recommended for all providers)
   #
   # Mode descriptions:
-  # - "auto": Tries strict first, falls back to none if >50% nulls returned (recommended for unknown models)
+  # - "auto": Tries strict first, falls back to none if >50% fail (recommended default)
   # - "strict": Best for thinking models (qwen-thinking, deepseek-reasoner) - skips verbose <think> tags
   # - "none": Best for non-thinking models (gpt-oss, llama, mistral) - allows reasoning in output
   # - "json_object": Middle ground, broader compatibility than strict
@@ -47,8 +47,8 @@ class Provider::Openai::AutoCategorizer
     setting_mode = Setting.openai_json_mode
     return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
 
-    # 3. Default: auto mode for custom providers (adaptive), strict for native OpenAI
-    custom_provider ? JSON_MODE_AUTO : JSON_MODE_STRICT
+    # 3. Default: auto mode for all providers (tries strict first, falls back to none if needed)
+    JSON_MODE_AUTO
   end
 
   def auto_categorize
