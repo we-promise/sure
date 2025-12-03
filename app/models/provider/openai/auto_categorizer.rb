@@ -8,6 +8,10 @@ class Provider::Openai::AutoCategorizer
   JSON_MODE_STRICT = "strict"
   JSON_MODE_OBJECT = "json_object"
   JSON_MODE_NONE = "none"
+  JSON_MODE_AUTO = "auto"
+
+  # Threshold for auto mode: if more than this percentage returns null, retry with none mode
+  AUTO_MODE_NULL_THRESHOLD = 0.5
 
   attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family, :json_mode
 
@@ -22,16 +26,29 @@ class Provider::Openai::AutoCategorizer
     @json_mode = json_mode || default_json_mode
   end
 
-  # Determine default JSON mode based on environment and provider type
-  def default_json_mode
-    # Check environment variable first (allows global override)
-    env_mode = ENV["LLM_JSON_MODE"]
-    return env_mode if env_mode.present? && [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE ].include?(env_mode)
+  VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
 
-    # Use strict mode by default - it's faster, uses fewer tokens, and produces cleaner output
-    # Strict mode with enum constraints forces the model to output valid JSON without thinking tags
-    # Falls back to none mode if strict mode fails (see auto_categorize_openai_generic)
-    JSON_MODE_STRICT
+  # Determine default JSON mode based on configuration hierarchy:
+  # 1. Environment variable (LLM_JSON_MODE) - highest priority, for testing/override
+  # 2. Setting.openai_json_mode - user-configured in app settings
+  # 3. Default: auto mode for custom providers, strict for native OpenAI
+  #
+  # Mode descriptions:
+  # - "auto": Tries strict first, falls back to none if >50% nulls returned (recommended for unknown models)
+  # - "strict": Best for thinking models (qwen-thinking, deepseek-reasoner) - skips verbose <think> tags
+  # - "none": Best for non-thinking models (gpt-oss, llama, mistral) - allows reasoning in output
+  # - "json_object": Middle ground, broader compatibility than strict
+  def default_json_mode
+    # 1. Check environment variable first (allows runtime override for testing)
+    env_mode = ENV["LLM_JSON_MODE"]
+    return env_mode if env_mode.present? && VALID_JSON_MODES.include?(env_mode)
+
+    # 2. Check app settings (user-configured)
+    setting_mode = Setting.openai_json_mode
+    return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
+
+    # 3. Default: auto mode for custom providers (adaptive), strict for native OpenAI
+    custom_provider ? JSON_MODE_AUTO : JSON_MODE_STRICT
   end
 
   def auto_categorize
@@ -142,15 +159,40 @@ class Provider::Openai::AutoCategorizer
     end
 
     def auto_categorize_openai_generic
-      auto_categorize_with_mode(json_mode)
+      if json_mode == JSON_MODE_AUTO
+        auto_categorize_with_auto_mode
+      else
+        auto_categorize_with_mode(json_mode)
+      end
     rescue Faraday::BadRequestError => e
       # If strict mode fails (HTTP 400), fall back to none mode
       # This handles providers that don't support json_schema response format
-      if json_mode == JSON_MODE_STRICT
+      if json_mode == JSON_MODE_STRICT || json_mode == JSON_MODE_AUTO
         Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
         auto_categorize_with_mode(JSON_MODE_NONE)
       else
         raise
+      end
+    end
+
+    # Auto mode: try strict first, fall back to none if too many nulls or missing results
+    def auto_categorize_with_auto_mode
+      result = auto_categorize_with_mode(JSON_MODE_STRICT)
+
+      # Check if too many nulls OR missing results were returned
+      # Models that can't reason in strict mode often:
+      # 1. Return null for everything, OR
+      # 2. Simply omit transactions they can't categorize (returning fewer results than input)
+      null_count = result.count { |r| r.category_name.nil? || r.category_name == "null" }
+      missing_count = transactions.size - result.size
+      failed_count = null_count + missing_count
+      failed_ratio = transactions.size > 0 ? failed_count.to_f / transactions.size : 0.0
+
+      if failed_ratio > AUTO_MODE_NULL_THRESHOLD
+        Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed (#{null_count} nulls, #{missing_count} missing) in strict mode, retrying with none mode")
+        auto_categorize_with_mode(JSON_MODE_NONE)
+      else
+        result
       end
     end
 

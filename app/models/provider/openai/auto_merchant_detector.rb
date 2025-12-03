@@ -5,9 +5,14 @@ class Provider::Openai::AutoMerchantDetector
   # - "strict": Use strict JSON schema (requires full OpenAI API compatibility)
   # - "json_object": Use json_object response format (broader compatibility)
   # - "none": No response format constraint (maximum compatibility with local LLMs)
+  # - "auto": Try strict first, fall back to none if poor results
   JSON_MODE_STRICT = "strict"
   JSON_MODE_OBJECT = "json_object"
   JSON_MODE_NONE = "none"
+  JSON_MODE_AUTO = "auto"
+
+  # Threshold for auto mode: if more than this percentage returns null, retry with none mode
+  AUTO_MODE_NULL_THRESHOLD = 0.5
 
   attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family, :json_mode
 
@@ -22,15 +27,29 @@ class Provider::Openai::AutoMerchantDetector
     @json_mode = json_mode || default_json_mode
   end
 
-  # Determine default JSON mode based on environment and provider type
-  def default_json_mode
-    # Check environment variable first (allows global override)
-    env_mode = ENV["LLM_JSON_MODE"]
-    return env_mode if env_mode.present? && [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE ].include?(env_mode)
+  VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
 
-    # Custom providers default to no JSON constraints for maximum compatibility
-    # Native OpenAI always uses strict mode (handled in auto_detect_merchants_openai_native)
-    custom_provider ? JSON_MODE_NONE : JSON_MODE_STRICT
+  # Determine default JSON mode based on configuration hierarchy:
+  # 1. Environment variable (LLM_JSON_MODE) - highest priority, for testing/override
+  # 2. Setting.openai_json_mode - user-configured in app settings
+  # 3. Default: auto mode for custom providers, strict for native OpenAI
+  #
+  # Mode descriptions:
+  # - "auto": Tries strict first, falls back to none if >50% nulls returned (recommended for unknown models)
+  # - "strict": Best for thinking models (qwen-thinking, deepseek-reasoner) - skips verbose <think> tags
+  # - "none": Best for non-thinking models (gpt-oss, llama, mistral) - allows reasoning in output
+  # - "json_object": Middle ground, broader compatibility than strict
+  def default_json_mode
+    # 1. Check environment variable first (allows runtime override for testing)
+    env_mode = ENV["LLM_JSON_MODE"]
+    return env_mode if env_mode.present? && VALID_JSON_MODES.include?(env_mode)
+
+    # 2. Check app settings (user-configured)
+    setting_mode = Setting.openai_json_mode
+    return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
+
+    # 3. Default: auto mode for custom providers (adaptive), strict for native OpenAI
+    custom_provider ? JSON_MODE_AUTO : JSON_MODE_STRICT
   end
 
   def auto_detect_merchants
@@ -154,11 +173,49 @@ class Provider::Openai::AutoMerchantDetector
     end
 
     def auto_detect_merchants_openai_generic
+      if json_mode == JSON_MODE_AUTO
+        auto_detect_merchants_with_auto_mode
+      else
+        auto_detect_merchants_with_mode(json_mode)
+      end
+    rescue Faraday::BadRequestError => e
+      # If strict mode fails (HTTP 400), fall back to none mode
+      # This handles providers that don't support json_schema response format
+      if json_mode == JSON_MODE_STRICT || json_mode == JSON_MODE_AUTO
+        Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
+        auto_detect_merchants_with_mode(JSON_MODE_NONE)
+      else
+        raise
+      end
+    end
+
+    # Auto mode: try strict first, fall back to none if too many nulls or missing results
+    def auto_detect_merchants_with_auto_mode
+      result = auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+
+      # Check if too many nulls OR missing results were returned
+      # Models that can't reason in strict mode often:
+      # 1. Return null for everything, OR
+      # 2. Simply omit transactions they can't detect (returning fewer results than input)
+      null_count = result.count { |r| r.business_name.nil? || r.business_name == "null" }
+      missing_count = transactions.size - result.size
+      failed_count = null_count + missing_count
+      failed_ratio = transactions.size > 0 ? failed_count.to_f / transactions.size : 0.0
+
+      if failed_ratio > AUTO_MODE_NULL_THRESHOLD
+        Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed (#{null_count} nulls, #{missing_count} missing) in strict mode, retrying with none mode")
+        auto_detect_merchants_with_mode(JSON_MODE_NONE)
+      else
+        result
+      end
+    end
+
+    def auto_detect_merchants_with_mode(mode)
       span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
         user_merchants: user_merchants,
-        json_mode: json_mode
+        json_mode: mode
       })
 
       # Build parameters with configurable JSON response format
@@ -171,7 +228,7 @@ class Provider::Openai::AutoMerchantDetector
       }
 
       # Add response format based on json_mode setting
-      case json_mode
+      case mode
       when JSON_MODE_STRICT
         params[:response_format] = {
           type: "json_schema",
@@ -188,7 +245,7 @@ class Provider::Openai::AutoMerchantDetector
 
       response = client.chat(parameters: params)
 
-      Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
+      Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")} (json_mode: #{mode})")
 
       merchants = extract_merchants_generic(response)
       result = build_response(merchants)
@@ -199,7 +256,8 @@ class Provider::Openai::AutoMerchantDetector
         operation: "auto_detect_merchants",
         metadata: {
           transaction_count: transactions.size,
-          merchant_count: user_merchants.size
+          merchant_count: user_merchants.size,
+          json_mode: mode
         }
       )
 
@@ -276,18 +334,77 @@ class Provider::Openai::AutoMerchantDetector
     def parse_json_flexibly(raw)
       return {} if raw.blank?
 
+      # Strip thinking model tags if present (e.g., <think>...</think>)
+      cleaned = strip_thinking_tags(raw)
+
       # Try direct parse first
-      JSON.parse(raw)
+      JSON.parse(cleaned)
     rescue JSON::ParserError
-      # Try to extract JSON from markdown code blocks
-      if raw =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
-        JSON.parse($1)
-      # Try to find a JSON object anywhere in the response
-      elsif raw =~ /(\{[\s\S]*\})/m
-        JSON.parse($1)
-      else
-        raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+      # Try multiple extraction strategies in order of preference
+
+      # Strategy 1: Closed markdown code blocks (```json...```)
+      if cleaned =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
+        matches = cleaned.scan(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/m).flatten
+        matches.reverse_each do |match|
+          begin
+            return JSON.parse(match)
+          rescue JSON::ParserError
+            next
+          end
+        end
       end
+
+      # Strategy 2: Unclosed markdown code blocks (thinking models often forget to close)
+      if cleaned =~ /```(?:json)?\s*(\{[\s\S]*\})\s*$/m
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Continue to next strategy
+        end
+      end
+
+      # Strategy 3: Find JSON object with "merchants" key
+      if cleaned =~ /(\{"merchants"\s*:\s*\[[\s\S]*\]\s*\})/m
+        matches = cleaned.scan(/(\{"merchants"\s*:\s*\[[\s\S]*?\]\s*\})/m).flatten
+        matches.reverse_each do |match|
+          begin
+            return JSON.parse(match)
+          rescue JSON::ParserError
+            next
+          end
+        end
+        # Try greedy match if non-greedy failed
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Continue to next strategy
+        end
+      end
+
+      # Strategy 4: Find any JSON object (last resort)
+      if cleaned =~ /(\{[\s\S]*\})/m
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Fall through to error
+        end
+      end
+
+      raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+    end
+
+    # Strip thinking model tags (<think>...</think>) from response
+    def strip_thinking_tags(raw)
+      if raw.include?("<think>")
+        if raw =~ /<\/think>\s*([\s\S]*)/m
+          after_thinking = $1.strip
+          return after_thinking if after_thinking.present?
+        end
+        if raw =~ /<think>([\s\S]*)/m
+          return $1
+        end
+      end
+      raw
     end
 
     def json_schema
