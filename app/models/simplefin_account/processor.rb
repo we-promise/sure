@@ -39,15 +39,50 @@ class SimplefinAccount::Processor
 
       # Update account balance and cash balance from latest SimpleFin data
       account = simplefin_account.current_account
-      balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
-      # Normalize balances for liabilities (SimpleFIN typically uses opposite sign)
-      # App convention:
-      # - Liabilities: positive => you owe; negative => provider owes you (overpayment/credit)
-      # Since providers often send the opposite sign, ALWAYS invert for liabilities so
-      # that both debt and overpayment cases are represented correctly.
-      if [ "CreditCard", "Loan" ].include?(account.accountable_type)
-        balance = -balance
+      # Extract raw values from SimpleFIN snapshot
+      bal   = to_decimal(simplefin_account.current_balance)
+      avail = to_decimal(simplefin_account.available_balance)
+
+      # Choose an observed value prioritizing posted balance first
+      observed = bal.nonzero? ? bal : avail
+
+      # Determine if this should be treated as a liability for normalization
+      is_linked_liability = [ "CreditCard", "Loan" ].include?(account.accountable_type)
+      inferred = Simplefin::AccountTypeMapper.infer(
+        name: simplefin_account.name,
+        holdings: (simplefin_account.raw_payload || {})["holdings"],
+        extra: simplefin_account.extra,
+        balance: bal,
+        available_balance: avail,
+        institution: simplefin_account.org_data&.dig("name")
+      ) rescue nil
+      is_mapper_liability = inferred && [ "CreditCard", "Loan" ].include?(inferred.accountable_type)
+      is_liability = is_linked_liability || is_mapper_liability
+
+      if is_mapper_liability && !is_linked_liability
+        Rails.logger.warn(
+          "SimpleFIN liability normalization: linked account #{account.id} type=#{account.accountable_type} " \
+          "appears to be liability via mapper (#{inferred.accountable_type}). Normalizing as liability; consider relinking."
+        )
+      end
+
+      balance = observed
+      if is_liability
+        # Heuristic using both fields when available
+        both_present = bal.nonzero? && avail.nonzero?
+        if both_present && same_sign?(bal, avail)
+          if bal.positive? && avail.positive?
+            # Overpayment/credit → negative in app
+            balance = -observed.abs
+          elsif bal.negative? && avail.negative?
+            # Debt owed → positive in app
+            balance = observed.abs
+          end
+        else
+          # Fallback: invert observed (covers mixed signs or only one field present)
+          balance = -observed
+        end
       end
 
       # Calculate cash balance correctly for investment accounts
@@ -97,5 +132,21 @@ class SimplefinAccount::Processor
           context: context
         )
       end
+    end
+
+    # Helpers
+    def to_decimal(value)
+      return BigDecimal("0") if value.nil?
+      case value
+      when BigDecimal then value
+      when String then BigDecimal(value) rescue BigDecimal("0")
+      when Numeric then BigDecimal(value.to_s)
+      else
+        BigDecimal("0")
+      end
+    end
+
+    def same_sign?(a, b)
+      (a.positive? && b.positive?) || (a.negative? && b.negative?)
     end
 end
