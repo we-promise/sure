@@ -62,7 +62,7 @@ class Eval::Sample < ApplicationRecord
 
   # Get all acceptable category names (primary + alternatives)
   def all_acceptable_categories
-    [expected_category_name, *acceptable_alternatives].compact
+    [ expected_category_name, *acceptable_alternatives ].compact
   end
 
   # Get expected merchant info (for merchant detection evals)
