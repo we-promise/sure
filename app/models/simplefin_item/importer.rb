@@ -16,8 +16,14 @@ class SimplefinItem::Importer
     Rails.logger.info "SimplefinItem::Importer - sync_start_date: #{simplefin_item.sync_start_date.inspect}"
 
     begin
-      if simplefin_item.last_synced_at.nil?
-        # First sync - use chunked approach to get full history
+      # Defensive guard: If last_synced_at is set but there are linked accounts
+      # with no transactions captured yet (typical after a balances-only run),
+      # force the first full run to use chunked history to backfill.
+      linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
+      no_txns_yet = linked_accounts.any? && linked_accounts.all? { |sfa| sfa.raw_transactions_payload.blank? }
+
+      if simplefin_item.last_synced_at.nil? || no_txns_yet
+        # First sync (or balances-only pre-run) — use chunked approach to get full history
         Rails.logger.info "SimplefinItem::Importer - Using chunked history import"
         import_with_chunked_history
       else
@@ -211,9 +217,15 @@ class SimplefinItem::Importer
       max_requests = 22
       current_end_date = Time.current
 
-      # Use user-selected sync_start_date if available, otherwise use default lookback
+      # Decide how far back to walk:
+      # - If the user set a custom sync_start_date, honor it
+      # - Else, for first-time chunked history, walk back up to the provider-safe
+      #   limit implied by chunking so we actually import meaningful history.
+      #   We do NOT use the small initial lookback (7 days) here, because that
+      #   would clip the very first chunk to ~1 week and prevent further history.
       user_start_date = simplefin_item.sync_start_date
-      default_start_date = initial_sync_lookback_period.days.ago
+      implied_max_lookback_days = chunk_size_days * max_requests
+      default_start_date = implied_max_lookback_days.days.ago
       target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
 
       # Enforce maximum 3-year lookback to respect SimpleFin's actual 60-day limit per request
@@ -698,7 +710,9 @@ class SimplefinItem::Importer
     end
 
     def initial_sync_lookback_period
-      # Default to 7 days for initial sync to avoid API limits
+      # Default to 7 days for initial sync. Providers that support deeper
+      # history will supply it via chunked fetches, and users can optionally
+      # set a custom `sync_start_date` to go further back.
       7
     end
 
