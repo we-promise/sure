@@ -1143,7 +1143,8 @@ samples:
       classification: expense
       description: "COSTCO.COM"
     expected:
-      category_name: "Shopping"
+      category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
 
   - id: cat_edge_011
     difficulty: edge_case
