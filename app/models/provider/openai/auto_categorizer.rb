@@ -498,82 +498,27 @@ class Provider::Openai::AutoCategorizer
       MESSAGE
     end
 
-    # Enhanced developer message with few-shot examples for smaller/local LLMs
+    # Concise developer message optimized for smaller/local LLMs
+    # Uses pattern-based guidance instead of exhaustive examples
     def developer_message_for_generic
-      category_names = user_categories.map { |c| c[:name] }.join(", ")
-
       <<~MESSAGE.strip_heredoc
-        AVAILABLE CATEGORIES: #{category_names}
+        AVAILABLE CATEGORIES: #{user_categories.map { |c| c[:name] }.join(", ")}
 
         TRANSACTIONS TO CATEGORIZE:
         #{format_transactions_simply}
 
-        EXAMPLES of correct categorization:
-        FAST FOOD chains (use "Fast Food"):
-        - "FIVE GUYS #987" → "Fast Food"
-        - "KFC #5432" → "Fast Food"
-        - "POPEYES LOUISIANA" → "Fast Food"
-        - "POSTMATES*BURGERKING" → "Restaurants" (delivery services use "Restaurants")
-
-        COFFEE (use "Coffee Shops"):
-        - "CARIBOU COFFEE #321" → "Coffee Shops"
-        - "DUTCH BROS #678" → "Coffee Shops"
-        - "BLUE BOTTLE COFFEE" → "Coffee Shops"
-        - "SQ *MORNING BREW" → "Coffee Shops" (SQ = Square, BREW = coffee shop)
-
-        SIT-DOWN restaurants (use "Restaurants"):
-        - "APPLEBEES #789" → "Restaurants"
-        - "RED LOBSTER #234" → "Restaurants"
-        - "SEAMLESS*SUSHI SPOT" → "Restaurants"
-        - "CAVIAR *DELIVERY" → "Restaurants"
-        - "CHILIS GRILL #456" → "Restaurants"
-
-        GAS STATIONS (use "Gas & Fuel"):
-        - "MOBIL 5678901" → "Gas & Fuel"
-        - "SUNOCO STATION #789" → "Gas & Fuel"
-
-        GROCERIES (dedicated grocery stores and convenience stores):
-        - "SPROUTS FARMERS" → "Groceries"
-        - "ALDI #4567" → "Groceries"
-        - "SHIPT*KROGER" → "Groceries"
-        - "CIRCLE K #89012" → "Groceries"
-
-        SHOPPING (retail stores, big-box, online marketplaces):
-        - "KOHLS #5678" → "Shopping"
-        - "MACY'S RETAIL" → "Shopping"
-        - "EBAY.COM*..." → "Shopping"
-        - "BJS.COM ONLINE" → "Shopping"
-        - "BJS WHOLESALE #567" → "Groceries" (in-store warehouse = groceries)
-
-        STREAMING (use "Streaming Services"):
-        - "PEACOCK TV" → "Streaming Services"
-        - "YOUTUBE PREMIUM" → "Streaming Services"
-        - "PARAMOUNT PLUS" → "Streaming Services"
-
-        SUBSCRIPTIONS (non-streaming services):
-        - "MICROSOFT*365" → "Subscriptions"
-        - "DROPBOX*STORAGE" → "Subscriptions"
-        - "AUDIBLE MEMBERSHIP" → "Subscriptions"
-
-        INCOME (use classification "income"):
-        - "PAYROLL DEPOSIT ABC CO" → "Salary"
-        - "GLOBEX INC PAYROLL" → "Salary"
-        - "COMPANY DIRECT PAY" → "Salary"
-        - "PAYPAL TRANSFER" → "Income" (generic income, not salary)
-        - "ZELLE FROM JANE D" → "Income" (person-to-person transfer)
-        - "SQUARE CASH*DEPOSIT" → "Income"
-
-        RETURN "null" for these (too generic/ambiguous):
-        - "ELECTRONIC WITHDRAWAL" → "null"
-        - "POS PURCHASE 67890" → "null"
-        - "CARD TRANSACTION" → "null"
-        - "CHECK #5678" → "null"
-        - "OUTGOING WIRE" → "null"
-        - "CASH WITHDRAWAL" → "null"
-        - "PAYPAL *UNKNOWN123" → "null" (unknown purpose)
-        - "AUTH HOLD PENDING" → "null"
-        - "REVERSED TXN" → "null"
-        - "BANK FEE" → "null"
+        EXAMPLES of correct categorization and key patterns:
+        - Delivery apps (DOORDASH*, UBEREATS*, GRUBHUB*) → "Restaurants"
+        - Grocery delivery (INSTACART*, SHIPT*) → "Groceries"
+        - SQ * (Square payments) → infer from merchant name after SQ *
+        - Fast-casual chains (PANERA, CHIPOTLE, FIVE GUYS) → "Fast Food"
+        - Warehouse in-store (COSTCO WHSE, SAM'S CLUB) → "Groceries"
+        - Warehouse online (COSTCO.COM, BJS.COM) → "Shopping"
+        - Video streaming (NETFLIX, HULU, HBO, DISNEY) → "Streaming Services"
+        - Software/cloud (GOOGLE *STORAGE, APPLE.COM/BILL, DROPBOX) → "Subscriptions"
+        - Payroll/employer deposits → "Salary"
+        - P2P transfers as income (ZELLE, VENMO, CASH APP) → "Income"
+        - Generic (POS DEBIT, ACH, CHECK #, WIRE, ATM) → "null"
 
         IMPORTANT:
         - Use EXACT category names from the list above
