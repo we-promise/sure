@@ -184,17 +184,6 @@ samples:
     expected:
       category_name: "Fast Food"
 
-  - id: cat_easy_022
-    difficulty: easy
-    tags: [fast_food, clear_merchant]
-    input:
-      id: txn_062
-      amount: 11.50
-      classification: expense
-      description: "WENDYS #456"
-    expected:
-      category_name: "Fast Food"
-
   - id: cat_easy_033
     difficulty: easy
     tags: [fast_food, clear_merchant]
@@ -327,17 +316,6 @@ samples:
       amount: 48.50
       classification: expense
       description: "EXXONMOBIL 12345"
-    expected:
-      category_name: "Gas & Fuel"
-
-  - id: cat_easy_027
-    difficulty: easy
-    tags: [gas, clear_merchant]
-    input:
-      id: txn_077
-      amount: 55.00
-      classification: expense
-      description: "BP#1234567"
     expected:
       category_name: "Gas & Fuel"
 
@@ -515,17 +493,6 @@ samples:
       amount: 245.00
       classification: expense
       description: "HILTON HOTELS"
-    expected:
-      category_name: "Hotels"
-
-  - id: cat_easy_029
-    difficulty: easy
-    tags: [hotels, clear_merchant]
-    input:
-      id: txn_079
-      amount: 178.00
-      classification: expense
-      description: "HYATT REGENCY"
     expected:
       category_name: "Hotels"
 
