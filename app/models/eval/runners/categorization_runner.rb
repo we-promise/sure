@@ -1,6 +1,5 @@
 class Eval::Runners::CategorizationRunner < Eval::Runners::Base
   DEFAULT_BATCH_SIZE = 25  # Matches Provider::Openai limit
-  SMALL_MODEL_BATCH_SIZE = 5  # Smaller batch for local/smaller LLMs
 
   protected
 
@@ -17,8 +16,6 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
 
     # Use smaller batches for custom providers (local LLMs) to reduce context length
     def effective_batch_size
-      return SMALL_MODEL_BATCH_SIZE if provider.custom_provider?
-
       eval_run.provider_config["batch_size"]&.to_i || DEFAULT_BATCH_SIZE
     end
 
