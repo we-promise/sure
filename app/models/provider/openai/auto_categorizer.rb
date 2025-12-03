@@ -510,70 +510,70 @@ class Provider::Openai::AutoCategorizer
 
         EXAMPLES of correct categorization:
         FAST FOOD chains (use "Fast Food"):
-        - "MCDONALD'S #12345" → "Fast Food"
-        - "CHIPOTLE ONLINE" → "Fast Food"
-        - "TACO BELL #789" → "Fast Food"
-        - "DOORDASH*CHIPOTLE" → "Restaurants" (delivery services use "Restaurants")
+        - "FIVE GUYS #987" → "Fast Food"
+        - "KFC #5432" → "Fast Food"
+        - "POPEYES LOUISIANA" → "Fast Food"
+        - "POSTMATES*BURGERKING" → "Restaurants" (delivery services use "Restaurants")
 
         COFFEE (use "Coffee Shops"):
-        - "STARBUCKS STORE" → "Coffee Shops"
-        - "DUNKIN #12345" → "Coffee Shops"
-        - "PEETS COFFEE" → "Coffee Shops"
-        - "SQ *DOWNTOWN CAFE" → "Coffee Shops" (SQ = Square, CAFE = coffee shop)
+        - "CARIBOU COFFEE #321" → "Coffee Shops"
+        - "DUTCH BROS #678" → "Coffee Shops"
+        - "BLUE BOTTLE COFFEE" → "Coffee Shops"
+        - "SQ *MORNING BREW" → "Coffee Shops" (SQ = Square, BREW = coffee shop)
 
         SIT-DOWN restaurants (use "Restaurants"):
-        - "OLIVE GARDEN #456" → "Restaurants"
-        - "CHEESECAKE FACTORY" → "Restaurants"
-        - "GRUBHUB*THAI KITCHEN" → "Restaurants"
-        - "UBEREATS *UBER EATS" → "Restaurants"
-        - "PANERA BREAD #567" → "Restaurants"
+        - "APPLEBEES #789" → "Restaurants"
+        - "RED LOBSTER #234" → "Restaurants"
+        - "SEAMLESS*SUSHI SPOT" → "Restaurants"
+        - "CAVIAR *DELIVERY" → "Restaurants"
+        - "CHILIS GRILL #456" → "Restaurants"
 
         GAS STATIONS (use "Gas & Fuel"):
-        - "SHELL OIL 12345" → "Gas & Fuel"
-        - "CHEVRON STATION" → "Gas & Fuel"
+        - "MOBIL 5678901" → "Gas & Fuel"
+        - "SUNOCO STATION #789" → "Gas & Fuel"
 
         GROCERIES (dedicated grocery stores and convenience stores):
-        - "WHOLE FOODS MKT" → "Groceries"
-        - "TRADER JOE'S" → "Groceries"
-        - "INSTACART*SAFEWAY" → "Groceries"
-        - "7-ELEVEN #34567" → "Groceries"
+        - "SPROUTS FARMERS" → "Groceries"
+        - "ALDI #4567" → "Groceries"
+        - "SHIPT*KROGER" → "Groceries"
+        - "CIRCLE K #89012" → "Groceries"
 
         SHOPPING (retail stores, big-box, online marketplaces):
-        - "TARGET #1234" → "Shopping"
-        - "WALMART SUPERCENTER" → "Shopping"
-        - "AMAZON.COM*..." → "Shopping"
-        - "COSTCO.COM" → "Shopping"
-        - "COSTCO WHSE #1234" → "Groceries" (in-store warehouse = groceries)
+        - "KOHLS #5678" → "Shopping"
+        - "MACY'S RETAIL" → "Shopping"
+        - "EBAY.COM*..." → "Shopping"
+        - "BJS.COM ONLINE" → "Shopping"
+        - "BJS WHOLESALE #567" → "Groceries" (in-store warehouse = groceries)
 
         STREAMING (use "Streaming Services"):
-        - "NETFLIX.COM" → "Streaming Services"
-        - "SPOTIFY USA" → "Streaming Services"
-        - "HBO MAX" → "Streaming Services"
+        - "PEACOCK TV" → "Streaming Services"
+        - "YOUTUBE PREMIUM" → "Streaming Services"
+        - "PARAMOUNT PLUS" → "Streaming Services"
 
         SUBSCRIPTIONS (non-streaming services):
-        - "APPLE.COM/BILL" → "Subscriptions"
-        - "GOOGLE *STORAGE" → "Subscriptions"
-        - "AMAZON PRIME*..." → "Subscriptions"
+        - "MICROSOFT*365" → "Subscriptions"
+        - "DROPBOX*STORAGE" → "Subscriptions"
+        - "AUDIBLE MEMBERSHIP" → "Subscriptions"
 
         INCOME (use classification "income"):
-        - "DIRECT DEPOSIT PAYROLL" → "Salary"
-        - "ACME CORP PAYROLL" → "Salary"
-        - "EMPLOYER DIRECT DEP" → "Salary"
-        - "VENMO CASHOUT" → "Income" (generic income, not salary)
-        - "ZELLE FROM JOHN S" → "Income" (person-to-person transfer)
-        - "CASH APP*CASH OUT" → "Income"
+        - "PAYROLL DEPOSIT ABC CO" → "Salary"
+        - "GLOBEX INC PAYROLL" → "Salary"
+        - "COMPANY DIRECT PAY" → "Salary"
+        - "PAYPAL TRANSFER" → "Income" (generic income, not salary)
+        - "ZELLE FROM JANE D" → "Income" (person-to-person transfer)
+        - "SQUARE CASH*DEPOSIT" → "Income"
 
         RETURN "null" for these (too generic/ambiguous):
-        - "ACH WITHDRAWAL" → "null"
-        - "POS DEBIT 12345" → "null"
-        - "DEBIT CARD PURCHASE" → "null"
-        - "CHECK #1234" → "null"
-        - "WIRE TRANSFER OUT" → "null"
-        - "ATM WITHDRAWAL" → "null"
-        - "PAYPAL *JOHNSMITH" → "null" (unknown purpose)
-        - "PENDING AUTHORIZATION" → "null"
-        - "VOID TRANSACTION" → "null"
-        - "SERVICE CHARGE" → "null"
+        - "ELECTRONIC WITHDRAWAL" → "null"
+        - "POS PURCHASE 67890" → "null"
+        - "CARD TRANSACTION" → "null"
+        - "CHECK #5678" → "null"
+        - "OUTGOING WIRE" → "null"
+        - "CASH WITHDRAWAL" → "null"
+        - "PAYPAL *UNKNOWN123" → "null" (unknown purpose)
+        - "AUTH HOLD PENDING" → "null"
+        - "REVERSED TXN" → "null"
+        - "BANK FEE" → "null"
 
         IMPORTANT:
         - Use EXACT category names from the list above
