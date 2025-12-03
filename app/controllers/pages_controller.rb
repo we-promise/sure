@@ -83,6 +83,14 @@ class PagesController < ApplicationController
           collapsible: true
         },
         {
+          key: "investment_summary",
+          title: "pages.dashboard.investment_summary.title",
+          partial: "pages/dashboard/investment_summary",
+          locals: { investment_statement: @investment_statement, period: @period },
+          visible: Current.family.accounts.any? && @investment_statement.investment_accounts.any?,
+          collapsible: true
+        },
+        {
           key: "net_worth_chart",
           title: "pages.dashboard.net_worth_chart.title",
           partial: "pages/dashboard/net_worth_chart",
