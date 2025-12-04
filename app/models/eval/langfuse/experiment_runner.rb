@@ -111,12 +111,17 @@ class Eval::Langfuse::ExperimentRunner
       categories = items.first.dig("input", "categories") || []
       categories = categories.map(&:deep_symbolize_keys)
 
+      # Determine effective JSON mode for this batch
+      # If the batch has many expected nulls, force strict mode to prevent false retries
+      effective_json_mode = json_mode_for_batch(items)
+
       start_time = Time.current
 
       response = llm_provider.auto_categorize(
         transactions: transactions,
         user_categories: categories,
-        model: model
+        model: model,
+        json_mode: effective_json_mode
       )
 
       latency_ms = ((Time.current - start_time) * 1000).to_i
@@ -359,6 +364,29 @@ class Eval::Langfuse::ExperimentRunner
         Provider::Openai.new(access_token, uri_base: uri_base, model: model)
       else
         raise "Unsupported provider: #{provider}"
+      end
+    end
+
+    # Determine the effective JSON mode for a batch based on expected null ratio
+    # This prevents the auto-categorizer from incorrectly retrying when many nulls are expected
+    def json_mode_for_batch(items)
+      # If a specific mode is configured (not "auto"), always use it
+      configured_mode = provider_config[:json_mode]
+      return configured_mode if configured_mode.present? && configured_mode != "auto"
+
+      # Calculate expected null ratio for this batch
+      expected_null_count = items.count { |item| item.dig("expectedOutput", "category_name").nil? }
+      expected_null_ratio = expected_null_count.to_f / items.size
+
+      # If >50% of the batch is expected to return null, force strict mode
+      # This matches the AUTO_MODE_NULL_THRESHOLD in the auto-categorizer
+      # and prevents unnecessary retries when nulls are legitimate
+      if expected_null_ratio > 0.5
+        Rails.logger.info("[Langfuse Experiment] Batch has #{(expected_null_ratio * 100).round}% expected nulls, forcing strict mode")
+        "strict"
+      else
+        # Use auto mode - let the auto-categorizer decide
+        "auto"
       end
     end
 

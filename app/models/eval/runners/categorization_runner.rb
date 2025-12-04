@@ -43,6 +43,12 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
       # Symbolize keys since Provider::Openai::AutoCategorizer expects symbol keys
       categories = batch_samples.first.categories_context.map(&:deep_symbolize_keys)
 
+      # Determine effective JSON mode for this batch
+      # If the batch has many expected nulls and we're using auto mode, force strict mode
+      # to prevent the auto-categorizer from incorrectly retrying (it would see many nulls
+      # and think strict mode is broken, when actually the nulls are expected)
+      effective_json_mode = json_mode_for_batch(batch_samples)
+
       start_time = Time.current
 
       begin
@@ -50,7 +56,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
           transactions: transactions,
           user_categories: categories,
           model: model,
-          json_mode: json_mode
+          json_mode: effective_json_mode
         )
 
         latency_ms = ((Time.current - start_time) * 1000).to_i
@@ -115,6 +121,28 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
           latency_ms: per_sample_latency,
           metadata: { "error" => error_message }
         )
+      end
+    end
+
+    # Determine the effective JSON mode for a batch based on expected null ratio
+    # This prevents the auto-categorizer from incorrectly retrying when many nulls are expected
+    def json_mode_for_batch(batch_samples)
+      # If a specific mode is configured (not "auto"), always use it
+      return json_mode if json_mode.present? && json_mode != "auto"
+
+      # Calculate expected null ratio for this batch
+      expected_null_count = batch_samples.count { |s| s.expected_category_name.nil? }
+      expected_null_ratio = expected_null_count.to_f / batch_samples.size
+
+      # If >50% of the batch is expected to return null, force strict mode
+      # This matches the AUTO_MODE_NULL_THRESHOLD in the auto-categorizer
+      # and prevents unnecessary retries when nulls are legitimate
+      if expected_null_ratio > 0.5
+        log_progress("Batch has #{(expected_null_ratio * 100).round}% expected nulls, forcing strict mode to prevent false retry")
+        "strict"
+      else
+        # Use auto mode - let the auto-categorizer decide
+        "auto"
       end
     end
 
