@@ -46,9 +46,6 @@
         data-action="
           dragstart->dashboard-sortable#dragStart
           dragend->dashboard-sortable#dragEnd
-          touchstart->dashboard-sortable#touchStart
-          touchmove->dashboard-sortable#touchMove
-          touchend->dashboard-sortable#touchEnd
           keydown->dashboard-sortable#handleKeyDown">
         <div class="px-4 py-2 flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -67,7 +64,12 @@
           </div>
           <button
             type="button"
-            class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
+            class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-1.5 -m-1 touch-none"
+            data-dashboard-sortable-target="handle"
+            data-action="
+              touchstart->dashboard-sortable#touchStart
+              touchmove->dashboard-sortable#touchMove
+              touchend->dashboard-sortable#touchEnd"
             aria-label="<%= t("pages.dashboard.drag_to_reorder") %>">
             <%= icon("grip-vertical", size: "sm") %>
           </button>
