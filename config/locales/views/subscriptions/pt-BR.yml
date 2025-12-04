@@ -1,4 +1,4 @@
 ---
 pt-BR:
   subscriptions:
-    self_hosted_alert: "Maybe+ não está disponível no modo auto-hospedado."
+    self_hosted_alert: "%{product_name} não está disponível no modo self-hosted."

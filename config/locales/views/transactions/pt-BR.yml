@@ -30,6 +30,9 @@ pt-BR:
         e não pode ser desfeito.
       delete_title: Excluir transação
       details: Detalhes
+      mark_recurring: Marcar como Recorrente
+      mark_recurring_subtitle: Acompanhe como uma transação recorrente. A variação de valor é calculada automaticamente com base nos últimos 6 meses de transações similares.
+      mark_recurring_title: Transação Recorrente
       merchant_label: Comerciante
       name_label: Nome
       nature: Tipo

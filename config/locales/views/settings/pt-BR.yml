@@ -1,6 +1,21 @@
 ---
 pt-BR:
   settings:
+    ai_prompts:
+      show:
+        page_title: Prompts de IA
+        openai_label: OpenAI
+        disable_ai: Desativar Assistente de IA
+        prompt_instructions: Instruções do Prompt
+        main_system_prompt:
+          title: Prompt de Sistema Principal
+          subtitle: Instruções centrais que definem como o assistente de IA se comporta em todas as conversas
+        transaction_categorizer:
+          title: Categorizador de Transações
+          subtitle: A IA categoriza automaticamente suas transações com base nas suas categorias definidas
+        merchant_detector:
+          title: Detector de Estabelecimentos
+          subtitle: A IA identifica e enriquece dados de transações com informações do estabelecimento
     billings:
       show:
         page_title: Cobrança
@@ -60,7 +75,7 @@ pt-BR:
         last_name: Sobrenome
         page_title: Conta
         pending: Pendente
-        profile_subtitle: Personalize como você aparece no Maybe
+        profile_subtitle: Personalize como você aparece no %{product_name}
         profile_title: Perfil
         remove_invitation: Remover Convite
         remove_member: Remover Membro
