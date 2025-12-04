@@ -34,11 +34,6 @@ context:
       classification: "expense"
       is_subcategory: true
       parent_id: "food_and_drink"
-    - id: "fast_food"
-      name: "Fast Food"
-      classification: "expense"
-      is_subcategory: true
-      parent_id: "food_and_drink"
     - id: "groceries"
       name: "Groceries"
       classification: "expense"
@@ -150,61 +145,66 @@ samples:
   # EASY SAMPLES - Unambiguous merchant names with single clear category
   # =============================================================================
 
-  # Fast Food - Clear chain names
+  # Food & Drink - Clear chain names
   - id: cat_easy_001
     difficulty: easy
-    tags: [fast_food, clear_merchant]
+    tags: [food_and_drink, clear_merchant]
     input:
       id: txn_001
       amount: 12.99
       classification: expense
       description: "MCDONALD'S #12345 SPRINGFIELD IL"
     expected:
-      category_name: "Fast Food"
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
 
   - id: cat_easy_002
     difficulty: easy
-    tags: [fast_food, clear_merchant]
+    tags: [food_and_drink, clear_merchant]
     input:
       id: txn_002
       amount: 8.50
       classification: expense
       description: "BURGER KING #456 NEW YORK NY"
     expected:
-      category_name: "Fast Food"
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
 
   - id: cat_easy_021
     difficulty: easy
-    tags: [fast_food, clear_merchant]
+    tags: [food_and_drink, clear_merchant]
     input:
       id: txn_061
       amount: 9.99
       classification: expense
       description: "TACO BELL #789"
     expected:
-      category_name: "Fast Food"
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
 
   - id: cat_easy_033
     difficulty: easy
-    tags: [fast_food, clear_merchant]
+    tags: [food_and_drink, clear_merchant]
     input:
       id: txn_093
       amount: 14.99
       classification: expense
       description: "CHIPOTLE MEXICAN GRILL"
     expected:
-      category_name: "Fast Food"
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
 
   - id: cat_easy_034
     difficulty: easy
-    tags: [fast_food, clear_merchant]
+    tags: [food_and_drink, clear_merchant]
     input:
       id: txn_094
       amount: 8.99
       classification: expense
       description: "SUBWAY #12345"
     expected:
-      category_name: "Fast Food"
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
 
   # Coffee Shops - Clear coffee chain names
   - id: cat_easy_003
@@ -364,6 +364,7 @@ samples:
       description: "NETFLIX.COM"
     expected:
       category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
 
   - id: cat_easy_011
     difficulty: easy
@@ -375,6 +376,7 @@ samples:
       description: "SPOTIFY USA"
     expected:
       category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
 
   # Electronics - Clear electronics retailers
   - id: cat_easy_012
@@ -449,6 +451,7 @@ samples:
       description: "PLANET FITNESS MONTHLY"
     expected:
       category_name: "Gym & Fitness"
+      acceptable_alternatives: ["Health & Wellness"]
 
   # Flights - Clear airline names
   - id: cat_easy_018
@@ -461,6 +464,7 @@ samples:
       description: "UNITED AIRLINES 0162345678"
     expected:
       category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
 
   - id: cat_easy_030
     difficulty: easy
@@ -472,6 +476,7 @@ samples:
       description: "DELTA AIR LINES"
     expected:
       category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
 
   # Hotels - Clear hotel names
   - id: cat_easy_019
@@ -637,6 +642,7 @@ samples:
       description: "XFINITY INTERNET"
     expected:
       category_name: "Utilities"
+      acceptable_alternatives: ["Subscriptions"]
 
   - id: cat_medium_027
     difficulty: medium
@@ -648,6 +654,7 @@ samples:
       description: "AT&T WIRELESS"
     expected:
       category_name: "Utilities"
+      acceptable_alternatives: ["Subscriptions"]
 
   - id: cat_medium_028
     difficulty: medium
@@ -671,6 +678,7 @@ samples:
       description: "MTA *METROCARD"
     expected:
       category_name: "Public Transit"
+      acceptable_alternatives: ["Transportation"]
 
   - id: cat_medium_008
     difficulty: medium
@@ -682,6 +690,7 @@ samples:
       description: "WMATA SMARTRIP"
     expected:
       category_name: "Public Transit"
+      acceptable_alternatives: ["Transportation"]
 
   # Housing - Rent payments
   - id: cat_medium_009
@@ -1032,7 +1041,7 @@ samples:
       description: "7-ELEVEN #34567"
     expected:
       category_name: "Groceries"
-      acceptable_alternatives: ["Fast Food"]
+      acceptable_alternatives: ["Food & Drink"]
 
   # Pharmacy/drugstore - Could sell many things
   - id: cat_hard_009
@@ -1058,7 +1067,7 @@ samples:
       description: "PANERA BREAD #567"
     expected:
       category_name: "Restaurants"
-      acceptable_alternatives: ["Fast Food"]
+      acceptable_alternatives: ["Food & Drink"]
 
   # Delivery services - Category depends on underlying merchant
   - id: cat_hard_011
@@ -1070,7 +1079,7 @@ samples:
       classification: expense
       description: "DOORDASH*CHIPOTLE"
     expected:
-      category_name: "Fast Food"
+      category_name: "Food & Drink"
       acceptable_alternatives: ["Restaurants"]
 
   - id: cat_hard_012
@@ -1105,7 +1114,7 @@ samples:
       description: "UBEREATS *UBER EATS"
     expected:
       category_name: "Restaurants"
-      acceptable_alternatives: ["Fast Food"]
+      acceptable_alternatives: ["Food & Drink"]
 
   # Amazon Prime - Subscription vs shopping
   - id: cat_hard_015

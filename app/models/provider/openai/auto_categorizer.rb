@@ -512,18 +512,12 @@ class Provider::Openai::AutoCategorizer
         TRANSACTIONS TO CATEGORIZE:
         #{format_transactions_simply}
 
-        EXAMPLES of correct categorization and key patterns:
-        - Delivery apps (DOORDASH*, UBEREATS*, GRUBHUB*) → "Restaurants"
-        - Grocery delivery (INSTACART*, SHIPT*) → "Groceries"
-        - SQ * (Square payments) → infer from merchant name after SQ *
-        - Fast-casual chains (PANERA, CHIPOTLE, FIVE GUYS) → "Fast Food"
-        - Warehouse in-store (COSTCO WHSE, SAM'S CLUB) → "Groceries"
-        - Warehouse online (COSTCO.COM, BJS.COM) → "Shopping"
-        - Video streaming (NETFLIX, HULU, HBO, DISNEY) → "Streaming Services"
-        - Software/cloud (GOOGLE *STORAGE, APPLE.COM/BILL, DROPBOX) → "Subscriptions"
-        - Payroll/employer deposits → "Salary"
-        - P2P transfers as income (ZELLE, VENMO, CASH APP) → "Income"
-        - Generic (POS DEBIT, ACH, CHECK #, WIRE, ATM) → "null"
+        CATEGORIZATION GUIDELINES:
+        - Prefer specific subcategories over general parent categories when confident
+        - Food delivery services should be categorized based on the underlying merchant type
+        - Square payments (SQ *) should be inferred from the merchant name after the prefix
+        - Warehouse/club stores should be categorized based on their primary purpose
+        - Return "null" for generic transactions (e.g., POS terminals, wire transfers, checks, ATM withdrawals)
 
         IMPORTANT:
         - Use EXACT category names from the list above
