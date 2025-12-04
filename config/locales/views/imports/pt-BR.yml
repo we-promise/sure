@@ -47,7 +47,7 @@ pt-BR:
           sem categoria.
         category_mapping_title: Atribuir suas categorias
         tag_mapping_description: Atribua todas as tags do seu arquivo importado às 
-          tags existentes no %{product_name}". Você também pode adicionar novas tags ou deixá-las
+          tags existentes no %{product_name}. Você também pode adicionar novas tags ou deixá-las
           sem categoria.
         tag_mapping_title: Atribuir suas tags
     uploads:

@@ -111,7 +111,7 @@ pt-BR:
       already_linked: "A conta já está vinculada a um provedor"
       no_providers: "Nenhum provedor configurado no momento"
   
-    email_confirmations:
+  email_confirmations:
     new:
       invalid_token: Link de confirmação inválido ou expirado.
       success_login: Seu e-mail foi confirmado. Por favor, faça login com seu novo endereço
