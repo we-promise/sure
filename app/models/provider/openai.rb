@@ -51,7 +51,7 @@ class Provider::Openai < Provider
     @uri_base.present?
   end
 
-  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil, expected_null_count: 0)
+  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
       if user_categories.blank?
@@ -75,8 +75,7 @@ class Provider::Openai < Provider
         custom_provider: custom_provider?,
         langfuse_trace: trace,
         family: family,
-        json_mode: json_mode,
-        expected_null_count: expected_null_count
+        json_mode: json_mode
       ).auto_categorize
 
       trace&.update(output: result.map(&:to_h))

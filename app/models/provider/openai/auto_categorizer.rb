@@ -11,11 +11,12 @@ class Provider::Openai::AutoCategorizer
   JSON_MODE_AUTO = "auto"
 
   # Threshold for auto mode: if more than this percentage returns null, retry with none mode
+  # This is a heuristic to detect when strict JSON mode is breaking the model's ability to reason
   AUTO_MODE_NULL_THRESHOLD = 0.5
 
-  attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family, :json_mode, :expected_null_count
+  attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family, :json_mode
 
-  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil, expected_null_count: 0)
+  def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil)
     @client = client
     @model = model
     @transactions = transactions
@@ -24,7 +25,6 @@ class Provider::Openai::AutoCategorizer
     @langfuse_trace = langfuse_trace
     @family = family
     @json_mode = json_mode || default_json_mode
-    @expected_null_count = expected_null_count
   end
 
   VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
@@ -177,26 +177,24 @@ class Provider::Openai::AutoCategorizer
     end
 
     # Auto mode: try strict first, fall back to none if too many nulls or missing results
+    #
+    # This uses pure heuristics to detect when strict JSON mode is breaking the model's
+    # ability to reason. Models that can't reason well in strict mode often:
+    # 1. Return null for everything, OR
+    # 2. Simply omit transactions they can't categorize (returning fewer results than input)
+    #
+    # The heuristic is simple: if >50% of results are null or missing, the model likely
+    # needs the freedom to reason in its output (which strict mode prevents).
     def auto_categorize_with_auto_mode
       result = auto_categorize_with_mode(JSON_MODE_STRICT)
 
-      # Check if too many UNEXPECTED nulls or missing results were returned
-      # Models that can't reason in strict mode often:
-      # 1. Return null for everything, OR
-      # 2. Simply omit transactions they can't categorize (returning fewer results than input)
-      #
-      # Some transactions legitimately should return null (e.g., generic descriptions).
-      # The expected_null_count parameter tells us how many nulls are expected.
       null_count = result.count { |r| r.category_name.nil? || r.category_name == "null" }
-      unexpected_null_count = [ null_count - expected_null_count, 0 ].max
-
       missing_count = transactions.size - result.size
-      failed_count = unexpected_null_count + missing_count
-      categorizable_count = transactions.size - expected_null_count
-      failed_ratio = categorizable_count > 0 ? failed_count.to_f / categorizable_count : 0.0
+      failed_count = null_count + missing_count
+      failed_ratio = transactions.size > 0 ? failed_count.to_f / transactions.size : 0.0
 
       if failed_ratio > AUTO_MODE_NULL_THRESHOLD
-        Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed (#{unexpected_null_count} unexpected nulls, #{missing_count} missing) in strict mode, retrying with none mode")
+        Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed (#{null_count} nulls, #{missing_count} missing) in strict mode, retrying with none mode")
         auto_categorize_with_mode(JSON_MODE_NONE)
       else
         result

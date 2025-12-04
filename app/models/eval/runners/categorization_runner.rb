@@ -43,9 +43,6 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
       # Symbolize keys since Provider::Openai::AutoCategorizer expects symbol keys
       categories = batch_samples.first.categories_context.map(&:deep_symbolize_keys)
 
-      # Count how many samples are expected to return null (for auto mode retry logic)
-      expected_null_count = batch_samples.count { |s| s.expected_category_name.nil? }
-
       start_time = Time.current
 
       begin
@@ -53,8 +50,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
           transactions: transactions,
           user_categories: categories,
           model: model,
-          json_mode: json_mode,
-          expected_null_count: expected_null_count
+          json_mode: json_mode
         )
 
         latency_ms = ((Time.current - start_time) * 1000).to_i
