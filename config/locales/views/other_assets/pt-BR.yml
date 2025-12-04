@@ -3,5 +3,7 @@ pt-BR:
   other_assets:
     edit:
       edit: Editar %{account}
+      balance_tracking_info: "Outros Ativos são atualizados via avaliações manuais usando 'Novo Saldo', e não por transações. O fluxo de caixa não afetará o saldo da conta."
     new:
       title: Inserir detalhes do ativo
+      balance_tracking_info: "Outros Ativos são atualizados via avaliações manuais usando 'Novo Saldo', e não por transações. O fluxo de caixa não afetará o saldo da conta."

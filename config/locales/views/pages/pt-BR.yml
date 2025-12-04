@@ -4,11 +4,34 @@ pt-BR:
     changelog:
       title: Novidades
     dashboard:
+      welcome: "Bem-vindo(a) de volta, %{name}"
+      subtitle: "Veja o que está acontecendo com suas finanças"
+      new: "Novo"
+      drag_to_reorder: "Arraste para reordenar a seção"
+      toggle_section: "Alternar visibilidade da seção"
       net_worth_chart:
         data_not_available: Dados não disponíveis para o período selecionado
         title: Patrimônio Líquido
       no_account_empty_state:
         new_account: Nova conta
-        no_account_subtitle: Como nenhuma conta foi adicionada, não há dados para
-          exibir. Adicione suas primeiras contas para começar a visualizar dados do dashboard.
+        no_account_subtitle: Como nenhuma conta foi adicionada, não há dados para exibir. Adicione suas primeiras contas para começar a visualizar os dados no painel.
         no_account_title: Nenhuma conta ainda
+      balance_sheet:
+        title: "Balanço Patrimonial"
+        no_items: "Nenhuma %{name} ainda"
+        add_accounts: "Adicione suas contas de %{name} para ver um detalhamento completo"
+      cashflow_sankey:
+        title: "Fluxo de Caixa"
+        no_data_title: "Sem dados de fluxo de caixa para este período"
+        no_data_description: "Adicione transações para exibir dados de fluxo de caixa ou expanda o período de tempo"
+        add_transaction: "Adicionar transação"
+      no_accounts:
+        title: "Nenhuma conta ainda"
+        description: "Adicione contas para exibir dados de patrimônio líquido"
+        add_account: "Adicionar conta"
+      outflows_donut:
+        title: "Saídas"
+        total_outflows: "Total de Saídas"
+        categories: "Categorias"
+        value: "Valor"
+        weight: "Peso"

@@ -24,3 +24,8 @@ pt-BR:
       status_never: Requer sincronização de dados
       syncing: Sincronizando...
       update: Atualizar conexão
+    select_existing_account:
+      title: "Vincular %{account_name} ao Plaid"
+      description: Selecione uma conta do Plaid para vincular à sua conta existente
+      cancel: Cancelar
+      link_account: Vincular conta

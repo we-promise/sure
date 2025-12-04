@@ -15,5 +15,5 @@ pt-BR:
       role_label: Função
       role_member: Membro
       submit: Enviar Convite
-      subtitle: Envie um convite para se juntar à sua conta familiar no Maybe
+      subtitle: Envie um convite para se juntar à sua conta familiar no %{product_name}
       title: Convidar Alguém

@@ -1,12 +1,11 @@
 ---
 pt-BR:
   layouts:
-    auth:
+    auth.sign_up:
       existing_account: Já tem uma conta?
-      no_account: Novo no Maybe?
+      no_account: Novo no %{product_name}?
       sign_in: Entrar
       sign_up: Criar conta
-      your_account: Sua conta
     shared:
       footer:
         privacy_policy: Política de Privacidade

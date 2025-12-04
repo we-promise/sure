@@ -7,4 +7,4 @@ pt-BR:
       cta: Confirmar alteração de e-mail
       expiry_notice: Este link expirará em %{hours} horas.
       greeting: Olá!
-      subject: 'Maybe: Confirme sua alteração de e-mail'
+      subject: '%{product_name}: Confirme sua alteração de e-mail'

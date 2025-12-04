@@ -25,4 +25,4 @@ pt-BR:
       message: Estamos muito empolgados por você estar aqui. No próximo passo, faremos
         algumas perguntas para completar seu perfil e então deixar tudo configurado.
       setup: Configurar conta
-      title: Conheça o Maybe
+      title: Conheça o %{product_name}
