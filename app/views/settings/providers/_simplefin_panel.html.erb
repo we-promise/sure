@@ -14,8 +14,8 @@
   </div>
 
   <% if defined?(@error_message) && @error_message.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
-      <%= @error_message %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= @error_message %>"><%= @error_message %></p>
     </div>
   <% end %>
 
@@ -36,12 +36,13 @@
     </div>
   <% end %>
 
-  <% if @simplefin_items&.any? %>
-    <div class="flex items-center gap-2">
+  <div class="flex items-center gap-2">
+    <% if @simplefin_items&.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
       <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
-    </div>
-  <% else %>
-    <div class="text-sm text-secondary">No SimpleFIN connections yet.</div>
-  <% end %>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
 </div>

@@ -1,6 +1,12 @@
 ---
 ca:
   simplefin_items:
+    new:
+      title: Connecta SimpleFin
+      setup_token: Token de configuració
+      setup_token_placeholder: enganxa el teu token de configuració SimpleFin
+      connect: Connecta
+      cancel: Cancel·la
     create:
       success: Connexió SimpleFin afegida correctament! Els teus comptes apareixeran en breu mentre es sincronitzen en segon pla.
       errors:

@@ -1,6 +1,12 @@
 ---
 ro:
   simplefin_items:
+    new:
+      title: Conectează SimpleFin
+      setup_token: Token de configurare
+      setup_token_placeholder: lipește token-ul tău de configurare SimpleFin
+      connect: Conectează
+      cancel: Anulează
     create:
       success: Conexiunea SimpleFin a fost adăugată cu succes! Conturile tale vor apărea în scurt timp pe măsură ce se sincronizează în fundal.
       errors:

@@ -96,7 +96,6 @@ namespace :sure do
         sfa = ap&.provider || SimplefinAccount.find_by(account: acct)
         sfas = Array.wrap(sfa).compact
       else
-        success = errors.empty?
         puts({ ok: false, error: "usage", message: "Provide one of item_id, account_id, or account_name" }.to_json)
         exit 1
       end
@@ -124,9 +123,9 @@ namespace :sure do
           if dry_run
             puts({ dry_run: true, sfa_id: sfa.id, account_id: account.id, name: sfa.name, would_process: count }.to_json)
           else
-            SimplefinAccount::Investments::HoldingsProcessor.new(sfa).process
+            SimplefinHoldingsApplyJob.perform_later(sfa.id)
             total_holdings_written += count
-            puts({ ok: true, sfa_id: sfa.id, account_id: account.id, name: sfa.name, processed: count }.to_json)
+            puts({ ok: true, sfa_id: sfa.id, account_id: account.id, name: sfa.name, enqueued: true, estimated_holdings: count }.to_json)
           end
 
           sleep(sleep_ms / 1000.0) if sleep_ms.positive?

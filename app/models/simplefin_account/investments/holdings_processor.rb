@@ -101,11 +101,17 @@ class SimplefinAccount::Investments::HoldingsProcessor
       if !sym.include?(":") && (is_crypto_account || is_crypto_symbol || mentions_crypto)
         sym = "CRYPTO:#{sym}"
       end
-      # Use Security::Resolver to find or create the security
-      Security::Resolver.new(sym).resolve
-    rescue ArgumentError => e
-      Rails.logger.error "Failed to resolve SimpleFin security #{symbol}: #{e.message}"
-      nil
+      # Use Security::Resolver to find or create the security, but be resilient
+      begin
+        Security::Resolver.new(sym).resolve
+      rescue => e
+        # If provider search fails or any unexpected error occurs, fall back to an offline security
+        Rails.logger.warn "SimpleFin: resolver failed for symbol=#{sym}: #{e.class} - #{e.message}; falling back to offline security"
+        Security.find_or_initialize_by(ticker: sym).tap do |sec|
+          sec.offline = true if sec.respond_to?(:offline) && sec.offline != true
+          sec.save! if sec.changed?
+        end
+      end
     end
 
     def parse_holding_date(created_timestamp)

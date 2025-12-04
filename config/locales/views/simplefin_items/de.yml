@@ -1,6 +1,12 @@
 ---
 de:
   simplefin_items:
+    new:
+      title: SimpleFin verbinden
+      setup_token: Setup-Token
+      setup_token_placeholder: Füge dein SimpleFin-Setup-Token ein
+      connect: Verbinden
+      cancel: Abbrechen
     create:
       success: SimpleFin-Verbindung erfolgreich hinzugefügt! Deine Konten werden in Kürze angezeigt, sobald sie im Hintergrund synchronisiert wurden.
       errors:
