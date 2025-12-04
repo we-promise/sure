@@ -25,6 +25,15 @@ class Rule::ActionExecutor
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end
 
+  def as_json
+    {
+      type: type,
+      key: key,
+      label: label,
+      options: options
+    }
+  end
+
   protected
     # Helper method to track modified count during enrichment
     def count_modified_resources(scope)
@@ -36,15 +45,6 @@ class Rule::ActionExecutor
       end
       modified_count
     end
-
-  def as_json
-    {
-      type: type,
-      key: key,
-      label: label,
-      options: options
-    }
-  end
 
   private
     attr_reader :rule
