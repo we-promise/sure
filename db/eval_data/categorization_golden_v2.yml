@@ -1,0 +1,2559 @@
+---
+name: categorization_golden_v2
+description: Golden dataset for transaction categorization evaluation with US and European merchants
+eval_type: categorization
+version: "2.0"
+metadata:
+  created_at: "2025-12-04"
+  updated_at: "2025-12-04"
+  source: manual_curation
+  notes: |
+    Difficulty levels:
+    - easy: Unambiguous merchant names, single clear category
+    - medium: Requires domain knowledge but has clear answer
+    - hard: Genuinely ambiguous, multiple reasonable interpretations
+    - edge_case: Should return null (generic/cryptic descriptions)
+
+    This v2 dataset includes:
+    - 200 total samples (150 base + 50 challenging)
+    - US merchants (original)
+    - European merchants (UK, Germany, France, Spain, Italy, Netherlands, etc.)
+    - Mix of international and regional brands
+    - Challenging samples: local businesses, abbreviations, cryptic formats
+    - More ambiguous cases requiring nuanced reasoning
+
+context:
+  categories:
+    - id: "income"
+      name: "Income"
+      classification: "income"
+      is_subcategory: false
+    - id: "salary"
+      name: "Salary"
+      classification: "income"
+      is_subcategory: true
+      parent_id: "income"
+    - id: "food_and_drink"
+      name: "Food & Drink"
+      classification: "expense"
+      is_subcategory: false
+    - id: "restaurants"
+      name: "Restaurants"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "food_and_drink"
+    - id: "groceries"
+      name: "Groceries"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "food_and_drink"
+    - id: "coffee_shops"
+      name: "Coffee Shops"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "food_and_drink"
+    - id: "shopping"
+      name: "Shopping"
+      classification: "expense"
+      is_subcategory: false
+    - id: "clothing"
+      name: "Clothing"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "shopping"
+    - id: "electronics"
+      name: "Electronics"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "shopping"
+    - id: "transportation"
+      name: "Transportation"
+      classification: "expense"
+      is_subcategory: false
+    - id: "gas"
+      name: "Gas & Fuel"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "transportation"
+    - id: "rideshare"
+      name: "Rideshare"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "transportation"
+    - id: "public_transit"
+      name: "Public Transit"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "transportation"
+    - id: "entertainment"
+      name: "Entertainment"
+      classification: "expense"
+      is_subcategory: false
+    - id: "streaming"
+      name: "Streaming Services"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "entertainment"
+    - id: "utilities"
+      name: "Utilities"
+      classification: "expense"
+      is_subcategory: false
+    - id: "housing"
+      name: "Housing"
+      classification: "expense"
+      is_subcategory: false
+    - id: "rent"
+      name: "Rent"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "housing"
+    - id: "health"
+      name: "Health & Wellness"
+      classification: "expense"
+      is_subcategory: false
+    - id: "pharmacy"
+      name: "Pharmacy"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "health"
+    - id: "gym"
+      name: "Gym & Fitness"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "health"
+    - id: "travel"
+      name: "Travel"
+      classification: "expense"
+      is_subcategory: false
+    - id: "flights"
+      name: "Flights"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "travel"
+    - id: "hotels"
+      name: "Hotels"
+      classification: "expense"
+      is_subcategory: true
+      parent_id: "travel"
+    - id: "subscriptions"
+      name: "Subscriptions"
+      classification: "expense"
+      is_subcategory: false
+    - id: "personal_care"
+      name: "Personal Care"
+      classification: "expense"
+      is_subcategory: false
+    - id: "gifts"
+      name: "Gifts & Donations"
+      classification: "expense"
+      is_subcategory: false
+
+samples:
+  # =============================================================================
+  # EASY SAMPLES - US Merchants (40 samples)
+  # =============================================================================
+
+  # Food & Drink - US
+  - id: cat_v2_easy_001
+    difficulty: easy
+    tags: [food_and_drink, us, clear_merchant]
+    input:
+      id: txn_v2_001
+      amount: 12.99
+      classification: expense
+      description: "MCDONALD'S #12345 SPRINGFIELD IL"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_easy_002
+    difficulty: easy
+    tags: [food_and_drink, us, clear_merchant]
+    input:
+      id: txn_v2_002
+      amount: 8.50
+      classification: expense
+      description: "BURGER KING #456 NEW YORK NY"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_easy_003
+    difficulty: easy
+    tags: [food_and_drink, us, clear_merchant]
+    input:
+      id: txn_v2_003
+      amount: 9.99
+      classification: expense
+      description: "TACO BELL #789"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_easy_004
+    difficulty: easy
+    tags: [food_and_drink, us, clear_merchant]
+    input:
+      id: txn_v2_004
+      amount: 14.99
+      classification: expense
+      description: "CHIPOTLE MEXICAN GRILL"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_easy_005
+    difficulty: easy
+    tags: [food_and_drink, us, clear_merchant]
+    input:
+      id: txn_v2_005
+      amount: 8.99
+      classification: expense
+      description: "WENDY'S #5678"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  # Coffee Shops - US
+  - id: cat_v2_easy_006
+    difficulty: easy
+    tags: [coffee_shops, us, clear_merchant]
+    input:
+      id: txn_v2_006
+      amount: 5.75
+      classification: expense
+      description: "STARBUCKS STORE #9876"
+    expected:
+      category_name: "Coffee Shops"
+
+  - id: cat_v2_easy_007
+    difficulty: easy
+    tags: [coffee_shops, us, clear_merchant]
+    input:
+      id: txn_v2_007
+      amount: 4.25
+      classification: expense
+      description: "DUNKIN #12345"
+    expected:
+      category_name: "Coffee Shops"
+
+  - id: cat_v2_easy_008
+    difficulty: easy
+    tags: [coffee_shops, us, clear_merchant]
+    input:
+      id: txn_v2_008
+      amount: 6.50
+      classification: expense
+      description: "PEETS COFFEE #456"
+    expected:
+      category_name: "Coffee Shops"
+
+  # Groceries - US
+  - id: cat_v2_easy_009
+    difficulty: easy
+    tags: [groceries, us, clear_merchant]
+    input:
+      id: txn_v2_009
+      amount: 156.32
+      classification: expense
+      description: "WHOLE FOODS MKT #10234"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_010
+    difficulty: easy
+    tags: [groceries, us, clear_merchant]
+    input:
+      id: txn_v2_010
+      amount: 87.45
+      classification: expense
+      description: "TRADER JOE'S #567 LOS ANGELES"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_011
+    difficulty: easy
+    tags: [groceries, us, clear_merchant]
+    input:
+      id: txn_v2_011
+      amount: 98.34
+      classification: expense
+      description: "PUBLIX SUPER MARKET"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_012
+    difficulty: easy
+    tags: [groceries, us, clear_merchant]
+    input:
+      id: txn_v2_012
+      amount: 67.89
+      classification: expense
+      description: "KROGER #789 GROCERY"
+    expected:
+      category_name: "Groceries"
+
+  # Gas & Fuel - US
+  - id: cat_v2_easy_013
+    difficulty: easy
+    tags: [gas, us, clear_merchant]
+    input:
+      id: txn_v2_013
+      amount: 45.00
+      classification: expense
+      description: "SHELL OIL 573849234"
+    expected:
+      category_name: "Gas & Fuel"
+
+  - id: cat_v2_easy_014
+    difficulty: easy
+    tags: [gas, us, clear_merchant]
+    input:
+      id: txn_v2_014
+      amount: 52.30
+      classification: expense
+      description: "CHEVRON STATION #1234"
+    expected:
+      category_name: "Gas & Fuel"
+
+  - id: cat_v2_easy_015
+    difficulty: easy
+    tags: [gas, us, clear_merchant]
+    input:
+      id: txn_v2_015
+      amount: 48.50
+      classification: expense
+      description: "EXXONMOBIL 12345"
+    expected:
+      category_name: "Gas & Fuel"
+
+  # Rideshare - US
+  - id: cat_v2_easy_016
+    difficulty: easy
+    tags: [rideshare, us, clear_merchant]
+    input:
+      id: txn_v2_016
+      amount: 23.50
+      classification: expense
+      description: "UBER *TRIP HELP.UBER.COM"
+    expected:
+      category_name: "Rideshare"
+
+  - id: cat_v2_easy_017
+    difficulty: easy
+    tags: [rideshare, us, clear_merchant]
+    input:
+      id: txn_v2_017
+      amount: 18.75
+      classification: expense
+      description: "LYFT *RIDE SAT 7PM"
+    expected:
+      category_name: "Rideshare"
+
+  # Streaming - US
+  - id: cat_v2_easy_018
+    difficulty: easy
+    tags: [streaming, us, clear_merchant]
+    input:
+      id: txn_v2_018
+      amount: 15.99
+      classification: expense
+      description: "NETFLIX.COM"
+    expected:
+      category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
+
+  - id: cat_v2_easy_019
+    difficulty: easy
+    tags: [streaming, us, clear_merchant]
+    input:
+      id: txn_v2_019
+      amount: 10.99
+      classification: expense
+      description: "SPOTIFY USA"
+    expected:
+      category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
+
+  # Electronics - US
+  - id: cat_v2_easy_020
+    difficulty: easy
+    tags: [electronics, us, clear_merchant]
+    input:
+      id: txn_v2_020
+      amount: 299.99
+      classification: expense
+      description: "BEST BUY 00000456"
+    expected:
+      category_name: "Electronics"
+      acceptable_alternatives: ["Shopping"]
+
+  # Clothing - US
+  - id: cat_v2_easy_021
+    difficulty: easy
+    tags: [clothing, us, clear_merchant]
+    input:
+      id: txn_v2_021
+      amount: 89.99
+      classification: expense
+      description: "GAP STORE #1234"
+    expected:
+      category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_easy_022
+    difficulty: easy
+    tags: [clothing, us, clear_merchant]
+    input:
+      id: txn_v2_022
+      amount: 65.00
+      classification: expense
+      description: "OLD NAVY #567"
+    expected:
+      category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
+
+  # Pharmacy - US
+  - id: cat_v2_easy_023
+    difficulty: easy
+    tags: [pharmacy, us, clear_merchant]
+    input:
+      id: txn_v2_023
+      amount: 24.99
+      classification: expense
+      description: "CVS/PHARMACY #4567"
+    expected:
+      category_name: "Pharmacy"
+
+  - id: cat_v2_easy_024
+    difficulty: easy
+    tags: [pharmacy, us, clear_merchant]
+    input:
+      id: txn_v2_024
+      amount: 35.50
+      classification: expense
+      description: "WALGREENS #12345"
+    expected:
+      category_name: "Pharmacy"
+      acceptable_alternatives: ["Health & Wellness"]
+
+  # Gym - US
+  - id: cat_v2_easy_025
+    difficulty: easy
+    tags: [gym, us, clear_merchant]
+    input:
+      id: txn_v2_025
+      amount: 39.99
+      classification: expense
+      description: "PLANET FITNESS MONTHLY"
+    expected:
+      category_name: "Gym & Fitness"
+
+  # Flights - US
+  - id: cat_v2_easy_026
+    difficulty: easy
+    tags: [flights, us, clear_merchant]
+    input:
+      id: txn_v2_026
+      amount: 345.00
+      classification: expense
+      description: "UNITED AIRLINES 0162345678"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  - id: cat_v2_easy_027
+    difficulty: easy
+    tags: [flights, us, clear_merchant]
+    input:
+      id: txn_v2_027
+      amount: 456.00
+      classification: expense
+      description: "DELTA AIR LINES"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  # Hotels - US
+  - id: cat_v2_easy_028
+    difficulty: easy
+    tags: [hotels, us, clear_merchant]
+    input:
+      id: txn_v2_028
+      amount: 189.00
+      classification: expense
+      description: "MARRIOTT HOTELS NYC"
+    expected:
+      category_name: "Hotels"
+
+  - id: cat_v2_easy_029
+    difficulty: easy
+    tags: [hotels, us, clear_merchant]
+    input:
+      id: txn_v2_029
+      amount: 245.00
+      classification: expense
+      description: "HILTON HOTELS"
+    expected:
+      category_name: "Hotels"
+
+  # Income - US
+  - id: cat_v2_easy_030
+    difficulty: easy
+    tags: [income, salary, us, clear_merchant]
+    input:
+      id: txn_v2_030
+      amount: 3500.00
+      classification: income
+      description: "ACME CORP PAYROLL"
+    expected:
+      category_name: "Salary"
+
+  - id: cat_v2_easy_031
+    difficulty: easy
+    tags: [income, salary, us, clear_merchant]
+    input:
+      id: txn_v2_031
+      amount: 2800.00
+      classification: income
+      description: "DIRECT DEPOSIT - PAYROLL"
+    expected:
+      category_name: "Salary"
+
+  # =============================================================================
+  # EASY SAMPLES - European Merchants (20 samples)
+  # =============================================================================
+
+  # Food & Drink - Europe
+  - id: cat_v2_easy_eu_001
+    difficulty: easy
+    tags: [food_and_drink, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_001
+      amount: 8.99
+      classification: expense
+      description: "NANDO'S LONDON"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_easy_eu_002
+    difficulty: easy
+    tags: [food_and_drink, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_002
+      amount: 6.50
+      classification: expense
+      description: "GREGGS PLC"
+    expected:
+      category_name: "Food & Drink"
+
+  - id: cat_v2_easy_eu_003
+    difficulty: easy
+    tags: [food_and_drink, europe, germany, clear_merchant]
+    input:
+      id: txn_v2_eu_003
+      amount: 7.80
+      classification: expense
+      description: "NORDSEE GMBH BERLIN"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Food & Drink"]
+
+  # Coffee Shops - Europe
+  - id: cat_v2_easy_eu_004
+    difficulty: easy
+    tags: [coffee_shops, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_004
+      amount: 4.50
+      classification: expense
+      description: "COSTA COFFEE LTD"
+    expected:
+      category_name: "Coffee Shops"
+
+  - id: cat_v2_easy_eu_005
+    difficulty: easy
+    tags: [coffee_shops, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_005
+      amount: 3.80
+      classification: expense
+      description: "CAFFE NERO GROUP"
+    expected:
+      category_name: "Coffee Shops"
+
+  - id: cat_v2_easy_eu_006
+    difficulty: easy
+    tags: [coffee_shops, europe, netherlands, clear_merchant]
+    input:
+      id: txn_v2_eu_006
+      amount: 4.20
+      classification: expense
+      description: "STARBUCKS AMSTERDAM"
+    expected:
+      category_name: "Coffee Shops"
+
+  # Groceries - Europe
+  - id: cat_v2_easy_eu_007
+    difficulty: easy
+    tags: [groceries, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_007
+      amount: 87.50
+      classification: expense
+      description: "TESCO STORES LTD"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_eu_008
+    difficulty: easy
+    tags: [groceries, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_008
+      amount: 65.30
+      classification: expense
+      description: "SAINSBURY'S SUPERMARKET"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_eu_009
+    difficulty: easy
+    tags: [groceries, europe, germany, clear_merchant]
+    input:
+      id: txn_v2_eu_009
+      amount: 78.90
+      classification: expense
+      description: "LIDL DIENSTLEISTUNG"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_eu_010
+    difficulty: easy
+    tags: [groceries, europe, germany, clear_merchant]
+    input:
+      id: txn_v2_eu_010
+      amount: 92.40
+      classification: expense
+      description: "ALDI SUED GMBH"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_eu_011
+    difficulty: easy
+    tags: [groceries, europe, france, clear_merchant]
+    input:
+      id: txn_v2_eu_011
+      amount: 123.50
+      classification: expense
+      description: "CARREFOUR MARKET PARIS"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_easy_eu_012
+    difficulty: easy
+    tags: [groceries, europe, netherlands, clear_merchant]
+    input:
+      id: txn_v2_eu_012
+      amount: 67.80
+      classification: expense
+      description: "ALBERT HEIJN BV"
+    expected:
+      category_name: "Groceries"
+
+  # Gas & Fuel - Europe
+  - id: cat_v2_easy_eu_013
+    difficulty: easy
+    tags: [gas, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_013
+      amount: 75.00
+      classification: expense
+      description: "BP OIL UK LTD"
+    expected:
+      category_name: "Gas & Fuel"
+
+  - id: cat_v2_easy_eu_014
+    difficulty: easy
+    tags: [gas, europe, france, clear_merchant]
+    input:
+      id: txn_v2_eu_014
+      amount: 68.50
+      classification: expense
+      description: "TOTAL ENERGIES PARIS"
+    expected:
+      category_name: "Gas & Fuel"
+
+  # Flights - Europe
+  - id: cat_v2_easy_eu_015
+    difficulty: easy
+    tags: [flights, europe, uk, clear_merchant]
+    input:
+      id: txn_v2_eu_015
+      amount: 189.00
+      classification: expense
+      description: "BRITISH AIRWAYS PLC"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  - id: cat_v2_easy_eu_016
+    difficulty: easy
+    tags: [flights, europe, ireland, clear_merchant]
+    input:
+      id: txn_v2_eu_016
+      amount: 89.99
+      classification: expense
+      description: "RYANAIR DAC"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  - id: cat_v2_easy_eu_017
+    difficulty: easy
+    tags: [flights, europe, germany, clear_merchant]
+    input:
+      id: txn_v2_eu_017
+      amount: 245.00
+      classification: expense
+      description: "LUFTHANSA AG FRANKFURT"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  - id: cat_v2_easy_eu_018
+    difficulty: easy
+    tags: [flights, europe, france, clear_merchant]
+    input:
+      id: txn_v2_eu_018
+      amount: 198.00
+      classification: expense
+      description: "AIR FRANCE KLM"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  # Clothing - Europe
+  - id: cat_v2_easy_eu_019
+    difficulty: easy
+    tags: [clothing, europe, spain, clear_merchant]
+    input:
+      id: txn_v2_eu_019
+      amount: 79.99
+      classification: expense
+      description: "ZARA ESPANA SA"
+    expected:
+      category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_easy_eu_020
+    difficulty: easy
+    tags: [clothing, europe, sweden, clear_merchant]
+    input:
+      id: txn_v2_eu_020
+      amount: 45.00
+      classification: expense
+      description: "H&M HENNES MAURITZ AB"
+    expected:
+      category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
+
+  # =============================================================================
+  # MEDIUM SAMPLES - US Merchants (25 samples)
+  # =============================================================================
+
+  # Restaurants - US
+  - id: cat_v2_med_001
+    difficulty: medium
+    tags: [restaurants, us, chain]
+    input:
+      id: txn_v2_med_001
+      amount: 67.50
+      classification: expense
+      description: "OLIVE GARDEN #456"
+    expected:
+      category_name: "Restaurants"
+
+  - id: cat_v2_med_002
+    difficulty: medium
+    tags: [restaurants, us, chain]
+    input:
+      id: txn_v2_med_002
+      amount: 85.00
+      classification: expense
+      description: "CHEESECAKE FACTORY"
+    expected:
+      category_name: "Restaurants"
+
+  - id: cat_v2_med_003
+    difficulty: medium
+    tags: [restaurants, us, upscale]
+    input:
+      id: txn_v2_med_003
+      amount: 123.45
+      classification: expense
+      description: "RUTH'S CHRIS STEAK"
+    expected:
+      category_name: "Restaurants"
+
+  # Groceries - Warehouse
+  - id: cat_v2_med_004
+    difficulty: medium
+    tags: [groceries, us, warehouse]
+    input:
+      id: txn_v2_med_004
+      amount: 234.56
+      classification: expense
+      description: "COSTCO WHSE #1234"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_med_005
+    difficulty: medium
+    tags: [groceries, us, warehouse]
+    input:
+      id: txn_v2_med_005
+      amount: 178.90
+      classification: expense
+      description: "SAM'S CLUB #8765"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
+
+  # Utilities - US
+  - id: cat_v2_med_006
+    difficulty: medium
+    tags: [utilities, us, power]
+    input:
+      id: txn_v2_med_006
+      amount: 125.00
+      classification: expense
+      description: "CON EDISON PAYMENT"
+    expected:
+      category_name: "Utilities"
+
+  - id: cat_v2_med_007
+    difficulty: medium
+    tags: [utilities, us, power]
+    input:
+      id: txn_v2_med_007
+      amount: 89.00
+      classification: expense
+      description: "PACIFIC GAS ELEC CO"
+    expected:
+      category_name: "Utilities"
+
+  - id: cat_v2_med_008
+    difficulty: medium
+    tags: [utilities, us, internet]
+    input:
+      id: txn_v2_med_008
+      amount: 145.00
+      classification: expense
+      description: "XFINITY INTERNET"
+    expected:
+      category_name: "Utilities"
+      acceptable_alternatives: ["Subscriptions"]
+
+  - id: cat_v2_med_009
+    difficulty: medium
+    tags: [utilities, us, phone]
+    input:
+      id: txn_v2_med_009
+      amount: 89.00
+      classification: expense
+      description: "AT&T WIRELESS"
+    expected:
+      category_name: "Utilities"
+      acceptable_alternatives: ["Subscriptions"]
+
+  # Public Transit - US
+  - id: cat_v2_med_010
+    difficulty: medium
+    tags: [public_transit, us]
+    input:
+      id: txn_v2_med_010
+      amount: 127.00
+      classification: expense
+      description: "MTA *METROCARD"
+    expected:
+      category_name: "Public Transit"
+      acceptable_alternatives: ["Transportation"]
+
+  - id: cat_v2_med_011
+    difficulty: medium
+    tags: [public_transit, us]
+    input:
+      id: txn_v2_med_011
+      amount: 2.75
+      classification: expense
+      description: "WMATA SMARTRIP"
+    expected:
+      category_name: "Public Transit"
+      acceptable_alternatives: ["Transportation"]
+
+  # Housing - US
+  - id: cat_v2_med_012
+    difficulty: medium
+    tags: [rent, us, housing]
+    input:
+      id: txn_v2_med_012
+      amount: 2100.00
+      classification: expense
+      description: "AVALON APARTMENTS RENT"
+    expected:
+      category_name: "Rent"
+      acceptable_alternatives: ["Housing"]
+
+  # Subscriptions - US
+  - id: cat_v2_med_013
+    difficulty: medium
+    tags: [subscriptions, us]
+    input:
+      id: txn_v2_med_013
+      amount: 9.99
+      classification: expense
+      description: "APPLE.COM/BILL"
+    expected:
+      category_name: "Subscriptions"
+
+  - id: cat_v2_med_014
+    difficulty: medium
+    tags: [subscriptions, us]
+    input:
+      id: txn_v2_med_014
+      amount: 2.99
+      classification: expense
+      description: "GOOGLE *STORAGE"
+    expected:
+      category_name: "Subscriptions"
+
+  # Personal Care - US
+  - id: cat_v2_med_015
+    difficulty: medium
+    tags: [personal_care, us]
+    input:
+      id: txn_v2_med_015
+      amount: 45.00
+      classification: expense
+      description: "SUPERCUTS #1234"
+    expected:
+      category_name: "Personal Care"
+
+  - id: cat_v2_med_016
+    difficulty: medium
+    tags: [personal_care, us]
+    input:
+      id: txn_v2_med_016
+      amount: 85.00
+      classification: expense
+      description: "ULTA BEAUTY #567"
+    expected:
+      category_name: "Personal Care"
+      acceptable_alternatives: ["Shopping"]
+
+  # Gifts & Donations - US
+  - id: cat_v2_med_017
+    difficulty: medium
+    tags: [gifts, us, donation]
+    input:
+      id: txn_v2_med_017
+      amount: 50.00
+      classification: expense
+      description: "RED CROSS DONATION"
+    expected:
+      category_name: "Gifts & Donations"
+
+  - id: cat_v2_med_018
+    difficulty: medium
+    tags: [gifts, us, donation]
+    input:
+      id: txn_v2_med_018
+      amount: 100.00
+      classification: expense
+      description: "UNICEF USA"
+    expected:
+      category_name: "Gifts & Donations"
+
+  # Entertainment - US
+  - id: cat_v2_med_019
+    difficulty: medium
+    tags: [entertainment, us, movies]
+    input:
+      id: txn_v2_med_019
+      amount: 45.00
+      classification: expense
+      description: "AMC THEATRES #1234"
+    expected:
+      category_name: "Entertainment"
+
+  - id: cat_v2_med_020
+    difficulty: medium
+    tags: [entertainment, us, tickets]
+    input:
+      id: txn_v2_med_020
+      amount: 89.00
+      classification: expense
+      description: "TICKETMASTER *EVENT"
+    expected:
+      category_name: "Entertainment"
+
+  # Travel - US
+  - id: cat_v2_med_021
+    difficulty: medium
+    tags: [travel, us, car_rental]
+    input:
+      id: txn_v2_med_021
+      amount: 156.00
+      classification: expense
+      description: "HERTZ RENT-A-CAR"
+    expected:
+      category_name: "Travel"
+      acceptable_alternatives: ["Transportation"]
+
+  - id: cat_v2_med_022
+    difficulty: medium
+    tags: [hotels, us, lodging]
+    input:
+      id: txn_v2_med_022
+      amount: 234.00
+      classification: expense
+      description: "AIRBNB *HMQT5J6QQJ"
+    expected:
+      category_name: "Hotels"
+      acceptable_alternatives: ["Travel"]
+
+  # Streaming - US
+  - id: cat_v2_med_023
+    difficulty: medium
+    tags: [streaming, us]
+    input:
+      id: txn_v2_med_023
+      amount: 17.99
+      classification: expense
+      description: "HULU LLC"
+    expected:
+      category_name: "Streaming Services"
+
+  - id: cat_v2_med_024
+    difficulty: medium
+    tags: [streaming, us]
+    input:
+      id: txn_v2_med_024
+      amount: 13.99
+      classification: expense
+      description: "DISNEY PLUS"
+    expected:
+      category_name: "Streaming Services"
+
+  # Income - US
+  - id: cat_v2_med_025
+    difficulty: medium
+    tags: [income, us, transfer]
+    input:
+      id: txn_v2_med_025
+      amount: 500.00
+      classification: income
+      description: "VENMO CASHOUT"
+    expected:
+      category_name: "Income"
+
+  # =============================================================================
+  # MEDIUM SAMPLES - European Merchants (15 samples)
+  # =============================================================================
+
+  # Restaurants - Europe
+  - id: cat_v2_med_eu_001
+    difficulty: medium
+    tags: [restaurants, europe, uk]
+    input:
+      id: txn_v2_med_eu_001
+      amount: 78.50
+      classification: expense
+      description: "WAGAMAMA LTD LONDON"
+    expected:
+      category_name: "Restaurants"
+
+  - id: cat_v2_med_eu_002
+    difficulty: medium
+    tags: [restaurants, europe, italy]
+    input:
+      id: txn_v2_med_eu_002
+      amount: 95.00
+      classification: expense
+      description: "RISTORANTE MILANO SRL"
+    expected:
+      category_name: "Restaurants"
+
+  - id: cat_v2_med_eu_003
+    difficulty: medium
+    tags: [restaurants, europe, spain]
+    input:
+      id: txn_v2_med_eu_003
+      amount: 67.00
+      classification: expense
+      description: "TELEPIZZA SAU MADRID"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  # Utilities - Europe
+  - id: cat_v2_med_eu_004
+    difficulty: medium
+    tags: [utilities, europe, uk]
+    input:
+      id: txn_v2_med_eu_004
+      amount: 156.00
+      classification: expense
+      description: "BRITISH GAS SERVICES"
+    expected:
+      category_name: "Utilities"
+
+  - id: cat_v2_med_eu_005
+    difficulty: medium
+    tags: [utilities, europe, germany]
+    input:
+      id: txn_v2_med_eu_005
+      amount: 89.00
+      classification: expense
+      description: "VODAFONE GMBH"
+    expected:
+      category_name: "Utilities"
+      acceptable_alternatives: ["Subscriptions"]
+
+  - id: cat_v2_med_eu_006
+    difficulty: medium
+    tags: [utilities, europe, france]
+    input:
+      id: txn_v2_med_eu_006
+      amount: 112.00
+      classification: expense
+      description: "EDF ENERGIE FRANCE"
+    expected:
+      category_name: "Utilities"
+
+  # Public Transit - Europe
+  - id: cat_v2_med_eu_007
+    difficulty: medium
+    tags: [public_transit, europe, uk]
+    input:
+      id: txn_v2_med_eu_007
+      amount: 156.50
+      classification: expense
+      description: "TFL TRAVEL LONDON"
+    expected:
+      category_name: "Public Transit"
+      acceptable_alternatives: ["Transportation"]
+
+  - id: cat_v2_med_eu_008
+    difficulty: medium
+    tags: [public_transit, europe, germany]
+    input:
+      id: txn_v2_med_eu_008
+      amount: 89.00
+      classification: expense
+      description: "DEUTSCHE BAHN AG"
+    expected:
+      category_name: "Public Transit"
+      acceptable_alternatives: ["Transportation", "Travel"]
+
+  - id: cat_v2_med_eu_009
+    difficulty: medium
+    tags: [public_transit, europe, france]
+    input:
+      id: txn_v2_med_eu_009
+      amount: 75.00
+      classification: expense
+      description: "SNCF VOYAGES"
+    expected:
+      category_name: "Public Transit"
+      acceptable_alternatives: ["Transportation", "Travel"]
+
+  # Entertainment - Europe
+  - id: cat_v2_med_eu_010
+    difficulty: medium
+    tags: [entertainment, europe, uk]
+    input:
+      id: txn_v2_med_eu_010
+      amount: 24.00
+      classification: expense
+      description: "ODEON CINEMAS LTD"
+    expected:
+      category_name: "Entertainment"
+
+  - id: cat_v2_med_eu_011
+    difficulty: medium
+    tags: [entertainment, europe, uk]
+    input:
+      id: txn_v2_med_eu_011
+      amount: 145.00
+      classification: expense
+      description: "TICKETMASTER UK LTD"
+    expected:
+      category_name: "Entertainment"
+
+  # Gym - Europe
+  - id: cat_v2_med_eu_012
+    difficulty: medium
+    tags: [gym, europe, uk]
+    input:
+      id: txn_v2_med_eu_012
+      amount: 35.00
+      classification: expense
+      description: "PUREGYM LTD"
+    expected:
+      category_name: "Gym & Fitness"
+      acceptable_alternatives: ["Health & Wellness"]
+
+  - id: cat_v2_med_eu_013
+    difficulty: medium
+    tags: [gym, europe, germany]
+    input:
+      id: txn_v2_med_eu_013
+      amount: 29.99
+      classification: expense
+      description: "MCFIT GMBH BERLIN"
+    expected:
+      category_name: "Gym & Fitness"
+      acceptable_alternatives: ["Health & Wellness"]
+
+  # Income - Europe
+  - id: cat_v2_med_eu_014
+    difficulty: medium
+    tags: [income, salary, europe, uk]
+    input:
+      id: txn_v2_med_eu_014
+      amount: 2850.00
+      classification: income
+      description: "ACME LTD SALARY"
+    expected:
+      category_name: "Salary"
+
+  - id: cat_v2_med_eu_015
+    difficulty: medium
+    tags: [income, salary, europe, germany]
+    input:
+      id: txn_v2_med_eu_015
+      amount: 3200.00
+      classification: income
+      description: "GEHALT FIRMA GMBH"
+    expected:
+      category_name: "Salary"
+
+  # =============================================================================
+  # HARD SAMPLES - US Merchants (15 samples)
+  # =============================================================================
+
+  # Big-box stores
+  - id: cat_v2_hard_001
+    difficulty: hard
+    tags: [ambiguous, us, multi_purpose_retailer]
+    input:
+      id: txn_v2_hard_001
+      amount: 156.78
+      classification: expense
+      description: "TARGET #1234"
+    expected:
+      category_name: "Shopping"
+      acceptable_alternatives: ["Groceries"]
+
+  - id: cat_v2_hard_002
+    difficulty: hard
+    tags: [ambiguous, us, multi_purpose_retailer]
+    input:
+      id: txn_v2_hard_002
+      amount: 234.56
+      classification: expense
+      description: "WALMART SUPERCENTER"
+    expected:
+      category_name: "Shopping"
+      acceptable_alternatives: ["Groceries"]
+
+  # Online marketplaces
+  - id: cat_v2_hard_003
+    difficulty: hard
+    tags: [ambiguous, us, online_marketplace]
+    input:
+      id: txn_v2_hard_003
+      amount: 89.99
+      classification: expense
+      description: "AMAZON.COM*1A2B3C4D"
+    expected:
+      category_name: "Shopping"
+
+  # Square payments
+  - id: cat_v2_hard_004
+    difficulty: hard
+    tags: [ambiguous, us, square_payment]
+    input:
+      id: txn_v2_hard_004
+      amount: 45.00
+      classification: expense
+      description: "SQ *DOWNTOWN CAFE"
+    expected:
+      category_name: "Coffee Shops"
+      acceptable_alternatives: ["Restaurants"]
+
+  # PayPal
+  - id: cat_v2_hard_005
+    difficulty: hard
+    tags: [ambiguous, us, payment_processor]
+    input:
+      id: txn_v2_hard_005
+      amount: 78.00
+      classification: expense
+      description: "PAYPAL *JOHNSMITH"
+    expected:
+      category_name: null
+
+  # Fast-casual
+  - id: cat_v2_hard_006
+    difficulty: hard
+    tags: [ambiguous, us, fast_casual]
+    input:
+      id: txn_v2_hard_006
+      amount: 34.50
+      classification: expense
+      description: "PANERA BREAD #567"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  # Delivery services
+  - id: cat_v2_hard_007
+    difficulty: hard
+    tags: [ambiguous, us, delivery_service]
+    input:
+      id: txn_v2_hard_007
+      amount: 45.00
+      classification: expense
+      description: "DOORDASH*CHIPOTLE"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants", "Food & Drink"]
+
+  - id: cat_v2_hard_008
+    difficulty: hard
+    tags: [ambiguous, us, delivery_service]
+    input:
+      id: txn_v2_hard_008
+      amount: 67.00
+      classification: expense
+      description: "GRUBHUB*THAI KITCHEN"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  - id: cat_v2_hard_009
+    difficulty: hard
+    tags: [ambiguous, us, delivery_service]
+    input:
+      id: txn_v2_hard_009
+      amount: 234.00
+      classification: expense
+      description: "INSTACART*SAFEWAY"
+    expected:
+      category_name: "Groceries"
+
+  # Amazon Prime
+  - id: cat_v2_hard_010
+    difficulty: hard
+    tags: [ambiguous, us, amazon]
+    input:
+      id: txn_v2_hard_010
+      amount: 14.99
+      classification: expense
+      description: "AMAZON PRIME*1A2B3C"
+    expected:
+      category_name: "Subscriptions"
+
+  # Convenience store
+  - id: cat_v2_hard_011
+    difficulty: hard
+    tags: [ambiguous, us, convenience_store]
+    input:
+      id: txn_v2_hard_011
+      amount: 12.50
+      classification: expense
+      description: "7-ELEVEN #34567"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Food & Drink"]
+
+  # Premium gym
+  - id: cat_v2_hard_012
+    difficulty: hard
+    tags: [ambiguous, us, premium_gym]
+    input:
+      id: txn_v2_hard_012
+      amount: 250.00
+      classification: expense
+      description: "EQUINOX MEMBERSHIP"
+    expected:
+      category_name: "Gym & Fitness"
+
+  # Streaming vs Subscription
+  - id: cat_v2_hard_013
+    difficulty: hard
+    tags: [ambiguous, us, streaming_subscription]
+    input:
+      id: txn_v2_hard_013
+      amount: 15.99
+      classification: expense
+      description: "HBO MAX"
+    expected:
+      category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
+
+  # Etsy
+  - id: cat_v2_hard_014
+    difficulty: hard
+    tags: [ambiguous, us, online_marketplace]
+    input:
+      id: txn_v2_hard_014
+      amount: 45.00
+      classification: expense
+      description: "ETSY.COM"
+    expected:
+      category_name: "Shopping"
+
+  # IKEA
+  - id: cat_v2_hard_015
+    difficulty: hard
+    tags: [ambiguous, us, home_goods]
+    input:
+      id: txn_v2_hard_015
+      amount: 423.00
+      classification: expense
+      description: "IKEA US EAST LLC"
+    expected:
+      category_name: "Shopping"
+
+  # =============================================================================
+  # HARD SAMPLES - European Merchants (10 samples)
+  # =============================================================================
+
+  # Multi-purpose retailers - Europe
+  - id: cat_v2_hard_eu_001
+    difficulty: hard
+    tags: [ambiguous, europe, uk, multi_purpose_retailer]
+    input:
+      id: txn_v2_hard_eu_001
+      amount: 156.00
+      classification: expense
+      description: "MARKS & SPENCER PLC"
+    expected:
+      category_name: "Shopping"
+      acceptable_alternatives: ["Groceries", "Clothing"]
+
+  - id: cat_v2_hard_eu_002
+    difficulty: hard
+    tags: [ambiguous, europe, uk, multi_purpose_retailer]
+    input:
+      id: txn_v2_hard_eu_002
+      amount: 89.50
+      classification: expense
+      description: "ASDA STORES LTD"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_hard_eu_003
+    difficulty: hard
+    tags: [ambiguous, europe, france, multi_purpose_retailer]
+    input:
+      id: txn_v2_hard_eu_003
+      amount: 234.00
+      classification: expense
+      description: "AUCHAN HYPERMARCHE"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
+
+  # Delivery - Europe
+  - id: cat_v2_hard_eu_004
+    difficulty: hard
+    tags: [ambiguous, europe, uk, delivery_service]
+    input:
+      id: txn_v2_hard_eu_004
+      amount: 32.50
+      classification: expense
+      description: "DELIVEROO UK LTD"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  - id: cat_v2_hard_eu_005
+    difficulty: hard
+    tags: [ambiguous, europe, germany, delivery_service]
+    input:
+      id: txn_v2_hard_eu_005
+      amount: 28.90
+      classification: expense
+      description: "LIEFERANDO GMBH"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  # Online marketplaces - Europe
+  - id: cat_v2_hard_eu_006
+    difficulty: hard
+    tags: [ambiguous, europe, online_marketplace]
+    input:
+      id: txn_v2_hard_eu_006
+      amount: 67.00
+      classification: expense
+      description: "AMAZON.CO.UK"
+    expected:
+      category_name: "Shopping"
+
+  - id: cat_v2_hard_eu_007
+    difficulty: hard
+    tags: [ambiguous, europe, germany, online_marketplace]
+    input:
+      id: txn_v2_hard_eu_007
+      amount: 123.00
+      classification: expense
+      description: "ZALANDO SE"
+    expected:
+      category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
+
+  # Payment processors - Europe
+  - id: cat_v2_hard_eu_008
+    difficulty: hard
+    tags: [ambiguous, europe, payment_processor]
+    input:
+      id: txn_v2_hard_eu_008
+      amount: 45.00
+      classification: expense
+      description: "PAYPAL EUROPE"
+    expected:
+      category_name: null
+
+  - id: cat_v2_hard_eu_009
+    difficulty: hard
+    tags: [ambiguous, europe, uk, payment_processor]
+    input:
+      id: txn_v2_hard_eu_009
+      amount: 89.00
+      classification: expense
+      description: "KLARNA UK LTD"
+    expected:
+      category_name: null
+
+  # Pharmacy/Drugstore - Europe
+  - id: cat_v2_hard_eu_010
+    difficulty: hard
+    tags: [ambiguous, europe, uk, drugstore]
+    input:
+      id: txn_v2_hard_eu_010
+      amount: 34.50
+      classification: expense
+      description: "BOOTS UK LTD"
+    expected:
+      category_name: "Pharmacy"
+      acceptable_alternatives: ["Personal Care", "Health & Wellness"]
+
+  # =============================================================================
+  # EDGE CASES - Should return null (15 samples)
+  # =============================================================================
+
+  # Generic POS transactions
+  - id: cat_v2_edge_001
+    difficulty: edge_case
+    tags: [should_be_null, generic_pos]
+    input:
+      id: txn_v2_edge_001
+      amount: 15.00
+      classification: expense
+      description: "POS DEBIT 12345"
+    expected:
+      category_name: null
+
+  - id: cat_v2_edge_002
+    difficulty: edge_case
+    tags: [should_be_null, generic_pos]
+    input:
+      id: txn_v2_edge_002
+      amount: 50.00
+      classification: expense
+      description: "DEBIT CARD PURCHASE"
+    expected:
+      category_name: null
+
+  - id: cat_v2_edge_003
+    difficulty: edge_case
+    tags: [should_be_null, generic_pos, europe]
+    input:
+      id: txn_v2_edge_003
+      amount: 45.00
+      classification: expense
+      description: "CARTE BANCAIRE"
+    expected:
+      category_name: null
+
+  # ACH/Wire transfers
+  - id: cat_v2_edge_004
+    difficulty: edge_case
+    tags: [should_be_null, transfer]
+    input:
+      id: txn_v2_edge_004
+      amount: 100.00
+      classification: expense
+      description: "ACH WITHDRAWAL"
+    expected:
+      category_name: null
+
+  - id: cat_v2_edge_005
+    difficulty: edge_case
+    tags: [should_be_null, transfer]
+    input:
+      id: txn_v2_edge_005
+      amount: 500.00
+      classification: expense
+      description: "ONLINE TRANSFER TO CHK 1234"
+    expected:
+      category_name: null
+
+  - id: cat_v2_edge_006
+    difficulty: edge_case
+    tags: [should_be_null, transfer, europe]
+    input:
+      id: txn_v2_edge_006
+      amount: 250.00
+      classification: expense
+      description: "SEPA TRANSFER"
+    expected:
+      category_name: null
+
+  - id: cat_v2_edge_007
+    difficulty: edge_case
+    tags: [should_be_null, transfer]
+    input:
+      id: txn_v2_edge_007
+      amount: 1500.00
+      classification: expense
+      description: "WIRE TRANSFER OUT"
+    expected:
+      category_name: null
+
+  # ATM
+  - id: cat_v2_edge_008
+    difficulty: edge_case
+    tags: [should_be_null, atm]
+    input:
+      id: txn_v2_edge_008
+      amount: 200.00
+      classification: expense
+      description: "ATM WITHDRAWAL 12345"
+    expected:
+      category_name: null
+
+  - id: cat_v2_edge_009
+    difficulty: edge_case
+    tags: [should_be_null, atm, europe]
+    input:
+      id: txn_v2_edge_009
+      amount: 150.00
+      classification: expense
+      description: "GELDAUTOMAT ABHEBUNG"
+    expected:
+      category_name: null
+
+  # Unknown/generic business names
+  - id: cat_v2_edge_010
+    difficulty: edge_case
+    tags: [should_be_null, unknown_merchant]
+    input:
+      id: txn_v2_edge_010
+      amount: 75.00
+      classification: expense
+      description: "MISC SERVICES LLC"
+    expected:
+      category_name: null
+
+  # Reference numbers only
+  - id: cat_v2_edge_011
+    difficulty: edge_case
+    tags: [should_be_null, reference_only]
+    input:
+      id: txn_v2_edge_011
+      amount: 234.56
+      classification: expense
+      description: "REF #789456123"
+    expected:
+      category_name: null
+
+  # Checks
+  - id: cat_v2_edge_012
+    difficulty: edge_case
+    tags: [should_be_null, check]
+    input:
+      id: txn_v2_edge_012
+      amount: 350.00
+      classification: expense
+      description: "CHECK #1234"
+    expected:
+      category_name: null
+
+  # Bank fees
+  - id: cat_v2_edge_013
+    difficulty: edge_case
+    tags: [should_be_null, fee]
+    input:
+      id: txn_v2_edge_013
+      amount: 35.00
+      classification: expense
+      description: "SERVICE CHARGE"
+    expected:
+      category_name: null
+
+  # Cryptic abbreviations
+  - id: cat_v2_edge_014
+    difficulty: edge_case
+    tags: [should_be_null, cryptic]
+    input:
+      id: txn_v2_edge_014
+      amount: 45.67
+      classification: expense
+      description: "TXN*89234*AUTH"
+    expected:
+      category_name: null
+
+  - id: cat_v2_edge_015
+    difficulty: edge_case
+    tags: [should_be_null, cryptic]
+    input:
+      id: txn_v2_edge_015
+      amount: 123.45
+      classification: expense
+      description: "PURCHASE 847392"
+    expected:
+      category_name: null
+
+  # =============================================================================
+  # ADDITIONAL SAMPLES - Mixed regions and categories (19 samples to reach 150)
+  # =============================================================================
+
+  # Additional US Easy samples
+  - id: cat_v2_add_001
+    difficulty: easy
+    tags: [food_and_drink, us]
+    input:
+      id: txn_v2_add_001
+      amount: 11.50
+      classification: expense
+      description: "CHICK-FIL-A #1234"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_add_002
+    difficulty: easy
+    tags: [food_and_drink, us]
+    input:
+      id: txn_v2_add_002
+      amount: 7.99
+      classification: expense
+      description: "POPEYES #5678"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_add_003
+    difficulty: easy
+    tags: [groceries, us]
+    input:
+      id: txn_v2_add_003
+      amount: 134.50
+      classification: expense
+      description: "SAFEWAY #1234"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_add_004
+    difficulty: easy
+    tags: [gas, us]
+    input:
+      id: txn_v2_add_004
+      amount: 55.00
+      classification: expense
+      description: "COSTCO GAS #789"
+    expected:
+      category_name: "Gas & Fuel"
+
+  # Additional European Easy samples
+  - id: cat_v2_add_005
+    difficulty: easy
+    tags: [groceries, europe, spain]
+    input:
+      id: txn_v2_add_005
+      amount: 89.00
+      classification: expense
+      description: "MERCADONA SA"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Food & Drink"]
+
+  - id: cat_v2_add_006
+    difficulty: easy
+    tags: [groceries, europe, italy]
+    input:
+      id: txn_v2_add_006
+      amount: 67.50
+      classification: expense
+      description: "ESSELUNGA SPA MILANO"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Food & Drink"]
+
+  - id: cat_v2_add_007
+    difficulty: easy
+    tags: [flights, europe, spain]
+    input:
+      id: txn_v2_add_007
+      amount: 156.00
+      classification: expense
+      description: "VUELING AIRLINES SA"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  - id: cat_v2_add_008
+    difficulty: easy
+    tags: [flights, europe, netherlands]
+    input:
+      id: txn_v2_add_008
+      amount: 234.00
+      classification: expense
+      description: "KLM ROYAL DUTCH"
+    expected:
+      category_name: "Flights"
+      acceptable_alternatives: ["Travel"]
+
+  # Additional Medium samples
+  - id: cat_v2_add_009
+    difficulty: medium
+    tags: [restaurants, us]
+    input:
+      id: txn_v2_add_009
+      amount: 56.00
+      classification: expense
+      description: "APPLEBEES #789"
+    expected:
+      category_name: "Restaurants"
+
+  - id: cat_v2_add_010
+    difficulty: medium
+    tags: [restaurants, us]
+    input:
+      id: txn_v2_add_010
+      amount: 78.50
+      classification: expense
+      description: "RED LOBSTER #456"
+    expected:
+      category_name: "Restaurants"
+
+  - id: cat_v2_add_011
+    difficulty: medium
+    tags: [subscriptions, us]
+    input:
+      id: txn_v2_add_011
+      amount: 14.99
+      classification: expense
+      description: "MICROSOFT *OFFICE365"
+    expected:
+      category_name: "Subscriptions"
+
+  - id: cat_v2_add_012
+    difficulty: medium
+    tags: [subscriptions, us]
+    input:
+      id: txn_v2_add_012
+      amount: 11.99
+      classification: expense
+      description: "ADOBE CREATIVE CLOUD"
+    expected:
+      category_name: "Subscriptions"
+
+  - id: cat_v2_add_013
+    difficulty: medium
+    tags: [personal_care, europe, uk]
+    input:
+      id: txn_v2_add_013
+      amount: 35.00
+      classification: expense
+      description: "SUPERDRUG STORES"
+    expected:
+      category_name: "Personal Care"
+      acceptable_alternatives: ["Pharmacy"]
+
+  # Additional Hard samples
+  - id: cat_v2_add_014
+    difficulty: hard
+    tags: [ambiguous, us, delivery_service]
+    input:
+      id: txn_v2_add_014
+      amount: 156.00
+      classification: expense
+      description: "INSTACART*COSTCO"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_add_015
+    difficulty: hard
+    tags: [ambiguous, europe, spain, delivery_service]
+    input:
+      id: txn_v2_add_015
+      amount: 45.00
+      classification: expense
+      description: "GLOVO APP BARCELONA"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Groceries", "Food & Drink"]
+
+  - id: cat_v2_add_016
+    difficulty: hard
+    tags: [ambiguous, europe, poland, multi_purpose_retailer]
+    input:
+      id: txn_v2_add_016
+      amount: 178.00
+      classification: expense
+      description: "BIEDRONKA SP ZOO"
+    expected:
+      category_name: "Groceries"
+
+  # Additional Edge cases
+  - id: cat_v2_add_017
+    difficulty: edge_case
+    tags: [should_be_null, europe, generic]
+    input:
+      id: txn_v2_add_017
+      amount: 89.00
+      classification: expense
+      description: "VIREMENT SEPA"
+    expected:
+      category_name: null
+
+  - id: cat_v2_add_018
+    difficulty: edge_case
+    tags: [should_be_null, generic]
+    input:
+      id: txn_v2_add_018
+      amount: 25.00
+      classification: expense
+      description: "RECURRING PAYMENT"
+    expected:
+      category_name: null
+
+  - id: cat_v2_add_019
+    difficulty: edge_case
+    tags: [should_be_null, europe, uk, generic]
+    input:
+      id: txn_v2_add_019
+      amount: 15.00
+      classification: expense
+      description: "DIRECT DEBIT PAYMENT"
+    expected:
+      category_name: null
+
+  # =============================================================================
+  # CHALLENGING SAMPLES - Local businesses, abbreviations, ambiguous
+  # =============================================================================
+
+  # Local/Unknown businesses - Hard to categorize without context
+  - id: cat_v2_challenge_001
+    difficulty: hard
+    tags: [local_business, ambiguous]
+    input:
+      id: txn_v2_ch_001
+      amount: 45.00
+      classification: expense
+      description: "MIKE'S PLACE"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_002
+    difficulty: hard
+    tags: [local_business, ambiguous]
+    input:
+      id: txn_v2_ch_002
+      amount: 67.50
+      classification: expense
+      description: "THE CORNER SPOT LLC"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_003
+    difficulty: hard
+    tags: [local_business, ambiguous]
+    input:
+      id: txn_v2_ch_003
+      amount: 23.99
+      classification: expense
+      description: "MAIN ST MARKET"
+    expected:
+      category_name: "Groceries"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_challenge_004
+    difficulty: hard
+    tags: [local_business, ambiguous]
+    input:
+      id: txn_v2_ch_004
+      amount: 89.00
+      classification: expense
+      description: "DOWNTOWN GRILL & BAR"
+    expected:
+      category_name: "Restaurants"
+
+  - id: cat_v2_challenge_005
+    difficulty: hard
+    tags: [local_business, ambiguous]
+    input:
+      id: txn_v2_ch_005
+      amount: 15.00
+      classification: expense
+      description: "JAVA JOE'S"
+    expected:
+      category_name: "Coffee Shops"
+      acceptable_alternatives: ["Restaurants"]
+
+  # Abbreviated/truncated merchant names
+  - id: cat_v2_challenge_006
+    difficulty: hard
+    tags: [abbreviated, ambiguous]
+    input:
+      id: txn_v2_ch_006
+      amount: 34.50
+      classification: expense
+      description: "AMZN MKTP US*2K9X7Y"
+    expected:
+      category_name: "Shopping"
+
+  - id: cat_v2_challenge_007
+    difficulty: hard
+    tags: [abbreviated, ambiguous]
+    input:
+      id: txn_v2_ch_007
+      amount: 12.99
+      classification: expense
+      description: "WM SUPERCENTER #"
+    expected:
+      category_name: "Shopping"
+      acceptable_alternatives: ["Groceries"]
+
+  - id: cat_v2_challenge_008
+    difficulty: hard
+    tags: [abbreviated, ambiguous]
+    input:
+      id: txn_v2_ch_008
+      amount: 8.50
+      classification: expense
+      description: "SBUX 12345"
+    expected:
+      category_name: "Coffee Shops"
+
+  - id: cat_v2_challenge_009
+    difficulty: hard
+    tags: [abbreviated, ambiguous]
+    input:
+      id: txn_v2_ch_009
+      amount: 156.00
+      classification: expense
+      description: "TGT*"
+    expected:
+      category_name: "Shopping"
+      acceptable_alternatives: ["Groceries"]
+
+  - id: cat_v2_challenge_010
+    difficulty: hard
+    tags: [abbreviated, ambiguous]
+    input:
+      id: txn_v2_ch_010
+      amount: 45.00
+      classification: expense
+      description: "SQ *JOE SMITH"
+    expected:
+      category_name: null
+
+  # Multiple category signals - genuinely ambiguous
+  - id: cat_v2_challenge_011
+    difficulty: hard
+    tags: [multi_signal, ambiguous]
+    input:
+      id: txn_v2_ch_011
+      amount: 234.00
+      classification: expense
+      description: "AMAZON FRESH"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_challenge_012
+    difficulty: hard
+    tags: [multi_signal, ambiguous]
+    input:
+      id: txn_v2_ch_012
+      amount: 45.00
+      classification: expense
+      description: "TARGET.COM"
+    expected:
+      category_name: "Shopping"
+      acceptable_alternatives: ["Groceries"]
+
+  - id: cat_v2_challenge_013
+    difficulty: hard
+    tags: [multi_signal, ambiguous]
+    input:
+      id: txn_v2_ch_013
+      amount: 67.00
+      classification: expense
+      description: "WALGREENS PHARMACY"
+    expected:
+      category_name: "Pharmacy"
+      acceptable_alternatives: ["Health & Wellness", "Groceries"]
+
+  - id: cat_v2_challenge_014
+    difficulty: hard
+    tags: [multi_signal, ambiguous]
+    input:
+      id: txn_v2_ch_014
+      amount: 23.00
+      classification: expense
+      description: "CVS STORE"
+    expected:
+      category_name: "Pharmacy"
+      acceptable_alternatives: ["Health & Wellness", "Groceries"]
+
+  # Numeric/cryptic descriptions
+  - id: cat_v2_challenge_015
+    difficulty: edge_case
+    tags: [cryptic, should_be_null]
+    input:
+      id: txn_v2_ch_015
+      amount: 78.00
+      classification: expense
+      description: "12345678901234"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_016
+    difficulty: edge_case
+    tags: [cryptic, should_be_null]
+    input:
+      id: txn_v2_ch_016
+      amount: 150.00
+      classification: expense
+      description: "PMT*AUTH*9876"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_017
+    difficulty: edge_case
+    tags: [cryptic, should_be_null]
+    input:
+      id: txn_v2_ch_017
+      amount: 99.00
+      classification: expense
+      description: "CHECKCARD 0423"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_018
+    difficulty: edge_case
+    tags: [cryptic, should_be_null]
+    input:
+      id: txn_v2_ch_018
+      amount: 200.00
+      classification: expense
+      description: "EXTERNAL WITHDRAWAL"
+    expected:
+      category_name: null
+
+  # Similar names, different categories
+  - id: cat_v2_challenge_019
+    difficulty: hard
+    tags: [similar_names, ambiguous]
+    input:
+      id: txn_v2_ch_019
+      amount: 45.00
+      classification: expense
+      description: "APPLE STORE R123"
+    expected:
+      category_name: "Electronics"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_challenge_020
+    difficulty: hard
+    tags: [similar_names, ambiguous]
+    input:
+      id: txn_v2_ch_020
+      amount: 2.99
+      classification: expense
+      description: "APPLE.COM BILL"
+    expected:
+      category_name: "Subscriptions"
+
+  - id: cat_v2_challenge_021
+    difficulty: hard
+    tags: [similar_names, ambiguous]
+    input:
+      id: txn_v2_ch_021
+      amount: 0.99
+      classification: expense
+      description: "GOOGLE PLAY"
+    expected:
+      category_name: "Subscriptions"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_challenge_022
+    difficulty: hard
+    tags: [similar_names, ambiguous]
+    input:
+      id: txn_v2_ch_022
+      amount: 1299.00
+      classification: expense
+      description: "GOOGLE STORE"
+    expected:
+      category_name: "Electronics"
+      acceptable_alternatives: ["Shopping"]
+
+  # International formats
+  - id: cat_v2_challenge_023
+    difficulty: hard
+    tags: [international, europe]
+    input:
+      id: txn_v2_ch_023
+      amount: 45.00
+      classification: expense
+      description: "REWE MARKT GMBH"
+    expected:
+      category_name: "Groceries"
+
+  - id: cat_v2_challenge_024
+    difficulty: hard
+    tags: [international, europe]
+    input:
+      id: txn_v2_ch_024
+      amount: 89.00
+      classification: expense
+      description: "MEDIAMARKT SATURN"
+    expected:
+      category_name: "Electronics"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_challenge_025
+    difficulty: hard
+    tags: [international, europe]
+    input:
+      id: txn_v2_ch_025
+      amount: 34.00
+      classification: expense
+      description: "PRIMARK STORES LTD"
+    expected:
+      category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
+
+  - id: cat_v2_challenge_026
+    difficulty: hard
+    tags: [international, asia]
+    input:
+      id: txn_v2_ch_026
+      amount: 78.00
+      classification: expense
+      description: "UNIQLO CO LTD"
+    expected:
+      category_name: "Clothing"
+      acceptable_alternatives: ["Shopping"]
+
+  # Delivery with ambiguous underlying merchant
+  - id: cat_v2_challenge_027
+    difficulty: hard
+    tags: [delivery, ambiguous]
+    input:
+      id: txn_v2_ch_027
+      amount: 45.00
+      classification: expense
+      description: "DOORDASH*"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  - id: cat_v2_challenge_028
+    difficulty: hard
+    tags: [delivery, ambiguous]
+    input:
+      id: txn_v2_ch_028
+      amount: 89.00
+      classification: expense
+      description: "UBER EATS"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  - id: cat_v2_challenge_029
+    difficulty: hard
+    tags: [delivery, ambiguous]
+    input:
+      id: txn_v2_ch_029
+      amount: 123.00
+      classification: expense
+      description: "INSTACART"
+    expected:
+      category_name: "Groceries"
+
+  # Gym/Fitness edge cases
+  - id: cat_v2_challenge_030
+    difficulty: hard
+    tags: [gym, ambiguous]
+    input:
+      id: txn_v2_ch_030
+      amount: 15.00
+      classification: expense
+      description: "CLASSPASS INC"
+    expected:
+      category_name: "Gym & Fitness"
+      acceptable_alternatives: ["Health & Wellness", "Subscriptions"]
+
+  # Streaming vs Subscription edge cases
+  - id: cat_v2_challenge_031
+    difficulty: hard
+    tags: [streaming, subscription, ambiguous]
+    input:
+      id: txn_v2_ch_031
+      amount: 6.99
+      classification: expense
+      description: "AMAZON VIDEO"
+    expected:
+      category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
+
+  - id: cat_v2_challenge_032
+    difficulty: hard
+    tags: [streaming, subscription, ambiguous]
+    input:
+      id: txn_v2_ch_032
+      amount: 9.99
+      classification: expense
+      description: "YOUTUBE PREMIUM"
+    expected:
+      category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
+
+  - id: cat_v2_challenge_033
+    difficulty: hard
+    tags: [streaming, subscription, ambiguous]
+    input:
+      id: txn_v2_ch_033
+      amount: 14.99
+      classification: expense
+      description: "APPLE TV+"
+    expected:
+      category_name: "Streaming Services"
+      acceptable_alternatives: ["Subscriptions"]
+
+  # P2P and transfer ambiguity
+  - id: cat_v2_challenge_034
+    difficulty: edge_case
+    tags: [p2p, should_be_null]
+    input:
+      id: txn_v2_ch_034
+      amount: 50.00
+      classification: expense
+      description: "VENMO *JOHN DOE"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_035
+    difficulty: edge_case
+    tags: [p2p, should_be_null]
+    input:
+      id: txn_v2_ch_035
+      amount: 100.00
+      classification: expense
+      description: "ZELLE PAYMENT TO"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_036
+    difficulty: medium
+    tags: [p2p, income]
+    input:
+      id: txn_v2_ch_036
+      amount: 200.00
+      classification: income
+      description: "VENMO *PAYMENT FROM"
+    expected:
+      category_name: "Income"
+
+  # Food-related ambiguity
+  - id: cat_v2_challenge_037
+    difficulty: hard
+    tags: [food, ambiguous]
+    input:
+      id: txn_v2_ch_037
+      amount: 12.00
+      classification: expense
+      description: "FIVE GUYS #1234"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_challenge_038
+    difficulty: hard
+    tags: [food, ambiguous]
+    input:
+      id: txn_v2_ch_038
+      amount: 45.00
+      classification: expense
+      description: "SHAKE SHACK"
+    expected:
+      category_name: "Food & Drink"
+      acceptable_alternatives: ["Restaurants"]
+
+  - id: cat_v2_challenge_039
+    difficulty: hard
+    tags: [food, ambiguous]
+    input:
+      id: txn_v2_ch_039
+      amount: 8.00
+      classification: expense
+      description: "SWEETGREEN"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  - id: cat_v2_challenge_040
+    difficulty: hard
+    tags: [food, ambiguous]
+    input:
+      id: txn_v2_ch_040
+      amount: 23.00
+      classification: expense
+      description: "CAVA GRILL"
+    expected:
+      category_name: "Restaurants"
+      acceptable_alternatives: ["Food & Drink"]
+
+  # Hotel/Travel edge cases
+  - id: cat_v2_challenge_041
+    difficulty: hard
+    tags: [travel, ambiguous]
+    input:
+      id: txn_v2_ch_041
+      amount: 89.00
+      classification: expense
+      description: "BOOKING.COM"
+    expected:
+      category_name: "Hotels"
+      acceptable_alternatives: ["Travel"]
+
+  - id: cat_v2_challenge_042
+    difficulty: hard
+    tags: [travel, ambiguous]
+    input:
+      id: txn_v2_ch_042
+      amount: 156.00
+      classification: expense
+      description: "EXPEDIA INC"
+    expected:
+      category_name: "Travel"
+      acceptable_alternatives: ["Hotels", "Flights"]
+
+  - id: cat_v2_challenge_043
+    difficulty: hard
+    tags: [travel, ambiguous]
+    input:
+      id: txn_v2_ch_043
+      amount: 234.00
+      classification: expense
+      description: "VRBO.COM"
+    expected:
+      category_name: "Hotels"
+      acceptable_alternatives: ["Travel"]
+
+  # Gas station convenience purchases
+  - id: cat_v2_challenge_044
+    difficulty: hard
+    tags: [gas, convenience, ambiguous]
+    input:
+      id: txn_v2_ch_044
+      amount: 8.50
+      classification: expense
+      description: "SHELL SERVICE STATION"
+    expected:
+      category_name: "Gas & Fuel"
+      acceptable_alternatives: ["Groceries"]
+
+  - id: cat_v2_challenge_045
+    difficulty: hard
+    tags: [gas, convenience, ambiguous]
+    input:
+      id: txn_v2_ch_045
+      amount: 12.00
+      classification: expense
+      description: "SPEEDWAY"
+    expected:
+      category_name: "Gas & Fuel"
+      acceptable_alternatives: ["Groceries"]
+
+  # Income edge cases
+  - id: cat_v2_challenge_046
+    difficulty: medium
+    tags: [income, ambiguous]
+    input:
+      id: txn_v2_ch_046
+      amount: 1500.00
+      classification: income
+      description: "ACH CREDIT"
+    expected:
+      category_name: "Income"
+      acceptable_alternatives: ["Salary"]
+
+  - id: cat_v2_challenge_047
+    difficulty: medium
+    tags: [income, ambiguous]
+    input:
+      id: txn_v2_ch_047
+      amount: 500.00
+      classification: income
+      description: "INTEREST PAYMENT"
+    expected:
+      category_name: "Income"
+
+  - id: cat_v2_challenge_048
+    difficulty: medium
+    tags: [income, ambiguous]
+    input:
+      id: txn_v2_ch_048
+      amount: 234.00
+      classification: income
+      description: "DIVIDEND"
+    expected:
+      category_name: "Income"
+
+  # Cryptic European formats
+  - id: cat_v2_challenge_049
+    difficulty: edge_case
+    tags: [europe, cryptic, should_be_null]
+    input:
+      id: txn_v2_ch_049
+      amount: 45.00
+      classification: expense
+      description: "LASTSCHRIFT"
+    expected:
+      category_name: null
+
+  - id: cat_v2_challenge_050
+    difficulty: edge_case
+    tags: [europe, cryptic, should_be_null]
+    input:
+      id: txn_v2_ch_050
+      amount: 89.00
+      classification: expense
+      description: "PRELEVEMENT"
+    expected:
+      category_name: null
