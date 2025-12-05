@@ -9,7 +9,7 @@
         </div>
       <% else %>
         <div class="w-8 h-8 rounded-full flex items-center justify-center bg-container-inset text-secondary text-sm font-medium">
-          <%= provider_merchant.name.first&.upcase || "?" %>
+          <%= provider_merchant.name&.first&.upcase || "?" %>
         </div>
       <% end %>
 
