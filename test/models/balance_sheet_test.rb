@@ -81,7 +81,7 @@ class BalanceSheetTest < ActiveSupport::TestCase
 
     cash_group = BalanceSheet.new(@family).assets.account_groups.find { |ag| ag.name == "Cash" }
 
-    assert_equal ["Savings"], cash_group.subgroups.map(&:name)
+    assert_equal [ "Savings" ], cash_group.subgroups.map(&:name)
     assert_equal 1, cash_group.uncategorized_accounts.size
     assert_equal 20000.0, cash_group.uncategorized_total_money.to_f
   end
