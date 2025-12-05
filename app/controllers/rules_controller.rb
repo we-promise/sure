@@ -86,6 +86,7 @@ class RulesController < ApplicationController
     def rule_params
       params.require(:rule).permit(
         :resource_type, :effective_date, :active, :name,
+        :schedule_enabled, :schedule_cron,
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]

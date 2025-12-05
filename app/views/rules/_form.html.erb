@@ -101,5 +101,36 @@
     </div>
   </section>
 
+  <section class="space-y-4">
+    <div class="flex items-center gap-1 text-secondary">
+      <h3 class="text-sm font-medium text-primary">WHEN</h3>
+    </div>
+
+    <div class="ml-6 space-y-3">
+      <div class="flex items-center gap-3 text-sm text-primary">
+        <%= render DS::Toggle.new(
+              id: dom_id(rule, :schedule_toggle),
+              name: "rule[schedule_enabled]",
+              checked: rule.schedule_enabled?,
+              disabled: false,
+              data: { rules_target: "scheduleCheckbox", action: "change->rules#toggleSchedule" }
+            ) %>
+        <label for="<%= dom_id(rule, :schedule_toggle) %>" class="cursor-pointer">Run this rule on a schedule</label>
+      </div>
+
+      <div class="space-y-2 transition-opacity" data-rules-target="scheduleFields">
+        <div class="flex items-center gap-2 text-sm text-secondary">
+          <%= f.label :schedule_cron, "Cron expression" %>
+          <%= icon "info", size: "xs", class: "text-secondary", title: "Use standard cron syntax (min hour day month weekday)" %>
+        </div>
+        <%= f.text_field :schedule_cron,
+              placeholder: "0 0 * * *",
+              class: "form-field__input w-full",
+              data: { rules_target: "scheduleCronInput" } %>
+        <p class="text-xs text-secondary">Example: 0 0 * * * to run every day at midnight.</p>
+      </div>
+    </div>
+  </section>
+
   <%= f.submit %>
 <% end %>

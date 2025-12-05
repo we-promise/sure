@@ -74,4 +74,55 @@ class RuleTest < ActiveSupport::TestCase
     assert_not rule.valid?
     assert_equal [ "Compound conditions cannot be nested" ], rule.errors.full_messages
   end
+
+  test "requires valid cron when scheduling is enabled" do
+    rule = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      schedule_enabled: true,
+      schedule_cron: "invalid",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ],
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "=", value: "Taxi") ]
+    )
+
+    assert_not rule.valid?
+    assert_includes rule.errors[:schedule_cron], "is invalid"
+  end
+
+  test "creates cron job when schedule is enabled and active" do
+    Sidekiq::Cron::Job.expects(:create).with do |options|
+      options[:cron] == "0 0 * * *" &&
+        options[:class] == "RuleScheduleWorker" &&
+        options[:queue] == "scheduled" &&
+        options[:args].length == 1
+    end
+
+    Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      active: true,
+      schedule_enabled: true,
+      schedule_cron: "0 0 * * *",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "=", value: "Taxi") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+  end
+
+  test "destroys cron job when scheduling is disabled" do
+    Sidekiq::Cron::Job.stubs(:create)
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      active: true,
+      schedule_enabled: true,
+      schedule_cron: "0 0 * * *",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "=", value: "Taxi") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    Sidekiq::Cron::Job.expects(:destroy).with("rule-#{rule.id}")
+
+    rule.update!(schedule_enabled: false)
+  end
 end
