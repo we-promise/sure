@@ -37,6 +37,9 @@ class ReportsController < ApplicationController
     # Transactions breakdown
     @transactions = build_transactions_breakdown
 
+    # Investment metrics (must be before build_reports_sections)
+    @investment_metrics = build_investment_metrics
+
     # Build reports sections for collapsible/reorderable UI
     @reports_sections = build_reports_sections
 
@@ -127,6 +130,14 @@ class ReportsController < ApplicationController
           partial: "reports/trends_insights",
           locals: { trends_data: @trends_data, spending_patterns: @spending_patterns },
           visible: Current.family.transactions.any?,
+          collapsible: true
+        },
+        {
+          key: "investment_performance",
+          title: "reports.investment_performance.title",
+          partial: "reports/investment_performance",
+          locals: { investment_metrics: @investment_metrics },
+          visible: @investment_metrics[:has_investments],
           collapsible: true
         },
         {
@@ -405,6 +416,25 @@ class ReportsController < ApplicationController
       else
         result.sort_by { |g| -g[:total] }
       end
+    end
+
+    def build_investment_metrics
+      investment_statement = Current.family.investment_statement
+      investment_accounts = investment_statement.investment_accounts
+
+      return { has_investments: false } unless investment_accounts.any?
+
+      period_totals = investment_statement.totals(period: @period)
+
+      {
+        has_investments: true,
+        portfolio_value: investment_statement.portfolio_value_money,
+        unrealized_trend: investment_statement.unrealized_gains_trend,
+        period_contributions: period_totals.contributions,
+        period_withdrawals: period_totals.withdrawals,
+        top_holdings: investment_statement.top_holdings(limit: 5),
+        accounts: investment_accounts.to_a
+      }
     end
 
     def apply_transaction_filters(transactions)

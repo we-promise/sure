@@ -1,0 +1,100 @@
+<%# locals: (investment_statement:, period:, **args) %>
+
+<% if investment_statement.investment_accounts.any? %>
+  <div id="investment-summary" class="space-y-4">
+    <div class="flex justify-between gap-4 px-4">
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-medium"><%= t(".title") %></h2>
+        </div>
+
+        <p class="text-primary text-3xl font-medium">
+          <%= format_money(investment_statement.portfolio_value_money) %>
+        </p>
+
+        <% trend = investment_statement.unrealized_gains_trend %>
+        <% if trend %>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-secondary"><%= t(".total_return") %>:</span>
+            <span class="font-medium" style="color: <%= trend.color %>">
+              <%= format_money(Money.new(trend.value, Current.family.currency)) %>
+              (<%= trend.percent_formatted %>)
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <% holdings = investment_statement.top_holdings(limit: 5) %>
+    <% if holdings.any? %>
+      <div class="bg-container-inset rounded-xl p-1 mx-4">
+        <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
+          <div class="flex-1"><%= t(".holding") %></div>
+          <div class="w-20 text-right"><%= t(".weight") %></div>
+          <div class="w-28 text-right"><%= t(".value") %></div>
+          <div class="w-24 text-right"><%= t(".return") %></div>
+        </div>
+
+        <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
+          <% holdings.each_with_index do |holding, idx| %>
+            <div class="p-4 flex items-center <%= idx < holdings.size - 1 ? 'border-b border-primary' : '' %>">
+              <div class="flex-1 flex items-center gap-3">
+                <% if holding.security.logo_url.present? %>
+                  <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-8 h-8 rounded-full">
+                <% else %>
+                  <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
+                    <%= holding.ticker[0..1] %>
+                  </div>
+                <% end %>
+                <div>
+                  <p class="font-medium"><%= holding.ticker %></p>
+                  <p class="text-xs text-secondary"><%= truncate(holding.name, length: 20) %></p>
+                </div>
+              </div>
+
+              <div class="w-20 text-right text-secondary">
+                <%= number_to_percentage(holding.weight || 0, precision: 1) %>
+              </div>
+
+              <div class="w-28 text-right">
+                <%= format_money(holding.amount_money) %>
+              </div>
+
+              <div class="w-24 text-right">
+                <% if holding.trend %>
+                  <span style="color: <%= holding.trend.color %>">
+                    <%= holding.trend.percent_formatted %>
+                  </span>
+                <% else %>
+                  <span class="text-secondary">-</span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Investment Activity Summary %>
+    <% totals = investment_statement.totals(period: period) %>
+    <% if totals.trades_count > 0 %>
+      <div class="px-4 pt-2">
+        <p class="text-xs text-secondary uppercase font-medium mb-2"><%= t(".period_activity", period: period.label) %></p>
+        <div class="flex gap-4 text-sm">
+          <div>
+            <span class="text-secondary"><%= t(".contributions") %>:</span>
+            <span class="font-medium text-primary"><%= format_money(totals.contributions) %></span>
+          </div>
+          <div>
+            <span class="text-secondary"><%= t(".withdrawals") %>:</span>
+            <span class="font-medium text-primary"><%= format_money(totals.withdrawals) %></span>
+          </div>
+          <div>
+            <span class="text-secondary"><%= t(".trades") %>:</span>
+            <span class="font-medium text-primary"><%= totals.trades_count %></span>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
