@@ -40,7 +40,18 @@
             { label: t(".country") },
             { data: { auto_submit_form_target: "auto" } } %>
 
-        <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.</p>
+        <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.  Please see the <%= link_to "I18n issue", "https://github.com/maybe-finance/maybe/issues/1225", target: "_blank", class: "underline" %> for more information.</p>
+
+        <div class="mt-4">
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <p class="text-sm text-primary"><%= t(".cash_subgroup_enabled_label") %></p>
+              <p class="text-secondary text-xs"><%= t(".cash_subgroup_enabled_hint") %></p>
+            </div>
+
+            <%= family_form.toggle :cash_subgroup_enabled, { data: { auto_submit_form_target: "auto" } } %>
+          </div>
+        </div>
       <% end %>
     <% end %>
   </div>

@@ -37,6 +37,38 @@ class BalanceSheet::AccountGroup
     accounts.sum(&:converted_balance)
   end
 
+  def subgroups
+    return [] unless cash_subgroup_enabled? && accountable_type == Depository
+
+    grouped_accounts = accounts.group_by { |account| normalized_subtype(account.subtype) }
+
+    order = Depository::SUBTYPES.keys
+
+    grouped_accounts
+      .reject { |subtype, _| subtype.nil? }
+      .map do |subtype, rows|
+        BalanceSheet::SubtypeGroup.new(subtype: subtype, accounts: rows, account_group: self)
+      end
+      .sort_by do |subgroup|
+        idx = order.index(subgroup.subtype)
+        [ idx || order.length, subgroup.name ]
+      end
+  end
+
+  def uncategorized_accounts
+    return [] unless cash_subgroup_enabled? && accountable_type == Depository
+
+    accounts.select { |account| normalized_subtype(account.subtype).nil? }
+  end
+
+  def uncategorized_total
+    uncategorized_accounts.sum(&:converted_balance)
+  end
+
+  def uncategorized_total_money
+    Money.new((uncategorized_total * 100).to_i, currency)
+  end
+
   def weight
     return 0 if classification_group.total.zero?
 
@@ -56,6 +88,17 @@ class BalanceSheet::AccountGroup
     classification_group.currency
   end
 
+  def cash_subgroup_enabled?
+    classification_group.family.cash_subgroup_enabled != false
+  end
+
   private
+    def normalized_subtype(subtype)
+      value = subtype&.to_s&.strip&.downcase
+      return nil if value.blank?
+
+      Depository::SUBTYPES.key?(value) ? value : nil
+    end
+
     attr_reader :classification_group
 end

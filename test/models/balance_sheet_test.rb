@@ -75,6 +75,40 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == I18n.t("accounts.types.other_liability") }.total
   end
 
+  test "cash subgroups render savings and uncategorized when enabled" do
+    create_account(balance: 100, accountable: Depository.new(subtype: "savings"))
+    create_account(balance: 200, accountable: Depository.new) # no subtype
+
+    cash_group = BalanceSheet.new(@family).assets.account_groups.find { |ag| ag.name == "Cash" }
+
+    assert_equal ["Savings"], cash_group.subgroups.map(&:name)
+    assert_equal 1, cash_group.uncategorized_accounts.size
+    assert_equal 20000.0, cash_group.uncategorized_total_money.to_f
+  end
+
+  test "cash subgroups flatten when preference disabled" do
+    @family.update!(cash_subgroup_enabled: false)
+
+    create_account(balance: 100, accountable: Depository.new(subtype: "savings"))
+    create_account(balance: 200, accountable: Depository.new)
+
+    cash_group = BalanceSheet.new(@family).assets.account_groups.find { |ag| ag.name == "Cash" }
+
+    assert_empty cash_group.subgroups
+    assert_empty cash_group.uncategorized_accounts
+    assert_equal 2, cash_group.accounts.size
+  end
+
+  test "unknown cash subtypes are treated as uncategorized" do
+    create_account(balance: 150, accountable: Depository.new(subtype: "mystery"))
+
+    cash_group = BalanceSheet.new(@family).assets.account_groups.find { |ag| ag.name == "Cash" }
+
+    assert_empty cash_group.subgroups
+    assert_equal 1, cash_group.uncategorized_accounts.size
+    assert_equal 15000.0, cash_group.uncategorized_total_money.to_f
+  end
+
   private
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes
