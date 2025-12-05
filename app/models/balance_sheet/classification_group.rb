@@ -3,13 +3,14 @@ class BalanceSheet::ClassificationGroup
 
   monetize :total, as: :total_money
 
-  attr_reader :classification, :currency
+  attr_reader :classification, :currency, :family
 
-  def initialize(classification:, currency:, accounts:)
+  def initialize(classification:, currency:, accounts:, family:)
     @classification = normalize_classification!(classification)
     @name = name
     @currency = currency
     @accounts = accounts
+    @family = family
   end
 
   def name

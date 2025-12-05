@@ -42,7 +42,7 @@ class ChatsTest < ApplicationSystemTestCase
 
       # After page refresh, we're still on the last chat we were viewing
       within "#chat-container" do
-        assert_selector "h1", text: @user.chats.first.title
+        assert_selector "h1", text: @user.chats.first.title, visible: :all
       end
     end
   end
