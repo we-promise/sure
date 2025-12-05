@@ -14,6 +14,10 @@ ca:
       empty: Encara no hi ha comerços
       new: Nou comerç
       title: Comerços
+      family_title: Comerços familiars
+      family_empty: Encara no hi ha comerços familiars
+      provider_title: Comerços del proveïdor
+      provider_empty: Encara no hi ha comerços del proveïdor vinculats a aquesta família
     merchant:
       confirm_accept: Elimina el comerç
       confirm_body: Segur que vols eliminar aquest comerç? Si l'elimines, es desvincularan totes les transaccions associades i pot afectar els teus informes.

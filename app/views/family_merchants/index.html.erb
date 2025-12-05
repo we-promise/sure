@@ -9,33 +9,53 @@
   ) %>
 </header>
 
-<div class="bg-container rounded-xl shadow-border-xs p-4">
-  <% if @family_merchants.any? %>
-    <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-        <p><%= t(".title") %></p>
-        <span class="text-subdued">&middot;</span>
-        <p><%= @family_merchants.count %></p>
-      </div>
+<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-6">
+  <section class="space-y-2">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+      <p><%= t(".family_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= @family_merchants.count %></p>
+    </div>
 
+    <% if @family_merchants.any? %>
       <div class="bg-container rounded-lg shadow-border-xs">
         <div class="overflow-hidden rounded-lg">
           <%= render partial: "family_merchants/family_merchant", collection: @family_merchants, spacer_template: "shared/ruler" %>
         </div>
       </div>
-    </div>
-  <% else %>
-    <div class="flex justify-center items-center py-20">
-      <div class="text-center flex flex-col items-center max-w-[300px]">
-        <p class="text-primary mb-1 font-medium text-sm"><%= t(".empty") %></p>
+    <% else %>
+      <div class="flex justify-center items-center py-12">
+        <div class="text-center flex flex-col items-center max-w-[300px]">
+          <p class="text-primary mb-1 font-medium text-sm"><%= t(".family_empty") %></p>
 
-        <%= render DS::Link.new(
-          text: t(".new"),
-          icon: "plus",
-          href: new_family_merchant_path,
-          frame: :modal
-        ) %>
+          <%= render DS::Link.new(
+            text: t(".new"),
+            icon: "plus",
+            href: new_family_merchant_path,
+            frame: :modal
+          ) %>
+        </div>
       </div>
+    <% end %>
+  </section>
+
+  <section class="space-y-2">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+      <p><%= t(".provider_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= @provider_merchants.count %></p>
     </div>
-  <% end %>
+
+    <% if @provider_merchants.any? %>
+      <div class="bg-container rounded-lg shadow-border-xs">
+        <div class="overflow-hidden rounded-lg">
+          <%= render partial: "family_merchants/provider_merchant", collection: @provider_merchants, spacer_template: "shared/ruler" %>
+        </div>
+      </div>
+    <% else %>
+      <div class="flex justify-center items-center py-8">
+        <p class="text-secondary text-sm text-center"><%= t(".provider_empty") %></p>
+      </div>
+    <% end %>
+  </section>
 </div>

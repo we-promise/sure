@@ -1,0 +1,24 @@
+<%# locals: (provider_merchant:) %>
+
+<div class="flex justify-between items-center p-4 bg-container">
+  <div class="flex w-full items-center gap-2.5">
+    <% if provider_merchant.logo_url %>
+      <div class="w-8 h-8 rounded-full flex justify-center items-center">
+        <%= image_tag provider_merchant.logo_url, class: "w-8 h-8 rounded-full" %>
+      </div>
+    <% else %>
+      <div class="w-8 h-8 rounded-full flex items-center justify-center bg-container-inset text-secondary text-sm font-medium">
+        <%= provider_merchant.name.first&.upcase || "?" %>
+      </div>
+    <% end %>
+
+    <div class="flex flex-col min-w-0">
+      <p class="text-primary text-sm truncate">
+        <%= provider_merchant.name %>
+      </p>
+      <p class="text-secondary text-xs">
+        <%= provider_merchant.source&.titleize %>
+      </p>
+    </div>
+  </div>
+</div>
