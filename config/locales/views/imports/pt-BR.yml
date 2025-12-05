@@ -1,0 +1,99 @@
+---
+pt-BR:
+  import:
+    cleans:
+      show:
+        description: Edite seus dados na tabela abaixo. Células vermelhas são inválidas.
+        errors_notice: Há erros em seus dados. Passe o mouse sobre o erro para ver
+          detalhes.
+        errors_notice_mobile: Há erros em seus dados. Toque na dica de ferramenta do erro para ver
+          detalhes.
+        title: Limpar seus dados
+    configurations:
+      category_import:
+        button_label: Continuar
+        description: Faça o upload de um arquivo CSV simples (como o que geramos quando você
+          exporta seus dados). Mapearemos as colunas automaticamente para você.
+        instructions: Selecione continuar para processar seu CSV e avançar para a etapa de limpeza.
+      mint_import:
+        date_format_label: Formato da data
+      show:
+        description: Selecione as colunas que correspondem a cada campo no seu CSV.
+        title: Configurar sua importação
+      trade_import:
+        date_format_label: Formato da data
+      transaction_import:
+        date_format_label: Formato da data
+    confirms:
+      mappings:
+        create_account: Criar conta
+        csv_mapping_label: "%{mapping} no CSV"
+        sure_mapping_label: "%{mapping} no %{product_name}"
+        no_accounts: Você ainda não tem contas. Crie uma conta que possamos usar para 
+          linhas (não atribuídas) no seu CSV ou volte para a etapa de Limpeza e forneça
+          um nome de conta que possamos usar.
+        rows_label: Linhas
+        unassigned_account: Precisa criar uma nova conta para linhas não atribuídas?
+      show:
+        account_mapping_description: Atribua todas as contas do seu arquivo importado às
+          contas existentes no %{product_name}. Você também pode adicionar novas contas ou deixá-las
+          sem categoria.
+        account_mapping_title: Atribuir suas contas
+        account_type_mapping_description: Atribuir todos os tipos de conta do seu arquivo importado aos
+          do %{product_name}
+        account_type_mapping_title: Atribuir seus tipos de conta
+        category_mapping_description: Atribua todas as categorias do seu arquivo importado às
+          categorias existentes no %{product_name}. Você também pode adicionar novas categorias ou deixá-las
+          sem categoria.
+        category_mapping_title: Atribuir suas categorias
+        tag_mapping_description: Atribua todas as tags do seu arquivo importado às 
+          tags existentes no %{product_name}. Você também pode adicionar novas tags ou deixá-las
+          sem categoria.
+        tag_mapping_title: Atribuir suas tags
+    uploads:
+      show:
+        description: Cole ou faça upload do seu arquivo CSV abaixo. Por favor, revise as instruções
+          na tabela abaixo antes de começar.
+        instructions_1: Abaixo está um exemplo de CSV com as colunas disponíveis para importação.
+        instructions_2: Seu CSV deve ter uma linha de cabeçalho
+        instructions_3: Você pode nomear suas colunas como quiser. Você as mapeará
+          em uma etapa posterior.
+        instructions_4: Colunas marcadas com um asterisco (*) são dados obrigatórios.
+        instructions_5: Sem vírgulas (para separar milhares), sem símbolos de moeda e sem parênteses em números.
+        title: Importar seus dados
+  imports:
+    empty:
+      message: Nenhuma importação ainda.
+      new: Nova Importação
+    import:
+      complete: Concluída
+      delete: Excluir
+      failed: Falhou
+      in_progress: Em andamento
+      label: "%{type}: %{datetime}"
+      revert_failed: Falha na reversão
+      reverting: Revertendo
+      uploading: Processando linhas
+      view: Visualizar
+    index:
+      imports: Importações
+      new: Nova Importação
+      title: Importar/Exportar
+      exports: Exportações
+      new_export: Nova Exportação
+      no_exports: Nenhuma exportação ainda.
+    new:
+      description: Você pode importar manualmente vários tipos de dados via CSV ou usar um
+        de nossos modelos de importação, como o do Mint.
+      import_accounts: Importar contas
+      import_categories: Importar categorias
+      import_mint: Importar do Mint
+      import_portfolio: Importar investimentos
+      import_transactions: Importar transações
+      resume: Retomar %{type}
+      sources: Fontes
+      title: Nova Importação CSV
+    ready:
+      description: Aqui está um resumo dos novos itens que serão adicionados à sua conta
+        assim que você publicar esta importação.
+      title: Confirmar seus dados de importação

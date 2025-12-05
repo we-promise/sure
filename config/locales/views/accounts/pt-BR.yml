@@ -1,0 +1,118 @@
+---
+pt-BR:
+  accounts:
+    account:
+      link_lunchflow: Vincular ao Lunch Flow
+      link_provider: Vincular ao provedor
+      unlink_provider: Desvincular do provedor
+      troubleshoot: Solucionar problemas
+    chart:
+      data_not_available: Dados não disponíveis para o período selecionado
+    create:
+      success: "Conta %{type} criada"
+    destroy:
+      success: "Conta %{type} agendada para exclusão"
+      cannot_delete_linked: "Não é possível excluir uma conta vinculada. Por favor, desvincule-a primeiro."
+    empty:
+      empty_message: Adicione uma conta via conexão, importação ou inserção manual.
+      new_account: Nova conta
+      no_accounts: Nenhuma conta ainda
+    form:
+      balance: Saldo atual
+      name_label: Nome da conta
+      name_placeholder: Nome da conta exemplo
+    index:
+      accounts: Contas
+      manual_accounts:
+        other_accounts: Outras contas
+      new_account: Nova conta
+      sync: Sincronizar todas
+    sync_all:
+      syncing: "Sincronizando contas..."
+    new:
+      import_accounts: Importar contas
+      method_selector:
+        connected_entry: Vincular conta
+        connected_entry_eu: Vincular conta EU
+        link_with_provider: "Vincular com %{provider}"
+        lunchflow_entry: Vincular conta do Lunch Flow
+        manual_entry: Inserir saldo da conta
+        title: Como você gostaria de adicionar?
+      title: O que você gostaria de adicionar?
+    show:
+      activity:
+        amount: Valor
+        balance: Saldo
+        date: Data
+        entries: entradas
+        entry: entrada
+        new: Nova
+        new_balance: Novo saldo
+        new_transaction: Nova transação
+        no_entries: Nenhuma entrada encontrada
+        search:
+          placeholder: Buscar entradas por nome
+        title: Atividade
+      chart:
+        balance: Saldo
+        owed: Valor devido
+      menu:
+        confirm_accept: Excluir "%{name}"
+        confirm_body_html: "<p>Ao excluir esta conta, você apagará seu histórico de valores,
+          afetando vários aspectos de sua conta geral. Esta ação
+          terá um impacto direto nos cálculos de patrimônio líquido e nos
+          gráficos da conta.</p><br /> <p>Após a exclusão, não há como restaurar
+          as informações da conta porque você precisará adicioná-la como uma nova conta.</p>"
+        confirm_title: Excluir conta?
+        edit: Editar
+        import: Importar transações
+        manage: Gerenciar contas
+    update:
+      success: "Conta %{type} atualizada"
+    sidebar:
+      missing_data: Dados históricos ausentes
+      missing_data_description: "%{product} usa provedores terceirizados para buscar taxas de câmbio históricas, preços de títulos e muito mais. Esses dados são necessários para calcular saldos de contas históricos com precisão."
+      configure_providers: Configure seus provedores aqui.
+      tabs:
+        all: Todas
+        assets: Ativos
+        debts: Dívidas
+      new_asset: Novo ativo
+      new_debt: Nova dívida
+      new_account: Nova conta
+      new_account_group: "Novo(a) %{account_group}"
+    types:
+      depository: Dinheiro
+      investment: Investimento
+      crypto: Cripto
+      property: Propriedade
+      vehicle: Veículo
+      other_asset: Outro Ativo
+      credit_card: Cartão de Crédito
+      loan: Empréstimo
+      other_liability: Outro Passivo
+    confirm_unlink:
+      title: Desvincular conta do provedor?
+      description_html: "Você está prestes a desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Isso a converterá em uma conta manual."
+      warning_title: O que isso significa
+      warning_no_sync: A conta não sincronizará mais automaticamente com seu banco
+      warning_manual_updates: Você precisará adicionar transações e atualizar saldos manualmente
+      warning_transactions_kept: Todas as transações e saldos existentes serão preservados
+      warning_can_delete: Após desvincular, você poderá excluir a conta, se necessário
+      confirm_button: Confirmar e desvincular
+    unlink:
+      success: "Conta desvinculada com sucesso. Agora é uma conta manual."
+      not_linked: "A conta não está vinculada a um provedor"
+      error: "Falha ao desvincular conta: %{error}"
+      generic_error: "Ocorreu um erro inesperado. Por favor, tente novamente."
+    select_provider:
+      title: Selecione um provedor para vincular
+      description: "Escolha qual provedor você deseja usar para vincular %{account_name}"
+      already_linked: "A conta já está vinculada a um provedor"
+      no_providers: "Nenhum provedor configurado no momento"
+  
+  email_confirmations:
+    new:
+      invalid_token: Link de confirmação inválido ou expirado.
+      success_login: Seu e-mail foi confirmado. Por favor, faça login com seu novo endereço
+        de e-mail.

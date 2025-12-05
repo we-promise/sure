@@ -1,0 +1,7 @@
+---
+pt-BR:
+  family_exports:
+    list:
+      in_progress: Em andamento 
+      complete: Concluído
+      failed: Falhou
