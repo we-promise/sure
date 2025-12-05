@@ -9,33 +9,80 @@
   ) %>
 </header>
 
-<div class="bg-container rounded-xl shadow-border-xs p-4">
-  <% if @family_merchants.any? %>
-    <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-        <p><%= t(".title") %></p>
-        <span class="text-subdued">&middot;</span>
-        <p><%= @family_merchants.count %></p>
-      </div>
+<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-6">
+  <section class="space-y-3">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+      <p><%= t(".family_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= @family_merchants.count %></p>
+    </div>
 
-      <div class="bg-container rounded-lg shadow-border-xs">
-        <div class="overflow-hidden rounded-lg">
-          <%= render partial: "family_merchants/family_merchant", collection: @family_merchants, spacer_template: "shared/ruler" %>
+    <% if @family_merchants.any? %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
+                <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= render partial: "family_merchants/family_merchant", collection: @family_merchants %>
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
-  <% else %>
-    <div class="flex justify-center items-center py-20">
-      <div class="text-center flex flex-col items-center max-w-[300px]">
-        <p class="text-primary mb-1 font-medium text-sm"><%= t(".empty") %></p>
+    <% else %>
+      <div class="flex justify-center items-center py-12">
+        <div class="text-center flex flex-col items-center max-w-[300px]">
+          <p class="text-primary mb-1 font-medium text-sm"><%= t(".family_empty") %></p>
 
-        <%= render DS::Link.new(
-          text: t(".new"),
-          icon: "plus",
-          href: new_family_merchant_path,
-          frame: :modal
-        ) %>
+          <%= render DS::Link.new(
+            text: t(".new"),
+            icon: "plus",
+            href: new_family_merchant_path,
+            frame: :modal
+          ) %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="space-y-3">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+      <p><%= t(".provider_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= @provider_merchants.count %></p>
+    </div>
+
+    <div class="p-4 bg-container-inset border border-secondary rounded-lg">
+      <div class="flex items-start gap-2">
+        <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
+        <p class="text-xs text-secondary leading-relaxed"><%= t(".provider_read_only") %></p>
       </div>
     </div>
-  <% end %>
+
+    <% if @provider_merchants.any? %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
+                <th scope="col" class="text-left py-3 px-4"><%= t(".table.source") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= render partial: "family_merchants/provider_merchant", collection: @provider_merchants %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% else %>
+      <div class="flex justify-center items-center py-8">
+        <p class="text-secondary text-sm text-center"><%= t(".provider_empty") %></p>
+      </div>
+    <% end %>
+  </section>
 </div>
