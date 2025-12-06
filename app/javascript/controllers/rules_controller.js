@@ -9,11 +9,17 @@ export default class extends Controller {
     "conditionsList",
     "actionsList",
     "effectiveDateInput",
+    "scheduleCheckbox",
+    "scheduleFields",
+    "scheduleCronInput",
   ];
 
   connect() {
     // Update condition prefixes on first connection (form render on edit)
     this.updateConditionPrefixes();
+
+    // Set initial schedule UI state
+    this.toggleSchedule();
   }
 
   addConditionGroup() {
@@ -38,6 +44,17 @@ export default class extends Controller {
 
   clearEffectiveDate() {
     this.effectiveDateInputTarget.value = "";
+  }
+
+  toggleSchedule() {
+    if (!this.hasScheduleCheckboxTarget || !this.hasScheduleFieldsTarget) return;
+
+    const enabled = this.scheduleCheckboxTarget.checked;
+    this.scheduleFieldsTarget.classList.toggle("opacity-50", !enabled);
+
+    if (this.hasScheduleCronInputTarget) {
+      this.scheduleCronInputTarget.disabled = !enabled;
+    }
   }
 
   #appendTemplate(templateEl, listEl) {

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_05_162439) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -334,6 +334,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.boolean "auto_sync_on_login", default: true, null: false
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
+    t.boolean "cash_subgroup_enabled", default: true, null: false
   end
 
   create_table "family_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -792,6 +793,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "name"
+    t.string "schedule_cron"
+    t.boolean "schedule_enabled", default: false, null: false
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
