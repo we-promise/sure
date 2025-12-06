@@ -24,13 +24,29 @@ class RuleImport < Import
   end
 
   def csv_template
-    template = <<-CSV
-      name,resource_type*,active,effective_date,conditions*,actions*
-      "Categorize groceries","transaction",true,2024-01-01,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"grocery\"}]","[{\"action_type\":\"set_transaction_category\",\"value\":\"Groceries\"}]"
-      "Auto-categorize transactions","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"amazon\"}]","[{\"action_type\":\"auto_categorize\"}]"
-    CSV
+    csv_string = CSV.generate do |csv|
+      csv << %w[name resource_type* active effective_date conditions* actions*]
 
-    CSV.parse(template, headers: true)
+      csv << [
+        "Categorize groceries",
+        "transaction",
+        "true",
+        "2024-01-01",
+        '[{"condition_type":"transaction_name","operator":"like","value":"grocery"}]',
+        '[{"action_type":"set_transaction_category","value":"Groceries"}]'
+      ]
+
+      csv << [
+        "Auto-categorize transactions",
+        "transaction",
+        "true",
+        "",
+        '[{"condition_type":"transaction_name","operator":"like","value":"amazon"}]',
+        '[{"action_type":"auto_categorize"}]'
+      ]
+    end
+
+    CSV.parse(csv_string, headers: true)
   end
 
   def generate_rows_from_csv
@@ -50,19 +66,10 @@ class RuleImport < Import
   end
 
   def parsed_csv
-    @parsed_csv ||= Import.parse_csv_str(normalized_raw_file_str, col_sep: col_sep)
+    @parsed_csv ||= Import.parse_csv_str(raw_file_str, col_sep: col_sep)
   end
 
   private
-
-    def normalized_raw_file_str
-      return raw_file_str if raw_file_str.blank?
-
-      raw_file_str.gsub(/"(\[.*?\])"/m) do
-        inner_json = Regexp.last_match(1)
-        "\"#{inner_json.gsub('"', '""')}\""
-      end
-    end
 
     def create_or_update_rule_from_row(row)
       rule_name = row.name.to_s.strip.presence
@@ -76,8 +83,8 @@ class RuleImport < Import
 
       # Parse conditions and actions from JSON
       begin
-        conditions_data = JSON.parse(row.conditions)
-        actions_data = JSON.parse(row.actions)
+        conditions_data = parse_json_safely(row.conditions, "conditions")
+        actions_data = parse_json_safely(row.actions, "actions")
       rescue JSON::ParserError => e
         errors.add(:base, "Invalid JSON in conditions or actions: #{e.message}")
         raise ActiveRecord::RecordInvalid.new(self)
@@ -231,5 +238,45 @@ class RuleImport < Import
       Date.parse(value.to_s)
     rescue ArgumentError
       nil
+    end
+
+    def parse_json_safely(json_string, field_name)
+      return [] if json_string.blank?
+
+      # Clean up the JSON string - remove extra escaping that might come from CSV parsing
+      cleaned = json_string.to_s.strip
+
+      # Remove surrounding quotes if present (both single and double)
+      cleaned = cleaned.gsub(/\A["']+|["']+\z/, "")
+
+      # Handle multiple levels of escaping iteratively
+      # Keep unescaping until no more changes occur
+      loop do
+        previous = cleaned.dup
+
+        # Unescape quotes - handle patterns like \" or \\\" or \\\\\" etc.
+        # Replace any number of backslashes followed by a quote with just a quote
+        cleaned = cleaned.gsub(/\\+"/, '"')
+        cleaned = cleaned.gsub(/\\+'/, "'")
+
+        # Unescape backslashes (\\\\ becomes \)
+        cleaned = cleaned.gsub(/\\\\/, "\\")
+
+        break if cleaned == previous
+      end
+
+      # Handle unicode escapes like \u003e (but only if not over-escaped)
+      # Try to find and decode unicode escapes
+      cleaned = cleaned.gsub(/\\u([0-9a-fA-F]{4})/i) do |match|
+        code_point = $1.to_i(16)
+        [ code_point ].pack("U")
+      rescue
+        match # If decoding fails, keep the original
+      end
+
+      # Try parsing
+      JSON.parse(cleaned)
+    rescue JSON::ParserError => e
+      raise JSON::ParserError.new("Invalid JSON in #{field_name}: #{e.message}. Raw value: #{json_string.inspect}")
     end
 end
