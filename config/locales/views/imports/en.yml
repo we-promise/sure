@@ -88,6 +88,7 @@ en:
       import_categories: Import categories
       import_mint: Import from Mint
       import_portfolio: Import investments
+      import_rules: Import rules
       import_transactions: Import transactions
       resume: Resume %{type}
       sources: Sources

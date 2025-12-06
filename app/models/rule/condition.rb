@@ -2,7 +2,7 @@ class Rule::Condition < ApplicationRecord
   belongs_to :rule, touch: true, optional: -> { where.not(parent_id: nil) }
   belongs_to :parent, class_name: "Rule::Condition", optional: true, inverse_of: :sub_conditions
 
-  has_many :sub_conditions, class_name: "Rule::Condition", foreign_key: :parent_id, dependent: :destroy, inverse_of: :parent
+  has_many :sub_conditions, -> { order(:created_at, :id) }, class_name: "Rule::Condition", foreign_key: :parent_id, dependent: :destroy, inverse_of: :parent
 
   validates :condition_type, presence: true
   validates :operator, presence: true
