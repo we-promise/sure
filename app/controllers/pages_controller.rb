@@ -14,7 +14,7 @@ class PagesController < ApplicationController
     expense_totals = Current.family.income_statement.expense_totals(period: @period)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
-    @outflows_data = build_outflows_donut_data(expense_totals)
+    @outflows_data = build_outflows_donut_data(expense_totals, family_currency)
 
     @dashboard_sections = build_dashboard_sections
 
@@ -213,8 +213,7 @@ class PagesController < ApplicationController
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency_symbol).symbol }
     end
 
-    def build_outflows_donut_data(expense_totals)
-      currency_symbol = Money::Currency.new(expense_totals.currency).symbol
+    def build_outflows_donut_data(expense_totals, family_currency)
       total = expense_totals.total
 
       # Only include top-level categories with non-zero amounts
@@ -226,12 +225,13 @@ class PagesController < ApplicationController
             id: ct.category.id,
             name: ct.category.name,
             amount: ct.total.to_f.round(2),
+            currency: ct.currency,
             percentage: ct.weight.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon
           }
         end
 
-      { categories: categories, total: total.to_f.round(2), currency_symbol: currency_symbol }
+      { categories: categories, total: total.to_f.round(2), currency: family_currency, currency_symbol: Money::Currency.new(family_currency).symbol }
     end
 end
