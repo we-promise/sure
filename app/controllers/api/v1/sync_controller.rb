@@ -15,7 +15,6 @@ class Api::V1::SyncController < Api::V1::BaseController
 
     @sync = sync
     render :create, status: :accepted
-
   rescue => e
     Rails.logger.error "SyncController#create error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
