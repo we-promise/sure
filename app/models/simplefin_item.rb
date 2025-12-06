@@ -7,10 +7,6 @@ class SimplefinItem < ApplicationRecord
   # Virtual attribute for the setup token form field
   attr_accessor :setup_token
 
-  if Rails.application.credentials.active_record_encryption.present?
-    encrypts :access_url, deterministic: true
-  end
-
   # Helper to detect if ActiveRecord Encryption is configured for this app
   def self.encryption_ready?
     creds_ready = Rails.application.credentials.active_record_encryption.present?
@@ -20,7 +16,13 @@ class SimplefinItem < ApplicationRecord
     creds_ready || env_ready
   end
 
-  validates :name, :access_url, presence: true
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
+  if encryption_ready?
+    encrypts :access_url, deterministic: true
+  end
+
+  validates :name, presence: true
+  validates :access_url, presence: true, on: :create
 
   before_destroy :remove_simplefin_item
 

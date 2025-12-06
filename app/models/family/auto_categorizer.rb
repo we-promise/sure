@@ -45,9 +45,8 @@ class Family::AutoCategorizer
           category_id,
           source: "ai"
         )
+        transaction.lock_attr!(:category_id)
       end
-
-      transaction.lock_attr!(:category_id)
     end
   end
 
@@ -77,7 +76,7 @@ class Family::AutoCategorizer
           id: transaction.id,
           amount: transaction.entry.amount.abs,
           classification: transaction.entry.classification,
-          description: transaction.entry.name,
+          description: [ transaction.entry.name, transaction.entry.notes ].compact.reject(&:empty?).join(" "),
           merchant: transaction.merchant&.name
         }
       end

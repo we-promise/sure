@@ -241,6 +241,7 @@ class Provider::Openai < Provider
             session_id: session_id,
             user_identifier: user_identifier
           )
+          record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
         end
       end
@@ -314,6 +315,7 @@ class Provider::Openai < Provider
             session_id: session_id,
             user_identifier: user_identifier
           )
+          record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
         end
       end
@@ -446,8 +448,36 @@ class Provider::Openai < Provider
       Rails.logger.warn("Langfuse logging failed: #{e.message}")
     end
 
-    def record_llm_usage(family:, model:, operation:, usage:)
-      return unless family && usage
+    def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)
+      return unless family
+
+      # For error cases, record with zero tokens
+      if error.present?
+        Rails.logger.info("Recording failed LLM usage - Error: #{error.message}")
+
+        # Extract HTTP status code if available from the error
+        http_status_code = extract_http_status_code(error)
+
+        inferred_provider = LlmUsage.infer_provider(model)
+        family.llm_usages.create!(
+          provider: inferred_provider,
+          model: model,
+          operation: operation,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+          estimated_cost: nil,
+          metadata: {
+            error: error.message,
+            http_status_code: http_status_code
+          }
+        )
+
+        Rails.logger.info("Failed LLM usage recorded successfully - Status: #{http_status_code}")
+        return
+      end
+
+      return unless usage
 
       Rails.logger.info("Recording LLM usage - Raw usage data: #{usage.inspect}")
 
@@ -486,5 +516,24 @@ class Provider::Openai < Provider
       Rails.logger.info("LLM usage recorded successfully - Cost: #{estimated_cost.inspect}")
     rescue => e
       Rails.logger.error("Failed to record LLM usage: #{e.message}")
+    end
+
+    def extract_http_status_code(error)
+      # Try to extract HTTP status code from various error types
+      # OpenAI gem errors may have status codes in different formats
+      if error.respond_to?(:code)
+        error.code
+      elsif error.respond_to?(:http_status)
+        error.http_status
+      elsif error.respond_to?(:status_code)
+        error.status_code
+      elsif error.respond_to?(:response) && error.response.respond_to?(:code)
+        error.response.code.to_i
+      elsif error.message =~ /(\d{3})/
+        # Extract 3-digit HTTP status code from error message
+        $1.to_i
+      else
+        nil
+      end
     end
 end

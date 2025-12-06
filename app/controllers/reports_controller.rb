@@ -11,6 +11,9 @@ class ReportsController < ApplicationController
     @start_date = parse_date_param(:start_date) || default_start_date
     @end_date = parse_date_param(:end_date) || default_end_date
 
+    # Validate and fix date range if end_date is before start_date
+    validate_and_fix_date_range(show_flash: true)
+
     # Build the period
     @period = Period.custom(start_date: @start_date, end_date: @end_date)
     @previous_period = build_previous_period
@@ -34,13 +37,29 @@ class ReportsController < ApplicationController
     # Transactions breakdown
     @transactions = build_transactions_breakdown
 
+    # Build reports sections for collapsible/reorderable UI
+    @reports_sections = build_reports_sections
+
     @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
+  end
+
+  def update_preferences
+    if Current.user.update_reports_preferences(preferences_params)
+      head :ok
+    else
+      head :unprocessable_entity
+    end
   end
 
   def export_transactions
     @period_type = params[:period_type]&.to_sym || :monthly
     @start_date = parse_date_param(:start_date) || default_start_date
     @end_date = parse_date_param(:end_date) || default_end_date
+
+    # Validate and fix date range if end_date is before start_date
+    # Don't show flash message since we're returning CSV data
+    validate_and_fix_date_range(show_flash: false)
+
     @period = Period.custom(start_date: @start_date, end_date: @end_date)
 
     # Build monthly breakdown data for export
@@ -92,6 +111,60 @@ class ReportsController < ApplicationController
   end
 
   private
+    def preferences_params
+      prefs = params.require(:preferences)
+      {}.tap do |permitted|
+        permitted["reports_collapsed_sections"] = prefs[:reports_collapsed_sections].to_unsafe_h if prefs[:reports_collapsed_sections]
+        permitted["reports_section_order"] = prefs[:reports_section_order] if prefs[:reports_section_order]
+      end
+    end
+
+    def build_reports_sections
+      all_sections = [
+        {
+          key: "trends_insights",
+          title: "reports.trends.title",
+          partial: "reports/trends_insights",
+          locals: { trends_data: @trends_data, spending_patterns: @spending_patterns },
+          visible: Current.family.transactions.any?,
+          collapsible: true
+        },
+        {
+          key: "transactions_breakdown",
+          title: "reports.transactions_breakdown.title",
+          partial: "reports/transactions_breakdown",
+          locals: {
+            transactions: @transactions,
+            period_type: @period_type,
+            start_date: @start_date,
+            end_date: @end_date
+          },
+          visible: Current.family.transactions.any?,
+          collapsible: true
+        }
+      ]
+
+      # Order sections according to user preference
+      section_order = Current.user.reports_section_order
+      ordered_sections = section_order.map do |key|
+        all_sections.find { |s| s[:key] == key }
+      end.compact
+
+      # Add any new sections that aren't in the saved order (future-proofing)
+      all_sections.each do |section|
+        ordered_sections << section unless ordered_sections.include?(section)
+      end
+
+      ordered_sections
+    end
+
+    def validate_and_fix_date_range(show_flash: false)
+      return unless @start_date > @end_date
+
+      # Swap the dates to maintain user's intended date range
+      @start_date, @end_date = @end_date, @start_date
+      flash.now[:alert] = t("reports.invalid_date_range") if show_flash
+    end
 
     def ensure_money(value)
       return value if value.is_a?(Money)
@@ -335,9 +408,13 @@ class ReportsController < ApplicationController
     end
 
     def apply_transaction_filters(transactions)
-      # Filter by category
+      # Filter by category (including subcategories)
       if params[:filter_category_id].present?
-        transactions = transactions.where(category_id: params[:filter_category_id])
+        category_id = params[:filter_category_id]
+        # Scope to family's categories to prevent cross-family data access
+        subcategory_ids = Current.family.categories.where(parent_id: category_id).pluck(:id)
+        all_category_ids = [ category_id ] + subcategory_ids
+        transactions = transactions.where(category_id: all_category_ids)
       end
 
       # Filter by account

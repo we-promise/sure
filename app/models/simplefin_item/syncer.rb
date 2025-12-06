@@ -6,16 +6,38 @@ class SimplefinItem::Syncer
   end
 
   def perform_sync(sync)
+    # If no accounts are linked yet, run a balances-only discovery pass so the user
+    # can review and manually link accounts first. This mirrors the historical flow
+    # users expect: initial 7-day balances snapshot, then full chunked history after linking.
+    begin
+      if simplefin_item.simplefin_accounts.joins(:account).count == 0
+        sync.update!(status_text: "Discovering accounts (balances only)...") if sync.respond_to?(:status_text)
+        # Pre-mark the sync as balances_only so downstream completion code does not
+        # bump last_synced_at. The importer also sets this flag, but setting it here
+        # guarantees the guard is present even if the importer exits early.
+        if sync.respond_to?(:sync_stats)
+          existing = (sync.sync_stats || {})
+          sync.update_columns(sync_stats: existing.merge("balances_only" => true))
+        end
+        SimplefinItem::Importer.new(simplefin_item, simplefin_provider: simplefin_item.simplefin_provider, sync: sync).import_balances_only
+        finalize_setup_counts(sync)
+        mark_completed(sync)
+        return
+      end
+    rescue => e
+      # If discovery-only path errors, fall back to regular logic below so we don't block syncs entirely
+      Rails.logger.warn("SimplefinItem::Syncer auto balances-only path failed: #{e.class} - #{e.message}")
+    end
+
     # Balances-only fast path
     if sync.respond_to?(:sync_stats) && (sync.sync_stats || {})["balances_only"]
       sync.update!(status_text: "Refreshing balances only...") if sync.respond_to?(:status_text)
       begin
         # Use the Importer to run balances-only path
         SimplefinItem::Importer.new(simplefin_item, simplefin_provider: simplefin_item.simplefin_provider, sync: sync).import_balances_only
-        # Update last_synced_at for UI freshness if the column exists
-        if simplefin_item.has_attribute?(:last_synced_at)
-          simplefin_item.update!(last_synced_at: Time.current)
-        end
+        # IMPORTANT: Do NOT update last_synced_at during balances-only runs.
+        # Leaving last_synced_at nil ensures the next full sync uses the
+        # chunked-history path to fetch full historical transactions.
         finalize_setup_counts(sync)
         mark_completed(sync)
       rescue => e

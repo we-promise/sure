@@ -39,10 +39,15 @@ class LunchflowAccount::Processor
       account = lunchflow_account.current_account
       balance = lunchflow_account.current_balance || 0
 
-      # For liability accounts (credit cards and loans), ensure positive balances
-      # LunchFlow may return negative values for liabilities, but Sure expects positive
+      # LunchFlow balance convention matches our app convention:
+      # - Positive balance = debt (you owe money)
+      # - Negative balance = credit balance (bank owes you, e.g., overpayment)
+      # No sign conversion needed - pass through as-is (same as Plaid)
+      #
+      # Exception: CreditCard and Loan accounts return inverted signs
+      # Provider returns negative for positive balance, so we negate it
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = balance.abs
+        balance = -balance
       end
 
       # Normalize currency with fallback chain: parsed lunchflow currency -> existing account currency -> USD

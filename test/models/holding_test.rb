@@ -1,5 +1,6 @@
 require "test_helper"
 require "ostruct"
+require "bigdecimal"
 
 class HoldingTest < ActiveSupport::TestCase
   include EntriesTestHelper, SecuritiesTestHelper
@@ -26,8 +27,17 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date)
     create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current)
 
-    assert_equal Money.new((212.00 + 216.00).to_d / 2), @amzn.avg_cost
-    assert_equal Money.new((128.00 + 124.00).to_d / 2), @nvda.avg_cost
+    # expected weighted averages (quantity-weighted)
+    amzn_total = BigDecimal("10") * BigDecimal("212.00") + BigDecimal("15") * BigDecimal("216.00")
+    amzn_qty   = BigDecimal("10") + BigDecimal("15")
+    expected_amzn = amzn_total / amzn_qty
+
+    nvda_total = BigDecimal("5") * BigDecimal("128.00") + BigDecimal("30") * BigDecimal("124.00")
+    nvda_qty   = BigDecimal("5") + BigDecimal("30")
+    expected_nvda = nvda_total / nvda_qty
+
+    assert_equal Money.new(expected_amzn), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda), @nvda.avg_cost
   end
 
   test "calculates average cost basis from another currency" do
@@ -37,8 +47,19 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current, currency: "CAD")
 
-    assert_equal Money.new((212.00 + 216.00).to_d / 2, "CAD").exchange_to("USD", fallback_rate: 1), @amzn.avg_cost
-    assert_equal Money.new((128.00 + 124.00).to_d / 2, "CAD").exchange_to("USD", fallback_rate: 1), @nvda.avg_cost
+    # compute expected: sum(price * qty * rate) / sum(qty)
+    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") * BigDecimal("1") +
+                     BigDecimal("15") * BigDecimal("216.00") * BigDecimal("1")
+    amzn_qty = BigDecimal("10") + BigDecimal("15")
+    expected_amzn_usd = amzn_total_usd / amzn_qty
+
+    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") * BigDecimal("1") +
+                     BigDecimal("30") * BigDecimal("124.00") * BigDecimal("1")
+    nvda_qty = BigDecimal("5") + BigDecimal("30")
+    expected_nvda_usd = nvda_total_usd / nvda_qty
+
+    assert_equal Money.new(expected_amzn_usd, "CAD").exchange_to("USD", fallback_rate: 1), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD", fallback_rate: 1), @nvda.avg_cost
   end
 
   test "calculates total return trend" do

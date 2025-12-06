@@ -5,6 +5,8 @@ en:
       title: Reports
       subtitle: Comprehensive insights into your financial health
       export: Export CSV
+      drag_to_reorder: "Drag to reorder section"
+      toggle_section: "Toggle section visibility"
       periods:
         monthly: Monthly
         quarterly: Quarterly
@@ -15,6 +17,7 @@ en:
         from: From
         to: To
       showing_period: "Showing data from %{start} to %{end}"
+    invalid_date_range: "End date cannot be before start date. The dates have been swapped."
     summary:
       total_income: Total Income
       total_expenses: Total Expenses

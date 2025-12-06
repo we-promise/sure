@@ -32,6 +32,10 @@ class Account < ApplicationRecord
     visible.manual
   }
 
+  scope :listable_manual, -> {
+    manual.where.not(status: :pending_deletion)
+  }
+
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
@@ -83,6 +87,12 @@ class Account < ApplicationRecord
 
 
     def create_from_simplefin_account(simplefin_account, account_type, subtype = nil)
+      # Respect user choice when provided; otherwise infer a sensible default
+      # Require an explicit account_type; do not infer on the backend
+      if account_type.blank? || account_type.to_s == "unknown"
+        raise ArgumentError, "account_type is required when creating an account from SimpleFIN"
+      end
+
       # Get the balance from SimpleFin
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
@@ -121,6 +131,37 @@ class Account < ApplicationRecord
       }
 
       create_and_sync(attributes)
+    end
+
+    def create_from_enable_banking_account(enable_banking_account, account_type, subtype = nil)
+      # Get the balance from Enable Banking
+      balance = enable_banking_account.current_balance || 0
+
+      # Enable Banking may return negative balances for liabilities
+      # Sure expects positive balances for liabilities
+      if account_type == "CreditCard" || account_type == "Loan"
+        balance = balance.abs
+      end
+
+      cash_balance = balance
+
+      attributes = {
+        family: enable_banking_account.enable_banking_item.family,
+        name: enable_banking_account.name,
+        balance: balance,
+        cash_balance: cash_balance,
+        currency: enable_banking_account.currency || "EUR"
+      }
+
+      accountable_attributes = {}
+      accountable_attributes[:subtype] = subtype if subtype.present?
+
+      create_and_sync(
+        attributes.merge(
+          accountable_type: account_type,
+          accountable_attributes: accountable_attributes
+        )
+      )
     end
 
 

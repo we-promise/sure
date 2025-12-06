@@ -55,6 +55,7 @@ class Provider::TwelveData < Provider
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
     with_provider_response do
+      # Try to fetch the currency pair via the time_series API (consumes 1 credit) - this might not return anything as the API does not provide time series data for all possible currency pairs
       response = client.get("#{base_url}/time_series") do |req|
         req.params["symbol"] = "#{from}/#{to}"
         req.params["start_date"] = start_date.to_s
@@ -64,6 +65,21 @@ class Provider::TwelveData < Provider
 
       parsed = JSON.parse(response.body)
       data = parsed.dig("values")
+
+      # If currency pair is not available, try to fetch via the time_series/cross API (consumes 5 credits)
+      if data.nil?
+        Rails.logger.info("#{self.class.name}: Currency pair #{from}/#{to} not available, fetching via time_series/cross API")
+        response = client.get("#{base_url}/time_series/cross") do |req|
+          req.params["base"] = from
+          req.params["quote"] = to
+          req.params["start_date"] = start_date.to_s
+          req.params["end_date"] = end_date.to_s
+          req.params["interval"] = "1day"
+        end
+
+        parsed = JSON.parse(response.body)
+        data = parsed.dig("values")
+      end
 
       if data.nil?
         error_message = parsed.dig("message") || "No data returned"
@@ -187,7 +203,7 @@ class Provider::TwelveData < Provider
           symbol: symbol,
           date: date.to_date,
           price: price,
-          currency: parsed.dig("currency"),
+          currency: parsed.dig("meta", "currency") || parsed.dig("currency"),
           exchange_operating_mic: exchange_operating_mic
         )
       end.compact

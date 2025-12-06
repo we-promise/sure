@@ -2,7 +2,7 @@
 
 <%= tag.div id: dom_id(simplefin_item) do %>
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
-    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+    <summary class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
 
@@ -57,7 +57,6 @@
                   <% if tooltip_text.present? %>
                     <%= render DS::Tooltip.new(text: tooltip_text, icon: "alert-octagon", size: "sm", color: "warning") %>
                   <% end %>
-                  <%= render DS::Link.new(text: "View errors", icon: "alert-octagon", variant: "secondary", href: errors_simplefin_item_path(simplefin_item), frame: "modal") %>
                 <% end %>
 
                 <% if stats["total_accounts"].to_i > 0 %>

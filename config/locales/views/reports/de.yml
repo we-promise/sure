@@ -15,6 +15,7 @@ de:
         from: Von
         to: Bis
       showing_period: "Zeitraum: %{start} bis %{end}"
+    invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
     summary:
       total_income: Gesamteinnahmen
       total_expenses: Gesamtausgaben

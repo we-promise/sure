@@ -1,20 +1,22 @@
 <%# locals: (family_merchant:) %>
 
-<div class="flex justify-between items-center p-4 bg-container">
-  <div class="flex w-full items-center gap-2.5">
-    <% if family_merchant.logo_url %>
-      <div class="w-8 h-8 rounded-full flex justify-center items-center">
-        <%= image_tag family_merchant.logo_url, class: "w-8 h-8 rounded-full" %>
-      </div>
-    <% else %>
-      <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
-    <% end %>
+<tr class="border-b border-subdued last:border-0 hover:bg-surface-hover">
+  <td class="py-3 px-4 text-sm text-primary">
+    <div class="flex w-full items-center gap-2.5">
+      <% if family_merchant.logo_url %>
+        <div class="w-8 h-8 rounded-full flex justify-center items-center">
+          <%= image_tag family_merchant.logo_url, class: "w-8 h-8 rounded-full" %>
+        </div>
+      <% else %>
+        <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
+      <% end %>
 
-    <p class="text-primary text-sm truncate">
-      <%= family_merchant.name %>
-    </p>
-  </div>
-  <div class="justify-self-end">
+      <p class="font-medium truncate">
+        <%= family_merchant.name %>
+      </p>
+    </div>
+  </td>
+  <td class="py-3 px-4 text-sm text-right align-middle">
     <%= render DS::Menu.new do |menu| %>
       <% menu.with_item(variant: "link", text: "Edit", href: edit_family_merchant_path(family_merchant), icon: "pencil", data: { turbo_frame: "modal" }) %>
       <% menu.with_item(
@@ -25,5 +27,5 @@
         method: :delete,
         confirm: CustomConfirm.for_resource_deletion(family_merchant.name)) %>
     <% end %>
-  </div>
-</div>
+  </td>
+</tr>

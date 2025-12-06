@@ -53,6 +53,8 @@ services:
     image: postgres:16
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     restart: unless-stopped
     environment:
       <<: *db_env
