@@ -151,13 +151,23 @@ class RuleImport < Import
       # Map category names to UUIDs
       if condition_type == "transaction_category"
         category = family.categories.find_by(name: value)
-        return category&.id || value
+        unless category
+          category = family.categories.create!(
+            name: value,
+            color: Category::UNCATEGORIZED_COLOR,
+            classification: "expense"
+          )
+        end
+        return category.id
       end
 
       # Map merchant names to UUIDs
       if condition_type == "transaction_merchant"
         merchant = family.merchants.find_by(name: value)
-        return merchant&.id || value
+        unless merchant
+          merchant = family.merchants.create!(name: value)
+        end
+        return merchant.id
       end
 
       value
