@@ -422,6 +422,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.string "category_color"
     t.string "category_classification"
     t.string "category_icon"
+    t.string "resource_type"
+    t.boolean "active"
+    t.string "effective_date"
+    t.text "conditions"
+    t.text "actions"
     t.index ["import_id"], name: "index_import_rows_on_import_id"
   end
 
