@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_06_131244) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -797,6 +797,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
 
   create_table "rule_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "rule_id", null: false
+    t.string "rule_name"
     t.string "execution_type", null: false
     t.string "status", null: false
     t.integer "transactions_queued", default: 0, null: false
@@ -809,6 +810,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.datetime "updated_at", null: false
     t.index ["executed_at"], name: "index_rule_runs_on_executed_at"
     t.index ["rule_id", "executed_at"], name: "index_rule_runs_on_rule_id_and_executed_at"
+    t.index ["rule_id"], name: "index_rule_runs_on_rule_id"
   end
 
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

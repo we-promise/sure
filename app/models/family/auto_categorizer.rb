@@ -47,7 +47,8 @@ class Family::AutoCategorizer
           source: "ai"
         )
         transaction.lock_attr!(:category_id)
-        modified_count += 1 if was_modified && transaction.previous_changes.key?("category_id")
+        # enrich_attribute returns true if the transaction was actually modified
+        modified_count += 1 if was_modified
       end
     end
 

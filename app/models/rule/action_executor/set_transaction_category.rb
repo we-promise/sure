@@ -17,6 +17,7 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
     end
 
     count_modified_resources(scope) do |txn|
+      # enrich_attribute returns true if the transaction was actually modified, false otherwise
       txn.enrich_attribute(
         :category_id,
         category.id,

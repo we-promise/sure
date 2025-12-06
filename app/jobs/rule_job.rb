@@ -17,8 +17,10 @@ class RuleJob < ApplicationJob
 
       # Create the RuleRun record first with pending status
       # We'll update it after we know if there are async jobs
+      # Store the rule name at execution time so it persists even if the rule name changes later
       rule_run = RuleRun.create!(
         rule: rule,
+        rule_name: rule.name,
         execution_type: execution_type,
         status: "pending",  # Start as pending, will be updated
         transactions_queued: transactions_queued,
@@ -33,13 +35,19 @@ class RuleJob < ApplicationJob
 
       if result.is_a?(Hash) && result[:async]
         # Async actions were executed
-        transactions_processed = result[:modified_count]
-        pending_jobs_count = result[:jobs_count]
+        transactions_processed = result[:modified_count] || 0
+        pending_jobs_count = result[:jobs_count] || 0
         status = "pending"
-      else
+      elsif result.is_a?(Integer)
         # Only synchronous actions were executed
         transactions_processed = result
         transactions_modified = result
+        status = "success"
+      else
+        # Unexpected result type - log and default to 0
+        Rails.logger.warn("RuleJob: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
+        transactions_processed = 0
+        transactions_modified = 0
         status = "success"
       end
 
@@ -60,8 +68,10 @@ class RuleJob < ApplicationJob
         rule_run.update(status: "failed", error_message: error_message)
       else
         # Create a failed rule run if we hadn't created one yet
+        # Store the rule name at execution time so it persists even if the rule name changes later
         RuleRun.create!(
           rule: rule,
+          rule_name: rule.name,
           execution_type: execution_type,
           status: "failed",
           transactions_queued: transactions_queued,

@@ -2,8 +2,9 @@ class CreateRuleRuns < ActiveRecord::Migration[7.2]
   def change
     create_table :rule_runs, id: :uuid do |t|
       t.references :rule, null: false, foreign_key: true, type: :uuid
-      t.string :execution_type, null: false # 'manual' or 'scheduled'
-      t.string :status, null: false # 'success' or 'failed'
+      t.string :rule_name
+      t.string :execution_type, null: false
+      t.string :status, null: false
       t.integer :transactions_queued, null: false, default: 0
       t.integer :transactions_processed, null: false, default: 0
       t.integer :transactions_modified, null: false, default: 0

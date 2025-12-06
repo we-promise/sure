@@ -25,9 +25,12 @@ class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
     end
 
     # Return metadata about async jobs
+    # Note: modified_count is set to queued_count here because we don't know
+    # the actual modified count until the async jobs complete
+    # The actual modified count will be reported back via rule_run.complete_job!
     {
       async: true,
-      queued_count: enrichable_transactions.count,
+      modified_count: enrichable_transactions.count,
       jobs_count: jobs_count
     }
   end

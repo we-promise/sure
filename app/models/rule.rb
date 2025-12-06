@@ -51,9 +51,12 @@ class Rule < ApplicationRecord
       if result.is_a?(Hash) && result[:async]
         has_async = true
         total_async_jobs += result[:jobs_count] || 0
-        total_modified += result[:queued_count] || 0
+        total_modified += result[:modified_count] || 0
       elsif result.is_a?(Integer)
         total_modified += result
+      else
+        # Log unexpected result type but don't fail
+        Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
       end
     end
 

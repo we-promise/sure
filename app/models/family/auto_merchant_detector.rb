@@ -53,7 +53,8 @@ class Family::AutoMerchantDetector
         )
         # We lock the attribute so that this Rule doesn't try to run again
         transaction.lock_attr!(:merchant_id)
-        modified_count += 1 if was_modified && transaction.previous_changes.key?("merchant_id")
+        # enrich_attribute returns true if the transaction was actually modified
+        modified_count += 1 if was_modified
       end
     end
 
