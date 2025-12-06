@@ -1,0 +1,24 @@
+---
+ro:
+  rules:
+    recent_runs:
+      title: Rulări Recente
+      description: Vezi istoricul de execuție al regulilor tale incluzând statusul de succes/eșec și numărul de tranzacții.
+      unnamed_rule: Regulă Fără Nume
+      columns:
+        date_time: Dată/Ora
+        execution_type: Tip
+        status: Status
+        rule_name: Nume Regulă
+        transactions_counts:
+          queued: În Așteptare
+          processed: Procesate
+          modified: Modificate
+      execution_types:
+        manual: Manual
+        scheduled: Programată
+      statuses:
+        pending: În Așteptare
+        success: Succes
+        failed: Eșuat
+

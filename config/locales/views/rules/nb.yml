@@ -1,0 +1,24 @@
+---
+nb:
+  rules:
+    recent_runs:
+      title: Siste Kjøringer
+      description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status og transaksjonsantall.
+      unnamed_rule: Navnløs Regel
+      columns:
+        date_time: Dato/Tid
+        execution_type: Type
+        status: Status
+        rule_name: Regelnavn
+        transactions_counts:
+          queued: I Kø
+          processed: Behandlet
+          modified: Endret
+      execution_types:
+        manual: Manuell
+        scheduled: Planlagt
+      statuses:
+        pending: Ventende
+        success: Vellykket
+        failed: Mislyktes
+

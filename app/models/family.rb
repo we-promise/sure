@@ -45,16 +45,16 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
-  def auto_categorize_transactions_later(transactions)
-    AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id))
+  def auto_categorize_transactions_later(transactions, rule_run_id: nil)
+    AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
 
   def auto_categorize_transactions(transaction_ids)
     AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
   end
 
-  def auto_detect_transaction_merchants_later(transactions)
-    AutoDetectMerchantsJob.perform_later(self, transaction_ids: transactions.pluck(:id))
+  def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
+    AutoDetectMerchantsJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
 
   def auto_detect_transaction_merchants(transaction_ids)

@@ -1,0 +1,24 @@
+---
+tr:
+  rules:
+    recent_runs:
+      title: Son Çalıştırmalar
+      description: Başarı/başarısızlık durumu ve işlem sayıları dahil olmak üzere kurallarınızın yürütme geçmişini görüntüleyin.
+      unnamed_rule: İsimsiz Kural
+      columns:
+        date_time: Tarih/Saat
+        execution_type: Tür
+        status: Durum
+        rule_name: Kural Adı
+        transactions_counts:
+          queued: Kuyruğa Alındı
+          processed: İşlendi
+          modified: Değiştirildi
+      execution_types:
+        manual: Manuel
+        scheduled: Zamanlanmış
+      statuses:
+        pending: Beklemede
+        success: Başarılı
+        failed: Başarısız
+

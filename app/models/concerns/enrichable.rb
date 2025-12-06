@@ -31,11 +31,36 @@ module Enrichable
   # - Are not locked
   # - Are not ignored
   # - Have changed value from the last saved value
+  # Returns true if any attributes were actually changed, false otherwise
   def enrich_attributes(attrs, source:, metadata: {})
+    # Track current values before modification for virtual attributes (like tag_ids)
+    current_values = {}
     enrichable_attrs = Array(attrs).reject do |attr_key, attr_value|
-      locked?(attr_key) || ignored_enrichable_attributes.include?(attr_key) || self[attr_key.to_s] == attr_value
+      if locked?(attr_key) || ignored_enrichable_attributes.include?(attr_key)
+        true
+      else
+        # For virtual attributes (like tag_ids), use the getter method
+        # For regular attributes, use self[attr_key]
+        current_value = if respond_to?(attr_key.to_sym)
+          send(attr_key.to_sym)
+        else
+          self[attr_key.to_s]
+        end
+
+        # Normalize arrays for comparison (sort them)
+        if current_value.is_a?(Array) && attr_value.is_a?(Array)
+          current_values[attr_key] = current_value
+          current_value.sort == attr_value.sort
+        else
+          current_values[attr_key] = current_value
+          current_value == attr_value
+        end
+      end
     end
 
+    return false if enrichable_attrs.empty?
+
+    was_modified = false
     ActiveRecord::Base.transaction do
       enrichable_attrs.each do |attr, value|
         self.send("#{attr}=", value)
@@ -47,7 +72,34 @@ module Enrichable
       end
 
       save
+
+      # For virtual attributes (like tag_ids), previous_changes won't track them
+      # So we need to check if the value actually changed by comparing before/after
+      if previous_changes.any?
+        was_modified = true
+      else
+        # Check if any virtual attributes changed by comparing current value with what we set
+        enrichable_attrs.each do |attr, new_value|
+          # Get the current value after save (for virtual attributes, this reflects the change)
+          current_value = if respond_to?(attr.to_sym)
+            send(attr.to_sym)
+          else
+            self[attr.to_s]
+          end
+
+          old_value = current_values[attr]
+          if old_value.is_a?(Array) && new_value.is_a?(Array) && current_value.is_a?(Array)
+            was_modified = true if old_value.sort != current_value.sort
+          elsif old_value != current_value
+            was_modified = true
+          end
+          break if was_modified
+        end
+      end
     end
+
+    # Return whether any attributes were actually saved
+    was_modified
   end
 
   def locked?(attr)

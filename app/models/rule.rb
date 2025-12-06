@@ -4,6 +4,7 @@ class Rule < ApplicationRecord
   belongs_to :family
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
+  has_many :rule_runs, dependent: :destroy
 
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
@@ -39,9 +40,30 @@ class Rule < ApplicationRecord
     matching_resources_scope.count
   end
 
-  def apply(ignore_attribute_locks: false)
+  def apply(ignore_attribute_locks: false, rule_run: nil)
+    total_modified = 0
+    total_async_jobs = 0
+    has_async = false
+
     actions.each do |action|
-      action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks)
+      result = action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+
+      if result.is_a?(Hash) && result[:async]
+        has_async = true
+        total_async_jobs += result[:jobs_count] || 0
+        total_modified += result[:modified_count] || 0
+      elsif result.is_a?(Integer)
+        total_modified += result
+      else
+        # Log unexpected result type but don't fail
+        Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
+      end
+    end
+
+    if has_async
+      { modified_count: total_modified, async: true, jobs_count: total_async_jobs }
+    else
+      total_modified
     end
   end
 

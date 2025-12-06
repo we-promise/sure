@@ -1,0 +1,23 @@
+---
+en:
+  rules:
+    recent_runs:
+      title: Recent Runs
+      description: View the execution history of your rules including success/failure status and transaction counts.
+      unnamed_rule: Unnamed Rule
+      columns:
+        date_time: Date/Time
+        execution_type: Type
+        status: Status
+        rule_name: Rule Name
+        transactions_counts:
+          queued: Queued
+          processed: Processed
+          modified: Modified
+      execution_types:
+        manual: Manual
+        scheduled: Scheduled
+      statuses:
+        pending: Pending
+        success: Success
+        failed: Failed

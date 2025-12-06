@@ -11,7 +11,7 @@ class Family::AutoMerchantDetector
 
     if scope.none?
       Rails.logger.info("No transactions to auto-detect merchants for family #{family.id}")
-      return
+      return 0
     else
       Rails.logger.info("Auto-detecting merchants for #{scope.count} transactions for family #{family.id}")
     end
@@ -24,9 +24,10 @@ class Family::AutoMerchantDetector
 
     unless result.success?
       Rails.logger.error("Failed to auto-detect merchants for family #{family.id}: #{result.error.message}")
-      return
+      return 0
     end
 
+    modified_count = 0
     scope.each do |transaction|
       auto_detection = result.data.find { |c| c.transaction_id == transaction.id }
 
@@ -45,15 +46,19 @@ class Family::AutoMerchantDetector
       merchant_id = merchant_id || ai_provider_merchant&.id
 
       if merchant_id.present?
-        transaction.enrich_attribute(
+        was_modified = transaction.enrich_attribute(
           :merchant_id,
           merchant_id,
           source: "ai"
         )
         # We lock the attribute so that this Rule doesn't try to run again
         transaction.lock_attr!(:merchant_id)
+        # enrich_attribute returns true if the transaction was actually modified
+        modified_count += 1 if was_modified
       end
     end
+
+    modified_count
   end
 
   private
