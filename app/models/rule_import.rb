@@ -49,7 +49,20 @@ class RuleImport < Import
     end
   end
 
+  def parsed_csv
+    @parsed_csv ||= Import.parse_csv_str(normalized_raw_file_str, col_sep: col_sep)
+  end
+
   private
+
+    def normalized_raw_file_str
+      return raw_file_str if raw_file_str.blank?
+
+      raw_file_str.gsub(/"(\[.*?\])"/m) do
+        inner_json = Regexp.last_match(1)
+        "\"#{inner_json.gsub('"', '""')}\""
+      end
+    end
 
     def create_or_update_rule_from_row(row)
       rule_name = row.name.to_s.strip.presence

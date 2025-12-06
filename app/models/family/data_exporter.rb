@@ -323,13 +323,13 @@ class Family::DataExporter
 
       # Map category UUIDs to names for portability
       if action.action_type == "set_transaction_category" && action.value.present?
-        category = @family.categories.find_by(id: action.value)
+        category = @family.categories.find_by(id: action.value) || @family.categories.find_by(name: action.value)
         return category&.name || action.value
       end
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant" && action.value.present?
-        merchant = @family.merchants.find_by(id: action.value)
+        merchant = @family.merchants.find_by(id: action.value) || @family.merchants.find_by(name: action.value)
         return merchant&.name || action.value
       end
 
