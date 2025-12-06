@@ -1,0 +1,24 @@
+---
+ca:
+  rules:
+    recent_runs:
+      title: Execucions Recents
+      description: Visualitza l'historial d'execució de les teves regles incloent l'estat d'èxit/fallada i els recomptes de transaccions.
+      unnamed_rule: Regla Sense Nom
+      columns:
+        date_time: Data/Hora
+        execution_type: Tipus
+        status: Estat
+        rule_name: Nom de la Regla
+        transactions_counts:
+          queued: En Cua
+          processed: Processades
+          modified: Modificades
+      execution_types:
+        manual: Manual
+        scheduled: Programada
+      statuses:
+        pending: Pendent
+        success: Èxit
+        failed: Fallada
+

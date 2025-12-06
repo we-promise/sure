@@ -1,0 +1,24 @@
+---
+de:
+  rules:
+    recent_runs:
+      title: Letzte Ausführungen
+      description: Zeige die Ausführungsgeschichte deiner Regeln einschließlich Erfolgs-/Fehlerstatus und Transaktionsanzahlen.
+      unnamed_rule: Unbenannte Regel
+      columns:
+        date_time: Datum/Uhrzeit
+        execution_type: Typ
+        status: Status
+        rule_name: Regelname
+        transactions_counts:
+          queued: In Warteschlange
+          processed: Verarbeitet
+          modified: Geändert
+      execution_types:
+        manual: Manuell
+        scheduled: Geplant
+      statuses:
+        pending: Ausstehend
+        success: Erfolgreich
+        failed: Fehlgeschlagen
+
