@@ -68,13 +68,13 @@ class Api::V1::SyncControllerTest < ActionDispatch::IntegrationTest
     assert_response :accepted
 
     response_data = JSON.parse(response.body)
-    
+
     # Check all expected fields are present
     assert response_data.key?("id")
     assert response_data.key?("status")
     assert response_data.key?("syncable_type")
     assert response_data.key?("syncable_id")
-    assert response_data.key?("started_at")
+    assert response_data.key?("syncing_at")
     assert response_data.key?("completed_at")
     assert response_data.key?("window_start_date")
     assert response_data.key?("window_end_date")
@@ -84,7 +84,6 @@ class Api::V1::SyncControllerTest < ActionDispatch::IntegrationTest
   private
 
     def api_headers(api_key)
-      token = api_key.generate_jwt_token
-      { "Authorization" => "Bearer #{token}" }
+      { "X-Api-Key" => api_key.display_key }
     end
 end
