@@ -69,18 +69,22 @@ class RuleJob < ApplicationJob
       else
         # Create a failed rule run if we hadn't created one yet
         # Store the rule name at execution time so it persists even if the rule name changes later
-        RuleRun.create!(
-          rule: rule,
-          rule_name: rule.name,
-          execution_type: execution_type,
-          status: "failed",
-          transactions_queued: transactions_queued,
-          transactions_processed: 0,
-          transactions_modified: 0,
-          pending_jobs_count: 0,
-          executed_at: executed_at,
-          error_message: error_message
-        )
+        begin
+          RuleRun.create!(
+            rule: rule,
+            rule_name: rule.name,
+            execution_type: execution_type,
+            status: "failed",
+            transactions_queued: transactions_queued,
+            transactions_processed: 0,
+            transactions_modified: 0,
+            pending_jobs_count: 0,
+            executed_at: executed_at,
+            error_message: error_message
+          )
+        rescue => e
+          Rails.logger.error("RuleJob: Failed to create RuleRun for rule #{rule.id}: #{create_error.message}")
+        end
       end
 
       raise # Re-raise to mark job as failed in Sidekiq
