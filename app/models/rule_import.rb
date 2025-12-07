@@ -262,6 +262,16 @@ class RuleImport < Import
         return merchant.id
       end
 
+      # Map tag names to UUIDs
+      if action_type == "set_transaction_tags"
+        tag = family.tags.find_by(name: value)
+        # Create tag if it doesn't exist
+        unless tag
+          tag = family.tags.create!(name: value)
+        end
+        return tag.id
+      end
+
       value
     end
 
