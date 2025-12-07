@@ -178,8 +178,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       rule_lines = lines.select do |line|
         parsed = JSON.parse(line)
-        parsed["type"] == "Rule"
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Test Rule"
       end
+
+      assert rule_lines.any?
 
       rule_data = JSON.parse(rule_lines.first)
       conditions = rule_data["data"]["conditions"]
@@ -200,8 +202,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       rule_lines = lines.select do |line|
         parsed = JSON.parse(line)
-        parsed["type"] == "Rule"
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Test Rule"
       end
+
+      assert rule_lines.any?
 
       rule_data = JSON.parse(rule_lines.first)
       actions = rule_data["data"]["actions"]
