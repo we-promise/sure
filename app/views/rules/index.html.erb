@@ -149,7 +149,7 @@
                 </div>
               </td>
               <td class="px-4 py-3 text-sm text-primary">
-                <%= run.rule_name.presence || run.rule.name.presence || t("rules.recent_runs.unnamed_rule") %>
+                <%= run.rule_name.presence || run.rule&.name.presence || t("rules.recent_runs.unnamed_rule") %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center tabular-nums">
                 <%= "#{number_with_delimiter(run.transactions_queued)} / #{number_with_delimiter(run.transactions_processed)} / #{number_with_delimiter(run.transactions_modified)}" %>
