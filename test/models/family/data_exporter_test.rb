@@ -23,6 +23,21 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       name: "Test Tag",
       color: "#00FF00"
     )
+
+    @rule = @family.rules.create!(
+      name: "Test Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    @rule.conditions.create!(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    @rule.actions.create!(
+      action_type: "set_transaction_category",
+      value: @category.id
+    )
   end
 
   test "generates a zip file with all required files" do
@@ -31,7 +46,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert zip_data.is_a?(StringIO)
 
     # Check that the zip contains all expected files
-    expected_files = [ "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "all.ndjson" ]
+    expected_files = [ "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "all.ndjson" ]
 
     Zip::File.open_buffer(zip_data) do |zip|
       actual_files = zip.entries.map(&:name)
@@ -58,6 +73,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       # Check categories.csv
       categories_csv = zip.read("categories.csv")
       assert categories_csv.include?("name,color,parent_category,classification,lucide_icon")
+
+      # Check rules.csv
+      rules_csv = zip.read("rules.csv")
+      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions")
     end
   end
 
@@ -110,6 +129,212 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       ndjson_content = zip.read("all.ndjson")
       refute ndjson_content.include?(other_account.id)
       refute ndjson_content.include?(other_category.id)
+    end
+  end
+
+  test "exports rules in CSV format" do
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rules_csv = zip.read("rules.csv")
+
+      assert rules_csv.include?("Test Rule")
+      assert rules_csv.include?("transaction")
+      assert rules_csv.include?("true")
+    end
+  end
+
+  test "exports rules in NDJSON format with versioning" do
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      assert_equal "Rule", rule_data["type"]
+      assert_equal 1, rule_data["version"]
+      assert rule_data["data"].key?("name")
+      assert rule_data["data"].key?("resource_type")
+      assert rule_data["data"].key?("active")
+      assert rule_data["data"].key?("conditions")
+      assert rule_data["data"].key?("actions")
+    end
+  end
+
+  test "exports rule conditions with proper structure" do
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Test Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      conditions = rule_data["data"]["conditions"]
+
+      assert_equal 1, conditions.length
+      assert_equal "transaction_name", conditions[0]["condition_type"]
+      assert_equal "like", conditions[0]["operator"]
+      assert_equal "test", conditions[0]["value"]
+    end
+  end
+
+  test "exports rule actions and maps category UUIDs to names" do
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Test Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      assert_equal "set_transaction_category", actions[0]["action_type"]
+      # Should export category name instead of UUID
+      assert_equal "Test Category", actions[0]["value"]
+    end
+  end
+
+  test "exports rule actions and maps tag UUIDs to names" do
+    # Create a rule with a tag action
+    tag_rule = @family.rules.create!(
+      name: "Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.create!(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.create!(
+      action_type: "set_transaction_tags",
+      value: @tag.id
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      assert_equal "set_transaction_tags", actions[0]["action_type"]
+      # Should export tag name instead of UUID
+      assert_equal "Test Tag", actions[0]["value"]
+    end
+  end
+
+  test "exports compound conditions with sub-conditions" do
+    # Create a rule with compound conditions
+    compound_rule = @family.rules.create!(
+      name: "Compound Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    parent_condition = compound_rule.conditions.create!(
+      condition_type: "compound",
+      operator: "or"
+    )
+    parent_condition.sub_conditions.create!(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "walmart"
+    )
+    parent_condition.sub_conditions.create!(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "target"
+    )
+    compound_rule.actions.create!(
+      action_type: "auto_categorize"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Compound Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      conditions = rule_data["data"]["conditions"]
+
+      assert_equal 1, conditions.length
+      assert_equal "compound", conditions[0]["condition_type"]
+      assert_equal "or", conditions[0]["operator"]
+      assert_equal 2, conditions[0]["sub_conditions"].length
+      assert_equal "walmart", conditions[0]["sub_conditions"][0]["value"]
+      assert_equal "target", conditions[0]["sub_conditions"][1]["value"]
+    end
+  end
+
+  test "only exports rules from the specified family" do
+    # Create a rule for another family that should NOT be exported
+    other_rule = @other_family.rules.create!(
+      name: "Other Family Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    other_rule.conditions.create!(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "other"
+    )
+    other_rule.actions.create!(
+      action_type: "auto_categorize"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      # Check rules.csv doesn't contain other family's data
+      rules_csv = zip.read("rules.csv")
+      assert rules_csv.include?(@rule.name)
+      refute rules_csv.include?(other_rule.name)
+
+      # Check NDJSON doesn't contain other family's rules
+      ndjson_content = zip.read("all.ndjson")
+      assert ndjson_content.include?(@rule.name)
+      refute ndjson_content.include?(other_rule.name)
     end
   end
 end

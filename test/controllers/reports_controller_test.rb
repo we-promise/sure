@@ -128,7 +128,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     entry = account.entries.create!(
       name: "Grocery shopping",
       date: weekday_date,
-      amount: -50.00,
+      amount: 50.00,
       currency: "USD",
       entryable: Transaction.new(
         category: expense_category,
@@ -142,7 +142,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     weekend_entry = account.entries.create!(
       name: "Weekend shopping",
       date: weekend_date,
-      amount: -75.00,
+      amount: 75.00,
       currency: "USD",
       entryable: Transaction.new(
         category: expense_category,

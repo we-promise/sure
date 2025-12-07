@@ -147,6 +147,7 @@ class Provider::EnableBanking
   def get_account_transactions(account_id:, date_from: nil, date_to: nil, continuation_key: nil)
     encoded_id = CGI.escape(account_id.to_s)
     query_params = {}
+    query_params[:transaction_status] = "BOOK" # Only accounted transactions
     query_params[:date_from] = date_from.to_date.iso8601 if date_from
     query_params[:date_to] = date_to.to_date.iso8601 if date_to
     query_params[:continuation_key] = continuation_key if continuation_key

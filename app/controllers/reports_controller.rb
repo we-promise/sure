@@ -408,9 +408,13 @@ class ReportsController < ApplicationController
     end
 
     def apply_transaction_filters(transactions)
-      # Filter by category
+      # Filter by category (including subcategories)
       if params[:filter_category_id].present?
-        transactions = transactions.where(category_id: params[:filter_category_id])
+        category_id = params[:filter_category_id]
+        # Scope to family's categories to prevent cross-family data access
+        subcategory_ids = Current.family.categories.where(parent_id: category_id).pluck(:id)
+        all_category_ids = [ category_id ] + subcategory_ids
+        transactions = transactions.where(category_id: all_category_ids)
       end
 
       # Filter by account

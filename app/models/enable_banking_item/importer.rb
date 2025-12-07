@@ -241,7 +241,7 @@ class EnableBankingItem::Importer
         if enable_banking_item.last_synced_at
           enable_banking_item.last_synced_at.to_date - 7.days
         else
-          user_start_date || 90.days.ago.to_date
+          30.days.ago.to_date
         end
       else
         # Initial sync: use user's configured date or default to 3 months

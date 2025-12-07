@@ -14,9 +14,19 @@ ca:
       empty: Encara no hi ha comerços
       new: Nou comerç
       title: Comerços
+      family_title: Comerços familiars
+      family_empty: Encara no hi ha comerços familiars
+      provider_title: Comerços del proveïdor
+      provider_empty: Encara no hi ha comerços del proveïdor vinculats a aquesta família
+      provider_read_only: Els comerços del proveïdor se sincronitzen automàticament amb les institucions connectades. No es poden editar aquí.
+      table:
+        merchant: Comerç
+        actions: Accions
+        source: Origen
     merchant:
       confirm_accept: Elimina el comerç
-      confirm_body: Segur que vols eliminar aquest comerç? Si l'elimines, es desvincularan totes les transaccions associades i pot afectar els teus informes.
+      confirm_body: Segur que vols eliminar aquest comerç? Si l'elimines, es desvincularan
+        totes les transaccions associades i pot afectar els teus informes.
       confirm_title: Vols eliminar el comerç?
       delete: Elimina el comerç
       edit: Edita el comerç
