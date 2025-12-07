@@ -14,6 +14,15 @@ ro:
       empty: Niciun comerciant încă
       new: Comerciant nou
       title: Comercianți
+      family_title: Comercianți ai familiei
+      family_empty: Încă nu există comercianți ai familiei
+      provider_title: Comercianți furnizor
+      provider_empty: Niciun comerciant furnizor asociat încă acestei familii
+      provider_read_only: Comercianții furnizor sunt sincronizați din instituțiile tale conectate. Nu pot fi editați aici.
+      table:
+        merchant: Comerciant
+        actions: Acțiuni
+        source: Sursă
     merchant:
       confirm_accept: Șterge comerciantul
       confirm_body: Ești sigur că vrei să ștergi acest comerciant? Eliminarea acestui comerciant

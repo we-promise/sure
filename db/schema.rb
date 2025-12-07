@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_06_131244) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -307,6 +307,80 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.index ["import_id"], name: "index_entries_on_import_id"
   end
 
+  create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "description"
+    t.string "eval_type", null: false
+    t.string "version", default: "1.0", null: false
+    t.integer "sample_count", default: 0
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["eval_type", "active"], name: "index_eval_datasets_on_eval_type_and_active"
+    t.index ["name"], name: "index_eval_datasets_on_name", unique: true
+  end
+
+  create_table "eval_results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "eval_run_id", null: false
+    t.uuid "eval_sample_id", null: false
+    t.jsonb "actual_output", null: false
+    t.boolean "correct", null: false
+    t.boolean "exact_match", default: false
+    t.boolean "hierarchical_match", default: false
+    t.boolean "null_expected", default: false
+    t.boolean "null_returned", default: false
+    t.float "fuzzy_score"
+    t.integer "latency_ms"
+    t.integer "prompt_tokens"
+    t.integer "completion_tokens"
+    t.decimal "cost", precision: 10, scale: 6
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "alternative_match", default: false
+    t.index ["eval_run_id", "correct"], name: "index_eval_results_on_eval_run_id_and_correct"
+    t.index ["eval_run_id"], name: "index_eval_results_on_eval_run_id"
+    t.index ["eval_sample_id"], name: "index_eval_results_on_eval_sample_id"
+  end
+
+  create_table "eval_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "eval_dataset_id", null: false
+    t.string "name"
+    t.string "status", default: "pending", null: false
+    t.string "provider", null: false
+    t.string "model", null: false
+    t.jsonb "provider_config", default: {}
+    t.jsonb "metrics", default: {}
+    t.integer "total_prompt_tokens", default: 0
+    t.integer "total_completion_tokens", default: 0
+    t.decimal "total_cost", precision: 10, scale: 6, default: "0.0"
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["eval_dataset_id", "model"], name: "index_eval_runs_on_eval_dataset_id_and_model"
+    t.index ["eval_dataset_id"], name: "index_eval_runs_on_eval_dataset_id"
+    t.index ["provider", "model"], name: "index_eval_runs_on_provider_and_model"
+    t.index ["status"], name: "index_eval_runs_on_status"
+  end
+
+  create_table "eval_samples", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "eval_dataset_id", null: false
+    t.jsonb "input_data", null: false
+    t.jsonb "expected_output", null: false
+    t.jsonb "context_data", default: {}
+    t.string "difficulty", default: "medium"
+    t.string "tags", default: [], array: true
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["eval_dataset_id", "difficulty"], name: "index_eval_samples_on_eval_dataset_id_and_difficulty"
+    t.index ["eval_dataset_id"], name: "index_eval_samples_on_eval_dataset_id"
+    t.index ["tags"], name: "index_eval_samples_on_tags", using: :gin
+  end
+
   create_table "exchange_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "from_currency", null: false
     t.string "to_currency", null: false
@@ -422,6 +496,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.string "category_color"
     t.string "category_classification"
     t.string "category_icon"
+    t.string "resource_type"
+    t.boolean "active"
+    t.string "effective_date"
+    t.text "conditions"
+    t.text "actions"
     t.index ["import_id"], name: "index_import_rows_on_import_id"
   end
 
@@ -784,6 +863,21 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.index ["rule_id"], name: "index_rule_conditions_on_rule_id"
   end
 
+  create_table "rule_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "rule_id", null: false
+    t.string "execution_type", null: false
+    t.string "status", null: false
+    t.integer "transactions_processed", default: 0, null: false
+    t.integer "transactions_modified", default: 0, null: false
+    t.datetime "executed_at", null: false
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["executed_at"], name: "index_rule_runs_on_executed_at"
+    t.index ["rule_id", "executed_at"], name: "index_rule_runs_on_rule_id_and_executed_at"
+    t.index ["rule_id"], name: "index_rule_runs_on_rule_id"
+  end
+
   create_table "rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "resource_type", null: false
@@ -793,6 +887,24 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.datetime "updated_at", null: false
     t.string "name"
     t.index ["family_id"], name: "index_rules_on_family_id"
+  end
+
+  create_table "rule_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "rule_id", null: false
+    t.string "rule_name"
+    t.string "execution_type", null: false
+    t.string "status", null: false
+    t.integer "transactions_queued", default: 0, null: false
+    t.integer "transactions_processed", default: 0, null: false
+    t.integer "transactions_modified", default: 0, null: false
+    t.integer "pending_jobs_count", default: 0, null: false
+    t.datetime "executed_at", null: false
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["executed_at"], name: "index_rule_runs_on_executed_at"
+    t.index ["rule_id", "executed_at"], name: "index_rule_runs_on_rule_id_and_executed_at"
+    t.index ["rule_id"], name: "index_rule_runs_on_rule_id"
   end
 
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -968,6 +1080,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
+    t.uuid "category_id"
+    t.index ["category_id"], name: "index_trades_on_category_id"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1072,6 +1186,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
   add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "imports"
+  add_foreign_key "eval_results", "eval_runs"
+  add_foreign_key "eval_results", "eval_samples"
+  add_foreign_key "eval_runs", "eval_datasets"
+  add_foreign_key "eval_samples", "eval_datasets"
   add_foreign_key "family_exports", "families"
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
@@ -1101,6 +1219,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
   add_foreign_key "rule_actions", "rules"
   add_foreign_key "rule_conditions", "rule_conditions", column: "parent_id"
   add_foreign_key "rule_conditions", "rules"
+  add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
@@ -1112,6 +1231,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_26_094446) do
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
+  add_foreign_key "trades", "categories"
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
