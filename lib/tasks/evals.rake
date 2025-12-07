@@ -92,7 +92,8 @@ namespace :evals do
       dataset: dataset,
       provider: provider,
       model: model,
-      name: run_name
+      name: run_name,
+      status: "pending"
     )
 
     runner = dataset.runner_class.new(eval_run)
@@ -161,7 +162,8 @@ namespace :evals do
         dataset: dataset,
         provider: provider,
         model: model,
-        name: "compare_#{model}_#{Time.current.to_i}"
+        name: "compare_#{model}_#{Time.current.to_i}",
+        status: "pending"
       )
 
       runner = dataset.runner_class.new(eval_run)
@@ -288,7 +290,8 @@ namespace :evals do
       dataset: dataset,
       provider: "openai",
       model: model,
-      name: "ci_regression_#{Time.current.to_i}"
+      name: "ci_regression_#{Time.current.to_i}",
+      status: "pending"
     )
 
     runner = dataset.runner_class.new(eval_run)

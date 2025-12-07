@@ -37,7 +37,8 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       provider: "openai",
       model: "gpt-4.1",
       name: "test_run",
-      provider_config: { "access_token" => "test-token" }
+      provider_config: { "access_token" => "test-token" },
+      status: "pending"
     )
 
     mock_response = provider_success_response([
@@ -74,7 +75,8 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       provider: "openai",
       model: "gpt-4.1",
       name: "test_run",
-      provider_config: { "access_token" => "test-token" }
+      provider_config: { "access_token" => "test-token" },
+      status: "pending"
     )
 
     mock_response = provider_success_response([
@@ -112,7 +114,8 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       provider: "openai",
       model: "gpt-4.1",
       name: "test_hierarchical",
-      provider_config: { "access_token" => "test-token" }
+      provider_config: { "access_token" => "test-token" },
+      status: "pending"
     )
 
     # Model returns parent category instead of subcategory
@@ -150,7 +153,8 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       provider: "openai",
       model: "gpt-4.1",
       name: "test_run",
-      provider_config: { "access_token" => "test-token" }
+      provider_config: { "access_token" => "test-token" },
+      status: "pending"
     )
 
     mock_response = provider_success_response([
@@ -188,7 +192,8 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       provider: "openai",
       model: "gpt-4.1",
       name: "test_run",
-      provider_config: { "access_token" => "test-token" }
+      provider_config: { "access_token" => "test-token" },
+      status: "pending"
     )
 
     Provider::Openai.any_instance.stubs(:auto_categorize).raises(StandardError.new("API Error"))
