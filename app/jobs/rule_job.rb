@@ -7,7 +7,7 @@ class RuleJob < ApplicationJob
     transactions_processed = 0
     transactions_modified = 0
     pending_jobs_count = 0
-    status = "success"
+    status = "unknown"
     error_message = nil
     rule_run = nil
 
@@ -48,7 +48,7 @@ class RuleJob < ApplicationJob
         Rails.logger.warn("RuleJob: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
         transactions_processed = 0
         transactions_modified = 0
-        status = "success"
+        status = "unknown"
       end
 
       # Update the rule run with final counts
