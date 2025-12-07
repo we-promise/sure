@@ -333,6 +333,12 @@ class Family::DataExporter
         return merchant&.name || action.value
       end
 
+      # Map tag UUIDs to names for portability
+      if action.action_type == "set_transaction_tags" && action.value.present?
+        tag = @family.tags.find_by(id: action.value) || @family.tags.find_by(name: action.value)
+        return tag&.name || action.value
+      end
+
       action.value
     end
 

@@ -213,6 +213,46 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports rule actions and maps tag UUIDs to names" do
+    # Create a rule with a tag action
+    tag_rule = @family.rules.create!(
+      name: "Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.create!(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.create!(
+      action_type: "set_transaction_tags",
+      value: @tag.id
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      assert_equal "set_transaction_tags", actions[0]["action_type"]
+      # Should export tag name instead of UUID
+      assert_equal "Test Tag", actions[0]["value"]
+    end
+  end
+
   test "exports compound conditions with sub-conditions" do
     # Create a rule with compound conditions
     compound_rule = @family.rules.create!(
