@@ -53,13 +53,15 @@ class RuleImport < Import
     rows.destroy_all
 
     csv_rows.each do |row|
+      normalized_row = normalize_rule_row(row)
+
       rows.create!(
-        name: row["name"].to_s.strip,
-        resource_type: row["resource_type"].to_s.strip,
-        active: parse_boolean(row["active"]),
-        effective_date: row["effective_date"].to_s.strip,
-        conditions: row["conditions"].to_s.strip,
-        actions: row["actions"].to_s.strip,
+        name: normalized_row[:name].to_s.strip,
+        resource_type: normalized_row[:resource_type].to_s.strip,
+        active: parse_boolean(normalized_row[:active]),
+        effective_date: normalized_row[:effective_date].to_s.strip,
+        conditions: normalized_row[:conditions].to_s.strip,
+        actions: normalized_row[:actions].to_s.strip,
         currency: default_currency
       )
     end
@@ -70,6 +72,41 @@ class RuleImport < Import
   end
 
   private
+
+    def normalize_rule_row(row)
+      fields = row.fields
+      name, resource_type, active, effective_date = fields[0..3]
+      conditions, actions = extract_conditions_and_actions(fields[4..])
+
+      {
+        name: row["name"].presence || name,
+        resource_type: row["resource_type"].presence || resource_type,
+        active: row["active"].presence || active,
+        effective_date: row["effective_date"].presence || effective_date,
+        conditions: conditions,
+        actions: actions
+      }
+    end
+
+    def extract_conditions_and_actions(fragments)
+      pieces = Array(fragments).compact
+      return [ "", "" ] if pieces.empty?
+
+      combined = pieces.join(col_sep)
+
+      # If the CSV was split incorrectly because of unescaped quotes in the JSON
+      # payload, re-assemble the last two logical columns by splitting on the
+      # boundary between the two JSON arrays: ...]","[...
+      parts = combined.split(/(?<=\])"\s*,\s*"(?=\[)/, 2)
+      parts = [ pieces[0], pieces[1] ] if parts.length < 2
+
+      parts.map do |part|
+        next "" unless part
+
+        # Remove any stray leading/trailing quotes left from CSV parsing
+        part.to_s.strip.gsub(/\A"+|"+\z/, "")
+      end
+    end
 
     def create_or_update_rule_from_row(row)
       rule_name = row.name.to_s.strip.presence
@@ -175,7 +212,8 @@ class RuleImport < Import
           category = family.categories.create!(
             name: value,
             color: Category::UNCATEGORIZED_COLOR,
-            classification: "expense"
+            classification: "expense",
+            lucide_icon: "shapes"
           )
         end
         return category.id
