@@ -1,15 +1,15 @@
 <%# locals: (import:) %>
 
 <div class="space-y-4">
-  <p class="text-sm text-secondary">Configure your rule import. Rules will be created or updated based on the CSV data.</p>
+  <p class="text-sm text-secondary"><%= t("import.configurations.rule_import.description") %></p>
 
   <%= styled_form_with model: import,
                        url: import_configuration_path(import),
                        scope: :import,
                        method: :patch,
                        class: "space-y-3" do |form| %>
-    <p class="text-sm text-secondary">Click the button below to process your CSV and generate rule rows.</p>
-    <%= form.submit "Process Rules", disabled: import.complete? %>
+    <p class="text-sm text-secondary"><%= t("import.configurations.rule_import.process_help") %></p>
+    <%= form.submit t("import.configurations.rule_import.process_button"), disabled: import.complete? %>
   <% end %>
 </div>
 
