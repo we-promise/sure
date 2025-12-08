@@ -12,7 +12,7 @@ class Provider::EnableBankingAdapter < Provider::Base
 
   # Returns connection configurations for this provider
   def self.connection_configs(family:)
-    return [] unless family.can_connect_simplefin?
+    return [] unless family.can_connect_enable_banking?
 
     [ {
       key: "enable_banking",
