@@ -10,11 +10,11 @@ module EnableBankingItems
       items = Array(items).compact
       return if items.empty?
 
-      @enable_bankingsync_stats_map ||= {}
-      @enable_bankinghas_unlinked_map ||= {}
-      @enable_bankingunlinked_count_map ||= {}
-      @enable_bankingduplicate_only_map ||= {}
-      @enable_bankingshow_relink_map ||= {}
+      @enable_banking_sync_stats_map ||= {}
+      @enable_banking_has_unlinked_map ||= {}
+      @enable_banking_unlinked_count_map ||= {}
+      @enable_banking_duplicate_only_map ||= {}
+      @enable_banking_show_relink_map ||= {}
 
       # Batch-check if ANY family has manual accounts (same result for all items from same family)
       family_ids = items.map { |i| i.family_id }.uniq
@@ -41,40 +41,40 @@ module EnableBankingItems
           item.syncs.ordered.first
         end
         stats = (latest_sync&.sync_stats || {})
-        @enable_bankingsync_stats_map[item.id] = stats
+        @enable_banking_sync_stats_map[item.id] = stats
 
         # Whether the family has any manual accounts available to link (from batch query)
-        @enable_bankinghas_unlinked_map[item.id] = families_with_manuals.include?(item.family_id)
+        @enable_banking_has_unlinked_map[item.id] = families_with_manuals.include?(item.family_id)
 
         # Count from batch query (defaults to 0 if not found)
-        @enable_bankingunlinked_count_map[item.id] = unlinked_counts[item.id] || 0
+        @enable_banking_unlinked_count_map[item.id] = unlinked_counts[item.id] || 0
 
         # Whether all reported errors for this item are duplicate-account warnings
-        @enable_bankingduplicate_only_map[item.id] = compute_duplicate_only_flag(stats)
+        @enable_banking_duplicate_only_map[item.id] = compute_duplicate_only_flag(stats)
 
         # Compute CTA visibility: show relink only when there are zero unlinked SFAs,
         # there exist manual accounts to link, and the item has at least one SFA
         begin
-          unlinked_count = @enable_bankingunlinked_count_map[item.id] || 0
-          manuals_exist = @enable_bankinghas_unlinked_map[item.id]
-          sfa_any = if item.enable_bankingaccounts.loaded?
-            item.enable_bankingaccounts.any?
+          unlinked_count = @enable_banking_unlinked_count_map[item.id] || 0
+          manuals_exist = @enable_banking_has_unlinked_map[item.id]
+          sfa_any = if item.item.enable_banking_accounts.loaded?
+            item.item.enable_banking_accounts.any?
           else
-            item.enable_bankingaccounts.exists?
+            item.item.enable_banking_accounts.exists?
           end
-          @enable_bankingshow_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
+          @enable_banking_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
         rescue StandardError => e
           Rails.logger.warn("Enable Banking card: CTA computation failed for item #{item.id}: #{e.class} - #{e.message}")
-          @enable_bankingshow_relink_map[item.id] = false
+          @enable_banking_show_relink_map[item.id] = false
         end
       end
 
       # Ensure maps are hashes even when items empty
-      @enable_bankingsync_stats_map ||= {}
-      @enable_bankinghas_unlinked_map ||= {}
-      @enable_bankingunlinked_count_map ||= {}
-      @enable_bankingduplicate_only_map ||= {}
-      @enable_bankingshow_relink_map ||= {}
+      @enable_banking_sync_stats_map ||= {}
+      @enable_banking_has_unlinked_map ||= {}
+      @enable_banking_unlinked_count_map ||= {}
+      @enable_banking_duplicate_only_map ||= {}
+      @enable_banking_show_relink_map ||= {}
     end
 
     private
