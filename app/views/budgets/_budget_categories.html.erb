@@ -36,8 +36,9 @@
 
         <%= render "shared/ruler" %>
       <% end %>
-
-      <%= render "budget_categories/budget_category", budget_category: budget.uncategorized_budget_category %>
+      <div class="py-2">
+        <%= render "budget_categories/budget_category", budget_category: budget.uncategorized_budget_category %>
+      </div>
     <% end %>
   </div>
 </div>
