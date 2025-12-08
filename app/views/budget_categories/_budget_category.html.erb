@@ -33,7 +33,7 @@
           <% elsif budget_category.near_limit? %>
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-500/10 text-warning text-xs font-medium rounded-full whitespace-nowrap">
               <%= icon("alert-triangle", size: "sm", color: "yellow") %>
-              <span class="hidden lg:inline"><%= t("reports.budget_performance.status.warning") %>
+              <%= t("reports.budget_performance.status.warning") %>
             </span>
           <% else %>
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-success text-xs font-medium rounded-full whitespace-nowrap">
