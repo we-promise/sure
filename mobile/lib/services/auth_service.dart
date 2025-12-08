@@ -16,57 +16,64 @@ class AuthService {
     required Map<String, String> deviceInfo,
     String? otpCode,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/login');
-    
-    final body = {
-      'email': email,
-      'password': password,
-      'device': deviceInfo,
-    };
-    
-    if (otpCode != null) {
-      body['otp_code'] = otpCode;
-    }
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/login');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode(body),
-    );
+      final body = {
+        'email': email,
+        'password': password,
+        'device': deviceInfo,
+      };
 
-    final responseData = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      // Store tokens
-      final tokens = AuthTokens.fromJson(responseData);
-      await _saveTokens(tokens);
-      
-      // Store user data
-      if (responseData['user'] != null) {
-        final user = User.fromJson(responseData['user']);
-        await _saveUser(user);
+      if (otpCode != null) {
+        body['otp_code'] = otpCode;
       }
-      
-      return {
-        'success': true,
-        'tokens': tokens,
-        'user': responseData['user'] != null 
-            ? User.fromJson(responseData['user']) 
-            : null,
-      };
-    } else if (response.statusCode == 401 && responseData['mfa_required'] == true) {
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Store tokens
+        final tokens = AuthTokens.fromJson(responseData);
+        await _saveTokens(tokens);
+
+        // Store user data
+        if (responseData['user'] != null) {
+          final user = User.fromJson(responseData['user']);
+          await _saveUser(user);
+        }
+
+        return {
+          'success': true,
+          'tokens': tokens,
+          'user': responseData['user'] != null
+              ? User.fromJson(responseData['user'])
+              : null,
+        };
+      } else if (response.statusCode == 401 && responseData['mfa_required'] == true) {
+        return {
+          'success': false,
+          'mfa_required': true,
+          'error': responseData['error'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Login failed',
+        };
+      }
+    } catch (e) {
       return {
         'success': false,
-        'mfa_required': true,
-        'error': responseData['error'],
-      };
-    } else {
-      return {
-        'success': false,
-        'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Login failed',
+        'error': 'Network error: ${e.toString()}',
       };
     }
   }
@@ -79,55 +86,62 @@ class AuthService {
     required Map<String, String> deviceInfo,
     String? inviteCode,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/signup');
-    
-    final Map<String, Object> body = {
-      'user': {
-        'email': email,
-        'password': password,
-        'first_name': firstName,
-        'last_name': lastName,
-      },
-      'device': deviceInfo,
-    };
-    
-    if (inviteCode != null) {
-      body['invite_code'] = inviteCode;
-    }
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/signup');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode(body),
-    );
-
-    final responseData = jsonDecode(response.body);
-
-    if (response.statusCode == 201) {
-      // Store tokens
-      final tokens = AuthTokens.fromJson(responseData);
-      await _saveTokens(tokens);
-      
-      // Store user data
-      if (responseData['user'] != null) {
-        final user = User.fromJson(responseData['user']);
-        await _saveUser(user);
-      }
-      
-      return {
-        'success': true,
-        'tokens': tokens,
-        'user': responseData['user'] != null 
-            ? User.fromJson(responseData['user']) 
-            : null,
+      final Map<String, Object> body = {
+        'user': {
+          'email': email,
+          'password': password,
+          'first_name': firstName,
+          'last_name': lastName,
+        },
+        'device': deviceInfo,
       };
-    } else {
+
+      if (inviteCode != null) {
+        body['invite_code'] = inviteCode;
+      }
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        // Store tokens
+        final tokens = AuthTokens.fromJson(responseData);
+        await _saveTokens(tokens);
+
+        // Store user data
+        if (responseData['user'] != null) {
+          final user = User.fromJson(responseData['user']);
+          await _saveUser(user);
+        }
+
+        return {
+          'success': true,
+          'tokens': tokens,
+          'user': responseData['user'] != null
+              ? User.fromJson(responseData['user'])
+              : null,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Signup failed',
+        };
+      }
+    } catch (e) {
       return {
         'success': false,
-        'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Signup failed',
+        'error': 'Network error: ${e.toString()}',
       };
     }
   }
@@ -136,34 +150,41 @@ class AuthService {
     required String refreshToken,
     required Map<String, String> deviceInfo,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/refresh');
-    
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({
-        'refresh_token': refreshToken,
-        'device': deviceInfo,
-      }),
-    );
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/refresh');
 
-    final responseData = jsonDecode(response.body);
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'refresh_token': refreshToken,
+          'device': deviceInfo,
+        }),
+      ).timeout(const Duration(seconds: 30));
 
-    if (response.statusCode == 200) {
-      final tokens = AuthTokens.fromJson(responseData);
-      await _saveTokens(tokens);
-      
-      return {
-        'success': true,
-        'tokens': tokens,
-      };
-    } else {
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final tokens = AuthTokens.fromJson(responseData);
+        await _saveTokens(tokens);
+
+        return {
+          'success': true,
+          'tokens': tokens,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': responseData['error'] ?? 'Token refresh failed',
+        };
+      }
+    } catch (e) {
       return {
         'success': false,
-        'error': responseData['error'] ?? 'Token refresh failed',
+        'error': 'Network error: ${e.toString()}',
       };
     }
   }

@@ -28,11 +28,11 @@ class TransactionsProvider with ChangeNotifier {
 
     _isLoading = false;
 
-    if (result['success']) {
-      _transactions = result['transactions'];
+    if (result['success'] == true && result.containsKey('transactions')) {
+      _transactions = (result['transactions'] as List<dynamic>?)?.cast<Transaction>() ?? [];
       _error = null;
     } else {
-      _error = result['error'];
+      _error = result['error'] as String? ?? 'Failed to fetch transactions';
     }
 
     notifyListeners();
@@ -47,12 +47,12 @@ class TransactionsProvider with ChangeNotifier {
       transactionId: transactionId,
     );
 
-    if (result['success']) {
+    if (result['success'] == true) {
       _transactions.removeWhere((t) => t.id == transactionId);
       notifyListeners();
       return true;
     } else {
-      _error = result['error'];
+      _error = result['error'] as String? ?? 'Failed to delete transaction';
       notifyListeners();
       return false;
     }
@@ -67,12 +67,12 @@ class TransactionsProvider with ChangeNotifier {
       transactionIds: transactionIds,
     );
 
-    if (result['success']) {
+    if (result['success'] == true) {
       _transactions.removeWhere((t) => transactionIds.contains(t.id));
       notifyListeners();
       return true;
     } else {
-      _error = result['error'];
+      _error = result['error'] as String? ?? 'Failed to delete transactions';
       notifyListeners();
       return false;
     }

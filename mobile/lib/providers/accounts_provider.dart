@@ -78,8 +78,8 @@ class AccountsProvider with ChangeNotifier {
         perPage: perPage,
       );
 
-      if (result['success'] == true) {
-        _accounts = result['accounts'] as List<Account>;
+      if (result['success'] == true && result.containsKey('accounts')) {
+        _accounts = (result['accounts'] as List<dynamic>?)?.cast<Account>() ?? [];
         _pagination = result['pagination'] as Map<String, dynamic>?;
         _isLoading = false;
         notifyListeners();

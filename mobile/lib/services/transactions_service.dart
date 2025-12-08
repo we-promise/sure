@@ -37,7 +37,7 @@ class TransactionsService {
           'Authorization': 'Bearer $accessToken',
         },
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       final responseData = jsonDecode(response.body);
 
@@ -83,7 +83,7 @@ class TransactionsService {
           'Accept': 'application/json',
           'Authorization': 'Bearer $accessToken',
         },
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -139,7 +139,7 @@ class TransactionsService {
           'Accept': 'application/json',
           'Authorization': 'Bearer $accessToken',
         },
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         return {
