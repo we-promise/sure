@@ -167,9 +167,19 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     return if options[:skip_routes]
 
     route_content = <<~RUBY.strip
-          resources :#{file_name}_items, only: [:create, :update, :destroy] do
+          resources :#{file_name}_items, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
+            collection do
+              get :preload_accounts
+              get :select_accounts
+              post :link_accounts
+              get :select_existing_account
+              post :link_existing_account
+            end
+
             member do
               post :sync
+              get :setup_accounts
+              post :complete_account_setup
             end
           end
         RUBY
@@ -240,11 +250,11 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       # Add section before the last closing div (at end of file)
       section_content = <<~ERB
 
-  <%= settings_section title: "#{class_name}" do %>
+  <%%= settings_section title: "#{class_name}", collapsible: true, open: false do %>
     <turbo-frame id="#{file_name}-providers-panel">
-      <%= render "settings/providers/#{file_name}_panel" %>
+      <%%= render "settings/providers/#{file_name}_panel" %>
     </turbo-frame>
-  <% end %>
+  <%% end %>
       ERB
 
       # Insert before the final </div> at the end of file

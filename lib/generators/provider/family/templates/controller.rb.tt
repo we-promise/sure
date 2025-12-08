@@ -1,5 +1,19 @@
 class <%= class_name %>ItemsController < ApplicationController
-  before_action :set_<%= file_name %>_item, only: [:update, :destroy, :sync]
+  before_action :set_<%= file_name %>_item, only: [:show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup]
+
+  def index
+    @<%= table_name %> = Current.family.<%= table_name %>.ordered
+  end
+
+  def show
+  end
+
+  def new
+    @<%= file_name %>_item = Current.family.<%= table_name %>.build
+  end
+
+  def edit
+  end
 
   def create
     @<%= file_name %>_item = Current.family.<%= table_name %>.build(<%= file_name %>_item_params)
@@ -80,6 +94,47 @@ class <%= class_name %>ItemsController < ApplicationController
       format.html { redirect_back_or_to accounts_path }
       format.json { head :ok }
     end
+  end
+
+  # Collection actions for account linking flow
+  # TODO: Implement these when you have the provider SDK ready
+
+  def preload_accounts
+    # TODO: Fetch accounts from provider API and cache them
+    redirect_to settings_providers_path, alert: "Not implemented yet"
+  end
+
+  def select_accounts
+    # TODO: Show UI to select which accounts to link
+    @accountable_type = params[:accountable_type]
+    @return_to = params[:return_to]
+    redirect_to settings_providers_path, alert: "Not implemented yet"
+  end
+
+  def link_accounts
+    # TODO: Link selected accounts
+    redirect_to settings_providers_path, alert: "Not implemented yet"
+  end
+
+  def select_existing_account
+    # TODO: Show UI to link an existing account to provider
+    @account_id = params[:account_id]
+    redirect_to settings_providers_path, alert: "Not implemented yet"
+  end
+
+  def link_existing_account
+    # TODO: Link an existing account to a provider account
+    redirect_to settings_providers_path, alert: "Not implemented yet"
+  end
+
+  def setup_accounts
+    # TODO: Show account setup UI
+    redirect_to settings_providers_path, alert: "Not implemented yet"
+  end
+
+  def complete_account_setup
+    # TODO: Complete the account setup process
+    redirect_to settings_providers_path, alert: "Not implemented yet"
   end
 
   private
