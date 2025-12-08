@@ -98,6 +98,47 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       template "provided_concern.rb.tt", provided_concern_path
       say "Created Provided concern: #{provided_concern_path}", :green
     end
+
+    # Create Unlinking concern
+    unlinking_concern_path = "app/models/#{file_name}_item/unlinking.rb"
+    if File.exist?(unlinking_concern_path)
+      say "Unlinking concern already exists: #{unlinking_concern_path}", :skip
+    else
+      template "unlinking_concern.rb.tt", unlinking_concern_path
+      say "Created Unlinking concern: #{unlinking_concern_path}", :green
+    end
+
+    # Create Family Connectable concern
+    connectable_concern_path = "app/models/family/#{file_name}_connectable.rb"
+    if File.exist?(connectable_concern_path)
+      say "Connectable concern already exists: #{connectable_concern_path}", :skip
+    else
+      template "connectable_concern.rb.tt", connectable_concern_path
+      say "Created Connectable concern: #{connectable_concern_path}", :green
+    end
+  end
+
+  def update_family_model
+    family_model_path = "app/models/family.rb"
+    return unless File.exist?(family_model_path)
+
+    content = File.read(family_model_path)
+    connectable_module = "#{class_name}Connectable"
+
+    # Check if already included
+    if content.include?(connectable_module)
+      say "Family model already includes #{connectable_module}", :skip
+    else
+      # Find the include line and add our module
+      if content =~ /^class Family < ApplicationRecord\n  include (.+)$/
+        gsub_file family_model_path,
+                  /^(class Family < ApplicationRecord\n  include .+)$/,
+                  "\\1, #{connectable_module}"
+        say "Added #{connectable_module} to Family model", :green
+      else
+        say "Could not find include line in Family model, please add manually: include #{connectable_module}", :yellow
+      end
+    end
   end
 
   def create_panel_view
@@ -223,11 +264,13 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "     - app/models/#{file_name}_item.rb"
     say "     - app/models/#{file_name}_account.rb"
     say "     - app/models/#{file_name}_item/provided.rb"
+    say "     - app/models/#{file_name}_item/unlinking.rb"
+    say "     - app/models/family/#{file_name}_connectable.rb"
     say "  🔌 Adapter: app/models/provider/#{file_name}_adapter.rb"
     say "  🎮 Controller: app/controllers/#{file_name}_items_controller.rb"
     say "  🖼️  View: app/views/settings/providers/_#{file_name}_panel.html.erb"
     say "  🛣️  Routes: Updated config/routes.rb"
-    say "  ⚙️  Settings: Updated controllers and views"
+    say "  ⚙️  Settings: Updated controllers, views, and Family model"
 
     if parsed_fields.any?
       say "\nCredential fields:", :cyan
