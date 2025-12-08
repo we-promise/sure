@@ -35,7 +35,7 @@ module <%= class_name %>Item::Unlinking
             ap.destroy!
           end
         end
-      rescue => e
+      rescue StandardError => e
         Rails.logger.warn(
           "<%= class_name %>Item Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
         )
