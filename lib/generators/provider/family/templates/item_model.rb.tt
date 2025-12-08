@@ -39,6 +39,10 @@ class <%= class_name %>Item < ApplicationRecord
     DestroyJob.perform_later(self)
   end
 
+  # TODO: Implement data import from provider API
+  # This method should fetch the latest data from the provider and import it.
+  # May need provider-specific validation (e.g., session validity checks).
+  # See LunchflowItem#import_latest_lunchflow_data or EnableBankingItem#import_latest_enable_banking_data for examples.
   def import_latest_<%= file_name %>_data
     provider = <%= file_name %>_provider
     unless provider
@@ -46,17 +50,20 @@ class <%= class_name %>Item < ApplicationRecord
       raise StandardError.new("<%= class_name %> provider is not configured")
     end
 
+    # TODO: Add any provider-specific validation here (e.g., session checks)
     <%= class_name %>Item::Importer.new(self, <%= file_name %>_provider: provider).import
   rescue => e
     Rails.logger.error "<%= class_name %>Item #{id} - Failed to import data: #{e.message}"
     raise
   end
 
+  # TODO: Implement account processing logic
+  # This method processes linked accounts after data import.
+  # Customize based on your provider's data structure and processing needs.
   def process_accounts
     return [] if <%= file_name %>_accounts.empty?
 
     results = []
-    # Only process accounts that are linked and have active status
     <%= file_name %>_accounts.joins(:account).merge(Account.visible).each do |<%= file_name %>_account|
       begin
         result = <%= class_name %>Account::Processor.new(<%= file_name %>_account).process
@@ -64,18 +71,18 @@ class <%= class_name %>Item < ApplicationRecord
       rescue => e
         Rails.logger.error "<%= class_name %>Item #{id} - Failed to process account #{<%= file_name %>_account.id}: #{e.message}"
         results << { <%= file_name %>_account_id: <%= file_name %>_account.id, success: false, error: e.message }
-        # Continue processing other accounts even if one fails
       end
     end
 
     results
   end
 
+  # TODO: Customize sync scheduling if needed
+  # This method schedules sync jobs for all linked accounts.
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
     results = []
-    # Only schedule syncs for active accounts
     accounts.visible.each do |account|
       begin
         account.sync_later(
@@ -87,7 +94,6 @@ class <%= class_name %>Item < ApplicationRecord
       rescue => e
         Rails.logger.error "<%= class_name %>Item #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
         results << { account_id: account.id, success: false, error: e.message }
-        # Continue scheduling other accounts even if one fails
       end
     end
 
@@ -107,6 +113,9 @@ class <%= class_name %>Item < ApplicationRecord
     accounts.any?
   end
 
+  # TODO: Customize sync status summary if needed
+  # Some providers use latest_sync.sync_stats, others use count methods directly.
+  # See SimplefinItem#sync_status_summary or EnableBankingItem#sync_status_summary for examples.
   def sync_status_summary
     total_accounts = total_accounts_count
     linked_count = linked_accounts_count
@@ -137,6 +146,9 @@ class <%= class_name %>Item < ApplicationRecord
     institution_name.presence || institution_domain.presence || name
   end
 
+  # TODO: Customize based on how your provider stores institution data
+  # SimpleFin uses org_data, others use institution_metadata.
+  # Adjust the field name and key lookups as needed.
   def connected_institutions
     <%= file_name %>_accounts.includes(:account)
                   .where.not(institution_metadata: nil)
@@ -144,6 +156,8 @@ class <%= class_name %>Item < ApplicationRecord
                   .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
 
+  # TODO: Customize institution summary if your provider has special fields
+  # EnableBanking uses aspsp_name as a fallback, for example.
   def institution_summary
     institutions = connected_institutions
     case institutions.count
