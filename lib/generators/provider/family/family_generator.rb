@@ -129,14 +129,36 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     if content.include?(connectable_module)
       say "Family model already includes #{connectable_module}", :skip
     else
-      # Find the include line and add our module
-      if content =~ /^class Family < ApplicationRecord\n  include (.+)$/
-        gsub_file family_model_path,
-                  /^(class Family < ApplicationRecord\n  include .+)$/,
-                  "\\1, #{connectable_module}"
+      # Insert a new include line after the class declaration
+      # This approach is more robust than trying to append to an existing include line
+      lines = content.lines
+      class_line_index = nil
+
+      lines.each_with_index do |line, index|
+        if line =~ /^\s*class\s+Family\s*<\s*ApplicationRecord/
+          class_line_index = index
+          break
+        end
+      end
+
+      if class_line_index
+        # Find the indentation used in the file (check next non-empty line)
+        indentation = "  " # default
+        ((class_line_index + 1)...lines.length).each do |i|
+          if lines[i] =~ /^(\s+)\S/
+            indentation = ::Regexp.last_match(1)
+            break
+          end
+        end
+
+        # Insert include line right after the class declaration
+        new_include_line = "#{indentation}include #{connectable_module}\n"
+        lines.insert(class_line_index + 1, new_include_line)
+
+        File.write(family_model_path, lines.join)
         say "Added #{connectable_module} to Family model", :green
       else
-        say "Could not find include line in Family model, please add manually: include #{connectable_module}", :yellow
+        say "Could not find class declaration in Family model, please add manually: include #{connectable_module}", :yellow
       end
     end
   end
