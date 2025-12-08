@@ -1,7 +1,7 @@
 <%# locals: (budget_category:) %>
 
 <%= turbo_frame_tag dom_id(budget_category), class: "flex-1 min-w-0 block" do %>
-  <%= link_to budget_budget_category_path(budget_category.budget, budget_category), class: "group block w-full p-4 bg-container", data: { turbo_frame: "drawer" } do %>
+  <%= link_to budget_budget_category_path(budget_category.budget, budget_category), class: "group block w-full px-4 py-2 bg-container", data: { turbo_frame: "drawer" } do %>
 
     <% if budget_category.initialized? %>
       <%# Category Header with Status Badge %>
