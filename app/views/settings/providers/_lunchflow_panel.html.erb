@@ -16,14 +16,14 @@
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
-      <%= error_msg %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
     </div>
   <% end %>
 
   <%
     # Get or initialize a lunchflow_item for this family
-    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunchflow Connection")
+    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunch Flow Connection")
     is_new_record = lunchflow_item.new_record?
   %>
 
@@ -50,10 +50,13 @@
   <% end %>
 
   <% items = local_assigns[:lunchflow_items] || @lunchflow_items || Current.family.lunchflow_items.where.not(api_key: nil) %>
-  <% if items&.any? %>
-    <div class="flex items-center gap-2">
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
       <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
-    </div>
-  <% end %>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
 </div>
