@@ -5,9 +5,7 @@ module <%= class_name %>Item::Provided
     return nil unless credentials_configured?
 
     # TODO: Implement provider instantiation
-    # Provider::<%= class_name %>.new(
-    #   <%= parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || 'api_key' %><%= parsed_fields.select { |f| f[:default] }.any? ? ",\n    #   " + parsed_fields.select { |f| f[:default] }.map { |f| "#{f[:name]}: effective_#{f[:name]}" }.join(",\n    #   ") : "" %>
-    # )
+    # Provider::<%= class_name %>.new(<%= parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || 'api_key' %><%= parsed_fields.select { |f| f[:default] }.any? ? ", " + parsed_fields.select { |f| f[:default] }.map { |f| "#{f[:name]}: effective_#{f[:name]}" }.join(", ") : "" %>)
     raise NotImplementedError, "Implement <%= file_name %>_provider method in #{__FILE__}"
   end
 end

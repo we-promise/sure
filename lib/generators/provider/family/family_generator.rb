@@ -284,19 +284,23 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
 
     def parsed_fields
       @parsed_fields ||= fields.map do |field_def|
+        # Handle default values with colons (like URLs) by extracting them first
+        # Format: field:type[:secret][:default=value]
+        default_match = field_def.match(/default=(.+)$/)
+        default_value = nil
+        if default_match
+          default_value = default_match[1]
+          # Remove the default part for further parsing
+          field_def = field_def.sub(/:?default=.+$/, "")
+        end
+
         parts = field_def.split(":")
         field = {
           name: parts[0],
           type: parts[1] || "string",
-          secret: parts.include?("secret")
+          secret: parts.include?("secret"),
+          default: default_value
         }
-
-        # Extract default value if present (format: field:type:default=value)
-        parts.each do |part|
-          if part.start_with?("default=")
-            field[:default] = part.sub("default=", "")
-          end
-        end
 
         field
       end

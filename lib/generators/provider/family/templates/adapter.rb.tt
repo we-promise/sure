@@ -5,6 +5,34 @@ class Provider::<%= class_name %>Adapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("<%= class_name %>Account", self)
 
+  # Define which account types this provider supports
+  def self.supported_account_types
+    %w[Depository CreditCard Loan]
+  end
+
+  # Returns connection configurations for this provider
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_<%= file_name %>?
+
+    [ {
+      key: "<%= file_name %>",
+      name: "<%= class_name.titleize %>",
+      description: "Connect to your bank via <%= class_name.titleize %>",
+      can_connect: true,
+      new_account_path: ->(accountable_type, return_to) {
+        Rails.application.routes.url_helpers.select_accounts_<%= file_name %>_items_path(
+          accountable_type: accountable_type,
+          return_to: return_to
+        )
+      },
+      existing_account_path: ->(account_id) {
+        Rails.application.routes.url_helpers.select_existing_account_<%= file_name %>_items_path(
+          account_id: account_id
+        )
+      }
+    } ]
+  end
+
   def provider_name
     "<%= file_name %>"
   end
@@ -21,7 +49,7 @@ class Provider::<%= class_name %>Adapter < Provider::Base
 
     # TODO: Implement provider initialization
     # Provider::<%= class_name %>.new(
-    #   <%= file_name %>_item.<%= parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || 'api_key' %>
+    #   <%= file_name %>_item.<%= parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || 'api_key' %><%= parsed_fields.select { |f| f[:default] }.any? ? ",\n    #   " + parsed_fields.select { |f| f[:default] }.map { |f| "#{f[:name]}: #{file_name}_item.effective_#{f[:name]}" }.join(",\n    #   ") : "" %>
     # )
     raise NotImplementedError, "Implement Provider::<%= class_name %>.new in #{__FILE__}"
   end
@@ -39,15 +67,25 @@ class Provider::<%= class_name %>Adapter < Provider::Base
   end
 
   def institution_domain
-    # TODO: Implement institution domain extraction
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
 
-    metadata["domain"]
+    domain = metadata["domain"]
+    url = metadata["url"]
+
+    # Derive domain from URL if missing
+    if domain.blank? && url.present?
+      begin
+        domain = URI.parse(url).host&.gsub(/^www\./, "")
+      rescue URI::InvalidURIError
+        Rails.logger.warn("Invalid institution URL for <%= class_name %> account #{provider_account.id}: #{url}")
+      end
+    end
+
+    domain
   end
 
   def institution_name
-    # TODO: Implement institution name extraction
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
 
@@ -55,7 +93,6 @@ class Provider::<%= class_name %>Adapter < Provider::Base
   end
 
   def institution_url
-    # TODO: Implement institution URL extraction
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
 
