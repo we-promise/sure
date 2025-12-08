@@ -1,6 +1,7 @@
-# Provider Generator & System Guide
+# Rails `Provider` Generator Guide
 
-This guide explains how to use the provider generators, which make it easy to add new provider integrations with either **global** or **per-family** credentials.
+This guide explains how to use the `Provider` generators, which make it easy to add new
+integrations with either **global** or **per-family** scope credentials.
 
 ## Table of Contents
 1. [Quick Start](#quick-start)
@@ -17,11 +18,11 @@ This guide explains how to use the provider generators, which make it easy to ad
 ### Two Generators Available
 
 ```bash
-# Per-Family Provider (each family has own credentials)
-rails g provider:family PROVIDER_NAME field:type[:secret] ...
+# Per-Family Provider (each family has separate credentials)
+rails g provider:family <PROVIDER_NAME> field:type[:secret] ...
 
-# Global Provider (all families share credentials)
-rails g provider:global PROVIDER_NAME field:type[:secret] ...
+# Global Provider (all families share site-wide credentials)
+rails g provider:global <PROVIDER_NAME> field:type[:secret] ...
 ```
 
 ### Quick Examples
@@ -53,7 +54,7 @@ rails g provider:global plaid \
 - ✅ Provider charges per-customer
 - ✅ Users bring their own API keys
 - ✅ Data isolation required between families
-- ✅ Examples: Lunchflow, SimpleFin, YNAB, personal bank APIs
+- ✅ Examples: Lunch Flow, SimpleFIN, YNAB, personal bank APIs
 
 ---
 
@@ -62,7 +63,7 @@ rails g provider:global plaid \
 ### Usage
 
 ```bash
-rails g provider:family PROVIDER_NAME field:type[:secret][:default=value] ...
+rails g provider:family <PROVIDER_NAME> field:type[:secret][:default=value] ...
 ```
 
 ### Example: Adding a MyBank Provider
@@ -98,7 +99,7 @@ This single command generates:
 ### Usage
 
 ```bash
-rails g provider:global PROVIDER_NAME field:type[:secret][:default=value] ...
+rails g provider:global <PROVIDER_NAME> field:type[:secret][:default=value] ...
 ```
 
 ### Example: Adding a Plaid Provider
@@ -149,7 +150,7 @@ This single command generates:
 | **UI location** | `/settings/providers` (always) | `/settings/providers` (self-hosted only) |
 | **ENV variable support** | ❌ No (per-family can't use ENV) | ✅ Yes (fallback) |
 | **Use case** | User brings own API key | Platform provides API access |
-| **Examples** | Lunchflow, SimpleFin, YNAB | Plaid, OpenAI, TwelveData |
+| **Examples** | Lunch Flow, SimpleFIN, YNAB | Plaid, OpenAI, TwelveData |
 
 ---
 
@@ -730,24 +731,6 @@ end
 
 ---
 
-## Comparison: Manual vs Generated
-
-### Manual Approach (Old Way)
-
-**Time:** ~2-3 hours
-**Files to create/edit:** 8+
-**Lines of code:** ~500+
-**Error-prone:** Yes (easy to miss steps)
-
-### Generated Approach (New Way)
-
-**Time:** ~5-10 minutes
-**Files to create/edit:** 1 (model customization)
-**Lines of code:** ~50 (customization only)
-**Error-prone:** No (generator handles boilerplate)
-
----
-
 ## Tips & Best Practices
 
 ### 1. Always Run Migrations
@@ -941,13 +924,12 @@ end
 
 ## Summary
 
-The per-family provider generator system provides:
-
-✅ **Fast development** - Generate in seconds, not hours
-✅ **Consistency** - All providers follow the same pattern
-✅ **Maintainability** - Clear structure and conventions
-✅ **Flexibility** - Easy to customize for complex needs
-✅ **Security** - Built-in encryption for sensitive fields
-✅ **Documentation** - Self-documenting with descriptions
+The per-family `Provider` Rails generator system provides:
+  - ✅ **Fast development** - Generate in seconds, not hour
+  - ✅ **Consistency** - All providers follow the same pattern
+  - ✅ **Maintainability** - Clear structure and conventions
+  - ✅ **Flexibility** - Easy to customize for complex needs
+  - ✅ **Security** - Built-in encryption for sensitive fields
+  - ✅ **Documentation** - Self-documenting with descriptions
 
 Use it whenever you need to add a new provider where each family needs their own credentials.
