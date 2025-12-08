@@ -21,8 +21,8 @@
       <% if @budget.initialized? && @budget.available_to_allocate.positive? %>
         <%= render DS::Tabs.new(active_tab: params[:tab].presence || "budgeted") do |tabs| %>
           <% tabs.with_nav do |nav| %>
-            <% nav.with_btn(id: "budgeted", label: "Budgeted") %>
-            <% nav.with_btn(id: "actuals", label: "Actual") %>
+            <% nav.with_btn(id: "budgeted", label: t("budgets.show.tabs.budgeted")) %>
+            <% nav.with_btn(id: "actuals", label: t("budgets.show.tabs.actual")) %>
           <% end %>
 
           <% tabs.with_panel(tab_id: "budgeted") do %>
