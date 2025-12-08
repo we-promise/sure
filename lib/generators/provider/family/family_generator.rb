@@ -199,39 +199,85 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     return unless File.exist?(controller_path)
 
     content = File.read(controller_path)
+    new_condition = "config.provider_key.to_s.casecmp(\"#{file_name}\").zero?"
 
     # Check if provider is already excluded
-    if content.include?("config.provider_key.to_s.casecmp(\"#{file_name}\").zero?")
+    if content.include?(new_condition)
       say "Settings controller already excludes #{file_name}", :skip
+      return
+    end
+
+    # Add to the rejection list in prepare_show_context
+    # Look for the end of the reject block and insert before it
+    if content.include?("reject do |config|")
+      # Find the reject block's end and insert our condition before it
+      # The block ends with "end" on its own line after the conditions
+      lines = content.lines
+      reject_block_start = nil
+      reject_block_end = nil
+
+      lines.each_with_index do |line, index|
+        if line.include?("Provider::ConfigurationRegistry.all.reject do |config|")
+          reject_block_start = index
+        elsif reject_block_start && line.strip == "end" && reject_block_end.nil?
+          reject_block_end = index
+          break
+        end
+      end
+
+      if reject_block_start && reject_block_end
+        # Find the last condition line (the one before 'end')
+        last_condition_index = reject_block_end - 1
+
+        # Get indentation from the last condition line
+        last_condition_line = lines[last_condition_index]
+        indentation = last_condition_line[/^\s*/]
+
+        # Append our condition with || to the last condition line
+        # Remove trailing whitespace/newline, add || and new condition
+        lines[last_condition_index] = last_condition_line.rstrip + " || \\\n#{indentation}#{new_condition}\n"
+
+        File.write(controller_path, lines.join)
+        say "Added #{file_name} to provider exclusion list", :green
+      else
+        say "Could not find reject block boundaries in settings controller", :yellow
+      end
+    elsif content.include?("@provider_configurations = Provider::ConfigurationRegistry.all")
+      # No reject block exists yet, create one
+      gsub_file controller_path,
+                "@provider_configurations = Provider::ConfigurationRegistry.all\n",
+                "@provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|\n        #{new_condition}\n      end\n"
+      say "Created provider exclusion block with #{file_name}", :green
     else
-      # Add to the rejection list in prepare_show_context
-      if content.include?("reject do |config|")
-        # Add to existing reject block - find last .zero? and append new condition
-        gsub_file controller_path,
-                  /(config\.provider_key\.to_s\.casecmp\("[^"]+"\)\.zero\?)(\s*$)/,
-                  "\\1 || \\\\\n        config.provider_key.to_s.casecmp(\"#{file_name}\").zero?\\2"
-      else
-        # Create new reject block
-        gsub_file controller_path,
-                  /@provider_configurations = Provider::ConfigurationRegistry\.all$/,
-                  "@provider_configurations = Provider::ConfigurationRegistry.all.reject { |config| config.provider_key.to_s.casecmp(\"#{file_name}\").zero? }"
-      end
+      say "Could not find provider_configurations assignment in settings controller", :yellow
+    end
 
-      # Add instance variable for items - find last similar line and add after it
-      if content =~ /@\w+_items = Current\.family\.\w+_items\.ordered\.select\(:id\)/
-        insert_into_file controller_path,
-                         after: /@\w+_items = Current\.family\.\w+_items\.ordered\.select\(:id\)\n/ do
-          "      @#{file_name}_items = Current.family.#{file_name}_items.ordered.select(:id)\n"
-        end
-      else
-        # Fallback: insert before end of prepare_show_context method
-        insert_into_file controller_path,
-                         before: /^    end\n  end\nend/ do
-          "      @#{file_name}_items = Current.family.#{file_name}_items.ordered.select(:id)\n"
+    # Re-read content after potential modifications
+    content = File.read(controller_path)
+
+    # Add instance variable for items
+    items_var = "@#{file_name}_items"
+    unless content.include?(items_var)
+      # Find the last @*_items assignment line and insert after it
+      lines = content.lines
+      last_items_index = nil
+
+      lines.each_with_index do |line, index|
+        if line =~ /@\w+_items = Current\.family\.\w+_items/
+          last_items_index = index
         end
       end
 
-      say "Updated settings controller to exclude #{file_name} from global configs", :green
+      if last_items_index
+        # Get indentation from the found line
+        indentation = lines[last_items_index][/^\s*/]
+        new_line = "#{indentation}#{items_var} = Current.family.#{file_name}_items.ordered.select(:id)\n"
+        lines.insert(last_items_index + 1, new_line)
+        File.write(controller_path, lines.join)
+        say "Added #{items_var} instance variable", :green
+      else
+        say "Could not find existing @*_items assignments, please add manually: #{items_var} = Current.family.#{file_name}_items.ordered.select(:id)", :yellow
+      end
     end
   end
 
