@@ -26,4 +26,10 @@
     </turbo-frame>
   <% end %>
 
+
+  <%= settings_section title: "Enable Banking (beta)", collapsible: true, open: false do %>
+    <turbo-frame id="enable_banking-providers-panel">
+      <%= render "settings/providers/enable_banking_panel" %>
+    </turbo-frame>
+  <% end %>
 </div>

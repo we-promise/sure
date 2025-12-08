@@ -14,9 +14,19 @@ class PagesController < ApplicationController
     expense_totals = Current.family.income_statement.expense_totals(period: @period)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
-    @outflows_data = build_outflows_donut_data(expense_totals)
+    @outflows_data = build_outflows_donut_data(expense_totals, family_currency)
+
+    @dashboard_sections = build_dashboard_sections
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+  end
+
+  def update_preferences
+    if Current.user.update_dashboard_preferences(preferences_params)
+      head :ok
+    else
+      head :unprocessable_entity
+    end
   end
 
   def changelog
@@ -45,6 +55,64 @@ class PagesController < ApplicationController
   end
 
   private
+    def preferences_params
+      prefs = params.require(:preferences)
+      {}.tap do |permitted|
+        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections]
+        permitted["section_order"] = prefs[:section_order] if prefs[:section_order]
+      end
+    end
+
+    def build_dashboard_sections
+      all_sections = [
+        {
+          key: "cashflow_sankey",
+          title: "pages.dashboard.cashflow_sankey.title",
+          partial: "pages/dashboard/cashflow_sankey",
+          locals: { sankey_data: @cashflow_sankey_data, period: @period },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "outflows_donut",
+          title: "pages.dashboard.outflows_donut.title",
+          partial: "pages/dashboard/outflows_donut",
+          locals: { outflows_data: @outflows_data, period: @period },
+          visible: Current.family.accounts.any? && @outflows_data[:categories].present?,
+          collapsible: true
+        },
+        {
+          key: "net_worth_chart",
+          title: "pages.dashboard.net_worth_chart.title",
+          partial: "pages/dashboard/net_worth_chart",
+          locals: { balance_sheet: @balance_sheet, period: @period },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "balance_sheet",
+          title: "pages.dashboard.balance_sheet.title",
+          partial: "pages/dashboard/balance_sheet",
+          locals: { balance_sheet: @balance_sheet },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        }
+      ]
+
+      # Order sections according to user preference
+      section_order = Current.user.dashboard_section_order
+      ordered_sections = section_order.map do |key|
+        all_sections.find { |s| s[:key] == key }
+      end.compact
+
+      # Add any new sections that aren't in the saved order (future-proofing)
+      all_sections.each do |section|
+        ordered_sections << section unless ordered_sections.include?(section)
+      end
+
+      ordered_sections
+    end
+
     def github_provider
       Provider::Registry.get_provider(:github)
     end
@@ -145,8 +213,7 @@ class PagesController < ApplicationController
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency_symbol).symbol }
     end
 
-    def build_outflows_donut_data(expense_totals)
-      currency_symbol = Money::Currency.new(expense_totals.currency).symbol
+    def build_outflows_donut_data(expense_totals, family_currency)
       total = expense_totals.total
 
       # Only include top-level categories with non-zero amounts
@@ -158,12 +225,13 @@ class PagesController < ApplicationController
             id: ct.category.id,
             name: ct.category.name,
             amount: ct.total.to_f.round(2),
+            currency: ct.currency,
             percentage: ct.weight.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon
           }
         end
 
-      { categories: categories, total: total.to_f.round(2), currency_symbol: currency_symbol }
+      { categories: categories, total: total.to_f.round(2), currency: family_currency, currency_symbol: Money::Currency.new(family_currency).symbol }
     end
 end

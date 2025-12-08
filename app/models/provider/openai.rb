@@ -51,7 +51,7 @@ class Provider::Openai < Provider
     @uri_base.present?
   end
 
-  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil)
+  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
       if user_categories.blank?
@@ -74,7 +74,8 @@ class Provider::Openai < Provider
         user_categories: user_categories,
         custom_provider: custom_provider?,
         langfuse_trace: trace,
-        family: family
+        family: family,
+        json_mode: json_mode
       ).auto_categorize
 
       trace&.update(output: result.map(&:to_h))
@@ -83,7 +84,7 @@ class Provider::Openai < Provider
     end
   end
 
-  def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil)
+  def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
 
@@ -101,7 +102,8 @@ class Provider::Openai < Provider
         user_merchants: user_merchants,
         custom_provider: custom_provider?,
         langfuse_trace: trace,
-        family: family
+        family: family,
+        json_mode: json_mode
       ).auto_detect_merchants
 
       trace&.update(output: result.map(&:to_h))

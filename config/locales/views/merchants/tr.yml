@@ -14,9 +14,19 @@ tr:
       empty: "Henüz satıcı yok"
       new: "Yeni satıcı"
       title: "Satıcılar"
+      family_title: "Aile satıcıları"
+      family_empty: "Henüz aile satıcısı yok"
+      provider_title: "Sağlayıcı satıcıları"
+      provider_empty: "Bu aileye bağlı sağlayıcı satıcısı yok"
+      provider_read_only: "Sağlayıcı satıcılar bağlı olduğunuz kurumlarla otomatik olarak eşitlenir. Burada düzenlenemezler."
+      table:
+        merchant: "Satıcı"
+        actions: "İşlemler"
+        source: "Kaynak"
     merchant:
       confirm_accept: "Satıcıyı sil"
-      confirm_body: "Bu satıcıyı silmek istediğinizden emin misiniz? Satıcıyı kaldırmak, ilişkili tüm işlemlerin bağlantısını kaldıracak ve raporlamanızı etkileyebilir."
+      confirm_body: "Bu satıcıyı silmek istediğinizden emin misiniz? Satıcıyı kaldırmak
+        ilişkili tüm işlemlerin bağlantısını kaldıracak ve raporlamanızı etkileyebilir."
       confirm_title: "Satıcı silinsin mi?"
       delete: "Satıcıyı sil"
       edit: "Satıcıyı düzenle"

@@ -1,10 +1,6 @@
 <%# locals: (outflows_data:, period:) %>
 <div id="outflows-donut-section">
-  <div class="flex justify-between items-center gap-4 px-4 mb-4">
-    <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
-      <%= t("pages.dashboard.outflows_donut.title") %>
-    </h2>
-
+  <div class="flex justify-end items-center gap-4 px-4 mb-4">
     <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
       <%= form.select :period,
                 Period.as_options,
@@ -37,7 +33,7 @@
               </div>
 
               <div class="text-3xl font-medium text-primary">
-                <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(outflows_data[:total], delimiter: ",") %>
+                <%= format_money Money.new(outflows_data[:total], outflows_data[:currency]) %>
               </div>
             </div>
 
@@ -88,7 +84,7 @@
                 <span class="text-sm font-medium text-primary truncate"><%= category[:name] %></span>
               </div>
               <div class="flex items-center gap-4 flex-shrink-0">
-                <span class="text-sm font-medium text-primary whitespace-nowrap"><%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ",") %></span>
+                <span class="text-sm font-medium text-primary whitespace-nowrap"><%= format_money Money.new(category[:amount], category[:currency]) %></span>
                 <span class="text-sm text-secondary whitespace-nowrap"><%= category[:percentage] %>%</span>
               </div>
             <% end %>

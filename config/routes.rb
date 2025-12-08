@@ -2,6 +2,21 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :enable_banking_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :callback
+      post :link_accounts
+    end
+    member do
+      post :sync
+      get :select_bank
+      post :authorize
+      post :reauthorize
+      get :setup_accounts
+      post :complete_account_setup
+      post :new_connection
+    end
+  end
   use_doorkeeper
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -32,6 +47,7 @@ Rails.application.routes.draw do
 
   get "changelog", to: "pages#changelog"
   get "feedback", to: "pages#feedback"
+  patch "dashboard/preferences", to: "pages#update_preferences"
 
   resource :current_session, only: %i[update]
 
@@ -104,6 +120,7 @@ Rails.application.routes.draw do
   end
 
   resources :reports, only: %i[index] do
+    patch :update_preferences, on: :collection
     get :export_transactions, on: :collection
     get :google_sheets_instructions, on: :collection
   end

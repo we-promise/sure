@@ -1,0 +1,24 @@
+---
+es:
+  rules:
+    recent_runs:
+      title: Ejecuciones Recientes
+      description: Ver el historial de ejecución de tus reglas incluyendo el estado de éxito/fallo y los conteos de transacciones.
+      unnamed_rule: Regla Sin Nombre
+      columns:
+        date_time: Fecha/Hora
+        execution_type: Tipo
+        status: Estado
+        rule_name: Nombre de Regla
+        transactions_counts:
+          queued: En Cola
+          processed: Procesadas
+          modified: Modificadas
+      execution_types:
+        manual: Manual
+        scheduled: Programada
+      statuses:
+        pending: Pendiente
+        success: Éxito
+        failed: Fallido
+

@@ -7,6 +7,7 @@ class SimplefinItem::Importer
     @simplefin_item = simplefin_item
     @simplefin_provider = simplefin_provider
     @sync = sync
+    @enqueued_holdings_job_ids = Set.new
   end
 
   def import
@@ -15,8 +16,14 @@ class SimplefinItem::Importer
     Rails.logger.info "SimplefinItem::Importer - sync_start_date: #{simplefin_item.sync_start_date.inspect}"
 
     begin
-      if simplefin_item.last_synced_at.nil?
-        # First sync - use chunked approach to get full history
+      # Defensive guard: If last_synced_at is set but there are linked accounts
+      # with no transactions captured yet (typical after a balances-only run),
+      # force the first full run to use chunked history to backfill.
+      linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
+      no_txns_yet = linked_accounts.any? && linked_accounts.all? { |sfa| sfa.raw_transactions_payload.blank? }
+
+      if simplefin_item.last_synced_at.nil? || no_txns_yet
+        # First sync (or balances-only pre-run) — use chunked approach to get full history
         Rails.logger.info "SimplefinItem::Importer - Using chunked history import"
         import_with_chunked_history
       else
@@ -210,9 +217,15 @@ class SimplefinItem::Importer
       max_requests = 22
       current_end_date = Time.current
 
-      # Use user-selected sync_start_date if available, otherwise use default lookback
+      # Decide how far back to walk:
+      # - If the user set a custom sync_start_date, honor it
+      # - Else, for first-time chunked history, walk back up to the provider-safe
+      #   limit implied by chunking so we actually import meaningful history.
+      #   We do NOT use the small initial lookback (7 days) here, because that
+      #   would clip the very first chunk to ~1 week and prevent further history.
       user_start_date = simplefin_item.sync_start_date
-      default_start_date = initial_sync_lookback_period.days.ago
+      implied_max_lookback_days = chunk_size_days * max_requests
+      default_start_date = implied_max_lookback_days.days.ago
       target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
 
       # Enforce maximum 3-year lookback to respect SimpleFin's actual 60-day limit per request
@@ -496,10 +509,21 @@ class SimplefinItem::Importer
         attrs[:raw_transactions_payload] = merged_transactions
       end
 
-      # Preserve most recent holdings (don't overwrite current positions with older data)
-      if holdings.is_a?(Array) && holdings.any? && simplefin_account.raw_holdings_payload.blank?
-        attrs[:raw_holdings_payload] = holdings
+      # Track whether incoming holdings are new/changed so we can materialize and refresh balances
+      holdings_changed = false
+      if holdings.is_a?(Array) && holdings.any?
+        prior = simplefin_account.raw_holdings_payload.to_a
+        if prior != holdings
+          attrs[:raw_holdings_payload] = holdings
+          # Also mirror into raw_payload['holdings'] so downstream calculators can use it
+          raw = simplefin_account.raw_payload.is_a?(Hash) ? simplefin_account.raw_payload.deep_dup : {}
+          raw = raw.with_indifferent_access
+          raw[:holdings] = holdings
+          attrs[:raw_payload] = raw
+          holdings_changed = true
+        end
       end
+
       simplefin_account.assign_attributes(attrs)
 
       # Inactive detection/toggling (non-blocking)
@@ -516,6 +540,37 @@ class SimplefinItem::Importer
 
       begin
         simplefin_account.save!
+
+        # Post-save side effects
+        acct = simplefin_account.current_account
+        if acct
+          # Refresh credit attributes when available-balance present
+          if acct.accountable_type == "CreditCard" && account_data[:"available-balance"].present?
+            begin
+              SimplefinAccount::Liabilities::CreditProcessor.new(simplefin_account).process
+            rescue => e
+              Rails.logger.warn("SimpleFin: credit post-import refresh failed for sfa=#{simplefin_account.id}: #{e.class} - #{e.message}")
+            end
+          end
+
+          # If holdings changed for an investment/crypto account, enqueue holdings apply job and recompute cash balance
+          if holdings_changed && [ "Investment", "Crypto" ].include?(acct.accountable_type)
+            # Debounce per importer run per SFA
+            unless @enqueued_holdings_job_ids.include?(simplefin_account.id)
+              SimplefinHoldingsApplyJob.perform_later(simplefin_account.id)
+              @enqueued_holdings_job_ids << simplefin_account.id
+            end
+
+            # Recompute cash balance using existing calculator; avoid altering canonical ledger balances
+            begin
+              calculator = SimplefinAccount::Investments::BalanceCalculator.new(simplefin_account)
+              new_cash = calculator.cash_balance
+              acct.update!(cash_balance: new_cash)
+            rescue => e
+              Rails.logger.warn("SimpleFin: cash balance recompute failed for sfa=#{simplefin_account.id}: #{e.class} - #{e.message}")
+            end
+          end
+        end
       rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
         # Treat duplicates/validation failures as partial success: count and surface friendly error, then continue
         stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
@@ -655,7 +710,9 @@ class SimplefinItem::Importer
     end
 
     def initial_sync_lookback_period
-      # Default to 7 days for initial sync to avoid API limits
+      # Default to 7 days for initial sync. Providers that support deeper
+      # history will supply it via chunked fetches, and users can optionally
+      # set a custom `sync_start_date` to go further back.
       7
     end
 
