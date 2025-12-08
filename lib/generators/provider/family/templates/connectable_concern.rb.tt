@@ -27,7 +27,11 @@ module Family::<%= class_name %>Connectable
   end
 
   def has_<%= file_name %>_credentials?
-<% primary_secret = parsed_fields.find { |f| f[:secret] }&.dig(:name) || 'api_key' -%>
+<% primary_secret = parsed_fields.find { |f| f[:secret] }&.dig(:name) -%>
+<% if primary_secret -%>
     <%= file_name %>_items.where.not(<%= primary_secret %>: nil).exists?
+<% else -%>
+    <%= file_name %>_items.exists?
+<% end -%>
   end
 end
