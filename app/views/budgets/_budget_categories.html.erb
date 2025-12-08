@@ -19,7 +19,9 @@
 
       <% category_groups.each_with_index do |group, index| %>
         <div>
-          <%= render "budget_categories/budget_category", budget_category: group.budget_category %>
+          <div class="p-4 bg-container w-full min-w-0">
+            <%= render "budget_categories/budget_category", budget_category: group.budget_category %>
+          </div>
 
           <div>
             <% group.budget_subcategories.each do |budget_subcategory| %>
@@ -27,8 +29,9 @@
                 <div class="ml-8 pt-6 flex items-center justify-center text-subdued">
                   <%= icon "corner-down-right" %>
                 </div>
-
-                <%= render "budget_categories/budget_category", budget_category: budget_subcategory %>
+                <div class="px-4 py-2 bg-container w-full min-w-0">
+                  <%= render "budget_categories/budget_category", budget_category: budget_subcategory %>
+                </div>
               </div>
             <% end %>
           </div>
