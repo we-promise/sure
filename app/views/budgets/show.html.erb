@@ -18,30 +18,30 @@
       </div>
 
       <%# Actuals Summary %>
-      <div class="bg-container rounded-xl shadow-border-xs">
-        <% if @budget.initialized? && @budget.available_to_allocate.positive? %>
-          <%= render DS::Tabs.new(active_tab: params[:tab].presence || "budgeted") do |tabs| %>
-            <% tabs.with_nav do |nav| %>
-              <% nav.with_btn(id: "budgeted", label: "Budgeted") %>
-              <% nav.with_btn(id: "actuals", label: "Actual") %>
-            <% end %>
-
-            <% tabs.with_panel(tab_id: "budgeted") do %>
-              <div class="bg-container rounded-xl shadow-border-xs">
-                <%= render "budgets/budgeted_summary", budget: @budget %>
-              </div>
-            <% end %>
-
-            <% tabs.with_panel(tab_id: "actuals") do %>
-              <div class="bg-container rounded-xl shadow-border-xs">
-                <%= render "budgets/actuals_summary", budget: @budget %>
-              </div>
-            <% end %>
+      <% if @budget.initialized? && @budget.available_to_allocate.positive? %>
+        <%= render DS::Tabs.new(active_tab: params[:tab].presence || "budgeted") do |tabs| %>
+          <% tabs.with_nav do |nav| %>
+            <% nav.with_btn(id: "budgeted", label: "Budgeted") %>
+            <% nav.with_btn(id: "actuals", label: "Actual") %>
           <% end %>
-        <% else %>
-          <%= render "budgets/actuals_summary", budget: @budget %>
+
+          <% tabs.with_panel(tab_id: "budgeted") do %>
+            <div class="bg-container rounded-xl shadow-border-xs">
+              <%= render "budgets/budgeted_summary", budget: @budget %>
+            </div>
+          <% end %>
+
+          <% tabs.with_panel(tab_id: "actuals") do %>
+            <div class="bg-container rounded-xl shadow-border-xs">
+              <%= render "budgets/actuals_summary", budget: @budget %>
+            </div>
+          <% end %>
         <% end %>
-      </div>
+      <% else %>
+        <div class="bg-container rounded-xl shadow-border-xs">
+          <%= render "budgets/actuals_summary", budget: @budget %>
+        </div>
+      <% end %>
     </div>
 
     <%# Bottom Section: Categories full width %>
