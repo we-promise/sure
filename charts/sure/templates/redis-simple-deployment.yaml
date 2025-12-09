@@ -1,0 +1,72 @@
+{{- if .Values.redisSimple.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sure.fullname" . }}-redis
+  labels:
+    app.kubernetes.io/component: redis
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: redis
+      {{- include "sure.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: redis
+        {{- include "sure.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: redis
+          image: {{ .Values.redisSimple.image.repository }}:{{ .Values.redisSimple.image.tag }}
+          imagePullPolicy: {{ .Values.redisSimple.image.pullPolicy }}
+          {{- if .Values.redisSimple.auth.enabled }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              exec redis-server --appendonly no --save '' --requirepass "$REDIS_PASSWORD"
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sure.redisSecretName" . }}
+                  key: {{ include "sure.redisPasswordKey" . }}
+          {{- end }}
+          ports:
+            - name: redis
+              containerPort: {{ .Values.redisSimple.service.port | default 6379 }}
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            {{- if .Values.redisSimple.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+      volumes:
+        {{- if .Values.redisSimple.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "sure.fullname" . }}-redis
+        {{- end }}
+---
+{{- if .Values.redisSimple.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sure.fullname" . }}-redis
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.redisSimple.persistence.size | default "1Gi" }}
+  {{- if .Values.redisSimple.persistence.storageClass }}
+  storageClassName: {{ .Values.redisSimple.persistence.storageClass }}
+  {{- end }}
+{{- end }}
+{{- end }}

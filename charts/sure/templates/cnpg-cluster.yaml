@@ -1,0 +1,43 @@
+{{- if .Values.cnpg.cluster.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ default (printf "%s-db" (include "sure.fullname" .)) .Values.cnpg.cluster.name }}
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.cnpg.cluster.instances | default 1 }}
+  storage:
+    size: {{ .Values.cnpg.cluster.storage.size | default "10Gi" }}
+    {{- if .Values.cnpg.cluster.storage.storageClassName }}
+    storageClass: {{ .Values.cnpg.cluster.storage.storageClassName }}
+    {{- end }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.cnpg.cluster.appDatabase | default "sure" }}
+      owner: {{ .Values.cnpg.cluster.appUser | default "sure" }}
+      secret:
+        name: {{ .Values.cnpg.cluster.existingSecret | default (default (printf "%s-db-app" (include "sure.fullname" .)) .Values.cnpg.cluster.secret.name) }}
+      postInitSQL:
+        - {{ printf "GRANT CONNECT ON DATABASE postgres TO \"%s\";" (.Values.cnpg.cluster.appUser | default "sure") | quote }}
+        - {{ printf "ALTER ROLE \"%s\" CREATEDB;" (.Values.cnpg.cluster.appUser | default "sure") | quote }}
+  {{- $secretName := .Values.cnpg.cluster.existingSecret | default (default (printf "%s-db-app" (include "sure.fullname" .)) .Values.cnpg.cluster.secret.name) }}
+  {{- if not .Values.cnpg.cluster.existingSecret }}
+  enableSuperuserAccess: false
+  {{- end }}
+  monitoring:
+    enablePodMonitor: false
+{{- end }}
+---
+{{- if and .Values.cnpg.cluster.enabled (and (not .Values.cnpg.cluster.existingSecret) .Values.cnpg.cluster.secret.enabled) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ default (printf "%s-db-app" (include "sure.fullname" .)) .Values.cnpg.cluster.secret.name }}
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  {{ .Values.cnpg.cluster.secret.usernameKey | default "username" }}: {{ .Values.cnpg.cluster.appUser | default "sure" }}
+  {{ .Values.cnpg.cluster.secret.passwordKey | default "password" }}: {{ randAlphaNum 24 | quote }}
+{{- end }}

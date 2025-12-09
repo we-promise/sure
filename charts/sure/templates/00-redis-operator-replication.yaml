@@ -1,0 +1,35 @@
+{{- if and .Values.redisOperator.enabled .Values.redisOperator.managed.enabled }}
+{{- $name := .Values.redisOperator.name | default (printf "%s-redis" (include "sure.fullname" .)) -}}
+{{- $imgRepo := .Values.redisOperator.image.repository | default "quay.io/opstree/redis" -}}
+{{- $imgTag := .Values.redisOperator.image.tag | default "v7.2.4" -}}
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisReplication
+metadata:
+  name: {{ $name | quote }}
+  labels:
+    app.kubernetes.io/component: redis
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  clusterSize: {{ .Values.redisOperator.replicas | default 3 }}
+  kubernetesConfig:
+    image: {{ printf "%s:%s" $imgRepo $imgTag | quote }}
+    redisSecret:
+      name: {{ include "sure.redisSecretName" . }}
+      key: {{ include "sure.redisPasswordKey" . }}
+    {{- with .Values.redisOperator.workloadResources }}
+    resources:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- if .Values.redisOperator.persistence.enabled }}
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ .Values.redisOperator.persistence.size | default "8Gi" }}
+        {{- if .Values.redisOperator.persistence.className }}
+        storageClassName: {{ .Values.redisOperator.persistence.className }}
+        {{- end }}
+  {{- end }}
+{{- end }}

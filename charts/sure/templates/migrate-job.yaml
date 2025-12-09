@@ -1,0 +1,103 @@
+{{- if eq .Values.migrations.strategy "job" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "sure.fullname" . }}-migrate
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+  annotations:
+    # Run migrations after all chart resources (including CNPG Cluster/Services) are created
+    # so the DB can actually come up before we connect and run db:prepare.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.job.backoffLimit | default 3 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sure.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.migrations.job.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.migrations.job.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.migrations.job.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.image.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.image.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "sure.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.migrations.job.command | nindent 12 }}
+          args:
+            - |
+              {{ .Values.migrations.job.args | nindent 14 }}
+          env:
+            - name: RAILS_ENV
+              value: {{ .Values.rails.env | quote }}
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sure.appSecretName" . }}
+                  key: SECRET_KEY_BASE
+            {{- if .Values.rails.encryptionEnv.enabled }}
+            - name: ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sure.appSecretName" . }}
+                  key: ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - name: ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sure.appSecretName" . }}
+                  key: ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - name: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sure.appSecretName" . }}
+                  key: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+            {{- end }}
+            {{- $dburl := include "sure.databaseUrl" . -}}
+            {{- if $dburl }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sure.dbSecretName" . }}
+                  key: {{ include "sure.dbPasswordKey" . }}
+            - name: DATABASE_URL
+              value: {{ $dburl | quote }}
+            {{- end }}
+            {{- range $k, $v := .Values.rails.settings }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- range $k, $v := .Values.rails.extraEnv }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- with .Values.rails.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.rails.extraEnvFrom }}
+          envFrom:
+            {{- toYaml .Values.rails.extraEnvFrom | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.migrations.job.resources | nindent 12 }}
+  ttlSecondsAfterFinished: {{ .Values.migrations.job.ttlSecondsAfterFinished | default 600 }}
+{{- end }}
