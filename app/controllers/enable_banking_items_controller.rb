@@ -3,6 +3,10 @@ class EnableBankingItemsController < ApplicationController
   before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
 
+  def new
+    @enable_banking_item = Current.family.enable_banking_items.build
+  end
+
   def create
     @enable_banking_item = Current.family.enable_banking_items.build(enable_banking_item_params)
     @enable_banking_item.name ||= "Enable Banking Connection"
