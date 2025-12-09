@@ -1,6 +1,8 @@
 # Default values for the Sure Helm chart.
-# These are safe defaults for simple self-hosting on a single node.
-# For HA and larger environments, review and override accordingly via a custom values file.
+# These defaults target a small multi-node self-hosted cluster (for example, k3s with 3 nodes)
+# with in-cluster Postgres and Redis managed by operators. For true single-node setups or
+# external DB/Redis, see the README "Installation profiles" section and provide an override
+# values file.
 
 nameOverride: ""
 fullnameOverride: ""
@@ -162,6 +164,12 @@ redisSimple:
     enabled: false
     storageClass: ""
     size: 1Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
 
 # URLs constructed automatically when using in-cluster DB and Redis.
 # You can override DATABASE_URL and REDIS_URL explicitly via rails.extraEnv if using external services.

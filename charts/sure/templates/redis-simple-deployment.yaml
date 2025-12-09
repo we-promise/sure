@@ -24,11 +24,15 @@ spec:
         - name: redis
           image: {{ .Values.redisSimple.image.repository }}:{{ .Values.redisSimple.image.tag }}
           imagePullPolicy: {{ .Values.redisSimple.image.pullPolicy }}
-          {{- if .Values.redisSimple.auth.enabled }}
           command: ["sh", "-c"]
           args:
             - |
-              exec redis-server --appendonly no --save '' --requirepass "$REDIS_PASSWORD"
+              {{- if .Values.redisSimple.persistence.enabled }}
+              exec redis-server --appendonly yes --dir /data{{ if .Values.redisSimple.auth.enabled }} --requirepass "$REDIS_PASSWORD"{{ end }}
+              {{- else }}
+              exec redis-server --appendonly no --save ''{{ if .Values.redisSimple.auth.enabled }} --requirepass "$REDIS_PASSWORD"{{ end }}
+              {{- end }}
+          {{- if .Values.redisSimple.auth.enabled }}
           env:
             - name: REDIS_PASSWORD
               valueFrom:
@@ -40,7 +44,10 @@ spec:
             - name: redis
               containerPort: {{ .Values.redisSimple.service.port | default 6379 }}
               protocol: TCP
-          resources: {}
+          {{- with .Values.redisSimple.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             {{- if .Values.redisSimple.persistence.enabled }}
             - name: data

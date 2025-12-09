@@ -51,67 +51,7 @@ spec:
                 {{- toYaml .args | nindent 16 }}
               {{- end }}
               env:
-                - name: RAILS_ENV
-                  value: {{ $.Values.rails.env | quote }}
-                - name: SECRET_KEY_BASE
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ include "sure.appSecretName" $ }}
-                      key: SECRET_KEY_BASE
-                {{- if $.Values.rails.encryptionEnv.enabled }}
-                - name: ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ include "sure.appSecretName" $ }}
-                      key: ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-                - name: ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ include "sure.appSecretName" $ }}
-                      key: ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-                - name: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ include "sure.appSecretName" $ }}
-                      key: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-                {{- end }}
-                {{- $dburl := include "sure.databaseUrl" $ -}}
-                {{- if $dburl }}
-                - name: DB_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ include "sure.dbSecretName" $ }}
-                      key: {{ include "sure.dbPasswordKey" $ }}
-                - name: DATABASE_URL
-                  value: {{ $dburl | quote }}
-                {{- end }}
-                {{- $redis := include "sure.redisUrl" $ -}}
-                {{- if $redis }}
-                - name: REDIS_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ include "sure.redisSecretName" $ }}
-                      key: {{ include "sure.redisPasswordKey" $ }}
-                - name: REDIS_URL
-                  value: {{ $redis | quote }}
-                {{- end }}
-                {{- range $k, $v := $.Values.rails.settings }}
-                - name: {{ $k }}
-                  value: {{ $v | quote }}
-                {{- end }}
-                {{- range $k, $v := $.Values.rails.extraEnv }}
-                - name: {{ $k }}
-                  value: {{ $v | quote }}
-                {{- end }}
-                {{- with $.Values.rails.extraEnvVars }}
-                {{- toYaml . | nindent 16 }}
-                {{- end }}
-                {{- with .env }}
-                {{- range $k, $v := . }}
-                - name: {{ $k }}
-                  value: {{ $v | quote }}
-                {{- end }}
-                {{- end }}
+                {{- include "sure.env" (dict "ctx" $ "includeDatabase" true "includeRedis" true "extraEnv" .env) | nindent 16 }}
               {{- if or $.Values.rails.extraEnvFrom .envFrom }}
               envFrom:
                 {{- with $.Values.rails.extraEnvFrom }}

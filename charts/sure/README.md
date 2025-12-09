@@ -502,6 +502,13 @@ if kubectl get redisreplication.redis.redis.opstreelabs.in -n "$NAMESPACE" >/dev
   done
 fi
 
+if kubectl get redissentinels.redis.redis.opstreelabs.in -n "$NAMESPACE" >/dev/null 2>&1; then
+  echo "[sure-cleanup] Clearing finalizers from RedisSentinel CRs..."
+  for rs in $(kubectl get redissentinels.redis.redis.opstreelabs.in -n "$NAMESPACE" -o name); do
+    kubectl patch "$rs" -n "$NAMESPACE" -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  done
+fi
+
 if kubectl get pvc -n "$NAMESPACE" >/dev/null 2>&1; then
   echo "[sure-cleanup] Clearing finalizers from PVCs..."
   for pvc in $(kubectl get pvc -n "$NAMESPACE" -o name); do
@@ -513,6 +520,11 @@ fi
 if kubectl get redisreplication.redis.redis.opstreelabs.in -n "$NAMESPACE" >/dev/null 2>&1; then
   echo "[sure-cleanup] Deleting RedisReplication CRs (no wait)..."
   kubectl delete redisreplication.redis.redis.opstreelabs.in -n "$NAMESPACE" --all --wait=false || true
+fi
+
+if kubectl get redissentinels.redis.redis.opstreelabs.in -n "$NAMESPACE" >/dev/null 2>&1; then
+  echo "[sure-cleanup] Deleting RedisSentinel CRs (no wait)..."
+  kubectl delete redissentinels.redis.redis.opstreelabs.in -n "$NAMESPACE" --all --wait=false || true
 fi
 
 if kubectl get cluster.postgresql.cnpg.io -n "$NAMESPACE" >/dev/null 2>&1; then
