@@ -36,7 +36,7 @@ class BalanceSheet::ClassificationGroup
                     .transform_keys { |at| Accountable.from_type(at) }
                     .map do |accountable, account_rows|
                       BalanceSheet::AccountGroup.new(
-                        name: I18n.t("accounts.types.#{accountable.name.underscore}", default: accountable.display_name),
+                        name: I18n.t("accounts.types.#{accountable.name.underscore}", default: accountable.display_name, count: 2),
                         color: accountable.color,
                         accountable_type: accountable,
                         accounts: account_rows,

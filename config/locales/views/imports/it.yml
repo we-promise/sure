@@ -40,8 +40,8 @@ it:
         account_type_mapping_title: Assegna i tuoi tipi di conto
         category_mapping_description: Assegna tutte le categorie del tuo file importato alle categorie esistenti. Puoi aggiungerne di nuove o lasciare i movimenti senza categoria.
         category_mapping_title: Assegna le tue categorie
-        tag_mapping_description: Assegna tutti i tag del tuo file importato ai tag esistenti. Puoi aggiungerne di nuovi o lasciare i movimenti senza tag.
-        tag_mapping_title: Assegna i tuoi tag
+        tag_mapping_description: Assegna tutti i Tag del tuo file importato ai Tag esistenti. Puoi aggiungerne di nuovi o lasciare i movimenti senza Tag.
+        tag_mapping_title: Assegna i tuoi Tag
     uploads:
       show:
         description: Incolla o carica il tuo file CSV qui sotto. Prima di iniziare, leggi le istruzioni nella tabella sottostante.

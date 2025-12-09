@@ -13,8 +13,8 @@ it:
     trend_change:
       no_change: "nessun cambiamento"
     breadcrumbs:
-      merchants: Membri
-      import_export: Importazioni ed Esportazioni
+      merchants: Esercenti
+      import_export: Import/Export
       reports: Report
       guides: Guide
       profile: Informazioni del profilo

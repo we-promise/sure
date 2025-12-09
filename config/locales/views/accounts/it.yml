@@ -11,7 +11,7 @@ it:
     create:
       success: "Conto %{type} creato"
     destroy:
-      success: "Conto %{type} scheduled for deletion"
+      success: "Conto %{type} programmato per l’eliminazione"
       cannot_delete_linked: "Non è possibile eliminare un conto collegato. È necessario prima scollegarlo."
     empty:
       empty_message: Aggiungi un conto tramite connessione, importazione o inserimento manuale.
@@ -81,15 +81,31 @@ it:
       new_account: Nuovo conto
       new_account_group: "Nuovo %{account_group}"
     types:
-      depository: Conto
-      investment: Investimento
+      depository: 
+        one: Conto
+        other: Conti
+      investment: 
+        one: Investimento
+        other: Investimenti
       crypto: Crypto
-      property: Immobile
-      vehicle: Veicolo
-      other_asset: Altro bene
-      credit_card: Carta di credito
-      loan: Prestito
-      other_liability: Altra passività
+      property:
+        one: Immobile
+        other: Immobili
+      vehicle:
+        one: Veicolo
+        other: Veicoli
+      other_asset:
+        one: Altro bene
+        other: Altri beni
+      credit_card:
+        one: Carta di credito
+        other: Carte di credito
+      loan:
+        one: Prestito
+        other: Prestiti
+      other_liability:
+        one: Altra passività
+        other: Altre passività
     confirm_unlink:
       title: Disassocia conto dal provider?
       description_html: "Stai per scollegare <strong>%{account_name}</strong> da <strong>%{provider_name}</strong>. Verrà trasformato in conto manuale."

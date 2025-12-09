@@ -19,7 +19,7 @@ it:
     billings:
       show:
         page_title: Fatturazione
-        subscription_subtitle: Aggiorna il tuo abbonamento e i dettagli di fatturazione
+        subscription_subtitle: Aggiorna il tuo abbonamento e i detTagli di fatturazione
         subscription_title: Gestisci abbonamento
     preferences:
       show:
@@ -49,7 +49,7 @@ it:
           body: Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione è irreversibile.
           title: Eliminare l’account?
         confirm_reset:
-          body: Sei sicuro di voler reimpostare il tuo account? Verranno eliminati tutti i tuoi account, categorie, commercianti, tag e altri dati. Questa azione non può essere annullata.
+          body: Sei sicuro di voler reimpostare il tuo account? Verranno eliminati tutti i tuoi account, categorie, commercianti, Tag e altri dati. Questa azione non può essere annullata.
           title: Reimpostare l’account?
         confirm_reset_with_sample_data:
           body: Sei sicuro di voler reimpostare il tuo account e caricare dati di esempio? I tuoi dati attuali verranno eliminati e sostituiti con dati demo per esplorare Sure in sicurezza.
@@ -64,7 +64,7 @@ it:
         delete_account: Elimina account
         delete_account_warning: Eliminando il tuo account verranno rimossi definitivamente tutti i tuoi dati. Questa azione non può essere annullata.
         reset_account: Reimposta account
-        reset_account_warning: La reimpostazione eliminerà tutti i tuoi account, categorie, commercianti, tag e altri dati, mantenendo intatto solo il tuo profilo utente.
+        reset_account_warning: La reimpostazione eliminerà tutti i tuoi account, categorie, commercianti, Tag e altri dati, mantenendo intatto solo il tuo profilo utente.
         reset_account_with_sample_data: Reimposta e carica dati demo
         reset_account_with_sample_data_warning: Elimina tutti i dati esistenti e carica un nuovo set di dati di esempio per esplorare l’app con un ambiente precompilato.
         email: Email
@@ -87,7 +87,7 @@ it:
       show:
         page_title: Sicurezza
     settings_nav:
-      accounts_label: Account
+      accounts_label: Conti
       advanced_section_title: Avanzate
       ai_prompts_label: Prompt AI
       api_key_label: Chiavi API
@@ -97,7 +97,7 @@ it:
       general_section_title: Generale
       imports_label: Import/Export
       logout: Esci
-      merchants_label: Membri della famiglia
+      merchants_label: Esercenti
       guides_label: Guide
       other_section_title: Altro
       preferences_label: Preferenze
@@ -106,7 +106,7 @@ it:
       rules_label: Regole
       security_label: Sicurezza
       self_hosting_label: Self-Hosting
-      tags_label: Tag
+      Tags_label: Tag
       transactions_section_title: Movimenti
       whats_new_label: Novità
       api_keys_label: Chiavi API

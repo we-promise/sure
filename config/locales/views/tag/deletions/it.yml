@@ -6,8 +6,8 @@ it:
         deleted: Tag eliminato
       new:
         delete_and_leave_uncategorized: Elimina "%{tag_name}"
-        delete_and_recategorize: Elimina "%{tag_name}" e assegna un nuovo tag
-        delete_tag: Eliminare il tag?
-        explanation: "%{tag_name} verrà rimosso dai movimenti ed altre entità taggabili. Invece di lasciarle senza tag, puoi anche assegnarne un nuovo qui sotto"
-        replacement_tag_prompt: Seleziona tag
+        delete_and_recategorize: Elimina "%{tag_name}" e assegna un nuovo Tag
+        delete_tag: Eliminare il Tag?
+        explanation: "%{tag_name} verrà rimosso dai movimenti ed altre entità taggabili. Invece di lasciarle senza Tag, puoi anche assegnarne un nuovo qui sotto"
+        replacement_tag_prompt: Seleziona Tag
         tag: Tag

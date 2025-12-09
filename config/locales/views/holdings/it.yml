@@ -22,7 +22,7 @@ it:
     show:
       avg_cost_label: Costo medio
       current_market_price_label: Prezzo corrente di mercato
-      delete: Canella
+      delete: Cancella
       delete_subtitle: Questo cancellerà le posizioni e tutte le operazioni associate su questo conto. Questa azione non può essere annullata.
       delete_title: Cancella posizioni
       history: Storico

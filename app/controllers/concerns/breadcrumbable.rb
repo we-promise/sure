@@ -10,9 +10,10 @@ module Breadcrumbable
     def set_breadcrumbs
       key = "shared.breadcrumbs.#{controller_name}"
       label = I18n.t(key, default: controller_name.titleize)
+      home_label = I18n.t("shared.breadcrumbs.home", default: "Home")
 
       @breadcrumbs = [
-        [ "Home", root_path ],
+        [ home_label, root_path ],
         [ label, nil ]
       ]
     end

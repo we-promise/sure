@@ -51,9 +51,13 @@
     </div>
 
     <div class="my-2">
+      <%
+        group_type = account_group.accountable_type.name.underscore
+        account_group_name = I18n.t("accounts.types.#{group_type}", count: 1)
+      %>
       <%= render DS::Link.new(
       href: new_polymorphic_path(account_group.key, step: "method_select"),
-      text: t("accounts.sidebar.new_account_group", account_group: account_group.name.downcase.singularize),
+      text: t("accounts.sidebar.new_account_group", account_group: account_group_name.downcase),
       icon: "plus",
       full_width: true,
       variant: "ghost",

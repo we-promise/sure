@@ -1,5 +1,5 @@
 ---
-en:
+it:
   email_confirmation_mailer:
     confirmation_email:
       body: Recentemente hai richiesto di modificare il tuo indirizzo e-mail. Clicca il bottone

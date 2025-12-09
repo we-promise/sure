@@ -2,26 +2,26 @@
 it:
   family_merchants:
     create:
-      error: 'Errore durante la creazione del nuovo membro: %{error}'
-      success: Nuovo membro creato con successo
+      error: 'Errore durante la creazione del nuovo esercente: %{error}'
+      success: Nuovo esercente creato con successo
     destroy:
-      success: Membro eliminato con successo
+      success: Esercente eliminato con successo
     edit:
-      title: Modifica membro
+      title: Modifica esercente
     form:
-      name_placeholder: Nome del membro
+      name_placeholder: Nome dell'esercente
     index:
-      empty: Nessun membro presente
-      new: Nuovo membro
-      title: Membri
+      empty: Nessun esercente presente
+      new: Nuovo Esercente
+      title: Esercenti
     merchant:
-      confirm_accept: Elimina membro
-      confirm_body: Sei sicuro di voler eliminare questo membro? Rimuoverlo
+      confirm_accept: Elimina esercente
+      confirm_body: Sei sicuro di voler eliminare questo esercente? Rimuoverlo
         scollegarà tutte le transazioni associate e potrebbe influire sui tuoi report.
-      confirm_title: Eliminare il membro?
-      delete: Elimina membro
-      edit: Modifica membro
+      confirm_title: Eliminare l'esercente?
+      delete: Elimina esercente
+      edit: Modifica esercente
     new:
-      title: Nuovo membro
+      title: Nuovo esercente
     update:
-      success: Membro aggiornato con successo
+      success: Esercente aggiornato con successo

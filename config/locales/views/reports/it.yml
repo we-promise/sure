@@ -38,7 +38,7 @@ it:
         over: Fuori budget
     trends:
       title: Andamenti e approfondimenti
-      monthly_breakdown: Dettaglio mensile
+      monthly_breakdown: DetTaglio mensile
       month: Mese
       income: Entrate
       expenses: Uscite
@@ -66,19 +66,19 @@ it:
       add_transaction: Aggiungi movimento
       add_account: Aggiungi account
     transactions_breakdown:
-      title: Dettaglio movimenti
+      title: DetTaglio movimenti
       no_transactions: Nessun movimento trovato per il periodo e i filtri selezionati
       filters:
         title: Filtri
         category: Categoria
         account: Account
-        tag: Tag
+        Tag: Tag
         amount_min: Importo minimo
         amount_max: Importo massimo
         date_range: Intervallo date
         all_categories: Tutte le categorie
         all_accounts: Tutti gli account
-        all_tags: Tutti i tag
+        all_Tags: Tutti i Tag
         apply: Applica filtri
         clear: Cancella filtri
       sort:
@@ -100,9 +100,9 @@ it:
         income: Entrate
         uncategorized: Senza categoria
         transactions: transazioni
-        percentage: "% del totale"
+        percenTage: "% del totale"
       pagination:
-        showing: Mostrando %{count} transazioni
+        showing: "%{count} transazioni visualizzate"
         previous: Precedente
         next: Successiva
     google_sheets_instructions:

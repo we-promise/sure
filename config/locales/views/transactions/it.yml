@@ -46,7 +46,7 @@ it:
       edit_categories: Modifica categorie
       edit_imports: Modifica importazioni
       edit_merchants: Modifica commercianti
-      edit_tags: Modifica tag
+      edit_tags: Modifica Tag
       import: Importa
     index:
       transaction:
@@ -96,7 +96,7 @@ it:
       new_rule: Nuova regola
       edit_rules: Modifica regole
       edit_categories: Modifica categorie
-      edit_tags: Modifica tag
+      edit_tags: Modifica Tag
       edit_merchants: Modifica membri
       edit_imports: Modifica importazioni
       import: Importa
