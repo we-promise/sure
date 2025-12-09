@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/auth_tokens.dart';
@@ -45,18 +48,17 @@ class AuthService {
         final tokens = AuthTokens.fromJson(responseData);
         await _saveTokens(tokens);
 
-        // Store user data
+        // Store user data - parse once and reuse
+        User? user;
         if (responseData['user'] != null) {
-          final user = User.fromJson(responseData['user']);
+          user = User.fromJson(responseData['user']);
           await _saveUser(user);
         }
 
         return {
           'success': true,
           'tokens': tokens,
-          'user': responseData['user'] != null
-              ? User.fromJson(responseData['user'])
-              : null,
+          'user': user,
         };
       } else if (response.statusCode == 401 && responseData['mfa_required'] == true) {
         return {
@@ -70,10 +72,41 @@ class AuthService {
           'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Login failed',
         };
       }
-    } catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      debugPrint('Login SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e, stackTrace) {
+      debugPrint('Login TimeoutException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Request timed out',
+      };
+    } on HttpException catch (e, stackTrace) {
+      debugPrint('Login HttpException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } on FormatException catch (e, stackTrace) {
+      debugPrint('Login FormatException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } on TypeError catch (e, stackTrace) {
+      debugPrint('Login TypeError: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } catch (e, stackTrace) {
+      debugPrint('Login unexpected error: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'An unexpected error occurred',
       };
     }
   }
@@ -119,18 +152,17 @@ class AuthService {
         final tokens = AuthTokens.fromJson(responseData);
         await _saveTokens(tokens);
 
-        // Store user data
+        // Store user data - parse once and reuse
+        User? user;
         if (responseData['user'] != null) {
-          final user = User.fromJson(responseData['user']);
+          user = User.fromJson(responseData['user']);
           await _saveUser(user);
         }
 
         return {
           'success': true,
           'tokens': tokens,
-          'user': responseData['user'] != null
-              ? User.fromJson(responseData['user'])
-              : null,
+          'user': user,
         };
       } else {
         return {
@@ -138,10 +170,41 @@ class AuthService {
           'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Signup failed',
         };
       }
-    } catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      debugPrint('Signup SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e, stackTrace) {
+      debugPrint('Signup TimeoutException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Request timed out',
+      };
+    } on HttpException catch (e, stackTrace) {
+      debugPrint('Signup HttpException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } on FormatException catch (e, stackTrace) {
+      debugPrint('Signup FormatException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } on TypeError catch (e, stackTrace) {
+      debugPrint('Signup TypeError: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } catch (e, stackTrace) {
+      debugPrint('Signup unexpected error: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'An unexpected error occurred',
       };
     }
   }
@@ -181,10 +244,41 @@ class AuthService {
           'error': responseData['error'] ?? 'Token refresh failed',
         };
       }
-    } catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      debugPrint('RefreshToken SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e, stackTrace) {
+      debugPrint('RefreshToken TimeoutException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Request timed out',
+      };
+    } on HttpException catch (e, stackTrace) {
+      debugPrint('RefreshToken HttpException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } on FormatException catch (e, stackTrace) {
+      debugPrint('RefreshToken FormatException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } on TypeError catch (e, stackTrace) {
+      debugPrint('RefreshToken TypeError: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Invalid response from server',
+      };
+    } catch (e, stackTrace) {
+      debugPrint('RefreshToken unexpected error: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'An unexpected error occurred',
       };
     }
   }
