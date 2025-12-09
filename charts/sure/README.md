@@ -11,7 +11,7 @@ Official Helm chart for deploying the Sure Rails application on Kubernetes. It s
 - Optional CronJobs for custom tasks
 - Optional subcharts
   - CloudNativePG (operator) + Cluster CR for PostgreSQL with HA support
-  - Redis HA (dandydev/redis-ha with Sentinel)
+  - OT-CONTAINER-KIT redis-operator for Redis HA (replication by default, optional Sentinel)
 - Security best practices: runAsNonRoot, readOnlyRootFilesystem, optional existingSecret, no hardcoded secrets
 - Scalability
   - Replicas (web/worker), resources, topology spread constraints
@@ -25,14 +25,13 @@ Official Helm chart for deploying the Sure Rails application on Kubernetes. It s
 - For subcharts: add repositories first
   ```sh
   helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
-  helm repo add dandydev https://dandydev.github.io/charts
   helm repo add ot-helm https://ot-container-kit.github.io/helm-charts
   helm repo update
   ```
 
 ## Quickstart (turnkey self-hosting)
 
-This installs CNPG operator + a Postgres cluster and Redis HA (Sentinel) by default. It also creates an app Secret if you provide values under `rails.secret.values` (recommended for quickstart only; prefer an existing Secret or External Secrets in production).
+This installs CNPG operator + a Postgres cluster and Redis managed by the OT redis-operator (replication mode by default). It also creates an app Secret if you provide values under `rails.secret.values` (recommended for quickstart only; prefer an existing Secret or External Secrets in production).
 
 Important: For production stability, use immutable image tags (for example, set `image.tag=v1.2.3`) instead of `latest`.
 
@@ -52,13 +51,17 @@ Expose the app via an Ingress (see values) or `kubectl port-forward svc/sure 808
 
 ## Using external Postgres/Redis
 
-Disable the bundled subcharts and set URLs explicitly.
+Disable the bundled CNPG/Redis resources and set URLs explicitly.
 
 ```yaml
 cnpg:
   enabled: false
 
-redis-ha:
+redisOperator:
+  managed:
+    enabled: false
+
+redisSimple:
   enabled: false
 
 rails:
@@ -192,14 +195,11 @@ Additional default hardening:
 
 ## Redis URL and authentication
 
-- When `redis-ha` is enabled with auth, this chart constructs `REDIS_URL` as:
-  - `redis://default:$(REDIS_PASSWORD)@<release>-redis-ha-haproxy.<namespace>.svc.cluster.local:6379/0`
-- When the OT redis-operator (Sentinel) is used via this chart (see `redisOperator.managed.enabled=true`), `REDIS_URL` resolves to the operator's stable master service:
+- When the OT redis-operator is used via this chart (see `redisOperator.managed.enabled=true`), `REDIS_URL` resolves to the operator's stable master service:
   - `redis://default:$(REDIS_PASSWORD)@<name>-redis-master.<namespace>.svc.cluster.local:6379/0` (where `<name>` defaults to `<fullname>-redis` but is overrideable via `redisOperator.name`)
 - The `default` username is required with Redis 6+ ACLs. If you explicitly set `REDIS_URL` under `rails.extraEnv`, your value takes precedence.
-- The Redis password is taken from the `redis-ha` Secret (or your `rails.existingSecret` when using external Redis as configured via `redis.passwordKey`).
-- If you are supplying your own Secret to the redis‑ha subchart, set `redis-ha.existingSecret` and, if the password key doesn’t match the subchart’s default, set `redis-ha.existingSecretPasswordKey`.
-- If you prefer a simple (non‑HA) in‑cluster Redis, disable `redis-ha.enabled` and enable `redisSimple.enabled`. The chart will deploy a single Redis Pod + Service and wire `REDIS_URL` accordingly. Provide a password via `redisSimple.auth.existingSecret` (recommended) or rely on your app secret mapping.
+- The Redis password is taken from `sure.redisSecretName` (typically your app Secret, e.g. `sure-secrets`) using the key returned by `sure.redisPasswordKey` (default `redis-password`).
+- If you prefer a simple (non‑HA) in‑cluster Redis, disable the operator-managed Redis (`redisOperator.managed.enabled=false`) and enable `redisSimple.enabled`. The chart will deploy a single Redis Pod + Service and wire `REDIS_URL` accordingly. Provide a password via `redisSimple.auth.existingSecret` (recommended) or rely on your app secret mapping.
 
 ### Using the OT redis-operator (Sentinel)
 
@@ -233,8 +233,55 @@ redisOperator:
 Notes:
 - The operator master service is `<name>-redis-master.<ns>.svc.cluster.local:6379`.
 - The CR references your existing password secret via `kubernetesConfig.redisSecret { name, key }`.
-- Provider precedence for auto-wiring is: explicit `rails.extraEnv.REDIS_URL` → `redisOperator.managed` → `redis-ha` → `redisSimple`.
+- Provider precedence for auto-wiring is: explicit `rails.extraEnv.REDIS_URL` → `redisOperator.managed` → `redisSimple`.
 - Only one in-cluster Redis provider should be enabled at a time to avoid ambiguity.
+
+## Example app Secret (sure-secrets)
+
+You will typically manage secrets via an external mechanism (External Secrets, Sealed Secrets, etc.), but for reference, below is an example `Secret` that provides the keys this chart expects by default:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sure-secrets
+type: Opaque
+stringData:
+  # Rails secrets
+  SECRET_KEY_BASE: "REPLACE_ME_WITH_64_HEX_CHARS"
+
+  # Active Record Encryption keys (optional but recommended when using encryption features)
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: "REPLACE_ME"
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: "REPLACE_ME"
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: "REPLACE_ME"
+
+  # Redis password used by operator-managed or simple Redis
+  redis-password: "super-secret-redis-password"
+
+  # Optional: CNPG bootstrap user/password if you are not letting the chart generate them
+  # username: "sure"
+  # password: "super-secret-db-password"
+```
+
+You can then point the chart at this Secret via:
+
+```yaml
+rails:
+  existingSecret: sure-secrets
+
+redisOperator:
+  managed:
+    enabled: true
+  auth:
+    existingSecret: sure-secrets
+    passwordKey: redis-password
+
+cnpg:
+  cluster:
+    existingSecret: sure-secrets   # if you are reusing the same Secret for DB creds
+    secret:
+      enabled: false               # do not generate a second Secret when using existingSecret
+```
 
 Environment variable ordering for shells:
 
