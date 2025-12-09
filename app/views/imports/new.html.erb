@@ -105,6 +105,26 @@
           </li>
         <% end %>
 
+        <% if params[:type].nil? || params[:type] == "RuleImport" %>
+          <li>
+            <%= button_to imports_path(import: { type: "RuleImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
+              <div class="flex items-center gap-2">
+                <div class="bg-green-500/5 rounded-md w-8 h-8 flex items-center justify-center">
+                  <span class="text-green-500">
+                    <%= icon("workflow", color: "current") %>
+                  </span>
+                </div>
+                <span class="text-sm text-primary group-hover:text-secondary">
+                  <%= t(".import_rules") %>
+                </span>
+              </div>
+              <%= icon("chevron-right") %>
+            <% end %>
+
+            <%= render "shared/ruler" %>
+          </li>
+        <% end %>
+
         <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "MintImport" || params[:type] == "TransactionImport") %>
           <li>
             <%= button_to imports_path(import: { type: "MintImport" }), class: "flex items-center justify-between p-4 group w-full", data: { turbo: false } do %>

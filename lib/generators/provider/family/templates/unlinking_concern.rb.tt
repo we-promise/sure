@@ -1,0 +1,49 @@
+# frozen_string_literal: true
+
+module <%= class_name %>Item::Unlinking
+  # Concern that encapsulates unlinking logic for a <%= class_name %> item.
+  extend ActiveSupport::Concern
+
+  # Idempotently remove all connections between this <%= class_name %> item and local accounts.
+  # - Detaches any AccountProvider links for each <%= class_name %>Account
+  # - Detaches Holdings that point at the AccountProvider links
+  # Returns a per-account result payload for observability
+  def unlink_all!(dry_run: false)
+    results = []
+
+    <%= file_name %>_accounts.find_each do |provider_account|
+      links = AccountProvider.where(provider_type: "<%= class_name %>Account", provider_id: provider_account.id).to_a
+      link_ids = links.map(&:id)
+      result = {
+        provider_account_id: provider_account.id,
+        name: provider_account.name,
+        provider_link_ids: link_ids
+      }
+      results << result
+
+      next if dry_run
+
+      begin
+        ActiveRecord::Base.transaction do
+          # Detach holdings for any provider links found
+          if link_ids.any?
+            Holding.where(account_provider_id: link_ids).update_all(account_provider_id: nil)
+          end
+
+          # Destroy all provider links
+          links.each do |ap|
+            ap.destroy!
+          end
+        end
+      rescue StandardError => e
+        Rails.logger.warn(
+          "<%= class_name %>Item Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
+        )
+        # Record error for observability; continue with other accounts
+        result[:error] = e.message
+      end
+    end
+
+    results
+  end
+end

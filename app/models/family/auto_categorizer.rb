@@ -11,7 +11,7 @@ class Family::AutoCategorizer
 
     if scope.none?
       Rails.logger.info("No transactions to auto-categorize for family #{family.id}")
-      return
+      return 0
     else
       Rails.logger.info("Auto-categorizing #{scope.count} transactions for family #{family.id}")
     end
@@ -20,7 +20,7 @@ class Family::AutoCategorizer
 
     if categories_input.empty?
       Rails.logger.error("Cannot auto-categorize transactions for family #{family.id}: no categories available")
-      return
+      return 0
     end
 
     result = llm_provider.auto_categorize(
@@ -31,23 +31,28 @@ class Family::AutoCategorizer
 
     unless result.success?
       Rails.logger.error("Failed to auto-categorize transactions for family #{family.id}: #{result.error.message}")
-      return
+      return 0
     end
 
+    modified_count = 0
     scope.each do |transaction|
       auto_categorization = result.data.find { |c| c.transaction_id == transaction.id }
 
       category_id = categories_input.find { |c| c[:name] == auto_categorization&.category_name }&.dig(:id)
 
       if category_id.present?
-        transaction.enrich_attribute(
+        was_modified = transaction.enrich_attribute(
           :category_id,
           category_id,
           source: "ai"
         )
         transaction.lock_attr!(:category_id)
+        # enrich_attribute returns true if the transaction was actually modified
+        modified_count += 1 if was_modified
       end
     end
+
+    modified_count
   end
 
   private
