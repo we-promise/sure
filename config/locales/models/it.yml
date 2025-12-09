@@ -17,6 +17,10 @@ it:
       label_short: "MTD"
       label: "Mese corrente"
       comparison_label: "vs. inizio mese"
+    last_month:
+      label_short: "LM"
+      label: "Mese scorso"
+      comparison_label: "vs. mese scorso"
     last_30_days:
       label_short: "30G"
       label: "Ultimi 30 giorni"

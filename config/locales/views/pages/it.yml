@@ -17,6 +17,7 @@ it:
       balance_sheet:
         asset: Attività
         liability: Passività
+        title: "Stato patrimoniale"
         no_items: "Ancora nessun %{name}"
         add_accounts: "Aggiunti i tuoi %{name} per visualizzare un riepilogo completo"
         name: Nome

@@ -17,6 +17,7 @@ en:
       balance_sheet:
         asset: Assets
         liability: Liabilities
+        title: "Balance Sheet"
         no_items: "No %{name} yet"
         add_accounts: "Add your %{name} accounts to see a full breakdown"
         name: Name

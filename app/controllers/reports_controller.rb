@@ -37,6 +37,9 @@ class ReportsController < ApplicationController
     # Transactions breakdown
     @transactions = build_transactions_breakdown
 
+    # Build reports sections for collapsible/reorderable UI
+    @reports_sections = build_reports_sections
+
     @breadcrumbs = [ [ "Home", root_path ], [ t("shared.breadcrumbs.reports", default: "Reports"), nil ] ]
   end
 

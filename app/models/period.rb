@@ -22,6 +22,9 @@ class Period
     "current_month" => {
       date_range: -> { [ Date.current.beginning_of_month, Date.current ] }
     },
+    "last_month" => {
+      date_range: -> { [ 1.month.ago.beginning_of_month.to_date, 1.month.ago.end_of_month.to_date ] }
+    },
     "last_30_days" => {
       date_range: -> { [ 30.days.ago.to_date, Date.current ] }
     },
