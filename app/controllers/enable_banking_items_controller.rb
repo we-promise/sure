@@ -155,7 +155,7 @@ class EnableBankingItemsController < ApplicationController
     rescue Provider::EnableBanking::EnableBankingError => e
       if e.message.include?("REDIRECT_URI_NOT_ALLOWED")
         Rails.logger.error "Enable Banking redirect URI not allowed: #{e.message}"
-        redirect_to settings_providers_path, alert: t(".redirect_uri_not_allowed", default: "Redirect not allowew. Configure `%{callback_url}` in your Enable Banking application settings.", callback_url: enable_banking_callback_url)
+        redirect_to settings_providers_path, alert: t(".redirect_uri_not_allowed", default: "Redirect not allowed. Configure `%{callback_url}` in your Enable Banking application settings.", callback_url: enable_banking_callback_url)
       else
         Rails.logger.error "Enable Banking authorization error: #{e.message}"
         redirect_to settings_providers_path, alert: t(".authorization_failed", default: "Failed to start authorization: %{message}", message: e.message)
