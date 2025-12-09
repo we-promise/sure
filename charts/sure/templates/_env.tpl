@@ -85,8 +85,4 @@ The helper always injects:
 - name: {{ $k }}
   value: {{ $v | quote }}
 {{- end }}
-{{- if $extraEnvFrom }}
-envFrom:
-  {{- toYaml $extraEnvFrom | nindent 2 }}
-{{- end }}
 {{- end }}

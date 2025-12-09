@@ -48,17 +48,17 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.redisSimple.persistence.enabled }}
           volumeMounts:
-            {{- if .Values.redisSimple.persistence.enabled }}
             - name: data
               mountPath: /data
-            {{- end }}
+          {{- end }}
+      {{- if .Values.redisSimple.persistence.enabled }}
       volumes:
-        {{- if .Values.redisSimple.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "sure.fullname" . }}-redis
-        {{- end }}
+      {{- end }}
 ---
 {{- if .Values.redisSimple.persistence.enabled }}
 apiVersion: v1

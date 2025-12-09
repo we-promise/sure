@@ -42,8 +42,7 @@ spec:
           command:
             {{- toYaml .Values.simplefin.encryption.backfill.command | nindent 12 }}
           args:
-            - |
-              {{ .Values.simplefin.encryption.backfill.args | nindent 14 }}
+            - {{ .Values.simplefin.encryption.backfill.args | quote }}
           env:
             {{- include "sure.env" (dict "ctx" . "includeDatabase" true "includeRedis" true) | nindent 12 }}
             # Expose dry-run also via ENV for the Rake task convenience
