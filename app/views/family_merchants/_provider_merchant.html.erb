@@ -1,0 +1,24 @@
+<%# locals: (provider_merchant:) %>
+
+<tr class="border-b border-subdued last:border-0 hover:bg-surface-hover">
+  <td class="py-3 px-4 text-sm text-primary">
+    <div class="flex w-full items-center gap-2.5">
+      <% if provider_merchant.logo_url %>
+        <div class="w-8 h-8 rounded-full flex justify-center items-center">
+          <%= image_tag provider_merchant.logo_url, class: "w-8 h-8 rounded-full" %>
+        </div>
+      <% else %>
+        <div class="w-8 h-8 rounded-full flex items-center justify-center bg-container-inset text-secondary text-sm font-medium">
+          <%= provider_merchant.name&.first&.upcase || "?" %>
+        </div>
+      <% end %>
+
+      <p class="font-medium truncate">
+        <%= provider_merchant.name %>
+      </p>
+    </div>
+  </td>
+  <td class="py-3 px-4 text-sm text-secondary align-middle">
+    <%= provider_merchant.source&.titleize %>
+  </td>
+</tr>

@@ -48,6 +48,12 @@ en:
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
+        json_mode_label: JSON Mode
+        json_mode_auto: Auto (recommended)
+        json_mode_strict: Strict (best for thinking models)
+        json_mode_none: None (best for standard models)
+        json_mode_json_object: JSON Object
+        json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

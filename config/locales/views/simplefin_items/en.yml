@@ -31,7 +31,9 @@ en:
         placeholder: "Paste your SimpleFin setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
     complete_account_setup:
-      success: SimpleFin accounts have been set up successfully! Your transactions and holdings are being imported in the background.
+      all_skipped: "All accounts were skipped. No accounts were created."
+      no_accounts: "No accounts to set up."
+      success: "Successfully created %{count} SimpleFIN account(s)! Your transactions and holdings are being imported in the background."
     simplefin_item:
       add_new: Add new connection
       confirm_accept: Delete connection

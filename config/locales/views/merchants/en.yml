@@ -14,6 +14,15 @@ en:
       empty: No merchants yet
       new: New merchant
       title: Merchants
+      family_title: Family merchants
+      family_empty: No family merchants yet
+      provider_title: Provider merchants
+      provider_empty: No provider merchants linked to this family yet
+      provider_read_only: Provider merchants are synced from your connected institutions. They cannot be edited here.
+      table:
+        merchant: Merchant
+        actions: Actions
+        source: Source
     merchant:
       confirm_accept: Delete merchant
       confirm_body: Are you sure you want to delete this merchant? Removing this merchant

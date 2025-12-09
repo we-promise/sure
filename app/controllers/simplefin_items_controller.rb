@@ -158,6 +158,7 @@ class SimplefinItemsController < ApplicationController
   def setup_accounts
     @simplefin_accounts = @simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
     @account_type_options = [
+      [ "Skip this account", "skip" ],
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
@@ -223,8 +224,38 @@ class SimplefinItemsController < ApplicationController
       @simplefin_item.update!(sync_start_date: params[:sync_start_date])
     end
 
+    # Valid account types for this provider (plus OtherAsset which SimpleFIN UI allows)
+    valid_types = Provider::SimplefinAdapter.supported_account_types + [ "OtherAsset" ]
+
+    created_accounts = []
+    skipped_count = 0
+
     account_types.each do |simplefin_account_id, selected_type|
-      simplefin_account = @simplefin_item.simplefin_accounts.find(simplefin_account_id)
+      # Skip accounts marked as "skip"
+      if selected_type == "skip" || selected_type.blank?
+        skipped_count += 1
+        next
+      end
+
+      # Validate account type is supported
+      unless valid_types.include?(selected_type)
+        Rails.logger.warn("Invalid account type '#{selected_type}' submitted for SimpleFIN account #{simplefin_account_id}")
+        next
+      end
+
+      # Find account - scoped to this item to prevent cross-item manipulation
+      simplefin_account = @simplefin_item.simplefin_accounts.find_by(id: simplefin_account_id)
+      unless simplefin_account
+        Rails.logger.warn("SimpleFIN account #{simplefin_account_id} not found for item #{@simplefin_item.id}")
+        next
+      end
+
+      # Skip if already linked (race condition protection)
+      if simplefin_account.account.present?
+        Rails.logger.info("SimpleFIN account #{simplefin_account_id} already linked, skipping")
+        next
+      end
+
       selected_subtype = account_subtypes[simplefin_account_id]
 
       # Default subtype for CreditCard since it only has one option
@@ -237,15 +268,23 @@ class SimplefinItemsController < ApplicationController
         selected_subtype
       )
       simplefin_account.update!(account: account)
+      created_accounts << account
     end
 
     # Clear pending status and mark as complete
     @simplefin_item.update!(pending_account_setup: false)
 
     # Trigger a sync to process the imported SimpleFin data (transactions and holdings)
-    @simplefin_item.sync_later
+    @simplefin_item.sync_later if created_accounts.any?
 
-    flash[:notice] = t(".success")
+    # Set appropriate flash message
+    if created_accounts.any?
+      flash[:notice] = t(".success", count: created_accounts.count)
+    elsif skipped_count > 0
+      flash[:notice] = t(".all_skipped")
+    else
+      flash[:notice] = t(".no_accounts")
+    end
     if turbo_frame_request?
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
@@ -276,7 +315,7 @@ class SimplefinItemsController < ApplicationController
         )
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path, notice: t(".success"), status: :see_other
+      redirect_to accounts_path, status: :see_other
     end
   end
 

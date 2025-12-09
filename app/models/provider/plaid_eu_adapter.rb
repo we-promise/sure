@@ -45,6 +45,9 @@ class Provider::PlaidEuAdapter
           env_key: "PLAID_EU_ENV",
           default: "sandbox",
           description: "Plaid environment: sandbox, development, or production"
+
+    # Plaid EU requires both client_id and secret to be configured
+    configured_check { get_value(:client_id).present? && get_value(:secret).present? }
   end
 
   # Thread-safe lazy loading of Plaid EU configuration

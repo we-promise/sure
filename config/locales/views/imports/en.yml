@@ -17,6 +17,11 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+      rule_import:
+        description: Configure your rule import. Rules will be created or updated based
+          on the CSV data.
+        process_button: Process Rules
+        process_help: Click the button below to process your CSV and generate rule rows.
       show:
         description: Select the columns that correspond to each field in your CSV.
         title: Configure your import
@@ -88,6 +93,7 @@ en:
       import_categories: Import categories
       import_mint: Import from Mint
       import_portfolio: Import investments
+      import_rules: Import rules
       import_transactions: Import transactions
       resume: Resume %{type}
       sources: Sources

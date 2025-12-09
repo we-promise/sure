@@ -47,5 +47,20 @@
                       inputmode: "text",
                       disabled: ENV["OPENAI_MODEL"].present?,
                       data: { "auto-submit-form-target": "auto" } %>
+
+  <%= form.select :openai_json_mode,
+                  options_for_select(
+                    [
+                      [t(".json_mode_auto"), ""],
+                      [t(".json_mode_strict"), "strict"],
+                      [t(".json_mode_none"), "none"],
+                      [t(".json_mode_json_object"), "json_object"]
+                    ],
+                    Setting.openai_json_mode
+                  ),
+                  { label: t(".json_mode_label") },
+                  { disabled: ENV["LLM_JSON_MODE"].present?,
+                    data: { "auto-submit-form-target": "auto" } } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
   <% end %>
 </div>

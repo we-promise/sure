@@ -6,6 +6,7 @@ class FamilyMerchantsController < ApplicationController
 
     # Show all merchants for this family
     @family_merchants = Current.family.merchants.alphabetically
+    @provider_merchants = Current.family.assigned_merchants.where(type: "ProviderMerchant").alphabetically
 
     render layout: "settings"
   end
