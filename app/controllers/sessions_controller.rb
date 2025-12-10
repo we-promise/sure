@@ -24,11 +24,20 @@ class SessionsController < ApplicationController
   end
 
   def create
-    if user = User.authenticate_by(email: params[:email], password: params[:password])
+    user = User.authenticate_by(email: params[:email], password: params[:password])
+
+    unless AuthConfig.local_login_allowed_for?(user)
+      redirect_to new_session_path, alert: t("sessions.create.local_login_disabled")
+      return
+    end
+
+    if user
       if user.otp_required?
+        log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
         redirect_to verify_mfa_path
       else
+        log_super_admin_override_login(user)
         @session = create_session_for(user)
         redirect_to root_path
       end
@@ -90,6 +99,16 @@ class SessionsController < ApplicationController
   private
     def set_session
       @session = Current.user.sessions.find(params[:id])
+    end
+
+    def log_super_admin_override_login(user)
+      # Only log when local login is globally disabled but an emergency
+      # super-admin override is enabled.
+      return if AuthConfig.local_login_enabled?
+      return unless AuthConfig.local_admin_override_enabled?
+      return unless user&.super_admin?
+
+      Rails.logger.info("[AUTH] Super admin override login: user_id=#{user.id} email=#{user.email}")
     end
 
     def demo_host_match?(demo)
