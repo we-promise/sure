@@ -1,4 +1,8 @@
 class Rule::ConditionFilter::TransactionNotes < Rule::ConditionFilter
+  def type
+    "text"
+  end
+
   def prepare(scope)
     scope.with_entry
   end

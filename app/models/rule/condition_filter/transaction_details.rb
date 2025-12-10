@@ -1,4 +1,8 @@
 class Rule::ConditionFilter::TransactionDetails < Rule::ConditionFilter
+  def type
+    "text"
+  end
+
   def prepare(scope)
     scope
   end
@@ -12,10 +16,10 @@ class Rule::ConditionFilter::TransactionDetails < Rule::ConditionFilter
       sanitized_value = "%#{ActiveRecord::Base.sanitize_sql_like(value)}%"
       scope.where("transactions.extra::text ILIKE ?", sanitized_value)
     when "="
-      # Case-insensitive contains search (same as like for JSONB text)
-      # This is more useful than exact match for JSONB fields
+      # Case-sensitive contains search across the JSONB field
+      # Differentiates from "like" by being case-sensitive
       sanitized_value = "%#{ActiveRecord::Base.sanitize_sql_like(value)}%"
-      scope.where("transactions.extra::text ILIKE ?", sanitized_value)
+      scope.where("transactions.extra::text LIKE ?", sanitized_value)
     when "is_null"
       # Check if extra field is empty or null
       scope.where("transactions.extra IS NULL OR transactions.extra = '{}'::jsonb")

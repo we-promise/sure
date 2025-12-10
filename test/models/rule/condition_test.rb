@@ -217,7 +217,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal paypal_entry.transaction.id, filtered.first.id
   end
 
-  test "applies transaction_details condition with equal operator" do
+  test "applies transaction_details condition with equal operator case-sensitive" do
     scope = @rule_scope
 
     # Create transaction with specific details
@@ -235,6 +235,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
       }
     )
 
+    # Test case-sensitive match (should match)
     condition = Rule::Condition.new(
       rule: @transaction_rule,
       condition_type: "transaction_details",
@@ -244,8 +245,19 @@ class Rule::ConditionTest < ActiveSupport::TestCase
 
     scope = condition.prepare(scope)
     filtered = condition.apply(scope)
-
     assert_equal 1, filtered.count
+
+    # Test case-sensitive match (should NOT match due to case difference)
+    condition_lowercase = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_details",
+      operator: "=",
+      value: "netflix"
+    )
+
+    scope = condition_lowercase.prepare(scope)
+    filtered = condition_lowercase.apply(scope)
+    assert_equal 0, filtered.count
   end
 
   test "applies transaction_details condition with is_null operator" do
