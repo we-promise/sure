@@ -57,10 +57,10 @@ module EnableBankingItems
         begin
           unlinked_count = @enable_banking_unlinked_count_map[item.id] || 0
           manuals_exist = @enable_banking_has_unlinked_map[item.id]
-          sfa_any = if item.item.enable_banking_accounts.loaded?
-            item.item.enable_banking_accounts.any?
+          sfa_any = if item.enable_banking_accounts.loaded?
+            item.enable_banking_accounts.any?
           else
-            item.item.enable_banking_accounts.exists?
+            item.enable_banking_accounts.exists?
           end
           @enable_banking_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
         rescue StandardError => e
