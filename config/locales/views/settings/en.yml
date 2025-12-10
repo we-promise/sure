@@ -30,6 +30,8 @@ en:
         general_title: General
         default_period: Default Period
         default_account_order: Default Account Order
+        cash_subgroup_enabled_label: Group cash accounts by subtype
+        cash_subgroup_enabled_hint: Show Savings/Checking sections under Cash; turn off for a flat list.
         language: Language
         page_title: Preferences
         theme_dark: Dark

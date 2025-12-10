@@ -13,7 +13,8 @@ class BalanceSheet
     @assets ||= ClassificationGroup.new(
       classification: "asset",
       currency: family.currency,
-      accounts: sorted(account_totals.asset_accounts)
+      accounts: sorted(account_totals.asset_accounts),
+      family: family
     )
   end
 
@@ -21,7 +22,8 @@ class BalanceSheet
     @liabilities ||= ClassificationGroup.new(
       classification: "liability",
       currency: family.currency,
-      accounts: sorted(account_totals.liability_accounts)
+      accounts: sorted(account_totals.liability_accounts),
+      family: family
     )
   end
 
