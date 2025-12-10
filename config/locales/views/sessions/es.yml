@@ -3,6 +3,7 @@ es:
   sessions:
     create:
       invalid_credentials: Correo electrónico o contraseña inválidos.
+      local_login_disabled: Local password login is disabled. Please use single sign-on. # TODO: translate
     destroy:
       logout_successful: Has cerrado sesión con éxito.
     openid_connect:

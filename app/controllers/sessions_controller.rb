@@ -5,13 +5,19 @@ class SessionsController < ApplicationController
   layout "auth"
 
   def new
-    demo = demo_config
-    @prefill_demo_credentials = demo_host_match?(demo)
-
-    if @prefill_demo_credentials
-      @email = params[:email].presence || demo["email"]
-      @password = params[:password].presence || demo["password"]
-    else
+    begin
+      demo = Rails.application.config_for(:demo)
+      @prefill_demo_credentials = demo_host_match?(demo)
+      if @prefill_demo_credentials
+        @email = params[:email].presence || demo["email"]
+        @password = params[:password].presence || demo["password"]
+      else
+        @email = params[:email]
+        @password = params[:password]
+      end
+    rescue RuntimeError, Errno::ENOENT, Psych::SyntaxError
+      # Demo config file missing or malformed - disable demo credential prefilling
+      @prefill_demo_credentials = false
       @email = params[:email]
       @password = params[:password]
     end
@@ -84,5 +90,21 @@ class SessionsController < ApplicationController
   private
     def set_session
       @session = Current.user.sessions.find(params[:id])
+    end
+
+    def log_super_admin_override_login(user)
+      # Only log when local login is globally disabled but an emergency
+      # super-admin override is enabled.
+      return if AuthConfig.local_login_enabled?
+      return unless AuthConfig.local_admin_override_enabled?
+      return unless user&.super_admin?
+
+      Rails.logger.info("[AUTH] Super admin override login: user_id=#{user.id} email=#{user.email}")
+    end
+
+    def demo_host_match?(demo)
+      return false unless demo.present? && demo["hosts"].present?
+
+      demo["hosts"].include?(request.host)
     end
 end
