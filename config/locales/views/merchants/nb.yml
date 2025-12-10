@@ -14,6 +14,15 @@ nb:
       empty: Ingen forhandlere ennå
       new: Ny forhandler
       title: Forhandlere
+      family_title: Familieforhandlere
+      family_empty: Ingen familieforhandlere ennå
+      provider_title: Leverandørforhandlere
+      provider_empty: Ingen leverandørforhandlere er koblet til denne familien ennå
+      provider_read_only: Leverandørforhandlere synkroniseres fra dine tilkoblede institusjoner. De kan ikke redigeres her.
+      table:
+        merchant: Forhandler
+        actions: Handlinger
+        source: Kilde
     merchant:
       confirm_accept: Slett forhandler
       confirm_body: Er du sikker på at du vil slette denne forhandleren? Fjerning av denne forhandleren

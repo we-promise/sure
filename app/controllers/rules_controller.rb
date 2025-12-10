@@ -12,6 +12,16 @@ class RulesController < ApplicationController
     @direction = "asc" unless [ "asc", "desc" ].include?(@direction)
 
     @rules = Current.family.rules.order(@sort_by => @direction)
+
+    # Fetch recent rule runs with pagination
+    recent_runs_scope = RuleRun
+                          .joins(:rule)
+                          .where(rules: { family_id: Current.family.id })
+                          .recent
+                          .includes(:rule)
+
+    @pagy, @recent_runs = pagy(recent_runs_scope, limit: params[:per_page] || 20, page_param: :runs_page)
+
     render layout: "settings"
   end
 

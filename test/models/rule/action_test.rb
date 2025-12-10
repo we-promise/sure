@@ -84,7 +84,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
     new_name = "Renamed Transaction"
 
     # Does not modify transactions that are locked (user edited them)
-    @txn1.lock_attr!(:name)
+    @txn1.entry.lock_attr!(:name)
 
     action = Rule::Action.new(
       rule: @transaction_rule,
