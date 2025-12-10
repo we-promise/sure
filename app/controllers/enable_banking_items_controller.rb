@@ -439,7 +439,8 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Verify the Enable Banking account belongs to this family's Enable Banking items
-    unless Current.family.enable_banking_items.include?(enable_banking_account.enable_banking_item)
+    unless enable_banking_account.enable_banking_item.present? && 
+           Current.family.enable_banking_items.include?(enable_banking_account.enable_banking_item)
       flash[:alert] = "Invalid Enable Banking account selected"
       if turbo_frame_request?
         render turbo_stream: Array(flash_notification_stream_items)
@@ -468,7 +469,11 @@ class EnableBankingItemsController < ApplicationController
       # visible manual list. This mirrors the unified flow expectation that the provider
       # follows the chosen account.
       if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
-        previous_account.disable! rescue nil
+        begin
+          previous_account.disable!
+        rescue => e
+          Rails.logger.warn("Failed to disable orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
+        end
       end
     end
 
