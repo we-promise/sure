@@ -439,7 +439,7 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Verify the Enable Banking account belongs to this family's Enable Banking items
-    unless enable_banking_account.enable_banking_item.present? && 
+    unless enable_banking_account.enable_banking_item.present? &&
            Current.family.enable_banking_items.include?(enable_banking_account.enable_banking_item)
       flash[:alert] = "Invalid Enable Banking account selected"
       if turbo_frame_request?
