@@ -55,6 +55,45 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry2.transaction.category
   end
 
+  test "exclude transaction rule" do
+    transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
+
+    assert_not transaction_entry.excluded, "Transaction should not be excluded initially"
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: @whole_foods_merchant.id) ],
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+
+    assert transaction_entry.excluded, "Transaction should be excluded after rule applies"
+  end
+
+  test "exclude transaction rule respects attribute locks" do
+    transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
+    transaction_entry.lock_attr!(:excluded)
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: @whole_foods_merchant.id) ],
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+
+    assert_not transaction_entry.excluded, "Transaction should not be excluded when attribute is locked"
+  end
+
   # Artificial limitation put in place to prevent users from creating overly complex rules
   # Rules should be shallow and wide
   test "no nested compound conditions" do
