@@ -1,0 +1,45 @@
+---
+pt-BR:
+  recurring_transactions:
+    title: Transações Recorrentes
+    upcoming: Próximas Transações Recorrentes
+    projected: Previsto
+    recurring: Recorrente
+    expected_on: Previsto para %{date}
+    day_of_month: Dia %{day} do mês
+    identify_patterns: Identificar Padrões
+    cleanup_stale: Limpar Obsoletas
+    info:
+      title: Detecção Automática de Padrões
+      manual_description: Você pode identificar padrões manualmente ou limpar transações recorrentes obsoletas usando os botões acima.
+      automatic_description: "A identificação automática também roda após:"
+      triggers:
+        - Importações de CSV concluídas (transações, negociações, contas, etc.)
+        - Sincronização de qualquer provedor concluída (Plaid, SimpleFIN, etc.)
+    identified: Identificados %{count} padrões de transações recorrentes
+    cleaned_up: Limpadas %{count} transações recorrentes obsoletas
+    marked_inactive: Transação recorrente marcada como inativa
+    marked_active: Transação recorrente marcada como ativa
+    deleted: Transação recorrente excluída
+    confirm_delete: Tem certeza de que deseja excluir esta transação recorrente?
+    marked_as_recurring: Transação marcada como recorrente
+    already_exists: Já existe uma transação recorrente manual para este padrão
+    creation_failed: Falha ao criar transação recorrente. Verifique os detalhes e tente novamente.
+    unexpected_error: Ocorreu um erro inesperado ao criar a transação recorrente
+    amount_range: "Faixa: %{min} até %{max}"
+    empty:
+      title: Nenhuma transação recorrente encontrada
+      description: Clique em "Identificar Padrões" para detectar automaticamente transações recorrentes do seu histórico.
+    table:
+      merchant: Nome
+      amount: Valor
+      expected_day: Dia Previsto
+      next_date: Próxima Data
+      last_occurrence: Última Ocorrência
+      status: Status
+      actions: Ações
+    status:
+      active: Ativa
+      inactive: Inativa
+    badges:
+      manual: Manual
