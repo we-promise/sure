@@ -1,0 +1,27 @@
+---
+it:
+  family_merchants:
+    create:
+      error: 'Errore durante la creazione del nuovo esercente: %{error}'
+      success: Nuovo esercente creato con successo
+    destroy:
+      success: Esercente eliminato con successo
+    edit:
+      title: Modifica esercente
+    form:
+      name_placeholder: Nome dell'esercente
+    index:
+      empty: Nessun esercente presente
+      new: Nuovo Esercente
+      title: Esercenti
+    merchant:
+      confirm_accept: Elimina esercente
+      confirm_body: Sei sicuro di voler eliminare questo esercente? Rimuoverlo
+        scollegarà tutte le transazioni associate e potrebbe influire sui tuoi report.
+      confirm_title: Eliminare l'esercente?
+      delete: Elimina esercente
+      edit: Modifica esercente
+    new:
+      title: Nuovo esercente
+    update:
+      success: Esercente aggiornato con successo

@@ -1,0 +1,17 @@
+---
+it:
+  investments:
+    edit:
+      edit: Modifica %{account}
+    form:
+      none: Nessuno
+      subtype_prompt: Seleziona il tipo di investimento
+    new:
+      title: Inserisci il saldo del conto
+    show:
+      chart_title: Valore totale
+    value_tooltip:
+      cash: Conto
+      holdings: Posizioni
+      total: Saldo totale
+      total_value_tooltip: Il saldo totale del portafoglio è dato dalla somma della liquidità disponibile nel conto di intermediazione (utilizzabile per il trading) e dal valore di mercato attuale delle tue posizioni.

@@ -1,21 +1,21 @@
 <div class="space-y-4 pb-20 flex flex-col">
   <header class="flex justify-between items-center text-primary font-medium">
-    <h1 class="text-xl">Transactions</h1>
+    <h1 class="text-xl"><%= t(".transaction", default: "Transactions", count: 2 ) %></h1>
     <div class="flex items-center gap-5">
       <div class="flex items-center gap-2">
         <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(variant: "link", text: "New rule", href: new_rule_path(resource_type: "transaction"), icon: "plus", data: { turbo_frame: :modal }) %>
-          <% menu.with_item(variant: "link", text: "Edit rules", href: rules_path, icon: "git-branch", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit categories", href: categories_path, icon: "shapes", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit tags", href: tags_path, icon: "tags", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit merchants", href: family_merchants_path, icon: "store", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit imports", href: imports_path, icon: "hard-drive-upload", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Import", href: new_import_path, icon: "download", data: { turbo_frame: "modal", class_name: "md:!hidden" }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.menu.new_rule", default: "New rule" ), href: new_rule_path(resource_type: "transaction"), icon: "plus", data: { turbo_frame: :modal }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.menu.edit_rules", default: "Edit rules" ), href: rules_path, icon: "git-branch", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.menu.edit_categories", default: "Edit categories" ), href: categories_path, icon: "shapes", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.menu.edit_tags", default: "Edit tags" ), href: tags_path, icon: "tags", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.menu.edit_merchants", default: "Edit merchants" ), href: family_merchants_path, icon: "store", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.menu.edit_imports", default: "Edit imports" ), href: imports_path, icon: "hard-drive-upload", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.menu.import", default: "Import" ), href: new_import_path, icon: "download", data: { turbo_frame: "modal", class_name: "md:!hidden" }) %>
         <% end %>
 
         <div class="hidden md:flex">
           <%= render DS::Link.new(
-            text: t(".import"),
+            text: t("transactions.menu.import", default: "Import" ),
             icon: "download",
             variant: "outline",
             href: new_import_path,
@@ -24,7 +24,7 @@
         </div>
 
         <%= render DS::Link.new(
-            text: "New transaction",
+            text: t("transactions.menu.new_transaction", default: "New transaction" ),
             icon: "plus",
             variant: "primary",
             href: new_transaction_path,
@@ -47,8 +47,8 @@
 
   <div id="transactions"
        data-controller="bulk-select"
-       data-bulk-select-singular-label-value="<%= t(".transaction") %>"
-       data-bulk-select-plural-label-value="<%= t(".transactions") %>"
+       data-bulk-select-singular-label-value="<%= t(".transaction", default: "transaction", count: 1 ) %> <%= t("transactions.selection_bar.selected", default: "selected", count: 1 ) %>"
+       data-bulk-select-plural-label-value="<%= t(".transaction", default: "transactions", count: 2 ) %> <%= t("transactions.selection_bar.selected", default: "selected", count: 2 ) %>"
        class="flex flex-col bg-container rounded-xl shadow-border-xs p-4">
     <%= render "transactions/searches/search" %>
 
@@ -64,11 +64,11 @@
               <%= check_box_tag "selection_entry",
                                 class: "checkbox checkbox--light",
                                 data: { action: "bulk-select#togglePageSelection" } %>
-              <p>transaction</p>
+              <p><%= t("transactions.index.transaction", default: "Transaction", count: 2 ) %></p>
             </div>
 
-            <p class="col-span-2 md:block hidden">category</p>
-            <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block">amount</p>
+            <p class="col-span-2 md:block hidden"><%= t("transactions.dashboard.category", default: "category", count: 1 ) %></p>
+            <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t("transactions.dashboard.amount", default: "amount", count: 1 ) %></p>
           </div>
         <% end %>
 

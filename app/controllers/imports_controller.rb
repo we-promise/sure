@@ -16,7 +16,7 @@ class ImportsController < ApplicationController
     @exports = Current.user.admin? ? Current.family.family_exports.ordered.limit(10) : nil
     @breadcrumbs = [
       [ "Home", root_path ],
-      [ "Import/Export", imports_path ]
+      [ t("shared.breadcrumbs.import_export", default: "Import/Export"), imports_path ]
     ]
     render layout: "settings"
   end

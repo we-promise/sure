@@ -1,0 +1,14 @@
+---
+it:
+  category:
+    deletions:
+      create:
+        success: Categoria eliminata con successo
+      new:
+        category: Categoria
+        delete_and_leave_uncategorized: Elimina "%{category_name}" e lasciare senza categoria
+        delete_and_recategorize: Elimina "%{category_name}" e essegnarere una nuova categoria
+        delete_category: Eliminare categoria?
+        explanation: Eliminando questa categoria, tutti movimenti che hanno la categoria "%{category_name}"
+          diventeranno senza categoria. Se vuoi, puoi anche assegnargli una nuova categoria qui sotto.
+        replacement_category_prompt: Seleziona categoria

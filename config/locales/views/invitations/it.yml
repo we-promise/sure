@@ -1,0 +1,19 @@
+---
+it:
+  invitations:
+    create:
+      failure: Impossibile inviare l'invito
+      success: Invito inviato con successo
+    destroy:
+      failure: Si è verificato un problema durante la cancellazione dell'invito.
+      not_authorized: Non sei autorizzato a gestire gli inviti.
+      success: L'invito è stato rimosso con successo.
+    new:
+      email_label: Email
+      email_placeholder: Inserisci l'indirizzo email
+      role_admin: Amministratore
+      role_label: Ruolo
+      role_member: Membro
+      submit: Invia invito
+      subtitle: Invia un invito per partecipare al tuo account familiare su %{product_name}
+      title: Invita chi vuoi

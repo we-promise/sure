@@ -1,0 +1,20 @@
+---
+it:
+  activerecord:
+    attributes:
+      user:
+        email: Email
+        family: Famiglia
+        family_id: Famiglia
+        first_name: Nome
+        last_name: Cognome
+        password: Password
+        password_confirmation: Conferma Password
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: L'amministratore non può eliminare l'account mentre sono presenti altri utenti. Elimina prima tutti i membri.
+            profile_image:
+              invalid_file_size: la dimensione del file deve essere inferiore a %{max_megabytes}MB

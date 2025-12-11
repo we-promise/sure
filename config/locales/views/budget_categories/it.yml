@@ -1,0 +1,11 @@
+---
+it:
+  budget_categories:
+    labels:
+      category: Categoria
+      overview: Panoramica
+      monthly_avg_spending: Uscita media mensile
+      monthly_med_spending: Uscita mediana mensile
+      budgeted: Messo a budget
+      recent_transactions: Movimenti recenti
+      view_all: Vedi tutti i movimenti per questa categoria

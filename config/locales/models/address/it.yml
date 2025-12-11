@@ -1,0 +1,11 @@
+---
+it:
+  address:
+    attributes:
+      country: Paese
+      line1: Indirizzo Riga 1
+      line2: Indirizzo Riga 2
+      locality: Località
+      postal_code: CAP
+      region: Regione
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

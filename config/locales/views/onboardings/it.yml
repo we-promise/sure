@@ -1,0 +1,27 @@
+---
+it:
+  onboardings:
+    header:
+      sign_out: Esci
+    preferences:
+      currency: Valuta
+      date_format: Formato data
+      example: Account di esempio
+      locale: Lingua
+      preview: Anteprima della visualizzazione dei dati in base alle preferenze.
+      submit: Completa
+      subtitle: Configuriamo le tue preferenze.
+      title: Configura le tue preferenze
+    profile:
+      country: Paese
+      first_name: Nome
+      household_name: Nome della famiglia
+      last_name: Cognome
+      profile_image: Immagine del profilo
+      submit: Continua
+      subtitle: Completiamo il tuo profilo.
+      title: Impostiamo le basi
+    show:
+      message: Siamo davvero felici che tu sia qui. Nel prossimo passaggio ti faremo qualche domanda per completare il profilo e iniziare subito.
+      setup: Configura account
+      title: Benvenuto in %{product_name}

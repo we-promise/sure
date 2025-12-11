@@ -4,7 +4,7 @@ class Settings::SecuritiesController < ApplicationController
   def show
     @breadcrumbs = [
       [ "Home", root_path ],
-      [ "Security", nil ]
+      [ t("shared.breadcrumbs.security", default: "Security"), nil ]
     ]
   end
 end

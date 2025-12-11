@@ -40,7 +40,7 @@ class ReportsController < ApplicationController
     # Build reports sections for collapsible/reorderable UI
     @reports_sections = build_reports_sections
 
-    @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
+    @breadcrumbs = [ [ "Home", root_path ], [ t("shared.breadcrumbs.reports", default: "Reports"), nil ] ]
   end
 
   def update_preferences

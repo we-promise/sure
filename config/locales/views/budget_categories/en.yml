@@ -1,0 +1,11 @@
+---
+en:
+  budget_categories:
+    labels:
+      category: Category
+      overview: Overview
+      monthly_avg_spending: Monthly average spending
+      monthly_med_spending: Monthly median spending
+      budgeted: Budgeted
+      recent_transactions: Recent Transactions
+      view_all: View all category transactions

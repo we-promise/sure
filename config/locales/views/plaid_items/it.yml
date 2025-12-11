@@ -1,0 +1,29 @@
+---
+it:
+  plaid_items:
+    create:
+      success: Account collegato con successo. Attendi la sincronizzazione degli account.
+    destroy:
+      success: Account programmati per l’eliminazione.
+    plaid_item:
+      add_new: Aggiungi nuova connessione
+      confirm_accept: Elimina istituzione
+      confirm_body: Questa operazione eliminerà definitivamente tutti gli account di questo gruppo e tutti i dati associati.
+      confirm_title: Eliminare l’istituzione?
+      connection_lost: Connessione persa
+      connection_lost_description: Questa connessione non è più valida. Per continuare la sincronizzazione dovrai eliminarla e aggiungerla di nuovo.
+      delete: Elimina
+      error: Errore durante la sincronizzazione dei dati
+      no_accounts_description: Non è stato possibile caricare alcun account da questa istituzione finanziaria.
+      no_accounts_title: Nessun account trovato
+      requires_update: Richiede una nuova autenticazione
+      status: Ultima sincronizzazione %{timestamp} fa
+      status_never: Richiede sincronizzazione dei dati
+      syncing: Sincronizzazione in corso...
+      update: Aggiorna connessione
+    select_existing_account:
+      title: "Collega %{account_name} a Plaid"
+      description: Seleziona un account Plaid da collegare al tuo account esistente
+      cancel: Annulla
+      link_account: Collega account
+

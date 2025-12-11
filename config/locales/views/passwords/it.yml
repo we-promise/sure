@@ -1,0 +1,10 @@
+---
+it:
+  passwords:
+    edit:
+      password: Nuova Password
+      password_challenge: Password Attuale
+      submit: Reimposta Password
+      title: Aggiorna Password
+    update:
+      success: La tua password è stata aggiornata.

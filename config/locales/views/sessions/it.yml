@@ -1,0 +1,24 @@
+---
+it:
+  sessions:
+    create:
+      invalid_credentials: Email o password non validi.
+    destroy:
+      logout_successful: Disconnessione avvenuta con successo.
+    openid_connect:
+      failed: Impossibile autenticarsi tramite OpenID Connect.
+    failure:
+      failed: Impossibile autenticarsi.
+    new:
+      email: Indirizzo email
+      email_placeholder: nome@example.com
+      forgot_password: Hai dimenticato la password?
+      password: Password
+      submit: Accedi
+      title: Sure
+      password_placeholder: Inserisci la tua password
+      openid_connect: Accedi con OpenID Connect
+      google_auth_connect: Accedi con Google
+      demo_banner_title: "Modalità demo attiva"
+      demo_banner_message: "Questo è un ambiente dimostrativo. Le credenziali di accesso sono già compilate per comodità. Non inserire informazioni reali o sensibili."
+
