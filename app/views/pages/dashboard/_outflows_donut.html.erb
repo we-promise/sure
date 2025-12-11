@@ -17,7 +17,6 @@
         <div class="h-[300px] relative"
           data-controller="donut-chart"
           data-donut-chart-segments-value="<%= outflows_data[:categories].to_json %>"
-          data-donut-chart-segment-height-value="5"
           data-donut-chart-segment-opacity-value="0.9"
           data-donut-chart-extended-hover-value="true"
           data-donut-chart-hover-extension-value="3"
@@ -79,8 +78,23 @@
                   action: "mouseenter->donut-chart#highlightSegment mouseleave->donut-chart#unhighlightSegment"
                 } do %>
               <div class="flex items-center gap-3 flex-1 min-w-0">
-                <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: <%= category[:color] %>"></div>
-                <%= icon(category[:icon], class: "w-4 h-4 text-primary flex-shrink-0") %>
+                <div class="h-9 w-9 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center" 
+                  style="
+                    background-color: color-mix(in oklab, <%= category[:color] %> 10%, transparent);
+                    border-color: color-mix(in oklab, <%= category[:color] %> 10%, transparent);
+                    color: <%= category[:color] %>;">
+                  <% if category[:icon] %>
+                    <%= icon(category[:icon], color: "current") %>
+                  <% else %>
+                    <%= render DS::FilledIcon.new(
+                      variant: :text,
+                      hex_color: category[:color],
+                      text: category[:name],
+                      size: "md",
+                      rounded: true
+                    ) %>
+                  <% end %>
+                </div>
                 <span class="text-sm font-medium text-primary truncate"><%= category[:name] %></span>
               </div>
               <div class="flex items-center gap-4 flex-shrink-0">
