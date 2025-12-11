@@ -453,10 +453,6 @@ class EnableBankingItemsController < ApplicationController
     # Relink behavior: detach any legacy link and point provider link at the chosen account
     Account.transaction do
       enable_banking_account.lock!
-      # Clear legacy association if present
-      if enable_banking_account.account_id.present?
-        enable_banking_account.update!(account_id: nil)
-      end
 
       # Upsert the AccountProvider mapping deterministically
       ap = AccountProvider.find_or_initialize_by(provider: enable_banking_account)
