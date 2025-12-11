@@ -114,7 +114,7 @@
 
         <div class="space-y-1.5">
           <div class="h-2 bg-surface-inset rounded-full overflow-hidden">
-            <div class="h-full <%= metrics[:budget_percent] >= 100 ? "bg-danger" : metrics[:budget_percent] >= 80 ? "bg-warning" : "bg-success" %> rounded-full transition-all"
+            <div class="h-full <%= metrics[:budget_percent] >= 100 ? "bg-destructive" : metrics[:budget_percent] >= 80 ? "bg-warning" : "bg-success" %> rounded-full transition-all"
                  style="width: <%= [metrics[:budget_percent], 100].min %>%"></div>
           </div>
 
