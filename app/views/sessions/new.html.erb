@@ -37,7 +37,7 @@
 
   <% unless AuthConfig.local_login_enabled? %>
     <p class="mt-2 text-xs text-secondary text-center">
-      Local login is restricted to administrators.
+      <%= t(".local_login_admin_only") %>
     </p>
   <% end %>
 
@@ -80,13 +80,13 @@
           <% if provider[:icon].present? %>
             <%= icon provider[:icon], size: "sm" %>
           <% end %>
-          <span><%= provider[:label] %></span>
+          <span><%= provider[:label].presence || provider[:name].to_s.titleize %></span>
         <% end %>
       <% end %>
     <% end %>
   </div>
 <% elsif !AuthConfig.local_login_form_visible? %>
   <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-    No authentication methods are currently enabled. Please contact an administrator.
+    <%= t(".no_auth_methods_enabled") %>
   </div>
 <% end %>
