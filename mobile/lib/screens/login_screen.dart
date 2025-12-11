@@ -32,14 +32,17 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.login(
       email: _emailController.text.trim(),
       password: _passwordController.text,
       otpCode: _showOtpField ? _otpController.text.trim() : null,
     );
 
+    if (!mounted) return;
+
     if (!success && authProvider.mfaRequired && !_showOtpField) {
+      // Show OTP field when MFA is required
       setState(() {
         _showOtpField = true;
       });

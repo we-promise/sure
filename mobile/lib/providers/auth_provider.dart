@@ -74,8 +74,11 @@ class AuthProvider with ChangeNotifier {
       } else {
         if (result['mfa_required'] == true) {
           _mfaRequired = true;
+          // Don't show error message when MFA is required - it's a normal flow
+          _errorMessage = null;
+        } else {
+          _errorMessage = result['error'] as String?;
         }
-        _errorMessage = result['error'] as String?;
         _isLoading = false;
         notifyListeners();
         return false;
