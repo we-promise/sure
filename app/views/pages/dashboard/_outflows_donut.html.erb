@@ -68,10 +68,10 @@
             </div>
           </div>
         </div>
-        <div class="py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm min-w-fit max-w-full">
+        <div class="py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm max-w-full">
           <% outflows_data[:categories].each_with_index do |category, idx| %>
             <%= link_to transactions_path(q: { categories: [category[:name]], start_date: period.date_range.first, end_date: period.date_range.last }),
-                class: "flex items-center justify-between mx-3 p-3 rounded-lg cursor-pointer group",
+                class: "flex items-center justify-between mx-3 p-3 rounded-lg cursor-pointer group gap-3",
                 data: {
                   turbo_frame: "_top",
                   category_id: category[:id],
@@ -97,9 +97,9 @@
                 </div>
                 <span class="text-sm font-medium text-primary truncate"><%= category[:name] %></span>
               </div>
-              <div class="flex items-center gap-4 flex-shrink-0">
+              <div class="flex items-center gap-4 flex-shrink-0 text-right">
                 <span class="text-sm font-medium text-primary whitespace-nowrap"><%= format_money Money.new(category[:amount], category[:currency]) %></span>
-                <span class="text-sm text-secondary whitespace-nowrap"><%= category[:percentage] %>%</span>
+                <span class="text-sm text-secondary whitespace-nowrap w-10 lg:w-15"><%= category[:percentage] %>%</span>
               </div>
             <% end %>
             <% if idx < outflows_data[:categories].size - 1 %>
