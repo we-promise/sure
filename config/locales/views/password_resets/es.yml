@@ -1,7 +1,6 @@
 ---
 es:
   password_resets:
-    disabled: Password reset via Sure is disabled. Please reset your password through your identity provider. # TODO: translate
     edit:
       title: Restablecer contraseña
     new:
