@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import '../models/transaction.dart';
 import '../services/transactions_service.dart';
@@ -9,7 +10,7 @@ class TransactionsProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  List<Transaction> get transactions => _transactions;
+  List<Transaction> get transactions => UnmodifiableListView(_transactions);
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -27,6 +28,7 @@ class TransactionsProvider with ChangeNotifier {
     );
 
     _isLoading = false;
+    notifyListeners();
 
     if (result['success'] == true && result.containsKey('transactions')) {
       _transactions = (result['transactions'] as List<dynamic>?)?.cast<Transaction>() ?? [];

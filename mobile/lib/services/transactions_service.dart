@@ -39,9 +39,8 @@ class TransactionsService {
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
 
-      final responseData = jsonDecode(response.body);
-
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
         return {
           'success': true,
           'transaction': Transaction.fromJson(responseData),
@@ -52,10 +51,18 @@ class TransactionsService {
           'error': 'unauthorized',
         };
       } else {
-        return {
-          'success': false,
-          'error': responseData['error'] ?? 'Failed to create transaction',
-        };
+        try {
+          final responseData = jsonDecode(response.body);
+          return {
+            'success': false,
+            'error': responseData['error'] ?? 'Failed to create transaction',
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'error': 'Failed to create transaction: ${response.body}',
+          };
+        }
       }
     } catch (e) {
       return {
@@ -69,11 +76,10 @@ class TransactionsService {
     required String accessToken,
     String? accountId,
   }) async {
-    var url = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions');
-
-    if (accountId != null) {
-      url = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions?account_id=$accountId');
-    }
+    final baseUri = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions');
+    final url = accountId != null
+        ? baseUri.replace(queryParameters: {'account_id': accountId})
+        : baseUri;
 
     try {
       final response = await http.get(
@@ -151,11 +157,18 @@ class TransactionsService {
           'error': 'unauthorized',
         };
       } else {
-        final responseData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'error': responseData['error'] ?? 'Failed to delete transaction',
-        };
+        try {
+          final responseData = jsonDecode(response.body);
+          return {
+            'success': false,
+            'error': responseData['error'] ?? 'Failed to delete transaction',
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'error': 'Failed to delete transaction: ${response.body}',
+          };
+        }
       }
     } catch (e) {
       return {
