@@ -18,12 +18,11 @@
               </tr>
             </thead>
             <tbody>
-              <% trends_data.each_with_index do |trend, index| %>
-                <% is_current_month = trend[:month] == Date.current.strftime("%b %Y") %>
-                <tr class="border-b border-tertiary/50 <%= is_current_month ? "font-medium" : "" %>">
+              <% trends_data.each do |trend| %>
+                <tr class="border-b border-tertiary/50 <%= trend[:is_current_month] ? "font-medium" : "" %>">
                   <td class="py-3 pr-4 text-primary">
                     <%= trend[:month] %>
-                    <% if is_current_month %>
+                    <% if trend[:is_current_month] %>
                       <span class="ml-2 text-xs text-tertiary">(<%= t("reports.trends.current") %>)</span>
                     <% end %>
                   </td>
