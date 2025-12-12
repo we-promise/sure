@@ -65,6 +65,8 @@ class AuthProvider with ChangeNotifier {
         otpCode: otpCode,
       );
 
+      debugPrint('Login result: $result'); // Debug log
+
       if (result['success'] == true) {
         _tokens = result['tokens'] as AuthTokens?;
         _user = result['user'] as User?;
@@ -74,6 +76,7 @@ class AuthProvider with ChangeNotifier {
       } else {
         if (result['mfa_required'] == true) {
           _mfaRequired = true;
+          debugPrint('MFA required! _mfaRequired set to: $_mfaRequired'); // Debug log
           // Don't show error message when MFA is required - it's a normal flow
           _errorMessage = null;
         } else {

@@ -41,7 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
+    debugPrint('Login success: $success, mfaRequired: ${authProvider.mfaRequired}, _showOtpField: $_showOtpField'); // Debug log
+
     if (!success && authProvider.mfaRequired && !_showOtpField) {
+      debugPrint('Showing OTP field...'); // Debug log
       // Show OTP field when MFA is required
       setState(() {
         _showOtpField = true;
