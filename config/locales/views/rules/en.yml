@@ -1,6 +1,7 @@
 ---
 en:
   rules:
+    no_action: No Action
     recent_runs:
       title: Recent Runs
       description: View the execution history of your rules including success/failure status and transaction counts.
