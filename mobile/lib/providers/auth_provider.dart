@@ -94,7 +94,9 @@ class AuthProvider with ChangeNotifier {
           // If user already submitted an OTP code, this is likely an invalid OTP error
           // Show the error message so user knows the code was wrong
           if (otpCode != null && otpCode.isNotEmpty) {
-            _errorMessage = result['error'] as String? ?? 'Invalid authentication code';
+            // Backend returns "Two-factor authentication required" for both cases
+            // Replace with clearer message when OTP was actually submitted
+            _errorMessage = 'Invalid authentication code. Please try again.';
           } else {
             // First time requesting MFA - don't show error message, it's a normal flow
             _errorMessage = null;
