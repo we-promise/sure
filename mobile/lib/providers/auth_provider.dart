@@ -7,10 +7,11 @@ import '../services/device_service.dart';
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final DeviceService _deviceService = DeviceService();
-  
+
   User? _user;
   AuthTokens? _tokens;
   bool _isLoading = true;
+  bool _isInitializing = true; // Track initial auth check separately
   String? _errorMessage;
   bool _mfaRequired = false;
   bool _showMfaInput = false; // Track if we should show MFA input field
@@ -18,6 +19,7 @@ class AuthProvider with ChangeNotifier {
   User? get user => _user;
   AuthTokens? get tokens => _tokens;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing; // Expose initialization state
   bool get isAuthenticated => _tokens != null && !_tokens!.isExpired;
   String? get errorMessage => _errorMessage;
   bool get mfaRequired => _mfaRequired;
@@ -29,6 +31,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _loadStoredAuth() async {
     _isLoading = true;
+    _isInitializing = true;
     notifyListeners();
 
     try {
@@ -45,6 +48,7 @@ class AuthProvider with ChangeNotifier {
     }
 
     _isLoading = false;
+    _isInitializing = false;
     notifyListeners();
   }
 
