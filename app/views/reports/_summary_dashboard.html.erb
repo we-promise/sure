@@ -23,8 +23,8 @@
               +<%= metrics[:income_change] %>%
             </span>
           <% else %>
-            <%= icon("arrow-down", class: "w-4 h-4 text-danger") %>
-            <span class="text-sm font-medium text-danger">
+            <%= icon("arrow-down", class: "w-4 h-4 text-destructive") %>
+            <span class="text-sm font-medium text-destructive">
               <%= metrics[:income_change] %>%
             </span>
           <% end %>
@@ -40,7 +40,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("trending-down", class: "w-5 h-5 text-danger") %>
+        <%= icon("trending-down", class: "w-5 h-5 text-destructive") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.total_expenses") %>
         </h3>
@@ -55,8 +55,8 @@
       <% if metrics[:expense_change] %>
         <div class="flex items-center gap-1.5">
           <% if metrics[:expense_change] >= 0 %>
-            <%= icon("arrow-up", class: "w-4 h-4 text-danger") %>
-            <span class="text-sm font-medium text-danger">
+            <%= icon("arrow-up", class: "w-4 h-4 text-destructive") %>
+            <span class="text-sm font-medium text-destructive">
               +<%= metrics[:expense_change] %>%
             </span>
           <% else %>
@@ -85,7 +85,7 @@
     </div>
 
     <div class="space-y-2">
-      <p class="text-2xl font-semibold <%= metrics[:net_savings] >= 0 ? "text-success" : "text-danger" %>">
+      <p class="text-2xl font-semibold <%= metrics[:net_savings] >= 0 ? "text-success" : "text-destructive" %>">
         <%= metrics[:net_savings].format %>
       </p>
 
@@ -114,7 +114,7 @@
 
         <div class="space-y-1.5">
           <div class="h-2 bg-surface-inset rounded-full overflow-hidden">
-            <div class="h-full <%= metrics[:budget_percent] >= 100 ? "bg-danger" : metrics[:budget_percent] >= 80 ? "bg-warning" : "bg-success" %> rounded-full transition-all"
+            <div class="h-full <%= metrics[:budget_percent] >= 100 ? "bg-destructive" : metrics[:budget_percent] >= 80 ? "bg-warning" : "bg-success" %> rounded-full transition-all"
                  style="width: <%= [metrics[:budget_percent], 100].min %>%"></div>
           </div>
 

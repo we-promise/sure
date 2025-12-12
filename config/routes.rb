@@ -2,10 +2,12 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
-  resources :enable_banking_items, only: [ :create, :update, :destroy ] do
+  resources :enable_banking_items, only: [ :new, :create, :update, :destroy ] do
     collection do
       get :callback
       post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
     end
     member do
       post :sync

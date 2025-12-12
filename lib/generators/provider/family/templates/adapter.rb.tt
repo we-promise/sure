@@ -1,0 +1,114 @@
+class Provider::<%= class_name %>Adapter < Provider::Base
+  include Provider::Syncable
+  include Provider::InstitutionMetadata
+
+  # Register this adapter with the factory
+  Provider::Factory.register("<%= class_name %>Account", self)
+
+  # Define which account types this provider supports
+  def self.supported_account_types
+    %w[Depository CreditCard Loan]
+  end
+
+  # Returns connection configurations for this provider
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_<%= file_name %>?
+
+    [ {
+      key: "<%= file_name %>",
+      name: "<%= class_name.titleize %>",
+      description: "Connect to your bank via <%= class_name.titleize %>",
+      can_connect: true,
+      new_account_path: ->(accountable_type, return_to) {
+        Rails.application.routes.url_helpers.select_accounts_<%= file_name %>_items_path(
+          accountable_type: accountable_type,
+          return_to: return_to
+        )
+      },
+      existing_account_path: ->(account_id) {
+        Rails.application.routes.url_helpers.select_existing_account_<%= file_name %>_items_path(
+          account_id: account_id
+        )
+      }
+    } ]
+  end
+
+  def provider_name
+    "<%= file_name %>"
+  end
+
+  # Build a <%= class_name %> provider instance with family-specific credentials
+  # @param family [Family] The family to get credentials for (required)
+  # @return [Provider::<%= class_name %>, nil] Returns nil if credentials are not configured
+  def self.build_provider(family: nil)
+    return nil unless family.present?
+
+    # Get family-specific credentials
+<% first_secret_field = parsed_fields.find { |f| f[:secret] }&.dig(:name) -%>
+<% if first_secret_field -%>
+    <%= file_name %>_item = family.<%= file_name %>_items.where.not(<%= first_secret_field %>: nil).first
+<% else -%>
+    <%= file_name %>_item = family.<%= file_name %>_items.first
+<% end -%>
+    return nil unless <%= file_name %>_item&.credentials_configured?
+
+    # TODO: Implement provider initialization
+<% if first_secret_field -%>
+    # Provider::<%= class_name %>.new(
+    #   <%= file_name %>_item.<%= first_secret_field %><%= parsed_fields.select { |f| f[:default] }.any? ? ",\n    #   " + parsed_fields.select { |f| f[:default] }.map { |f| "#{f[:name]}: #{file_name}_item.effective_#{f[:name]}" }.join(",\n    #   ") : "" %>
+    # )
+<% else -%>
+    # Provider::<%= class_name %>.new(<%= file_name %>_item)
+<% end -%>
+    raise NotImplementedError, "Implement Provider::<%= class_name %>.new in #{__FILE__}"
+  end
+
+  def sync_path
+    Rails.application.routes.url_helpers.sync_<%= file_name %>_item_path(item)
+  end
+
+  def item
+    provider_account.<%= file_name %>_item
+  end
+
+  def can_delete_holdings?
+    false
+  end
+
+  def institution_domain
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    domain = metadata["domain"]
+    url = metadata["url"]
+
+    # Derive domain from URL if missing
+    if domain.blank? && url.present?
+      begin
+        domain = URI.parse(url).host&.gsub(/^www\./, "")
+      rescue URI::InvalidURIError
+        Rails.logger.warn("Invalid institution URL for <%= class_name %> account #{provider_account.id}: #{url}")
+      end
+    end
+
+    domain
+  end
+
+  def institution_name
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    metadata["name"] || item&.institution_name
+  end
+
+  def institution_url
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    metadata["url"] || item&.institution_url
+  end
+
+  def institution_color
+    item&.institution_color
+  end
+end
