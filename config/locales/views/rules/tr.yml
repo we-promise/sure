@@ -1,6 +1,7 @@
 ---
 tr:
   rules:
+    no_action: İşlem yok
     recent_runs:
       title: Son Çalıştırmalar
       description: Başarı/başarısızlık durumu ve işlem sayıları dahil olmak üzere kurallarınızın yürütme geçmişini görüntüleyin.
