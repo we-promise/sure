@@ -24,20 +24,21 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       color: "#00FF00"
     )
 
-    @rule = @family.rules.create!(
+    @rule = @family.rules.build(
       name: "Test Rule",
       resource_type: "transaction",
       active: true
     )
-    @rule.conditions.create!(
+    @rule.conditions.build(
       condition_type: "transaction_name",
       operator: "like",
       value: "test"
     )
-    @rule.actions.create!(
+    @rule.actions.build(
       action_type: "set_transaction_category",
       value: @category.id
     )
+    @rule.save!
   end
 
   test "generates a zip file with all required files" do
@@ -219,20 +220,21 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
   test "exports rule actions and maps tag UUIDs to names" do
     # Create a rule with a tag action
-    tag_rule = @family.rules.create!(
+    tag_rule = @family.rules.build(
       name: "Tag Rule",
       resource_type: "transaction",
       active: true
     )
-    tag_rule.conditions.create!(
+    tag_rule.conditions.build(
       condition_type: "transaction_name",
       operator: "like",
       value: "test"
     )
-    tag_rule.actions.create!(
+    tag_rule.actions.build(
       action_type: "set_transaction_tags",
       value: @tag.id
     )
+    tag_rule.save!
 
     zip_data = @exporter.generate_export
 
@@ -259,28 +261,29 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
   test "exports compound conditions with sub-conditions" do
     # Create a rule with compound conditions
-    compound_rule = @family.rules.create!(
+    compound_rule = @family.rules.build(
       name: "Compound Rule",
       resource_type: "transaction",
       active: true
     )
-    parent_condition = compound_rule.conditions.create!(
+    parent_condition = compound_rule.conditions.build(
       condition_type: "compound",
       operator: "or"
     )
-    parent_condition.sub_conditions.create!(
+    parent_condition.sub_conditions.build(
       condition_type: "transaction_name",
       operator: "like",
       value: "walmart"
     )
-    parent_condition.sub_conditions.create!(
+    parent_condition.sub_conditions.build(
       condition_type: "transaction_name",
       operator: "like",
       value: "target"
     )
-    compound_rule.actions.create!(
+    compound_rule.actions.build(
       action_type: "auto_categorize"
     )
+    compound_rule.save!
 
     zip_data = @exporter.generate_export
 
@@ -309,19 +312,20 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
   test "only exports rules from the specified family" do
     # Create a rule for another family that should NOT be exported
-    other_rule = @other_family.rules.create!(
+    other_rule = @other_family.rules.build(
       name: "Other Family Rule",
       resource_type: "transaction",
       active: true
     )
-    other_rule.conditions.create!(
+    other_rule.conditions.build(
       condition_type: "transaction_name",
       operator: "like",
       value: "other"
     )
-    other_rule.actions.create!(
+    other_rule.actions.build(
       action_type: "auto_categorize"
     )
+    other_rule.save!
 
     zip_data = @exporter.generate_export
 
