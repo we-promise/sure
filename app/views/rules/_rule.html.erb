@@ -30,10 +30,14 @@
       </div>
       <p class="flex items-center flex-wrap gap-1.5 m-0">
         <span class="px-2 py-1 border border-secondary rounded-full">
-          <% if rule.actions.first.value && rule.actions.first.options %>
-            <%= rule.actions.first.executor.label %> to <%= rule.actions.first.value_display %>
+          <% if rule.actions.first.nil? %>
+            No action
           <% else %>
-            <%= rule.actions.first.executor.label %>
+            <% if rule.actions.first.value && rule.actions.first.options %>
+              <%= rule.actions.first.executor.label %> to <%= rule.actions.first.value_display %>
+            <% else %>
+              <%= rule.actions.first.executor.label %>
+            <% end %>
           <% end %>
         </span>
         <% if rule.actions.count > 1 %>
