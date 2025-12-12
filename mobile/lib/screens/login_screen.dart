@@ -18,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
   bool _obscurePassword = true;
-  bool _showOtpField = false;
 
   @override
   void dispose() {
@@ -32,18 +31,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    final success = await authProvider.login(
+
+    await authProvider.login(
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      otpCode: _showOtpField ? _otpController.text.trim() : null,
+      otpCode: authProvider.showMfaInput ? _otpController.text.trim() : null,
     );
-
-    if (!success && authProvider.mfaRequired && !_showOtpField) {
-      setState(() {
-        _showOtpField = true;
-      });
-    }
   }
 
   @override
@@ -154,81 +147,93 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Password Field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  textInputAction: _showOtpField 
-                      ? TextInputAction.next 
-                      : TextInputAction.done,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword 
-                            ? Icons.visibility_outlined 
-                            : Icons.visibility_off_outlined,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    return null;
-                  },
-                  onFieldSubmitted: _showOtpField ? null : (_) => _handleLogin(),
-                ),
-                
-                // OTP Field (shown when MFA is required)
-                if (_showOtpField) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
+                // Password and OTP Fields with Consumer
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, _) {
+                    final showOtp = authProvider.showMfaInput;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Icon(
-                          Icons.security,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Two-factor authentication is enabled. Enter your code.',
-                            style: TextStyle(color: colorScheme.onSurface),
+                        // Password Field
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textInputAction: showOtp
+                              ? TextInputAction.next
+                              : TextInputAction.done,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: const Icon(Icons.lock_outlined),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
                           ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            return null;
+                          },
+                          onFieldSubmitted: showOtp ? null : (_) => _handleLogin(),
                         ),
+
+                        // OTP Field (shown when MFA is required)
+                        if (showOtp) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.security,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Two-factor authentication is enabled. Enter your code.',
+                                    style: TextStyle(color: colorScheme.onSurface),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _otpController,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            decoration: const InputDecoration(
+                              labelText: 'Authentication Code',
+                              prefixIcon: Icon(Icons.pin_outlined),
+                            ),
+                            validator: (value) {
+                              if (showOtp && (value == null || value.isEmpty)) {
+                                return 'Please enter your authentication code';
+                              }
+                              return null;
+                            },
+                            onFieldSubmitted: (_) => _handleLogin(),
+                          ),
+                        ],
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _otpController,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(
-                      labelText: 'Authentication Code',
-                      prefixIcon: Icon(Icons.pin_outlined),
-                    ),
-                    validator: (value) {
-                      if (_showOtpField && (value == null || value.isEmpty)) {
-                        return 'Please enter your authentication code';
-                      }
-                      return null;
-                    },
-                    onFieldSubmitted: (_) => _handleLogin(),
-                  ),
-                ],
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 24),
 

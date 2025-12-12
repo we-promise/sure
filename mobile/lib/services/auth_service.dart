@@ -41,6 +41,9 @@ class AuthService {
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
 
+      debugPrint('Login response status: ${response.statusCode}');
+      debugPrint('Login response body: ${response.body}');
+
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
