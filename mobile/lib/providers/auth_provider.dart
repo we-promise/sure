@@ -90,10 +90,21 @@ class AuthProvider with ChangeNotifier {
           _mfaRequired = true;
           _showMfaInput = true; // Show MFA input field
           debugPrint('MFA required! Setting _showMfaInput to true'); // Debug log
-          // Don't show error message when MFA is required - it's a normal flow
-          _errorMessage = null;
+
+          // If user already submitted an OTP code, this is likely an invalid OTP error
+          // Show the error message so user knows the code was wrong
+          if (otpCode != null && otpCode.isNotEmpty) {
+            _errorMessage = result['error'] as String? ?? 'Invalid authentication code';
+          } else {
+            // First time requesting MFA - don't show error message, it's a normal flow
+            _errorMessage = null;
+          }
         } else {
           _errorMessage = result['error'] as String?;
+          // If user submitted an OTP (is in MFA flow) but got error, keep MFA input visible
+          if (otpCode != null) {
+            _showMfaInput = true;
+          }
         }
         _isLoading = false;
         notifyListeners();
