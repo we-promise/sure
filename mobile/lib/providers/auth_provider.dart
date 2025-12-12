@@ -13,6 +13,7 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = true;
   String? _errorMessage;
   bool _mfaRequired = false;
+  bool _showMfaInput = false; // Track if we should show MFA input field
 
   User? get user => _user;
   AuthTokens? get tokens => _tokens;
@@ -20,6 +21,7 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _tokens != null && !_tokens!.isExpired;
   String? get errorMessage => _errorMessage;
   bool get mfaRequired => _mfaRequired;
+  bool get showMfaInput => _showMfaInput; // Expose MFA input state
 
   AuthProvider() {
     _loadStoredAuth();
@@ -54,6 +56,10 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     _mfaRequired = false;
     _isLoading = true;
+    // Don't reset _showMfaInput if we're submitting OTP code
+    if (otpCode == null) {
+      _showMfaInput = false;
+    }
     notifyListeners();
 
     try {
@@ -70,13 +76,16 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true) {
         _tokens = result['tokens'] as AuthTokens?;
         _user = result['user'] as User?;
+        _mfaRequired = false;
+        _showMfaInput = false; // Reset on successful login
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
         if (result['mfa_required'] == true) {
           _mfaRequired = true;
-          debugPrint('MFA required! _mfaRequired set to: $_mfaRequired'); // Debug log
+          _showMfaInput = true; // Show MFA input field
+          debugPrint('MFA required! Setting _showMfaInput to true'); // Debug log
           // Don't show error message when MFA is required - it's a normal flow
           _errorMessage = null;
         } else {
