@@ -157,7 +157,8 @@ class _AppWrapperState extends State<AppWrapper> {
 
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
-        if (authProvider.isLoading) {
+        // Only show loading spinner during initial auth check
+        if (authProvider.isInitializing) {
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),

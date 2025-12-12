@@ -31,12 +31,19 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final hadOtpCode = authProvider.showMfaInput && _otpController.text.isNotEmpty;
 
-    await authProvider.login(
+    final success = await authProvider.login(
       email: _emailController.text.trim(),
       password: _passwordController.text,
       otpCode: authProvider.showMfaInput ? _otpController.text.trim() : null,
     );
+
+    // Clear OTP field if login failed and user had entered an OTP code
+    // This allows user to easily try again with a new code
+    if (!success && hadOtpCode && authProvider.errorMessage != null) {
+      _otpController.clear();
+    }
   }
 
   @override
