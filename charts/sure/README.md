@@ -195,8 +195,10 @@ Additional default hardening:
 
 ## Redis URL and authentication
 
-- When the OT redis-operator is used via this chart (see `redisOperator.managed.enabled=true`), `REDIS_URL` resolves to the operator's stable master service:
+- When the OT redis-operator is used via this chart (see `redisOperator.managed.enabled=true`), `REDIS_URL` resolves to the operator's stable master service. In shell contexts, this can be expressed as:
   - `redis://default:$(REDIS_PASSWORD)@<name>-redis-master.<namespace>.svc.cluster.local:6379/0` (where `<name>` defaults to `<fullname>-redis` but is overrideable via `redisOperator.name`)
+  For Kubernetes manifests, do not inline shell expansion. Either let this chart construct `REDIS_URL` for you automatically (recommended), or use a literal form with a placeholder password, e.g.:
+  - `redis://default:<password>@<name>-redis-master.<namespace>.svc.cluster.local:6379/0`
 - The `default` username is required with Redis 6+ ACLs. If you explicitly set `REDIS_URL` under `rails.extraEnv`, your value takes precedence.
 - The Redis password is taken from `sure.redisSecretName` (typically your app Secret, e.g. `sure-secrets`) using the key returned by `sure.redisPasswordKey` (default `redis-password`).
 - If you prefer a simple (non‑HA) in‑cluster Redis, disable the operator-managed Redis (`redisOperator.managed.enabled=false`) and enable `redisSimple.enabled`. The chart will deploy a single Redis Pod + Service and wire `REDIS_URL` accordingly. Provide a password via `redisSimple.auth.existingSecret` (recommended) or rely on your app secret mapping.
@@ -319,20 +321,30 @@ metadata:
 type: Opaque
 stringData:
   # Rails secrets
-  SECRET_KEY_BASE: "REPLACE_ME_WITH_64_HEX_CHARS"
+  SECRET_KEY_BASE: "__SET_SECRET__"
 
   # Active Record Encryption keys (optional but recommended when using encryption features)
-  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: "REPLACE_ME"
-  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: "REPLACE_ME"
-  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: "REPLACE_ME"
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: "__SET_SECRET__"
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: "__SET_SECRET__"
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: "__SET_SECRET__"
 
   # Redis password used by operator-managed or simple Redis
-  redis-password: "super-secret-redis-password"
+  redis-password: "__SET_SECRET__"
 
   # Optional: CNPG bootstrap user/password if you are not letting the chart generate them
   # username: "sure"
-  # password: "super-secret-db-password"
+  # password: "__SET_SECRET__"
 ```
+
+Note: These are non-sensitive placeholder values. Do not commit real secrets to version control. Prefer External Secrets, Sealed Secrets, or your platform’s secret manager to source these at runtime.
+
+### Linting Helm templates and YAML
+
+Helm template files under `charts/**/templates/**` contain template delimiters like `{{- ... }}` that raw YAML linters will flag as invalid. To avoid false positives in CI:
+
+- Use Helm’s linter for charts:
+  - `helm lint charts/sure`
+- Configure your YAML linter (e.g., yamllint) to ignore Helm template directories (exclude `charts/**/templates/**`), or use a Helm-aware plugin that preprocesses templates before linting.
 
 You can then point the chart at this Secret via:
 
