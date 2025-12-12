@@ -236,6 +236,77 @@ Notes:
 - Provider precedence for auto-wiring is: explicit `rails.extraEnv.REDIS_URL` → `redisOperator.managed` → `redisSimple`.
 - Only one in-cluster Redis provider should be enabled at a time to avoid ambiguity.
 
+### HA scheduling and topology spreading
+
+For resilient multi-node clusters, enforce one pod per node for critical components. Use `topologySpreadConstraints` with `maxSkew: 1` and `whenUnsatisfiable: DoNotSchedule`. Keep selectors precise to avoid matching other apps.
+
+Examples:
+
+```yaml
+cnpg:
+  cluster:
+    instances: 3
+    minSyncReplicas: 1
+    maxSyncReplicas: 2
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            cnpg.io/cluster: sure-db
+
+redisOperator:
+  managed:
+    enabled: true
+    replicas: 3
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: sure  # verify labels on your cluster
+```
+
+Security note on label selectors:
+- Choose selectors that uniquely match the intended pods to avoid cross-app interference. Good candidates are:
+  - CNPG: `cnpg.io/cluster: <cluster-name>` (CNPG labels its pods)
+  - RedisReplication: `app.kubernetes.io/instance: <release-name>` or `app.kubernetes.io/name: <cr-name>`
+
+Compatibility:
+- CloudNativePG v1.27.1 supports `minSyncReplicas`/`maxSyncReplicas` and standard k8s scheduling fields under `spec`.
+- OT redis-operator v0.21.0 supports scheduling under `spec.kubernetesConfig`.
+
+Testing and verification:
+
+```bash
+# Dry-run render with your values
+helm template sure charts/sure -n sure -f ha-values.yaml --debug > rendered.yaml
+
+# Install/upgrade in a test namespace
+kubectl create ns sure-test || true
+helm upgrade --install sure charts/sure -n sure-test -f ha-values.yaml --wait
+
+# Verify CRs include your scheduling config
+kubectl get cluster.postgresql.cnpg.io sure-db -n sure-test -o yaml \
+  | yq '.spec | {instances, minSyncReplicas, maxSyncReplicas, nodeSelector, affinity, tolerations, topologySpreadConstraints}'
+
+# Default RedisReplication CR name is <fullname>-redis (e.g., sure-redis) unless overridden by redisOperator.name
+kubectl get redisreplication sure-redis -n sure-test -o yaml \
+  | yq '.spec.kubernetesConfig | {nodeSelector, affinity, tolerations, topologySpreadConstraints}'
+
+# After upgrade, trigger a gentle reschedule to apply spreads
+# CNPG: delete one pod at a time or perform a switchover
+kubectl delete pod -n sure-test -l cnpg.io/cluster=sure-db --wait=false --field-selector=status.phase=Running
+
+# RedisReplication: delete one replica pod to let the operator recreate it under new constraints
+kubectl delete pod -n sure-test -l app.kubernetes.io/component=redis --wait=false
+
+# Confirm distribution across nodes
+kubectl get pods -n sure-test -o wide
+```
+
 ## Example app Secret (sure-secrets)
 
 You will typically manage secrets via an external mechanism (External Secrets, Sealed Secrets, etc.), but for reference, below is an example `Secret` that provides the keys this chart expects by default:

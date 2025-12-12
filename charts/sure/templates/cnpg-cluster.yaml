@@ -7,11 +7,33 @@ metadata:
     {{- include "sure.labels" . | nindent 4 }}
 spec:
   instances: {{ .Values.cnpg.cluster.instances | default 1 }}
+  {{- if .Values.cnpg.cluster.minSyncReplicas }}
+  minSyncReplicas: {{ .Values.cnpg.cluster.minSyncReplicas }}
+  {{- end }}
+  {{- if .Values.cnpg.cluster.maxSyncReplicas }}
+  maxSyncReplicas: {{ .Values.cnpg.cluster.maxSyncReplicas }}
+  {{- end }}
   storage:
     size: {{ .Values.cnpg.cluster.storage.size | default "10Gi" }}
     {{- if .Values.cnpg.cluster.storage.storageClassName }}
     storageClass: {{ .Values.cnpg.cluster.storage.storageClassName }}
     {{- end }}
+  {{- with .Values.cnpg.cluster.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.cnpg.cluster.affinity }}
+  affinity:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.cnpg.cluster.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.cnpg.cluster.topologySpreadConstraints }}
+  topologySpreadConstraints:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   bootstrap:
     initdb:
       database: {{ .Values.cnpg.cluster.appDatabase | default "sure" }}

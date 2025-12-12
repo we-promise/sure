@@ -79,6 +79,7 @@ cnpg:
     minSyncReplicas: 0  # set >0 for synchronous replication
     maxSyncReplicas: 0
     # Optional scheduling for cluster Pods (examples for multi-node k3s; leave empty for single-node)
+    nodeSelector: {}
     affinity: {}
     tolerations: []
     topologySpreadConstraints: []
@@ -92,9 +93,6 @@ redisOperator:
   # Many users run small k3s nodes; keep defaults empty and document examples in README
   operator:
     resources: {}
-  # Sure-managed Redis via Operator CR (works with or without installing the subchart if operator is cluster-wide)
-  managed:
-    enabled: true           # default to in-cluster HA Redis via operator
   name: ""                 # defaults to <fullname>-redis
   # Mode controls how this chart templates Redis CRs for the OT redis-operator.
   # - replication: only a RedisReplication CR (recommended/production)
@@ -135,10 +133,25 @@ redisOperator:
     enabled: false
     className: ""          # e.g. longhorn
     size: 8Gi
+  # Optional scheduling for RedisReplication Pods (top-level fallback if managed.* not set). Prefer setting under managed.*
   nodeSelector: {}
   tolerations: []
   affinity: {}
-  workloadResources: {}      # resources for Redis pods created by the CR (not operator controller)
+  topologySpreadConstraints: []
+  workloadResources: {}      # resources for Redis pods created by the CR (data-plane, not operator controller)
+  # Sure-managed Redis via Operator CR (works with or without installing the subchart if operator is cluster-wide)
+  managed:
+    enabled: true           # default to in-cluster HA Redis via operator
+    # Optional scheduling knobs for managed RedisReplication (preferred location)
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    topologySpreadConstraints: []
+    workloadResources: {}
+    persistence:
+      enabled: false
+      className: ""
+      size: 8Gi
 
 # Redis when using external service (redis-ha.enabled=false) — used only for secret key mapping
 redis:
