@@ -18,24 +18,31 @@
             } %>
 
         <div class="max-w-full">
-          <%= content_tag :div, class: ["flex items-center gap-2"] do %>
-            <% if transaction.merchant&.logo_url.present? %>
-              <%= image_tag transaction.merchant.logo_url,
-                  class: "w-6 h-6 rounded-full",
-                  loading: "lazy" %>
-            <% else %>
-              <div class="hidden lg:flex">
-                <%= render DS::FilledIcon.new(
-                  variant: :text,
-                  text: entry.name,
-                  size: "sm",
-                  rounded: true
-                ) %>
-              </div>
-              <div class="flex lg:hidden items-center gap-1 col-span-2">
-                <%= render "transactions/transaction_category", transaction: transaction %>
-              </div>
-            <% end %>
+          <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
+            <div class="hidden lg:flex">
+              <% if transaction.merchant&.logo_url.present? %>
+                <%= image_tag transaction.merchant.logo_url,
+                    class: "w-9 h-9 rounded-full",
+                    loading: "lazy" %>
+              <% else %>
+                <div class="hidden lg:flex">
+                  <%= render DS::FilledIcon.new(
+                    variant: :text,
+                    text: entry.name,
+                    size: "lg",
+                    rounded: true
+                  ) %>
+                </div>
+              <% end %>
+            </div>
+            <div class="flex lg:hidden items-center gap-1 col-span-2 relative">
+              <%= render "transactions/transaction_category", transaction: transaction %>
+              <% if transaction.merchant&.logo_url.present? %>
+                <%= image_tag transaction.merchant.logo_url,
+                    class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1",
+                    loading: "lazy" %>
+              <% end %>
+            </div>
 
             <div class="truncate">
               <div class="space-y-0.5">
