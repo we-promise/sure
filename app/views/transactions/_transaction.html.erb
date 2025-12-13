@@ -84,7 +84,7 @@
                     </span>
                   <% else %>
                     <% if transaction.merchant&.present? %>
-                      <span class="lg:inline truncate"><%= transaction.merchant.name %> • </span>
+                      <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
                     <% end %>
                     <span class="text-secondary hidden lg:inline">
                       <%= link_to entry.account.name,
