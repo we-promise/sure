@@ -10,8 +10,8 @@
     <div class="p-4 grid grid-cols-12 items-center text-primary text-sm font-medium">
       <div class="col-span-8 flex items-center gap-4">
         <%= check_box_tag dom_id(entry, "selection"),
-                        class: "checkbox checkbox--light",
-                        data: { id: entry.id, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection" } %>
+                        class: "checkbox checkbox--light hidden lg:block",
+                        data: { id: entry.id, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
 
         <div class="flex items-center gap-3">
           <%= render DS::FilledIcon.new(icon: icon, size: "sm", hex_color: color, rounded: true) %>

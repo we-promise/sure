@@ -55,7 +55,7 @@
     <% else %>
       <%= tag.div id: dom_id(@account, "entries_bulk_select"),
                 data: {
-                  controller: "bulk-select",
+                  controller: "bulk-select checkbox-toggle",
                   bulk_select_singular_label_value: t(".entry"),
                   bulk_select_plural_label_value: t(".entries")
                 } do %>
@@ -66,8 +66,11 @@
         <div class="grid bg-container-inset rounded-xl grid-cols-12 items-center uppercase text-xs font-medium text-secondary px-5 py-3 mb-4">
           <div class="pl-0.5 col-span-8 flex items-center gap-4">
             <%= check_box_tag "selection_entry",
-                              class: "checkbox checkbox--light",
-                              data: { action: "bulk-select#togglePageSelection" } %>
+                              class: "checkbox checkbox--light checkbox checkbox--light hidden lg:block",
+                              data: { 
+                                action: "bulk-select#togglePageSelection",
+                                checkbox_toggle_target: "selectionEntry"
+                              } %>
             <p><%= t(".date") %></p>
           </div>
           <%= tag.p t(".amount"), class: "col-span-2 justify-self-end" %>

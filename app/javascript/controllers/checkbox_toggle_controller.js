@@ -15,7 +15,7 @@ export default class extends Controller {
     })
 
     if (!shouldShow) {
-      const bulkSelectElement = this.element.closest("[data-controller~='bulk-select']");
+      const bulkSelectElement = document.querySelector("[data-controller~='bulk-select']");
       if (bulkSelectElement) {
         const bulkSelectController = this.application.getControllerForElementAndIdentifier(
           bulkSelectElement,

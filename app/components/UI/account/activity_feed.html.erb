@@ -1,5 +1,5 @@
 <%= turbo_frame_tag dom_id(account, "entries") do %>
-  <div class="bg-container p-5 shadow-border-xs rounded-xl">
+  <div class="bg-container p-5 shadow-border-xs rounded-xl" data-controller="checkbox-toggle">
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t("accounts.show.activity.title"), class: "font-medium text-lg" %>
 
@@ -46,8 +46,17 @@
                             "data-auto-submit-form-target": "auto" %>
             </div>
           </div>
-        </div>
       <% end %>
+      <%= button_tag type: "button",
+            id: "toggle-checkboxes-button",
+            class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
+            data: {
+              action: "click->checkbox-toggle#toggle",
+              checkbox_toggle_target: "toggleButton"
+            } do %>
+            <%= helpers.icon("list-todo") %>
+        <% end %>
+      </div>
     </div>
 
     <% if activity_dates.empty? %>
@@ -66,8 +75,11 @@
         <div class="grid bg-container-inset rounded-xl grid-cols-12 items-center uppercase text-xs font-medium text-secondary px-5 py-3 mb-4">
           <div class="pl-0.5 col-span-8 flex items-center gap-4">
             <%= check_box_tag "selection_entry",
-                              class: "checkbox checkbox--light",
-                              data: { action: "bulk-select#togglePageSelection" } %>
+                              class: "checkbox checkbox--light hidden lg:block",
+                              data: { 
+                                action: "bulk-select#togglePageSelection",
+                                checkbox_toggle_target: "selectionEntry"
+                              } %>
             <%= tag.p t("accounts.show.activity.date") %>
           </div>
 
