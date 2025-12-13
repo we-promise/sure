@@ -25,15 +25,14 @@
                     class: "w-9 h-9 rounded-full",
                     loading: "lazy" %>
               <% else %>
-                <div class="hidden lg:flex">
-                  <%= render DS::FilledIcon.new(
-                    variant: :text,
-                    text: entry.name,
-                    size: "lg",
-                    rounded: true
-                  ) %>
-                </div>
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  text: entry.name,
+                  size: "lg",
+                  rounded: true
+                ) %>
               <% end %>
+            </div>
             </div>
             <div class="flex lg:hidden items-center gap-1 col-span-2 relative">
               <%= render "transactions/transaction_category", transaction: transaction %>
