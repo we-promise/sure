@@ -30,7 +30,9 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "balances enqueues SyncJob and returns sync id as JSON" do
     # Expect a Sync to be enqueued via SyncJob
-    SyncJob.expects(:perform_later).with(kind_of(Sync)).once
+    SyncJob.expects(:perform_later).with do |sync, opts|
+      sync.is_a?(Sync) && opts.is_a?(Hash) && opts[:balances_only] == true
+    end.once
 
     post balances_simplefin_item_url(@simplefin_item, format: :json)
 
