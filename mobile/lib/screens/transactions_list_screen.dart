@@ -1,0 +1,409 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/account.dart';
+import '../providers/auth_provider.dart';
+import '../providers/transactions_provider.dart';
+import '../screens/transaction_form_screen.dart';
+
+class TransactionsListScreen extends StatefulWidget {
+  final Account account;
+
+  const TransactionsListScreen({
+    super.key,
+    required this.account,
+  });
+
+  @override
+  State<TransactionsListScreen> createState() => _TransactionsListScreenState();
+}
+
+class _TransactionsListScreenState extends State<TransactionsListScreen> {
+  bool _isSelectionMode = false;
+  final Set<String> _selectedTransactions = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  // 計算負號個數並決定顯示邏輯
+  Map<String, dynamic> _getAmountDisplayInfo(String amount, bool isAsset) {
+    // 計算負號個數
+    int negativeCount = '-'.allMatches(amount).length;
+
+    // Asset 帳戶需要在負號個數上 +1 進行微調
+    if (isAsset) {
+      negativeCount += 1;
+    }
+
+    // 移除所有負號以獲取純數字
+    String cleanAmount = amount.replaceAll('-', '');
+
+    // 偶數個負號 = 正數，奇數個負號 = 負數
+    bool isPositive = negativeCount % 2 == 0;
+
+    return {
+      'isPositive': isPositive,
+      'displayAmount': cleanAmount,
+      'color': isPositive ? Colors.green : Colors.red,
+      'icon': isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+      'prefix': isPositive ? '' : '-',
+    };
+  }
+
+  Future<void> _loadTransactions() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken != null) {
+      await transactionsProvider.fetchTransactions(
+        accessToken: accessToken,
+        accountId: widget.account.id,
+      );
+    }
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedTransactions.clear();
+      }
+    });
+  }
+
+  void _toggleTransactionSelection(String transactionId) {
+    setState(() {
+      if (_selectedTransactions.contains(transactionId)) {
+        _selectedTransactions.remove(transactionId);
+      } else {
+        _selectedTransactions.add(transactionId);
+      }
+    });
+  }
+
+  Future<void> _deleteSelectedTransactions() async {
+    if (_selectedTransactions.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Transactions'),
+        content: Text('Are you sure you want to delete ${_selectedTransactions.length} transaction(s)?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken != null) {
+      final success = await transactionsProvider.deleteMultipleTransactions(
+        accessToken: accessToken,
+        transactionIds: _selectedTransactions.toList(),
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Deleted ${_selectedTransactions.length} transaction(s)'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          setState(() {
+            _selectedTransactions.clear();
+            _isSelectionMode = false;
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete transactions'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+
+  void _showAddTransactionForm() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TransactionFormScreen(account: widget.account),
+    ).then((_) {
+      _loadTransactions();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.account.name),
+        actions: [
+          if (_isSelectionMode)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _selectedTransactions.isEmpty ? null : _deleteSelectedTransactions,
+            ),
+          IconButton(
+            icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
+            onPressed: _toggleSelectionMode,
+          ),
+        ],
+      ),
+      body: Consumer<TransactionsProvider>(
+        builder: (context, transactionsProvider, child) {
+          if (transactionsProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (transactionsProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    transactionsProvider.error!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadTransactions,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final transactions = transactionsProvider.transactions;
+
+          if (transactions.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 64,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No transactions yet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap + to add your first transaction',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _loadTransactions,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: transactions.length,
+              itemBuilder: (context, index) {
+                final transaction = transactions[index];
+                final isSelected = transaction.id != null &&
+                    _selectedTransactions.contains(transaction.id);
+
+                return Dismissible(
+                  key: Key(transaction.id ?? 'transaction_$index'),
+                  direction: _isSelectionMode
+                      ? DismissDirection.none
+                      : DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  confirmDismiss: (direction) async {
+                    if (transaction.id == null) return false;
+                    return await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Transaction'),
+                        content: Text('Are you sure you want to delete "${transaction.name}"?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  onDismissed: (direction) async {
+                    if (transaction.id != null) {
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final accessToken = await authProvider.getValidAccessToken();
+                      if (accessToken != null) {
+                        final success = await transactionsProvider.deleteTransaction(
+                          accessToken: accessToken,
+                          transactionId: transaction.id!,
+                        );
+
+                        if (mounted && success) {
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Transaction deleted'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: _isSelectionMode && transaction.id != null
+                          ? () => _toggleTransactionSelection(transaction.id!)
+                          : null,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            if (_isSelectionMode)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Checkbox(
+                                  value: isSelected,
+                                  onChanged: transaction.id != null
+                                      ? (value) => _toggleTransactionSelection(transaction.id!)
+                                      : null,
+                                ),
+                              ),
+                            Builder(
+                              builder: (context) {
+                                final displayInfo = _getAmountDisplayInfo(
+                                  transaction.amount,
+                                  widget.account.isAsset,
+                                );
+                                return Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: (displayInfo['color'] as Color).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    displayInfo['icon'] as IconData,
+                                    color: displayInfo['color'] as Color,
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    transaction.name,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    transaction.date,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Builder(
+                              builder: (context) {
+                                final displayInfo = _getAmountDisplayInfo(
+                                  transaction.amount,
+                                  widget.account.isAsset,
+                                );
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: displayInfo['color'] as Color,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      transaction.currency,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddTransactionForm,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
