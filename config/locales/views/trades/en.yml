@@ -24,6 +24,7 @@ en:
       title: New transaction
     show:
       additional: Additional
+      category_label: Category
       cost_per_share_label: Cost per Share
       date_label: Date
       delete: Delete
@@ -32,6 +33,7 @@ en:
       details: Details
       exclude_subtitle: This trade will not be included in reports and calculations
       exclude_title: Exclude from analytics
+      no_category: No category
       note_label: Note
       note_placeholder: Add any additional notes here...
       quantity_label: Quantity
