@@ -1,0 +1,55 @@
+default: &default
+  local_login:
+    # When false, local email/password login is disabled for all users unless
+    # AUTH_LOCAL_ADMIN_OVERRIDE_ENABLED is true and the user is a super admin.
+    enabled: <%= ENV.fetch("AUTH_LOCAL_LOGIN_ENABLED", "true") == "true" %>
+
+    # When true and local_login.enabled is false, allow super admins to use
+    # local login as an emergency override. Regular users remain SSO-only.
+    admin_override_enabled: <%= ENV.fetch("AUTH_LOCAL_ADMIN_OVERRIDE_ENABLED", "false") == "true" %>
+
+  jit:
+    # Controls behavior when a user signs in via SSO and no OIDC identity exists.
+    # - "create_and_link" (default): create a new user + family when no match exists
+    # - "link_only": require an existing user; block JIT creation
+    mode: <%= ENV.fetch("AUTH_JIT_MODE", "create_and_link") %>
+
+    # Optional comma-separated list of domains (e.g. "example.com,corp.com").
+    # When non-empty, JIT SSO account creation is only allowed for these domains.
+    # When empty, all domains are allowed (current behavior).
+    allowed_oidc_domains: <%= ENV.fetch("ALLOWED_OIDC_DOMAINS", "") %>
+
+  providers:
+    # Generic OpenID Connect provider (e.g., Keycloak, Authentik, other OIDC issuers).
+    # This maps to the existing :openid_connect OmniAuth strategy and keeps
+    # backwards-compatible behavior for self-hosted setups using OIDC_* env vars.
+    - id: "oidc"
+      strategy: "openid_connect"
+      name: "openid_connect"
+      label: <%= ENV.fetch("OIDC_BUTTON_LABEL", "Sign in with OpenID Connect") %>
+      icon:  <%= ENV.fetch("OIDC_BUTTON_ICON", "key") %>
+
+    # Optional Google OAuth provider. Requires the omniauth-google-oauth2 gem
+    # and GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET env vars.
+    - id: "google"
+      strategy: "google_oauth2"
+      name: "google_oauth2"
+      label: <%= ENV.fetch("GOOGLE_BUTTON_LABEL", "Sign in with Google") %>
+      icon:  <%= ENV.fetch("GOOGLE_BUTTON_ICON", "google") %>
+
+    # Optional GitHub OAuth provider. Requires the omniauth-github gem and
+    # GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET env vars.
+    - id: "github"
+      strategy: "github"
+      name: "github"
+      label: <%= ENV.fetch("GITHUB_BUTTON_LABEL", "Sign in with GitHub") %>
+      icon:  <%= ENV.fetch("GITHUB_BUTTON_ICON", "github") %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default
