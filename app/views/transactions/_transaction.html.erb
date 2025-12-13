@@ -39,7 +39,7 @@
               <%= render "transactions/transaction_category", transaction: transaction %>
               <% if transaction.merchant&.logo_url.present? %>
                 <%= image_tag transaction.merchant.logo_url,
-                    class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border-1 border-secondary pointer-events-none",
+                    class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
                     loading: "lazy" %>
               <% end %>
             </div>
