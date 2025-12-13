@@ -39,6 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       otpCode: authProvider.showMfaInput ? _otpController.text.trim() : null,
     );
 
+    // Check if widget is still mounted after async operation
+    if (!mounted) return;
+
     // Clear OTP field if login failed and user had entered an OTP code
     // This allows user to easily try again with a new code
     if (!success && hadOtpCode && authProvider.errorMessage != null) {
