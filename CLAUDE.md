@@ -94,6 +94,13 @@ Two primary data ingestion methods:
    - Supports transaction and balance imports
    - Custom field mapping with transformation rules
 
+### Provider Integrations: Pending Transactions and FX (SimpleFIN/Plaid)
+
+- Detection: SimpleFIN pending via `pending: true` or `posted` blank/0 + `transacted_at`; Plaid via `extra["plaid"]["pending"]`.
+- Storage: provider data on `Transaction#extra` (e.g., `extra["simplefin"]["pending"]`; FX uses `fx_from`, `fx_date`).
+- UI: “Pending” badge when SimpleFIN or Plaid pending is true; no badge if provider omits pendings.
+- Debug (default-off): `SIMPLEFIN_INCLUDE_PENDING=1`, `SIMPLEFIN_DEBUG_RAW=1`.
+
 ### Background Processing
 Sidekiq handles asynchronous tasks:
 - Account syncing (`SyncJob`)
