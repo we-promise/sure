@@ -6,8 +6,11 @@
       <%= icon "link-2", size: "sm", class: "text-secondary" %>
     </span>
   <% elsif transaction.transfer.pending? %>
-    <span class="inline-flex items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
+    <span class="hidden lg:inline-flex items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
       Auto-matched
+    </span>
+    <span class="inline-flex lg:hidden items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
+      A/M
     </span>
 
     <%= button_to transfer_path(transaction.transfer, transfer: { status: "confirmed" }),

@@ -4,6 +4,11 @@
   <% if transaction.transfer&.categorizable? || transaction.transfer.nil? %>
     <%= render "categories/menu", transaction: transaction %>
   <% else %>
-    <%= render "categories/badge", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+    <div class="hidden lg:flex">
+      <%= render "categories/badge", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+    </div>
+    <div class="flex lg:hidden">
+      <%= render "categories/badge_mobile", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+    </div>
   <% end %>
 </div>
