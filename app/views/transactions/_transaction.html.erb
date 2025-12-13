@@ -89,6 +89,9 @@
                           data: { turbo_frame: "_top" },
                           class: "hover:underline" %>
                     </span>
+                    <% if transaction.merchant&.present? %>
+                      <span class="lg:inline truncate">• <%= transaction.merchant.name %></span>
+                    <% end %>
                     <div class="flex items-center gap-1 truncate">
                       <%= render "categories/category_name_mobile", transaction: transaction %>
                       <% if transaction.merchant&.present? %>
