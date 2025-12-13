@@ -35,7 +35,7 @@
                 </div>
               <% end %>
             </div>
-            <div class="flex lg:hidden items-center gap-1 col-span-2 relative">
+            <div class="flex md:hidden items-center gap-1 col-span-2 relative">
               <%= render "transactions/transaction_category", transaction: transaction %>
               <% if transaction.merchant&.logo_url.present? %>
                 <%= image_tag transaction.merchant.logo_url,
