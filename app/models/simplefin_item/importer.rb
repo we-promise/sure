@@ -105,9 +105,52 @@ class SimplefinItem::Importer
       # Only update balance for already-linked accounts (if any), to avoid creating duplicates in setup.
       if (acct = sfa.current_account)
         adapter = Account::ProviderImportAdapter.new(acct)
+
+        # Normalize balances for SimpleFIN liabilities so immediate UI is correct after discovery
+        bal   = to_decimal(account_data[:balance])
+        avail = to_decimal(account_data[:"available-balance"])
+        observed = bal.nonzero? ? bal : avail
+
+        is_linked_liability = [ "CreditCard", "Loan" ].include?(acct.accountable_type)
+        inferred = begin
+          Simplefin::AccountTypeMapper.infer(
+            name: account_data[:name],
+            holdings: account_data[:holdings],
+            extra: account_data[:extra],
+            balance: bal,
+            available_balance: avail,
+            institution: account_data.dig(:org, :name)
+          )
+        rescue
+          nil
+        end
+        is_mapper_liability = inferred && [ "CreditCard", "Loan" ].include?(inferred.accountable_type)
+        is_liability = is_linked_liability || is_mapper_liability
+
+        normalized = observed
+        if is_liability
+          both_present = bal.nonzero? && avail.nonzero?
+          if both_present && same_sign?(bal, avail)
+            if bal.positive? && avail.positive?
+              normalized = -observed.abs
+            elsif bal.negative? && avail.negative?
+              normalized = observed.abs
+            end
+          else
+            normalized = -observed
+          end
+        end
+
+        cash = if acct.accountable_type == "Investment"
+          # Leave investment cash to investment calculators in full run
+          normalized
+        else
+          normalized
+        end
+
         adapter.update_balance(
-          balance: account_data[:balance],
-          cash_balance: account_data[:"available-balance"],
+          balance: normalized,
+          cash_balance: cash,
           source: "simplefin"
         )
       end
@@ -773,5 +816,21 @@ class SimplefinItem::Importer
     def sync_buffer_period
       # Default to 7 days buffer for subsequent syncs
       7
+    end
+
+    # --- Simple helpers for numeric handling in normalization ---
+    def to_decimal(value)
+      return BigDecimal("0") if value.nil?
+      case value
+      when BigDecimal then value
+      when String then BigDecimal(value) rescue BigDecimal("0")
+      when Numeric then BigDecimal(value.to_s)
+      else
+        BigDecimal("0")
+      end
+    end
+
+    def same_sign?(a, b)
+      (a.positive? && b.positive?) || (a.negative? && b.negative?)
     end
 end
