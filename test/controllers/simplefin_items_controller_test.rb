@@ -28,6 +28,83 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "balances enqueues SyncJob and returns sync id as JSON" do
+    # Expect a Sync to be enqueued via SyncJob
+    SyncJob.expects(:perform_later).with do |sync, opts|
+      sync.is_a?(Sync) && opts.is_a?(Hash) && opts[:balances_only] == true
+    end.once
+
+    post balances_simplefin_item_url(@simplefin_item, format: :json)
+
+    assert_response :success
+    body = JSON.parse(@response.body)
+    assert_equal true, body["ok"], "expected ok: true"
+    assert body["sync_id"].present?, "expected sync_id to be present"
+  end
+
+  test "relink does not disable a previously linked account that still has other provider links" do
+    # Create two manual accounts A and B
+    account_a = Account.create!(
+      family: @family,
+      name: "Manual A",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+
+    account_b = Account.create!(
+      family: @family,
+      name: "Manual B",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "savings")
+    )
+
+    # Create a SimpleFIN account under the same item
+    sfa_primary = SimplefinAccount.create!(
+      simplefin_item: @simplefin_item,
+      name: "SF A",
+      account_id: "sf_a",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+
+    # Link the primary SimpleFIN provider to account A via AccountProvider (legacy link cleared by action)
+    AccountProvider.create!(account: account_a, provider: sfa_primary)
+
+    # Also link a different provider TYPE (Plaid) to account A so it is NOT orphaned
+    plaid_item = PlaidItem.create!(family: @family, name: "Plaid Conn", access_token: "test-token", plaid_id: "test-plaid-id")
+    plaid_acct = PlaidAccount.create!(
+      plaid_item: plaid_item,
+      plaid_id: "test-plaid-acct",
+      name: "Plaid A",
+      plaid_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: account_a, provider: plaid_acct)
+
+    # Perform relink: point sfa_primary at account B
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account_b.id,
+      simplefin_account_id: sfa_primary.id
+    }
+
+    assert_response :see_other
+
+    # Reload and assert: account A should still be enabled (not disabled) because it has another provider link
+    account_a.reload
+    assert account_a.account_providers.any?, "expected previous account to still have provider links"
+    refute account_a.disabled?, "previous account should not be disabled when still linked to other providers"
+
+    # And the AccountProvider for sfa_primary should now point to account B
+    ap = AccountProvider.find_by(provider: sfa_primary)
+    assert_equal account_b.id, ap.account_id
+  end
+
   test "should get edit" do
     @simplefin_item.update!(status: :requires_update)
     get edit_simplefin_item_url(@simplefin_item)
