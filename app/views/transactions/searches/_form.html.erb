@@ -30,5 +30,15 @@
         <%= render "transactions/searches/menu", form: form %>
       <% end %>
     <% end %>
+
+    <%= button_tag type: "button",
+        id: "toggle-checkboxes-button",
+        class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
+        data: {
+          action: "click->checkbox-toggle#toggle",
+          checkbox_toggle_target: "toggleButton"
+        } do %>
+      <%= icon("list-todo") %>
+    <% end %>
   </div>
 <% end %>

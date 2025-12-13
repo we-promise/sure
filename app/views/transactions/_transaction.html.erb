@@ -9,11 +9,12 @@
       <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
-            class: "checkbox checkbox--light",
+            class: "checkbox checkbox--light hidden lg:block",
             data: {
               id: entry.id,
               "bulk-select-target": "row",
-              action: "bulk-select#toggleRowSelection"
+              action: "bulk-select#toggleRowSelection",
+              checkbox_toggle_target: "selectionEntry"
             } %>
 
         <div class="max-w-full">
