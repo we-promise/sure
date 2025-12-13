@@ -24,12 +24,17 @@
                   class: "w-6 h-6 rounded-full",
                   loading: "lazy" %>
             <% else %>
-              <%= render DS::FilledIcon.new(
-                variant: :text,
-                text: entry.name,
-                size: "sm",
-                rounded: true
-              ) %>
+              <div class="hidden lg:flex">
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  text: entry.name,
+                  size: "sm",
+                  rounded: true
+                ) %>
+              </div>
+              <div class="flex lg:hidden items-center gap-1 col-span-2">
+                <%= render "transactions/transaction_category", transaction: transaction %>
+              </div>
             <% end %>
 
             <div class="truncate">
@@ -72,16 +77,19 @@
                   </div>
                 </div>
 
-                <div class="text-secondary text-xs font-normal hidden lg:block">
+                <div class="text-secondary text-xs font-normal">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
                       <%= transaction.loan_payment? ? "Loan Payment" : "Transfer" %> • <%= entry.account.name %>
                     </span>
                   <% else %>
-                    <%= link_to entry.account.name,
-                        account_path(entry.account, tab: "transactions"),
-                        data: { turbo_frame: "_top" },
-                        class: "hover:underline" %>
+                    <span class="text-secondary hidden lg:inline">
+                      <%= link_to entry.account.name,
+                          account_path(entry.account, tab: "transactions"),
+                          data: { turbo_frame: "_top" },
+                          class: "hover:underline" %>
+                    </span>
+                    <%= render "categories/category_name_mobile", transaction: transaction %>
                   <% end %>
                 </div>
               </div>

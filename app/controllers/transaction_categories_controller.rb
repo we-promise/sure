@@ -27,6 +27,11 @@ class TransactionCategoriesController < ApplicationController
             partial: "categories/menu",
             locals: { transaction: transaction }
           ),
+          turbo_stream.replace(
+            "category_name_mobile_#{transaction.id}",
+            partial: "categories/category_name_mobile",
+            locals: { transaction: transaction }
+          ),
           *flash_notification_stream_items
         ]
       end
