@@ -4,9 +4,9 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
+    <div class="flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
 
-      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
+      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
             class: "checkbox checkbox--light hidden lg:block",
@@ -89,7 +89,7 @@
                           data: { turbo_frame: "_top" },
                           class: "hover:underline" %>
                     </span>
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1 truncate">
                       <%= render "categories/category_name_mobile", transaction: transaction %>
                       <% if transaction.merchant&.present? %>
                         <span class="lg:hidden truncate">• <%= transaction.merchant.name %></span>
@@ -107,7 +107,7 @@
         <%= render "transactions/transaction_category", transaction: transaction %>
       </div>
 
-      <div class="col-span-2 col-start-11 md:col-start-auto ml-auto text-right">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
         <%= content_tag :p,
             transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
             class: ["text-green-600": entry.amount.negative?] %>
