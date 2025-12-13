@@ -2,6 +2,8 @@
 # are invoked here are part of Puma's configuration DSL. For more information
 # about methods provided by the DSL, see https://puma.io/puma/Puma/DSL.html.
 
+require_relative "../lib/settings_log_dump"
+
 rails_env = ENV.fetch("RAILS_ENV", "development")
 
 # Puma starts a configurable number of processes (workers) and each process
@@ -53,4 +55,11 @@ if rails_env == "development"
   # Specifies a very generous `worker_timeout` so that the worker
   # isn't killed by Puma when suspended by a debugger.
   worker_timeout 3600
+end
+
+# Set up SIGUSR1 handler in worker processes to dump settings
+# This runs after Puma sets up its worker, so it only affects individual workers
+# The master process can still use SIGUSR1 for phased restarts
+on_worker_boot do
+  SettingsLogDump.install_usr1_trap(process_label: "Puma worker")
 end
