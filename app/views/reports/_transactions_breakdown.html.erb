@@ -109,7 +109,7 @@
       <%# Expenses Section %>
       <% if expense_groups.any? %>
         <div>
-          <h3 class="text-base font-semibold text-danger mb-4 flex items-center gap-2">
+          <h3 class="text-base font-semibold text-destructive mb-4 flex items-center gap-2">
             <%= icon("trending-down", class: "w-5 h-5") %>
             <%= t("reports.transactions_breakdown.table.expense") %>
             <span class="text-sm font-normal text-tertiary">(<%= Money.new(expense_total, Current.family.currency).format %>)</span>
@@ -143,7 +143,7 @@
                       </div>
                     </td>
                     <td class="py-3 px-4 text-right">
-                      <span class="font-semibold text-danger">
+                      <span class="font-semibold text-destructive">
                         <%= Money.new(group[:total], Current.family.currency).format %>
                       </span>
                     </td>

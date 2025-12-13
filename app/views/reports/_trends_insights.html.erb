@@ -29,13 +29,13 @@
                   <td class="text-right py-3 px-4 text-success">
                     <%= Money.new(trend[:income], Current.family.currency).format %>
                   </td>
-                  <td class="text-right py-3 px-4 text-danger">
+                  <td class="text-right py-3 px-4 text-destructive">
                     <%= Money.new(trend[:expenses], Current.family.currency).format %>
                   </td>
-                  <td class="text-right py-3 px-2 <%= trend[:net] >= 0 ? "text-success" : "text-danger" %>">
+                  <td class="text-right py-3 px-2 <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
                     <%= Money.new(trend[:net], Current.family.currency).format %>
                   </td>
-                  <td class="text-right py-3 pl-4 <%= trend[:net] >= 0 ? "text-success" : "text-danger" %>">
+                  <td class="text-right py-3 pl-4 <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
                     <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
                     <%= savings_rate %>%
                   </td>
@@ -60,14 +60,14 @@
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
-            <p class="text-lg font-semibold text-danger">
+            <p class="text-lg font-semibold text-destructive">
               <%= Money.new(avg_expenses, Current.family.currency).format %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_savings") %></p>
-            <p class="text-lg font-semibold <%= avg_net >= 0 ? "text-success" : "text-danger" %>">
+            <p class="text-lg font-semibold <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
               <%= Money.new(avg_net, Current.family.currency).format %>
             </p>
           </div>
