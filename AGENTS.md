@@ -15,6 +15,13 @@
 - Lint/format JS/CSS: `npm run lint` and `npm run format` — uses Biome.
 - Security scan: `bin/brakeman` — static analysis for common Rails issues.
 
+## Mobile Prototype Workflow
+- Planning artifacts for the Hotwire Native prototype live in `docs/hotwire_native_prototype_plan.md`. Review and update the checklist before starting native-wrapper work.
+- Implementation spikes for the native wrappers must originate from the `feature/hotwire-native-prototype` branch cut off the latest `main` once planning is approved.
+- Keep PWA regressions in mind: always confirm changes behave in both the web PWA and Turbo Native contexts.
+- Turbo Native requests are detected via `TurboNative::Controller`; when you add new controllers ensure they inherit from `ApplicationController` (or include the concern) so the `:turbo_native` layout variant is applied automatically.
+- The native layout exports navigation metadata through `ApplicationHelper#turbo_native_navigation_payload` and the `turbo_native_bridge` Stimulus controller. When adding tabs or nav links, update the helper to keep web and native shells in sync.
+
 ## Coding Style & Naming Conventions
 - Ruby: 2-space indent, `snake_case` for methods/vars, `CamelCase` for classes/modules. Follow Rails conventions for folders and file names.
 - Views: ERB checked by `erb-lint` (see `.erb_lint.yml`). Avoid heavy logic in views; prefer helpers/components.
