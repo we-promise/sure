@@ -87,7 +87,7 @@
                 <div class="text-secondary text-xs font-normal">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
-                      <%= transaction.loan_payment? ? "Loan Payment" : "Transfer" %> • <%= entry.account.name %>
+                      <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> • <%= entry.account.name %>
                     </span>
                   <% else %>
                     <% if transaction.merchant&.present? %>
