@@ -3,7 +3,7 @@
 if ! gem list foreman -i --silent; then
   echo "Installing foreman..."
   gem install foreman
-  
+
   # Add rehash for rbenv users
   if command -v rbenv > /dev/null; then
     echo "Running rbenv rehash..."
