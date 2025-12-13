@@ -62,8 +62,11 @@
           <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
             <div class="pl-0.5 col-span-8 flex items-center gap-4">
               <%= check_box_tag "selection_entry",
-                                class: "checkbox checkbox--light",
-                                data: { action: "bulk-select#togglePageSelection" } %>
+                                class: "checkbox checkbox--light hidden lg:block",
+                                data: { 
+                                  action: "bulk-select#togglePageSelection",
+                                  checkbox_toggle_target: "selectionEntry"
+                                } %>
               <p>transaction</p>
             </div>
 
