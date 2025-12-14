@@ -49,13 +49,15 @@ class SimplefinAccount::Processor
 
       # Determine if this should be treated as a liability for normalization
       is_linked_liability = [ "CreditCard", "Loan" ].include?(account.accountable_type)
+      raw = (simplefin_account.raw_payload || {}).with_indifferent_access
+      org = (simplefin_account.org_data || {}).with_indifferent_access
       inferred = Simplefin::AccountTypeMapper.infer(
         name: simplefin_account.name,
-        holdings: (simplefin_account.raw_payload || {})["holdings"],
+        holdings: raw[:holdings],
         extra: simplefin_account.extra,
         balance: bal,
         available_balance: avail,
-        institution: simplefin_account.org_data&.dig("name")
+        institution: org[:name]
       ) rescue nil
       is_mapper_liability = inferred && [ "CreditCard", "Loan" ].include?(inferred.accountable_type)
       is_liability = is_linked_liability || is_mapper_liability

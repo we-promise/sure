@@ -213,7 +213,8 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
     end
 
     def sticky_key
-      "simplefin:sfa:#{@sfa.id}:liability_sign_hint"
+      id = @sfa.id || "new"
+      "simplefin:sfa:#{id}:liability_sign_hint"
     end
 
     def to_d(value)
