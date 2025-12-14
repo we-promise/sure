@@ -11,6 +11,7 @@
 # - Returns :unknown when evidence is insufficient; callers should fallback
 #   to existing sign-only normalization.
 class SimplefinAccount::Liabilities::OverpaymentAnalyzer
+  include SimplefinNumericHelpers
   Result = Struct.new(:classification, :reason, :metrics, keyword_init: true)
 
   DEFAULTS = {
@@ -24,7 +25,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
 
   def initialize(simplefin_account, observed_balance:, now: Time.current)
     @sfa = simplefin_account
-    @observed = to_d(observed_balance)
+    @observed = to_decimal(observed_balance)
     @now = now
   end
 
@@ -100,7 +101,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
 
     def epsilon_base
       val = Setting["simplefin_cc_overpayment_epsilon_base"]
-      d = to_d(val.presence || DEFAULTS[:epsilon_base])
+      d = to_decimal(val.presence || DEFAULTS[:epsilon_base])
       d > 0 ? d : DEFAULTS[:epsilon_base]
     end
 
@@ -121,7 +122,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
 
       # Prefer materialized entries
       entries = account.entries.where("date >= ?", start_date).select(:amount, :date)
-      txns = entries.map { |e| { amount: to_d(e.amount), date: e.date } }
+      txns = entries.map { |e| { amount: to_decimal(e.amount), date: e.date } }
       return txns if txns.size >= min_txns
 
       # Fallback: provider raw payload
@@ -150,7 +151,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
       guard_since = (@now.to_date - statement_guard_days.days)
 
       txns.each do |t|
-        amt = to_d(t[:amount])
+        amt = to_decimal(t[:amount])
         if amt.positive?
           charges += amt
         elsif amt.negative?
@@ -217,15 +218,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
       "simplefin:sfa:#{id}:liability_sign_hint"
     end
 
-    def to_d(value)
-      case value
-      when BigDecimal then value
-      when String then BigDecimal(value) rescue BigDecimal("0")
-      when Numeric then BigDecimal(value.to_s)
-      else
-        BigDecimal("0")
-      end
-    end
+    # numeric coercion handled by SimplefinNumericHelpers#to_decimal
 
     def unknown(reason)
       Result.new(classification: :unknown, reason: reason, metrics: {})

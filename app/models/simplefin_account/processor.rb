@@ -1,4 +1,5 @@
 class SimplefinAccount::Processor
+  include SimplefinNumericHelpers
   attr_reader :simplefin_account
 
   def initialize(simplefin_account)
@@ -175,20 +176,7 @@ class SimplefinAccount::Processor
     end
 
     # Helpers
-    def to_decimal(value)
-      return BigDecimal("0") if value.nil?
-      case value
-      when BigDecimal then value
-      when String then BigDecimal(value) rescue BigDecimal("0")
-      when Numeric then BigDecimal(value.to_s)
-      else
-        BigDecimal("0")
-      end
-    end
-
-    def same_sign?(a, b)
-      (a.positive? && b.positive?) || (a.negative? && b.negative?)
-    end
+    # to_decimal and same_sign? provided by SimplefinNumericHelpers concern
 
     def normalize_liability_balance(observed, bal, avail)
       both_present = bal.nonzero? && avail.nonzero?

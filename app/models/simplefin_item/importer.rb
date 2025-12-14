@@ -1,5 +1,6 @@
 require "set"
 class SimplefinItem::Importer
+  include SimplefinNumericHelpers
   class RateLimitedError < StandardError; end
   attr_reader :simplefin_item, :simplefin_provider, :sync
 

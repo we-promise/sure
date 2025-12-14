@@ -1,6 +1,8 @@
 require "test_helper"
 
 class SimplefinAccount::Liabilities::OverpaymentAnalyzerTest < ActiveSupport::TestCase
+  # Limit fixtures to only what's required to avoid FK validation on unrelated tables
+  fixtures :families
   setup do
     @family = families(:dylan_family)
     @item = SimplefinItem.create!(family: @family, name: "SimpleFIN", access_url: "https://example.com/token")
@@ -13,8 +15,17 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzerTest < ActiveSupport::Te
       current_balance: BigDecimal("-22.72")
     )
 
-    @acct = accounts(:credit_card)
-    @acct.update!(simplefin_account: @sfa)
+    # Avoid cross‑suite fixture dependency by creating a fresh credit card account
+    @acct = Account.create!(
+      family: @family,
+      name: "Test CC",
+      balance: 0,
+      cash_balance: 0,
+      currency: "USD",
+      accountable: CreditCard.new
+    )
+    # Create explicit provider link to ensure FK validity in isolation
+    AccountProvider.create!(account: @acct, provider: @sfa)
 
     # Enable heuristic
     Setting["simplefin_cc_overpayment_detection"] = "true"
@@ -30,7 +41,16 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzerTest < ActiveSupport::Te
     Setting["simplefin_cc_overpayment_min_txns"] = nil
     Setting["simplefin_cc_overpayment_min_payments"] = nil
     Setting["simplefin_cc_overpayment_statement_guard_days"] = nil
-    Rails.cache.delete_matched("simplefin:sfa:#{@sfa.id}:liability_sign_hint") rescue nil
+    begin
+      Rails.cache.delete_matched("simplefin:sfa:#{@sfa.id}:liability_sign_hint") if @sfa&.id
+    rescue
+      # ignore cache backends without delete_matched
+    end
+    # Ensure created records are removed to avoid FK validation across examples in single-file runs
+    AccountProvider.where(account_id: @acct.id).destroy_all rescue nil
+    @acct.destroy! rescue nil
+    @sfa.destroy! rescue nil
+    @item.destroy! rescue nil
   end
 
   test "classifies credit when payments exceed charges roughly by observed amount" do
