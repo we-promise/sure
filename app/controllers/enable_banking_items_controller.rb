@@ -1,6 +1,11 @@
 class EnableBankingItemsController < ApplicationController
+  include EnableBankingItems::MapsHelper
   before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
+
+  def new
+    @enable_banking_item = Current.family.enable_banking_items.build
+  end
 
   def create
     @enable_banking_item = Current.family.enable_banking_items.build(enable_banking_item_params)
@@ -150,7 +155,7 @@ class EnableBankingItemsController < ApplicationController
     rescue Provider::EnableBanking::EnableBankingError => e
       if e.message.include?("REDIRECT_URI_NOT_ALLOWED")
         Rails.logger.error "Enable Banking redirect URI not allowed: #{e.message}"
-        redirect_to settings_providers_path, alert: t(".redirect_uri_not_allowed", default: "Redirect not allowew. Configure `%{callback_url}` in your Enable Banking application settings.", callback_url: enable_banking_callback_url)
+        redirect_to settings_providers_path, alert: t(".redirect_uri_not_allowed", default: "Redirect not allowed. Configure `%{callback_url}` in your Enable Banking application settings.", callback_url: enable_banking_callback_url)
       else
         Rails.logger.error "Enable Banking authorization error: #{e.message}"
         redirect_to settings_providers_path, alert: t(".authorization_failed", default: "Failed to start authorization: %{message}", message: e.message)
@@ -401,6 +406,115 @@ class EnableBankingItemsController < ApplicationController
     end
 
     redirect_to accounts_path, status: :see_other
+  end
+
+  def select_existing_account
+    @account = Current.family.accounts.find(params[:account_id])
+
+    # Filter out Enable Banking accounts that are already linked to any account
+    # (either via account_provider or legacy account association)
+    @available_enable_banking_accounts = Current.family.enable_banking_items
+      .includes(:enable_banking_accounts)
+      .flat_map(&:enable_banking_accounts)
+      .reject { |sfa| sfa.account_provider.present? || sfa.account.present? }
+      .sort_by { |sfa| sfa.updated_at || sfa.created_at }
+      .reverse
+
+    # Always render a modal: either choices or a helpful empty-state
+    render :select_existing_account, layout: false
+  end
+
+  def link_existing_account
+    @account = Current.family.accounts.find(params[:account_id])
+    enable_banking_account = EnableBankingAccount.find(params[:enable_banking_account_id])
+
+    # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
+    if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
+      flash[:alert] = "Only manual accounts can be linked"
+      if turbo_frame_request?
+        return render turbo_stream: Array(flash_notification_stream_items)
+      else
+        return redirect_to account_path(@account), alert: flash[:alert]
+      end
+    end
+
+    # Verify the Enable Banking account belongs to this family's Enable Banking items
+    unless enable_banking_account.enable_banking_item.present? &&
+           Current.family.enable_banking_items.include?(enable_banking_account.enable_banking_item)
+      flash[:alert] = "Invalid Enable Banking account selected"
+      if turbo_frame_request?
+        render turbo_stream: Array(flash_notification_stream_items)
+      else
+        redirect_to account_path(@account), alert: flash[:alert]
+      end
+      return
+    end
+
+    # Relink behavior: detach any legacy link and point provider link at the chosen account
+    Account.transaction do
+      enable_banking_account.lock!
+
+      # Upsert the AccountProvider mapping deterministically
+      ap = AccountProvider.find_or_initialize_by(provider: enable_banking_account)
+      previous_account = ap.account
+      ap.account_id = @account.id
+      ap.save!
+
+      # If the provider was previously linked to a different account in this family,
+      # and that account is now orphaned, quietly disable it so it disappears from the
+      # visible manual list. This mirrors the unified flow expectation that the provider
+      # follows the chosen account.
+      if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
+        begin
+          previous_account.disable!
+        rescue => e
+          Rails.logger.warn("Failed to disable orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
+        end
+      end
+    end
+
+    if turbo_frame_request?
+      # Reload the item to ensure associations are fresh
+      enable_banking_account.reload
+      item = enable_banking_account.enable_banking_item
+      item.reload
+
+      # Recompute data needed by Accounts#index partials
+      @manual_accounts = Account.uncached {
+        Current.family.accounts
+          .visible_manual
+          .order(:name)
+          .to_a
+      }
+      @enable_banking_items = Current.family.enable_banking_items.ordered.includes(:syncs)
+      build_enable_banking_maps_for(@enable_banking_items)
+
+      flash[:notice] = "Account successfully linked to Enable Banking"
+      @account.reload
+      manual_accounts_stream = if @manual_accounts.any?
+        turbo_stream.update(
+          "manual-accounts",
+          partial: "accounts/index/manual_accounts",
+          locals: { accounts: @manual_accounts }
+        )
+      else
+        turbo_stream.replace("manual-accounts", view_context.tag.div(id: "manual-accounts"))
+      end
+
+      render turbo_stream: [
+        # Optimistic removal of the specific account row if it exists in the DOM
+        turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
+        manual_accounts_stream,
+        turbo_stream.replace(
+          ActionView::RecordIdentifier.dom_id(item),
+          partial: "enable_banking_items/enable_banking_item",
+          locals: { enable_banking_item: item }
+        ),
+        turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
+      ] + Array(flash_notification_stream_items)
+    else
+      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: "Account successfully linked to Enable Banking", status: :see_other
+    end
   end
 
   private

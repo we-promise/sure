@@ -70,9 +70,10 @@ class BudgetCategory < ApplicationRecord
   end
 
   def percent_of_budget_spent
-    return 0 unless budgeted_spending > 0
-
-    (actual_spending / budgeted_spending) * 100
+    return 0 if budgeted_spending == 0 && actual_spending == 0
+    return 0 if budgeted_spending > 0 && actual_spending == 0
+    return 100 if budgeted_spending == 0 && actual_spending > 0
+    (actual_spending.to_f / budgeted_spending) * 100 if budgeted_spending > 0 && actual_spending > 0
   end
 
   def bar_width_percent

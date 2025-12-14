@@ -32,7 +32,7 @@
           <% elsif enable_banking_item.requires_update? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span "Re-authorization required" %>
+              <%= tag.span "Reconnect" %>
             </div>
           <% else %>
             <p class="text-secondary">
@@ -56,7 +56,7 @@
                         class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
                         data: { turbo: false } do %>
             <%= icon "refresh-cw", size: "sm" %>
-            Re-authorize
+            Update
           <% end %>
         <% elsif Rails.env.development? %>
           <%= icon(

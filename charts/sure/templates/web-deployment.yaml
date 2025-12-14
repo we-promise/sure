@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sure.fullname" . }}-web
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  revisionHistoryLimit: {{ .Values.web.revisionHistoryLimit | default 3 }}
+  replicas: {{ .Values.web.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 25%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: web
+      {{- include "sure.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: web
+        {{- include "sure.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- toYaml .Values.web.podAnnotations | nindent 8 }}
+    spec:
+      {{- if or (eq .Values.migrations.strategy "initContainer") .Values.migrations.initContainer.enabled }}
+      initContainers:
+        - name: db-migrate
+          image: {{ include "sure.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.migrations.initContainer.command | nindent 12 }}
+          args:
+            - |
+              {{ .Values.migrations.initContainer.args | nindent 14 }}
+          env:
+            {{- include "sure.env" (dict "ctx" . "includeDatabase" true "includeRedis" true) | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.migrations.initContainer.resources | nindent 12 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.image.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.image.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: {{ include "sure.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.web.command }}
+          command:
+            {{- toYaml .Values.web.command | nindent 12 }}
+          {{- end }}
+          {{- if .Values.web.args }}
+          args:
+            {{- toYaml .Values.web.args | nindent 12 }}
+          {{- end }}
+          env:
+            {{- include "sure.env" (dict "ctx" . "includeDatabase" true "includeRedis" true) | nindent 12 }}
+            {{- range $k, $v := .Values.web.extraEnv }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- if or .Values.rails.extraEnvFrom .Values.web.extraEnvFrom }}
+          envFrom:
+            {{- with .Values.rails.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.web.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml .Values.web.readinessProbe | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.web.livenessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.web.startupProbe | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.web.extraVolumeMounts | nindent 12 }}
+            {{- if .Values.writableTmp.enabled }}
+            - name: tmp
+              mountPath: /tmp
+            {{- end }}
+      volumes:
+        {{- toYaml .Values.web.extraVolumes | nindent 8 }}
+        {{- if .Values.writableTmp.enabled }}
+        - name: tmp
+          emptyDir: {}
+        {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.web.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.web.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.web.tolerations | nindent 8 }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.web.topologySpreadConstraints | nindent 8 }}
