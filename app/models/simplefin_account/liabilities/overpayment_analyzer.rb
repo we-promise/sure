@@ -61,23 +61,21 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
   private
 
     def enabled?
-      env = ENV["SIMPLEFIN_CC_OVERPAYMENT_HEURISTIC"].to_s
-      env_specified = env.present?
-      env_enabled = env_specified ? (%w[1 true yes on].include?(env.downcase)) : false
-      # Allow dynamic Setting override; Setting[] returns value or nil
+      # Setting override takes precedence, then ENV, then default enabled
       setting_val = Setting["simplefin_cc_overpayment_detection"]
-      setting_enabled = case setting_val
-      when true then true
-      when false then false
-      when String then %w[1 true yes on].include?(setting_val.downcase)
-      else
-        nil
-      end
-      # Default behavior: ENABLED unless explicitly disabled via Setting or ENV
-      if setting_enabled.nil?
-        env_specified ? env_enabled : true
-      else
-        setting_enabled
+      return parse_bool(setting_val) unless setting_val.nil?
+
+      env_val = ENV["SIMPLEFIN_CC_OVERPAYMENT_HEURISTIC"]
+      return parse_bool(env_val) if env_val.present?
+
+      true # Default enabled
+    end
+
+    def parse_bool(value)
+      case value
+      when true, false then value
+      when String then %w[1 true yes on].include?(value.downcase)
+      else false
       end
     end
 
@@ -139,7 +137,8 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
         { amount: amt, date: d }
       end
       raw_txns
-    rescue => _e
+    rescue => e
+      Rails.logger.debug("SimpleFIN transaction gathering failed for sfa=#{@sfa.id}: #{e.class} - #{e.message}")
       []
     end
 
@@ -214,7 +213,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
     end
 
     def sticky_key
-      id = @sfa.id || "new"
+      id = @sfa.id || "tmp:#{@sfa.object_id}"
       "simplefin:sfa:#{id}:liability_sign_hint"
     end
 
