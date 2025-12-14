@@ -129,15 +129,54 @@ class SimplefinItem::Importer
 
         normalized = observed
         if is_liability
-          both_present = bal.nonzero? && avail.nonzero?
-          if both_present && same_sign?(bal, avail)
-            if bal.positive? && avail.positive?
+          # Try the overpayment analyzer first (feature-flagged)
+          begin
+            result = SimplefinAccount::Liabilities::OverpaymentAnalyzer
+              .new(sfa, observed_balance: observed)
+              .call
+
+            case result.classification
+            when :credit
               normalized = -observed.abs
-            elsif bal.negative? && avail.negative?
+            when :debt
               normalized = observed.abs
+            else
+              # Fallback to existing normalization when unknown/disabled
+              begin
+                obs = {
+                  reason: result.reason,
+                  tx_count: result.metrics[:tx_count],
+                  charges_total: result.metrics[:charges_total],
+                  payments_total: result.metrics[:payments_total],
+                  observed: observed.to_s("F")
+                }.compact
+                Rails.logger.info("SimpleFIN overpayment heuristic (balances-only): unknown; falling back #{obs.inspect}")
+              rescue
+                # no-op
+              end
+              both_present = bal.nonzero? && avail.nonzero?
+              if both_present && same_sign?(bal, avail)
+                if bal.positive? && avail.positive?
+                  normalized = -observed.abs
+                elsif bal.negative? && avail.negative?
+                  normalized = observed.abs
+                end
+              else
+                normalized = -observed
+              end
             end
-          else
-            normalized = -observed
+          rescue NameError
+            # Analyzer missing; use legacy path
+            both_present = bal.nonzero? && avail.nonzero?
+            if both_present && same_sign?(bal, avail)
+              if bal.positive? && avail.positive?
+                normalized = -observed.abs
+              elsif bal.negative? && avail.negative?
+                normalized = observed.abs
+              end
+            else
+              normalized = -observed
+            end
           end
         end
 
