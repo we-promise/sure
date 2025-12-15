@@ -102,18 +102,19 @@ class Family::AutoMerchantDetector
     end
 
     def find_or_create_ai_merchant(auto_detection)
+      # Only use (source, name) for find_or_create since that's the uniqueness constraint
       ProviderMerchant.find_or_create_by!(
         source: "ai",
-        name: auto_detection.business_name,
-        website_url: auto_detection.business_url
+        name: auto_detection.business_name
       ) do |pm|
+        pm.website_url = auto_detection.business_url
         if Setting.brand_fetch_client_id.present?
           pm.logo_url = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
         end
       end
-    rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.error("Failed to create AI merchant: #{e.message}")
-      nil
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      # Race condition: another process created the merchant between our find and create
+      ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
     end
 
     def enhance_provider_merchant(merchant, auto_detection)
