@@ -29,13 +29,11 @@ class Family::SyncCompleteEvent
       Rails.logger.error("Family::SyncCompleteEvent net_worth_chart broadcast failed: #{e.message}\n#{e.backtrace&.join("\n")}")
     end
 
-    # Identify recurring transaction patterns after sync (unless disabled)
-    unless family.recurring_transactions_disabled?
-      begin
-        RecurringTransaction.identify_patterns_for(family)
-      rescue => e
-        Rails.logger.error("Family::SyncCompleteEvent recurring transaction identification failed: #{e.message}\n#{e.backtrace&.join("\n")}")
-      end
+    # Schedule recurring transaction pattern identification (debounced to run after all syncs complete)
+    begin
+      RecurringTransaction.identify_patterns_for(family)
+    rescue => e
+      Rails.logger.error("Family::SyncCompleteEvent recurring transaction identification failed: #{e.message}\n#{e.backtrace&.join("\n")}")
     end
   end
 end

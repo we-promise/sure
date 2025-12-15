@@ -20,7 +20,7 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def identify
-    count = RecurringTransaction.identify_patterns_for(Current.family)
+    count = RecurringTransaction.identify_patterns_for!(Current.family)
 
     respond_to do |format|
       format.html do
