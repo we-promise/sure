@@ -234,6 +234,29 @@ class User < ApplicationRecord
     end
   end
 
+  # Transactions preferences management
+  def transactions_section_collapsed?(section_key)
+    preferences&.dig("transactions_collapsed_sections", section_key) == true
+  end
+
+  def update_transactions_preferences(prefs)
+    transaction do
+      lock!
+
+      updated_prefs = (preferences || {}).deep_dup
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          updated_prefs["transactions_#{key}"] ||= {}
+          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
+        else
+          updated_prefs["transactions_#{key}"] = value
+        end
+      end
+
+      update!(preferences: updated_prefs)
+    end
+  end
+
   private
     def default_dashboard_section_order
       %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
