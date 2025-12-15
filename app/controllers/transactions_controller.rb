@@ -162,8 +162,8 @@ class TransactionsController < ApplicationController
   def update_preferences
     Current.user.update_transactions_preferences(preferences_params)
     head :ok
-  rescue => e
-    render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
+    head :unprocessable_entity
   end
 
   private
