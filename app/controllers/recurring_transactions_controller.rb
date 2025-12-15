@@ -9,7 +9,7 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def update_settings
-    Current.family.update!(recurring_transactions_disabled: params[:recurring_transactions_disabled] == "true")
+    Current.family.update!(recurring_settings_params)
 
     respond_to do |format|
       format.html do
@@ -67,4 +67,10 @@ class RecurringTransactionsController < ApplicationController
     flash[:notice] = t("recurring_transactions.deleted")
     redirect_to recurring_transactions_path
   end
+
+  private
+
+    def recurring_settings_params
+      { recurring_transactions_disabled: params[:recurring_transactions_disabled] == "true" }
+    end
 end
