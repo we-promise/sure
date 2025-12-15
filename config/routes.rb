@@ -182,6 +182,7 @@ Rails.application.routes.draw do
     collection do
       match :identify, via: [ :get, :post ]
       match :cleanup, via: [ :get, :post ]
+      patch :update_settings
     end
 
     member do

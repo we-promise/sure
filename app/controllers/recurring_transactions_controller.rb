@@ -5,6 +5,18 @@ class RecurringTransactionsController < ApplicationController
     @recurring_transactions = Current.family.recurring_transactions
                                     .includes(:merchant)
                                     .order(status: :asc, next_expected_date: :asc)
+    @family = Current.family
+  end
+
+  def update_settings
+    Current.family.update!(recurring_transactions_disabled: params[:recurring_transactions_disabled] == "true")
+
+    respond_to do |format|
+      format.html do
+        flash[:notice] = t("recurring_transactions.settings_updated")
+        redirect_to recurring_transactions_path
+      end
+    end
   end
 
   def identify
