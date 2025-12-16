@@ -101,7 +101,7 @@ class Rule < ApplicationRecord
     end
 
     def min_actions
-      return if new_record? && actions.empty?
+      return if new_record? && !actions.empty?
 
       if actions.reject(&:marked_for_destruction?).empty?
         errors.add(:base, "must have at least one action")

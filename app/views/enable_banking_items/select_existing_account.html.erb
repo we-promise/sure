@@ -1,0 +1,40 @@
+<%# Modal: Link an existing manual account to a Enable Banking account %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "Link Enable Banking account") %>
+
+    <% dialog.with_body do %>
+      <% if @available_enable_banking_accounts.blank? %>
+        <div class="p-4 text-sm text-secondary">
+          <p class="mb-2">All Enable Banking accounts appear to be linked already.</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>If you just connected or synced, try again after the sync completes.</li>
+            <li>To link a different account, first unlink it from the account’s actions menu.</li>
+          </ul>
+        </div>
+      <% else %>
+        <%= form_with url: link_existing_account_enable_banking_items_path, method: :post, class: "space-y-4" do %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <div class="space-y-2 max-h-64 overflow-auto">
+            <% @available_enable_banking_accounts.each do |eba| %>
+              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+                <%= radio_button_tag :enable_banking_account_id, eba.id, false %>
+                <div class="flex flex-col">
+                  <span class="text-sm text-primary font-medium"><%= eba.name.presence || eba.account_id %></span>
+                  <span class="text-xs text-secondary">
+                    <%= eba.currency %> • Balance: <%= number_to_currency((eba.current_balance || 0), unit: eba.currency) %>
+                  </span>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -499,14 +499,68 @@ class SimplefinItem::Importer
         org_data: account_data[:org]
       }
 
-      # Merge transactions from chunked imports (accumulate historical data)
+      # Merge transactions from chunked/regular imports (accumulate history).
+      # Prefer non-pending records with a real posted timestamp over earlier
+      # pending placeholders that sometimes come back with posted: 0.
       if transactions.is_a?(Array) && transactions.any?
         existing_transactions = simplefin_account.raw_transactions_payload.to_a
-        merged_transactions = (existing_transactions + transactions).uniq do |tx|
-          tx = tx.with_indifferent_access
-          tx[:id] || tx[:fitid] || [ tx[:posted], tx[:amount], tx[:description] ]
+
+        # Build a map of key => best_tx
+        best_by_key = {}
+
+        comparator = lambda do |a, b|
+          ax = a.with_indifferent_access
+          bx = b.with_indifferent_access
+
+          # Key dates
+          a_posted = ax[:posted].to_i
+          b_posted = bx[:posted].to_i
+          a_trans  = ax[:transacted_at].to_i
+          b_trans  = bx[:transacted_at].to_i
+
+          a_pending = !!ax[:pending]
+          b_pending = !!bx[:pending]
+
+          # 1) Prefer real posted date over 0/blank
+          a_has_posted = a_posted > 0
+          b_has_posted = b_posted > 0
+          return a if a_has_posted && !b_has_posted
+          return b if b_has_posted && !a_has_posted
+
+          # 2) Prefer later posted date
+          if a_posted != b_posted
+            return a_posted > b_posted ? a : b
+          end
+
+          # 3) Prefer non-pending over pending
+          if a_pending != b_pending
+            return a_pending ? b : a
+          end
+
+          # 4) Prefer later transacted_at
+          if a_trans != b_trans
+            return a_trans > b_trans ? a : b
+          end
+
+          # 5) Stable: keep 'a'
+          a
         end
-        attrs[:raw_transactions_payload] = merged_transactions
+
+        build_key = lambda do |tx|
+          t = tx.with_indifferent_access
+          t[:id] || t[:fitid] || [ t[:posted], t[:amount], t[:description] ]
+        end
+
+        (existing_transactions + transactions).each do |tx|
+          key = build_key.call(tx)
+          if (cur = best_by_key[key])
+            best_by_key[key] = comparator.call(cur, tx)
+          else
+            best_by_key[key] = tx
+          end
+        end
+
+        attrs[:raw_transactions_payload] = best_by_key.values
       end
 
       # Track whether incoming holdings are new/changed so we can materialize and refresh balances

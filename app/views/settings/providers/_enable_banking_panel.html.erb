@@ -127,13 +127,13 @@
               <div class="w-2 h-2 bg-warning rounded-full"></div>
               <div>
                 <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connection" %></p>
-                <p class="text-xs text-destructive">Session expired - re-authorization required</p>
+                <p class="text-xs text-destructive">Session expired - reconnect</p>
               </div>
             <% else %>
               <div class="w-2 h-2 bg-secondary rounded-full"></div>
               <div>
                 <p class="text-sm font-medium text-primary">Configured</p>
-                <p class="text-xs text-secondary">Ready to connect a bank</p>
+                <p class="text-xs text-secondary">Ready to link accounts</p>
               </div>
             <% end %>
           </div>
@@ -151,7 +151,7 @@
                             method: :post,
                             class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-warning hover:opacity-90 transition-colors",
                             data: { turbo: false } do %>
-                Re-authorize
+                Reconnect
               <% end %>
             <% else %>
               <%= link_to select_bank_enable_banking_item_path(item),
