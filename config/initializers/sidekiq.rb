@@ -10,6 +10,40 @@ if Rails.env.production?
   end
 end
 
+# Configure Redis connection for Sidekiq
+# Supports both Redis Sentinel (for HA) and direct Redis URL
+redis_config = if ENV["REDIS_SENTINEL_HOSTS"].present?
+  # Redis Sentinel configuration for high availability
+  # REDIS_SENTINEL_HOSTS should be comma-separated list: "host1:port1,host2:port2,host3:port3"
+  sentinels = ENV["REDIS_SENTINEL_HOSTS"].split(",").map do |host_port|
+    host, port = host_port.split(":")
+    { host: host.strip, port: (port || 26379).to_i }
+  end
+
+  {
+    url: "redis://#{ENV.fetch('REDIS_SENTINEL_MASTER', 'mymaster')}/0",
+    sentinels: sentinels,
+    password: ENV["REDIS_PASSWORD"],
+    role: :master,
+    # Recommended timeouts for Sentinel
+    connect_timeout: 0.2,
+    read_timeout: 1,
+    write_timeout: 1,
+    reconnect_attempts: 3
+  }
+else
+  # Standard Redis URL configuration (no Sentinel)
+  { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
+end
+
+Sidekiq.configure_server do |config|
+  config.redis = redis_config
+end
+
+Sidekiq.configure_client do |config|
+  config.redis = redis_config
+end
+
 Sidekiq::Cron.configure do |config|
   # 10 min "catch-up" window in case worker process is re-deploying when cron tick occurs
   config.reschedule_grace_period = 600
