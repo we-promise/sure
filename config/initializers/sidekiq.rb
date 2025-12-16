@@ -17,12 +17,20 @@ redis_config = if ENV["REDIS_SENTINEL_HOSTS"].present?
   # REDIS_SENTINEL_HOSTS should be comma-separated list: "host1:port1,host2:port2,host3:port3"
   sentinels = ENV["REDIS_SENTINEL_HOSTS"].split(",").filter_map do |host_port|
     parts = host_port.strip.split(":", 2)
-    host = parts[0]
-    port = parts[1]
+    host = parts[0]&.strip
+    port_str = parts[1]&.strip
     
     next if host.blank?
 
-    { host: host.strip, port: (port.presence || "26379").to_i }
+    # Parse port with validation, default to 26379 if invalid or missing
+    port = if port_str.present?
+      port_int = port_str.to_i
+      (port_int > 0 && port_int <= 65535) ? port_int : 26379
+    else
+      26379
+    end
+
+    { host: host, port: port }
   end
 
   if sentinels.empty?
