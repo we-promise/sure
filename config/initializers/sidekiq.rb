@@ -15,22 +15,32 @@ end
 redis_config = if ENV["REDIS_SENTINEL_HOSTS"].present?
   # Redis Sentinel configuration for high availability
   # REDIS_SENTINEL_HOSTS should be comma-separated list: "host1:port1,host2:port2,host3:port3"
-  sentinels = ENV["REDIS_SENTINEL_HOSTS"].split(",").map do |host_port|
-    host, port = host_port.split(":")
-    { host: host.strip, port: (port || 26379).to_i }
+  sentinels = ENV["REDIS_SENTINEL_HOSTS"].split(",").filter_map do |host_port|
+    parts = host_port.strip.split(":", 2)
+    host = parts[0]
+    port = parts[1]
+    
+    next if host.blank?
+
+    { host: host.strip, port: (port.presence || "26379").to_i }
   end
 
-  {
-    url: "redis://#{ENV.fetch('REDIS_SENTINEL_MASTER', 'mymaster')}/0",
-    sentinels: sentinels,
-    password: ENV["REDIS_PASSWORD"],
-    role: :master,
-    # Recommended timeouts for Sentinel
-    connect_timeout: 0.2,
-    read_timeout: 1,
-    write_timeout: 1,
-    reconnect_attempts: 3
-  }
+  if sentinels.empty?
+    Rails.logger.warn("REDIS_SENTINEL_HOSTS is set but no valid sentinel hosts found, falling back to REDIS_URL")
+    { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
+  else
+    {
+      url: "redis://#{ENV.fetch('REDIS_SENTINEL_MASTER', 'mymaster')}/0",
+      sentinels: sentinels,
+      password: ENV["REDIS_PASSWORD"],
+      role: :master,
+      # Recommended timeouts for Sentinel
+      connect_timeout: 0.2,
+      read_timeout: 1,
+      write_timeout: 1,
+      reconnect_attempts: 3
+    }
+  end
 else
   # Standard Redis URL configuration (no Sentinel)
   { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
