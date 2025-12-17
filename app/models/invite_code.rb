@@ -1,4 +1,11 @@
 class InviteCode < ApplicationRecord
+  include Encryptable
+
+  # Encrypt token if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :token, deterministic: true, downcase: true
+  end
+
   before_validation :generate_token, on: :create
 
   class << self

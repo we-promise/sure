@@ -1,5 +1,13 @@
 class User < ApplicationRecord
+  include Encryptable
+
   has_secure_password
+
+  # Encrypt MFA secrets if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :otp_secret, deterministic: true
+    encrypts :otp_backup_codes
+  end
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
