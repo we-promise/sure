@@ -1,5 +1,11 @@
 class LunchflowAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
 
   belongs_to :lunchflow_item
 

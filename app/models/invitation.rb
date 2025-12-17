@@ -1,6 +1,13 @@
 class Invitation < ApplicationRecord
+  include Encryptable
+
   belongs_to :family
   belongs_to :inviter, class_name: "User"
+
+  # Encrypt token if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :token, deterministic: true
+  end
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :role, presence: true, inclusion: { in: %w[admin member] }
