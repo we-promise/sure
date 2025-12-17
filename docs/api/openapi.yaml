@@ -208,6 +208,153 @@ components:
         message_id:
           type: string
           format: uuid
+    Account:
+      type: object
+      required:
+      - id
+      - name
+      - account_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        account_type:
+          type: string
+    Category:
+      type: object
+      required:
+      - id
+      - name
+      - classification
+      - color
+      - icon
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        classification:
+          type: string
+        color:
+          type: string
+        icon:
+          type: string
+    Merchant:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    Tag:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+    Transfer:
+      type: object
+      required:
+      - id
+      - amount
+      - currency
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        currency:
+          type: string
+        other_account:
+          "$ref": "#/components/schemas/Account"
+          nullable: true
+    Transaction:
+      type: object
+      required:
+      - id
+      - date
+      - amount
+      - currency
+      - name
+      - classification
+      - account
+      - tags
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        currency:
+          type: string
+        name:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        classification:
+          type: string
+        account:
+          "$ref": "#/components/schemas/Account"
+        category:
+          "$ref": "#/components/schemas/Category"
+          nullable: true
+        merchant:
+          "$ref": "#/components/schemas/Merchant"
+          nullable: true
+        tags:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Tag"
+        transfer:
+          "$ref": "#/components/schemas/Transfer"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TransactionCollection:
+      type: object
+      required:
+      - transactions
+      - pagination
+      properties:
+        transactions:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Transaction"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    DeleteResponse:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
 paths:
   "/api/v1/chats":
     get:
@@ -449,6 +596,292 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: no assistant message available
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transactions":
+    get:
+      summary: List transactions
+      tags:
+      - Transactions
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Bearer token with read scope
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: account_id
+        in: query
+        required: false
+        description: Filter by account ID
+        schema:
+          type: string
+      - name: category_id
+        in: query
+        required: false
+        description: Filter by category ID
+        schema:
+          type: string
+      - name: merchant_id
+        in: query
+        required: false
+        description: Filter by merchant ID
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        format: date
+        required: false
+        description: Filter transactions from this date
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        format: date
+        required: false
+        description: Filter transactions until this date
+        schema:
+          type: string
+      - name: min_amount
+        in: query
+        required: false
+        description: Filter by minimum amount
+        schema:
+          type: number
+      - name: max_amount
+        in: query
+        required: false
+        description: Filter by maximum amount
+        schema:
+          type: number
+      - name: type
+        in: query
+        enum:
+        - income
+        - expense
+        required: false
+        description: "Filter by transaction type:\n * `income` \n * `expense` \n "
+        schema:
+          type: string
+      - name: search
+        in: query
+        required: false
+        description: Search by name, notes, or merchant name
+        schema:
+          type: string
+      responses:
+        '200':
+          description: transactions filtered by date range
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TransactionCollection"
+    post:
+      summary: Create transaction
+      tags:
+      - Transactions
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Bearer token with write scope
+      responses:
+        '201':
+          description: transaction created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '422':
+          description: validation error - missing required fields
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transaction:
+                  type: object
+                  properties:
+                    account_id:
+                      type: string
+                      format: uuid
+                      description: Account ID (required)
+                    date:
+                      type: string
+                      format: date
+                      description: Transaction date
+                    amount:
+                      type: number
+                      description: Transaction amount
+                    name:
+                      type: string
+                      description: Transaction name/description
+                    notes:
+                      type: string
+                      description: Additional notes
+                    currency:
+                      type: string
+                      description: Currency code (defaults to family currency)
+                    category_id:
+                      type: string
+                      format: uuid
+                      description: Category ID
+                    merchant_id:
+                      type: string
+                      format: uuid
+                      description: Merchant ID
+                    nature:
+                      type: string
+                      enum:
+                      - income
+                      - expense
+                      - inflow
+                      - outflow
+                      description: Transaction nature (determines sign)
+                    tag_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                      description: Array of tag IDs
+                  required:
+                  - account_id
+                  - date
+                  - amount
+                  - name
+              required:
+              - transaction
+        required: true
+  "/api/v1/transactions/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Bearer token
+    - name: id
+      in: path
+      required: true
+      description: Transaction ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a transaction
+      tags:
+      - Transactions
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: transaction retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '404':
+          description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a transaction
+      tags:
+      - Transactions
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: transaction updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '404':
+          description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transaction:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    amount:
+                      type: number
+                    name:
+                      type: string
+                    notes:
+                      type: string
+                    category_id:
+                      type: string
+                      format: uuid
+                    merchant_id:
+                      type: string
+                      format: uuid
+                    nature:
+                      type: string
+                      enum:
+                      - income
+                      - expense
+                      - inflow
+                      - outflow
+                    tag_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+        required: true
+    delete:
+      summary: Delete a transaction
+      tags:
+      - Transactions
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: transaction deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: transaction not found
           content:
             application/json:
               schema:

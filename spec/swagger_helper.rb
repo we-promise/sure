@@ -161,6 +161,94 @@ RSpec.configure do |config|
               message: { type: :string },
               message_id: { type: :string, format: :uuid }
             }
+          },
+          Account: {
+            type: :object,
+            required: %w[id name account_type],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              account_type: { type: :string }
+            }
+          },
+          Category: {
+            type: :object,
+            required: %w[id name classification color icon],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              classification: { type: :string },
+              color: { type: :string },
+              icon: { type: :string }
+            }
+          },
+          Merchant: {
+            type: :object,
+            required: %w[id name],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string }
+            }
+          },
+          Tag: {
+            type: :object,
+            required: %w[id name color],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              color: { type: :string }
+            }
+          },
+          Transfer: {
+            type: :object,
+            required: %w[id amount currency],
+            properties: {
+              id: { type: :string, format: :uuid },
+              amount: { type: :string },
+              currency: { type: :string },
+              other_account: { '$ref' => '#/components/schemas/Account', nullable: true }
+            }
+          },
+          Transaction: {
+            type: :object,
+            required: %w[id date amount currency name classification account tags created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              currency: { type: :string },
+              name: { type: :string },
+              notes: { type: :string, nullable: true },
+              classification: { type: :string },
+              account: { '$ref' => '#/components/schemas/Account' },
+              category: { '$ref' => '#/components/schemas/Category', nullable: true },
+              merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },
+              tags: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/Tag' }
+              },
+              transfer: { '$ref' => '#/components/schemas/Transfer', nullable: true },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          TransactionCollection: {
+            type: :object,
+            required: %w[transactions pagination],
+            properties: {
+              transactions: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/Transaction' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          DeleteResponse: {
+            type: :object,
+            required: %w[message],
+            properties: {
+              message: { type: :string }
+            }
           }
         }
       }
