@@ -79,12 +79,15 @@ RSpec.describe 'API V1 Categories', type: :request do
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
                 description: 'Items per page (default: 25, max: 100)'
-      parameter name: :classification, in: :query, type: :string, enum: %w[income expense], required: false,
-                description: 'Filter by classification (income or expense)'
-      parameter name: :roots_only, in: :query, type: :boolean, required: false,
-                description: 'Return only root categories (no parent)'
-      parameter name: :parent_id, in: :query, type: :string, format: :uuid, required: false,
-                description: 'Filter by parent category ID'
+      parameter name: :classification, in: :query, required: false,
+                description: 'Filter by classification (income or expense)',
+                schema: { type: :string, enum: %w[income expense] }
+      parameter name: :roots_only, in: :query, required: false,
+                description: 'Return only root categories (no parent)',
+                schema: { type: :boolean }
+      parameter name: :parent_id, in: :query, required: false,
+                description: 'Filter by parent category ID',
+                schema: { type: :string, format: :uuid }
 
       response '200', 'categories listed' do
         schema '$ref' => '#/components/schemas/CategoryCollection'

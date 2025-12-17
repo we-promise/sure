@@ -445,14 +445,13 @@ paths:
           type: integer
       - name: classification
         in: query
-        enum:
-        - income
-        - expense
         required: false
-        description: "Filter by classification (income or expense):\n * `income` \n
-          * `expense` \n "
+        description: Filter by classification (income or expense)
         schema:
           type: string
+          enum:
+          - income
+          - expense
       - name: roots_only
         in: query
         required: false
@@ -461,11 +460,11 @@ paths:
           type: boolean
       - name: parent_id
         in: query
-        format: uuid
         required: false
         description: Filter by parent category ID
         schema:
           type: string
+          format: uuid
       responses:
         '200':
           description: categories filtered by parent
@@ -795,18 +794,18 @@ paths:
           type: string
       - name: start_date
         in: query
-        format: date
         required: false
         description: Filter transactions from this date
         schema:
           type: string
+          format: date
       - name: end_date
         in: query
-        format: date
         required: false
         description: Filter transactions until this date
         schema:
           type: string
+          format: date
       - name: min_amount
         in: query
         required: false
@@ -821,13 +820,13 @@ paths:
           type: number
       - name: type
         in: query
-        enum:
-        - income
-        - expense
         required: false
-        description: "Filter by transaction type:\n * `income` \n * `expense` \n "
+        description: Filter by transaction type
         schema:
           type: string
+          enum:
+          - income
+          - expense
       - name: search
         in: query
         required: false

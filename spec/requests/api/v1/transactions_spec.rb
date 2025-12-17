@@ -110,16 +110,19 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 description: 'Filter by category ID'
       parameter name: :merchant_id, in: :query, type: :string, required: false,
                 description: 'Filter by merchant ID'
-      parameter name: :start_date, in: :query, type: :string, format: :date, required: false,
-                description: 'Filter transactions from this date'
-      parameter name: :end_date, in: :query, type: :string, format: :date, required: false,
-                description: 'Filter transactions until this date'
+      parameter name: :start_date, in: :query, required: false,
+                description: 'Filter transactions from this date',
+                schema: { type: :string, format: :date }
+      parameter name: :end_date, in: :query, required: false,
+                description: 'Filter transactions until this date',
+                schema: { type: :string, format: :date }
       parameter name: :min_amount, in: :query, type: :number, required: false,
                 description: 'Filter by minimum amount'
       parameter name: :max_amount, in: :query, type: :number, required: false,
                 description: 'Filter by maximum amount'
-      parameter name: :type, in: :query, type: :string, enum: %w[income expense], required: false,
-                description: 'Filter by transaction type'
+      parameter name: :type, in: :query, required: false,
+                description: 'Filter by transaction type',
+                schema: { type: :string, enum: %w[income expense] }
       parameter name: :search, in: :query, type: :string, required: false,
                 description: 'Search by name, notes, or merchant name'
       parameter name: :account_ids, in: :query, required: false,
