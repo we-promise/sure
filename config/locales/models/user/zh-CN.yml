@@ -1,0 +1,20 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      user:
+        email: 邮箱
+        family: 家庭
+        family_id: 家庭
+        first_name: 名字
+        last_name: 姓氏
+        password: 密码
+        password_confirmation: 密码确认
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: 存在其他用户时无法删除管理员账户，请先删除所有家庭成员。
+            profile_image:
+              invalid_file_size: 文件大小必须小于 %{max_megabytes}MB

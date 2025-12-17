@@ -1,0 +1,6 @@
+---
+zh-CN:
+  invite_codes:
+    index:
+      invite_code_description: 生成新代码后将会显示在此处。已使用的生成代码将不再显示。
+      no_invite_codes: 暂无邀请码

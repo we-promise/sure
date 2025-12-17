@@ -1,0 +1,45 @@
+---
+zh-CN:
+  recurring_transactions:
+    title: 定期交易
+    upcoming: 即将发生的定期交易
+    projected: 预计
+    recurring: 定期
+    expected_on: 预计于 %{date}
+    day_of_month: 每月第 %{day} 天
+    identify_patterns: 识别模式
+    cleanup_stale: 清理过期记录
+    info:
+      title: 自动模式识别
+      manual_description: 您可以使用上方按钮手动识别模式或清理过期的定期交易记录。
+      automatic_description: "自动识别也会在以下情况后运行："
+      triggers:
+        - CSV 导入完成时（交易、投资、账户等）
+        - 任何服务提供商同步完成时（Plaid、SimpleFIN 等）
+    identified: 已识别 %{count} 个定期交易模式
+    cleaned_up: 已清理 %{count} 个过期定期交易记录
+    marked_inactive: 定期交易已标记为未激活
+    marked_active: 定期交易已标记为激活
+    deleted: 定期交易已删除
+    confirm_delete: 确定要删除此定期交易吗？
+    marked_as_recurring: 交易已标记为定期交易
+    already_exists: 此模式已存在手动创建的定期交易
+    creation_failed: 创建定期交易失败。请检查交易详情并重试。
+    unexpected_error: 创建定期交易时发生意外错误
+    amount_range: "金额范围：%{min} 至 %{max}"
+    empty:
+      title: 未找到定期交易
+      description: 点击"识别模式"可从您的交易历史中自动识别定期交易。
+    table:
+      merchant: 名称
+      amount: 金额
+      expected_day: 预计日期
+      next_date: 下次发生日
+      last_occurrence: 上次发生日
+      status: 状态
+      actions: 操作
+    status:
+      active: 激活
+      inactive: 未激活
+    badges:
+      manual: 手动
