@@ -5,10 +5,19 @@ class User < ApplicationRecord
   # Custom validation ensures password is present for non-SSO registration.
   has_secure_password validations: false
 
-  # Encrypt MFA secrets if ActiveRecord encryption is configured
+  # Encrypt sensitive fields if ActiveRecord encryption is configured
   if encryption_ready?
+    # MFA secrets
     encrypts :otp_secret, deterministic: true
     encrypts :otp_backup_codes
+
+    # PII - emails (deterministic for lookups, downcase for case-insensitive)
+    encrypts :email, deterministic: true, downcase: true
+    encrypts :unconfirmed_email, deterministic: true, downcase: true
+
+    # PII - names (non-deterministic for maximum security)
+    encrypts :first_name
+    encrypts :last_name
   end
 
   belongs_to :family

@@ -4,9 +4,10 @@ class Invitation < ApplicationRecord
   belongs_to :family
   belongs_to :inviter, class_name: "User"
 
-  # Encrypt token if ActiveRecord encryption is configured
+  # Encrypt sensitive fields if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :token, deterministic: true
+    encrypts :email, deterministic: true, downcase: true
   end
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
