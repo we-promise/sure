@@ -96,7 +96,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
   path '/api/v1/transactions' do
     get 'List transactions' do
       tags 'Transactions'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       produces 'application/json'
       parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
                 description: 'Bearer token with read scope'
@@ -159,7 +159,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
     post 'Create transaction' do
       tags 'Transactions'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
       parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
@@ -250,7 +250,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
     get 'Retrieve a transaction' do
       tags 'Transactions'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       produces 'application/json'
 
       let(:id) { transaction.id }
@@ -279,7 +279,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
     patch 'Update a transaction' do
       tags 'Transactions'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
 
@@ -334,7 +334,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
     delete 'Delete a transaction' do
       tags 'Transactions'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       produces 'application/json'
 
       let(:id) { another_transaction.id }
