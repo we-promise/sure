@@ -159,6 +159,13 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def update_preferences
+    Current.user.update_transactions_preferences(preferences_params)
+    head :ok
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
+    head :unprocessable_entity
+  end
+
   private
     def per_page
       params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
@@ -235,5 +242,9 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
+    end
+
+    def preferences_params
+      params.require(:preferences).permit(collapsed_sections: {})
     end
 end

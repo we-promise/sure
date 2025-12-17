@@ -27,7 +27,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
 
     assert_difference "@family.recurring_transactions.count", 1 do
-      RecurringTransaction.identify_patterns_for(@family)
+      RecurringTransaction.identify_patterns_for!(@family)
     end
 
     recurring = @family.recurring_transactions.last
@@ -56,7 +56,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
 
     assert_no_difference "@family.recurring_transactions.count" do
-      RecurringTransaction.identify_patterns_for(@family)
+      RecurringTransaction.identify_patterns_for!(@family)
     end
   end
 
@@ -159,7 +159,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
 
     assert_difference "@family.recurring_transactions.count", 1 do
-      RecurringTransaction.identify_patterns_for(@family)
+      RecurringTransaction.identify_patterns_for!(@family)
     end
 
     recurring = @family.recurring_transactions.last
@@ -187,7 +187,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
 
     assert_difference "@family.recurring_transactions.count", 1 do
-      RecurringTransaction.identify_patterns_for(@family)
+      RecurringTransaction.identify_patterns_for!(@family)
     end
 
     recurring = @family.recurring_transactions.last
@@ -235,7 +235,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     # Should create 2 patterns - one for each amount
     assert_difference "@family.recurring_transactions.count", 2 do
-      RecurringTransaction.identify_patterns_for(@family)
+      RecurringTransaction.identify_patterns_for!(@family)
     end
   end
 
@@ -261,7 +261,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       )
     end
 
-    RecurringTransaction.identify_patterns_for(@family)
+    RecurringTransaction.identify_patterns_for!(@family)
     recurring = @family.recurring_transactions.last
 
     # Verify matching transactions finds the correct entries
@@ -320,7 +320,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
 
     assert_difference "@family.recurring_transactions.count", 2 do
-      RecurringTransaction.identify_patterns_for(@family)
+      RecurringTransaction.identify_patterns_for!(@family)
     end
 
     # Verify both types exist
@@ -563,7 +563,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     # Run pattern identification
     assert_no_difference "@family.recurring_transactions.count" do
-      RecurringTransaction.identify_patterns_for(@family)
+      RecurringTransaction.identify_patterns_for!(@family)
     end
 
     # Manual recurring should be updated with new variance

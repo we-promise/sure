@@ -9,6 +9,10 @@ en:
     day_of_month: Day %{day} of month
     identify_patterns: Identify Patterns
     cleanup_stale: Clean Up Stale
+    settings:
+      enable_label: Enable Recurring Transactions
+      enable_description: Automatically detect recurring transaction patterns and show upcoming projected transactions.
+    settings_updated: Recurring transactions settings updated
     info:
       title: Automatic Pattern Detection
       manual_description: You can manually identify patterns or clean up stale recurring transactions using the buttons above.

@@ -126,10 +126,10 @@ RSpec.describe 'API V1 Chats', type: :request do
         type: :object,
         properties: {
           title: { type: :string, example: 'Monthly budget review' },
-          message: { type: :string, description: 'Initial message in the chat' },
+          message: { type: :string, description: 'Optional initial message in the chat' },
           model: { type: :string, description: 'Optional OpenAI model identifier' }
         },
-        required: %w[title message]
+        required: %w[title]
       }
 
       let(:chat_params) do

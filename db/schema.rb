@@ -894,24 +894,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_17_141218) do
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
-  create_table "rule_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "rule_id", null: false
-    t.string "rule_name"
-    t.string "execution_type", null: false
-    t.string "status", null: false
-    t.integer "transactions_queued", default: 0, null: false
-    t.integer "transactions_processed", default: 0, null: false
-    t.integer "transactions_modified", default: 0, null: false
-    t.integer "pending_jobs_count", default: 0, null: false
-    t.datetime "executed_at", null: false
-    t.text "error_message"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["executed_at"], name: "index_rule_runs_on_executed_at"
-    t.index ["rule_id", "executed_at"], name: "index_rule_runs_on_rule_id_and_executed_at"
-    t.index ["rule_id"], name: "index_rule_runs_on_rule_id"
-  end
-
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "ticker", null: false
     t.string "name"
