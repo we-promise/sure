@@ -1,6 +1,7 @@
 ---
 ca:
   rules:
+    no_action: Sense acció
     recent_runs:
       title: Execucions Recents
       description: Visualitza l'historial d'execució de les teves regles incloent l'estat d'èxit/fallada i els recomptes de transaccions.

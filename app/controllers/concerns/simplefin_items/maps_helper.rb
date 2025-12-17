@@ -87,7 +87,8 @@ module SimplefinItems
           end
         end
         errs.present? && errs.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
-      rescue
+      rescue StandardError => e
+        Rails.logger.warn("SimpleFin maps: compute_duplicate_only_flag failed: #{e.class} - #{e.message}")
         false
       end
   end

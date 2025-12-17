@@ -15,6 +15,7 @@ module Simplefin
       when Time, DateTime
         val.to_date
       when Integer, Float
+        return nil if val.to_i == 0
         Time.at(val).utc.to_date
       when String
         Date.parse(val)
