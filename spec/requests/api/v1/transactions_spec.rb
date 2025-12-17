@@ -122,14 +122,18 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 description: 'Filter by transaction type'
       parameter name: :search, in: :query, type: :string, required: false,
                 description: 'Search by name, notes, or merchant name'
-      parameter name: :account_ids, in: :query, type: :array, items: { type: :string }, required: false,
-                description: 'Filter by multiple account IDs'
-      parameter name: :category_ids, in: :query, type: :array, items: { type: :string }, required: false,
-                description: 'Filter by multiple category IDs'
-      parameter name: :merchant_ids, in: :query, type: :array, items: { type: :string }, required: false,
-                description: 'Filter by multiple merchant IDs'
-      parameter name: :tag_ids, in: :query, type: :array, items: { type: :string }, required: false,
-                description: 'Filter by tag IDs'
+      parameter name: :account_ids, in: :query, required: false,
+                description: 'Filter by multiple account IDs',
+                schema: { type: :array, items: { type: :string } }
+      parameter name: :category_ids, in: :query, required: false,
+                description: 'Filter by multiple category IDs',
+                schema: { type: :array, items: { type: :string } }
+      parameter name: :merchant_ids, in: :query, required: false,
+                description: 'Filter by multiple merchant IDs',
+                schema: { type: :array, items: { type: :string } }
+      parameter name: :tag_ids, in: :query, required: false,
+                description: 'Filter by tag IDs',
+                schema: { type: :array, items: { type: :string } }
 
       response '200', 'transactions listed' do
         schema '$ref' => '#/components/schemas/TransactionCollection'

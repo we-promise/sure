@@ -836,36 +836,36 @@ paths:
           type: string
       - name: account_ids
         in: query
-        items:
-          type: string
         required: false
         description: Filter by multiple account IDs
         schema:
           type: array
+          items:
+            type: string
       - name: category_ids
         in: query
-        items:
-          type: string
         required: false
         description: Filter by multiple category IDs
         schema:
           type: array
+          items:
+            type: string
       - name: merchant_ids
         in: query
-        items:
-          type: string
         required: false
         description: Filter by multiple merchant IDs
         schema:
           type: array
+          items:
+            type: string
       - name: tag_ids
         in: query
-        items:
-          type: string
         required: false
         description: Filter by tag IDs
         schema:
           type: array
+          items:
+            type: string
       responses:
         '200':
           description: transactions filtered by date range
