@@ -29,8 +29,8 @@ class MintImport < Import
         category = mappings.categories.mappable_for(row.category)
         tags = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
 
-        # Use account's currency when no currency column was mapped in CSV
-        effective_currency = currency_col_label.present? ? row.currency : account.currency
+        # Use account's currency when no currency column was mapped in CSV, with family currency as fallback
+        effective_currency = currency_col_label.present? ? row.currency : (account.currency.presence || family.currency)
 
         entry = account.entries.build \
           date: row.date_iso,

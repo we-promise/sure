@@ -27,8 +27,8 @@ class TransactionImport < Import
         category = mappings.categories.mappable_for(row.category)
         tags = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
 
-        # Use account's currency when no currency column was mapped in CSV
-        effective_currency = currency_col_label.present? ? row.currency : mapped_account.currency
+        # Use account's currency when no currency column was mapped in CSV, with family currency as fallback
+        effective_currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
 
         # Check for duplicate transactions using the adapter's deduplication logic
         # Pass claimed_entry_ids to exclude entries we've already matched in this import
