@@ -420,13 +420,12 @@ paths:
                   example: Monthly budget review
                 message:
                   type: string
-                  description: Initial message in the chat
+                  description: Optional initial message in the chat
                 model:
                   type: string
                   description: Optional OpenAI model identifier
               required:
               - title
-              - message
         required: true
   "/api/v1/chats/{id}":
     parameters:
@@ -685,6 +684,38 @@ paths:
         description: Search by name, notes, or merchant name
         schema:
           type: string
+      - name: account_ids
+        in: query
+        items:
+          type: string
+        required: false
+        description: Filter by multiple account IDs
+        schema:
+          type: array
+      - name: category_ids
+        in: query
+        items:
+          type: string
+        required: false
+        description: Filter by multiple category IDs
+        schema:
+          type: array
+      - name: merchant_ids
+        in: query
+        items:
+          type: string
+        required: false
+        description: Filter by multiple merchant IDs
+        schema:
+          type: array
+      - name: tag_ids
+        in: query
+        items:
+          type: string
+        required: false
+        description: Filter by tag IDs
+        schema:
+          type: array
       responses:
         '200':
           description: transactions filtered by date range
@@ -741,6 +772,9 @@ paths:
                     name:
                       type: string
                       description: Transaction name/description
+                    description:
+                      type: string
+                      description: Alternative to name field
                     notes:
                       type: string
                       description: Additional notes
@@ -846,8 +880,14 @@ paths:
                       type: number
                     name:
                       type: string
+                    description:
+                      type: string
+                      description: Alternative to name field
                     notes:
                       type: string
+                    currency:
+                      type: string
+                      description: Currency code
                     category_id:
                       type: string
                       format: uuid

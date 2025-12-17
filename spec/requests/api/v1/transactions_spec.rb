@@ -122,6 +122,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 description: 'Filter by transaction type'
       parameter name: :search, in: :query, type: :string, required: false,
                 description: 'Search by name, notes, or merchant name'
+      parameter name: :account_ids, in: :query, type: :array, items: { type: :string }, required: false,
+                description: 'Filter by multiple account IDs'
+      parameter name: :category_ids, in: :query, type: :array, items: { type: :string }, required: false,
+                description: 'Filter by multiple category IDs'
+      parameter name: :merchant_ids, in: :query, type: :array, items: { type: :string }, required: false,
+                description: 'Filter by multiple merchant IDs'
+      parameter name: :tag_ids, in: :query, type: :array, items: { type: :string }, required: false,
+                description: 'Filter by tag IDs'
 
       response '200', 'transactions listed' do
         schema '$ref' => '#/components/schemas/TransactionCollection'
@@ -174,6 +182,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               date: { type: :string, format: :date, description: 'Transaction date' },
               amount: { type: :number, description: 'Transaction amount' },
               name: { type: :string, description: 'Transaction name/description' },
+              description: { type: :string, description: 'Alternative to name field' },
               notes: { type: :string, description: 'Additional notes' },
               currency: { type: :string, description: 'Currency code (defaults to family currency)' },
               category_id: { type: :string, format: :uuid, description: 'Category ID' },
@@ -294,7 +303,9 @@ RSpec.describe 'API V1 Transactions', type: :request do
               date: { type: :string, format: :date },
               amount: { type: :number },
               name: { type: :string },
+              description: { type: :string, description: 'Alternative to name field' },
               notes: { type: :string },
+              currency: { type: :string, description: 'Currency code' },
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
