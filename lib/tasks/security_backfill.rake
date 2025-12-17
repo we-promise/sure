@@ -29,13 +29,11 @@ namespace :security do
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # User MFA fields
-    results[:users] = backfill_model(User, %i[otp_secret otp_backup_codes], batch_size, dry_run) do |user|
-      user.otp_secret.present? || user.otp_backup_codes.present?
-    end
+    # User fields (MFA + PII)
+    results[:users] = backfill_model(User, %i[otp_secret otp_backup_codes email unconfirmed_email first_name last_name], batch_size, dry_run)
 
-    # Invitation tokens
-    results[:invitations] = backfill_model(Invitation, %i[token], batch_size, dry_run)
+    # Invitation tokens and email
+    results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
 
     # InviteCode tokens
     results[:invite_codes] = backfill_model(InviteCode, %i[token], batch_size, dry_run)
