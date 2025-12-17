@@ -242,6 +242,67 @@ components:
           type: string
         icon:
           type: string
+    CategoryParent:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    CategoryDetail:
+      type: object
+      required:
+      - id
+      - name
+      - classification
+      - color
+      - icon
+      - subcategories_count
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        classification:
+          type: string
+          enum:
+          - income
+          - expense
+        color:
+          type: string
+        icon:
+          type: string
+        parent:
+          "$ref": "#/components/schemas/CategoryParent"
+          nullable: true
+        subcategories_count:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CategoryCollection:
+      type: object
+      required:
+      - categories
+      - pagination
+      properties:
+        categories:
+          type: array
+          items:
+            "$ref": "#/components/schemas/CategoryDetail"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Merchant:
       type: object
       required:
@@ -356,6 +417,95 @@ components:
         message:
           type: string
 paths:
+  "/api/v1/categories":
+    get:
+      summary: List categories
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Bearer token with read scope
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: classification
+        in: query
+        enum:
+        - income
+        - expense
+        required: false
+        description: "Filter by classification (income or expense):\n * `income` \n
+          * `expense` \n "
+        schema:
+          type: string
+      - name: roots_only
+        in: query
+        required: false
+        description: Return only root categories (no parent)
+        schema:
+          type: boolean
+      - name: parent_id
+        in: query
+        format: uuid
+        required: false
+        description: Filter by parent category ID
+        schema:
+          type: string
+      responses:
+        '200':
+          description: categories filtered by parent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryCollection"
+  "/api/v1/categories/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Bearer token with read scope
+    - name: id
+      in: path
+      required: true
+      description: Category ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a category
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: subcategory retrieved with parent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '404':
+          description: category not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/chats":
     get:
       summary: List chats

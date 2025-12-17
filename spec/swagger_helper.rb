@@ -182,6 +182,40 @@ RSpec.configure do |config|
               icon: { type: :string }
             }
           },
+          CategoryParent: {
+            type: :object,
+            required: %w[id name],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string }
+            }
+          },
+          CategoryDetail: {
+            type: :object,
+            required: %w[id name classification color icon subcategories_count created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              classification: { type: :string, enum: %w[income expense] },
+              color: { type: :string },
+              icon: { type: :string },
+              parent: { '$ref' => '#/components/schemas/CategoryParent', nullable: true },
+              subcategories_count: { type: :integer, minimum: 0 },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          CategoryCollection: {
+            type: :object,
+            required: %w[categories pagination],
+            properties: {
+              categories: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/CategoryDetail' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Merchant: {
             type: :object,
             required: %w[id name],
