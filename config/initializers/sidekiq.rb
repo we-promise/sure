@@ -19,7 +19,7 @@ redis_config = if ENV["REDIS_SENTINEL_HOSTS"].present?
     parts = host_port.strip.split(":", 2)
     host = parts[0]&.strip
     port_str = parts[1]&.strip
-    
+
     next if host.blank?
 
     # Parse port with validation, default to 26379 if invalid or missing
