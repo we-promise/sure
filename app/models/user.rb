@@ -9,7 +9,9 @@ class User < ApplicationRecord
   if encryption_ready?
     # MFA secrets
     encrypts :otp_secret, deterministic: true
-    encrypts :otp_backup_codes
+    # Note: otp_backup_codes is a PostgreSQL array column which doesn't support
+    # AR encryption. To encrypt it, a migration would be needed to change the
+    # column type from array to text/jsonb.
 
     # PII - emails (deterministic for lookups, downcase for case-insensitive)
     encrypts :email, deterministic: true, downcase: true
