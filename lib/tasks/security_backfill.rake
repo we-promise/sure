@@ -16,8 +16,8 @@ namespace :security do
       true # Default to dry run for safety
     end
 
-    # Check encryption configuration
-    unless Encryptable.encryption_ready?
+    # Check encryption configuration (use User model which includes Encryptable)
+    unless User.encryption_ready?
       puts({
         ok: false,
         error: "encryption_not_configured",
@@ -30,7 +30,8 @@ namespace :security do
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
     # User fields (MFA + PII)
-    results[:users] = backfill_model(User, %i[otp_secret otp_backup_codes email unconfirmed_email first_name last_name], batch_size, dry_run)
+    # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
+    results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
 
     # Invitation tokens and email
     results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
