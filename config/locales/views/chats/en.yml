@@ -1,0 +1,6 @@
+---
+en:
+  chats:
+    demo_banner_title: "Demo Mode Active"
+    demo_banner_message: "You are using an open-weights Qwen3 LLM with credits provided by Cloudflare Workers AI.  Function calling is non-functional so most interesting questions fail.  We're working on fixing this!"
+
