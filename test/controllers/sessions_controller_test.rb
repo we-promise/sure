@@ -65,6 +65,18 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert Session.exists?(user_id: super_admin.id)
   end
 
+  test "shows invalid credentials for super admin when override enabled but password is wrong" do
+    super_admin = users(:sure_support_staff)
+
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    post sessions_url, params: { email: super_admin.email, password: "bad" }
+
+    assert_response :unprocessable_entity
+    assert_equal "Invalid email or password.", flash[:alert]
+  end
+
   test "blocks non-super-admin local login when override enabled" do
     AuthConfig.stubs(:local_login_enabled?).returns(false)
     AuthConfig.stubs(:local_admin_override_enabled?).returns(true)

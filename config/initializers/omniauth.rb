@@ -46,7 +46,10 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       provider :google_oauth2,
                client_id,
                client_secret,
-               scope: "userinfo.email,userinfo.profile"
+               {
+                 name: name.to_sym,
+                 scope: "userinfo.email,userinfo.profile"
+               }
 
       Rails.configuration.x.auth.sso_providers << cfg.merge(name: name)
 
@@ -58,7 +61,10 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       provider :github,
                client_id,
                client_secret,
-               scope: "user:email"
+               {
+                 name: name.to_sym,
+                 scope: "user:email"
+               }
 
       Rails.configuration.x.auth.sso_providers << cfg.merge(name: name)
     end
