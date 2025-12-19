@@ -1,0 +1,5 @@
+---
+en:
+  security_mailer:
+    unusual_login:
+      subject: "%{product_name}: New login from an unusual country"

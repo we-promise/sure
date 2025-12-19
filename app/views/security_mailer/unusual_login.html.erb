@@ -1,0 +1,9 @@
+<p>Hi <%= @user.first_name.presence || @user.display_name %>,</p>
+
+<p>We've recently noticed access to your <%= product_name %> account from outside of the usual country we see activity from you. As a security measure, we wanted to provide you notice of this activity to help you identify any unauthorized access to your account. If this is something you expect and are aware of (e.g.: perhaps you are traveling), you can safely ignore this email.</p>
+
+<p>If this is not something you recognize, we encourage you to go to your <%= product_name %> security preferences and review all recent login locations. If there are any that you do not recognize we recommend changing your account password as a precaution. Good practices for passwords include using a password manager or a long phrase that is easy for you to remember.</p>
+
+<p>Thank you for using <%= product_name %>.</p>
+
+<p>Sincerely,<br>Your friendly security bot</p>

@@ -44,3 +44,32 @@
     </div>
   </div>
 <% end %>
+
+<%= settings_section title: t(".recent_logins_title", default: "Recent logins"), subtitle: t(".recent_logins_description", default: "Your last 5 login locations and IP addresses.") do %>
+  <div class="space-y-3">
+    <% if @recent_sessions.any? %>
+      <div class="overflow-hidden rounded-lg border border-gray-100">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-25 text-secondary">
+            <tr>
+              <th class="px-4 py-2 text-left font-medium"><%= t(".recent_logins_location", default: "Location") %></th>
+              <th class="px-4 py-2 text-left font-medium"><%= t(".recent_logins_ip", default: "IP address") %></th>
+              <th class="px-4 py-2 text-left font-medium"><%= t(".recent_logins_time", default: "Time") %></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <% @recent_sessions.each do |session| %>
+              <tr class="text-primary">
+                <td class="px-4 py-2"><%= session.country_name || session.country_code || t(".unknown_location", default: "Unknown") %></td>
+                <td class="px-4 py-2"><%= session.ip_address || t(".unknown_ip", default: "Unknown") %></td>
+                <td class="px-4 py-2 text-secondary"><%= l(session.created_at, format: :long) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".no_recent_logins", default: "No recent login activity yet.") %></p>
+    <% end %>
+  </div>
+<% end %>

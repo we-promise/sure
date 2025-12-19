@@ -10,3 +10,11 @@ en:
         mfa_description: Add an extra layer of security to your account by requiring
           a code from your authenticator app when signing in
         mfa_title: Two-Factor Authentication
+        no_recent_logins: No recent login activity yet.
+        recent_logins_description: Your last 5 login locations and IP addresses.
+        recent_logins_ip: IP address
+        recent_logins_location: Location
+        recent_logins_time: Time
+        recent_logins_title: Recent logins
+        unknown_ip: Unknown
+        unknown_location: Unknown
