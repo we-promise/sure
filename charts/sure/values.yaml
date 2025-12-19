@@ -142,6 +142,12 @@ redisOperator:
   # Sure-managed Redis via Operator CR (works with or without installing the subchart if operator is cluster-wide)
   managed:
     enabled: true           # default to in-cluster HA Redis via operator
+    # Optional per-managed overrides (take precedence over top-level redisOperator.* when set)
+    # Useful if you want different replicas/image for the managed Redis CR than the operator defaults.
+    replicas: null
+    image:
+      repository: ""
+      tag: ""
     # Optional scheduling knobs for managed RedisReplication (preferred location)
     nodeSelector: {}
     tolerations: []
@@ -282,7 +288,7 @@ worker:
 
 # Migrations: how to run database migrations
 migrations:
-  # strategy: job (default) runs a Helm hook pre-install/pre-upgrade Job
+  # strategy: job (default) runs a Helm hook post-install/post-upgrade Job
   # strategy: initContainer runs migrations on web pod start via initContainer instead
   strategy: job
   job:

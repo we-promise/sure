@@ -1,4 +1,4 @@
-{{- if and .Values.redisOperator.enabled .Values.redisOperator.managed.enabled (eq (.Values.redisOperator.mode | default "sentinel") "sentinel") }}
+{{- if and .Values.redisOperator.enabled .Values.redisOperator.managed.enabled (eq (.Values.redisOperator.mode | default "sentinel") "sentinel") .Values.redisOperator.sentinel.enabled }}
 {{- $name := .Values.redisOperator.name | default (printf "%s-redis" (include "sure.fullname" .)) -}}
 {{- $imgRepo := .Values.redisOperator.sentinel.image.repository | default "quay.io/opstree/redis-sentinel" -}}
 {{- $imgTag := .Values.redisOperator.sentinel.image.tag | default "v7.2.4" -}}

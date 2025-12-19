@@ -1,4 +1,4 @@
-{{- if and .Values.redisOperator.enabled .Values.redisOperator.managed.enabled (eq (.Values.redisOperator.mode | default "sentinel") "sentinel") }}
+{{- if and .Values.redisOperator.enabled .Values.redisOperator.managed.enabled (eq (.Values.redisOperator.mode | default "sentinel") "sentinel") .Values.redisOperator.sentinel.enabled }}
 {{- $name := .Values.redisOperator.name | default (printf "%s-redis" (include "sure.fullname" .)) -}}
 apiVersion: v1
 kind: ConfigMap

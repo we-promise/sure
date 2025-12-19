@@ -1,12 +1,12 @@
 # Sure Helm Chart
 
-Official Helm chart for deploying the Sure Rails application on Kubernetes. It supports web (Rails) and worker (Sidekiq) workloads, optional in-cluster PostgreSQL (CloudNativePG) and Redis subcharts for turnkey self-hosting, and production-grade features like pre-upgrade migrations, pod security contexts, HPAs, and optional ServiceMonitor.
+Official Helm chart for deploying the Sure Rails application on Kubernetes. It supports web (Rails) and worker (Sidekiq) workloads, optional in-cluster PostgreSQL (CloudNativePG) and Redis subcharts for turnkey self-hosting, and production-grade features like post-install/post-upgrade migrations, pod security contexts, HPAs, and optional ServiceMonitor.
 
 ## Features
 
 - Web (Rails) Deployment + Service and optional Ingress
 - Worker (Sidekiq) Deployment
-- Optional Helm-hook Job for db:migrate, or initContainer migration strategy
+- Optional Helm-hook Job for `db:prepare` (create + migrate), or initContainer migration strategy
 - Optional post-install/upgrade SimpleFin encryption backfill Job (idempotent; dry-run by default)
 - Optional CronJobs for custom tasks
 - Optional subcharts
@@ -200,7 +200,10 @@ Additional default hardening:
   For Kubernetes manifests, do not inline shell expansion. Either let this chart construct `REDIS_URL` for you automatically (recommended), or use a literal form with a placeholder password, e.g.:
   - `redis://default:<password>@<name>-redis-master.<namespace>.svc.cluster.local:6379/0`
 - The `default` username is required with Redis 6+ ACLs. If you explicitly set `REDIS_URL` under `rails.extraEnv`, your value takes precedence.
-- The Redis password is taken from `sure.redisSecretName` (typically your app Secret, e.g. `sure-secrets`) using the key returned by `sure.redisPasswordKey` (default `redis-password`).
+- The Redis password is read from a Kubernetes Secret:
+  - If `redisOperator.managed.enabled=true`: Secret name is `redisOperator.auth.existingSecret` if set, otherwise falls back to your app Secret; key is `redisOperator.auth.passwordKey` (default `redis-password`).
+  - If `redisSimple.enabled=true` and `redisSimple.auth.enabled=true`: Secret name is `redisSimple.auth.existingSecret` if set, otherwise falls back to your app Secret; key is `redisSimple.auth.passwordKey` (default `redis-password`).
+  - Otherwise (external Redis): the chart does not build `REDIS_URL`, but some jobs/tests may still reference `REDIS_PASSWORD`; the fallback key is `redis.passwordKey` (default `redis-password`) in your app Secret.
 - If you prefer a simple (non‑HA) in‑cluster Redis, disable the operator-managed Redis (`redisOperator.managed.enabled=false`) and enable `redisSimple.enabled`. The chart will deploy a single Redis Pod + Service and wire `REDIS_URL` accordingly. Provide a password via `redisSimple.auth.existingSecret` (recommended) or rely on your app secret mapping.
 
 ### Using the OT redis-operator (Sentinel)
@@ -212,6 +215,10 @@ Quickstart example (Sentinel, 3 replicas, Longhorn storage, reuse `sure-secrets`
 ```yaml
 redisOperator:
   enabled: true              # install operator subchart (or leave false if already installed cluster-wide)
+  mode: sentinel
+  sentinel:
+    enabled: true
+    masterGroupName: mymaster
   operator:
     resources:               # optional: keep the operator light on small k3s nodes
       requests:
@@ -221,7 +228,7 @@ redisOperator:
         cpu: 100m
         memory: 256Mi
   managed:
-    enabled: true            # render a RedisSentinel CR
+    enabled: true            # render a RedisReplication CR (and RedisSentinel when mode=sentinel)
   name: ""                   # defaults to <fullname>-redis
   replicas: 3
   auth:
@@ -547,18 +554,20 @@ Tip: For production stability, prefer immutable image tags. Set `image.tag` to a
 
 See `values.yaml` for the complete configuration surface, including:
 
+- `nameOverride`, `fullnameOverride`: override the generated resource names
 - `image.*`: repository, tag, pullPolicy, imagePullSecrets
 - `rails.*`: environment, extraEnv, existingSecret or secret.values, settings
   - Also: `rails.extraEnvVars[]` (full EnvVar), `rails.extraEnvFrom[]` (EnvFromSource), and `rails.encryptionEnv.enabled` toggle
 - `cnpg.*`: enable operator subchart and a Cluster resource, set instances, storage
-- `redis-ha.*`: enable dandydev/redis-ha subchart and configure replicas/auth (Sentinel/HA); supports `existingSecret` and `existingSecretPasswordKey`
-- `redisOperator.*`: optionally install OT redis-operator (`redisOperator.enabled`) and/or render a `RedisSentinel` CR (`redisOperator.managed.enabled`); configure `name`, `replicas`, `auth.existingSecret/passwordKey`, `persistence.className/size`, scheduling knobs, and `operator.resources` (controller) / `workloadResources` (Redis pods)
-- `redisSimple.*`: optional single‑pod Redis (non‑HA) when `redis-ha.enabled=false`
-- `web.*`, `worker.*`: replicas, probes, resources, scheduling
+- `redisOperator.*`: optionally install OT redis-operator (`redisOperator.enabled`) and/or render a `RedisReplication` CR (`redisOperator.managed.enabled`); optionally render a `RedisSentinel` CR when `redisOperator.mode=sentinel` (and Sentinel is enabled)
+- `redis.*`: misc Redis settings, including `redis.passwordKey` used when wiring `REDIS_PASSWORD`
+- `redisSimple.*`: optional single‑pod Redis (non‑HA) when `redisOperator.managed.enabled=false`
+- `web.*`, `worker.*`: replicas, command/args overrides, resources, scheduling, and advanced knobs like probes (`web.*Probe`) and `extraVolumes`/`extraVolumeMounts`
 - `migrations.*`: strategy job or initContainer
 - `simplefin.encryption.*`: enable + backfill options
-- `cronjobs.*`: custom CronJobs
+- `cronjobs.*`: custom CronJobs (see `cronjobs.items[]` schema in `values.yaml`)
 - `service.*`, `ingress.*`, `serviceMonitor.*`, `hpa.*`
+- `podSecurityContext`, `securityContext`, `writableTmp.*`: security hardening defaults and optional writable `/tmp`
 
 ## Helm tests
 
