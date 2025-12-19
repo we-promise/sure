@@ -30,7 +30,7 @@
       </div>
 
       <div class="col-span-2 flex items-center">
-        <%= render "categories/badge", category: trade_category %>
+        <%= render "categories/badge", category: trade.category || trade_category %>
       </div>
 
       <div class="col-span-2 justify-self-end font-medium text-sm">
