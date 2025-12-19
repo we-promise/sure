@@ -1,6 +1,8 @@
 class SecurityMailer < ApplicationMailer
   def unusual_login
     @user = params[:user]
+    return unless @user&.email.present?
+
     @session = params[:session]
     @usual_country_code = params[:usual_country_code]
     @subject = t(".subject", product_name: product_name)
