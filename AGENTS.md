@@ -38,13 +38,24 @@
 
 - Pending detection
   - SimpleFIN: pending when provider sends `pending: true`, or when `posted` is blank/0 and `transacted_at` is present.
-  - Plaid: read `transaction.extra["plaid"]["pending"]`.
+  - Plaid: pending when Plaid sends `pending: true` (stored at `transaction.extra["plaid"]["pending"]` for bank/credit transactions imported via `PlaidEntry::Processor`).
 - Storage (extras)
   - Provider metadata lives on `Transaction#extra`, namespaced (e.g., `extra["simplefin"]["pending"]`).
   - SimpleFIN FX: `extra["simplefin"]["fx_from"]`, `extra["simplefin"]["fx_date"]`.
 - UI
-  - Shows a small “Pending” badge when either SimpleFIN or Plaid pending is true.
+  - Shows a small “Pending” badge when `transaction.pending?` is true.
 - Variability
   - Some providers don’t expose pendings; in that case nothing is shown.
-- Debug flags (default-off)
-  - `SIMPLEFIN_INCLUDE_PENDING=1`, `SIMPLEFIN_DEBUG_RAW=1`.
+- Configuration (default-off)
+  - SimpleFIN runtime toggles live in `config/initializers/simplefin.rb` via `Rails.configuration.x.simplefin.*`.
+  - ENV-backed keys:
+    - `SIMPLEFIN_INCLUDE_PENDING=1` (forces `pending=1` on SimpleFIN fetches when caller didn’t specify a `pending:` arg)
+    - `SIMPLEFIN_DEBUG_RAW=1` (logs raw payload returned by SimpleFIN)
+
+### Provider support notes
+
+- SimpleFIN: supports pending + FX metadata; stored under `extra["simplefin"]`.
+- Plaid: supports pending when the upstream Plaid payload includes `pending: true`; stored under `extra["plaid"]`.
+- Plaid investments: investment transactions currently do not store pending metadata.
+- Lunchflow: does not currently store pending metadata.
+- Manual/CSV imports: no pending concept.

@@ -65,19 +65,12 @@
                       </span>
                     <% end %>
 
-                    <%# Pending indicator (Plaid/SimpleFIN) %>
-                    <% begin %>
-                      <% extra = transaction.extra.is_a?(Hash) ? transaction.extra : {} %>
-                      <% sf_pending = ActiveModel::Type::Boolean.new.cast(extra.dig("simplefin", "pending")) %>
-                      <% plaid_pending = ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending")) %>
-                      <% if sf_pending || plaid_pending %>
-                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="Pending — may change when posted">
-                          <%= icon "clock", size: "sm", color: "current" %>
-                          Pending
-                        </span>
-                      <% end %>
-                    <% rescue %>
-                      <%# no-op if extra is not hash-like %>
+                    <%# Pending indicator %>
+                    <% if transaction.pending? %>
+                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="Pending — may change when posted">
+                        <%= icon "clock", size: "sm", color: "current" %>
+                        Pending
+                      </span>
                     <% end %>
 
                     <% if transaction.transfer.present? %>

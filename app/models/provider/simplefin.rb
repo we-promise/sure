@@ -2,6 +2,8 @@ class Provider::Simplefin
   # Pending: some institutions do not return pending transactions even with `pending=1`.
   # This is provider variability (not a bug). For troubleshooting, you can set
   # `SIMPLEFIN_INCLUDE_PENDING=1` and/or `SIMPLEFIN_DEBUG_RAW=1` (both default-off).
+  # These are centralized in `Rails.configuration.x.simplefin.*` via
+  # `config/initializers/simplefin.rb`.
   include HTTParty
 
   headers "User-Agent" => "Sure Finance SimpleFin Client"

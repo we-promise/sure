@@ -15,7 +15,12 @@ class PlaidEntry::Processor
       name: name,
       source: "plaid",
       category_id: matched_category&.id,
-      merchant: merchant
+      merchant: merchant,
+      extra: {
+        plaid: {
+          pending: plaid_transaction["pending"]
+        }
+      }
     )
   end
 
