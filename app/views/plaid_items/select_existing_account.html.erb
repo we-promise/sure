@@ -1,0 +1,45 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description") %>
+        </p>
+
+        <form action="<%= link_existing_account_plaid_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <%= hidden_field_tag :account_id, @account.id %>
+
+          <div class="space-y-2">
+            <% @available_plaid_accounts.each do |plaid_account| %>
+              <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-subtle cursor-pointer transition-colors">
+                <%= radio_button_tag "plaid_account_id", plaid_account.id, false, class: "mt-1" %>
+                <div class="flex-1">
+                  <div class="font-medium text-sm text-primary">
+                    <%= plaid_account.name %>
+                  </div>
+                  <div class="text-xs text-secondary mt-1">
+                    <% if plaid_account.mask.present? %>
+                      ****<%= plaid_account.mask %> •
+                    <% end %>
+                    <%= plaid_account.plaid_item.name %> • <%= plaid_account.currency %> • <%= plaid_account.plaid_type %>
+                  </div>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= link_to t(".cancel"), accounts_path,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+            <%= submit_tag t(".link_account"),
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
+          </div>
+        </form>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,0 +1,85 @@
+de:
+  accounts:
+    account:
+      link_lunchflow: Mit Lunch Flow verknüpfen
+      troubleshoot: Fehlerbehebung
+    chart:
+      data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar
+    create:
+      success: "%{type}-Konto erstellt"
+    destroy:
+      success: "%{type}-Konto zur Löschung vorgemerkt"
+    empty:
+      empty_message: Füge ein Konto über eine Verbindung, einen Import oder manuell hinzu
+      new_account: Neues Konto
+      no_accounts: Noch keine Konten vorhanden
+    form:
+      balance: Aktueller Kontostand
+      name_label: Kontoname
+      name_placeholder: Beispielkontoname
+    index:
+      accounts: Konten
+      manual_accounts:
+        other_accounts: Andere Konten
+      new_account: Neues Konto
+      sync: Alle synchronisieren
+    new:
+      import_accounts: Konten importieren
+      method_selector:
+        connected_entry: Konto verknüpfen
+        connected_entry_eu: EU-Konto verknüpfen
+        link_with_provider: "Mit %{provider} verknüpfen"
+        manual_entry: Kontostand manuell eingeben
+        title: Wie möchtest du es hinzufügen
+      title: Was möchtest du hinzufügen
+    show:
+      activity:
+        amount: Betrag
+        balance: Kontostand
+        date: Datum
+        entries: Buchungen
+        entry: Buchung
+        new: Neu
+        new_balance: Neuer Kontostand
+        new_transaction: Neue Transaktion
+        no_entries: Keine Buchungen gefunden
+        title: Aktivität
+      chart:
+        balance: Kontostand
+        owed: Geschuldeter Betrag
+      menu:
+        confirm_accept: "%{name} löschen"
+        confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden Du müsstest es als neues Konto hinzufügen</p>"
+        confirm_title: Konto löschen
+        edit: Bearbeiten
+        import: Transaktionen importieren
+        manage: Konten verwalten
+    update:
+      success: "%{type}-Konto aktualisiert"
+    sidebar:
+      missing_data: Fehlende historische Daten
+      missing_data_description: "%{product} verwendet Drittanbieter, um historische Wechselkurse, Wertpapierpreise und weitere Daten abzurufen. Diese Daten sind erforderlich, um genaue historische Kontostände zu berechnen."
+      configure_providers: Konfiguriere deine Anbieter hier
+      tabs:
+        all: Alle
+        assets: Vermögen
+        debts: Schulden
+      new_asset: Neues Vermögen
+      new_debt: Neue Verbindlichkeit
+      new_account: Neues Konto
+      new_account_group: "Neue %{account_group}"
+    types:
+      depository: Bargeld
+      investment: Investition
+      crypto: Krypto
+      property: Immobilie
+      vehicle: Fahrzeug
+      other_asset: Sonstiges Vermögen
+      credit_card: Kreditkarte
+      loan: Darlehen
+      other_liability: Sonstige Verbindlichkeit
+
+  email_confirmations:
+    new:
+      invalid_token: Ungültiger oder abgelaufener Bestätigungslink
+      success_login: Deine E-Mail-Adresse wurde bestätigt Bitte melde dich mit deiner neuen Adresse an

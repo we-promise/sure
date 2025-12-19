@@ -128,6 +128,21 @@ class LlmUsage < ApplicationRecord
     estimated_cost.nil? ? "N/A" : "$#{estimated_cost.round(4)}"
   end
 
+  # Check if this usage record represents a failed API call
+  def failed?
+    metadata.present? && metadata["error"].present?
+  end
+
+  # Get the HTTP status code from metadata
+  def http_status_code
+    metadata&.dig("http_status_code")
+  end
+
+  # Get the error message from metadata
+  def error_message
+    metadata&.dig("error")
+  end
+
   # Estimate cost for auto-categorizing a batch of transactions
   # Based on typical token usage patterns:
   # - ~100 tokens per transaction in the prompt

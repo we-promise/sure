@@ -267,6 +267,48 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 
+  test "category filter includes subcategories" do
+    # Create a transaction with the parent category
+    parent_entry = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    # Create a transaction with the subcategory (fixture :subcategory has name "Restaurants", parent "Food & Drink")
+    subcategory_entry = create_transaction(
+      account: @checking_account,
+      amount: 75,
+      category: categories(:subcategory),
+      kind: "standard"
+    )
+
+    # Create a transaction with a different category
+    other_entry = create_transaction(
+      account: @checking_account,
+      amount: 50,
+      category: categories(:income),
+      kind: "standard"
+    )
+
+    # Filter by parent category only - should include both parent and subcategory transactions
+    search = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink" ] })
+    results = search.transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should include both parent and subcategory transactions
+    assert_includes result_ids, parent_entry.entryable.id
+    assert_includes result_ids, subcategory_entry.entryable.id
+    # Should not include transactions with different category
+    assert_not_includes result_ids, other_entry.entryable.id
+
+    # Verify totals also include subcategory transactions
+    totals = search.totals
+    assert_equal 2, totals.count
+    assert_equal Money.new(175, "USD"), totals.expense_money # 100 + 75
+  end
+
   test "totals respects type filters" do
     # Create expense and income transactions
     expense_entry = create_transaction(
@@ -297,5 +339,30 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal 0, totals.count
     assert_equal Money.new(0, "USD"), totals.expense_money
     assert_equal Money.new(0, "USD"), totals.income_money
+  end
+
+  test "category filter handles non-existent category names without SQL error" do
+    # Create a transaction with an existing category
+    existing_entry = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    # Search for non-existent category names (parent_category_ids will be empty)
+    # This should not cause a SQL error with "IN ()"
+    search = Transaction::Search.new(@family, filters: { categories: [ "Non-Existent Category 1", "Non-Existent Category 2" ] })
+    results = search.transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should not include any transactions since categories don't exist
+    assert_not_includes result_ids, existing_entry.entryable.id
+    assert_equal 0, result_ids.length
+
+    # Verify totals also work without error
+    totals = search.totals
+    assert_equal 0, totals.count
+    assert_equal Money.new(0, "USD"), totals.expense_money
   end
 end

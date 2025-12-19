@@ -81,3 +81,89 @@
     </div>
   <% end %>
 </div>
+
+<!-- Recent Runs Section -->
+<% if @recent_runs.any? %>
+  <div class="mt-6 bg-container rounded-xl shadow-border-xs p-4">
+    <div class="mb-4">
+      <h2 class="text-primary text-lg font-medium mb-1"><%= t("rules.recent_runs.title") %></h2>
+      <p class="text-sm text-secondary"><%= t("rules.recent_runs.description") %></p>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-surface-default border-b border-primary">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+              <%= t("rules.recent_runs.columns.date_time") %>
+            </th>
+            <th class="px-4 py-3 text-center text-xs font-medium text-secondary uppercase tracking-wider">
+              <%= t("rules.recent_runs.columns.execution_type") %>
+            </th>
+            <th class="px-4 py-3 text-center text-xs font-medium text-secondary uppercase tracking-wider">
+              <%= t("rules.recent_runs.columns.status") %>
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+              <%= t("rules.recent_runs.columns.rule_name") %>
+            </th>
+            <th class="px-4 py-3 text-center text-xs font-medium text-secondary uppercase tracking-wider">
+              <div class="flex flex-col leading-tight">
+                <div><%= t("rules.recent_runs.columns.transactions_counts.queued") %></div>
+                <div><%= t("rules.recent_runs.columns.transactions_counts.processed") %></div>
+                <div><%= t("rules.recent_runs.columns.transactions_counts.modified") %></div>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <% @recent_runs.each do |run| %>
+            <tr class="<%= 'bg-red-50 theme-dark:bg-red-950/30' if run.failed? %>">
+              <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
+                <%= run.executed_at.strftime("%b %d, %Y %I:%M %p") %>
+              </td>
+              <td class="px-4 py-3 text-sm text-primary text-center">
+                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.execution_type == 'manual' ? 'bg-blue-50 text-blue-700 theme-dark:bg-blue-950/30 theme-dark:text-blue-400' : 'bg-purple-50 text-purple-700 theme-dark:bg-purple-950/30 theme-dark:text-purple-400' %>">
+                  <%= t("rules.recent_runs.execution_types.#{run.execution_type}") %>
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <% if run.pending? %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700 theme-dark:bg-yellow-950/30 theme-dark:text-yellow-400">
+                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                    </span>
+                  <% elsif run.success? %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 theme-dark:bg-green-950/30 theme-dark:text-green-400">
+                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                    </span>
+                  <% else %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 theme-dark:bg-red-950/30 theme-dark:text-red-400">
+                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                    </span>
+                  <% end %>
+                  <% if run.failed? && run.error_message.present? %>
+                    <div data-controller="tooltip" data-tooltip-content-value="<%= run.error_message %>">
+                      <%= icon("info", size: "sm", class: "text-red-500") %>
+                    </div>
+                  <% end %>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-sm text-primary">
+                <%= run.rule_name.presence || run.rule&.name.presence || t("rules.recent_runs.unnamed_rule") %>
+              </td>
+              <td class="px-4 py-3 text-sm text-primary text-center tabular-nums">
+                <%= "#{number_with_delimiter(run.transactions_queued)} / #{number_with_delimiter(run.transactions_processed)} / #{number_with_delimiter(run.transactions_modified)}" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if @pagy.pages > 1 %>
+      <div class="mt-4">
+        <%= render "shared/pagination", pagy: @pagy %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

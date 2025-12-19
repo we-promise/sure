@@ -9,6 +9,10 @@ en:
     day_of_month: Day %{day} of month
     identify_patterns: Identify Patterns
     cleanup_stale: Clean Up Stale
+    settings:
+      enable_label: Enable Recurring Transactions
+      enable_description: Automatically detect recurring transaction patterns and show upcoming projected transactions.
+    settings_updated: Recurring transactions settings updated
     info:
       title: Automatic Pattern Detection
       manual_description: You can manually identify patterns or clean up stale recurring transactions using the buttons above.
@@ -22,11 +26,16 @@ en:
     marked_active: Recurring transaction marked as active
     deleted: Recurring transaction deleted
     confirm_delete: Are you sure you want to delete this recurring transaction?
+    marked_as_recurring: Transaction marked as recurring
+    already_exists: A manual recurring transaction already exists for this pattern
+    creation_failed: Failed to create recurring transaction. Please check the transaction details and try again.
+    unexpected_error: An unexpected error occurred while creating the recurring transaction
+    amount_range: "Range: %{min} to %{max}"
     empty:
       title: No recurring transactions found
       description: Click "Identify Patterns" to automatically detect recurring transactions from your transaction history.
     table:
-      merchant: Merchant
+      merchant: Name
       amount: Amount
       expected_day: Expected Day
       next_date: Next Date
@@ -36,3 +45,5 @@ en:
     status:
       active: Active
       inactive: Inactive
+    badges:
+      manual: Manual

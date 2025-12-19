@@ -1,0 +1,12 @@
+---
+es:
+  layouts:
+    auth:
+      existing_account: ¿Ya tienes una cuenta?
+      no_account: ¿Nuevo en %{product_name}?
+      sign_in: Iniciar sesión
+      sign_up: Crear cuenta
+    shared:
+      footer:
+        privacy_policy: Política de privacidad
+        terms_of_service: Términos de servicio

@@ -1,25 +1,35 @@
 class Provider::SimplefinAdapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
-  include Provider::Configurable
 
   # Register this adapter with the factory
   Provider::Factory.register("SimplefinAccount", self)
 
-  # Configuration for SimpleFIN
-  configure do
-    description <<~DESC
-      Setup instructions:
-      1. Visit [SimpleFIN Bridge](https://bridge.simplefin.org/simplefin/create) to get a setup token
-      2. This token is optional and only needed if you want to provide a default setup token for users
-    DESC
+  # Define which account types this provider supports
+  def self.supported_account_types
+    %w[Depository CreditCard Loan Investment]
+  end
 
-    field :setup_token,
-          label: "Setup Token",
-          required: false,
-          secret: true,
-          env_key: "SIMPLEFIN_SETUP_TOKEN",
-          description: "Optional: SimpleFIN setup token from your SimpleFIN Bridge account (one-time use)"
+  # Returns connection configurations for this provider
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_simplefin?
+
+    [ {
+      key: "simplefin",
+      name: "SimpleFIN",
+      description: "Connect to your bank via SimpleFIN",
+      can_connect: true,
+      new_account_path: ->(accountable_type, return_to) {
+        Rails.application.routes.url_helpers.new_simplefin_item_path(
+          accountable_type: accountable_type
+        )
+      },
+      existing_account_path: ->(account_id) {
+        Rails.application.routes.url_helpers.select_existing_account_simplefin_items_path(
+          account_id: account_id
+        )
+      }
+    } ]
   end
 
   def provider_name

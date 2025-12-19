@@ -1,6 +1,6 @@
 <%= content_for :page_title, "Bank Sync Providers" %>
 
-<div class="space-y-8">
+<div class="space-y-4">
   <div>
     <p class="text-secondary mb-4">
       Configure credentials for third-party bank sync providers. Settings configured here will override environment variables.
@@ -8,8 +8,28 @@
   </div>
 
   <% @provider_configurations.each do |config| %>
-    <%= settings_section title: config.provider_key.titleize do %>
+    <% next if config.provider_key.to_s.casecmp("simplefin").zero? %>
+    <%= settings_section title: config.provider_key.titleize, collapsible: true, open: false do %>
       <%= render "settings/providers/provider_form", configuration: config %>
     <% end %>
+  <% end %>
+
+  <%= settings_section title: "Lunch Flow", collapsible: true, open: false do %>
+    <turbo-frame id="lunchflow-providers-panel">
+      <%= render "settings/providers/lunchflow_panel" %>
+    </turbo-frame>
+  <% end %>
+
+  <%= settings_section title: "SimpleFIN", collapsible: true, open: false do %>
+    <turbo-frame id="simplefin-providers-panel">
+      <%= render "settings/providers/simplefin_panel" %>
+    </turbo-frame>
+  <% end %>
+
+
+  <%= settings_section title: "Enable Banking (beta)", collapsible: true, open: false do %>
+    <turbo-frame id="enable_banking-providers-panel">
+      <%= render "settings/providers/enable_banking_panel" %>
+    </turbo-frame>
   <% end %>
 </div>

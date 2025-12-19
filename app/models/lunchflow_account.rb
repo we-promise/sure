@@ -1,4 +1,6 @@
 class LunchflowAccount < ApplicationRecord
+  include CurrencyNormalizable
+
   belongs_to :lunchflow_item
 
   # New association through account_providers
@@ -19,10 +21,17 @@ class LunchflowAccount < ApplicationRecord
 
     # Map Lunchflow field names to our field names
     # Lunchflow API returns: { id, name, institution_name, institution_logo, provider, currency, status }
-    update!(
+    # Build display name: "Institution Name - Account Name" if institution is present
+    display_name = if snapshot[:institution_name].present?
+      "#{snapshot[:institution_name]} - #{snapshot[:name]}"
+    else
+      snapshot[:name]
+    end
+
+    assign_attributes(
       current_balance: nil, # Balance not provided by accounts endpoint
-      currency: snapshot[:currency] || "USD",
-      name: snapshot[:name],
+      currency: parse_currency(snapshot[:currency]) || "USD",
+      name: display_name,
       account_id: snapshot[:id].to_s,
       account_status: snapshot[:status],
       provider: snapshot[:provider],
@@ -32,6 +41,8 @@ class LunchflowAccount < ApplicationRecord
       }.compact,
       raw_payload: account_snapshot
     )
+
+    save!
   end
 
   def upsert_lunchflow_transactions_snapshot!(transactions_snapshot)
@@ -41,4 +52,10 @@ class LunchflowAccount < ApplicationRecord
 
     save!
   end
+
+  private
+
+    def log_invalid_currency(currency_value)
+      Rails.logger.warn("Invalid currency code '#{currency_value}' for LunchFlow account #{id}, defaulting to USD")
+    end
 end

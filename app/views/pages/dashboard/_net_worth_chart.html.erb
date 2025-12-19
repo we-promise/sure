@@ -4,24 +4,17 @@
   <% series = balance_sheet.net_worth_series(period: period) %>
   <div class="flex justify-between gap-4 px-4">
     <div class="space-y-2">
-      <div class="space-y-2">
-        <div class="flex items-center gap-2">
-          <p class="text-sm text-secondary font-medium"><%= t(".title") %></p>
-        </div>
-
+      <% if series.trend.present? %>
         <p class="text-primary -space-x-0.5 text-3xl font-medium <%= "animate-pulse" if balance_sheet.syncing? %>">
           <%= series.trend.current.format %>
         </p>
-
-        <% if series.trend.nil? %>
-          <p class="text-sm text-secondary"><%= t(".data_not_available") %></p>
-        <% else %>
-          <%= render partial: "shared/trend_change", locals: { trend: series.trend, comparison_label: period.comparison_label } %>
-        <% end %>
-      </div>
+        <%= render partial: "shared/trend_change", locals: { trend: series.trend, comparison_label: period.comparison_label } %>
+      <% else %>
+        <p class="text-sm text-secondary"><%= t(".data_not_available") %></p>
+      <% end %>
     </div>
 
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form" } do |form| %>
+    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
       <%= form.select :period,
                     Period.as_options,
                     { selected: period.key },

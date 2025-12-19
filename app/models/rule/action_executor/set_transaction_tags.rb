@@ -4,10 +4,10 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
   end
 
   def options
-    family.tags.pluck(:name, :id)
+    family.tags.alphabetically.pluck(:name, :id)
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     tag = family.tags.find_by_id(value)
 
     scope = transaction_scope
@@ -16,7 +16,7 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
       scope = scope.enrichable(:tag_ids)
     end
 
-    rows = scope.each do |txn|
+    count_modified_resources(scope) do |txn|
       txn.enrich_attribute(
         :tag_ids,
         [ tag.id ],

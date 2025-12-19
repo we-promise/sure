@@ -1,8 +1,8 @@
 # Module for providers to declare their configuration requirements
 #
 # Providers can declare their own configuration fields without needing to modify
-# the Setting model. Settings are stored dynamically using RailsSettings::Base's
-# hash-style access (Setting[:key] = value).
+# the Setting model. Settings are stored dynamically as individual entries using
+# RailsSettings::Base's bracket-style access (Setting[:key] = value).
 #
 # Configuration fields are automatically registered and displayed in the UI at
 # /settings/providers. The system checks Setting storage first, then ENV variables,
@@ -113,12 +113,21 @@ module Provider::Configurable
       @provider_key = provider_key
       @fields = []
       @provider_description = nil
+      @configured_check = nil
     end
 
     # Set the provider-level description (markdown supported)
     # @param text [String] The description text for this provider
     def description(text)
       @provider_description = text
+    end
+
+    # Define a custom check for whether this provider is configured
+    # @param block [Proc] A block that returns true if the provider is configured
+    # Example:
+    #   configured_check { get_value(:client_id).present? && get_value(:secret).present? }
+    def configured_check(&block)
+      @configured_check = block
     end
 
     # Define a configuration field
@@ -150,9 +159,21 @@ module Provider::Configurable
       field.value
     end
 
-    # Check if all required fields are present
+    # Check if provider is properly configured
+    # Uses custom configured_check if defined, otherwise checks required fields
     def configured?
-      fields.select(&:required).all? { |f| f.value.present? }
+      if @configured_check
+        instance_eval(&@configured_check)
+      else
+        required_fields = fields.select(&:required)
+        if required_fields.any?
+          required_fields.all? { |f| f.value.present? }
+        else
+          # If no required fields, provider is not considered configured
+          # unless it defines a custom configured_check
+          false
+        end
+      end
     end
 
     # Get all field values as a hash
@@ -186,8 +207,8 @@ module Provider::Configurable
 
     # Get the value for this field (Setting -> ENV -> default)
     def value
-      # First try Setting using dynamic hash-style access
-      # This works even without explicit field declarations in Setting model
+      # First try Setting using dynamic bracket-style access
+      # Each field is stored as an individual entry without explicit field declarations
       setting_value = Setting[setting_key]
       return normalize_value(setting_value) if setting_value.present?
 

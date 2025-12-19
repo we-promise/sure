@@ -9,11 +9,15 @@ class Setting < RailsSettings::Base
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
+  field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
 
-  # Single hash field for all dynamic provider credentials and other dynamic settings
-  # This allows unlimited dynamic fields without declaring them upfront
-  field :dynamic_fields, type: :hash, default: {}
+  # Provider selection
+  field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
+  field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
+
+  # Dynamic fields are now stored as individual entries with "dynamic:" prefix
+  # This prevents race conditions and ensures each field is independently managed
 
   # Onboarding and app settings
   ONBOARDING_STATES = %w[open closed invite_only].freeze
@@ -50,7 +54,7 @@ class Setting < RailsSettings::Base
     end
 
     # Support dynamic field access via bracket notation
-    # First checks if it's a declared field, then falls back to dynamic_fields hash
+    # First checks if it's a declared field, then falls back to individual dynamic entries
     def [](key)
       key_str = key.to_s
 
@@ -58,8 +62,8 @@ class Setting < RailsSettings::Base
       if respond_to?(key_str)
         public_send(key_str)
       else
-        # Fall back to dynamic_fields hash
-        dynamic_fields[key_str]
+        # Fall back to individual dynamic entry lookup
+        find_by(var: dynamic_key_name(key_str))&.value
       end
     end
 
@@ -70,17 +74,26 @@ class Setting < RailsSettings::Base
       if respond_to?("#{key_str}=")
         public_send("#{key_str}=", value)
       else
-        # Otherwise, store in dynamic_fields hash
-        current_dynamic = dynamic_fields.dup
-        current_dynamic[key_str] = value
-        self.dynamic_fields = current_dynamic
+        # Store as individual dynamic entry
+        dynamic_key = dynamic_key_name(key_str)
+        if value.nil?
+          where(var: dynamic_key).destroy_all
+          clear_cache
+        else
+          # Use upsert for atomic insert/update to avoid race conditions
+          upsert({ var: dynamic_key, value: value.to_yaml }, unique_by: :var)
+          clear_cache
+        end
       end
     end
 
     # Check if a dynamic field exists (useful to distinguish nil value vs missing key)
     def key?(key)
       key_str = key.to_s
-      respond_to?(key_str) || dynamic_fields.key?(key_str)
+      return true if respond_to?(key_str)
+
+      # Check if dynamic entry exists
+      where(var: dynamic_key_name(key_str)).exists?
     end
 
     # Delete a dynamic field
@@ -88,16 +101,23 @@ class Setting < RailsSettings::Base
       key_str = key.to_s
       return nil if respond_to?(key_str) # Can't delete declared fields
 
-      current_dynamic = dynamic_fields.dup
-      value = current_dynamic.delete(key_str)
-      self.dynamic_fields = current_dynamic
+      dynamic_key = dynamic_key_name(key_str)
+      value = self[key_str]
+      where(var: dynamic_key).destroy_all
+      clear_cache
       value
     end
 
     # List all dynamic field keys (excludes declared fields)
     def dynamic_keys
-      dynamic_fields.keys
+      where("var LIKE ?", "dynamic:%").pluck(:var).map { |var| var.sub(/^dynamic:/, "") }
     end
+
+    private
+
+      def dynamic_key_name(key_str)
+        "dynamic:#{key_str}"
+      end
   end
 
   # Validates OpenAI configuration requires model when custom URI base is set

@@ -1,55 +1,57 @@
 class Provider::LunchflowAdapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
-  include Provider::Configurable
 
   # Register this adapter with the factory
   Provider::Factory.register("LunchflowAccount", self)
 
-  # Configuration for Lunchflow
-  configure do
-    description <<~DESC
-      Setup instructions:
-      1. Visit [Lunchflow](https://www.lunchflow.app) to get your API key
-      2. Enter your API key below to enable Lunchflow bank data sync
-      3. Choose the appropriate environment (production or staging)
-    DESC
+  # Define which account types this provider supports
+  def self.supported_account_types
+    %w[Depository CreditCard Loan]
+  end
 
-    field :api_key,
-          label: "API Key",
-          required: true,
-          secret: true,
-          env_key: "LUNCHFLOW_API_KEY",
-          description: "Your Lunchflow API key for authentication"
+  # Returns connection configurations for this provider
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_lunchflow?
 
-    field :base_url,
-          label: "Base URL",
-          required: false,
-          env_key: "LUNCHFLOW_BASE_URL",
-          default: "https://lunchflow.app/api/v1",
-          description: "Base URL for Lunchflow API"
+    [ {
+      key: "lunchflow",
+      name: "Lunch Flow",
+      description: "Connect to your bank via Lunch Flow",
+      can_connect: true,
+      new_account_path: ->(accountable_type, return_to) {
+        Rails.application.routes.url_helpers.select_accounts_lunchflow_items_path(
+          accountable_type: accountable_type,
+          return_to: return_to
+        )
+      },
+      existing_account_path: ->(account_id) {
+        Rails.application.routes.url_helpers.select_existing_account_lunchflow_items_path(
+          account_id: account_id
+        )
+      }
+    } ]
   end
 
   def provider_name
     "lunchflow"
   end
 
-  # Build a Lunchflow provider instance with configured credentials
+  # Build a Lunch Flow provider instance with family-specific credentials
+  # Lunchflow is now fully per-family - no global credentials supported
+  # @param family [Family] The family to get credentials for (required)
   # @return [Provider::Lunchflow, nil] Returns nil if API key is not configured
-  def self.build_provider
-    api_key = config_value(:api_key)
-    return nil unless api_key.present?
+  def self.build_provider(family: nil)
+    return nil unless family.present?
 
-    base_url = config_value(:base_url).presence || "https://lunchflow.app/api/v1"
-    Provider::Lunchflow.new(api_key, base_url: base_url)
-  end
+    # Get family-specific credentials
+    lunchflow_item = family.lunchflow_items.where.not(api_key: nil).first
+    return nil unless lunchflow_item&.credentials_configured?
 
-  # Reload Lunchflow configuration when settings are updated
-  def self.reload_configuration
-    # Lunchflow doesn't need to configure Rails.application.config like Plaid does
-    # The configuration is read dynamically via config_value(:api_key) and config_value(:base_url)
-    # This method exists to be called by the settings controller after updates
-    # No action needed here since values are fetched on-demand
+    Provider::Lunchflow.new(
+      lunchflow_item.api_key,
+      base_url: lunchflow_item.effective_base_url
+    )
   end
 
   def sync_path
@@ -65,7 +67,7 @@ class Provider::LunchflowAdapter < Provider::Base
   end
 
   def institution_domain
-    # Lunchflow may provide institution metadata in account data
+    # Lunch Flow may provide institution metadata in account data
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
 
@@ -77,7 +79,7 @@ class Provider::LunchflowAdapter < Provider::Base
       begin
         domain = URI.parse(url).host&.gsub(/^www\./, "")
       rescue URI::InvalidURIError
-        Rails.logger.warn("Invalid institution URL for Lunchflow account #{provider_account.id}: #{url}")
+        Rails.logger.warn("Invalid institution URL for Lunch Flow account #{provider_account.id}: #{url}")
       end
     end
 

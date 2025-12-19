@@ -4,8 +4,9 @@ class FamilyMerchantsController < ApplicationController
   def index
     @breadcrumbs = [ [ "Home", root_path ], [ "Merchants", nil ] ]
 
-    # Show all merchants assigned to transactions (both FamilyMerchant and ProviderMerchant)
-    @family_merchants = Current.family.assigned_merchants.alphabetically
+    # Show all merchants for this family
+    @family_merchants = Current.family.merchants.alphabetically
+    @provider_merchants = Current.family.assigned_merchants.where(type: "ProviderMerchant").alphabetically
 
     render layout: "settings"
   end

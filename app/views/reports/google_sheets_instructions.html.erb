@@ -1,0 +1,67 @@
+<%= render DS::Dialog.new(variant: "modal", width: "md") do |dialog| %>
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="font-medium text-primary">
+          <% if @api_key_present %>
+            <%= t("reports.google_sheets_instructions.title_with_key") %>
+          <% else %>
+            <%= t("reports.google_sheets_instructions.title_no_key") %>
+          <% end %>
+        </h3>
+        <%= icon("x", as_button: true, data: { action: "DS--dialog#close" }, class: "text-subdued hover:text-primary") %>
+      </div>
+
+      <div class="text-sm text-secondary space-y-3 whitespace-pre-line">
+        <% if @api_key_present %>
+          <p><%= t("reports.google_sheets_instructions.ready") %></p>
+          <p><%= t("reports.google_sheets_instructions.steps") %></p>
+          <div class="bg-surface-inset p-3 rounded-lg font-mono text-xs break-all">
+            =IMPORTDATA("<%= @csv_url %>")
+          </div>
+          <p class="text-warning"><%= icon("alert-triangle", class: "w-4 h-4 inline") %> <%= t("reports.google_sheets_instructions.security_warning") %></p>
+        <% else %>
+          <p><%= t("reports.google_sheets_instructions.need_key") %></p>
+          <ol class="list-decimal list-inside space-y-2">
+            <li><%= t("reports.google_sheets_instructions.step1") %></li>
+            <li><%= t("reports.google_sheets_instructions.step2") %></li>
+            <li><%= t("reports.google_sheets_instructions.step3") %></li>
+            <li><%= t("reports.google_sheets_instructions.step4") %></li>
+          </ol>
+          <p><strong><%= t("reports.google_sheets_instructions.example") %>:</strong></p>
+          <div class="bg-surface-inset p-3 rounded-lg font-mono text-xs break-all">
+            <%= @csv_url %>&api_key=YOUR_API_KEY_HERE
+          </div>
+          <p><%= t("reports.google_sheets_instructions.then_use") %></p>
+        <% end %>
+      </div>
+
+      <div class="flex gap-2">
+        <% if @api_key_present %>
+          <%= render DS::Button.new(
+            text: t("reports.google_sheets_instructions.open_sheets"),
+            variant: "primary",
+            full_width: true,
+            href: "https://sheets.google.com/create",
+            target: "_blank",
+            data: { action: "click->DS--dialog#close" }
+          ) %>
+        <% else %>
+          <%= render DS::Button.new(
+            text: t("reports.google_sheets_instructions.go_to_api_keys"),
+            variant: "primary",
+            full_width: true,
+            href: settings_api_key_path,
+            frame: "_top"
+          ) %>
+        <% end %>
+        <%= render DS::Button.new(
+          text: t("reports.google_sheets_instructions.close"),
+          variant: "outline",
+          full_width: true,
+          data: { action: "DS--dialog#close" }
+        ) %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

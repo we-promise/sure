@@ -51,7 +51,10 @@ class Security::Price::Importer
       end
 
       # Gap-fill using LOCF (last observation carried forward)
-      chosen_price ||= prev_price_value
+      # Treat nil or zero prices as invalid and use previous price
+      if chosen_price.nil? || chosen_price.to_f <= 0
+        chosen_price = prev_price_value
+      end
       prev_price_value = chosen_price
 
       {

@@ -4,11 +4,22 @@ class PlaidItem < ApplicationRecord
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
-  if Rails.application.credentials.active_record_encryption.present?
+  # Helper to detect if ActiveRecord Encryption is configured for this app
+  def self.encryption_ready?
+    creds_ready = Rails.application.credentials.active_record_encryption.present?
+    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
+                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
+    creds_ready || env_ready
+  end
+
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
+  if encryption_ready?
     encrypts :access_token, deterministic: true
   end
 
-  validates :name, :access_token, presence: true
+  validates :name, presence: true
+  validates :access_token, presence: true, on: :create
 
   before_destroy :remove_plaid_item
 
@@ -16,11 +27,21 @@ class PlaidItem < ApplicationRecord
   has_one_attached :logo
 
   has_many :plaid_accounts, dependent: :destroy
-  has_many :accounts, through: :plaid_accounts
+  has_many :legacy_accounts, through: :plaid_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+
+  # Get accounts from both new and legacy systems
+  def accounts
+    # Preload associations to avoid N+1 queries
+    plaid_accounts
+      .includes(:account, account_provider: :account)
+      .map(&:current_account)
+      .compact
+      .uniq
+  end
 
   def get_update_link_token(webhooks_url:, redirect_url:)
     family.get_link_token(

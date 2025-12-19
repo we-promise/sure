@@ -6,7 +6,23 @@ module Family::LunchflowConnectable
   end
 
   def can_connect_lunchflow?
-    # Check if the API key is configured
-    Provider::LunchflowAdapter.configured?
+    # Families can now configure their own Lunchflow credentials
+    true
+  end
+
+  def create_lunchflow_item!(api_key:, base_url: nil, item_name: nil)
+    lunchflow_item = lunchflow_items.create!(
+      name: item_name || "Lunch Flow Connection",
+      api_key: api_key,
+      base_url: base_url
+    )
+
+    lunchflow_item.sync_later
+
+    lunchflow_item
+  end
+
+  def has_lunchflow_credentials?
+    lunchflow_items.where.not(api_key: nil).exists?
   end
 end

@@ -48,6 +48,48 @@ class PlaidItemsController < ApplicationController
     end
   end
 
+  def select_existing_account
+    @account = Current.family.accounts.find(params[:account_id])
+    @region = params[:region] || "us"
+
+    # Get all Plaid accounts from this family's Plaid items for the specified region
+    # that are not yet linked to any account
+    @available_plaid_accounts = Current.family.plaid_items
+      .where(plaid_region: @region)
+      .includes(:plaid_accounts)
+      .flat_map(&:plaid_accounts)
+      .select { |pa| pa.account_provider.nil? && pa.account.nil? } # Not linked via new or legacy system
+
+    if @available_plaid_accounts.empty?
+      redirect_to account_path(@account), alert: "No available Plaid accounts to link. Please connect a new Plaid account first."
+    end
+  end
+
+  def link_existing_account
+    @account = Current.family.accounts.find(params[:account_id])
+    plaid_account = PlaidAccount.find(params[:plaid_account_id])
+
+    # Verify the Plaid account belongs to this family's Plaid items
+    unless Current.family.plaid_items.include?(plaid_account.plaid_item)
+      redirect_to account_path(@account), alert: "Invalid Plaid account selected"
+      return
+    end
+
+    # Verify the Plaid account is not already linked
+    if plaid_account.account_provider.present? || plaid_account.account.present?
+      redirect_to account_path(@account), alert: "This Plaid account is already linked"
+      return
+    end
+
+    # Create the link via AccountProvider
+    AccountProvider.create!(
+      account: @account,
+      provider: plaid_account
+    )
+
+    redirect_to accounts_path, notice: "Account successfully linked to Plaid"
+  end
+
   private
     def set_plaid_item
       @plaid_item = Current.family.plaid_items.find(params[:id])

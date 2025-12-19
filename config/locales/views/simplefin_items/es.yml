@@ -1,0 +1,53 @@
+---
+es:
+  simplefin_items:
+    new:
+      title: Conectar SimpleFin
+      setup_token: Token de configuración
+      setup_token_placeholder: pega tu token de configuración de SimpleFin
+      connect: Conectar
+      cancel: Cancelar
+    create:
+      success: ¡Conexión SimpleFin añadida con éxito! Tus cuentas aparecerán en breve mientras se sincronizan en segundo plano.
+      errors:
+        blank_token: Por favor, introduce un token de configuración de SimpleFin.
+        invalid_token: Token de configuración inválido. Por favor, verifica que has copiado el token completo desde SimpleFin Bridge.
+        token_compromised: El token de configuración puede estar comprometido, expirado o ya utilizado. Por favor, crea uno nuevo.
+        create_failed: "No se pudo conectar: %{message}"
+        unexpected: Ocurrió un error inesperado. Por favor, inténtalo de nuevo o contacta con soporte.
+    destroy:
+      success: La conexión SimpleFin será eliminada.
+    update:
+      success: ¡Conexión SimpleFin actualizada con éxito! Tus cuentas están siendo reconectadas.
+      errors:
+        blank_token: Por favor, introduce un token de configuración de SimpleFin.
+        invalid_token: Token de configuración inválido. Por favor, verifica que has copiado el token completo desde SimpleFin Bridge.
+        token_compromised: El token de configuración puede estar comprometido, expirado o ya utilizado. Por favor, crea uno nuevo.
+        update_failed: "No se pudo actualizar la conexión: %{message}"
+        unexpected: Ocurrió un error inesperado. Por favor, inténtalo de nuevo o contacta con soporte.
+    edit:
+      setup_token:
+        label: "Token de configuración de SimpleFin:"
+        placeholder: "Pega aquí tu token de configuración de SimpleFin..."
+        help_text: "El token debería ser una cadena larga que comienza con letras y números."
+    complete_account_setup:
+      success: ¡Las cuentas de SimpleFin se han configurado con éxito! Tus transacciones y activos se están importando en segundo plano.
+    simplefin_item:
+      add_new: Añadir nueva conexión
+      confirm_accept: Eliminar conexión
+      confirm_body: Esto eliminará permanentemente todas las cuentas de este grupo y todos los datos asociados.
+      confirm_title: ¿Eliminar conexión SimpleFin?
+      delete: Eliminar
+      deletion_in_progress: "(eliminación en progreso...)"
+      error: Ocurrió un error al sincronizar los datos
+      no_accounts_description: Esta conexión aún no tiene cuentas sincronizadas.
+      no_accounts_title: No se encontraron cuentas
+      requires_update: Requiere reautenticación
+      setup_needed: Nuevas cuentas listas para configurar
+      setup_description: Elige los tipos de cuenta para tus nuevas cuentas importadas de SimpleFin.
+      setup_action: Configurar nuevas cuentas
+      status: Última sincronización hace %{timestamp}
+      status_never: Nunca sincronizado
+      status_with_summary: "Última sincronización hace %{timestamp} • %{summary}"
+      syncing: Sincronizando...
+      update: Actualizar conexión

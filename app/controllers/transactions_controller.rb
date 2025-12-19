@@ -116,6 +116,56 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def mark_as_recurring
+    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+
+    # Check if a recurring transaction already exists for this pattern
+    existing = Current.family.recurring_transactions.find_by(
+      merchant_id: transaction.merchant_id,
+      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
+      currency: transaction.entry.currency,
+      manual: true
+    )
+
+    if existing
+      flash[:alert] = t("recurring_transactions.already_exists")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    begin
+      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+
+      respond_to do |format|
+        format.html do
+          flash[:notice] = t("recurring_transactions.marked_as_recurring")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue ActiveRecord::RecordInvalid => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.creation_failed")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue StandardError => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.unexpected_error")
+          redirect_back_or_to transactions_path
+        end
+      end
+    end
+  end
+
+  def update_preferences
+    Current.user.update_transactions_preferences(preferences_params)
+    head :ok
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
+    head :unprocessable_entity
+  end
+
   private
     def per_page
       params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
@@ -192,5 +242,9 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
+    end
+
+    def preferences_params
+      params.require(:preferences).permit(collapsed_sections: {})
     end
 end

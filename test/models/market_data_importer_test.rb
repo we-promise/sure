@@ -34,6 +34,11 @@ class MarketDataImporterTest < ActiveSupport::TestCase
                          date: SNAPSHOT_START_DATE,
                          rate: 2.0)
 
+    ExchangeRate.create!(from_currency: "USD",
+                         to_currency: "CAD",
+                         date: SNAPSHOT_START_DATE,
+                         rate: 0.5)
+
     expected_start_date = (SNAPSHOT_START_DATE + 1.day) - PROVIDER_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
@@ -46,11 +51,20 @@ class MarketDataImporterTest < ActiveSupport::TestCase
                OpenStruct.new(from: "CAD", to: "USD", date: SNAPSHOT_START_DATE, rate: 1.5)
              ]))
 
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD",
+                   to: "CAD",
+                   start_date: expected_start_date,
+                   end_date: end_date)
+             .returns(provider_success_response([
+               OpenStruct.new(from: "USD", to: "CAD", date: SNAPSHOT_START_DATE, rate: 0.67)
+             ]))
+
     before = ExchangeRate.count
     MarketDataImporter.new(mode: :snapshot).import_exchange_rates
     after  = ExchangeRate.count
 
-    assert_operator after, :>, before, "Should insert at least one new exchange-rate row"
+    assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows"
   end
 
   test "syncs security prices" do

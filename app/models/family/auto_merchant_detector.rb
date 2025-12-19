@@ -11,7 +11,7 @@ class Family::AutoMerchantDetector
 
     if scope.none?
       Rails.logger.info("No transactions to auto-detect merchants for family #{family.id}")
-      return
+      return 0
     else
       Rails.logger.info("Auto-detecting merchants for #{scope.count} transactions for family #{family.id}")
     end
@@ -24,38 +24,38 @@ class Family::AutoMerchantDetector
 
     unless result.success?
       Rails.logger.error("Failed to auto-detect merchants for family #{family.id}: #{result.error.message}")
-      return
+      return 0
     end
 
+    modified_count = 0
     scope.each do |transaction|
       auto_detection = result.data.find { |c| c.transaction_id == transaction.id }
+      next unless auto_detection&.business_name.present? && auto_detection&.business_url.present?
 
-      merchant_id = user_merchants_input.find { |m| m[:name] == auto_detection&.business_name }&.dig(:id)
+      existing_merchant = transaction.merchant
 
-      if merchant_id.nil? && auto_detection&.business_url.present? && auto_detection&.business_name.present? && Setting.brand_fetch_client_id.present?
-        ai_provider_merchant = ProviderMerchant.find_or_create_by!(
-          source: "ai",
-          name: auto_detection.business_name,
-          website_url: auto_detection.business_url,
-        ) do |pm|
-          pm.logo_url = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+      if existing_merchant.nil?
+        # Case 1: No merchant - create/find AI merchant and assign
+        merchant_id = find_matching_user_merchant(auto_detection)
+        merchant_id ||= find_or_create_ai_merchant(auto_detection)&.id
+
+        if merchant_id.present?
+          was_modified = transaction.enrich_attribute(:merchant_id, merchant_id, source: "ai")
+          transaction.lock_attr!(:merchant_id)
+          modified_count += 1 if was_modified
+        end
+
+      elsif existing_merchant.is_a?(ProviderMerchant) && existing_merchant.source != "ai"
+        # Case 2: Has provider merchant (non-AI) - enhance it with AI data
+        if enhance_provider_merchant(existing_merchant, auto_detection)
+          transaction.lock_attr!(:merchant_id)
+          modified_count += 1
         end
       end
-
-      merchant_id = merchant_id || ai_provider_merchant&.id
-
-      if merchant_id.present?
-        transaction.enrich_attribute(
-          :merchant_id,
-          merchant_id,
-          source: "ai"
-        )
-
-      end
-
-      # We lock the attribute so that this Rule doesn't try to run again
-      transaction.lock_attr!(:merchant_id)
+      # Case 3: AI merchant or FamilyMerchant - skip (already good or user-set)
     end
+
+    modified_count
   end
 
   private
@@ -85,15 +85,57 @@ class Family::AutoMerchantDetector
           id: transaction.id,
           amount: transaction.entry.amount.abs,
           classification: transaction.entry.classification,
-          description: transaction.entry.name,
+          description: [ transaction.entry.name, transaction.entry.notes ].compact.reject(&:empty?).join(" "),
           merchant: transaction.merchant&.name
         }
       end
     end
 
     def scope
-      family.transactions.where(id: transaction_ids, merchant_id: nil)
+      family.transactions.where(id: transaction_ids)
                          .enrichable(:merchant_id)
                          .includes(:merchant, :entry)
+    end
+
+    def find_matching_user_merchant(auto_detection)
+      user_merchants_input.find { |m| m[:name] == auto_detection.business_name }&.dig(:id)
+    end
+
+    def find_or_create_ai_merchant(auto_detection)
+      # Only use (source, name) for find_or_create since that's the uniqueness constraint
+      ProviderMerchant.find_or_create_by!(
+        source: "ai",
+        name: auto_detection.business_name
+      ) do |pm|
+        pm.website_url = auto_detection.business_url
+        if Setting.brand_fetch_client_id.present?
+          pm.logo_url = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+        end
+      end
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      # Race condition: another process created the merchant between our find and create
+      ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+    end
+
+    def enhance_provider_merchant(merchant, auto_detection)
+      updates = {}
+
+      # Add website_url if missing
+      if merchant.website_url.blank? && auto_detection.business_url.present?
+        updates[:website_url] = auto_detection.business_url
+
+        # Add logo if BrandFetch is configured
+        if Setting.brand_fetch_client_id.present?
+          updates[:logo_url] = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+        end
+      end
+
+      return false if updates.empty?
+
+      merchant.update!(updates)
+      true
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.error("Failed to enhance merchant #{merchant.id}: #{e.message}")
+      false
     end
 end

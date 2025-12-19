@@ -1,0 +1,24 @@
+---
+de:
+  helpers:
+    label:
+      user:
+        invite_code: Einladungscode
+    submit:
+      user:
+        create: Weiter
+  registrations:
+    create:
+      failure: Beim Registrieren ist ein Problem aufgetreten
+      invalid_invite_code: Ungültiger Einladungscode bitte versuche es erneut
+      success: Du hast dich erfolgreich registriert
+    new:
+      invitation_message: "%{inviter} hat dich eingeladen als %{role} beizutreten"
+      join_family_title: "%{family} beitreten"
+      role_admin: Administrator
+      role_member: Mitglied
+      submit: Konto erstellen
+      title: Erstelle dein Konto
+      welcome_body: Um zu beginnen musst du ein neues Konto erstellen Danach kannst du zusätzliche Einstellungen in der App konfigurieren
+      welcome_title: Willkommen bei Self Hosted %{product_name}
+      password_placeholder: Passwort eingeben

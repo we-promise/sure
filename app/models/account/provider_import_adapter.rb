@@ -15,8 +15,10 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param category_id [Integer, nil] Optional category ID
   # @param merchant [Merchant, nil] Optional merchant object
+  # @param notes [String, nil] Optional transaction notes/memo
+  # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, extra: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -30,6 +32,7 @@ class Account::ProviderImportAdapter
       # If this is a new entry, check for potential duplicates from manual/CSV imports
       # This handles the case where a user manually created or CSV imported a transaction
       # before linking their account to a provider
+      # Note: We don't pass name here to allow matching even when provider formats names differently
       if entry.new_record?
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
         if duplicate
@@ -63,6 +66,16 @@ class Account::ProviderImportAdapter
         entry.transaction.enrich_attribute(:merchant_id, merchant.id, source: source)
       end
 
+      if notes.present? && entry.respond_to?(:enrich_attribute)
+        entry.enrich_attribute(:notes, notes, source: source)
+      end
+
+      # Persist extra provider metadata on the transaction (non-enriched; always merged)
+      if extra.present? && entry.entryable.is_a?(Transaction)
+        existing = entry.transaction.extra || {}
+        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+        entry.transaction.extra = existing.deep_merge(incoming)
+      end
       entry.save!
       entry
     end
@@ -123,18 +136,61 @@ class Account::ProviderImportAdapter
       # Two strategies for finding/creating holdings:
       # 1. By external_id (SimpleFin approach) - tracks each holding uniquely
       # 2. By security+date+currency (Plaid approach) - overwrites holdings for same security/date
-      holding = if external_id.present?
-        account.holdings.find_or_initialize_by(external_id: external_id) do |h|
-          h.security = security
-          h.date = date
-          h.currency = currency
+      holding = nil
+
+      if external_id.present?
+        # Preferred path: match by provider's external_id
+        holding = account.holdings.find_by(external_id: external_id)
+
+        unless holding
+          # Fallback path: match by (security, date, currency) — and when provided,
+          # also scope by account_provider_id to avoid cross‑provider claiming.
+          # This keeps behavior symmetric with deletion logic below which filters
+          # by account_provider_id when present.
+          find_by_attrs = {
+            security: security,
+            date: date,
+            currency: currency
+          }
+          if account_provider_id.present?
+            find_by_attrs[:account_provider_id] = account_provider_id
+          end
+
+          holding = account.holdings.find_by(find_by_attrs)
         end
+
+        holding ||= account.holdings.new(
+          security: security,
+          date: date,
+          currency: currency,
+          account_provider_id: account_provider_id
+        )
       else
-        account.holdings.find_or_initialize_by(
+        holding = account.holdings.find_or_initialize_by(
           security: security,
           date: date,
           currency: currency
         )
+      end
+
+      # Early cross-provider composite-key conflict guard: avoid attempting a write
+      # that would violate a unique index on (account_id, security_id, date, currency).
+      if external_id.present?
+        existing_composite = account.holdings.find_by(
+          security: security,
+          date: date,
+          currency: currency
+        )
+
+        if existing_composite &&
+           account_provider_id.present? &&
+           existing_composite.account_provider_id.present? &&
+           existing_composite.account_provider_id != account_provider_id
+          Rails.logger.warn(
+            "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing_composite.id}"
+          )
+          return existing_composite
+        end
       end
 
       holding.assign_attributes(
@@ -145,10 +201,66 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         cost_basis: cost_basis,
-        account_provider_id: account_provider_id
+        account_provider_id: account_provider_id,
+        external_id: external_id
       )
 
-      holding.save!
+      begin
+        Holding.transaction(requires_new: true) do
+          holding.save!
+        end
+      rescue ActiveRecord::RecordNotUnique => e
+        # Handle unique index collisions on (account_id, security_id, date, currency)
+        # that can occur when another provider (or concurrent import) already
+        # created a row for this composite key. Use the existing row and keep
+        # the outer transaction valid by isolating the error in a savepoint.
+        existing = account.holdings.find_by(
+          security: security,
+          date: date,
+          currency: currency
+        )
+
+        if existing
+          # If an existing row belongs to a different provider, do NOT claim it.
+          # Keep cross-provider isolation symmetrical with deletion logic.
+          if account_provider_id.present? && existing.account_provider_id.present? && existing.account_provider_id != account_provider_id
+            Rails.logger.warn(
+              "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing.id}"
+            )
+            holding = existing
+          else
+            # Same provider (or unowned). Apply latest snapshot and attach external_id for idempotency.
+            updates = {
+              qty: quantity,
+              price: price,
+              amount: amount,
+              cost_basis: cost_basis
+            }
+
+            # Adopt the row to this provider if it’s currently unowned
+            if account_provider_id.present? && existing.account_provider_id.nil?
+              updates[:account_provider_id] = account_provider_id
+            end
+
+            # Attach external_id if provided and missing
+            if external_id.present? && existing.external_id.blank?
+              updates[:external_id] = external_id
+            end
+
+            begin
+              # Use update_columns to avoid validations and keep this collision handler best-effort.
+              existing.update_columns(updates.compact)
+            rescue => _
+              # Best-effort only; avoid raising in collision handler
+            end
+
+            holding = existing
+          end
+        else
+          # Could not find an existing row; re-raise original error
+          raise e
+        end
+      end
 
       # Optionally delete future holdings for this security (Plaid behavior)
       # Only delete if ALL providers allow deletion (cross-provider check)
@@ -266,33 +378,41 @@ class Account::ProviderImportAdapter
     false
   end
 
-  private
+  # Finds a potential duplicate transaction from manual entry or CSV import
+  # Matches on date, amount, currency, and optionally name
+  # Only matches transactions without external_id (manual/CSV imported)
+  #
+  # @param date [Date, String] Transaction date
+  # @param amount [BigDecimal, Numeric] Transaction amount
+  # @param currency [String] Currency code
+  # @param name [String, nil] Optional transaction name for more accurate matching
+  # @param exclude_entry_ids [Set, Array, nil] Entry IDs to exclude from the search (e.g., already claimed entries)
+  # @return [Entry, nil] The duplicate entry or nil if not found
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil)
+    # Convert date to Date object if it's a string
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
 
-    # Finds a potential duplicate transaction from manual entry or CSV import
-    # Matches on date, amount, and currency
-    # Only matches transactions without external_id (manual/CSV imported)
-    #
-    # @param date [Date, String] Transaction date
-    # @param amount [BigDecimal, Numeric] Transaction amount
-    # @param currency [String] Currency code
-    # @return [Entry, nil] The duplicate entry or nil if not found
-    def find_duplicate_transaction(date:, amount:, currency:)
-      # Convert date to Date object if it's a string
-      date = Date.parse(date.to_s) unless date.is_a?(Date)
+    # Look for entries on the same account with:
+    # 1. Same date
+    # 2. Same amount (exact match)
+    # 3. Same currency
+    # 4. No external_id (manual/CSV imported transactions)
+    # 5. Entry type is Transaction (not Trade or Valuation)
+    # 6. Optionally same name (if name parameter is provided)
+    # 7. Not in the excluded IDs list (if provided)
+    query = account.entries
+                   .where(entryable_type: "Transaction")
+                   .where(date: date)
+                   .where(amount: amount)
+                   .where(currency: currency)
+                   .where(external_id: nil)
 
-      # Look for entries on the same account with:
-      # 1. Same date
-      # 2. Same amount (exact match)
-      # 3. Same currency
-      # 4. No external_id (manual/CSV imported transactions)
-      # 5. Entry type is Transaction (not Trade or Valuation)
-      account.entries
-             .where(entryable_type: "Transaction")
-             .where(date: date)
-             .where(amount: amount)
-             .where(currency: currency)
-             .where(external_id: nil)
-             .order(created_at: :asc)
-             .first
-    end
+    # Add name filter if provided
+    query = query.where(name: name) if name.present?
+
+    # Exclude already claimed entries if provided
+    query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
+
+    query.order(created_at: :asc).first
+  end
 end

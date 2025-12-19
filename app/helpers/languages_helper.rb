@@ -153,6 +153,18 @@ module LanguagesHelper
     "en-IND"
   ].freeze
 
+  # Locales with complete/extensive translations
+  SUPPORTED_LOCALES = [
+    "en",   # English - 62 translation files
+    "de",   # German - 62 translation files
+    "es",   # Spanish - 61 translation files
+    "tr",   # Turkish - 58 translation files
+    "nb",   # Norwegian Bokmål - 57 translation files
+    "ca",   # Catalan - 57 translation files
+    "ro",   # Romanian - 62 translation files
+    "pt-BR" # Brazilian Portuguese - 60 translation files
+  ].freeze
+
   COUNTRY_MAPPING = {
     AF: "🇦🇫 Afghanistan",
     AL: "🇦🇱 Albania",
@@ -356,7 +368,7 @@ module LanguagesHelper
 
   def language_options
     I18n.available_locales
-      .reject { |locale| EXCLUDED_LOCALES.include?(locale.to_s) }
+      .select { |locale| SUPPORTED_LOCALES.include?(locale.to_s) }
       .map do |locale|
         label = LANGUAGE_MAPPING[locale.to_sym] || locale.to_s.humanize
         [ "#{label} (#{locale})", locale ]

@@ -70,9 +70,38 @@ class BudgetCategory < ApplicationRecord
   end
 
   def percent_of_budget_spent
-    return 0 unless budgeted_spending > 0
+    return 0 if budgeted_spending == 0 && actual_spending == 0
+    return 0 if budgeted_spending > 0 && actual_spending == 0
+    return 100 if budgeted_spending == 0 && actual_spending > 0
+    (actual_spending.to_f / budgeted_spending) * 100 if budgeted_spending > 0 && actual_spending > 0
+  end
 
-    (actual_spending / budgeted_spending) * 100
+  def bar_width_percent
+    [ percent_of_budget_spent, 100 ].min
+  end
+
+  def over_budget?
+    available_to_spend.negative?
+  end
+
+  def near_limit?
+    !over_budget? && percent_of_budget_spent >= 90
+  end
+
+  # Returns hash with suggested daily spending info or nil if not applicable
+  def suggested_daily_spending
+    return nil unless available_to_spend > 0
+
+    budget_date = budget.start_date
+    return nil unless budget_date.month == Date.current.month && budget_date.year == Date.current.year
+
+    days_remaining = (budget_date.end_of_month - Date.current).to_i + 1
+    return nil unless days_remaining > 0
+
+    {
+      amount: Money.new((available_to_spend / days_remaining), budget.family.currency),
+      days_remaining: days_remaining
+    }
   end
 
   def to_donut_segments_json
@@ -111,9 +140,5 @@ class BudgetCategory < ApplicationRecord
     budget.budget_categories
       .joins(:category)
       .where(categories: { parent_id: category.id })
-  end
-
-  def subcategory?
-    category.parent_id.present?
   end
 end

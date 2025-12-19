@@ -11,9 +11,7 @@ class Settings::ProvidersController < ApplicationController
       [ "Bank Sync Providers", nil ]
     ]
 
-    # Load all provider configurations
-    Provider::Factory.ensure_adapters_loaded
-    @provider_configurations = Provider::ConfigurationRegistry.all
+    prepare_show_context
   end
 
   def update
@@ -44,8 +42,21 @@ class Settings::ProvidersController < ApplicationController
           next
         end
 
-        # Set the value using dynamic hash-style access
-        Setting[field.setting_key] = value
+        key_str = field.setting_key.to_s
+
+        # Check if the setting is a declared field in setting.rb
+        # Use method_defined? to check if the setter actually exists on the singleton class,
+        # not just respond_to? which returns true for dynamic fields due to respond_to_missing?
+        if Setting.singleton_class.method_defined?("#{key_str}=")
+          # If it's a declared field (e.g., openai_model), set it directly.
+          # This is safe and uses the proper setter.
+          Setting.public_send("#{key_str}=", value)
+        else
+          # If it's a dynamic field, set it as an individual entry
+          # Each field is stored independently, preventing race conditions
+          Setting[key_str] = value
+        end
+
         updated_fields << param_key
       end
     end
@@ -61,6 +72,7 @@ class Settings::ProvidersController < ApplicationController
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.message}")
     flash.now[:alert] = "Failed to update provider settings: #{error.message}"
+    prepare_show_context
     render :show, status: :unprocessable_entity
   end
 
@@ -104,5 +116,21 @@ class Settings::ProvidersController < ApplicationController
         adapter_class = Provider::ConfigurationRegistry.get_adapter_class(provider_key)
         adapter_class&.reload_configuration
       end
+    end
+
+    # Prepares instance vars needed by the show view and partials
+    def prepare_show_context
+      # Load all provider configurations (exclude SimpleFin and Lunchflow, which have their own family-specific panels below)
+      Provider::Factory.ensure_adapters_loaded
+      @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
+        config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
+        config.provider_key.to_s.casecmp("enable_banking").zero?
+      end
+
+      # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
+      @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
+      @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
+      # Enable Banking panel needs session info for status display
+      @enable_banking_items = Current.family.enable_banking_items.ordered
     end
 end

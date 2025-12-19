@@ -1,8 +1,8 @@
 <%# locals: (balance_sheet:, **args) %>
 
-<div class="space-y-4" id="balance-sheet">
+<div class="space-y-6" id="balance-sheet">
   <% balance_sheet.classification_groups.each do |classification_group| %>
-    <div class="bg-container shadow-border-xs rounded-xl space-y-4 p-4">
+    <div class="space-y-4 px-4">
       <div class="flex items-center gap-2">
         <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
           <span class="<%= "animate-pulse" if classification_group.syncing? %>">
@@ -35,7 +35,7 @@
           </div>
         </div>
 
-        <div class="bg-surface rounded-xl p-1 space-y-1 overflow-x-auto">
+        <div class="bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
           <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
             <div class="w-40">Name</div>
             <div class="ml-auto text-right flex items-center gap-6">
@@ -48,13 +48,13 @@
             </div>
           </div>
 
-          <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm min-w-fit">
+          <div class="rounded-lg bg-container font-medium text-sm min-w-fit">
             <% classification_group.account_groups.each_with_index do |account_group, idx| %>
-              <details class="group open:bg-surface
+              <details class="group open:bg-container
                 <%= idx == 0 ? "rounded-t-lg" : "" %>
                 <%= idx == classification_group.account_groups.size - 1 ? "rounded-b-lg" : "" %>
               ">
-                <summary class="cursor-pointer p-4 group-open:bg-surface rounded-lg flex items-center justify-between">
+                <summary class="cursor-pointer p-4 group-open:bg-container rounded-lg flex items-center justify-between">
                   <div class="w-40 shrink-0 flex items-center gap-4">
                     <%= icon("chevron-right", class: "group-open:rotate-90") %>
 

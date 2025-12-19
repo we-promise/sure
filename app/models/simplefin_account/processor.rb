@@ -9,11 +9,19 @@ class SimplefinAccount::Processor
   # Processing the account is the first step and if it fails, we halt
   # Each subsequent step can fail independently, but we continue processing
   def process
+    # If the account is missing (e.g., user deleted the connection and re‑linked later),
+    # do not auto‑link. Relinking is now a manual, user‑confirmed flow via the Relink modal.
     unless simplefin_account.current_account.present?
       return
     end
 
     process_account!
+    # Ensure provider link exists after processing the account/balance
+    begin
+      simplefin_account.ensure_account_provider!
+    rescue => e
+      Rails.logger.warn("SimpleFin provider link ensure failed for #{simplefin_account.id}: #{e.class} - #{e.message}")
+    end
     process_transactions
     process_investments
     process_liabilities
@@ -33,10 +41,13 @@ class SimplefinAccount::Processor
       account = simplefin_account.current_account
       balance = simplefin_account.current_balance || simplefin_account.available_balance || 0
 
-      # SimpleFin returns negative balances for credit cards (liabilities)
-      # But Maybe expects positive balances for liabilities
-      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = balance.abs
+      # Normalize balances for liabilities (SimpleFIN typically uses opposite sign)
+      # App convention:
+      # - Liabilities: positive => you owe; negative => provider owes you (overpayment/credit)
+      # Since providers often send the opposite sign, ALWAYS invert for liabilities so
+      # that both debt and overpayment cases are represented correctly.
+      if [ "CreditCard", "Loan" ].include?(account.accountable_type)
+        balance = -balance
       end
 
       # Calculate cash balance correctly for investment accounts
@@ -49,7 +60,8 @@ class SimplefinAccount::Processor
 
       account.update!(
         balance: balance,
-        cash_balance: cash_balance
+        cash_balance: cash_balance,
+        currency: simplefin_account.currency
       )
     end
 

@@ -1,0 +1,51 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "change"
+                       } do |form| %>
+    <div class="space-y-4">
+      <%= form.select :exchange_rate_provider,
+                      [
+                        [t(".providers.twelve_data"), "twelve_data"],
+                        [t(".providers.yahoo_finance"), "yahoo_finance"]
+                      ],
+                      { label: t(".exchange_rate_provider_label") },
+                      {
+                        value: ENV.fetch("EXCHANGE_RATE_PROVIDER", Setting.exchange_rate_provider),
+                        disabled: ENV["EXCHANGE_RATE_PROVIDER"].present?,
+                        data: { "auto-submit-form-target": "auto" }
+                      } %>
+
+      <%= form.select :securities_provider,
+                      [
+                        [t(".providers.twelve_data"), "twelve_data"],
+                        [t(".providers.yahoo_finance"), "yahoo_finance"]
+                      ],
+                      { label: t(".securities_provider_label") },
+                      {
+                        value: ENV.fetch("SECURITIES_PROVIDER", Setting.securities_provider),
+                        disabled: ENV["SECURITIES_PROVIDER"].present?,
+                        data: { "auto-submit-form-target": "auto" }
+                      } %>
+    </div>
+
+    <% if ENV["EXCHANGE_RATE_PROVIDER"].present? || ENV["SECURITIES_PROVIDER"].present? %>
+      <div class="mt-4 bg-warning-50 border border-warning-200 rounded-lg p-3">
+        <div class="flex items-start gap-2">
+          <%= icon("alert-circle", class: "w-5 h-5 text-warning-600 mt-0.5 shrink-0") %>
+          <p class="text-sm text-warning-800">
+            <%= t(".env_configured_message") %>
+          </p>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>
