@@ -14,9 +14,14 @@ class Provider::Openai::AutoMerchantDetector
   # Threshold for auto mode: if more than this percentage returns null, retry with none mode
   AUTO_MODE_NULL_THRESHOLD = 0.5
 
-  attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family, :json_mode
+  # Default max_tokens for custom providers (Cloudflare, Ollama, etc.)
+  # Many providers default to low values (e.g., Cloudflare's Qwen3 defaults to 2000)
+  # which can truncate JSON responses. We use 4096 as a safe default.
+  DEFAULT_CUSTOM_PROVIDER_MAX_TOKENS = 4096
 
-  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil)
+  attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family, :json_mode, :max_tokens
+
+  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil, max_tokens: nil)
     @client = client
     @model = model
     @transactions = transactions
@@ -25,6 +30,7 @@ class Provider::Openai::AutoMerchantDetector
     @langfuse_trace = langfuse_trace
     @family = family
     @json_mode = json_mode || default_json_mode
+    @max_tokens = max_tokens || default_max_tokens
   end
 
   VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
@@ -50,6 +56,23 @@ class Provider::Openai::AutoMerchantDetector
 
     # 3. Default: auto mode for all providers (tries strict first, falls back to none if needed)
     JSON_MODE_AUTO
+  end
+
+  # Determine default max_tokens based on configuration hierarchy:
+  # 1. Environment variable (LLM_MAX_TOKENS) - highest priority, for testing/override
+  # 2. Setting.openai_max_tokens - user-configured in app settings
+  # 3. Default: 4096 for custom providers (to prevent truncation), nil for native OpenAI (use their defaults)
+  def default_max_tokens
+    # 1. Check environment variable first (allows runtime override for testing)
+    env_max_tokens = ENV["LLM_MAX_TOKENS"]
+    return env_max_tokens.to_i if env_max_tokens.present? && env_max_tokens.to_i > 0
+
+    # 2. Check app settings (user-configured)
+    setting_max_tokens = Setting.openai_max_tokens
+    return setting_max_tokens.to_i if setting_max_tokens.present? && setting_max_tokens.to_i > 0
+
+    # 3. Default: only set max_tokens for custom providers to prevent truncation
+    custom_provider ? DEFAULT_CUSTOM_PROVIDER_MAX_TOKENS : nil
   end
 
   def auto_detect_merchants
@@ -190,8 +213,16 @@ class Provider::Openai::AutoMerchantDetector
     end
 
     # Auto mode: try strict first, fall back to none if too many nulls or missing results
+    # Also handles providers that don't support json_schema at all (like Cloudflare)
     def auto_detect_merchants_with_auto_mode
-      result = auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      begin
+        result = auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      rescue JSON::ParserError, NoMethodError, Provider::Openai::Error => e
+        # Some providers (like Cloudflare) don't support json_schema and return garbage
+        # NoMethodError catches cases like "undefined method 'dig' for Float"
+        Rails.logger.warn("Auto mode: strict mode failed with error (#{e.class}: #{e.message.truncate(100)}), falling back to none mode")
+        return auto_detect_merchants_with_mode(JSON_MODE_NONE)
+      end
 
       # Check if too many nulls OR missing results were returned
       # Models that can't reason in strict mode often:
@@ -215,7 +246,8 @@ class Provider::Openai::AutoMerchantDetector
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
         user_merchants: user_merchants,
-        json_mode: mode
+        json_mode: mode,
+        max_tokens: max_tokens
       })
 
       # Build parameters with configurable JSON response format
@@ -226,6 +258,9 @@ class Provider::Openai::AutoMerchantDetector
           { role: "user", content: developer_message_for_generic }
         ]
       }
+
+      # Add max_tokens if configured (important for providers like Cloudflare that default to low values)
+      params[:max_tokens] = max_tokens if max_tokens.present?
 
       # Add response format based on json_mode setting
       case mode
