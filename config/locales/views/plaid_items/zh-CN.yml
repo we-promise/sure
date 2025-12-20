@@ -22,7 +22,7 @@ zh-CN:
       syncing: 同步中...
       update: 更新
     select_existing_account:
-      title: "将 %{account_name} 关联到 Plaid"
-      description: 选择一个 Plaid 账户与您的现有账户关联
       cancel: 取消
+      description: 选择一个 Plaid 账户与您的现有账户关联
       link_account: 关联账户
+      title: 将 %{account_name} 关联到 Plaid

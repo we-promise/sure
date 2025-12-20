@@ -1,0 +1,6 @@
+zh-CN:
+  budgets:
+    show:
+      tabs:
+        actual: "实际"
+        budgeted: "预算"

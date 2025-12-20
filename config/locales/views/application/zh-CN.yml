@@ -7,4 +7,4 @@ zh-CN:
         format: "%u%n"
         precision: 2
         separator: "."
-        unit: "¥" # 人民币符号
+        unit: "¥"

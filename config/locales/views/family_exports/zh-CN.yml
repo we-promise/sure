@@ -2,6 +2,6 @@
 zh-CN:
   family_exports:
     list:
-      in_progress: 进行中
       complete: 已完成
       failed: 已失败
+      in_progress: 进行中
