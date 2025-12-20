@@ -14,9 +14,9 @@ zh-CN:
       valuations: 估值
       value: 价值
     new:
+      amount: 金额
+      submit: 提交
       title: 新建余额记录
-      amount: "金额"
-      submit: "提交"
     show:
       amount: 金额
       date_label: 日期

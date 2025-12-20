@@ -29,6 +29,10 @@ zh-CN:
     marked_inactive: 定期交易已标记为未激活
     projected: 预计
     recurring: 定期
+    settings:
+      enable_description: 自动检测定期交易模式并显示即将发生的预计交易。
+      enable_label: 启用定期交易功能
+    settings_updated: 定期交易设置已更新
     status:
       active: 激活
       inactive: 未激活
@@ -43,3 +47,4 @@ zh-CN:
     title: 定期交易
     unexpected_error: 创建定期交易时发生意外错误
     upcoming: 即将发生的定期交易
+    

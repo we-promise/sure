@@ -1,5 +1,9 @@
 ---
 zh-CN:
+  account:
+    entries:
+      destroy:
+        success: 删除成功
   accounts:
     account:
       link_lunchflow: 关联 Lunch Flow 账户
@@ -112,8 +116,3 @@ zh-CN:
     new:
       invalid_token: 确认链接无效或已过期。
       success_login: 您的邮箱已确认成功。请使用新邮箱地址登录。
-  account:
-    entries:
-      destroy:
-        success: "删除成功"
-        

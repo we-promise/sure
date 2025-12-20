@@ -1,5 +1,6 @@
 ---
 zh-CN:
+  no_pending_change: 当前没有待处理的邮箱更改请求！
   users:
     destroy:
       success: 您的账户已删除。
@@ -15,4 +16,3 @@ zh-CN:
       email_change_failed: 邮箱地址更改失败。
       email_change_initiated: 请查收新邮箱地址的确认邮件以完成更改。
       success: 个人资料已更新成功。
-  no_pending_change: 当前没有待处理的邮箱更改请求！

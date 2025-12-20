@@ -22,12 +22,13 @@ zh-CN:
         other: 无法关联 %{count} 个名称为空的账户
       link_failed: 关联账户失败
       no_accounts_selected: 请至少选择一个账户
-      partial_invalid: 成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count} 个账户名称无效
+      no_api_key: 未发现 API 密钥
+      partial_invalid: 成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count}
+        个账户名称无效
       partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
       success:
         one: 成功关联 %{count} 个账户
         other: 成功关联 %{count} 个账户
-      no_api_key: 未发现 API 密钥
     link_existing_account:
       account_already_linked: 此账户已关联到其他服务提供商
       api_error: API 错误：%{message}
@@ -35,8 +36,8 @@ zh-CN:
       lunchflow_account_already_linked: 此 Lunch Flow 账户已关联到其他账户
       lunchflow_account_not_found: 未找到 Lunch Flow 账户
       missing_parameters: 缺少必要参数
-      success: "%{account_name} 已成功与 Lunch Flow 关联"
       no_api_key: 未发现 API 密钥
+      success: "%{account_name} 已成功与 Lunch Flow 关联"
     loading:
       loading_message: 正在加载 Lunch Flow 账户...
       loading_title: 加载中
@@ -65,9 +66,9 @@ zh-CN:
       link_accounts: 关联所选账户
       no_accounts_found: 未找到账户。请检查您的 API 密钥配置。
       no_api_key: Lunch Flow API 密钥未配置。请在设置中配置。
+      no_credentials_configured: 请先在服务商设置中配置您的 Lunch Flow API 密钥。
       no_name_placeholder: "（无名称）"
       title: 选择 Lunch Flow 账户
-      no_credentials_configured: 请先在服务商设置中配置您的 Lunch Flow API 密钥。
     select_existing_account:
       account_already_linked: 此账户已关联到其他服务提供商
       all_accounts_already_linked: 所有 Lunch Flow 账户均已关联
@@ -79,9 +80,9 @@ zh-CN:
       no_account_specified: 未指定账户
       no_accounts_found: 未找到 Lunch Flow 账户。请检查您的 API 密钥配置。
       no_api_key: Lunch Flow API 密钥未配置。请在设置中配置。
+      no_credentials_configured: 请先在服务商设置中配置您的 Lunch Flow API 密钥。
       no_name_placeholder: "（无名称）"
       title: 将 %{account_name} 与 Lunch Flow 关联
-      no_credentials_configured: 请先在服务商设置中配置您的 Lunch Flow API 密钥。
     setup_accounts:
       account_type_label: 账户类型：
       account_types:
@@ -104,11 +105,11 @@ zh-CN:
       no_api_key: Lunch Flow API 密钥未配置。请检查您的连接设置。
       subtitle: 为您的导入账户选择正确的账户类型
       subtype_labels:
-        credit_card: ""
+        credit_card: ''
         depository: 账户子类型：
         investment: 投资类型：
         loan: 贷款类型：
-        other_asset: ""
+        other_asset: ''
       subtype_messages:
         credit_card: 信用卡将自动设置为信用卡账户。
         other_asset: 其他资产无需额外选项。
@@ -120,9 +121,9 @@ zh-CN:
           money_market: 货币市场账户
           savings: 储蓄账户
         investment:
-          "401k": "401(k) 计划"
-          "403b": "403(b) 计划"
-          "529_plan": "529 教育储蓄计划"
+          401k: 401(k) 计划
+          403b: 403(b) 计划
+          529_plan: 529 教育储蓄计划
           angel: 天使投资
           brokerage: 经纪账户
           hsa: 健康储蓄账户
@@ -130,8 +131,8 @@ zh-CN:
           mutual_fund: 共同基金
           pension: 养老金账户
           retirement: 退休账户
-          roth_401k: "Roth 401(k) 计划"
-          roth_ira: "Roth IRA"
+          roth_401k: Roth 401(k) 计划
+          roth_ira: Roth IRA
           tsp: 节俭储蓄计划
         loan:
           auto: 汽车贷款

@@ -21,6 +21,9 @@ zh-CN:
         page_title: 账单管理
         subscription_subtitle: 更新订阅与账单信息
         subscription_title: 管理订阅
+    hostings:
+      ensure_admin:
+        not_authorized: 未授权
     preferences:
       show:
         country: 国家/地区
@@ -119,6 +122,3 @@ zh-CN:
       change: 更换头像
       choose: 上传头像
       choose_label: "（可选）"
-    hostings:
-      ensure_admin:
-        not_authorized: "未授权"

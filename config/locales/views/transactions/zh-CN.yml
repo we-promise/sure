@@ -10,6 +10,7 @@ zh-CN:
       date: 日期
       description: 描述
       description_placeholder: 请输入交易描述
+      details: 详情
       expense: 支出
       income: 收入
       none: "（无）"
@@ -18,7 +19,6 @@ zh-CN:
       submit: 添加交易
       tags_label: 标签
       transfer: 转账
-      details: "详情"
     header:
       edit_categories: 编辑分类
       edit_imports: 编辑导入
@@ -26,9 +26,9 @@ zh-CN:
       edit_tags: 编辑标签
       import: 导入
     index:
+      import: 导入
       transaction: 交易
       transactions: 交易记录
-      import: "导入"
     new:
       new_transaction: 新建交易
     searches:
@@ -85,3 +85,4 @@ zh-CN:
       settings: 设置
       tags_label: 标签
       uncategorized: "（未分类）"
+    toggle_recurring_section: 切换即将发生的定期交易显示

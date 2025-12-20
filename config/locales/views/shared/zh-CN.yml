@@ -10,9 +10,9 @@ zh-CN:
       label: 金额
     syncing_notice:
       syncing: 账户数据同步中...
+    transaction_tabs:
+      expense: 支出
+      income: 收入
+      transfer: 转账
     trend_change:
       no_change: 无变化
-    transaction_tabs:
-      expense: "支出"
-      income: "收入"
-      transfer: "转账"

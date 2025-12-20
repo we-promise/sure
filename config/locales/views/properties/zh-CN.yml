@@ -32,9 +32,9 @@ zh-CN:
       year_built: 建造年份
     tabs:
       overview:
-        living_area: "居住面积"
-        market_value: "市场价"
-        purchase_price: "买入价"
-        trend: "走势"
-        unknown: "未知"
-        year_built: "建筑年份"
+        living_area: 居住面积
+        market_value: 市场价
+        purchase_price: 买入价
+        trend: 走势
+        unknown: 未知
+        year_built: 建筑年份
