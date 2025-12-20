@@ -1,0 +1,16 @@
+<% native_navigation_payload = turbo_native_navigation_payload %>
+
+<% content_for :head do %>
+  <%= tag.meta name: "turbo-native", content: "true" %>
+  <%= tag.meta name: "turbo-native-navigation", content: native_navigation_payload.to_json %>
+<% end %>
+
+<%= render "layouts/shared/htmldoc" do %>
+  <%= tag.div class: "min-h-full bg-surface", data: {
+        controller: "turbo-native-bridge",
+        turbo_native_bridge_navigation_value: native_navigation_payload.to_json,
+        turbo_native_bridge_active_path_value: request.fullpath
+      } do %>
+    <%= yield %>
+  <% end %>
+<% end %>
