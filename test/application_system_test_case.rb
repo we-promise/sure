@@ -12,13 +12,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     def sign_in(user)
       visit new_session_path
       within %(form[action='#{sessions_path}']) do
-        fill_in "Email", with: user.email
-        fill_in "Password", with: user_password_test
-        click_on "Log in"
+        fill_in "email", with: user.email
+        fill_in "password", with: user_password_test
+        click_on I18n.t("sessions.new.submit")
       end
 
       # Trigger Capybara's wait mechanism to avoid timing issues with logins
-      find("h1", text: "Welcome back, #{user.first_name}")
+      find("h1", text: I18n.t("pages.dashboard.welcome", name: user.first_name))
     end
 
     def login_as(user)
@@ -30,7 +30,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       click_button "Logout"
 
       # Trigger Capybara's wait mechanism to avoid timing issues with logout
-      find("a", text: "Sign in")
+      find("a", text: I18n.t("layouts.auth.sign_in"))
     end
 
     def within_testid(testid)

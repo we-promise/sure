@@ -23,6 +23,11 @@ require "minitest/autorun"
 require "mocha/minitest"
 require "aasm/minitest"
 
+if ENV["DEFAULT_LOCALE"].present?
+  I18n.default_locale = ENV["DEFAULT_LOCALE"].to_sym
+  I18n.locale = I18n.default_locale
+end
+
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
   config.hook_into :webmock
@@ -61,6 +66,13 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+    setup do
+      next unless ENV["DEFAULT_LOCALE"].present?
+
+      I18n.locale = I18n.default_locale
+      Family.update_all(locale: I18n.default_locale.to_s)
+    end
+
     def sign_in(user)
       post sessions_path, params: { email: user.email, password: user_password_test }
     end

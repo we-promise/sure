@@ -10,14 +10,14 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
   test "should show no API key state when user has no active keys" do
     visit settings_api_key_path
 
-    assert_text "API Key"
-    assert_link "Create API Key", href: new_settings_api_key_path
-    assert_text "Access your account data programmatically"
+    assert_text I18n.t("settings.api_keys.show.no_api_key.title")
+    assert_link I18n.t("settings.api_keys.show.no_api_key.create_api_key"), href: new_settings_api_key_path
+    assert_text I18n.t("settings.api_keys.show.no_api_key.heading", product_name: ApplicationController.helpers.product_name)
   end
 
   test "should navigate to create new API key form" do
     visit settings_api_key_path
-    click_link "Create API Key"
+    click_link I18n.t("settings.api_keys.show.no_api_key.create_api_key")
 
     assert_current_path new_settings_api_key_path
     assert_text "Create New API Key"
@@ -132,8 +132,8 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     # Wait for redirect after revoke
     assert_no_selector "#confirm-dialog"
 
-    assert_text "API Key"
-    assert_text "Access your account data programmatically"
+    assert_text I18n.t("settings.api_keys.show.no_api_key.title")
+    assert_text I18n.t("settings.api_keys.show.no_api_key.heading", product_name: ApplicationController.helpers.product_name)
 
     # Key should be revoked in the database
     api_key.reload
@@ -157,7 +157,7 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     visit settings_api_key_path
 
     within("nav") do
-      assert_text "API Key"
+      assert_text I18n.t("settings.settings_nav.api_keys_label")
     end
   end
 
@@ -185,7 +185,8 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
 
     visit settings_api_key_path
 
-    assert_text "2 hours ago"
+    last_used_text = "#{ApplicationController.helpers.time_ago_in_words(api_key.last_used_at)} ago"
+    assert_text last_used_text
     assert_no_text "Never used"
   end
 

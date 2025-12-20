@@ -49,9 +49,9 @@ class TransactionsTest < ApplicationSystemTestCase
 
     within "#transaction-filters-menu" do
       check(@transaction.account.name)
-      click_button "Category"
+      click_button I18n.t("transactions.searches.menu.category_filter")
       check(@transaction.transaction.category.name)
-      click_button "Apply"
+      click_button I18n.t("transactions.searches.menu.apply")
     end
 
     assert_selector "#" + dom_id(@transaction), count: 1
@@ -66,9 +66,9 @@ class TransactionsTest < ApplicationSystemTestCase
     find("#transaction-filters-button").click
 
     within "#transaction-filters-menu" do
-      click_button "Category"
+      click_button I18n.t("transactions.searches.menu.category_filter")
       check("Uncategorized")
-      click_button "Apply"
+      click_button I18n.t("transactions.searches.menu.apply")
     end
 
     assert_selector "#" + dom_id(@uncategorized_transaction), count: 1
@@ -77,9 +77,9 @@ class TransactionsTest < ApplicationSystemTestCase
     find("#transaction-filters-button").click
 
     within "#transaction-filters-menu" do
-      click_button "Category"
+      click_button I18n.t("transactions.searches.menu.category_filter")
       check(@transaction.transaction.category.name)
-      click_button "Apply"
+      click_button I18n.t("transactions.searches.menu.apply")
     end
 
     assert_selector "#" + dom_id(@transaction), count: 1
@@ -94,30 +94,30 @@ class TransactionsTest < ApplicationSystemTestCase
     merchant = @transaction.transaction.merchant
 
     within "#transaction-filters-menu" do
-      click_button "Account"
+      click_button I18n.t("transactions.searches.menu.account_filter")
       check(account.name)
 
-      click_button "Date"
+      click_button I18n.t("transactions.searches.menu.date_filter")
       fill_in "q_start_date", with: 10.days.ago.to_date
       fill_in "q_end_date", with: 1.day.ago.to_date
 
-      click_button "Type"
-      check("Income")
+      click_button I18n.t("transactions.searches.menu.type_filter")
+      check(I18n.t("transactions.searches.filters.type_filter.income"))
 
-      click_button "Amount"
-      select "Less than"
+      click_button I18n.t("transactions.searches.menu.amount_filter")
+      select I18n.t("transactions.searches.filters.amount_filter.less_than")
       fill_in "q_amount", with: 200
 
-      click_button "Category"
+      click_button I18n.t("transactions.searches.menu.category_filter")
       check(category.name)
 
-      click_button "Merchant"
+      click_button I18n.t("transactions.searches.menu.merchant_filter")
       check(merchant.name)
 
-      click_button "Apply"
+      click_button I18n.t("transactions.searches.menu.apply")
     end
 
-    assert_text "No entries found"
+    assert_text I18n.t("accounts.show.activity.no_entries")
 
     # Wait for Turbo to finish updating the DOM
     sleep 0.5
@@ -125,7 +125,7 @@ class TransactionsTest < ApplicationSystemTestCase
     # Page reload doesn't affect results
     visit current_url
 
-    assert_text "No entries found"
+    assert_text I18n.t("accounts.show.activity.no_entries")
 
     # Remove all filters by clicking their X buttons
     # Get all the filter buttons at once to avoid stale elements
@@ -191,12 +191,12 @@ class TransactionsTest < ApplicationSystemTestCase
       click_on "New"
       click_on "New transaction"
     end
-    select "Deposit", from: "Type"
-    fill_in "Date", with: transfer_date
+    select "Deposit", from: I18n.t("trades.form.type")
+    fill_in "model_date", with: transfer_date
     fill_in "model[amount]", with: 175.25
-    click_button "Add transaction"
+    click_button I18n.t("trades.form.submit")
     within "#" + dom_id(investment_account, "entries_#{transfer_date}") do
-      assert_text "175.25"
+      assert_text ApplicationController.helpers.format_money(Money.from_amount(175.25, investment_account.currency))
     end
   end
 
@@ -209,7 +209,7 @@ class TransactionsTest < ApplicationSystemTestCase
     visit transactions_url
 
     within "#entry-group-" + Date.current.to_s + "-totals" do
-      assert_text "-$100.00" # transaction eleven from setup
+      assert_text formatted_transaction_amount(100)
     end
   end
 
@@ -250,5 +250,9 @@ class TransactionsTest < ApplicationSystemTestCase
           assert_text "#{count} transaction#{count == 1 ? "" : "s"} selected"
         end
       end
+    end
+
+    def formatted_transaction_amount(amount)
+      ApplicationController.helpers.format_money(Money.from_amount(-amount, "USD"))
     end
 end

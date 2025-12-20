@@ -20,7 +20,7 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
   test "should get preferences" do
     get preferences_onboarding_url
     assert_response :success
-    assert_select "h1", text: /preferences/i
+    assert_select "h1", text: I18n.t("onboardings.preferences.title")
   end
 
   test "preferences page renders Series chart data without errors" do
@@ -95,29 +95,38 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     # Should show formatted currency example
-    assert_select "p", text: /\$2,325\.25/
-    assert_select "span", text: /\+\$78\.90/
+    amount_text = ApplicationController.helpers.format_money(Money.new(2325.25, @family.currency))
+    delta_text = "+#{ApplicationController.helpers.format_money(Money.new(78.90, @family.currency))}"
+
+    assert_select "p", text: /#{Regexp.escape(amount_text)}/
+    assert_select "span", text: /#{Regexp.escape(delta_text)}/
   end
 
   test "preferences page shows date formatting example" do
-  get preferences_onboarding_url
-  assert_response :success
+    get preferences_onboarding_url
+    assert_response :success
 
-  # Should show formatted date example (checking for the specific format shown)
-  assert_match /10-23-2024/, response.body
-end
+    expected_date = ApplicationController.helpers.format_date(
+      Date.parse("2024-10-23"),
+      :default,
+      format_code: @family.date_format
+    )
+
+    # Should show formatted date example (checking for the specific format shown)
+    assert_match /#{Regexp.escape(expected_date)}/, response.body
+  end
 
   test "preferences page includes all required form fields" do
-  get preferences_onboarding_url
-  assert_response :success
+    get preferences_onboarding_url
+    assert_response :success
 
-  # Verify all form fields are present
-  assert_select "select[name='user[family_attributes][locale]']"
-  assert_select "select[name='user[family_attributes][currency]']"
-  assert_select "select[name='user[family_attributes][date_format]']"
-  assert_select "select[name='user[theme]']"
-  assert_select "button[type='submit']"
-end
+    # Verify all form fields are present
+    assert_select "select[name='user[family_attributes][locale]']"
+    assert_select "select[name='user[family_attributes][currency]']"
+    assert_select "select[name='user[family_attributes][date_format]']"
+    assert_select "select[name='user[theme]']"
+    assert_select "button[type='submit']"
+  end
 
   test "preferences page includes JavaScript controllers" do
     get preferences_onboarding_url
@@ -144,20 +153,20 @@ end
   end
 
   test "onboarding pages require authentication" do
-  sign_out
+    sign_out
 
-  get onboarding_url
-  assert_redirected_to new_session_url
+    get onboarding_url
+    assert_redirected_to new_session_url
 
-  get preferences_onboarding_url
-  assert_redirected_to new_session_url
+    get preferences_onboarding_url
+    assert_redirected_to new_session_url
 
-  get goals_onboarding_url
-  assert_redirected_to new_session_url
+    get goals_onboarding_url
+    assert_redirected_to new_session_url
 
-  get trial_onboarding_url
-  assert_redirected_to new_session_url
-end
+    get trial_onboarding_url
+    assert_redirected_to new_session_url
+  end
 
     private
 

@@ -13,7 +13,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "transaction import" do
     visit new_import_path
 
-    click_on "Import transactions"
+    click_on I18n.t("imports.new.import_transactions")
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -38,13 +38,13 @@ class ImportsTest < ApplicationSystemTestCase
 
     click_on "Next step"
 
-    assert_selector "h1", text: "Assign your categories"
+    assert_selector "h1", text: I18n.t("import.confirms.show.category_mapping_title")
     click_on "Next"
 
-    assert_selector "h1", text: "Assign your tags"
+    assert_selector "h1", text: I18n.t("import.confirms.show.tag_mapping_title")
     click_on "Next"
 
-    assert_selector "h1", text: "Assign your accounts"
+    assert_selector "h1", text: I18n.t("import.confirms.show.account_mapping_title")
     click_on "Next"
 
     click_on "Publish import"
@@ -63,7 +63,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "trade import" do
     visit new_import_path
 
-    click_on "Import investments"
+    click_on I18n.t("imports.new.import_portfolio")
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -86,7 +86,7 @@ class ImportsTest < ApplicationSystemTestCase
 
     click_on "Next step"
 
-    assert_selector "h1", text: "Assign your accounts"
+    assert_selector "h1", text: I18n.t("import.confirms.show.account_mapping_title")
     click_on "Next"
 
     click_on "Publish import"
@@ -105,7 +105,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "account import" do
     visit new_import_path
 
-    click_on "Import accounts"
+    click_on I18n.t("imports.new.import_accounts")
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -125,7 +125,7 @@ class ImportsTest < ApplicationSystemTestCase
 
     click_on "Next step"
 
-    assert_selector "h1", text: "Assign your account types"
+    assert_selector "h1", text: I18n.t("import.confirms.show.account_type_mapping_title")
 
     all("form").each do |form|
       within(form) do
@@ -153,7 +153,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "mint import" do
     visit new_import_path
 
-    click_on "Import from Mint"
+    click_on I18n.t("imports.new.import_mint")
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -169,13 +169,13 @@ class ImportsTest < ApplicationSystemTestCase
 
     click_on "Next step"
 
-    assert_selector "h1", text: "Assign your categories"
+    assert_selector "h1", text: I18n.t("import.confirms.show.category_mapping_title")
     click_on "Next"
 
-    assert_selector "h1", text: "Assign your tags"
+    assert_selector "h1", text: I18n.t("import.confirms.show.tag_mapping_title")
     click_on "Next"
 
-    assert_selector "h1", text: "Assign your accounts"
+    assert_selector "h1", text: I18n.t("import.confirms.show.account_mapping_title")
     click_on "Next"
 
     click_on "Publish import"

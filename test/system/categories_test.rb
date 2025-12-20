@@ -8,8 +8,8 @@ class CategoriesTest < ApplicationSystemTestCase
   test "can create category" do
     visit categories_url
     click_link I18n.t("categories.new.new_category")
-    fill_in "Name", with: "My Shiny New Category"
-    click_button "Create Category"
+    fill_in "category_name", with: "My Shiny New Category"
+    click_button I18n.t("helpers.submit.create", model: Category.model_name.human)
 
     visit categories_url
     assert_text "My Shiny New Category"
@@ -18,9 +18,9 @@ class CategoriesTest < ApplicationSystemTestCase
   test "trying to create a duplicate category fails" do
     visit categories_url
     click_link I18n.t("categories.new.new_category")
-    fill_in "Name", with: categories(:food_and_drink).name
-    click_button "Create Category"
+    fill_in "category_name", with: categories(:food_and_drink).name
+    click_button I18n.t("helpers.submit.create", model: Category.model_name.human)
 
-    assert_text "Name has already been taken"
+    assert_text "#{Category.human_attribute_name(:name)} #{I18n.t("errors.messages.taken")}"
   end
 end
