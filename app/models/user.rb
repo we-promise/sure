@@ -1,5 +1,24 @@
 class User < ApplicationRecord
+  include Encryptable
+
   has_secure_password
+
+  # Encrypt sensitive fields if ActiveRecord encryption is configured
+  if encryption_ready?
+    # MFA secrets
+    encrypts :otp_secret, deterministic: true
+    # Note: otp_backup_codes is a PostgreSQL array column which doesn't support
+    # AR encryption. To encrypt it, a migration would be needed to change the
+    # column type from array to text/jsonb.
+
+    # PII - emails (deterministic for lookups, downcase for case-insensitive)
+    encrypts :email, deterministic: true, downcase: true
+    encrypts :unconfirmed_email, deterministic: true, downcase: true
+
+    # PII - names (non-deterministic for maximum security)
+    encrypts :first_name
+    encrypts :last_name
+  end
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true

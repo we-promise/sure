@@ -125,8 +125,6 @@
           ) %>
         <% end %>
 
-
-
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
@@ -145,7 +143,6 @@
         <% if simplefin_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
         <% end %>
-
 
         <%# Sync summary (collapsible) %>
         <% stats = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {} %>
