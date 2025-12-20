@@ -1,6 +1,13 @@
 ---
 pt-BR:
   layouts:
+    application:
+      nav:
+        assistant: Assistente
+        budgets: Orçamentos
+        home: Início
+        reports: Relatórios
+        transactions: Transações
     auth.sign_up:
       existing_account: Já tem uma conta?
       no_account: Novo no %{product_name}?

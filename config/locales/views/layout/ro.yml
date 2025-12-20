@@ -1,6 +1,13 @@
 ---
 ro:
   layouts:
+    application:
+      nav:
+        assistant: Asistent
+        budgets: Bugete
+        home: Acasă
+        reports: Rapoarte
+        transactions: Tranzacții
     auth:
       existing_account: Ai deja un cont?
       no_account: Ești nou pe %{product_name}?
