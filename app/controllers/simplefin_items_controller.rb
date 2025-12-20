@@ -323,12 +323,11 @@ class SimplefinItemsController < ApplicationController
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
 
-    # Filter out SimpleFIN accounts that are already linked to any account
-    # (either via account_provider or legacy account association)
+    # Allow explicit relinking by listing all available SimpleFIN accounts for the family.
+    # The UI will surface the current mapping (if any), and the action will move the link.
     @available_simplefin_accounts = Current.family.simplefin_items
-      .includes(:simplefin_accounts)
+      .includes(simplefin_accounts: [ :account, { account_provider: :account } ])
       .flat_map(&:simplefin_accounts)
-      .reject { |sfa| sfa.account_provider.present? || sfa.account.present? }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
@@ -364,9 +363,10 @@ class SimplefinItemsController < ApplicationController
     # Relink behavior: detach any legacy link and point provider link at the chosen account
     Account.transaction do
       simplefin_account.lock!
-      # Clear legacy association if present
-      if simplefin_account.account_id.present?
-        simplefin_account.update!(account_id: nil)
+
+      # Clear legacy association if present (Account.simplefin_account_id)
+      if (legacy_account = simplefin_account.account)
+        legacy_account.update!(simplefin_account_id: nil)
       end
 
       # Upsert the AccountProvider mapping deterministically
@@ -382,9 +382,13 @@ class SimplefinItemsController < ApplicationController
       if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
         begin
           previous_account.reload
-          # Only disable if the previous account is truly orphaned (no other provider links)
+          # Only hide if the previous account is truly orphaned (no other provider links)
           if previous_account.account_providers.none?
-            previous_account.disable!
+            # Disabled accounts still appear (greyed-out) in the manual list; for relink
+            # consolidation we want the duplicate to disappear from the UI.
+            # Use the app's standard deletion path (async) so the "pending_deletion" state
+            # remains truthful in the UI.
+            previous_account.destroy_later if previous_account.may_mark_for_deletion?
           else
             Rails.logger.info("Skipped disabling account ##{previous_account.id} after relink because it still has active provider links")
           end

@@ -466,9 +466,12 @@ class EnableBankingItemsController < ApplicationController
       # follows the chosen account.
       if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
         begin
-          previous_account.disable!
+          # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
+          # Use the app's standard deletion path (async) so the duplicate disappears and the
+          # "pending_deletion" state remains truthful in the UI.
+          previous_account.destroy_later if previous_account.may_mark_for_deletion?
         rescue => e
-          Rails.logger.warn("Failed to disable orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
+          Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
         end
       end
     end

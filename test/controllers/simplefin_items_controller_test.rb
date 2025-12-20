@@ -95,14 +95,54 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :see_other
 
-    # Reload and assert: account A should still be enabled (not disabled) because it has another provider link
+    # Reload and assert: account A should not be hidden because it has another provider link
     account_a.reload
     assert account_a.account_providers.any?, "expected previous account to still have provider links"
-    refute account_a.disabled?, "previous account should not be disabled when still linked to other providers"
+    refute_equal "pending_deletion", account_a.status, "previous account should not be hidden when still linked to other providers"
 
     # And the AccountProvider for sfa_primary should now point to account B
     ap = AccountProvider.find_by(provider: sfa_primary)
     assert_equal account_b.id, ap.account_id
+  end
+
+  test "relink hides a previously linked orphaned duplicate account" do
+    account_a = Account.create!(
+      family: @family,
+      name: "Duplicate A",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+
+    account_b = Account.create!(
+      family: @family,
+      name: "Target B",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "savings")
+    )
+
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "SF For Duplicate",
+      account_id: "sf_dup_1",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+
+    AccountProvider.create!(account: account_a, provider: sfa)
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account_b.id,
+      simplefin_account_id: sfa.id
+    }
+
+    assert_response :see_other
+
+    account_a.reload
+    assert_equal "pending_deletion", account_a.status, "expected orphaned duplicate to be hidden after relink"
   end
 
   test "should get edit" do
@@ -301,12 +341,39 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert @simplefin_item.scheduled_for_deletion?
   end
 
-  test "select_existing_account renders empty-state modal when no available simplefin accounts" do
+  test "select_existing_account renders empty-state modal when no simplefin accounts exist" do
     account = accounts(:depository)
 
     get select_existing_account_simplefin_items_url(account_id: account.id)
     assert_response :success
-    assert_includes @response.body, "All SimpleFIN accounts appear to be linked already."
+    assert_includes @response.body, "No SimpleFIN accounts found for this family."
+  end
+
+  test "select_existing_account lists simplefin accounts even when they are already linked" do
+    account = accounts(:depository)
+
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Linked SF",
+      account_id: "sf_linked_123",
+      currency: "USD",
+      current_balance: 10,
+      account_type: "depository"
+    )
+
+    linked_account = Account.create!(
+      family: @family,
+      name: "Existing Linked Account",
+      currency: "USD",
+      balance: 0,
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    AccountProvider.create!(account: linked_account, provider: sfa)
+
+    get select_existing_account_simplefin_items_url(account_id: account.id)
+    assert_response :success
+    assert_includes @response.body, "Linked SF"
+    assert_includes @response.body, "Currently linked to: Existing Linked Account"
   end
   test "destroy should unlink provider links and legacy fk" do
     # Create SFA and linked Account with AccountProvider
