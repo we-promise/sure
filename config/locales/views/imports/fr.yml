@@ -36,10 +36,10 @@ fr:
         tag_mapping_title: Attribuez vos étiquettes
     uploads:
       show:
-        description: Coller ou télécharger votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
+        description: Coller ou téléverser votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
         instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
         instructions_2: Votre CSV doit avoir une ligne d'en-tête
-        instructions_3: Vous pouvez nommer vos colonnes ce que vous voulez. Vous les mappez à un stade ultérieur.
+        instructions_3: Vous pouvez nommer vos colonnes comme vous le souhaitez. Vous les associerez à un stade ultérieur.
         instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
         title: Importez vos données

@@ -8,8 +8,8 @@ fr:
     create:
       success: Demande envoyée à l'utilisateur. En attente d'approbation.
     join:
-      success: Rejoint la session
+      success: Session rejointe
     leave:
-      success: Parti de la session
+      success: Session quittée
     reject:
       success: Demande rejetée

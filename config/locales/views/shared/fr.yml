@@ -3,7 +3,7 @@ fr:
   shared:
     confirm_modal:
       accept: Confirmer
-      body_html: "<p>Vous ne pourrez pas annuler cette décision</p>"
+      body_html: "<p>Vous ne pourrez pas annuler cette action</p>"
       cancel: Annuler
       title: Êtes-vous sûr ?
     money_field:

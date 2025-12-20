@@ -5,7 +5,7 @@ fr:
       account: Compte de transfert (facultatif)
       account_prompt: Rechercher un compte
       amount: Montant
-      holding: Symbole ticker
+      holding: Symbole boursier
       price: Prix par action
       qty: Quantité
       submit: Ajouter la transaction

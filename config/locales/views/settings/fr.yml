@@ -10,7 +10,7 @@ fr:
           title: Prompt Système Principal
           subtitle: Instructions fondamentales qui définissent le comportement de l'assistant AI dans toutes les conversations de chat
         transaction_categorizer:
-          title: Categoriseur des transactions
+          title: Catégorisation des transactions
           subtitle: L'IA catégorise automatiquement vos transactions en fonction de vos catégories définies
         merchant_detector:
           title: Détection du vendeur
@@ -32,7 +32,7 @@ fr:
         language: Langue
         page_title: Préférences
         theme_dark: Sombre
-        theme_light: Léger
+        theme_light: Clair
         theme_subtitle: Choisissez un thème préféré pour l'application
         theme_system: Système
         theme_title: Thème
@@ -45,7 +45,7 @@ fr:
         not_authorized: Vous n'êtes pas autorisé à supprimer les membres.
       show:
         confirm_delete:
-          body: Êtes-vous sûr(e) de vouloir effacer permanemment votre compte ? Cette action est irréversible.
+          body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
           title: Supprimer le compte?
         confirm_reset:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, vendeurs, étiquettes et autres données. Cette action ne peut pas être annulée.
@@ -65,7 +65,7 @@ fr:
         first_name: Prénom
         household_form_input_placeholder: Entrez le nom du foyer
         household_form_label: Nom du foyer
-        household_subtitle: Invitez des membres de la famille, des partenaires et d'autres individus. Les personnes invitées peuvent se connecter à votre foyer et accéder aux comptes partagés.
+        household_subtitle: Invitez des membres de la famille, des partenaires et d'autres personnes. Les personnes invitées peuvent se connecter à votre foyer et accéder aux comptes partagés.
         household_title: Foyer
         invitation_link: Lien d'invitation
         invite_member: Ajouter un membre

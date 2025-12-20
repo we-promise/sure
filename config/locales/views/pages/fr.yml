@@ -4,7 +4,7 @@ fr:
     changelog:
       title: Nouveautés
     dashboard:
-      welcome_back: Content de te revoir
+      welcome_back: Content de vous revoir
       happening_with_finance: Voici ce qui se passe avec vos finances
       new: Nouveau
       cashflow_sankey:
@@ -14,7 +14,7 @@ fr:
         new: Ajouter une transaction
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée
-        title: Richesse totale
+        title: Valeur nette
       no_account_empty_state:
         new_account: Nouveau compte
         no_account_subtitle: Comme aucun compte n'a été ajouté, il n'y a pas de données à afficher. Ajoutez vos premiers comptes pour commencer à consulter les données du tableau de bord.

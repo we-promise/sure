@@ -16,8 +16,8 @@ fr:
       none: Aucun
       postal_code: Code postal/ZIP
       postal_code_placeholder: '75000'
-      region: État/Province
-      region_placeholder: CA
+      region: Région/Département
+      region_placeholder: Ile-de-France
       subtype_prompt: Sélectionnez le type de propriété
       year_built: Année de construction
       year_built_placeholder: '2000'

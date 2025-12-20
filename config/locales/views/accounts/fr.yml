@@ -32,15 +32,15 @@ fr:
       manual_accounts:
         other_accounts: Autres comptes
       new_account: Nouveau compte
-      sync: Synchroniser tous
+      sync: Tout synchroniser
     new:
       import_accounts: Importer des comptes
       method_selector:
         connected_entry: Lier un compte
         connected_entry_eu: Lier un compte européen
-        manual_entry: Entrée du solde du compte
+        manual_entry: Saisir le solde du compte
         title: Comment voulez-vous l'ajouter ?
-      title: Que voudriez-vous ajouter ?
+      title: Que voulez-vous ajouter ?
     show:
       activity:
         amount: Montant
