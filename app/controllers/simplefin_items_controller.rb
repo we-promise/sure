@@ -328,6 +328,15 @@ class SimplefinItemsController < ApplicationController
     @available_simplefin_accounts = Current.family.simplefin_items
       .includes(simplefin_accounts: [ :account, { account_provider: :account } ])
       .flat_map(&:simplefin_accounts)
+      # After provider setup, SFAs may already have an AccountProvider (linked to the freshly
+      # created duplicate accounts). During relink, we need to show those SFAs until the legacy
+      # link (`Account.simplefin_account_id`) has been cleared.
+      #
+      # Eligibility rule:
+      # - Show SFAs that are still legacy-linked (`sfa.account.present?`) => candidates to move.
+      # - Show SFAs that are fully unlinked (no legacy account and no account_provider) => candidates to link.
+      # - Hide SFAs that are linked via AccountProvider but no longer legacy-linked => already relinked.
+      .select { |sfa| sfa.account.present? || sfa.account_provider.nil? }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
@@ -341,7 +350,7 @@ class SimplefinItemsController < ApplicationController
 
     # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
     if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
-      flash[:alert] = "Only manual accounts can be linked"
+      flash[:alert] = t("simplefin_items.link_existing_account.errors.only_manual")
       if turbo_frame_request?
         return render turbo_stream: Array(flash_notification_stream_items)
       else
@@ -351,7 +360,7 @@ class SimplefinItemsController < ApplicationController
 
     # Verify the SimpleFIN account belongs to this family's SimpleFIN items
     unless Current.family.simplefin_items.include?(simplefin_account.simplefin_item)
-      flash[:alert] = "Invalid SimpleFIN account selected"
+      flash[:alert] = t("simplefin_items.link_existing_account.errors.invalid_simplefin_account")
       if turbo_frame_request?
         render turbo_stream: Array(flash_notification_stream_items)
       else
@@ -414,7 +423,7 @@ class SimplefinItemsController < ApplicationController
       @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
       build_simplefin_maps_for(@simplefin_items)
 
-      flash[:notice] = "Account successfully linked to SimpleFIN"
+      flash[:notice] = t("simplefin_items.link_existing_account.success")
       @account.reload
       manual_accounts_stream = if @manual_accounts.any?
         turbo_stream.update(
@@ -438,7 +447,7 @@ class SimplefinItemsController < ApplicationController
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: "Account successfully linked to SimpleFIN", status: :see_other
+      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: t("simplefin_items.link_existing_account.success"), status: :see_other
     end
   end
 

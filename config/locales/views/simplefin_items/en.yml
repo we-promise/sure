@@ -60,5 +60,12 @@ en:
       link_account: Link account
       no_accounts_found: No SimpleFIN accounts found for this family.
       wait_for_sync: If you just connected or synced, try again after the sync completes.
-      check_provider_health: Ensure your SimpleFIN connection is healthy in Settings → Providers.
+      unlink_to_move: To move a link, first unlink it from the account’s actions menu.
+      all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
       currently_linked_to: "Currently linked to: %{account_name}"
+
+    link_existing_account:
+      success: Account successfully linked to SimpleFIN
+      errors:
+        only_manual: Only manual accounts can be linked
+        invalid_simplefin_account: Invalid SimpleFIN account selected

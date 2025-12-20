@@ -368,12 +368,43 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       accountable_type: "Depository",
       accountable: Depository.create!(subtype: "checking")
     )
+    # Model the pre-relink state: the provider account is linked to a newly set up duplicate
+    # via the legacy FK, and may also have an AccountProvider.
+    linked_account.update!(simplefin_account_id: sfa.id)
+    sfa.update!(account: linked_account)
     AccountProvider.create!(account: linked_account, provider: sfa)
 
     get select_existing_account_simplefin_items_url(account_id: account.id)
     assert_response :success
     assert_includes @response.body, "Linked SF"
     assert_includes @response.body, "Currently linked to: Existing Linked Account"
+  end
+
+  test "select_existing_account hides simplefin accounts after they have been relinked" do
+    account = accounts(:depository)
+
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Relinked SF",
+      account_id: "sf_relinked_123",
+      currency: "USD",
+      current_balance: 10,
+      account_type: "depository"
+    )
+
+    # Simulate post-relink state: legacy link cleared, AccountProvider exists.
+    linked_account = Account.create!(
+      family: @family,
+      name: "Final Linked Account",
+      currency: "USD",
+      balance: 0,
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    AccountProvider.create!(account: linked_account, provider: sfa)
+
+    get select_existing_account_simplefin_items_url(account_id: account.id)
+    assert_response :success
+    refute_includes @response.body, "Relinked SF"
   end
   test "destroy should unlink provider links and legacy fk" do
     # Create SFA and linked Account with AccountProvider

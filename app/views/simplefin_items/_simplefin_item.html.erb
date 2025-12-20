@@ -147,8 +147,15 @@
         <% end %>
 
 
-        <%# Sync summary (collapsible) %>
-        <% stats = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {} %>
+        <%# Sync summary (collapsible)
+            Prefer controller-provided map; fallback to latest sync stats so Turbo broadcasts
+            can render the summary without requiring a full page refresh. %>
+        <% stats = if defined?(@simplefin_sync_stats_map) && @simplefin_sync_stats_map
+             @simplefin_sync_stats_map[simplefin_item.id] || {}
+           else
+             # `latest_sync` is private on Syncable; access via association for broadcast renders.
+             simplefin_item.syncs.ordered.first&.sync_stats || {}
+           end %>
         <% if stats.present? %>
           <details class="group bg-surface rounded-lg border border-surface-inset/50">
             <summary class="flex items-center justify-between gap-2 p-3 cursor-pointer">
