@@ -163,7 +163,7 @@ module LanguagesHelper
     "ca",   # Catalan - 57 translation files
     "ro",   # Romanian - 62 translation files
     "pt-BR", # Brazilian Portuguese - 60 translation files
-    "zh-CN", # Chinese (Simplified) - 59 translation files
+    "zh-CN"  # Chinese (Simplified) - 59 translation files
   ].freeze
 
   COUNTRY_MAPPING = {

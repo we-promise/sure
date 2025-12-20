@@ -35,7 +35,7 @@ zh-CN:
       add_new: 添加新连接
       confirm_accept: 删除连接
       confirm_body: 此操作将永久删除该组下的所有账户及相关数据。
-      confirm_title: 确认删除 SimpleFin 连接？
+      confirm_title: 确认删除 SimpleFIN 连接？
       delete: 删除
       deletion_in_progress: "（删除进行中...）"
       error: 同步数据时发生错误

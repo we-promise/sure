@@ -244,7 +244,7 @@ class Import < ApplicationRecord
     end
 
     def default_currency
-      family.currency
+      account&.currency || family.currency
     end
 
     def parsed_csv
