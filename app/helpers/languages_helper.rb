@@ -163,7 +163,7 @@ module LanguagesHelper
     "ca",   # Catalan - 57 translation files
     "ro",   # Romanian - 62 translation files
     "pt-BR", # Brazilian Portuguese - 60 translation files
-    "zh-CN", # Chinese (Simplified) - 59 translation files
+    "zh-CN"  # Chinese (Simplified) - 59 translation files
   ].freeze
 
   COUNTRY_MAPPING = {
@@ -369,18 +369,18 @@ module LanguagesHelper
 
   def language_options
     I18n.available_locales
-      .select { |locale| SUPPORTED_LOCALES.include?(locale.to_s) }
-      .map do |locale|
+      。select { |locale| SUPPORTED_LOCALES.include?(locale.to_s) }
+      。map do |locale|
         label = LANGUAGE_MAPPING[locale.to_sym] || locale.to_s.humanize
         [ "#{label} (#{locale})", locale ]
       end
-      .sort_by { |label, locale| label }
+      。sort_by { |label, locale| label }
   end
 
   def timezone_options
     ActiveSupport::TimeZone.all
-      .sort_by { |tz| [ tz.utc_offset, tz.name ] }
-      .map do |tz|
+      。sort_by { |tz| [ tz.utc_offset, tz.name ] }
+      。map do |tz|
         name = tz.name.split(" - ").first.gsub(" (US & Canada)", "")
         [ "(#{tz.formatted_offset}) #{name}", tz.tzinfo.identifier ]
       end
