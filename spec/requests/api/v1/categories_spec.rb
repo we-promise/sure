@@ -1,0 +1,190 @@
+# frozen_string_literal: true
+
+require 'swagger_helper'
+
+RSpec.describe 'API V1 Categories', type: :request do
+  let(:family) do
+    Family.create!(
+      name: 'API Family',
+      currency: 'USD',
+      locale: 'en',
+      date_format: '%m-%d-%Y'
+    )
+  end
+
+  let(:user) do
+    family.users.create!(
+      email: 'api-user@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+  end
+
+  let(:oauth_application) do
+    Doorkeeper::Application.create!(
+      name: 'API Docs',
+      redirect_uri: 'https://example.com/callback',
+      scopes: 'read read_write'
+    )
+  end
+
+  let(:access_token) do
+    Doorkeeper::AccessToken.create!(
+      application: oauth_application,
+      resource_owner_id: user.id,
+      scopes: 'read_write',
+      expires_in: 2.hours,
+      token: SecureRandom.hex(32)
+    )
+  end
+
+  let(:Authorization) { "Bearer #{access_token.token}" }
+
+  let!(:parent_category) do
+    family.categories.create!(
+      name: 'Food & Drink',
+      classification: 'expense',
+      color: '#f97316',
+      lucide_icon: 'utensils'
+    )
+  end
+
+  let!(:subcategory) do
+    family.categories.create!(
+      name: 'Restaurants',
+      classification: 'expense',
+      color: '#f97316',
+      lucide_icon: 'utensils',
+      parent: parent_category
+    )
+  end
+
+  let!(:income_category) do
+    family.categories.create!(
+      name: 'Salary',
+      classification: 'income',
+      color: '#22c55e',
+      lucide_icon: 'circle-dollar-sign'
+    )
+  end
+
+  path '/api/v1/categories' do
+    get 'List categories' do
+      tags 'Categories'
+      security [ { bearerAuth: [] } ]
+      produces 'application/json'
+      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
+                description: 'Bearer token with read scope'
+      parameter name: :page, in: :query, type: :integer, required: false,
+                description: 'Page number (default: 1)'
+      parameter name: :per_page, in: :query, type: :integer, required: false,
+                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :classification, in: :query, required: false,
+                description: 'Filter by classification (income or expense)',
+                schema: { type: :string, enum: %w[income expense] }
+      parameter name: :roots_only, in: :query, required: false,
+                description: 'Return only root categories (no parent)',
+                schema: { type: :boolean }
+      parameter name: :parent_id, in: :query, required: false,
+                description: 'Filter by parent category ID',
+                schema: { type: :string, format: :uuid }
+
+      response '200', 'categories listed' do
+        schema '$ref' => '#/components/schemas/CategoryCollection'
+
+        run_test! do |response|
+          payload = JSON.parse(response.body)
+          expect(payload.fetch('categories')).to be_present
+          expect(payload.fetch('pagination')).to include('page', 'per_page', 'total_count', 'total_pages')
+        end
+      end
+
+      response '200', 'categories filtered by classification' do
+        schema '$ref' => '#/components/schemas/CategoryCollection'
+
+        let(:classification) { 'expense' }
+
+        run_test! do |response|
+          payload = JSON.parse(response.body)
+          payload.fetch('categories').each do |category|
+            expect(category.fetch('classification')).to eq('expense')
+          end
+        end
+      end
+
+      response '200', 'root categories only' do
+        schema '$ref' => '#/components/schemas/CategoryCollection'
+
+        let(:roots_only) { true }
+
+        run_test! do |response|
+          payload = JSON.parse(response.body)
+          payload.fetch('categories').each do |category|
+            expect(category.fetch('parent')).to be_nil
+          end
+        end
+      end
+
+      response '200', 'categories filtered by parent' do
+        schema '$ref' => '#/components/schemas/CategoryCollection'
+
+        let(:parent_id) { parent_category.id }
+
+        run_test! do |response|
+          payload = JSON.parse(response.body)
+          payload.fetch('categories').each do |category|
+            expect(category.dig('parent', 'id')).to eq(parent_category.id)
+          end
+        end
+      end
+    end
+  end
+
+  path '/api/v1/categories/{id}' do
+    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
+              description: 'Bearer token with read scope'
+    parameter name: :id, in: :path, type: :string, required: true, description: 'Category ID'
+
+    get 'Retrieve a category' do
+      tags 'Categories'
+      security [ { bearerAuth: [] } ]
+      produces 'application/json'
+
+      let(:id) { parent_category.id }
+
+      response '200', 'category retrieved' do
+        schema '$ref' => '#/components/schemas/CategoryDetail'
+
+        run_test! do |response|
+          payload = JSON.parse(response.body)
+          expect(payload.fetch('id')).to eq(parent_category.id)
+          expect(payload.fetch('name')).to eq('Food & Drink')
+          expect(payload.fetch('classification')).to eq('expense')
+          expect(payload.fetch('subcategories_count')).to eq(1)
+        end
+      end
+
+      response '200', 'subcategory retrieved with parent' do
+        schema '$ref' => '#/components/schemas/CategoryDetail'
+
+        let(:id) { subcategory.id }
+
+        run_test! do |response|
+          payload = JSON.parse(response.body)
+          expect(payload.fetch('id')).to eq(subcategory.id)
+          expect(payload.fetch('name')).to eq('Restaurants')
+          expect(payload.dig('parent', 'id')).to eq(parent_category.id)
+          expect(payload.dig('parent', 'name')).to eq('Food & Drink')
+        end
+      end
+
+      response '404', 'category not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+  end
+end

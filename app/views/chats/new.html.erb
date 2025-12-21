@@ -2,6 +2,12 @@
   <div class="flex flex-col h-full md:p-4">
     <%= render "chats/chat_nav", chat: @chat %>
 
+    <% if show_demo_warning? %>
+      <%= render "shared/demo_warning",
+        title: t("chats.demo_banner_title"),
+        message: t("chats.demo_banner_message") %>
+    <% end %>
+
     <div class="mt-auto py-8">
       <%= render "chats/ai_greeting" %>
     </div>

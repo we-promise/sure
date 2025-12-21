@@ -2,56 +2,77 @@
   <header class="flex justify-between items-center text-primary font-medium">
     <h1 class="text-xl"><%= t("recurring_transactions.title") %></h1>
     <div class="flex items-center gap-2">
-      <%= render DS::Link.new(
-        text: t("recurring_transactions.identify_patterns"),
-        icon: "search",
-        variant: "outline",
-        href: identify_recurring_transactions_path,
-        method: :post
-      ) %>
-      <%= render DS::Link.new(
-        text: t("recurring_transactions.cleanup_stale"),
-        icon: "trash-2",
-        variant: "outline",
-        href: cleanup_recurring_transactions_path,
-        method: :post
-      ) %>
-    </div>
-  </header>
-
-  <div class="p-4 bg-container-inset border border-secondary rounded-lg">
-    <div class="flex items-start gap-2">
-      <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
-      <div>
-        <p class="text-sm font-medium text-primary mb-2"><%= t("recurring_transactions.info.title") %></p>
-        <p class="text-xs text-secondary mb-2"><%= t("recurring_transactions.info.manual_description") %></p>
-        <p class="text-xs text-secondary mb-1"><%= t("recurring_transactions.info.automatic_description") %></p>
-        <ul class="list-disc list-inside text-xs text-secondary space-y-0.5 ml-2">
-          <% t("recurring_transactions.info.triggers").each do |trigger| %>
-            <li><%= trigger %></li>
-          <% end %>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <% if @recurring_transactions.empty? %>
-      <div class="text-center py-12">
-        <div class="text-secondary mb-4">
-          <%= icon "repeat", size: "xl" %>
-        </div>
-        <p class="text-primary font-medium mb-2"><%= t("recurring_transactions.empty.title") %></p>
-        <p class="text-secondary text-sm mb-4"><%= t("recurring_transactions.empty.description") %></p>
+      <% unless @family.recurring_transactions_disabled? %>
         <%= render DS::Link.new(
           text: t("recurring_transactions.identify_patterns"),
           icon: "search",
-          variant: "primary",
+          variant: "outline",
           href: identify_recurring_transactions_path,
           method: :post
         ) %>
+        <%= render DS::Link.new(
+          text: t("recurring_transactions.cleanup_stale"),
+          icon: "trash-2",
+          variant: "outline",
+          href: cleanup_recurring_transactions_path,
+          method: :post
+        ) %>
+      <% end %>
+    </div>
+  </header>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-primary"><%= t("recurring_transactions.settings.enable_label") %></p>
+        <p class="text-xs text-secondary"><%= t("recurring_transactions.settings.enable_description") %></p>
       </div>
-    <% else %>
+      <%= form_with url: update_settings_recurring_transactions_path, method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
+        <%= f.hidden_field :recurring_transactions_disabled, value: @family.recurring_transactions_disabled? ? "false" : "true" %>
+        <%= render DS::Toggle.new(
+          id: "recurring_transactions_enabled",
+          name: "toggle_display",
+          checked: !@family.recurring_transactions_disabled?,
+          data: { auto_submit_form_target: "auto" }
+        ) %>
+      <% end %>
+    </div>
+  </div>
+
+  <% unless @family.recurring_transactions_disabled? %>
+    <div class="p-4 bg-container-inset border border-secondary rounded-lg">
+      <div class="flex items-start gap-2">
+        <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
+        <div>
+          <p class="text-sm font-medium text-primary mb-2"><%= t("recurring_transactions.info.title") %></p>
+          <p class="text-xs text-secondary mb-2"><%= t("recurring_transactions.info.manual_description") %></p>
+          <p class="text-xs text-secondary mb-1"><%= t("recurring_transactions.info.automatic_description") %></p>
+          <ul class="list-disc list-inside text-xs text-secondary space-y-0.5 ml-2">
+            <% t("recurring_transactions.info.triggers").each do |trigger| %>
+              <li><%= trigger %></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <% if @recurring_transactions.empty? %>
+        <div class="text-center py-12">
+          <div class="text-secondary mb-4">
+            <%= icon "repeat", size: "xl" %>
+          </div>
+          <p class="text-primary font-medium mb-2"><%= t("recurring_transactions.empty.title") %></p>
+          <p class="text-secondary text-sm mb-4"><%= t("recurring_transactions.empty.description") %></p>
+          <%= render DS::Link.new(
+            text: t("recurring_transactions.identify_patterns"),
+            icon: "search",
+            variant: "primary",
+            href: identify_recurring_transactions_path,
+            method: :post
+          ) %>
+        </div>
+      <% else %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
           <p><%= t("recurring_transactions.title") %></p>
@@ -109,7 +130,7 @@
                 </td>
                 <td class="py-3 px-2 text-sm font-medium <%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
                   <% if recurring_transaction.manual? && recurring_transaction.has_amount_variance? %>
-                    <div class="inline-flex items-center gap-1 cursor-help group" title="<%= t('recurring_transactions.amount_range', min: format_money(-recurring_transaction.expected_amount_min_money), max: format_money(-recurring_transaction.expected_amount_max_money)) %>">
+                    <div class="inline-flex items-center gap-1 cursor-help group" title="<%= t("recurring_transactions.amount_range", min: format_money(-recurring_transaction.expected_amount_min_money), max: format_money(-recurring_transaction.expected_amount_max_money)) %>">
                       <span class="text-xs text-secondary group-hover:text-primary transition-colors">~</span>
                       <span class="border-b border-dashed border-subdued group-hover:border-primary transition-colors"><%= format_money(-recurring_transaction.expected_amount_avg_money) %></span>
                     </div>
@@ -158,5 +179,6 @@
         </div>
       </div>
     <% end %>
-  </div>
+    </div>
+  <% end %>
 </div>

@@ -94,6 +94,23 @@ Two primary data ingestion methods:
    - Supports transaction and balance imports
    - Custom field mapping with transformation rules
 
+### Provider Integrations: Pending Transactions and FX (SimpleFIN/Plaid)
+
+- Detection
+  - SimpleFIN: pending via `pending: true` or `posted` blank/0 + `transacted_at`.
+  - Plaid: pending via Plaid `pending: true` (stored at `extra["plaid"]["pending"]` for bank/credit transactions imported via `PlaidEntry::Processor`).
+- Storage: provider data on `Transaction#extra` (e.g., `extra["simplefin"]["pending"]`; FX uses `fx_from`, `fx_date`).
+- UI: “Pending” badge when `transaction.pending?` is true; no badge if provider omits pendings.
+- Configuration (default-off)
+  - Centralized in `config/initializers/simplefin.rb` via `Rails.configuration.x.simplefin.*`.
+  - ENV-backed keys: `SIMPLEFIN_INCLUDE_PENDING=1`, `SIMPLEFIN_DEBUG_RAW=1`.
+
+Provider support notes:
+- SimpleFIN: supports pending + FX metadata (stored under `extra["simplefin"]`).
+- Plaid: supports pending when the upstream Plaid payload includes `pending: true` (stored under `extra["plaid"]`).
+- Plaid investments: investment transactions currently do not store pending metadata.
+- Lunchflow: does not currently store pending metadata.
+
 ### Background Processing
 Sidekiq handles asynchronous tasks:
 - Account syncing (`SyncJob`)

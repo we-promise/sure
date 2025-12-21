@@ -1,9 +1,9 @@
 <% mobile_nav_items = [
-  { name: "Home", path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
-  { name: "Transactions", path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
-  { name: "Reports", path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
-  { name: "Budgets", path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
-  { name: "Assistant", path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
+  { name: t(".nav.home"), path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
+  { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
+  { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
+  { name: t(".nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
+  { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
 ] %>
 
 <% desktop_nav_items = mobile_nav_items.reject { |item| item[:mobile_only] } %>

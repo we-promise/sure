@@ -277,6 +277,41 @@ class TransactionImportTest < ActiveSupport::TestCase
     ).count
   end
 
+  test "uses family currency as fallback when account has no currency and no CSV currency column" do
+    account = accounts(:depository)
+    family = account.family
+
+    # Clear the account's currency to simulate an account without currency set
+    account.update_column(:currency, nil)
+
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Test Transaction,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 1 do
+      @import.publish
+    end
+
+    # The transaction should have the family's currency as fallback
+    entry = @import.entries.first
+    assert_equal family.currency, entry.currency
+  end
+
   test "does not raise error when all accounts are properly mapped" do
     # Import CSV with multiple accounts, all mapped
     import_csv = <<~CSV

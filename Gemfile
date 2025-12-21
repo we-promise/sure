@@ -46,7 +46,7 @@ gem "logtail-rails"
 gem "skylight", groups: [ :production ]
 
 # Active Storage
-gem "aws-sdk-s3", "~> 1.177.0", require: false
+gem "aws-sdk-s3", "~> 1.208.0", require: false
 gem "image_processing", ">= 1.2"
 
 # Other
@@ -123,4 +123,8 @@ group :test do
   gem "webmock"
   gem "climate_control"
   gem "simplecov", require: false
+  gem "rspec-rails"
+  gem "rswag-api"
+  gem "rswag-specs"
+  gem "rswag-ui"
 end
