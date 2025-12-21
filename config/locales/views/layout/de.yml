@@ -1,6 +1,13 @@
 ---
 de:
   layouts:
+    application:
+      nav:
+        assistant: Assistent
+        budgets: Budgets
+        home: Startseite
+        reports: Berichte
+        transactions: Transaktionen
     auth:
       existing_account: Du hast bereits ein Konto?
       no_account: Neu bei %{product_name}?

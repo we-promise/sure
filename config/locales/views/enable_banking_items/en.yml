@@ -1,0 +1,8 @@
+---
+en:
+  enable_banking_items:
+    link_existing_account:
+      success: Account successfully linked to Enable Banking
+      errors:
+        only_manual: Only manual accounts can be linked
+        invalid_enable_banking_account: Invalid Enable Banking account selected

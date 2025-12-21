@@ -18,14 +18,14 @@
     <% if direction == 'previous' %>
       <div class="flex items-center gap-3">
         <%= icon("arrow-left") %>
-        <span class="text-sm text-secondary">Back</span>
+        <span class="text-sm text-secondary"><%= t("settings.settings_nav_link_large.previous") %></span>
       </div>
       <div>
         <span class="text-sm font-medium text-primary"><%= title %></span>
       </div>
     <% else %>
       <div>
-        <span class="text-sm text-secondary">Next</span>
+        <span class="text-sm text-secondary"><%= t("settings.settings_nav_link_large.next") %></span>
       </div>
       <div class="flex items-center gap-3">
         <span class="text-sm font-medium text-primary"><%= title %></span>
