@@ -28,6 +28,11 @@ zh-CN:
       no_accounts_selected: 未选择任何账户。
       no_session: 无活跃的 Enable Banking 连接。请先连接一家银行。
       success: 成功关联了 %{count} 个账户。
+    link_existing_account:
+      errors:
+        invalid_enable_banking_account: 所选 Enable Banking 账户无效
+        only_manual: 只能关联手动账户
+      success: 账户已成功关联到 Enable Banking
     new:
       link_enable_banking_title: 关联 Enable Banking
     reauthorize:

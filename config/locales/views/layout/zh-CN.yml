@@ -1,6 +1,14 @@
+
 ---
 zh-CN:
   layouts:
+    application:
+      nav:
+        assistant: 智能助手
+        budgets: 预算管理
+        home: 首页
+        reports: 财务报告
+        transactions: 交易记录
     auth:
       existing_account: 已有账户？
       no_account: 新用户？
