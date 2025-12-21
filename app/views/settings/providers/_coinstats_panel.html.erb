@@ -1,0 +1,54 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup Instructions:</p>
+    <ol>
+      <li>Visit the <a href="https://openapi.coinstats.app/" class="link" target="_blank">CoinStats Public API Dashboard</a> to obtain an API key</li>
+      <li>Enter an API key below, then press the Configure button</li>
+      <li>Once the connection is successful, go to the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to setup wallets</li>
+    </ol>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <%
+    # Get or initialize a coinstats_item for this family
+    # - If family has an item WITH credentials, use it (for updates)
+    # - If family has an item WITHOUT credentials, use it (to add credentials)
+    # - If family has no items at all, create a new one
+    coinstats_item = Current.family.coinstats_items.first_or_initialize(name: "CoinStats Connection")
+    is_new_record = coinstats_item.new_record?
+  %>
+
+  <%= styled_form_with model: coinstats_item,
+                       url: is_new_record ? coinstats_items_path : coinstats_item_path(coinstats_item),
+                       scope: :coinstats_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :api_key,
+                        label: "API Key",
+                        placeholder: "Required",
+                        type: :password %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Configure" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: [nil, ""]) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and setup wallets.</p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
+</div>

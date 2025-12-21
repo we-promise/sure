@@ -1,0 +1,55 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".link_coinstats_title")) %>
+    
+    <% dialog.with_body do %>
+        <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items %>
+        <% if items&.any? %>
+          <%= styled_form_with model: @coinstats_item,
+                              url: coinstats_items_path,
+                              scope: :coinstats_item,
+                              method: :post,
+                              data: { turbo: true, turbo_frame: "_top" },
+                              class: "space-y-3" do |form| %>
+            <%= form.text_field :address,
+                                label: "Address",
+                                placeholder: "Required"%>
+            <%= form.text_field :blockchain,
+                                label: "Blockchain",
+                                placeholder: "Required"%>
+
+            <div class="flex justify-end">
+              <%= form.submit "Link",
+                              class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+            </div>
+          <% end %>
+        <% else %>
+            <div class="space-y-4">
+                <div class="flex items-start gap-3">
+                <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
+                <div class="text-sm text-secondary">
+                    <p class="font-medium text-primary mb-2">CoinStats connection not configured</p>
+                    <p>Before you can link a crypto wallet using CoinStats, you need to configure the CoinStats connection.</p>
+                </div>
+                </div>
+
+                <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+                <ol class="list-decimal list-inside space-y-1 text-secondary">
+                    <li>Go to <strong>Settings → Providers</strong></li>
+                    <li>Find the <strong>CoinStats</strong> section</li>
+                    <li>Follow the provided Setup Instructions</li>
+                </ol>
+                </div>
+
+                <div class="mt-4">
+                <%= link_to settings_providers_path,
+                            class: "w-full inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap rounded-lg hidden md:inline-flex px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
+                            data: { turbo: false } do %>
+                    Go to Provider Settings
+                <% end %>
+                </div>
+            </div>
+        <% end %>
+    <% end %>
+  <% end %>
+<% end %>
