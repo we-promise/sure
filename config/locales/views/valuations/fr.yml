@@ -11,7 +11,7 @@ fr:
       date: date
       new_entry: Nouvelle entrée
       no_valuations: Aucune évaluation pour ce compte pour l'instant
-      valuations: Valeur
+      valuations: Évaluations
       value: valeur
     new:
       title: Nouveau solde

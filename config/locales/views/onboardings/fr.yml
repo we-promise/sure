@@ -15,7 +15,7 @@ fr:
     profile:
       country: Pays
       first_name: Prénom
-      household_name: Nom de famille (si applicable)
+      household_name: Nom du foyer (si applicable)
       last_name: Nom de famille
       profile_image: Photo de profil
       submit: Continuer

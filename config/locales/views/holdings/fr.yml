@@ -14,7 +14,7 @@ fr:
       name: Nom
       new_holding: Nouvelle transaction
       no_holdings: Aucune position à afficher.
-      return: Retour total
+      return: Rendement total
       weight: Poids
     missing_price_tooltip:
       description: Cet investissement a des valeurs manquantes et nous ne pouvons pas calculer
@@ -32,5 +32,5 @@ fr:
       settings: Paramètres
       ticker_label: Ticker
       trade_history_entry: "%{qty} actions de %{security} à %{price}"
-      total_return_label: Retour total
+      total_return_label: Rendement total
       unknown: Inconnu

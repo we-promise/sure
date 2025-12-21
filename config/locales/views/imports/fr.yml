@@ -21,7 +21,7 @@ fr:
       mappings:
         create_account: Créer un compte
         csv_mapping_label: "%{mapping} dans le CSV"
-        maybe_mapping_label: "%{mapping} dans %{product_name}"
+        sure_mapping_label: "%{mapping} dans %{product_name}"
         no_accounts: Vous n'avez pas encore de comptes. Veuillez créer un compte que nous pouvons utiliser pour les lignes non affectées de votre CSV ou retournez à l'étape Nettoyer et fournissez un nom de compte que nous pouvons utiliser.
         rows_label: Lignes
         unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées?

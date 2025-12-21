@@ -14,7 +14,7 @@ fr:
       new_debt: Nouvelle dette
       new_account: Nouveau compte
     chart:
-      data_not_available: Données non disponibles pour le période sélectionnée
+      data_not_available: Données non disponibles pour la période sélectionnée
     create:
       success: "Compte %{type} créé"
     destroy:

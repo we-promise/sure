@@ -7,7 +7,7 @@ fr:
       logout_successful: Vous avez été déconnecté avec succès.
     new:
       email: Adresse e-mail
-      email_placeholder: you@example.com
+      email_placeholder: nom@exemple.fr
       forgot_password: Mot de passe oublié ?
       password: Mot de passe
       submit: Se connecter

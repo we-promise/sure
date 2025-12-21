@@ -19,7 +19,7 @@ fr:
       purchase_qty_label: Quantité achetée
       sell: Vendre
       symbol_label: Symbole
-      total_return_label: Gain/déficit non réalisé
+      total_return_label: Gain/perte non réalisé(e)
     new:
       title: Nouvelle transaction
     show:

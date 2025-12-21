@@ -9,4 +9,4 @@ fr:
       success: Votre profil a été mis à jour.
     reset:
       success: Votre compte a été réinitialisé. Les données seront supprimées en arrière-plan dans un certain temps.
-      unauthorized: Vous n'êtes pas autorisé à effectuer cette action
+      unauthorized: Vous n'êtes pas autorisé à effectuer cette action.

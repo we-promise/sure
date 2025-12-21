@@ -15,7 +15,7 @@ fr:
         title: Hébergement autonome
         danger_zone: Zone dangereuse
         clear_cache: Effacer le cache de données
-        clear_cache_warning: L'éffacement du cache de données supprimera tous les taux de change, les cours des titres, les soldes des comptes et d’autres données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d’autres données possédées par les utilisateurs.
+        clear_cache_warning: L'effacement du cache de données supprimera tous les taux de change, les cours des titres, les soldes des comptes et d’autres données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d’autres données possédées par les utilisateurs.
         confirm_clear_cache:
           title: Effacer le cache de données ?
           body: Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera tous les taux de change, les cours des titres, les soldes des comptes et d’autres données. Cette action ne peut pas être annulée.
