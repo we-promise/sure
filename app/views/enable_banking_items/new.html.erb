@@ -41,7 +41,7 @@
                     <% if item.session_valid? %>
                     <%= button_to sync_enable_banking_item_path(item),
                                     method: :post,
-                                    class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-gray-50 transition-colors",
+                                    class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-container-hover theme-dark:hover:bg-container-inset-hover transition-colors",
                                     data: { turbo: false } do %>
                         Sync
                     <% end %>
