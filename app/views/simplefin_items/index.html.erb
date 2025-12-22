@@ -1,0 +1,25 @@
+<%= content_for :page_title, "SimpleFIN Connections" %>
+
+<div class="space-y-4">
+  <% if @simplefin_items.any? %>
+    <% @simplefin_items.each do |simplefin_item| %>
+      <%= render simplefin_item %>
+    <% end %>
+  <% else %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <div class="flex justify-center items-center py-20">
+        <div class="text-center flex flex-col items-center max-w-[300px]">
+          <p class="text-primary mb-1 font-medium text-sm">No SimpleFIN connections</p>
+          <p class="text-secondary text-sm mb-4">Connect your bank accounts using SimpleFIN.</p>
+          <%= render DS::Link.new(
+            text: "Add Connection",
+            icon: "plus",
+            variant: "primary",
+            href: new_simplefin_item_path,
+            frame: :modal
+          ) %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
