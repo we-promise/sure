@@ -61,13 +61,13 @@ class CategoryImport < Import
 
     validate_required_headers!
 
-    csv_rows.each do |row|
-      name_header = header_for("name")
-      color_header = header_for("color")
-      parent_header = header_for("parent_category", "parent category")
-      classification_header = header_for("classification")
-      icon_header = header_for("lucide_icon", "lucide icon", "icon")
+    name_header = header_for("name")
+    color_header = header_for("color")
+    parent_header = header_for("parent_category", "parent category")
+    classification_header = header_for("classification")
+    icon_header = header_for("lucide_icon", "lucide icon", "icon")
 
+    csv_rows.each do |row|
       rows.create!(
         name: row[name_header].to_s.strip,
         category_color: row[color_header].to_s.strip,
