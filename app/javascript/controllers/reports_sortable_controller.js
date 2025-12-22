@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["section", "handle"];
+  static targets = ["section", "handle", "header"];
 
   // Short delay to prevent accidental touches on the grip handle
   static values = {
@@ -20,6 +20,31 @@ export default class extends Controller {
   }
 
   // ===== Mouse Drag Events =====
+
+  // Enable dragging only when mousedown on header or handle
+  enableDrag(event) {
+    const section = event.currentTarget.closest(
+      "[data-reports-sortable-target='section']",
+    );
+    if (section) {
+      section.setAttribute("draggable", "true");
+    }
+  }
+
+  disableDrag(event) {
+    const section = event.currentTarget.closest(
+      "[data-reports-sortable-target='section']",
+    );
+    if (section && !this.draggedElement) {
+      section.setAttribute("draggable", "false");
+    }
+  }
+
+  // Prevent drag when clicking on interactive elements like the toggle button
+  preventDrag(event) {
+    event.stopPropagation();
+  }
+
   dragStart(event) {
     this.draggedElement = event.currentTarget;
     this.draggedElement.classList.add("opacity-50");

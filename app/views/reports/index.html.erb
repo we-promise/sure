@@ -105,7 +105,7 @@
           data-controller="reports-section"
           data-reports-section-section-key-value="<%= section[:key] %>"
           data-reports-section-collapsed-value="<%= Current.user.reports_section_collapsed?(section[:key]) %>"
-          draggable="true"
+          draggable="false"
           tabindex="0"
           role="listitem"
           aria-grabbed="false"
@@ -114,12 +114,17 @@
             dragstart->reports-sortable#dragStart
             dragend->reports-sortable#dragEnd
             keydown->reports-sortable#handleKeyDown">
-          <div class="px-4 py-2 flex items-center justify-between">
+          <div class="px-4 py-2 flex items-center justify-between cursor-grab"
+            data-reports-sortable-target="header"
+            data-action="
+              mousedown->reports-sortable#enableDrag
+              mouseup->reports-sortable#disableDrag
+              mouseleave->reports-sortable#disableDrag">
             <div class="flex items-center gap-2">
               <button
                 type="button"
                 class="text-secondary hover:text-primary transition-colors p-0.5"
-                data-action="click->reports-section#toggle keydown->reports-section#handleToggleKeydown"
+                data-action="click->reports-section#toggle keydown->reports-section#handleToggleKeydown mousedown->reports-sortable#preventDrag"
                 data-reports-section-target="button"
                 aria-label="<%= t("reports.index.toggle_section") %>"
                 aria-expanded="<%= !Current.user.reports_section_collapsed?(section[:key]) %>">
