@@ -1,6 +1,12 @@
 ---
 ca:
   simplefin_items:
+    index:
+      page_title: Connexions SimpleFIN
+      empty_state:
+        title: No hi ha connexions SimpleFIN
+        description: Connecta els teus comptes bancaris amb SimpleFIN.
+        add_connection: Afegeix connexió
     new:
       title: Connecta SimpleFin
       setup_token: Token de configuració
