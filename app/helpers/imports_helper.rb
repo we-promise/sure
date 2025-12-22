@@ -51,7 +51,7 @@ module ImportsHelper
   end
 
   def cell_class(row, field)
-    base = "bg-container text-sm focus:ring-primary focus:border-solid w-full max-w-full disabled:text-subdued"
+    base = "px-3 py-2 bg-container text-sm focus:ring-primary focus:border-solid w-full max-w-full disabled:text-subdued"
 
     row.valid? # populate errors
 
