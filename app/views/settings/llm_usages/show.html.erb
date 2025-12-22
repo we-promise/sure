@@ -115,7 +115,7 @@
               <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase">Cost</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-primary">
             <% @llm_usages.each do |usage| %>
               <tr class="<%= 'bg-red-50 theme-dark:bg-red-950/30' if usage.failed? %>">
                 <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
