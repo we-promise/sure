@@ -13,6 +13,15 @@
 @import "./google-sign-in.css";
 @import "./date-picker-dark-mode.css";
 
+@layer base {
+  *,
+  *::before,
+  *::after {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}
+
 @layer components {
   .pcr-app{
     position: static !important;
