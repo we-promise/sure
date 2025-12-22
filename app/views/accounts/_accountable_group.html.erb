@@ -26,7 +26,7 @@
         <%= link_to account_path(account),
                   class: class_names(
                     "block flex items-center gap-2 px-3 py-2 rounded-lg",
-                    page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover"
+                    page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover theme-dark:hover:bg-container-inset-hover"
                   ),
                   title: account.name do %>
           <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
