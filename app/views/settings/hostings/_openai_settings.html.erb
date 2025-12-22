@@ -15,8 +15,13 @@
                          controller: "auto-submit-form",
                          "auto-submit-form-trigger-event-value": "blur"
                        } do |form| %>
+  <% access_token_label = if self_hosted?
+                            "#{t('.access_token_label')} (optional)"
+                          else
+                            t(".access_token_label")
+                          end %>
   <%= form.password_field :openai_access_token,
-                          label: t(".access_token_label"),
+                          label: access_token_label,
                           placeholder: t(".access_token_placeholder"),
                           value: (Setting.openai_access_token.present? ? "********" : nil),
                           autocomplete: "off",

@@ -64,10 +64,11 @@ class Provider::Registry
 
       def openai
         access_token = ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
-
-        return nil unless access_token.present?
-
         uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
+
+        # Require access_token unless using a custom provider (custom URI base)
+        return nil unless access_token.present? || uri_base.present?
+
         model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
 
         if uri_base.present? && model.blank?

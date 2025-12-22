@@ -141,16 +141,23 @@ class UserTest < ActiveSupport::TestCase
 
   test "ai_available? returns true when openai access token set in settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil do
+    previous_token = Setting.openai_access_token
+    previous_uri_base = Setting.openai_uri_base
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, OPENAI_URI_BASE: nil do
       Setting.openai_access_token = nil
+      Setting.openai_uri_base = nil
       assert_not @user.ai_available?
 
       Setting.openai_access_token = "token"
       assert @user.ai_available?
+
+      Setting.openai_access_token = nil
+      Setting.openai_uri_base = "http://localhost:11434/v1"
+      assert @user.ai_available?
     end
   ensure
-    Setting.openai_access_token = previous
+    Setting.openai_access_token = previous_token
+    Setting.openai_uri_base = previous_uri_base
   end
 
   test "update_dashboard_preferences handles concurrent updates atomically" do

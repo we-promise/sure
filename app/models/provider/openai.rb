@@ -16,7 +16,8 @@ class Provider::Openai < Provider
   end
 
   def initialize(access_token, uri_base: nil, model: nil)
-    client_options = { access_token: access_token }
+    client_options = {}
+    client_options[:access_token] = access_token if access_token.present?
     client_options[:uri_base] = uri_base if uri_base.present?
 
     @client = ::OpenAI::Client.new(**client_options)
