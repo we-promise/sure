@@ -15,52 +15,56 @@
                          controller: "auto-submit-form",
                          "auto-submit-form-trigger-event-value": "blur"
                        } do |form| %>
-  <%= form.password_field :openai_access_token,
-                          label: t(".access_token_label"),
-                          placeholder: t(".access_token_placeholder"),
-                          value: (Setting.openai_access_token.present? ? "********" : nil),
+    <div class="space-y-4">
+      <%= form.password_field :openai_access_token,
+                              label: t(".access_token_label"),
+                              placeholder: t(".access_token_placeholder"),
+                              value: (Setting.openai_access_token.present? ? "********" : nil),
+                              autocomplete: "off",
+                              autocapitalize: "none",
+                              spellcheck: "false",
+                              inputmode: "text",
+                              disabled: ENV["OPENAI_ACCESS_TOKEN"].present?,
+                              data: { "auto-submit-form-target": "auto" } %>
+
+      <%= form.text_field :openai_uri_base,
+                          label: t(".uri_base_label"),
+                          placeholder: t(".uri_base_placeholder"),
+                          value: Setting.openai_uri_base,
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "url",
+                          disabled: ENV["OPENAI_URI_BASE"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+
+      <%= form.text_field :openai_model,
+                          label: t(".model_label"),
+                          placeholder: t(".model_placeholder"),
+                          value: Setting.openai_model,
                           autocomplete: "off",
                           autocapitalize: "none",
                           spellcheck: "false",
                           inputmode: "text",
-                          disabled: ENV["OPENAI_ACCESS_TOKEN"].present?,
+                          disabled: ENV["OPENAI_MODEL"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
 
-  <%= form.text_field :openai_uri_base,
-                      label: t(".uri_base_label"),
-                      placeholder: t(".uri_base_placeholder"),
-                      value: Setting.openai_uri_base,
-                      autocomplete: "off",
-                      autocapitalize: "none",
-                      spellcheck: "false",
-                      inputmode: "url",
-                      disabled: ENV["OPENAI_URI_BASE"].present?,
-                      data: { "auto-submit-form-target": "auto" } %>
-
-  <%= form.text_field :openai_model,
-                      label: t(".model_label"),
-                      placeholder: t(".model_placeholder"),
-                      value: Setting.openai_model,
-                      autocomplete: "off",
-                      autocapitalize: "none",
-                      spellcheck: "false",
-                      inputmode: "text",
-                      disabled: ENV["OPENAI_MODEL"].present?,
-                      data: { "auto-submit-form-target": "auto" } %>
-
-  <%= form.select :openai_json_mode,
-                  options_for_select(
-                    [
-                      [t(".json_mode_auto"), ""],
-                      [t(".json_mode_strict"), "strict"],
-                      [t(".json_mode_none"), "none"],
-                      [t(".json_mode_json_object"), "json_object"]
-                    ],
-                    Setting.openai_json_mode
-                  ),
-                  { label: t(".json_mode_label") },
-                  { disabled: ENV["LLM_JSON_MODE"].present?,
-                    data: { "auto-submit-form-target": "auto" } } %>
-  <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
+      <div>
+        <%= form.select :openai_json_mode,
+                        options_for_select(
+                          [
+                            [t(".json_mode_auto"), ""],
+                            [t(".json_mode_strict"), "strict"],
+                            [t(".json_mode_none"), "none"],
+                            [t(".json_mode_json_object"), "json_object"]
+                          ],
+                          Setting.openai_json_mode
+                        ),
+                        { label: t(".json_mode_label") },
+                        { disabled: ENV["LLM_JSON_MODE"].present?,
+                          data: { "auto-submit-form-target": "auto" } } %>
+        <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
+      </div>
+    </div>
   <% end %>
 </div>
