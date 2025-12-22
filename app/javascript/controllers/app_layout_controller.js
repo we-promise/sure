@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 
-// Connects to data-controller="dialog"
+// Connects to data-controller="app-layout"
 export default class extends Controller {
   static targets = ["leftSidebar", "rightSidebar", "mobileSidebar"];
   static classes = [
@@ -9,6 +9,9 @@ export default class extends Controller {
     "expandedTransition",
     "collapsedTransition",
   ];
+  static values = {
+    userId: String,
+  };
 
   openMobileSidebar() {
     this.mobileSidebarTarget.classList.remove("hidden");
