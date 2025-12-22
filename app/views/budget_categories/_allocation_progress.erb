@@ -5,7 +5,7 @@
     <% if budget.available_to_allocate.negative? %>
       <div class="rounded-full w-1.5 h-1.5 bg-red-500"></div>
     <% else %>
-      <div class="rounded-full w-1.5 h-1.5 <%= budget.allocated_spending > 0 ? "bg-gray-900" : "bg-gray-100" %>"></div>
+      <div class="rounded-full w-1.5 h-1.5 <%= budget.allocated_spending > 0 ? "bg-inverse" : "bg-surface-inset" %>"></div>
     <% end %>
 
     <% if budget.available_to_allocate.negative? %>
