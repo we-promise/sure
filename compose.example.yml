@@ -26,6 +26,22 @@
 #
 # https://github.com/we-promise/sure/discussions/categories/general
 #
+# ===========================================================================
+# DATABASE OPTIONS:
+# ===========================================================================
+#
+# OPTION 1 (Default): Use bundled PostgreSQL container
+#   - Just run: docker compose up
+#
+# OPTION 2: Use external database (Supabase, AWS RDS, Neon, etc.)
+#   - IMPORTANT: External DB requires building locally (not the prebuilt image)
+#   - Change `image: ghcr.io/...` to `build: .` for web and worker services
+#   - Configure DB_HOST, POSTGRES_USER, POSTGRES_PASSWORD, DB_SSLMODE in .env
+#   - For Supabase free tier: use Session Pooler (not Direct Connection)
+#   - Run: docker compose up (db service will start but won't be used)
+#
+# See docs/hosting/supabase.md for detailed instructions.
+#
 
 x-db-env: &db_env
   POSTGRES_USER: ${POSTGRES_USER:-sure_user}
@@ -38,10 +54,14 @@ x-rails-env: &rails_env
   SELF_HOSTED: "true"
   RAILS_FORCE_SSL: "false"
   RAILS_ASSUME_SSL: "false"
-  DB_HOST: db
-  DB_PORT: 5432
+  DB_HOST: ${DB_HOST:-db}
+  DB_PORT: ${DB_PORT:-5432}
+  # External database settings (Supabase, AWS RDS, Neon, etc.)
+  DB_SSLMODE: ${DB_SSLMODE:-prefer}
+  DB_CONNECT_TIMEOUT: ${DB_CONNECT_TIMEOUT:-5}
+  DB_PREPARED_STATEMENTS: ${DB_PREPARED_STATEMENTS:-true}
   REDIS_URL: redis://redis:6379/1
-# NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
+  # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
   OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
 
 services:
@@ -57,6 +77,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
       redis:
         condition: service_healthy
     networks:
@@ -71,6 +92,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
       redis:
         condition: service_healthy
     environment:
@@ -110,6 +132,7 @@ volumes:
   app-storage:
   postgres-data:
   redis-data:
+
 
 networks:
   sure_net:

@@ -6,6 +6,10 @@ default: &default
   port: <%= ENV.fetch("DB_PORT") { "5432" } %>
   user: <%= ENV.fetch("POSTGRES_USER") { nil } %>
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { nil } %>
+  # External database support (Supabase, AWS RDS, Neon, etc.)
+  sslmode: <%= ENV.fetch("DB_SSLMODE") { "prefer" } %>
+  connect_timeout: <%= ENV.fetch("DB_CONNECT_TIMEOUT") { 5 } %>
+  prepared_statements: <%= ENV.fetch("DB_PREPARED_STATEMENTS") { "true" } == "true" %>
 
 development:
   <<: *default
