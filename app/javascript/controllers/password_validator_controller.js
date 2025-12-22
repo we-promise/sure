@@ -52,11 +52,11 @@ export default class extends Controller {
     // Update block lines sequentially based on total requirements met
     this.blockLineTargets.forEach((line, index) => {
       if (index < requirementsMet) {
-        line.classList.remove("bg-gray-200");
+        line.classList.remove("bg-surface-inset");
         line.classList.add("bg-green-600");
       } else {
         line.classList.remove("bg-green-600");
-        line.classList.add("bg-gray-200");
+        line.classList.add("bg-surface-inset");
       }
     });
   }
