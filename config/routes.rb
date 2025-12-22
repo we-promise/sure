@@ -4,10 +4,11 @@ require "sidekiq/cron/web"
 Rails.application.routes.draw do
   # CoinStats routes
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
+    collection do
+      post :link_wallet
+    end
     member do
       post :sync
-      get :setup_accounts
-      post :complete_account_setup
     end
   end
 

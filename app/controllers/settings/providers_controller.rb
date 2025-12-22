@@ -8,7 +8,7 @@ class Settings::ProvidersController < ApplicationController
   def show
     @breadcrumbs = [
       [ "Home", root_path ],
-      [ "Bank Sync Providers", nil ]
+      [ "Sync Providers", nil ]
     ]
 
     prepare_show_context
@@ -132,6 +132,6 @@ class Settings::ProvidersController < ApplicationController
       @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
-      @coinstats_items = Current.family.coinstats_items.ordered.select(:id)
+      @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
     end
 end

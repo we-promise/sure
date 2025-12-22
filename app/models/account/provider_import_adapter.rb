@@ -92,14 +92,25 @@ class Account::ProviderImportAdapter
   def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
-    ProviderMerchant.find_or_create_by!(
-      provider_merchant_id: provider_merchant_id,
-      source: source
-    ) do |m|
-      m.name = name
+    # ProviderMerchant has a unique index on [source, name], so find by those first
+    # This handles cases where the provider_merchant_id format changes
+    merchant = ProviderMerchant.find_or_create_by!(source: source, name: name) do |m|
+      m.provider_merchant_id = provider_merchant_id
       m.website_url = website_url
       m.logo_url = logo_url
     end
+
+    # Update provider_merchant_id if it changed (e.g., format update)
+    if merchant.provider_merchant_id != provider_merchant_id
+      merchant.update!(provider_merchant_id: provider_merchant_id)
+    end
+
+    # Update logo if provided and merchant doesn't have one (or has a different one)
+    if logo_url.present? && merchant.logo_url != logo_url
+      merchant.update!(logo_url: logo_url)
+    end
+
+    merchant
   end
 
   # Updates account balance from provider data

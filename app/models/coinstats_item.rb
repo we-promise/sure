@@ -13,9 +13,7 @@ class CoinstatsItem < ApplicationRecord
   end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
-  if encryption_ready?
-    encrypts :api_key, deterministic: true
-  end
+  encrypts :api_key, deterministic: true if encryption_ready?
 
   validates :name, presence: true
   validates :api_key, presence: true, on: :create
@@ -38,10 +36,9 @@ class CoinstatsItem < ApplicationRecord
   def import_latest_coinstats_data
     provider = coinstats_provider
     unless provider
-      Rails.logger.error "CoinstatsItem #{id} - Cannot import: provider is not configured"
-      raise StandardError.new("Coinstats provider is not configured")
+      Rails.logger.error "CoinstatsItem #{id} - Cannot import: CoinStats provider is not configured"
+      raise StandardError.new("CoinStats provider is not configured")
     end
-
     CoinstatsItem::Importer.new(self, coinstats_provider: provider).import
   rescue => e
     Rails.logger.error "CoinstatsItem #{id} - Failed to import data: #{e.message}"
@@ -87,15 +84,11 @@ class CoinstatsItem < ApplicationRecord
   end
 
   def upsert_coinstats_snapshot!(accounts_snapshot)
-    assign_attributes(
-      raw_payload: accounts_snapshot
-    )
-
+    assign_attributes(raw_payload: accounts_snapshot)
     save!
   end
 
   def has_completed_initial_setup?
-    # Setup is complete if we have any linked accounts
     accounts.any?
   end
 
@@ -125,27 +118,9 @@ class CoinstatsItem < ApplicationRecord
     coinstats_accounts.count
   end
 
+  # Display name for the CoinStats connection
   def institution_display_name
-    institution_name.presence || institution_domain.presence || name
-  end
-
-  def connected_institutions
-    coinstats_accounts.includes(:account)
-                  .where.not(institution_metadata: nil)
-                  .map { |acc| acc.institution_metadata }
-                  .uniq { |inst| inst["name"] || inst["institution_name"] }
-  end
-
-  def institution_summary
-    institutions = connected_institutions
-    case institutions.count
-    when 0
-      "No wallets connected"
-    when 1
-      institutions.first["name"] || institutions.first["institution_name"] || "1 wallet"
-    else
-      "#{institutions.count} wallets"
-    end
+    name.presence || "CoinStats"
   end
 
   def credentials_configured?

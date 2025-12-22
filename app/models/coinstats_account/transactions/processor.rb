@@ -1,4 +1,6 @@
 class CoinstatsAccount::Transactions::Processor
+  include CoinstatsTransactionIdentifiable
+
   attr_reader :coinstats_account
 
   def initialize(coinstats_account)
@@ -11,14 +13,19 @@ class CoinstatsAccount::Transactions::Processor
       return { success: true, total: 0, imported: 0, failed: 0, errors: [] }
     end
 
-    total_count = coinstats_account.raw_transactions_payload.count
-    Rails.logger.info "CoinstatsAccount::Transactions::Processor - Processing #{total_count} transactions for coinstats_account #{coinstats_account.id}"
+    # Filter transactions to only include ones for this specific token
+    # Multiple coinstats_accounts can share the same wallet address (one per token)
+    # but we only want to process transactions relevant to this token
+    relevant_transactions = filter_transactions_for_account(coinstats_account.raw_transactions_payload)
+
+    total_count = relevant_transactions.count
+    Rails.logger.info "CoinstatsAccount::Transactions::Processor - Processing #{total_count} transactions for coinstats_account #{coinstats_account.id} (#{coinstats_account.name})"
 
     imported_count = 0
     failed_count = 0
     errors = []
 
-    coinstats_account.raw_transactions_payload.each_with_index do |transaction_data, index|
+    relevant_transactions.each_with_index do |transaction_data, index|
       begin
         result = CoinstatsEntry::Processor.new(
           transaction_data,
@@ -27,19 +34,20 @@ class CoinstatsAccount::Transactions::Processor
 
         if result.nil?
           failed_count += 1
-          errors << { index: index, transaction_id: transaction_data[:transaction_id], error: "No linked account" }
+          transaction_id = extract_coinstats_transaction_id(transaction_data)
+          errors << { index: index, transaction_id: transaction_id, error: "No linked account" }
         else
           imported_count += 1
         end
       rescue ArgumentError => e
         failed_count += 1
-        transaction_id = transaction_data.try(:[], :transaction_id) || transaction_data.try(:[], "transaction_id") || "unknown"
+        transaction_id = extract_coinstats_transaction_id(transaction_data)
         error_message = "Validation error: #{e.message}"
         Rails.logger.error "CoinstatsAccount::Transactions::Processor - #{error_message} (transaction #{transaction_id})"
         errors << { index: index, transaction_id: transaction_id, error: error_message }
       rescue => e
         failed_count += 1
-        transaction_id = transaction_data.try(:[], :transaction_id) || transaction_data.try(:[], "transaction_id") || "unknown"
+        transaction_id = extract_coinstats_transaction_id(transaction_data)
         error_message = "#{e.class}: #{e.message}"
         Rails.logger.error "CoinstatsAccount::Transactions::Processor - Error processing transaction #{transaction_id}: #{error_message}"
         Rails.logger.error e.backtrace.join("\n")
@@ -63,4 +71,30 @@ class CoinstatsAccount::Transactions::Processor
 
     result
   end
+
+  private
+
+    # Filter transactions to only include ones for this specific token
+    # CoinStats returns all transactions for a wallet address, but each coinstats_account
+    # represents a single token, so we filter by matching coin ID
+    def filter_transactions_for_account(transactions)
+      return [] unless transactions.present?
+      return transactions unless coinstats_account.account_id.present?
+
+      account_id = coinstats_account.account_id.to_s.downcase
+
+      transactions.select do |tx|
+        tx = tx.with_indifferent_access
+
+        # Check coin ID in transactions[0].items[0].coin.id (most common location)
+        coin_id = tx.dig(:transactions, 0, :items, 0, :coin, :id)&.to_s&.downcase
+
+        # Also check coinData for symbol match as fallback
+        coin_symbol = tx.dig(:coinData, :symbol)&.to_s&.downcase
+
+        # Match if coin ID equals account_id, or if symbol matches account name
+        coin_id == account_id ||
+          (coin_symbol.present? && coinstats_account.name&.downcase&.include?(coin_symbol))
+      end
+    end
 end

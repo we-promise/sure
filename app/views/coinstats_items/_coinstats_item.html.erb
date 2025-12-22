@@ -7,13 +7,9 @@
         <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
 
         <div class="flex items-center justify-center h-8 w-8 bg-success/10 rounded-full">
-          <% if coinstats_item.logo.attached? %>
-            <%= image_tag coinstats_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
-          <% else %>
-            <div class="flex items-center justify-center">
-              <%= tag.p coinstats_item.institution_display_name.first.upcase, class: "text-success text-xs font-medium" %>
-            </div>
-          <% end %>
+          <div class="flex items-center justify-center">
+            <%= tag.p coinstats_item.institution_display_name.first.upcase, class: "text-success text-xs font-medium" %>
+          </div>
         </div>
 
         <div class="pl-1 text-sm">
@@ -51,13 +47,13 @@
 
       <div class="flex items-center gap-2">
         <% if coinstats_item.requires_update? %>
-          <%= button_to reauthorize_coinstats_item_path(coinstats_item),
-                        method: :post,
-                        class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
-                        data: { turbo: false } do %>
-            <%= icon "refresh-cw", size: "sm" %>
-            Update
-          <% end %>
+          <%= render DS::Link.new(
+            text: "Update API Key",
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
         <% elsif Rails.env.development? %>
           <%= icon(
             "refresh-cw",
@@ -83,24 +79,10 @@
       <div class="space-y-4 mt-4">
         <% if coinstats_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: coinstats_item.accounts %>
-        <% end %>
-
-        <% if coinstats_item.unlinked_accounts_count > 0 %>
-          <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm">Setup needed</p>
-            <p class="text-secondary text-sm"><%= pluralize(coinstats_item.unlinked_accounts_count, "Wallet") %> imported from CoinStats need to be setup</p>
-            <%= render DS::Link.new(
-              text: "Setup Wallets",
-              icon: "settings",
-              variant: "primary",
-              href: setup_accounts_coinstats_item_path(coinstats_item),
-              frame: :modal
-            ) %>
-          </div>
-        <% elsif coinstats_item.accounts.empty? && coinstats_item.coinstats_accounts.empty? %>
+        <% else %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm">No wallets found</p>
-            <p class="text-secondary text-sm">No wallets were found from CoinStats.</p>
+            <p class="text-secondary text-sm">No wallets were found connected to CoinStats.</p>
           </div>
         <% end %>
       </div>

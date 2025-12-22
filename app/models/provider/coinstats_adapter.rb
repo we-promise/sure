@@ -7,7 +7,7 @@ class Provider::CoinstatsAdapter < Provider::Base
 
   # Define which account types this provider supports
   def self.supported_account_types
-    %w[Depository CreditCard Loan]
+    %w[Crypto]
   end
 
   # Returns connection configurations for this provider
@@ -25,11 +25,8 @@ class Provider::CoinstatsAdapter < Provider::Base
           return_to: return_to
         )
       },
-      existing_account_path: ->(account_id) {
-        Rails.application.routes.url_helpers.select_existing_account_coinstats_items_path(
-          account_id: account_id
-        )
-      }
+      # CoinStats wallets are linked via the link_wallet action, not via existing account selection
+      existing_account_path: nil
     } ]
   end
 
@@ -97,5 +94,12 @@ class Provider::CoinstatsAdapter < Provider::Base
 
   def institution_color
     item&.institution_color
+  end
+
+  def logo_url
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    metadata["logo"]
   end
 end

@@ -192,6 +192,10 @@ class Account < ApplicationRecord
     provider&.institution_domain
   end
 
+  def logo_url
+    provider&.logo_url
+  end
+
   def destroy_later
     mark_for_deletion!
     DestroyJob.perform_later(self)

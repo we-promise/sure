@@ -13,7 +13,7 @@ class CoinstatsAccount::Processor
       return
     end
 
-    Rails.logger.info "CoinstatsAccount::Processor - Processing coinstats_account #{coinstats_account.id} (uid #{coinstats_account.uid})"
+    Rails.logger.info "CoinstatsAccount::Processor - Processing coinstats_account #{coinstats_account.id}"
 
     begin
       process_account!

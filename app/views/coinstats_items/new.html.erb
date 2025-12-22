@@ -1,22 +1,33 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: t(".link_coinstats_title")) %>
+    <% dialog.with_header(title: "Link Crypto Wallet using CoinStats") %>
     
     <% dialog.with_body do %>
-        <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items %>
+        <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: nil) %>
         <% if items&.any? %>
-          <%= styled_form_with model: @coinstats_item,
-                              url: coinstats_items_path,
-                              scope: :coinstats_item,
+          <% selected_item = items.first %>
+          <% blockchains = Provider::Coinstats.new(selected_item.api_key).blockchain_options rescue [] %>
+          <%= styled_form_with url: link_wallet_coinstats_items_path,
                               method: :post,
                               data: { turbo: true, turbo_frame: "_top" },
                               class: "space-y-3" do |form| %>
+            <%= form.hidden_field :coinstats_item_id, value: selected_item.id %>
+            
             <%= form.text_field :address,
                                 label: "Address",
                                 placeholder: "Required"%>
-            <%= form.text_field :blockchain,
-                                label: "Blockchain",
-                                placeholder: "Required"%>
+
+            <% if blockchains.present? %>
+              <%= form.select :blockchain,
+                              options_for_select(blockchains),
+                              { include_blank: "Select blockchain" },
+                              label: "Blockchain",
+                              class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+            <% else %>
+              <%= form.text_field :blockchain,
+                                  label: "Blockchain",
+                                  placeholder: "Required"%>
+            <% end %>
 
             <div class="flex justify-end">
               <%= form.submit "Link",
@@ -28,8 +39,8 @@
                 <div class="flex items-start gap-3">
                 <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
                 <div class="text-sm text-secondary">
-                    <p class="font-medium text-primary mb-2">CoinStats connection not configured</p>
-                    <p>Before you can link a crypto wallet using CoinStats, you need to configure the CoinStats connection.</p>
+                    <p class="font-medium text-primary mb-2">CoinStats not configured</p>
+                    <p>To link a crypto wallet with CoinStats, first configure the provider.</p>
                 </div>
                 </div>
 
@@ -37,7 +48,7 @@
                 <ol class="list-decimal list-inside space-y-1 text-secondary">
                     <li>Go to <strong>Settings → Providers</strong></li>
                     <li>Find the <strong>CoinStats</strong> section</li>
-                    <li>Follow the provided Setup Instructions</li>
+                    <li>Follow the provided <strong>Setup Instructions</strong></li>
                 </ol>
                 </div>
 

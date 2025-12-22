@@ -1,29 +1,62 @@
 class Provider::Coinstats
+  include HTTParty
+
   class AuthenticationError < StandardError; end
   class RateLimitError < StandardError; end
 
   BASE_URL = "https://openapiv1.coinstats.app"
 
+  headers "User-Agent" => "Sure Finance CoinStats Client (https://github.com/we-promise/sure)"
+  default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
+
+  attr_reader :api_key
+
   def initialize(api_key)
     @api_key = api_key
-    @client = HTTP.headers(
-      "X-API-KEY" => api_key,
-      "User-Agent" => "Sure Finance CoinStats Client (https://github.com/we-promise/sure)"
-    )
   end
 
   # Get the list of blockchains supported by CoinStats
   # https://coinstats.app/api-docs/openapi/get-blockchains
   def get_blockchains
-    res = @client.get("#{BASE_URL}/wallet/blockchains")
+    res = self.class.get("#{BASE_URL}/wallet/blockchains", headers: auth_headers)
 
     handle_response(res)
+  end
+
+  # Returns blockchain options formatted for select dropdowns
+  # @return [Array<Array>] Array of [label, value] pairs sorted alphabetically
+  def blockchain_options
+    raw_blockchains = get_blockchains
+
+    items = if raw_blockchains.is_a?(Array)
+      raw_blockchains
+    elsif raw_blockchains.respond_to?(:dig) && raw_blockchains[:data].is_a?(Array)
+      raw_blockchains[:data]
+    else
+      []
+    end
+
+    items.filter_map do |b|
+      b = b.with_indifferent_access
+      value = b[:connectionId] || b[:id] || b[:name]
+      next unless value.present?
+
+      label = b[:name].presence || value.to_s
+      [ label, value ]
+    end.uniq { |_label, value| value }.sort_by { |label, _| label.to_s.downcase }
+  rescue StandardError => e
+    Rails.logger.warn("CoinStats: failed to fetch blockchains: #{e.class} - #{e.message}")
+    []
   end
 
   # Get cryptocurrency balances for any blockchain wallet
   # https://coinstats.app/api-docs/openapi/get-wallet-balance
   def get_wallet_balance(address, blockchain)
-    res = @client.get("#{BASE_URL}/wallet/balance", params: { address: address, connectionId: blockchain })
+    res = self.class.get(
+      "#{BASE_URL}/wallet/balance",
+      headers: auth_headers,
+      query: { address: address, connectionId: blockchain }
+    )
 
     handle_response(res)
   end
@@ -33,7 +66,11 @@ class Provider::Coinstats
   def get_wallet_transactions(address, blockchain)
     # Initiate syncing process to update transaction data
     # https://coinstats.app/api-docs/openapi/transactions-sync
-    @client.patch("#{BASE_URL}/wallet/transactions", params: { address: address, connectionId: blockchain })
+    self.class.patch(
+      "#{BASE_URL}/wallet/transactions",
+      headers: auth_headers,
+      query: { address: address, connectionId: blockchain }
+    )
 
     sync_retry_current = 0
     sync_retry_max = 10
@@ -44,7 +81,11 @@ class Provider::Coinstats
 
       # Get the syncing status of the provided wallet address with the blockchain network.
       # https://coinstats.app/api-docs/openapi/get-wallet-sync-status
-      sync_res = @client.get("#{BASE_URL}/wallet/status", params: { address: address, connectionId: blockchain })
+      sync_res = self.class.get(
+        "#{BASE_URL}/wallet/status",
+        headers: auth_headers,
+        query: { address: address, connectionId: blockchain }
+      )
       sync_data = handle_response(sync_res)
 
       break if sync_data[:status] == "synced"
@@ -57,12 +98,23 @@ class Provider::Coinstats
       sleep sync_retry_delay * sync_retry_current
     end
 
-    res = @client.get("#{BASE_URL}/wallet/transactions", params: { address: address, connectionId: blockchain })
+    res = self.class.get(
+      "#{BASE_URL}/wallet/transactions",
+      headers: auth_headers,
+      query: { address: address, connectionId: blockchain }
+    )
 
     handle_response(res)
   end
 
   private
+
+    def auth_headers
+      {
+        "X-API-KEY" => api_key,
+        "Accept" => "application/json"
+      }
+    end
 
     # The CoinStats API uses standard HTTP status codes to indicate the success or failure of requests.
     # https://coinstats.app/api-docs/errors
