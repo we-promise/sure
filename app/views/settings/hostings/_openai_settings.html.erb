@@ -11,6 +11,7 @@
   <%= styled_form_with model: Setting.new,
                        url: settings_hosting_path,
                        method: :patch,
+                       class: "space-y-4",
                        data: {
                          controller: "auto-submit-form",
                          "auto-submit-form-trigger-event-value": "blur"
