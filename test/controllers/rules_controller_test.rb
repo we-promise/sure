@@ -10,6 +10,23 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should get new with pre-filled name and action" do
+    category = categories(:food_and_drink)
+    get new_rule_url(
+      resource_type: "transaction",
+      name: "Starbucks",
+      action_type: "set_transaction_category",
+      action_value: category.id
+    )
+    assert_response :success
+
+    assert_select "input[name='rule[name]'][value='Starbucks']"
+    assert_select "input[name*='[value]'][value='Starbucks']"
+    assert_select "select[name*='[condition_type]'] option[selected][value='transaction_name']"
+    assert_select "select[name*='[action_type]'] option[selected][value='set_transaction_category']"
+    assert_select "select[name*='[value]'] option[selected][value='#{category.id}']"
+  end
+
   test "should get edit" do
     get edit_rule_url(rules(:one))
     assert_response :success
