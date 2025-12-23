@@ -3,6 +3,11 @@ x-db-env: &db_env
   POSTGRES_DB: postgres
   POSTGRES_PASSWORD: postgres
 
+x-mirror-db-env: &mirror_db_env
+  POSTGRES_USER: mirror_user
+  POSTGRES_DB: mirror_db
+  POSTGRES_PASSWORD: mirror_password
+
 x-rails-env: &rails_env
   DB_HOST: db
   HOST: "0.0.0.0"
@@ -10,6 +15,14 @@ x-rails-env: &rails_env
   POSTGRES_PASSWORD: postgres
   BUNDLE_PATH: /bundle
   REDIS_URL: redis://redis:6379/1
+  # Database Mirror Configuration
+  DATABASE_MIRROR_ENABLED: "true"
+  MIRROR_DB_HOST: mirror_db
+  MIRROR_DB_PORT: "5432"
+  MIRROR_DB_NAME: mirror_db
+  MIRROR_DB_USER: mirror_user
+  MIRROR_DB_PASSWORD: mirror_password
+  MIRROR_DB_SSLMODE: disable
 
 services:
   app:
@@ -28,6 +41,7 @@ services:
     depends_on:
       - db
       - redis
+      - mirror_db
 
   worker:
     build:
@@ -42,6 +56,7 @@ services:
       <<: *rails_env
     depends_on:
       - redis
+      - mirror_db
 
   redis:
     image: redis:latest
@@ -59,7 +74,18 @@ services:
     environment:
       <<: *db_env
 
+  mirror_db:
+    image: postgres:16
+    volumes:
+      - mirror-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    environment:
+      <<: *mirror_db_env
+
 volumes:
   postgres-data:
   redis-data:
   bundle_cache:
+  mirror-postgres-data:
