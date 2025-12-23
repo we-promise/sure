@@ -13,7 +13,7 @@
     <%= yield :head %>
   </head>
 
-  <body class="h-full overflow-hidden antialiased">
+  <body class="h-full overflow-hidden antialiased bg-surface">
     <% if Rails.env.development? %>
       <button hidden data-controller="hotkey" data-hotkey="t t /" data-action="theme#toggle"></button>
     <% end %>
@@ -33,7 +33,7 @@
     <%= turbo_frame_tag "modal" %>
     <%= turbo_frame_tag "drawer" %>
 
-    <%# Custom overrides for browser's confirm API  %>
+    <%# Custom overrides for browser's confirm API %>
     <%= render "layouts/shared/confirm_dialog" %>
 
     <%= render "impersonation_sessions/super_admin_bar" if Current.true_user&.super_admin? && show_super_admin_bar? %>
