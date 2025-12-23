@@ -414,7 +414,8 @@ class Provider::Openai < Provider
         name: name,
         input: input,
         session_id: session_id,
-        user_id: user_identifier
+        user_id: user_identifier,
+        environment: Rails.env
       )
     rescue => e
       Rails.logger.warn("Langfuse trace creation failed: #{e.message}")

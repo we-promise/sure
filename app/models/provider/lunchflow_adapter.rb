@@ -7,7 +7,7 @@ class Provider::LunchflowAdapter < Provider::Base
 
   # Define which account types this provider supports
   def self.supported_account_types
-    %w[Depository CreditCard Loan]
+    %w[Depository CreditCard Loan Investment]
   end
 
   # Returns connection configurations for this provider
