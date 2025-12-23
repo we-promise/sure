@@ -22,7 +22,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     click_button "Continue"
 
     assert_current_path preferences_onboarding_path
-    assert_text "Configure your preferences"
+    assert_text I18n.t("onboardings.preferences.title")
 
     # Test that the chart renders without errors (this would catch the Series bug)
     assert_selector "[data-controller='time-series-chart']"
@@ -34,7 +34,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "Light", from: "user_theme"
 
     # Submit preferences
-    click_button "Complete"
+    click_button I18n.t("onboardings.preferences.submit")
 
     # Should redirect to goals page
     assert_current_path goals_onboarding_path
@@ -59,9 +59,9 @@ class OnboardingsTest < ApplicationSystemTestCase
     end
 
     # Verify the preview example shows
-    assert_text "Example"
-    assert_text "$2,325.25"
-    assert_text "+$78.90"
+    assert_text I18n.t("onboardings.preferences.example")
+    assert_text expected_preview_amount
+    assert_text expected_preview_delta
   end
 
   test "can change currency and see preview update" do
@@ -72,7 +72,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     # The preview should update (this tests the JavaScript controller)
     # Note: This would require the onboarding controller to handle currency changes
-    assert_text "Example"
+    assert_text I18n.t("onboardings.preferences.example")
   end
 
   test "can change date format and see preview update" do
@@ -82,7 +82,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "DD/MM/YYYY", from: "user_family_attributes_date_format"
 
     # The preview should update
-    assert_text "Example"
+    assert_text I18n.t("onboardings.preferences.example")
   end
 
   test "can change theme" do
@@ -92,7 +92,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "Dark", from: "user_theme"
 
     # Theme should be applied (this tests the JavaScript controller)
-    assert_text "Example"
+    assert_text I18n.t("onboardings.preferences.example")
   end
 
   test "preferences form validation" do
@@ -100,7 +100,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     # Clear required fields and try to submit
     select "", from: "user_family_attributes_locale"
-    click_button "Complete"
+    click_button I18n.t("onboardings.preferences.submit")
 
     # Should stay on preferences page with validation errors (may have query params)
     assert_match %r{/onboarding/preferences}, current_path
@@ -115,7 +115,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "DD/MM/YYYY", from: "user_family_attributes_date_format"
     select "Dark", from: "user_theme"
 
-    click_button "Complete"
+    click_button I18n.t("onboardings.preferences.submit")
 
     # Wait for redirect to goals page to ensure form was submitted
     assert_current_path goals_onboarding_path
@@ -159,7 +159,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "English (en)", from: "user_family_attributes_locale"
     select "United States Dollar (USD)", from: "user_family_attributes_currency"
     select "MM/DD/YYYY", from: "user_family_attributes_date_format"
-    click_button "Complete"
+    click_button I18n.t("onboardings.preferences.submit")
 
     # Should be at goals
     assert_current_path goals_onboarding_path
@@ -184,12 +184,20 @@ class OnboardingsTest < ApplicationSystemTestCase
     def sign_in(user)
       visit new_session_path
       within %(form[action='#{sessions_path}']) do
-        fill_in "Email", with: user.email
-        fill_in "Password", with: user_password_test
-        click_on "Log in"
+        fill_in "email", with: user.email
+        fill_in "password", with: user_password_test
+        click_on I18n.t("sessions.new.submit")
       end
 
       # Wait for successful login
       assert_current_path root_path
+    end
+
+    def expected_preview_amount
+      ApplicationController.helpers.format_money(Money.new(2325.25, @user.family.currency))
+    end
+
+    def expected_preview_delta
+      "+#{ApplicationController.helpers.format_money(Money.new(78.90, @user.family.currency))}"
     end
 end

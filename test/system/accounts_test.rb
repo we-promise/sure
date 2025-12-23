@@ -27,25 +27,25 @@ class AccountsTest < ApplicationSystemTestCase
     click_link "Property"
 
     account_name = "[system test] Property Account"
-    fill_in "Name*", with: account_name
-    select "Single Family Home", from: "Property type*"
-    fill_in "Year Built (optional)", with: 2005
-    fill_in "Area (optional)", with: 2250
+    fill_in "account_name", with: account_name
+    select "Single Family Home", from: "account_subtype"
+    fill_in "account_accountable_attributes_year_built", with: 2005
+    fill_in "account_accountable_attributes_area_value", with: 2250
 
     click_button "Next"
 
     # Step 2: Enter balance information
-    assert_text "Value"
+    assert_field "account_balance"
     fill_in "account[balance]", with: 500000
     click_button "Next"
 
     # Step 3: Enter address information
-    assert_text "Address"
-    fill_in "Address Line 1", with: "123 Main St"
-    fill_in "City", with: "San Francisco"
-    fill_in "State/Region", with: "CA"
-    fill_in "Postal Code", with: "94101"
-    fill_in "Country", with: "US"
+    assert_field "account_accountable_attributes_address_attributes_line1"
+    fill_in "account_accountable_attributes_address_attributes_line1", with: "123 Main St"
+    fill_in "account_accountable_attributes_address_attributes_locality", with: "San Francisco"
+    fill_in "account_accountable_attributes_address_attributes_region", with: "CA"
+    fill_in "account_accountable_attributes_address_attributes_postal_code", with: "94101"
+    fill_in "account_accountable_attributes_address_attributes_country", with: "US"
 
     click_button "Save"
 
@@ -61,10 +61,10 @@ class AccountsTest < ApplicationSystemTestCase
 
   test "can create vehicle account" do
     assert_account_created "Vehicle" do
-      fill_in "Make", with: "Toyota"
-      fill_in "Model", with: "Camry"
-      fill_in "Year", with: "2020"
-      fill_in "Mileage", with: "30000"
+      fill_in "account_accountable_attributes_make", with: "Toyota"
+      fill_in "account_accountable_attributes_model", with: "Camry"
+      fill_in "account_accountable_attributes_year", with: "2020"
+      fill_in "account_accountable_attributes_mileage_value", with: "30000"
     end
   end
 
@@ -74,20 +74,20 @@ class AccountsTest < ApplicationSystemTestCase
 
   test "can create credit card account" do
     assert_account_created "CreditCard" do
-      fill_in "Available credit", with: 1000
+      fill_in "account_accountable_attributes_available_credit", with: 1000
       fill_in "account[accountable_attributes][minimum_payment]", with: 25.51
-      fill_in "APR", with: 15.25
-      fill_in "Expiration date", with: 1.year.from_now.to_date
-      fill_in "Annual fee", with: 100
+      fill_in "account_accountable_attributes_apr", with: 15.25
+      fill_in "account_accountable_attributes_expiration_date", with: 1.year.from_now.to_date
+      fill_in "account_accountable_attributes_annual_fee", with: 100
     end
   end
 
   test "can create loan account" do
     assert_account_created "Loan" do
       fill_in "account[accountable_attributes][initial_balance]", with: 1000
-      fill_in "Interest rate", with: 5.25
-      select "Fixed", from: "Rate type"
-      fill_in "Term (months)", with: 360
+      fill_in "account_accountable_attributes_interest_rate", with: 5.25
+      select "Fixed", from: "account_accountable_attributes_rate_type"
+      fill_in "account_accountable_attributes_term_months", with: 360
     end
   end
 
@@ -99,26 +99,26 @@ class AccountsTest < ApplicationSystemTestCase
 
     def open_new_account_modal
       within "[data-controller='DS--tabs']" do
-        click_button "All"
-        click_link "New account"
+        click_button I18n.t("accounts.sidebar.tabs.all")
+        click_link I18n.t("accounts.sidebar.new_account")
       end
     end
 
     def assert_account_created(accountable_type, &block)
       click_link Accountable.from_type(accountable_type).display_name.singularize
-      click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto Loan CreditCard])
+      click_link I18n.t("accounts.new.method_selector.manual_entry") if accountable_type.in?(%w[Depository Investment Crypto Loan CreditCard])
 
       account_name = "[system test] #{accountable_type} Account"
 
-      fill_in "Account name*", with: account_name
+      fill_in "account_name", with: account_name
       fill_in "account[balance]", with: 100.99
 
       yield if block_given?
 
-      click_button "Create Account"
+      click_button I18n.t("helpers.submit.create", model: Account.model_name.human)
 
       within_testid("account-sidebar-tabs") do
-        click_on "All"
+        click_on I18n.t("accounts.sidebar.tabs.all")
         find("details", text: Accountable.from_type(accountable_type).display_name).click
         assert_text account_name
       end
@@ -132,11 +132,11 @@ class AccountsTest < ApplicationSystemTestCase
 
       within_testid("account-menu") do
         find("button").click
-        click_on "Edit"
+        click_on I18n.t("accounts.show.menu.edit")
       end
 
-      fill_in "Account name", with: "Updated account name"
-      click_button "Update Account"
+      fill_in "account_name", with: "Updated account name"
+      click_button I18n.t("helpers.submit.update", model: Account.model_name.human)
       assert_selector "h2", text: "Updated account name"
     end
 

@@ -21,12 +21,12 @@ class TradesTest < ApplicationSystemTestCase
 
     open_new_trade_modal
 
-    fill_in "Ticker symbol", with: "AAPL"
-    fill_in "Date", with: Date.current
-    fill_in "Quantity", with: shares_qty
+    fill_in "model_manual_ticker", with: "AAPL"
+    fill_in "model_date", with: Date.current
+    fill_in "model_qty", with: shares_qty
     fill_in "model[price]", with: 214.23
 
-    click_button "Add transaction"
+    click_button I18n.t("trades.form.submit")
 
     visit_trades
 
@@ -41,13 +41,13 @@ class TradesTest < ApplicationSystemTestCase
 
     open_new_trade_modal
 
-    select "Sell", from: "Type"
-    fill_in "Ticker symbol", with: "AAPL"
-    fill_in "Date", with: Date.current
-    fill_in "Quantity", with: qty
+    select "Sell", from: I18n.t("trades.form.type")
+    fill_in "model_manual_ticker", with: "AAPL"
+    fill_in "model_date", with: Date.current
+    fill_in "model_qty", with: qty
     fill_in "model[price]", with: 215.33
 
-    click_button "Add transaction"
+    click_button I18n.t("trades.form.submit")
 
     visit_trades
 

@@ -8,6 +8,10 @@ en:
       title: Are you sure?
     money_field:
       label: Amount
+    transaction_tabs:
+      expense: Expense
+      income: Income
+      transfer: Transfer
     syncing_notice:
       syncing: Syncing accounts data...
     trend_change:

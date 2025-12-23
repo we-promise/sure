@@ -8,6 +8,10 @@ de:
       title: Bist du sicher
     money_field:
       label: Betrag
+    transaction_tabs:
+      expense: Ausgabe
+      income: Einnahme
+      transfer: Überweisung
     syncing_notice:
       syncing: Kontodaten werden synchronisiert...
     trend_change:
