@@ -144,6 +144,11 @@ cnpg:
     storage:
       size: 20Gi
       storageClassName: longhorn
+    # Optional: enable CNPG volume snapshot backups (requires a VolumeSnapshotClass)
+    backup:
+      method: volumeSnapshot
+      volumeSnapshot:
+        className: longhorn
     # Synchronous replication for stronger durability
     minSyncReplicas: 1
     maxSyncReplicas: 2
@@ -187,6 +192,10 @@ simplefin:
 - The chart configures credentials via `spec.bootstrap.initdb.secret` rather than `managed.roles`. The operator expects the referenced Secret to contain `username` and `password` keys (configurable via values).
 - This chart generates the application DB Secret when `cnpg.cluster.secret.enabled=true` using the keys defined at `cnpg.cluster.secret.usernameKey` (default `username`) and `cnpg.cluster.secret.passwordKey` (default `password`). If you use an existing Secret (`cnpg.cluster.existingSecret`), ensure it contains these keys. The Cluster CR references the Secret by name and maps the keys accordingly.
 - If the CNPG operator is already installed cluster‑wide, you may set `cnpg.enabled=false` and keep `cnpg.cluster.enabled=true`. The chart will still render the `Cluster` CR and compute the in‑cluster `DATABASE_URL`.
+- For backups, CNPG requires `spec.backup.method` to be explicit (for example `volumeSnapshot` or `barmanObjectStore`). This chart will infer `method: volumeSnapshot` if a `backup.volumeSnapshot` block is present.
+  - For snapshot backups, `backup.volumeSnapshot.className` must be set (the chart will fail the render if it is missing).
+  - The CNPG `spec.backup` schema does not support keys like `ttl` or `volumeSnapshot.enabled`; this chart strips those keys to avoid CRD warnings.
+  - Unknown `backup.method` values are passed through and left for CNPG to validate.
 
 Additional default hardening:
 
