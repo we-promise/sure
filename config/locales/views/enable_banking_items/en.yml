@@ -2,16 +2,16 @@
 en:
   enable_banking_items:
     authorize:
-      authorization_failed: Failed to initiate authorization: %{message}
+      authorization_failed: Failed to initiate authorization
       bank_required: Please select a bank.
       invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
       redirect_uri_not_allowed: Redirect not allowed. Please configure `%{callback_url}` in your Enable Banking app settings.
       unexpected_error: An unexpected error occurred. Please try again.
     callback:
-      authorization_error: Authorization failed: %{error}
+      authorization_error: Authorization failed
       invalid_callback: Invalid callback parameters.
       item_not_found: Connection not found.
-      session_failed: Unable to complete authorization: %{message}
+      session_failed: Unable to complete authorization
       success: Successfully connected to your bank. Your accounts are syncing.
       unexpected_error: An unexpected error occurred. Please try again.
     complete_account_setup:
@@ -24,7 +24,7 @@ en:
       success: Enable Banking connection has been queued for deletion.
     link_accounts:
       already_linked: The selected accounts are already linked.
-      link_failed: Failed to link accounts: %{error}
+      link_failed: Failed to link accounts
       no_accounts_selected: No accounts selected.
       no_session: No active Enable Banking connection. Please connect to a bank first.
       success: Successfully linked %{count} accounts.
@@ -37,7 +37,7 @@ en:
       link_enable_banking_title: Link Enable Banking
     reauthorize:
       invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
-      reauthorization_failed: Reauthorization failed: %{message}
+      reauthorization_failed: Reauthorization failed
     select_bank:
       cancel: Cancel
       check_country: Please check your country code settings.
