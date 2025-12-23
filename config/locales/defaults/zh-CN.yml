@@ -82,9 +82,6 @@ zh-CN:
       month: 月
       second: 秒
       year: 年
-  defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
   errors:
     format: "%{attribute}%{message}"
     messages:
