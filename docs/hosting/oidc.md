@@ -149,6 +149,31 @@ Special behavior:
 - Providers with `id: "google"` or `strategy: "google_oauth2"` render a Google‑branded sign‑in button.
 - Other providers (e.g. OIDC/Keycloak, GitHub) render a generic styled button with the configured label and icon.
 
+#### Enabling Google sign‑in (local dev / self‑hosted)
+
+The Google button is only shown when the Google provider is actually registered by OmniAuth at boot.
+
+To enable Google:
+
+1. Ensure the Google provider exists in `config/auth.yml` under `providers:` with `strategy: "google_oauth2"`.
+2. Set these environment variables (for example in `.env.local`, Docker Compose, or your process manager):
+
+   - `GOOGLE_OAUTH_CLIENT_ID`
+   - `GOOGLE_OAUTH_CLIENT_SECRET`
+
+   If either is missing, Sure will skip registering the Google provider and the Google button will not appear on the login page.
+
+3. In your Google Cloud OAuth client configuration, add an authorized redirect URI that matches the host you use in dev.
+
+   Common local values:
+
+   - `http://localhost:3000/auth/google_oauth2/callback`
+   - `http://127.0.0.1:3000/auth/google_oauth2/callback`
+
+   If you customize the provider `name` in `config/auth.yml`, the callback path changes accordingly:
+
+   - `http://localhost:3000/auth/<provider_name>/callback`
+
 ---
 
 ## 4. Example configurations
