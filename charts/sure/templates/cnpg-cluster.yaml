@@ -58,6 +58,10 @@ spec:
   backup:
     {{- toYaml $backup | nindent 4 }}
   {{- end }}
+  {{ with .Values.cnpg.cluster.plugins }}
+  plugins:
+    {{- toYaml . | nindent 4 }}
+  {{ end }}
   {{- with .Values.cnpg.cluster.nodeSelector }}
   nodeSelector:
     {{- toYaml . | nindent 4 }}

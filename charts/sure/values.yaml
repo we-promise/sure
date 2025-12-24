@@ -92,6 +92,15 @@ cnpg:
     # - This chart only hard-validates required fields for supported methods; unknown `method` values
     #   are passed through for CNPG to validate.
     backup: {}
+
+    # Optional CNPG plugin configuration (rendered as `.spec.plugins` on the Cluster CR)
+    # Example (barman-cloud plugin as WAL archiver):
+    # plugins:
+    #   - name: barman-cloud.cloudnative-pg.io
+    #     isWALArchiver: true
+    #     parameters:
+    #       barmanObjectName: minio-backups
+    plugins: []
     # auth config for application user
     appUser: sure
     appDatabase: sure
