@@ -48,11 +48,12 @@ class Api::V1::ImportsController < Api::V1::BaseController
     family = current_resource_owner.family
 
     # 1. Build the import object
-    @import = family.imports.build(import_params)
-    @import.type = "TransactionImport" # Default to transaction import for now
+    # Only pass attributes that exist on the Import model to build
+    import_attributes = import_params.to_h.except("publish", "raw_file_content", "file")
+    @import = family.imports.build(import_attributes)
+    @import.type = params[:type] || "TransactionImport"
 
-    # 2. Attach the uploaded file if present (assuming raw_file_str for now or ActiveStorage)
-    # The Import model uses `raw_file_str` to store the content directly or we can handle file upload
+    # 2. Attach the uploaded file if present
     if params[:file].present?
       @import.raw_file_str = params[:file].read
     elsif params[:raw_file_content].present?
@@ -111,6 +112,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     def import_params
       params.permit(
         :account_id,
+        :type,
         :date_col_label,
         :amount_col_label,
         :name_col_label,
@@ -118,10 +120,21 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :tags_col_label,
         :notes_col_label,
         :account_col_label,
+        :qty_col_label,
+        :ticker_col_label,
+        :price_col_label,
+        :entity_type_col_label,
+        :currency_col_label,
+        :exchange_operating_mic_col_label,
         :date_format,
         :number_format,
         :signage_convention,
-        :col_sep
+        :col_sep,
+        :amount_type_strategy,
+        :amount_type_inflow_value,
+        :raw_file_content,
+        :publish,
+        :file
       )
     end
 
