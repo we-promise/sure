@@ -274,13 +274,33 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      # Authentication endpoints
+      post "auth/signup", to: "auth#signup"
+      post "auth/login", to: "auth#login"
+      post "auth/refresh", to: "auth#refresh"
+
+      # Production API endpoints
       resources :accounts, only: [ :index, :show ]
       resources :categories, only: [ :index, :show ]
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :imports, only: [ :index, :show, :create ]
-      resources :chats, only: [ :create ]
       resource :usage, only: [ :show ], controller: :usage
       post :sync, to: "sync#create"
+
+      resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
+        resources :messages, only: [ :create ] do
+          post :retry, on: :collection
+        end
+      end
+
+      # Test routes for API controller testing (only available in test environment)
+      if Rails.env.test?
+        get "test", to: "test#index"
+        get "test_not_found", to: "test#not_found"
+        get "test_family_access", to: "test#family_access"
+        get "test_scope_required", to: "test#scope_required"
+        get "test_multiple_scopes_required", to: "test#multiple_scopes_required"
+      end
     end
   end
 
