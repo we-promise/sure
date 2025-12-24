@@ -96,6 +96,25 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", json_response["data"]["status"]
   end
 
+  test "should not create import for account in another family" do
+    other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
+    other_depository = Depository.create!(subtype: "checking")
+    other_account = Account.create!(family: other_family, name: "Other Account", currency: "USD", classification: "asset", accountable: other_depository, balance: 0)
+    
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    
+    post api_v1_imports_url, 
+          params: { 
+            raw_file_content: csv_content,
+            account_id: other_account.id
+          }, 
+          headers: { Authorization: "Bearer #{@token}" }
+    
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_includes json_response["errors"], "Account must belong to your family"
+  end
+
   private
 
     def valid_token_for(user)
