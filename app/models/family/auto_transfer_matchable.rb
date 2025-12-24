@@ -53,8 +53,6 @@ module Family::AutoTransferMatchable
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
 
-    candidates = []
-
     Transfer.transaction do
       candidates_scope.each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
