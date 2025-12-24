@@ -47,27 +47,30 @@ class Api::V1::ImportsController < Api::V1::BaseController
   def create
     family = current_resource_owner.family
 
-    # 1. Build the import object
-    # Only pass attributes that exist on the Import model to build
-    import_attributes = import_params.to_h.except("publish", "raw_file_content", "file")
-    @import = family.imports.build(import_attributes)
-    @import.type = params[:type] || "TransactionImport"
+    # 1. Determine type and validate
+    type = params[:type].to_s
+    type = "TransactionImport" unless Import::TYPES.include?(type)
 
-    # 2. Attach the uploaded file if present
+    # 2. Build the import object with permitted config attributes
+    @import = family.imports.build(import_config_params)
+    @import.type = type
+    @import.account_id = params[:account_id] if params[:account_id].present?
+
+    # 3. Attach the uploaded file if present
     if params[:file].present?
       @import.raw_file_str = params[:file].read
     elsif params[:raw_file_content].present?
       @import.raw_file_str = params[:raw_file_content]
     end
 
-    # 3. Save and Process
+    # 4. Save and Process
     if @import.save
       # Generate rows if file content was provided
       if @import.uploaded?
         begin
           @import.generate_rows_from_csv
           @import.reload
-        rescue => e
+        rescue StandardError => e
           Rails.logger.error "Row generation failed for import #{@import.id}: #{e.message}"
         end
       end
@@ -109,10 +112,8 @@ class Api::V1::ImportsController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
-    def import_params
+    def import_config_params
       params.permit(
-        :account_id,
-        :type,
         :date_col_label,
         :amount_col_label,
         :name_col_label,
@@ -131,10 +132,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :signage_convention,
         :col_sep,
         :amount_type_strategy,
-        :amount_type_inflow_value,
-        :raw_file_content,
-        :publish,
-        :file
+        :amount_type_inflow_value
       )
     end
 
