@@ -42,7 +42,7 @@ class AccountImport < Import
 
   def dry_run
     {
-      accounts: rows.count
+      accounts: rows_count
     }
   end
 

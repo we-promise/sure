@@ -111,7 +111,7 @@ class Import < ApplicationRecord
 
   def dry_run
     mappings = {
-      transactions: rows.count,
+      transactions: rows_count,
       categories: Import::CategoryMapping.for_import(self).creational.count,
       tags: Import::TagMapping.for_import(self).creational.count
     }
@@ -153,6 +153,7 @@ class Import < ApplicationRecord
     end
 
     rows.insert_all!(mapped_rows)
+    update_column(:rows_count, rows.count)
   end
 
   def sync_mappings
@@ -233,7 +234,7 @@ class Import < ApplicationRecord
 
   private
     def row_count_exceeded?
-      rows.count > max_row_count
+      rows_count > max_row_count
     end
 
     def import!

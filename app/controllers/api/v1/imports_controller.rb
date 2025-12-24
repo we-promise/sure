@@ -95,7 +95,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   private
 
     def set_import
-      @import = current_resource_owner.family.imports.find(params[:id])
+      @import = current_resource_owner.family.imports.includes(:rows).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Import not found" }, status: :not_found
     end

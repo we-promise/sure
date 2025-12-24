@@ -6,7 +6,7 @@ json.data do
     json.created_at import.created_at
     json.updated_at import.updated_at
     json.account_id import.account_id
-    json.rows_count import.rows.count
+    json.rows_count import.rows_count
     json.error import.error if import.error.present?
   end
 end

@@ -20,7 +20,7 @@ class RuleImport < Import
   end
 
   def dry_run
-    { rules: rows.count }
+    { rules: rows_count }
   end
 
   def csv_template
