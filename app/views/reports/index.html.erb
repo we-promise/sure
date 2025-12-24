@@ -1,3 +1,70 @@
+<% content_for :head do %>
+  <style media="print">
+    @page {
+      margin: 0.75in;
+    }
+
+    body {
+      background: #fff;
+      color: #111827;
+    }
+
+    #notification-tray,
+    #cta,
+    #chat-container,
+    turbo-frame#modal,
+    turbo-frame#drawer,
+    [data-print="hide"] {
+      display: none !important;
+    }
+
+    [data-controller="app-layout"] {
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    [data-app-layout-target="content"] {
+      max-width: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: visible !important;
+    }
+
+    [data-app-layout-target="content"] > .hidden.lg\:flex {
+      display: none !important;
+    }
+
+    .reports-page {
+      background: #fff;
+      padding: 0 !important;
+    }
+
+    .reports-page section {
+      box-shadow: none !important;
+    }
+
+    .reports-print-hide,
+    [data-reports-section-target="button"],
+    [data-reports-sortable-target="handle"] {
+      display: none !important;
+    }
+
+    [data-reports-section-target="content"] {
+      display: block !important;
+    }
+
+    section[data-section-key="transactions_breakdown"] {
+      break-before: page;
+      page-break-before: always;
+    }
+
+    .reports-page table th,
+    .reports-page table td {
+      padding-inline: 0.5rem !important;
+    }
+  </style>
+<% end %>
+
 <% content_for :page_header do %>
   <div class="space-y-4 mb-6">
     <div class="space-y-1">
@@ -17,7 +84,7 @@
     <% end %>
 
     <%# Period Navigation Tabs %>
-    <div class="flex items-center gap-2 overflow-x-auto pb-2">
+    <div class="reports-print-hide flex items-center gap-2 overflow-x-auto pb-2">
       <%= render DS::Link.new(
         text: t("reports.index.periods.monthly"),
         variant: @period_type == :monthly ? "secondary" : "ghost",
@@ -52,7 +119,7 @@
 
     <%# Custom Date Range Picker (only shown when custom is selected) %>
     <% if @period_type == :custom %>
-      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
+      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "reports-print-hide flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
         <%= f.hidden_field :period_type, value: :custom %>
 
         <div class="flex items-center gap-2">
@@ -84,7 +151,7 @@
   </div>
 <% end %>
 
-<div class="w-full space-y-6 pb-24">
+<div class="reports-page w-full space-y-6 pb-24">
   <% if Current.family.transactions.any? %>
     <%# Summary Dashboard - Always visible, not collapsible %>
     <section>
