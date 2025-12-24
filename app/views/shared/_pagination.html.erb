@@ -1,7 +1,7 @@
 <%# locals: (pagy:) %>
 
 <nav class="flex w-full items-center justify-between">
-  <div class="flex items-center gap-1">
+  <div class="flex items-center gap-1 mr-3">
     <div>
       <% if pagy.prev %>
         <%= link_to pagy_url_for(pagy, pagy.prev),
