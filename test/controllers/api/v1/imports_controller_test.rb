@@ -69,7 +69,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     json_response = JSON.parse(response.body)
     
     import = Import.find(json_response["data"]["id"])
-    assert_equal 1, import.rows.count
+    assert_equal 1, import.rows_count
     assert_equal "Test Transaction", import.rows.first.name
     assert_equal "-10.00", import.rows.first.amount # Normalized
   end

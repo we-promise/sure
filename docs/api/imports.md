@@ -12,7 +12,7 @@ All import endpoints require an OAuth2 access token or API key that grants the a
 | --- | --- | --- |
 | `GET /api/v1/imports` | `read` | List imports with filtering and pagination. |
 | `GET /api/v1/imports/{id}` | `read` | Retrieve a single import with configuration and statistics. |
-| `POST /api/v1/imports` | `write` | Create a new import and optionally trigger processing. |
+| `POST /api/v1/imports` | `read_write` | Create a new import and optionally trigger processing. |
 
 ## Filtering options
 

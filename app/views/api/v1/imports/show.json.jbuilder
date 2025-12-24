@@ -21,7 +21,7 @@ json.data do
   end
 
   json.stats do
-    json.rows_count @import.rows.count
+    json.rows_count @import.rows_count
     json.valid_rows_count @import.rows.select(&:valid?).count if @import.rows.loaded?
   end
 
