@@ -183,7 +183,7 @@ class Import < ApplicationRecord
   end
 
   def configured?
-    uploaded? && rows.any?
+    uploaded? && rows_count > 0
   end
 
   def cleaned?
