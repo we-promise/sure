@@ -1,0 +1,105 @@
+require "test_helper"
+
+class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @family = families(:dylan_family)
+    @user = users(:family_admin)
+    @account = accounts(:depository)
+    @import = imports(:transaction)
+    @token = valid_token_for(@user)
+  end
+
+  test "should list imports" do
+    get api_v1_imports_url, headers: { Authorization: "Bearer #{@token}" }
+    assert_response :success
+    
+    json_response = JSON.parse(response.body)
+    assert_not_empty json_response["data"]
+    assert_equal @family.imports.count, json_response["meta"]["total_count"]
+  end
+
+  test "should show import" do
+    get api_v1_import_url(@import), headers: { Authorization: "Bearer #{@token}" }
+    assert_response :success
+    
+    json_response = JSON.parse(response.body)
+    assert_equal @import.id, json_response["data"]["id"]
+    assert_equal @import.status, json_response["data"]["status"]
+  end
+
+  test "should create import with raw content" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    
+    assert_difference("Import.count") do
+      post api_v1_imports_url, 
+           params: { 
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: @account.id
+           }, 
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+    
+    assert_response :created
+    json_response = JSON.parse(response.body)
+    assert_equal "pending", json_response["data"]["status"]
+    
+    created_import = Import.find(json_response["data"]["id"])
+    assert_equal csv_content, created_import.raw_file_str
+  end
+
+  test "should create import and generate rows when configured" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    
+    assert_difference(["Import.count", "Import::Row.count"], 1) do
+      post api_v1_imports_url, 
+           params: { 
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: @account.id
+           }, 
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+    
+    assert_response :created
+    json_response = JSON.parse(response.body)
+    
+    import = Import.find(json_response["data"]["id"])
+    assert_equal 1, import.rows.count
+    assert_equal "Test Transaction", import.rows.first.name
+    assert_equal "-10.00", import.rows.first.amount # Normalized
+  end
+
+  test "should create import and auto-publish when configured and requested" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    
+    assert_enqueued_with(job: ImportJob) do
+      post api_v1_imports_url, 
+           params: { 
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: @account.id,
+             date_format: "%Y-%m-%d",
+             publish: "true"
+           }, 
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+    
+    assert_response :created
+    json_response = JSON.parse(response.body)
+    assert_equal "importing", json_response["data"]["status"]
+  end
+
+  private
+
+    def valid_token_for(user)
+      application = Doorkeeper::Application.create!(name: "Test App", redirect_uri: "urn:ietf:wg:oauth:2.0:oob", scopes: "read read_write")
+      Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id, scopes: "read read_write").token
+    end
+end
