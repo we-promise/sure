@@ -52,6 +52,8 @@ en:
     index:
       transaction: transaction
       transactions: transactions
+      import: Import
+    toggle_recurring_section: Toggle upcoming recurring transactions
     searches:
       filters:
         amount_filter:

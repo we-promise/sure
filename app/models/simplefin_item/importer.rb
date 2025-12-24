@@ -403,6 +403,10 @@ class SimplefinItem::Importer
     # Returns a Hash payload with keys like :accounts, or nil when an error is
     # handled internally via `handle_errors`.
     def fetch_accounts_data(start_date:, end_date: nil, pending: nil)
+      # Determine whether to include pending based on explicit arg or global config.
+      # `Rails.configuration.x.simplefin.include_pending` is ENV-backed.
+      effective_pending = pending.nil? ? Rails.configuration.x.simplefin.include_pending : pending
+
       # Debug logging to track exactly what's being sent to SimpleFin API
       start_str = start_date.respond_to?(:strftime) ? start_date.strftime("%Y-%m-%d") : "none"
       end_str = end_date.respond_to?(:strftime) ? end_date.strftime("%Y-%m-%d") : "current"
@@ -411,7 +415,7 @@ class SimplefinItem::Importer
       else
         "unknown"
       end
-      Rails.logger.info "SimplefinItem::Importer - API Request: #{start_str} to #{end_str} (#{days_requested} days)"
+      Rails.logger.info "SimplefinItem::Importer - API Request: #{start_str} to #{end_str} (#{days_requested} days) pending=#{effective_pending ? 1 : 0}"
 
       begin
         # Track API request count for quota awareness
@@ -420,7 +424,7 @@ class SimplefinItem::Importer
           simplefin_item.access_url,
           start_date: start_date,
           end_date: end_date,
-          pending: pending
+          pending: effective_pending
         )
         # Soft warning when approaching SimpleFin daily refresh guidance
         if stats["api_requests"].to_i >= 20
@@ -434,6 +438,11 @@ class SimplefinItem::Importer
         else
           raise e
         end
+      end
+
+      # Optional raw payload debug logging (guarded by ENV to avoid spam)
+      if Rails.configuration.x.simplefin.debug_raw
+        Rails.logger.debug("SimpleFIN raw: #{accounts_data.inspect}")
       end
 
       # Handle errors if present in response

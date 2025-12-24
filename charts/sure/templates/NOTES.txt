@@ -1,0 +1,47 @@
+Thank you for installing the Sure Helm chart!
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+Next steps
+----------
+1) Wait for dependencies (if enabled):
+   - CloudNativePG operator/Cluster: wait until the Cluster reports Ready and the RW service is reachable
+   - Redis (operator-managed replication by default; optional Sentinel mode available):
+     - Default (replication-only): watch the RedisReplication CR:
+         kubectl get redisreplication.redis.redis.opstreelabs.in \
+           {{ default (printf "%s-redis" (include "sure.fullname" .)) .Values.redisOperator.name }} -n {{ .Release.Namespace }} -w
+     - If you enabled Sentinel mode (`redisOperator.mode=sentinel` and `redisOperator.sentinel.enabled=true`), also watch the RedisSentinel CR:
+         kubectl get redissentinels.redis.redis.opstreelabs.in \
+           {{ default (printf "%s-redis" (include "sure.fullname" .)) .Values.redisOperator.name }} -n {{ .Release.Namespace }} -w
+     - Primary service (for the app):
+         {{ default (printf "%s-redis" (include "sure.fullname" .)) .Values.redisOperator.name }}-redis-master.{{ .Release.Namespace }}.svc.cluster.local:6379
+
+   You can watch pods with:
+     kubectl get pods -n {{ .Release.Namespace }} -w -l app.kubernetes.io/instance={{ .Release.Name }}
+
+2) Access the application:
+   - If you enabled Ingress, navigate to the host you configured.
+   - Otherwise, port-forward the Service:
+       kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "sure.fullname" . }} 8080:80
+     Then open: http://localhost:8080
+
+3) Run database migrations (default behavior):
+   - By default, a Helm hook Job runs pre-install/upgrade. If you switched to the initContainer strategy, migrations will run on the web pod start.
+
+4) Optional: run Helm tests to verify connectivity:
+     helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+   - Includes a Redis auth smoke test when an in-cluster Redis provider is enabled
+
+Troubleshooting
+---------------
+- If pods are not Ready, check logs:
+    kubectl logs deploy/{{ include "sure.fullname" . }}-web -n {{ .Release.Namespace }}
+    kubectl logs deploy/{{ include "sure.fullname" . }}-worker -n {{ .Release.Namespace }}
+- For CloudNativePG, verify the RW service exists and the primary is Ready.
+- For redis-operator, verify the RedisSentinel CR reports Ready and that the master service resolves.
+
+Security reminder
+-----------------
+- For production, prefer immutable image tags (for example, image.tag=v1.2.3) instead of 'latest'.
+- Provide secrets via an existing Kubernetes Secret or a secret manager (External Secrets, Sealed Secrets).

@@ -3,6 +3,7 @@ en:
   sessions:
     create:
       invalid_credentials: Invalid email or password.
+      local_login_disabled: Local password login is disabled. Please use single sign-on.
     destroy:
       logout_successful: You have signed out successfully.
     openid_connect:
@@ -19,5 +20,7 @@ en:
       password_placeholder: Enter your password
       openid_connect: Sign in with OpenID Connect
       google_auth_connect: Sign in with Google
+      local_login_admin_only: Local login is restricted to administrators.
+      no_auth_methods_enabled: No authentication methods are currently enabled. Please contact an administrator.
       demo_banner_title: "Demo Mode Active"
       demo_banner_message: "This is a demonstration environment. Login credentials have been pre-filled for your convenience. Please do not enter real or sensitive information."

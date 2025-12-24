@@ -7,6 +7,12 @@
     <div class="flex flex-col h-full">
       <div class="md:p-4">
         <%= render "chats/chat_nav", chat: @chat %>
+
+        <% if show_demo_warning? %>
+          <%= render "shared/demo_warning",
+            title: t("chats.demo_banner_title"),
+            message: t("chats.demo_banner_message") %>
+        <% end %>
       </div>
 
       <div id="messages" class="grow overflow-y-auto p-4 space-y-6 pb-24 lg:pb-4" data-chat-target="messages">

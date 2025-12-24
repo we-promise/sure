@@ -1,0 +1,88 @@
+---
+zh-CN:
+  import:
+    cleans:
+      show:
+        description: 请在下方表格中编辑您的数据。红色单元格表示无效数据。
+        errors_notice: 您的数据中存在错误。将鼠标悬停在错误上可查看详情。
+        errors_notice_mobile: 您的数据中存在错误。点击错误提示可查看详情。
+        title: 数据清洗
+    configurations:
+      category_import:
+        button_label: 继续
+        description: 上传简单的 CSV 文件（例如我们导出数据时生成的文件格式）。我们将自动为您映射列。
+        instructions: 选择继续以解析您的 CSV 文件并进入清洗步骤。
+      mint_import:
+        date_format_label: 日期格式
+      rule_import:
+        description: 配置您的规则导入。规则将根据 CSV 数据创建或更新。
+        process_button: 处理规则
+        process_help: 点击下方按钮处理您的 CSV 并生成规则行。
+      show:
+        description: 请选择 CSV 文件中各列对应的字段。
+        title: 配置导入设置
+      trade_import:
+        date_format_label: 日期格式
+      transaction_import:
+        date_format_label: 日期格式
+    confirms:
+      mappings:
+        create_account: 新建账户
+        csv_mapping_label: CSV 中的 %{mapping}
+        no_accounts: 您目前没有任何账户。请创建一个账户用于处理 CSV 中的（未分配）行，或返回上一步的“清洗”环节提供一个可用的账户名称。
+        rows_label: 行数
+        sure_mapping_label: "%{product_name} 中的 %{mapping}"
+        unassigned_account: 需要为未分配行创建新账户？
+      show:
+        account_mapping_description: 将导入文件中的所有账户分配到 %{product_name} 的现有账户。您也可以新建账户或保留为未分类。
+        account_mapping_title: 分配账户
+        account_type_mapping_description: 将导入文件中的所有账户类型分配到 %{product_name} 的账户类型
+        account_type_mapping_title: 分配账户类型
+        category_mapping_description: 将导入文件中的所有分类分配到 %{product_name} 的现有分类。您也可以新建分类或保留为未分类。
+        category_mapping_title: 分配分类
+        tag_mapping_description: 将导入文件中的所有标签分配到 %{product_name} 的现有标签。您也可以新建标签或保留为未分类。
+        tag_mapping_title: 分配标签
+    uploads:
+      show:
+        description: 请在下方粘贴或上传您的 CSV 文件。开始前请仔细阅读下表中的说明。
+        instructions_1: 下方是可供导入的 CSV 示例文件及列说明。
+        instructions_2: 您的 CSV 文件必须包含表头行
+        instructions_3: 您可以为各列自由命名，稍后步骤中将进行字段映射。
+        instructions_4: 标有星号 (*) 的列为必填数据。
+        instructions_5: 数字中请勿包含逗号、货币符号或括号。
+        title: 导入数据
+  imports:
+    empty:
+      message: 暂无导入记录。
+      new: 新建导入
+    import:
+      complete: 已完成
+      delete: 删除
+      failed: 已失败
+      in_progress: 进行中
+      label: "%{type}：%{datetime}"
+      revert_failed: 回滚失败
+      reverting: 回滚中
+      uploading: 处理行数据中
+      view: 查看
+    index:
+      exports: 导出记录
+      imports: 导入记录
+      new: 新建导入
+      new_export: 新建导出
+      no_exports: 暂无导出记录
+      title: 导入/导出管理
+    new:
+      description: 您可以通过 CSV 手动导入多种类型数据，或使用我们的导入模板（如 Mint 格式）。
+      import_accounts: 导入账户
+      import_categories: 导入分类
+      import_mint: 从 Mint 导入
+      import_portfolio: 导入投资数据
+      import_rules: 导入规则
+      import_transactions: 导入交易记录
+      resume: 继续 %{type}
+      sources: 数据来源
+      title: 新建 CSV 导入
+    ready:
+      description: 以下是发布导入后将添加到您账户的新项目摘要。
+      title: 确认导入数据
