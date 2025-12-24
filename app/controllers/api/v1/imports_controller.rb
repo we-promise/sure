@@ -32,14 +32,14 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     render :index
 
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "ImportsController#index error: #{e.message}"
     render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
   end
 
   def show
     render :show
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "ImportsController#show error: #{e.message}"
     render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
   end
@@ -87,7 +87,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
       }, status: :unprocessable_entity
     end
 
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "ImportsController#create error: #{e.message}"
     render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
   end
