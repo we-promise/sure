@@ -36,6 +36,7 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validate :account_belongs_to_family
 
   has_many :rows, dependent: :destroy
   has_many :mappings, dependent: :destroy
@@ -287,5 +288,12 @@ class Import < ApplicationRecord
 
     def set_default_number_format
       self.number_format ||= "1,234.56" # Default to US/UK format
+    end
+
+    def account_belongs_to_family
+      return if account.nil?
+      return if account.family_id == family_id
+
+      errors.add(:account, "must belong to your family")
     end
 end
