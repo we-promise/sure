@@ -63,6 +63,8 @@ zh-CN:
         equal_to: 等于
         greater_than: 大于
         less_than: 小于
+      form:
+        toggle_selection_checkboxes: 切换所有复选框
     show:
       account_label: 账户
       amount: 金额
