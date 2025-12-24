@@ -21,7 +21,7 @@
                    data-list-filter-target="input"
                    data-action="input->list-filter#filter"
                    placeholder="<%= t(".search_placeholder", default: "Search by bank name or BIC...") %>"
-                   class="w-full pl-9 pr-3 py-2 text-sm text-primary placeholder:text-secondary border border-primary rounded-lg bg-container focus:outline-none focus:ring-2 focus:ring-primary/20 caret-primary">
+                   class="w-full pl-9 pr-3 py-2 text-sm text-primary placeholder:text-secondary border border-primary rounded-lg bg-container focus:outline-none focus:ring-2 focus:ring-primary/20">
           </div>
 
           <div class="space-y-2 max-h-80 overflow-y-auto" data-list-filter-target="list">
@@ -37,8 +37,8 @@
                 <% if aspsp[:logo].present? %>
                   <img src="<%= aspsp[:logo] %>" alt="<%= aspsp[:name] %>" loading="lazy" decoding="async" class="w-10 h-10 rounded object-contain">
                 <% else %>
-                  <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
-                    <%= icon "building-bank", class: "w-5 h-5 text-gray-400" %>
+                  <div class="w-10 h-10 rounded bg-surface-inset flex items-center justify-center">
+                    <%= icon "building-bank", class: "w-5 h-5 text-subdued" %>
                   </div>
                 <% end %>
                 <div class="flex-1">

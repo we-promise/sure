@@ -1,6 +1,8 @@
 ---
 en:
   enable_banking_items:
+    select_bank:
+      search_placeholder: Search by bank name or BIC...
     link_existing_account:
       success: Account successfully linked to Enable Banking
       errors:
