@@ -1,0 +1,10 @@
+---
+zh-CN:
+  depositories:
+    edit:
+      edit: 编辑%{account}
+    form:
+      none: 无
+      subtype_prompt: 选择账户类型
+    new:
+      title: 请输入账户余额

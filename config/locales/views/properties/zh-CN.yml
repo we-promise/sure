@@ -1,0 +1,40 @@
+---
+zh-CN:
+  properties:
+    edit:
+      edit: 编辑%{account}
+    form:
+      address_line1: 街道地址
+      address_line1_placeholder: 123 Main St
+      area: 居住面积
+      area_placeholder: '2000'
+      area_unit: 面积单位
+      country: 国家/地区
+      country_placeholder: 美国
+      locality: 城市
+      locality_placeholder: 旧金山
+      none: 无
+      postal_code: 邮政编码
+      postal_code_placeholder: '94105'
+      region: 州/省份
+      region_placeholder: 加利福尼亚州
+      subtype_prompt: 选择房产类型
+      year_built: 建造年份
+      year_built_placeholder: '2000'
+    new:
+      title: 请输入房产详情
+    overview:
+      living_area: 居住面积
+      market_value: 市场估值
+      purchase_price: 购买价格
+      trend: 价格趋势
+      unknown: 未知
+      year_built: 建造年份
+    tabs:
+      overview:
+        living_area: 居住面积
+        market_value: 市场价
+        purchase_price: 买入价
+        trend: 走势
+        unknown: 未知
+        year_built: 建筑年份

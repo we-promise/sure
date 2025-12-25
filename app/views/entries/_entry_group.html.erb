@@ -4,9 +4,12 @@
   <div class="py-2 px-4 flex items-center justify-between font-medium text-xs text-secondary">
     <div class="flex pl-0.5 items-center gap-4">
         <%= check_box_tag "#{date}_entries_selection",
-                          class: ["checkbox checkbox--light", "hidden": entries.size == 0],
+                          class: ["checkbox checkbox--light hidden lg:block", "lg:hidden": entries.size == 0],
                           id: "selection_entry_#{date}",
-                          data: { action: "bulk-select#toggleGroupSelection" } %>
+                          data: { 
+                            action: "bulk-select#toggleGroupSelection",
+                            checkbox_toggle_target: "selectionEntry"
+                          } %>
 
       <p class="uppercase space-x-1.5">
         <%= tag.span I18n.l(date, format: :long) %>

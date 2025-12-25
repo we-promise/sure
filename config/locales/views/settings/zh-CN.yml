@@ -1,0 +1,124 @@
+---
+zh-CN:
+  settings:
+    ai_prompts:
+      show:
+        disable_ai: 禁用 AI 助手
+        main_system_prompt:
+          subtitle: 定义 AI 助手在所有聊天对话中行为的核心指令
+          title: 主系统提示词
+        merchant_detector:
+          subtitle: AI 识别交易数据并补充商户信息
+          title: 商户识别器
+        openai_label: OpenAI
+        page_title: AI 提示词设置
+        prompt_instructions: 提示词说明
+        transaction_categorizer:
+          subtitle: AI 根据您定义的分类自动为交易进行分类
+          title: 交易分类器
+    billings:
+      show:
+        page_title: 账单管理
+        subscription_subtitle: 更新订阅与账单信息
+        subscription_title: 管理订阅
+    hostings:
+      ensure_admin:
+        not_authorized: 未授权
+    preferences:
+      show:
+        country: 国家/地区
+        currency: 货币
+        date_format: 日期格式
+        default_account_order: 默认账户排序
+        default_period: 默认周期
+        general_subtitle: 配置个人偏好设置
+        general_title: 通用设置
+        language: 语言
+        page_title: 偏好设置
+        theme_dark: 深色模式
+        theme_light: 浅色模式
+        theme_subtitle: 选择应用的主题模式
+        theme_system: 跟随系统
+        theme_title: 主题
+        timezone: 时区
+    profiles:
+      destroy:
+        cannot_remove_self: 您无法将自己从账户中移除。
+        member_removal_failed: 移除成员时出现问题。
+        member_removed: 成员已成功移除。
+        not_authorized: 您没有移除成员的权限。
+      show:
+        confirm_delete:
+          body: 确定要永久删除您的账户吗？此操作不可逆转。
+          title: 确认删除账户？
+        confirm_remove_invitation:
+          body: 确定要移除 %{email} 的邀请吗？
+          title: 移除邀请
+        confirm_remove_member:
+          body: 确定要将 %{name} 从您的账户中移除吗？
+          title: 移除成员
+        confirm_reset:
+          body: 确定要重置您的账户吗？这将删除您的所有账户、分类、商户、标签及其他数据，且不可撤销。
+          title: 确认重置账户？
+        confirm_reset_with_sample_data:
+          body: 确定要重置账户并加载示例数据吗？这将删除您的现有数据并替换为演示数据，以便您安全地探索 %{product_name}。
+          title: 确认重置账户并加载示例数据？
+        danger_zone_title: 高风险操作
+        delete_account: 删除账户
+        delete_account_warning: 删除账户将永久移除您的所有数据且不可恢复。
+        email: 邮箱
+        first_name: 名字
+        household_form_input_placeholder: 请输入家庭名称
+        household_form_label: 家庭名称
+        household_subtitle: 邀请家庭成员、合作伙伴等人员。被邀请者可登录您的家庭账户并访问共享账户。
+        household_title: 家庭管理
+        invitation_link: 邀请链接
+        invite_member: 添加成员
+        last_name: 姓氏
+        page_title: 个人资料信息
+        pending: 待处理
+        profile_subtitle: 自定义您在 %{product_name} 中的显示信息
+        profile_title: 个人信息
+        remove_invitation: 移除邀请
+        remove_member: 移除成员
+        reset_account: 重置账户
+        reset_account_warning: 重置账户将删除您的所有账户、分类、商户、标签及其他数据，但保留您的用户账户。
+        reset_account_with_sample_data: 重置并预加载数据
+        reset_account_with_sample_data_warning: 删除所有现有数据，然后加载新的示例数据，以便您在预填充环境中进行探索。
+        save: 保存
+    securities:
+      show:
+        page_title: 安全设置
+    settings_nav:
+      accounts_label: 账户管理
+      advanced_section_title: 高级设置
+      ai_prompts_label: AI 提示词
+      api_key_label: API 密钥
+      api_keys_label: API 密钥
+      bank_sync_label: 银行同步
+      billing_label: 账单管理
+      categories_label: 分类管理
+      feedback_label: 意见反馈
+      general_section_title: 通用设置
+      guides_label: 使用指南
+      imports_label: 导入/导出
+      logout: 退出登录
+      merchants_label: 商户管理
+      other_section_title: 更多设置
+      preferences_label: 偏好设置
+      profile_label: 个人资料信息
+      recurring_transactions_label: 定期交易
+      rules_label: 规则管理
+      security_label: 安全设置
+      self_hosting_label: 自托管
+      tags_label: 标签管理
+      transactions_section_title: 交易管理
+      whats_new_label: 更新日志
+    settings_nav_link_large:
+      next: 下一步
+      previous: 上一步
+    user_avatar_field:
+      accepted_formats: 支持 JPG 或 PNG 格式，最大 5MB
+      change: 更换头像
+      choose: 上传头像
+      choose_label: "（可选）"

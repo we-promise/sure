@@ -1,0 +1,5 @@
+---
+en:
+  oidc_accounts:
+    link:
+      account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.

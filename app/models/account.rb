@@ -188,8 +188,12 @@ class Account < ApplicationRecord
       end
   end
 
+  def institution_name
+    read_attribute(:institution_name).presence || provider&.institution_name
+  end
+
   def institution_domain
-    provider&.institution_domain
+    read_attribute(:institution_domain).presence || provider&.institution_domain
   end
 
   def destroy_later

@@ -1,0 +1,130 @@
+---
+zh-CN:
+  reports:
+    budget_performance:
+      budgeted: 预算额
+      no_budgets: 本月未设置预算分类
+      over_by: 超支
+      remaining: 剩余
+      spent: 已支出
+      status:
+        good: 正常执行
+        over: 超出预算
+        warning: 接近限额
+      suggested_daily: 建议每日 %{amount}（剩余 %{days} 天）
+      title: 预算执行情况
+    empty_state:
+      add_account: 添加账户
+      add_transaction: 添加交易
+      description: 开始追踪您的财务状况：添加交易记录或关联账户以查看详细报告
+      title: 无可用数据
+    google_sheets_instructions:
+      close: 知道了
+      example: 示例
+      go_to_api_keys: 前往 API 密钥设置
+      need_key: 要将数据导入 Google 表格，您需要一个 API 密钥。
+      open_sheets: 打开 Google 表格
+      ready: 您的 CSV 链接（含 API 密钥）已准备就绪。
+      security_warning: 此链接包含您的 API 密钥，请妥善保管！
+      step1: 前往 设置 → API 密钥
+      step2: 创建一个具有"读取"权限的新 API 密钥
+      step3: 复制 API 密钥
+      step4: 将其添加到链接中：?api_key=您的密钥
+      steps: |-
+        导入到 Google 表格的步骤：
+        1. 创建新的 Google 表格
+        2. 在 A1 单元格中输入下方所示的公式
+        3. 按 Enter 键
+      then_use: 然后在 Google 表格中使用完整链接和 =IMPORTDATA() 函数。
+      title_no_key: "⚠️ 需要 API 密钥"
+      title_with_key: "✅ 复制 Google 表格导入链接"
+    index:
+      date_range:
+        from: 开始日期
+        to: 结束日期
+      drag_to_reorder: 拖动以重新排序模块
+      export: 导出 CSV
+      periods:
+        custom: 自定义范围
+        last_6_months: 过去6个月
+        monthly: 月度
+        quarterly: 季度
+        ytd: 本年度至今
+      showing_period: 显示 %{start} 至 %{end} 的数据
+      subtitle: 全面洞察您的财务健康状况
+      title: 财务报告
+      toggle_section: 切换模块显示/隐藏
+    invalid_date_range: 结束日期不能早于开始日期。日期已自动交换。
+    summary:
+      budget_performance: 预算执行情况
+      income_minus_expenses: 收入减去支出
+      net_savings: 净储蓄
+      no_budget_data: 此期间无预算数据
+      of_budget_used: 的预算已使用
+      total_expenses: 总支出
+      total_income: 总收入
+      vs_previous: 与上一期相比
+    transactions_breakdown:
+      export:
+        csv: CSV
+        excel: Excel
+        google_sheets: 在 Google 表格中打开
+        label: 导出格式
+        pdf: PDF
+      filters:
+        account: 账户
+        all_accounts: 全部账户
+        all_categories: 全部分类
+        all_tags: 全部标签
+        amount_max: 最大金额
+        amount_min: 最小金额
+        apply: 应用筛选
+        category: 分类
+        clear: 清除筛选
+        date_range: 日期范围
+        tag: 标签
+        title: 筛选条件
+      no_transactions: 所选时间段和筛选条件下未找到交易记录
+      pagination:
+        next: 下一页
+        previous: 上一页
+        showing: 显示 %{count} 笔交易
+      sort:
+        amount_asc: 金额（从低到高）
+        amount_desc: 金额（从高到低）
+        date_desc: 日期（从新到旧）
+        label: 排序方式
+      table:
+        amount: 金额
+        category: 分类
+        expense: 支出
+        income: 收入
+        percentage: 占总比
+        transactions: 笔交易
+        type: 类型
+        uncategorized: 未分类
+      title: 交易明细分析
+    trends:
+      avg_monthly_expenses: 月均支出
+      avg_monthly_income: 月均收入
+      avg_monthly_savings: 月均储蓄
+      avg_per_transaction: 每笔交易平均
+      current: 当前
+      expenses: 支出
+      income: 收入
+      insight_higher_weekday: 您工作日每笔交易消费比周末高 %{percent}%
+      insight_higher_weekend: 您周末每笔交易消费比工作日高 %{percent}%
+      insight_similar: 您工作日和周末的每笔交易消费水平相似
+      insight_title: 数据洞察
+      month: 月份
+      monthly_breakdown: 月度明细
+      net: 净额
+      no_data: 无趋势数据可用
+      no_spending_data: 此期间无消费数据可用
+      savings_rate: 储蓄率
+      spending_patterns: 消费模式
+      title: 趋势与洞察
+      total: 总计
+      transactions: 交易笔数
+      weekday_spending: 工作日消费
+      weekend_spending: 周末消费

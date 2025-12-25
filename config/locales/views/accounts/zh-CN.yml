@@ -1,0 +1,118 @@
+---
+zh-CN:
+  account:
+    entries:
+      destroy:
+        success: 删除成功
+  accounts:
+    account:
+      link_lunchflow: 关联 Lunch Flow 账户
+      link_provider: 关联服务提供商
+      troubleshoot: 故障排查
+      unlink_provider: 解除提供商关联
+    chart:
+      data_not_available: 所选时间段内无可用数据
+    confirm_unlink:
+      confirm_button: 确认并解除关联
+      description_html: 您即将解除 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong>
+        的关联。这将转换为手动账户。
+      title: 确认解除账户关联？
+      warning_can_delete: 解除关联后，您可以在需要时删除账户
+      warning_manual_updates: 您需要手动添加交易和更新余额
+      warning_no_sync: 账户将不再与您的银行自动同步
+      warning_title: 这意味着
+      warning_transactions_kept: 所有现有交易和余额将被保留
+    create:
+      success: "%{type} 账户已创建"
+    destroy:
+      cannot_delete_linked: 无法删除已关联账户，请先解除关联。
+      success: "%{type} 账户已计划删除"
+    empty:
+      empty_message: 可通过关联服务、导入数据或手动输入的方式添加账户。
+      new_account: 新建账户
+      no_accounts: 暂无账户
+    form:
+      balance: 当前余额
+      name_label: 账户名称
+      name_placeholder: 例如：储蓄账户
+    index:
+      accounts: 账户管理
+      manual_accounts:
+        other_accounts: 其他账户
+      new_account: 新建账户
+      sync: 同步所有账户
+    new:
+      import_accounts: 导入账户
+      method_selector:
+        connected_entry: 关联账户
+        connected_entry_eu: 关联欧盟账户
+        link_with_provider: 关联 %{provider}
+        lunchflow_entry: 关联 Lunch Flow 账户
+        manual_entry: 手动输入账户余额
+        title: 请选择添加方式
+      title: 您希望添加什么类型的账户？
+    select_provider:
+      already_linked: 账户已关联到服务提供商
+      description: 请选择用于关联 %{account_name} 的服务提供商
+      no_providers: 当前未配置任何服务提供商
+      title: 选择关联的服务提供商
+    show:
+      activity:
+        amount: 金额
+        balance: 余额
+        date: 日期
+        entries: 条记录
+        entry: 条记录
+        new: 新建
+        new_balance: 新增余额
+        new_transaction: 新建交易
+        no_entries: 未找到相关记录
+        search:
+          placeholder: 按名称搜索记录
+        title: 账户活动
+      chart:
+        balance: 余额
+        owed: 欠款金额
+      menu:
+        confirm_accept: 删除“%{name}”
+        confirm_body_html: "<p>删除此账户将清除其历史价值数据，影响您整体账户的多个方面。此操作将直接影响您的资产净值计算和账户图表。</p><br
+          /><p>删除后无法恢复账户信息，您需要将其作为新账户重新添加。</p>"
+        confirm_title: 确认删除账户？
+        edit: 编辑
+        import: 导入交易记录
+        manage: 管理账户
+    sidebar:
+      configure_providers: 在此配置您的服务提供商。
+      missing_data: 历史数据缺失
+      missing_data_description: "%{product} 使用第三方服务提供商获取历史汇率、证券价格等数据。这些数据是计算准确历史账户余额所必需的。"
+      new_account: 新建账户
+      new_account_group: 新建 %{account_group}
+      new_asset: 新增资产
+      new_debt: 新增负债
+      tabs:
+        all: 全部
+        assets: 资产
+        debts: 负债
+    sync_all:
+      syncing: 账户同步中...
+    types:
+      credit_card: 信用卡账户
+      crypto: 加密货币账户
+      depository: 现金账户
+      investment: 投资账户
+      loan: 贷款账户
+      other_asset: 其他资产账户
+      other_liability: 其他负债账户
+      property: 房产账户
+      vehicle: 车辆账户
+    unlink:
+      error: 解除账户关联失败：%{error}
+      generic_error: 发生意外错误，请重试。
+      not_linked: 账户未关联到任何服务提供商
+      success: 账户已成功解除关联，现已成为手动账户。
+    update:
+      success: "%{type} 账户已更新"
+  email_confirmations:
+    new:
+      invalid_token: 确认链接无效或已过期。
+      success_login: 您的邮箱已确认成功。请使用新邮箱地址登录。

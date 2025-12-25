@@ -188,6 +188,9 @@ OPENAI_URI_BASE=http://localhost:11434/v1
 
 # Model you pulled
 OPENAI_MODEL=llama3.1:13b
+
+# Optional: enable debug logging in the AI chat
+AI_DEBUG_MODE=true 
 ```
 
 **Important:** When using Ollama or any custom provider:
@@ -204,6 +207,7 @@ services:
       - OPENAI_ACCESS_TOKEN=ollama-local
       - OPENAI_URI_BASE=http://ollama:11434/v1
       - OPENAI_MODEL=llama3.1:13b
+      - AI_DEBUG_MODE=true # Optional: enable debug logging in the AI chat
     depends_on:
       - ollama
   
@@ -235,7 +239,7 @@ volumes:
 
 ### For Chat Assistant
 
-The AI assistant needs to understand financial context and perform function calling:
+The AI assistant needs to understand financial context and perform **function/tool** calling:
 
 **Cloud:**
 - **Best:** `gpt-4.1` or `gpt-5` - Most reliable, best function calling
@@ -245,7 +249,7 @@ The AI assistant needs to understand financial context and perform function call
 **Local:**
 - **Best:** `qwen3-30b` - Strong function calling and reasoning (24GB+ VRAM, 14GB at 3bit quantised )
 - **Good:** `openai/gpt-oss-20b` - Solid performance (12GB VRAM)
-- **Budget:** `qwen3-8b` - Minimal hardware (8GB VRAM), still supports tool calling
+- **Budget:** `qwen3-8b`, `llama3.1-8b` - Minimal hardware (8GB VRAM), still supports tool calling
 
 ### For Auto-Categorization
 

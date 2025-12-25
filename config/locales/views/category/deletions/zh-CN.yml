@@ -1,0 +1,13 @@
+---
+zh-CN:
+  category:
+    deletions:
+      create:
+        success: 交易分类已删除成功
+      new:
+        category: 分类
+        delete_and_leave_uncategorized: 删除“%{category_name}”并保留为未分类
+        delete_and_recategorize: 删除“%{category_name}”并重新分配分类
+        delete_category: 确认删除分类？
+        explanation: 删除此分类后，所有标记为“%{category_name}”的交易将变为未分类状态。您也可以在下述选项中选择一个新分类进行重新分配。
+        replacement_category_prompt: 选择新分类

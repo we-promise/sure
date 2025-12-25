@@ -43,6 +43,71 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid email or password.", flash[:alert]
   end
 
+  test "redirects when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+
+    post sessions_url, params: { email: @user.email, password: user_password_test }
+
+    assert_redirected_to new_session_path
+    assert_equal "Local password login is disabled. Please use single sign-on.", flash[:alert]
+  end
+
+  test "allows super admin local login when override enabled" do
+    super_admin = users(:sure_support_staff)
+
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    post sessions_url, params: { email: super_admin.email, password: user_password_test }
+
+    assert_redirected_to root_path
+    assert Session.exists?(user_id: super_admin.id)
+  end
+
+  test "shows invalid credentials for super admin when override enabled but password is wrong" do
+    super_admin = users(:sure_support_staff)
+
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    post sessions_url, params: { email: super_admin.email, password: "bad" }
+
+    assert_response :unprocessable_entity
+    assert_equal "Invalid email or password.", flash[:alert]
+  end
+
+  test "blocks non-super-admin local login when override enabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    post sessions_url, params: { email: @user.email, password: user_password_test }
+
+    assert_redirected_to new_session_path
+    assert_equal "Local password login is disabled. Please use single sign-on.", flash[:alert]
+  end
+
+  test "renders multiple SSO provider buttons" do
+    AuthConfig.stubs(:local_login_form_visible?).returns(true)
+    AuthConfig.stubs(:password_features_enabled?).returns(true)
+    AuthConfig.stubs(:sso_providers).returns([
+      { id: "oidc", strategy: "openid_connect", name: "openid_connect", label: "Sign in with Keycloak", icon: "key" },
+      { id: "google", strategy: "google_oauth2", name: "google_oauth2", label: "Sign in with Google", icon: "google" }
+    ])
+
+    get new_session_path
+    assert_response :success
+
+    # Generic OIDC button
+    assert_match %r{/auth/openid_connect}, @response.body
+    assert_match /Sign in with Keycloak/, @response.body
+
+    # Google-branded button
+    assert_match %r{/auth/google_oauth2}, @response.body
+    assert_match /gsi-material-button/, @response.body
+    assert_match /Sign in with Google/, @response.body
+  end
+
   test "can sign out" do
     sign_in @user
     session_record = @user.sessions.last

@@ -1,0 +1,143 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 应用名称
+        redirect_uri: 重定向 URI
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              forbidden_uri: 被服务器禁止
+              fragment_present: 不能包含片段标识符
+              invalid_uri: 必须是有效的 URI
+              relative_uri: 必须是绝对 URI
+              secured_uri: 必须是 HTTPS/SSL URI
+              unspecified_scheme: 必须指定协议
+            scopes:
+              not_match_configured: 与服务器配置不匹配
+  doorkeeper:
+    applications:
+      buttons:
+        authorize: 授权
+        cancel: 取消
+        destroy: 删除
+        edit: 编辑
+        submit: 提交
+      confirmations:
+        destroy: 确定要删除吗？
+      edit:
+        title: 编辑应用
+      form:
+        error: 错误！请检查表单中的可能错误
+      help:
+        blank_redirect_uri: 如果您的提供商配置为使用客户端凭据、资源所有者密码凭据或其他不需要重定向 URI 的授权类型，请留空。
+        confidential: 此应用将用于可以保密客户端密钥的场景。原生移动应用和单页应用被视为非保密应用。
+        redirect_uri: 每个 URI 占用一行
+        scopes: 用空格分隔权限范围。留空则使用默认范围。
+      index:
+        actions: 操作
+        callback_url: 回调 URL
+        confidential: 保密应用？
+        confidentiality:
+          'no': 否
+          'yes': 是
+        name: 名称
+        new: 新建应用
+        title: 您的应用
+      new:
+        title: 新建应用
+      show:
+        actions: 操作
+        application_id: 应用 ID
+        callback_urls: 回调 URL
+        confidential: 保密
+        not_defined: 未定义
+        scopes: 权限范围
+        secret: 密钥
+        secret_hashed: 密钥哈希值
+        title: 应用：%{name}
+    authorizations:
+      buttons:
+        authorize: 授权
+        deny: 拒绝
+      error:
+        title: 发生错误
+      form_post:
+        title: 提交此表单
+      new:
+        able_to: 此应用将能够
+        prompt: 授权 %{client_name} 使用您的账户吗？
+        title: 需要授权
+      show:
+        title: 授权代码
+    authorized_applications:
+      buttons:
+        revoke: 撤销
+      confirmations:
+        revoke: 确定要撤销吗？
+      index:
+        application: 应用
+        created_at: 创建时间
+        date_format: "%Y年%m月%d日 %H:%M:%S"
+        title: 您已授权的应用
+    errors:
+      messages:
+        access_denied: 资源所有者或授权服务器拒绝了请求。
+        admin_authenticator_not_configured: 访问管理面板被禁止，因为 Doorkeeper.configure.admin_authenticator
+          未配置。
+        credential_flow_not_configured: 资源所有者密码凭据流程失败，因为 Doorkeeper.configure.resource_owner_from_credentials
+          未配置。
+        forbidden_token:
+          missing_scope: 访问此资源需要权限范围 "%{oauth_scopes}"。
+        invalid_client: 客户端认证失败：未知客户端、未包含客户端认证或使用了不受支持的认证方法。
+        invalid_code_challenge_method:
+          one: code_challenge_method 必须是 %{challenge_methods}。
+          other: code_challenge_method 必须是以下之一：%{challenge_methods}。
+          zero: 授权服务器不支持 PKCE，因为没有可接受的 code_challenge_method 值。
+        invalid_grant: 提供的授权授权码无效、已过期、已撤销、与授权请求中使用的重定向 URI 不匹配，或已颁发给其他客户端。
+        invalid_redirect_uri: 请求的重定向 URI 格式不正确或与客户端重定向 URI 不匹配。
+        invalid_request:
+          invalid_code_challenge: 需要代码挑战参数。
+          missing_param: 缺少必要参数：%{value}。
+          request_not_authorized: 请求需要授权。授权请求的必要参数缺失或无效。
+          unknown: 请求缺少必要参数、包含不受支持的参数值或格式不正确。
+        invalid_scope: 请求的权限范围无效、未知或格式不正确。
+        invalid_token:
+          expired: 访问令牌已过期
+          revoked: 访问令牌已被撤销
+          unknown: 访问令牌无效
+        resource_owner_authenticator_not_configured: 资源所有者查找失败，因为 Doorkeeper.configure.resource_owner_authenticator
+          未配置。
+        revoke:
+          unauthorized: 您无权撤销此令牌
+        server_error: 授权服务器遇到意外情况，无法完成请求。
+        temporarily_unavailable: 授权服务器因临时过载或维护而暂时无法处理请求。
+        unauthorized_client: 客户端无权使用此方法执行此请求。
+        unsupported_grant_type: 授权服务器不支持此授权类型。
+        unsupported_response_mode: 授权服务器不支持此响应模式。
+        unsupported_response_type: 授权服务器不支持此响应类型。
+    flash:
+      applications:
+        create:
+          notice: 应用已创建。
+        destroy:
+          notice: 应用已删除。
+        update:
+          notice: 应用已更新。
+      authorized_applications:
+        destroy:
+          notice: 应用授权已撤销。
+    layouts:
+      admin:
+        nav:
+          applications: 应用管理
+          home: 首页
+          oauth2_provider: OAuth2 提供商
+        title: Doorkeeper
+      application:
+        title: 需要 OAuth 授权
+    pre_authorization:
+      status: 预授权

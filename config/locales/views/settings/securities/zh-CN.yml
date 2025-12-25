@@ -1,0 +1,10 @@
+---
+zh-CN:
+  settings:
+    securities:
+      show:
+        disable_mfa: 停用双重认证
+        disable_mfa_confirm: 确定要停用双重认证吗？这可能会降低您的账户安全性。
+        enable_mfa: 启用双重认证
+        mfa_description: 在登录时要求输入身份验证器应用中的代码，为账户增加额外安全层
+        mfa_title: 双重认证

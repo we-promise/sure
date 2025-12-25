@@ -89,7 +89,14 @@ class PropertiesController < ApplicationController
 
     def property_params
       params.require(:account)
-            .permit(:name, :accountable_type, accountable_attributes: [ :id, :subtype, :year_built, :area_unit, :area_value ])
+            .permit(
+              :name,
+              :accountable_type,
+              :institution_name,
+              :institution_domain,
+              :notes,
+              accountable_attributes: [ :id, :subtype, :year_built, :area_unit, :area_value ]
+            )
     end
 
     def set_property

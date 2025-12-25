@@ -1,0 +1,30 @@
+---
+zh-CN:
+  transfers:
+    create:
+      success: 转账已创建
+    destroy:
+      success: 转账已移除
+    form:
+      amount: 金额
+      date: 日期
+      expense: 支出
+      from: 转出账户
+      income: 收入
+      select_account: 选择账户
+      submit: 创建转账
+      to: 转入账户
+      transfer: 转账
+    new:
+      title: 新建转账
+    show:
+      delete: 移除转账
+      delete_subtitle: 此操作仅移除转账记录，不会删除底层交易数据。
+      delete_title: 确认移除转账？
+      details: 详情
+      note_label: 备注
+      note_placeholder: 为此转账添加备注
+      overview: 概览
+      settings: 设置
+    update:
+      success: 转账已更新

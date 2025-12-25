@@ -1,0 +1,27 @@
+---
+zh-CN:
+  onboardings:
+    header:
+      sign_out: 退出登录
+    preferences:
+      currency: 货币
+      date_format: 日期格式
+      example: 示例账户
+      locale: 语言
+      preview: 预览偏好设置下的数据展示效果。
+      submit: 完成设置
+      subtitle: 现在来配置您的偏好设置。
+      title: 配置偏好设置
+    profile:
+      country: 国家/地区
+      first_name: 名字
+      household_name: 家庭名称
+      last_name: 姓氏
+      profile_image: 个人头像
+      submit: 继续
+      subtitle: 现在来完成您的个人资料。
+      title: 基础信息设置
+    show:
+      message: 很高兴您的加入！接下来我们将引导您完成几个步骤：完善个人资料，然后进行初始设置。
+      setup: 开始设置
+      title: 欢迎使用 %{product_name}

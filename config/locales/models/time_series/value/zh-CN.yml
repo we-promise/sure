@@ -1,0 +1,9 @@
+---
+zh-CN:
+  activemodel:
+    errors:
+      models:
+        time_series/value:
+          attributes:
+            value:
+              must_be_a_money_or_numeric: 必须是货币类型或数字类型

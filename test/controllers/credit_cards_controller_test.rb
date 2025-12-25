@@ -18,6 +18,9 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
           name: "New Credit Card",
           balance: 1000,
           currency: "USD",
+          institution_name: "Amex",
+          institution_domain: "americanexpress.com",
+          notes: "Primary card",
           accountable_type: "CreditCard",
           accountable_attributes: {
             available_credit: 5000,
@@ -35,6 +38,9 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "New Credit Card", created_account.name
     assert_equal 1000, created_account.balance
     assert_equal "USD", created_account.currency
+    assert_equal "Amex", created_account[:institution_name]
+    assert_equal "americanexpress.com", created_account[:institution_domain]
+    assert_equal "Primary card", created_account[:notes]
     assert_equal 5000, created_account.accountable.available_credit
     assert_equal 25.51, created_account.accountable.minimum_payment
     assert_equal 15.99, created_account.accountable.apr
@@ -53,6 +59,9 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
           name: "Updated Credit Card",
           balance: 2000,
           currency: "USD",
+          institution_name: "Chase",
+          institution_domain: "chase.com",
+          notes: "Updated notes",
           accountable_type: "CreditCard",
           accountable_attributes: {
             id: @account.accountable_id,
@@ -70,6 +79,9 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "Updated Credit Card", @account.name
     assert_equal 2000, @account.balance
+    assert_equal "Chase", @account[:institution_name]
+    assert_equal "chase.com", @account[:institution_domain]
+    assert_equal "Updated notes", @account[:notes]
     assert_equal 6000, @account.accountable.available_credit
     assert_equal 50, @account.accountable.minimum_payment
     assert_equal 14.99, @account.accountable.apr

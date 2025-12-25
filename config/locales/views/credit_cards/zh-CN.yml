@@ -1,0 +1,25 @@
+---
+zh-CN:
+  credit_cards:
+    edit:
+      edit: 编辑%{account}
+    form:
+      annual_fee: 年费
+      annual_fee_placeholder: '99'
+      apr: 年利率
+      apr_placeholder: '15.99'
+      available_credit: 可用额度
+      available_credit_placeholder: '10000'
+      expiration_date: 到期日期
+      minimum_payment: 最低还款额
+      minimum_payment_placeholder: '100'
+    new:
+      title: 请输入信用卡详细信息
+    overview:
+      amount_owed: 欠款总额
+      annual_fee: 年费
+      apr: 年利率
+      available_credit: 可用额度
+      expiration_date: 到期日期
+      minimum_payment: 最低还款额
+      unknown: 未知

@@ -80,3 +80,5 @@ de:
         equal_to: gleich
         greater_than: größer als
         less_than: kleiner als
+      form:
+        toggle_selection_checkboxes: Alle Kontrollkästchen umschalten

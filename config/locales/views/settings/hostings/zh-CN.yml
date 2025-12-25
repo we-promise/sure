@@ -1,0 +1,79 @@
+---
+zh-CN:
+  settings:
+    hostings:
+      brand_fetch_settings:
+        description: 请输入 Brand Fetch 提供的 Client ID
+        label: Client ID
+        placeholder: 在此输入您的 Client ID
+        title: Brand Fetch 设置
+      clear_cache:
+        cache_cleared: 数据缓存已清除，此操作可能需要一些时间完成。
+      invite_code_settings:
+        description: 控制新用户如何注册您的 %{product} 实例。
+        email_confirmation_description: 启用后，用户在更改邮箱地址时必须进行邮箱确认。
+        email_confirmation_title: 要求邮箱确认
+        generate_tokens: 生成新代码
+        generated_tokens: 已生成的代码
+        states:
+          closed: 关闭注册
+          invite_only: 仅限邀请注册
+          open: 开放注册
+        title: 新用户注册设置
+      not_authorized: 您没有执行此操作的权限
+      openai_settings:
+        access_token_label: 访问令牌
+        access_token_placeholder: 在此输入您的访问令牌
+        description: 输入访问令牌，并可选择配置自定义的 OpenAI 兼容提供商
+        env_configured_message: 已通过环境变量成功配置。
+        json_mode_auto: 自动（推荐）
+        json_mode_help: 严格模式最适合思考模型（qwen-thinking、deepseek-reasoner）。无模式最适合标准模型（llama、mistral、gpt-oss）。
+        json_mode_json_object: JSON 对象
+        json_mode_label: JSON 模式
+        json_mode_none: 无（最适合标准模型）
+        json_mode_strict: 严格（最适合思考模型）
+        model_label: 模型（可选）
+        model_placeholder: gpt-4.1（默认）
+        title: OpenAI 设置
+        uri_base_label: API 基础 URL（可选）
+        uri_base_placeholder: https://api.openai.com/v1（默认）
+      provider_selection:
+        description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的
+          API 密钥，但可能提供更全面的数据覆盖。
+        env_configured_message: 提供商选择已禁用，因为环境变量（EXCHANGE_RATE_PROVIDER 或 SECURITIES_PROVIDER）已设置。要在此处启用选择，请从配置中移除这些环境变量。
+        exchange_rate_provider_label: 汇率数据提供商
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+        securities_provider_label: 证券（股票价格）数据提供商
+        title: 数据提供商选择
+      show:
+        clear_cache: 清除数据缓存
+        clear_cache_warning: 清除数据缓存将移除所有汇率、证券价格、账户余额及其他数据。这不会删除账户、交易记录、分类或其他用户自有数据。
+        confirm_clear_cache:
+          body: 确定要清除数据缓存吗？这将移除所有汇率、证券价格、账户余额及其他数据，且不可撤销。
+          title: 确认清除数据缓存？
+        danger_zone: 高风险操作
+        financial_data_providers: 金融数据提供商
+        general: 通用设置
+        invites: 邀请码设置
+        title: 自托管配置
+      twelve_data_settings:
+        api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
+        description: 请输入 Twelve Data 提供的 API 密钥
+        env_configured_message: 已通过 TWELVE_DATA_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 API 密钥
+        plan: "%{plan} 套餐"
+        title: Twelve Data 设置
+      update:
+        failure: 设置值无效
+        invalid_onboarding_state: 无效的新用户注册状态
+        success: 设置已更新
+      yahoo_finance_settings:
+        connection_failed: 无法连接到 Yahoo Finance
+        description: Yahoo Finance 提供免费的股票价格、汇率和金融数据访问，无需 API 密钥。
+        status_active: Yahoo Finance 已激活并正常工作
+        status_inactive: Yahoo Finance 连接失败
+        title: Yahoo Finance 设置
+        troubleshooting: 请检查您的互联网连接和防火墙设置。Yahoo Finance 可能暂时不可用。

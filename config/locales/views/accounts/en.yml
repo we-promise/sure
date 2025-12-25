@@ -21,6 +21,13 @@ en:
       balance: Current balance
       name_label: Account name
       name_placeholder: Example account name
+      additional_details: Additional details
+      institution_name_label: Institution name
+      institution_name_placeholder: e.g., Chase Bank
+      institution_domain_label: Institution domain
+      institution_domain_placeholder: e.g., chase.com
+      notes_label: Notes
+      notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
     index:
       accounts: Accounts
       manual_accounts:

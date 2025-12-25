@@ -29,6 +29,22 @@ class RulesController < ApplicationController
     @rule = Current.family.rules.build(
       resource_type: params[:resource_type] || "transaction",
     )
+
+    if params[:name].present?
+      @rule.name = params[:name]
+      @rule.conditions.build(
+        condition_type: "transaction_name",
+        operator: "like",
+        value: params[:name]
+      )
+    end
+
+    if params[:action_type].present? && params[:action_value].present?
+      @rule.actions.build(
+        action_type: params[:action_type],
+        value: params[:action_value]
+      )
+    end
   end
 
   def create

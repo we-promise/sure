@@ -1,0 +1,77 @@
+---
+zh-CN:
+  settings:
+    api_keys:
+      created:
+        continue: 继续前往 API 密钥设置
+        copy_key: 复制 API 密钥
+        critical_warning_1: 这是您唯一一次看到 API 密钥的明文显示。
+        critical_warning_2: 请复制并安全存储至密码管理器或应用中。
+        critical_warning_3: 如遗失此密钥，您需要重新创建。
+        critical_warning_title: "⚠️ 重要提示：请立即保存 API 密钥"
+        key_name: 密钥名称
+        permissions: 权限范围
+        success_description: 您的新 API 密钥已准备就绪。请立即复制保存，后续将无法再次查看。
+        success_title: API 密钥创建成功
+        title: API 密钥已创建
+        usage_instructions: 在 X-Api-Key 请求头中包含您的 API 密钥即可使用：
+        usage_instructions_title: 快速开始
+        your_api_key: 您的 API 密钥
+      new:
+        cancel: 取消
+        create_key: 创建 API 密钥
+        create_new_key: 创建新 API 密钥
+        description: 为新 API 密钥设置描述性名称和适当权限。
+        name_help: 请选择描述性名称以便识别该密钥的用途。
+        name_label: API 密钥名称
+        name_placeholder: 例如：生产环境应用、分析仪表板
+        permissions_help: 选择 API 密钥所需的权限范围。您随时可以创建具有不同权限的新密钥。
+        permissions_label: 权限设置
+        scope_details:
+          read_accounts: 查看账户信息、余额及账户级数据
+          read_balances: 查看历史余额数据及账户价值趋势
+          read_transactions: 查看交易数据、分类及交易详情
+          write_transactions: 创建和更新交易记录（即将推出）
+        security_warning: API 密钥仅在创建后显示一次。请安全存储，切勿公开分享。如遗失需重新创建。
+        security_warning_title: 重要安全提示
+        title: 创建 API 密钥
+      show:
+        current_api_key:
+          active: 活跃
+          ago: 前
+          created_at: 创建时间
+          description: 您的活跃 API 密钥已准备就绪。请妥善保管，切勿公开分享。
+          expires: 过期时间
+          key_name: 密钥名称
+          last_used: 最后使用
+          never_expires: 永不过期
+          never_used: 从未使用
+          permissions: 权限范围
+          regenerate_key: 创建新密钥
+          revoke_confirmation: 确定要撤销此 API 密钥吗？此操作不可撤销，将立即停用所有使用此密钥的应用程序。
+          revoke_key: 撤销密钥
+          title: 您的 API 密钥
+          usage_instructions: 向 %{product_name} API 发起请求时，请在 X-Api-Key 请求头中包含您的 API
+            密钥：
+          usage_instructions_title: 如何使用 API 密钥
+        no_api_key:
+          create_api_key: 创建 API 密钥
+          description: 通过安全的 API 密钥以编程方式访问您的 %{product_name} 数据。
+          feature_1: 以编程方式访问账户数据
+          feature_2: 构建自定义集成和应用
+          feature_3: 自动化数据获取与分析
+          heading: 以编程方式访问您的账户数据
+          security_note: 您的 API 密钥将根据所选权限范围受到限制，且同一时间只能有一个活跃的 API 密钥。
+          security_note_title: 安全第一
+          title: API 密钥
+          what_you_can_do: API 功能概述：
+        title: API 密钥管理
+    api_keys_controller:
+      revoke_failed: 撤销 API 密钥失败
+      revoked_successfully: API 密钥已成功撤销
+      scope_descriptions:
+        read_accounts: 查看账户
+        read_balances: 查看余额
+        read_transactions: 查看交易
+        write_transactions: 创建交易
+      success: API 密钥已创建成功

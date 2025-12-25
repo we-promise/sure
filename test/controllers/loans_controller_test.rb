@@ -18,6 +18,9 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
           name: "New Loan",
           balance: 50000,
           currency: "USD",
+          institution_name: "Local Bank",
+          institution_domain: "localbank.example",
+          notes: "Mortgage notes",
           accountable_type: "Loan",
           accountable_attributes: {
             interest_rate: 5.5,
@@ -34,6 +37,9 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "New Loan", created_account.name
     assert_equal 50000, created_account.balance
     assert_equal "USD", created_account.currency
+    assert_equal "Local Bank", created_account[:institution_name]
+    assert_equal "localbank.example", created_account[:institution_domain]
+    assert_equal "Mortgage notes", created_account[:notes]
     assert_equal 5.5, created_account.accountable.interest_rate
     assert_equal 60, created_account.accountable.term_months
     assert_equal "fixed", created_account.accountable.rate_type
@@ -51,6 +57,9 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
           name: "Updated Loan",
           balance: 45000,
           currency: "USD",
+          institution_name: "Updated Bank",
+          institution_domain: "updatedbank.example",
+          notes: "Updated loan notes",
           accountable_type: "Loan",
           accountable_attributes: {
             id: @account.accountable_id,
@@ -67,6 +76,9 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "Updated Loan", @account.name
     assert_equal 45000, @account.balance
+    assert_equal "Updated Bank", @account[:institution_name]
+    assert_equal "updatedbank.example", @account[:institution_domain]
+    assert_equal "Updated loan notes", @account[:notes]
     assert_equal 4.5, @account.accountable.interest_rate
     assert_equal 48, @account.accountable.term_months
     assert_equal "fixed", @account.accountable.rate_type

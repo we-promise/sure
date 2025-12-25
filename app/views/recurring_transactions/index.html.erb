@@ -1,20 +1,22 @@
-<div class="space-y-4 pb-20 flex flex-col">
+<div class="space-y-4 flex flex-col">
   <header class="flex justify-between items-center text-primary font-medium">
     <h1 class="text-xl"><%= t("recurring_transactions.title") %></h1>
     <div class="flex items-center gap-2">
-      <% unless @family.recurring_transactions_disabled? %>
+      <% unless @family.recurring_transactions_disabled? %>        
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+              variant: "button",
+              text: t("recurring_transactions.cleanup_stale"),
+              href: cleanup_recurring_transactions_path,
+              method: :post,
+              icon: "trash-2") %>
+        <% end %>
+
         <%= render DS::Link.new(
           text: t("recurring_transactions.identify_patterns"),
           icon: "search",
           variant: "outline",
           href: identify_recurring_transactions_path,
-          method: :post
-        ) %>
-        <%= render DS::Link.new(
-          text: t("recurring_transactions.cleanup_stale"),
-          icon: "trash-2",
-          variant: "outline",
-          href: cleanup_recurring_transactions_path,
           method: :post
         ) %>
       <% end %>
