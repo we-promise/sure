@@ -46,10 +46,24 @@
   <%= render "summary", totals: @search.totals %>
 
   <div id="transactions"
-       data-controller="bulk-select checkbox-toggle"
+       data-controller="bulk-select checkbox-toggle drag-and-drop-import"
        data-bulk-select-singular-label-value="<%= t(".transaction") %>"
        data-bulk-select-plural-label-value="<%= t(".transactions") %>"
-       class="flex flex-col bg-container rounded-xl shadow-border-xs px-3 py-4 lg:p-4">
+       class="flex flex-col bg-container rounded-xl shadow-border-xs px-3 py-4 lg:p-4 relative group">
+
+    <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form" } do |f| %>
+      <%= f.hidden_field "import[type]", value: "TransactionImport" %>
+      <%= f.file_field "import[csv_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
+    <% end %>
+
+    <div data-drag-and-drop-import-target="overlay" class="fixed inset-0 bg-primary/20 backdrop-blur-sm z-50 hidden flex items-center justify-center pointer-events-none">
+      <div class="text-center p-8 bg-container rounded-xl shadow-2xl border-2 border-dashed border-primary animate-in fade-in zoom-in duration-200">
+        <%= icon("upload", size: "xl", class: "text-primary mb-4 mx-auto w-16 h-16") %>
+        <h3 class="text-2xl font-semibold text-primary mb-2">Drop CSV to import</h3>
+        <p class="text-secondary text-base">Upload transactions directly</p>
+      </div>
+    </div>
+
     <%= render "transactions/searches/search" %>
 
     <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
