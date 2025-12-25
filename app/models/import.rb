@@ -2,6 +2,9 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  MAX_CSV_SIZE = 10.megabytes
+  ALLOWED_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+
   TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
