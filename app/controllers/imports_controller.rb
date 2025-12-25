@@ -34,7 +34,23 @@ class ImportsController < ApplicationController
     )
 
     if import_params[:csv_file].present?
-      import.update!(raw_file_str: import_params[:csv_file].read)
+      file = import_params[:csv_file]
+
+      if file.size > Import::MAX_CSV_SIZE
+        import.destroy
+        redirect_to new_import_path, alert: "File is too large. Maximum size is #{Import::MAX_CSV_SIZE / 1.megabyte}MB."
+        return
+      end
+
+      unless Import::ALLOWED_MIME_TYPES.include?(file.content_type)
+        import.destroy
+        redirect_to new_import_path, alert: "Invalid file type. Please upload a CSV file."
+        return
+      end
+
+      # Stream reading is not fully applicable here as we store the raw string in the DB,
+      # but we have validated size beforehand to prevent memory exhaustion from massive files.
+      import.update!(raw_file_str: file.read)
       redirect_to import_configuration_path(import), notice: "CSV uploaded successfully."
     else
       redirect_to import_upload_path(import)
