@@ -56,13 +56,7 @@
       <%= f.file_field "import[csv_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
     <% end %>
 
-    <div data-drag-and-drop-import-target="overlay" class="fixed inset-0 bg-primary/20 backdrop-blur-sm z-50 hidden flex items-center justify-center pointer-events-none">
-      <div class="text-center p-8 bg-container rounded-xl shadow-2xl border-2 border-dashed border-primary animate-in fade-in zoom-in duration-200">
-        <%= icon("upload", size: "xl", class: "text-primary mb-4 mx-auto w-16 h-16") %>
-        <h3 class="text-2xl font-semibold text-primary mb-2">Drop CSV to import</h3>
-        <p class="text-secondary text-base">Upload transactions directly</p>
-      </div>
-    </div>
+    <%= render "imports/drag_drop_overlay", title: "Drop CSV to import", subtitle: "Upload transactions directly" %>
 
     <%= render "transactions/searches/search" %>
 
