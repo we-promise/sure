@@ -33,7 +33,12 @@ class ImportsController < ApplicationController
       date_format: Current.family.date_format,
     )
 
-    redirect_to import_upload_path(import)
+    if import_params[:csv_file].present?
+      import.update!(raw_file_str: import_params[:csv_file].read)
+      redirect_to import_configuration_path(import), notice: "CSV uploaded successfully."
+    else
+      redirect_to import_upload_path(import)
+    end
   end
 
   def show
@@ -70,6 +75,6 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:type)
+      params.require(:import).permit(:type, :csv_file)
     end
 end
