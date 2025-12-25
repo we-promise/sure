@@ -4,7 +4,16 @@
 
 <%= content_for :previous_path, imports_path %>
 
-<div class="space-y-4">
+<div class="space-y-4" data-controller="drag-and-drop-import">
+  <!-- Overlay -->
+  <div data-drag-and-drop-import-target="overlay" class="fixed inset-0 bg-primary/20 backdrop-blur-sm z-50 hidden flex items-center justify-center pointer-events-none">
+    <div class="text-center p-8 bg-container rounded-xl shadow-2xl border-2 border-dashed border-primary animate-in fade-in zoom-in duration-200">
+      <%= icon("upload", size: "xl", class: "text-primary mb-4 mx-auto w-16 h-16") %>
+      <h3 class="text-2xl font-semibold text-primary mb-2">Drop CSV to upload</h3>
+      <p class="text-secondary text-base">Your file will be uploaded automatically</p>
+    </div>
+  </div>
+
   <div class="space-y-4 mx-auto max-w-md">
     <div class="text-center space-y-2">
       <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
@@ -18,7 +27,7 @@
       <% end %>
 
       <% tabs.with_panel(tab_id: "csv-upload") do %>
-        <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2" do |form| %>
+        <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2", data: { drag_and_drop_import_target: "form" } do |form| %>
           <%= form.select :col_sep, Import::SEPARATORS, label: true %>
 
           <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
@@ -41,7 +50,7 @@
                 <p class="text-md font-medium text-primary"></p>
               </div>
 
-              <%= form.file_field :csv_file, class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input" %>
+              <%= form.file_field :csv_file, class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
             </div>
           </div>
 
