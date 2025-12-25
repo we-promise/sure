@@ -26,9 +26,12 @@ class ImportsController < ApplicationController
   end
 
   def create
+    type = params.dig(:import, :type).to_s
+    type = "TransactionImport" unless Import::TYPES.include?(type)
+
     account = Current.family.accounts.find_by(id: params.dig(:import, :account_id))
     import = Current.family.imports.create!(
-      type: import_params[:type],
+      type: type,
       account: account,
       date_format: Current.family.date_format,
     )
@@ -91,6 +94,6 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:type, :csv_file)
+      params.require(:import).permit(:csv_file)
     end
 end
