@@ -1,6 +1,6 @@
 <details class="group" <%= "open" if open %>>
   <%= tag.summary class: class_names(
-    "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface"
+    "px-3 py-2 rounded-xl cursor-pointer flex items-center gap-2 bg-surface hover:bg-surface-hover theme-dark:hover:bg-container-inset-hover"
   ) do %>
     <% if summary_content? %>
       <%= summary_content %>

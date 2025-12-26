@@ -1,6 +1,12 @@
 ---
 ro:
   simplefin_items:
+    index:
+      page_title: Conexiuni SimpleFIN
+      empty_state:
+        title: Nu există conexiuni SimpleFIN
+        description: Conectează-ți conturile bancare folosind SimpleFIN.
+        add_connection: Adaugă conexiune
     new:
       title: Conectează SimpleFin
       setup_token: Token de configurare

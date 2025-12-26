@@ -61,6 +61,7 @@ Only proceed with pull request creation if ALL checks pass.
 - Do not run `touch tmp/restart.txt`
 - Do not run `rails credentials`
 - Do not automatically run migrations
+- ActiveRecord migrations must inherit from `ActiveRecord::Migration[7.2]`. Do **not** use version 8.0 yet.
 
 ## High-Level Architecture
 
@@ -168,12 +169,43 @@ Sidekiq handles asynchronous tasks:
 - Caching strategies for expensive calculations
 - Turbo Frames for partial page updates
 
+### Data Provider Architecture
+The app uses several 3rd party data providers for exchange rates, security prices, enrichment, etc. Since the app can be self-hosted, all providers are optional and configurable at runtime.
+
+**Provider Concepts:**
+- "Concept" data (exchange rates, security prices) can be swapped between providers
+- Interfaces defined in `app/models/provider/concepts/`
+- Provider registry in `app/models/provider/registry.rb`
+- Runtime configuration via `Setting` model
+
+**"Provided" Concerns:**
+- Domain models use `Provided` concerns for 3rd party data access
+- Example: `ExchangeRate::Provided` selects provider and exposes convenience methods
+- Callers don't need to know which specific provider is configured
+
+**Provider Implementation:**
+- All providers inherit from `Provider` base class
+- Return data using `with_provider_response` for automatic error handling
+- Raise `ProviderError` when valid data cannot be returned
+
 ### Development Workflow
 - Feature branches merged to `main`
 - Docker support for consistent environments
 - Environment variables via `.env` files
-- Lookbook for component development (`/lookbook`)
+- Lookbook for component development (`/design-system`)
 - Letter Opener for email preview in development
+
+### Development Requirements
+- Ruby version: see `.ruby-version` file
+- PostgreSQL >9.3 (latest stable recommended)
+- Redis >5.4 (latest stable recommended)
+
+### Demo Credentials
+After running `bin/setup` and `bin/dev`, visit http://localhost:3000:
+- Email: `user@example.com`
+- Password: `Password1!`
+
+Optionally load demo data with: `rake demo_data:default`
 
 ## Project Conventions
 

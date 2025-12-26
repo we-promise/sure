@@ -1,6 +1,12 @@
 ---
 pt-BR:
   simplefin_items:
+    index:
+      page_title: Conexões SimpleFIN
+      empty_state:
+        title: Nenhuma conexão SimpleFIN
+        description: Conecte suas contas bancárias usando SimpleFIN.
+        add_connection: Adicionar conexão
     new:
       title: Conectar SimpleFin
       setup_token: Token de configuração

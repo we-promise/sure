@@ -11,18 +11,19 @@
   </div>
 
   <div class="px-4">
-    <div class="flex flex-col lg:flex-row gap-8 items-center">
+    <% categories_with_ids = outflows_data[:categories].map { |c| c.merge(id: c[:id].presence || "uncategorized") } %>
+    <div class="flex flex-col lg:flex-row gap-8 items-center"
+      data-controller="donut-chart"
+      data-donut-chart-segments-value="<%= categories_with_ids.to_json %>"
+      data-donut-chart-segment-opacity-value="0.9"
+      data-donut-chart-extended-hover-value="true"
+      data-donut-chart-hover-extension-value="3"
+      data-donut-chart-enable-click-value="true"
+      data-donut-chart-start-date-value="<%= period.date_range.first %>"
+      data-donut-chart-end-date-value="<%= period.date_range.last %>">
       <!-- Donut Chart -->
       <div class="w-full lg:w-1/3 max-w-[300px] p-4">
-        <div class="h-[300px] relative"
-          data-controller="donut-chart"
-          data-donut-chart-segments-value="<%= outflows_data[:categories].to_json %>"
-          data-donut-chart-segment-opacity-value="0.9"
-          data-donut-chart-extended-hover-value="true"
-          data-donut-chart-hover-extension-value="3"
-          data-donut-chart-enable-click-value="true"
-          data-donut-chart-start-date-value="<%= period.date_range.first %>"
-          data-donut-chart-end-date-value="<%= period.date_range.last %>">
+        <div class="h-[300px] relative">
           <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
 
           <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
@@ -37,7 +38,8 @@
             </div>
 
             <% outflows_data[:categories].each do |category| %>
-              <div id="segment_<%= category[:id] %>" class="hidden">
+              <% segment_id = category[:id].presence || "uncategorized" %>
+              <div id="segment_<%= segment_id %>" class="hidden">
                 <div class="flex flex-col gap-2 items-center">
                   <p class="text-sm text-secondary"><%= category[:name] %></p>
 
@@ -70,15 +72,19 @@
         </div>
         <div class="py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm max-w-full">
           <% outflows_data[:categories].each_with_index do |category, idx| %>
-            <%= link_to transactions_path(q: { categories: [category[:name]], start_date: period.date_range.first, end_date: period.date_range.last }),
-                class: "flex items-center justify-between mx-3 p-3 rounded-lg cursor-pointer group gap-3",
-                data: {
-                  turbo_frame: "_top",
-                  category_id: category[:id],
-                  action: "mouseenter->donut-chart#highlightSegment mouseleave->donut-chart#unhighlightSegment"
-                } do %>
+            <% segment_id = category[:id].presence || "uncategorized" %>
+            <div class="flex items-center justify-between mx-3 p-3 rounded-lg group gap-3"
+                data-donut-chart-target="categoryRow"
+                data-category-id="<%= segment_id %>"
+                data-category-color="<%= category[:color] %>"
+                data-action="mouseenter->donut-chart#highlightSegment mouseleave->donut-chart#unhighlightSegment">
               <div class="flex items-center gap-3 flex-1 min-w-0">
-                <div class="h-6 w-6 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center" 
+                <button type="button"
+                  class="h-6 w-6 flex-shrink-0 hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center cursor-pointer"
+                  data-donut-chart-target="toggleButton"
+                  data-category-id="<%= segment_id %>"
+                  data-category-color="<%= category[:color] %>"
+                  data-action="click->donut-chart#toggleSegment"
                   style="
                     background-color: color-mix(in oklab, <%= category[:color] %> 10%, transparent);
                     border-color: color-mix(in oklab, <%= category[:color] %> 10%, transparent);
@@ -94,14 +100,17 @@
                       rounded: true
                     ) %>
                   <% end %>
-                </div>
-                <span class="text-sm font-medium text-primary truncate"><%= category[:name] %></span>
+                </button>
+                <%= link_to category[:name],
+                    transactions_path(q: { categories: [category[:name]], start_date: period.date_range.first, end_date: period.date_range.last }),
+                    class: "text-sm font-medium text-primary truncate hover:underline",
+                    data: { turbo_frame: "_top" } %>
               </div>
               <div class="flex items-center gap-4 flex-shrink-0 text-right">
-                <span class="text-sm font-medium text-primary whitespace-nowrap"><%= format_money Money.new(category[:amount], category[:currency]) %></span>
-                <span class="text-sm text-secondary whitespace-nowrap w-10 lg:w-15"><%= category[:percentage] %>%</span>
+                <span class="text-sm font-medium text-primary whitespace-nowrap" data-donut-chart-target="categoryAmount" data-category-id="<%= segment_id %>"><%= format_money Money.new(category[:amount], category[:currency]) %></span>
+                <span class="text-sm text-secondary whitespace-nowrap w-10 lg:w-15" data-donut-chart-target="categoryPercentage" data-category-id="<%= segment_id %>"><%= category[:percentage] %>%</span>
               </div>
-            <% end %>
+            </div>
             <% if idx < outflows_data[:categories].size - 1 %>
               <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
             <% end %>

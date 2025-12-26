@@ -4,8 +4,8 @@
       <%= render "settings/settings_nav" %>
     </div>
 
-    <main class="px-4 pt-2 md:py-4 md:px-10 grow flex h-full overflow-y-auto">
-      <div class="relative max-w-4xl mx-auto flex flex-col w-full h-full">
+    <main class="px-4 pt-2 md:py-4 md:px-10 grow flex min-h-0">
+      <div class="relative max-w-4xl mx-auto flex flex-col w-full min-h-0">
         <div class="grow space-y-4 overflow-y-auto -mx-1 px-1 pb-12">
           <% if content_for?(:breadcrumbs) %>
             <%= yield :breadcrumbs %>

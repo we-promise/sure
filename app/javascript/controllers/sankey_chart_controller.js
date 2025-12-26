@@ -265,7 +265,7 @@ export default class extends Controller {
     // Create tooltip element once and reuse it
     this.tooltip = d3.select("body")
       .append("div")
-      .attr("class", "bg-gray-700 text-white text-sm p-2 rounded pointer-events-none absolute z-50")
+      .attr("class", "bg-inverse text-inverse text-sm p-2 rounded pointer-events-none absolute z-50")
       .style("opacity", 0)
       .style("pointer-events", "none");
   }

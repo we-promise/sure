@@ -1,6 +1,12 @@
 ---
 en:
   simplefin_items:
+    index:
+      page_title: SimpleFIN Connections
+      empty_state:
+        title: No SimpleFIN connections
+        description: Connect your bank accounts using SimpleFIN.
+        add_connection: Add Connection
     new:
       title: Connect SimpleFin
       setup_token: Setup token

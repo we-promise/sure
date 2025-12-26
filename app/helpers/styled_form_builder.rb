@@ -131,7 +131,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       @template.tag.div(data: { controller: "tooltip" }) do
         @template.safe_join([
           @template.icon("help-circle", size: "sm", color: "default", class: "cursor-help"),
-          @template.tag.div(tooltip_text, role: "tooltip", data: { tooltip_target: "tooltip" }, class: "tooltip bg-gray-700 text-sm p-2 rounded w-64 text-white")
+          @template.tag.div(tooltip_text, role: "tooltip", data: { tooltip_target: "tooltip" }, class: "tooltip bg-inverse text-sm p-2 rounded w-64 text-inverse")
         ])
       end
     end

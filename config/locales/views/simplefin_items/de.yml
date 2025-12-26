@@ -1,6 +1,12 @@
 ---
 de:
   simplefin_items:
+    index:
+      page_title: SimpleFIN-Verbindungen
+      empty_state:
+        title: Keine SimpleFIN-Verbindungen
+        description: Verbinde deine Bankkonten mit SimpleFIN.
+        add_connection: Verbindung hinzufügen
     new:
       title: SimpleFin verbinden
       setup_token: Setup-Token
