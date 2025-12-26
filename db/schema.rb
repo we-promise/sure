@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_26_205942) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -538,6 +538,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
+    t.integer "rows_to_skip", default: 0, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 

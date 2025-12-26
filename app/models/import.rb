@@ -36,6 +36,7 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validates :rows_to_skip, numericality: { greater_than_or_equal_to: 0 }
 
   has_many :rows, dependent: :destroy
   has_many :mappings, dependent: :destroy
@@ -248,7 +249,14 @@ class Import < ApplicationRecord
     end
 
     def parsed_csv
-      @parsed_csv ||= self.class.parse_csv_str(raw_file_str, col_sep: col_sep)
+      return @parsed_csv if defined?(@parsed_csv)
+
+      csv_content = raw_file_str || ""
+      if rows_to_skip.to_i > 0
+        csv_content = csv_content.lines.drop(rows_to_skip).join
+      end
+
+      @parsed_csv = self.class.parse_csv_str(csv_content, col_sep: col_sep)
     end
 
     def sanitize_number(value)
