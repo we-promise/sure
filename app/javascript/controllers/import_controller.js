@@ -11,6 +11,7 @@ export default class extends Controller {
     "signedAmountFieldset",
     "customColumnFieldset",
     "amountTypeValue",
+    "amountTypeInflowValue",
     "amountTypeStrategySelect",
   ];
 
@@ -20,6 +21,9 @@ export default class extends Controller {
       this.amountTypeColumnKeyValue
     ) {
       this.#showAmountTypeValueTargets(this.amountTypeColumnKeyValue);
+      if (this.amountTypeValueTarget.querySelector("select")?.value) {
+        this.#showAmountTypeInflowValueTargets();
+      }
     }
   }
 
@@ -31,6 +35,9 @@ export default class extends Controller {
 
       if (this.amountTypeColumnKeyValue) {
         this.#showAmountTypeValueTargets(this.amountTypeColumnKeyValue);
+        if (this.amountTypeValueTarget.querySelector("select")?.value) {
+          this.#showAmountTypeInflowValueTargets();
+        }
       }
     }
 
@@ -43,6 +50,10 @@ export default class extends Controller {
     const amountTypeColumnKey = event.target.value;
 
     this.#showAmountTypeValueTargets(amountTypeColumnKey);
+  }
+
+  handleAmountTypeIdentifierChange(event) {
+    this.#showAmountTypeInflowValueTargets();
   }
 
   #showAmountTypeValueTargets(amountTypeColumnKey) {
@@ -70,6 +81,29 @@ export default class extends Controller {
     });
 
     select.appendChild(fragment);
+  }
+
+  #showAmountTypeInflowValueTargets() {
+    // Called when amount_type_identifier_value changes
+    // Updates the displayed identifier value in the UI text and shows/hides the inflow value dropdown
+    const identifierValueSelect = this.amountTypeValueTarget.querySelector("select");
+    const selectedValue = identifierValueSelect.value;
+
+    if (!selectedValue) {
+      this.amountTypeInflowValueTarget.classList.add("hidden");
+      this.amountTypeInflowValueTarget.classList.remove("flex");
+      return;
+    }
+
+    // Show the inflow value dropdown
+    this.amountTypeInflowValueTarget.classList.remove("hidden");
+    this.amountTypeInflowValueTarget.classList.add("flex");
+
+    // Update the displayed identifier value in the text
+    const identifierSpan = this.amountTypeInflowValueTarget.querySelector("span.font-medium");
+    if (identifierSpan) {
+      identifierSpan.textContent = selectedValue;
+    }
   }
 
   #uniqueValuesForColumn(column) {
@@ -101,6 +135,11 @@ export default class extends Controller {
     this.customColumnFieldsetTarget.classList.add("hidden");
     this.signedAmountFieldsetTarget.classList.remove("hidden");
 
+    // Hide the inflow value targets when using signed amount strategy
+    this.amountTypeValueTarget.classList.add("hidden");
+    this.amountTypeValueTarget.classList.remove("flex");
+    this.amountTypeInflowValueTarget.classList.add("hidden");
+    this.amountTypeInflowValueTarget.classList.remove("flex");
     // Remove required from custom column fields
     this.customColumnFieldsetTarget
       .querySelectorAll("select, input")
