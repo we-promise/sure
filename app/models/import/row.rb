@@ -58,6 +58,8 @@ class Import::Row < ApplicationRecord
         inflow_treatment =
           if import.amount_type_inflow_value.in?(%w[inflows_positive inflows_negative])
             import.amount_type_inflow_value
+          elsif import.signage_convention.in?(%w[inflows_positive inflows_negative])
+            import.signage_convention
           else
             "inflows_positive"
           end
