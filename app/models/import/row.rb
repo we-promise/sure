@@ -1,5 +1,5 @@
 class Import::Row < ApplicationRecord
-  belongs_to :import
+  belongs_to :import, counter_cache: true
 
   validates :amount, numericality: true, allow_blank: true
   validates :currency, presence: true
