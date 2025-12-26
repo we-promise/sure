@@ -41,6 +41,7 @@ class Import::ConfigurationsController < ApplicationController
         :number_format,
         :signage_convention,
         :amount_type_strategy,
+        :amount_type_identifier_value,
         :amount_type_inflow_value,
       )
     end
