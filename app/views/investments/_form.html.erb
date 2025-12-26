@@ -1,7 +1,9 @@
 <%# locals: (account:, url:) %>
 
 <%= render "accounts/form", account: account, url: url do |form| %>
-  <%= form.select :subtype,
-                 Investment::SUBTYPES.map { |k, v| [v[:long], k] },
-                 { label: true, prompt: t("investments.form.subtype_prompt"), include_blank: t("investments.form.none") } %>
+  <%= form.fields_for :accountable do |investment_form| %>
+    <%= investment_form.select :subtype,
+                   Investment::SUBTYPES.map { |k, v| [v[:long], k] },
+                   { label: true, prompt: t("investments.form.subtype_prompt"), include_blank: t("investments.form.none") } %>
+  <% end %>
 <% end %>

@@ -3,6 +3,7 @@ class CreditCardsController < ApplicationController
 
   permitted_accountable_attributes(
     :id,
+    :subtype,
     :available_credit,
     :minimum_payment,
     :apr,
