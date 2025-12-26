@@ -1,0 +1,25 @@
+---
+zh-CN:
+  helpers:
+    label:
+      user:
+        invite_code: 邀请码
+    submit:
+      user:
+        create: 继续
+  registrations:
+    closed: 当前注册功能已关闭。
+    create:
+      failure: 注册过程中出现问题。
+      invalid_invite_code: 邀请码无效，请重试。
+      success: 您已成功注册。
+    new:
+      invitation_message: "%{inviter} 已邀请您以 %{role} 身份加入"
+      join_family_title: 加入 %{family}
+      password_placeholder: 请输入密码
+      role_admin: 管理员
+      role_member: 成员
+      submit: 创建账户
+      title: 创建您的账户
+      welcome_body: 开始使用前，您需要注册一个新账户。注册后即可在应用内配置其他设置。
+      welcome_title: 欢迎使用自托管版 %{product_name}！

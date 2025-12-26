@@ -1,0 +1,148 @@
+---
+zh-CN:
+  lunchflow_items:
+    complete_account_setup:
+      all_skipped: 所有账户已跳过。未创建任何账户。
+      creation_failed: 创建账户失败：%{error}
+      no_accounts: 无待设置账户。
+      success: 成功创建 %{count} 个账户。
+    create:
+      success: Lunch Flow 连接已创建成功
+    destroy:
+      success: Lunch Flow 连接已移除
+    index:
+      title: Lunch Flow 连接管理
+    link_accounts:
+      all_already_linked:
+        one: 所选账户（%{names}）已关联
+        other: 所有 %{count} 个所选账户均已关联：%{names}
+      api_error: API 错误：%{message}
+      invalid_account_names:
+        one: 无法关联名称为空的账户
+        other: 无法关联 %{count} 个名称为空的账户
+      link_failed: 关联账户失败
+      no_accounts_selected: 请至少选择一个账户
+      no_api_key: 未发现 API 密钥
+      partial_invalid: 成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count}
+        个账户名称无效
+      partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
+      success:
+        one: 成功关联 %{count} 个账户
+        other: 成功关联 %{count} 个账户
+    link_existing_account:
+      account_already_linked: 此账户已关联到其他服务提供商
+      api_error: API 错误：%{message}
+      invalid_account_name: 无法关联名称为空的账户
+      lunchflow_account_already_linked: 此 Lunch Flow 账户已关联到其他账户
+      lunchflow_account_not_found: 未找到 Lunch Flow 账户
+      missing_parameters: 缺少必要参数
+      no_api_key: 未发现 API 密钥
+      success: "%{account_name} 已成功与 Lunch Flow 关联"
+    loading:
+      loading_message: 正在加载 Lunch Flow 账户...
+      loading_title: 加载中
+    lunchflow_item:
+      accounts_need_setup: 账户需要设置
+      delete: 删除连接
+      deletion_in_progress: 删除进行中...
+      error: 错误
+      no_accounts_description: 此连接尚未关联任何账户。
+      no_accounts_title: 暂无账户
+      setup_action: 设置新账户
+      setup_description: 已关联 %{linked} / %{total} 个账户。请为您新导入的 Lunch Flow 账户选择账户类型。
+      setup_needed: 新账户待设置
+      status: 同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 • %{summary}
+      syncing: 同步中...
+      total: 总计
+      unlinked: 未关联
+    select_accounts:
+      accounts_selected: 个账户已选
+      api_error: API 错误：%{message}
+      cancel: 取消
+      configure_name_in_lunchflow: 无法导入 - 请在 Lunchflow 中配置账户名称
+      description: 选择您想要关联到 %{product_name} 账户的 Lunch Flow 账户。
+      link_accounts: 关联所选账户
+      no_accounts_found: 未找到账户。请检查您的 API 密钥配置。
+      no_api_key: Lunch Flow API 密钥未配置。请在设置中配置。
+      no_credentials_configured: 请先在服务商设置中配置您的 Lunch Flow API 密钥。
+      no_name_placeholder: "（无名称）"
+      title: 选择 Lunch Flow 账户
+    select_existing_account:
+      account_already_linked: 此账户已关联到其他服务提供商
+      all_accounts_already_linked: 所有 Lunch Flow 账户均已关联
+      api_error: API 错误：%{message}
+      cancel: 取消
+      configure_name_in_lunchflow: 无法导入 - 请在 Lunchflow 中配置账户名称
+      description: 选择一个 Lunch Flow 账户与此账户关联。交易将自动同步并去重。
+      link_account: 关联账户
+      no_account_specified: 未指定账户
+      no_accounts_found: 未找到 Lunch Flow 账户。请检查您的 API 密钥配置。
+      no_api_key: Lunch Flow API 密钥未配置。请在设置中配置。
+      no_credentials_configured: 请先在服务商设置中配置您的 Lunch Flow API 密钥。
+      no_name_placeholder: "（无名称）"
+      title: 将 %{account_name} 与 Lunch Flow 关联
+    setup_accounts:
+      account_type_label: 账户类型：
+      account_types:
+        credit_card: 信用卡
+        depository: 支票或储蓄账户
+        investment: 投资账户
+        loan: 贷款或抵押贷款
+        other_asset: 其他资产
+        skip: 跳过此账户
+      all_accounts_linked: 您的所有 Lunch Flow 账户已完成设置。
+      api_error: API 错误：%{message}
+      balance: 余额
+      cancel: 取消
+      choose_account_type: 请为每个 Lunch Flow 账户选择正确的账户类型：
+      create_accounts: 创建账户
+      creating_accounts: 正在创建账户...
+      fetch_failed: 获取账户失败
+      historical_data_range: 历史数据范围：
+      no_accounts_to_setup: 无待设置账户
+      no_api_key: Lunch Flow API 密钥未配置。请检查您的连接设置。
+      subtitle: 为您的导入账户选择正确的账户类型
+      subtype_labels:
+        credit_card: ''
+        depository: 账户子类型：
+        investment: 投资类型：
+        loan: 贷款类型：
+        other_asset: ''
+      subtype_messages:
+        credit_card: 信用卡将自动设置为信用卡账户。
+        other_asset: 其他资产无需额外选项。
+      subtypes:
+        depository:
+          cd: 定期存款
+          checking: 支票账户
+          hsa: 健康储蓄账户
+          money_market: 货币市场账户
+          savings: 储蓄账户
+        investment:
+          401k: 401(k) 计划
+          403b: 403(b) 计划
+          529_plan: 529 教育储蓄计划
+          angel: 天使投资
+          brokerage: 经纪账户
+          hsa: 健康储蓄账户
+          ira: 传统 IRA
+          mutual_fund: 共同基金
+          pension: 养老金账户
+          retirement: 退休账户
+          roth_401k: Roth 401(k) 计划
+          roth_ira: Roth IRA
+          tsp: 节俭储蓄计划
+        loan:
+          auto: 汽车贷款
+          mortgage: 抵押贷款
+          other: 其他贷款
+          student: 学生贷款
+      sync_start_date_help: 选择您希望同步交易历史的时间范围。最多可同步 3 年历史数据。
+      sync_start_date_label: 开始同步交易的日期：
+      title: 设置您的 Lunch Flow 账户
+    sync:
+      success: 同步已开始
+    update:
+      success: Lunch Flow 连接已更新

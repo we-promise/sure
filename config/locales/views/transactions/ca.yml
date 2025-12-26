@@ -80,3 +80,5 @@ ca:
         equal_to: igual a
         greater_than: major que
         less_than: menor que
+      form:
+        toggle_selection_checkboxes: Commuta totes les caselles

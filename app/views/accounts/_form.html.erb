@@ -16,6 +16,28 @@
     <% end %>
 
     <%= yield form %>
+
+    <details class="group">
+      <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
+        <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
+        <%= t(".additional_details") %>
+      </summary>
+
+      <div class="space-y-2 mt-2 pl-4 border-l border-primary">
+        <%= form.text_field :institution_name,
+            label: t(".institution_name_label"),
+            placeholder: account.provider&.institution_name || t(".institution_name_placeholder") %>
+
+        <%= form.text_field :institution_domain,
+            label: t(".institution_domain_label"),
+            placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
+
+        <%= form.text_area :notes,
+            label: t(".notes_label"),
+            placeholder: t(".notes_placeholder"),
+            rows: 4 %>
+      </div>
+    </details>
   </div>
 
   <%= form.submit %>

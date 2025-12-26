@@ -1,0 +1,71 @@
+---
+zh-CN:
+  simplefin_items:
+    complete_account_setup:
+      all_skipped: 所有账户已跳过。未创建任何账户。
+      no_accounts: 无待设置账户。
+      success: 已成功创建 %{count} 个 SimpleFIN 账户！您的交易和投资数据正在后台导入。
+    create:
+      errors:
+        blank_token: 请输入 SimpleFIN 设置令牌。
+        create_failed: 连接失败：%{message}
+        invalid_token: 设置令牌无效。请检查是否从 SimpleFIN Bridge 复制了完整的令牌。
+        token_compromised: 设置令牌可能已泄露、过期或已被使用。请创建新令牌。
+        unexpected: 发生意外错误。请重试或联系支持团队。
+      success: SimpleFIN 连接已成功添加！您的账户将在后台同步后显示。
+    destroy:
+      success: SimpleFIN 连接将被移除
+    edit:
+      setup_token:
+        help_text: 令牌应为以字母和数字开头的长字符串
+        label: SimpleFIN 设置令牌：
+        placeholder: 在此粘贴您的 SimpleFIN 设置令牌...
+    link_existing_account:
+      errors:
+        invalid_simplefin_account: 所选 SimpleFIN 账户无效
+        only_manual: 只能关联手动账户
+      success: 账户已成功关联到 SimpleFIN
+    new:
+      cancel: 取消
+      connect: 连接
+      setup_token: 设置令牌
+      setup_token_placeholder: 粘贴您的 SimpleFIN 设置令牌
+      title: 连接 SimpleFIN
+    select_existing_account:
+      all_accounts_already_linked: 所有 SimpleFIN 账户似乎均已关联。
+      cancel: 取消
+      check_provider_health: 检查服务提供商状态
+      currently_linked_to: "当前关联到：%{account_name}"
+      description: 选择一个 SimpleFIN 账户与您的现有账户关联
+      link_account: 关联账户
+      no_accounts_found: 此家庭未找到 SimpleFIN 账户。
+      title: 将 %{account_name} 关联到 SimpleFIN
+      unlink_to_move: 如需移动关联，请先从账户操作菜单中解除当前关联。
+      wait_for_sync: 如果您刚刚连接或同步完成，请等待同步完成后再试。
+    simplefin_item:
+      add_new: 添加新连接
+      confirm_accept: 删除连接
+      confirm_body: 此操作将永久删除该组下的所有账户及相关数据。
+      confirm_title: 确认删除 SimpleFIN 连接？
+      delete: 删除
+      deletion_in_progress: "（删除进行中...）"
+      error: 同步数据时发生错误
+      no_accounts_description: 此连接尚未同步任何账户。
+      no_accounts_title: 未找到账户
+      requires_update: 需要重新认证
+      setup_action: 设置新账户
+      setup_description: 请为您新导入的 SimpleFIN 账户选择账户类型。
+      setup_needed: 新账户待设置
+      status: 上次同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 同步于 %{timestamp} 前 • %{summary}
+      syncing: 同步中...
+      update: 更新连接
+    update:
+      errors:
+        blank_token: 请输入 SimpleFIN 设置令牌。
+        invalid_token: 设置令牌无效。请检查是否从 SimpleFIN Bridge 复制了完整的令牌。
+        token_compromised: 设置令牌可能已泄露、过期或已被使用。请创建新令牌。
+        unexpected: 发生意外错误。请重试或联系支持团队。
+        update_failed: 更新连接失败：%{message}
+      success: SimpleFIN 连接更新成功！您的账户正在重新连接中。
