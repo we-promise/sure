@@ -221,7 +221,11 @@ redisOperator:
         cpu: 100m
         memory: 256Mi
   managed:
-    enabled: true            # render a RedisSentinel CR
+    enabled: true            # render Redis CRs for in-cluster Redis
+  mode: sentinel             # enables RedisSentinel CR in addition to RedisReplication
+  sentinel:
+    enabled: true            # must be true when mode=sentinel
+    masterGroupName: mymaster
   name: ""                   # defaults to <fullname>-redis
   replicas: 3
   auth:
@@ -233,9 +237,12 @@ redisOperator:
 ```
 
 Notes:
+- When `redisOperator.mode=sentinel` and `redisOperator.sentinel.enabled=true`, the chart automatically configures Sidekiq to use Redis Sentinel for high availability.
+- The application receives `REDIS_SENTINEL_HOSTS` (comma-separated list of Sentinel endpoints) and `REDIS_SENTINEL_MASTER` (master group name) environment variables instead of `REDIS_URL`.
+- Sidekiq will connect to Sentinel nodes for automatic master discovery and failover support.
 - The operator master service is `<name>-redis-master.<ns>.svc.cluster.local:6379`.
 - The CR references your existing password secret via `kubernetesConfig.redisSecret { name, key }`.
-- Provider precedence for auto-wiring is: explicit `rails.extraEnv.REDIS_URL` → `redisOperator.managed` → `redisSimple`.
+- Provider precedence for auto-wiring is: explicit `rails.extraEnv.REDIS_URL` → `redisOperator.managed` (with Sentinel if configured) → `redisSimple`.
 - Only one in-cluster Redis provider should be enabled at a time to avoid ambiguity.
 
 ### HA scheduling and topology spreading
