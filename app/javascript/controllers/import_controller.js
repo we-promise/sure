@@ -50,6 +50,7 @@ export default class extends Controller {
     const amountTypeColumnKey = event.target.value;
 
     this.#showAmountTypeValueTargets(amountTypeColumnKey);
+    this.#showAmountTypeInflowValueTargets();
   }
 
   handleAmountTypeIdentifierChange(event) {
