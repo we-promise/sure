@@ -1,0 +1,15 @@
+---
+zh-TW:
+  registrations:
+    create:
+      failure: 帳戶建立失敗。
+      success: 帳戶建立成功！請檢查您的電子信箱確認帳戶。
+    new:
+      email: 電子信箱
+      email_placeholder: name@example.com
+      email_taken: 此電子信箱已被使用
+      password: 密碼
+      password_helper: 至少 8 個字元
+      password_placeholder: 輸入您的密碼
+      submit: 建立帳戶
+      title: 建立新帳戶

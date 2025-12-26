@@ -1,0 +1,13 @@
+---
+zh-TW:
+  pages:
+    asset_allocation:
+      allocation_explanation: 根據投資持股計算的資產配置
+    asset_class_allocation:
+      allocation: 資產類別配置
+      explanation: 根據投資持股計算的資產類別配置
+    net_worth:
+      assets: 資產
+      breakdown: 淨資產分類
+      liabilities: 負債
+      net_worth: 淨資產

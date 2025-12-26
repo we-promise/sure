@@ -1,0 +1,8 @@
+---
+zh-TW:
+  plaid_items:
+    new:
+      description: 連接您的銀行帳戶以自動同步交易記錄。
+      no_accounts: 未找到任何帳戶
+      start_connection: 開始連接
+      title: 連接帳戶

@@ -1,0 +1,19 @@
+---
+zh-TW:
+  loans:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      balance_placeholder: 0.00
+      lender_placeholder: 銀行名稱、朋友名字等
+      none: 無
+      original_balance_placeholder: 0.00
+      provider_select: 選擇貸款人
+    new:
+      title: 請輸入帳戶詳細資訊
+    show:
+      balance_remaining: 剩餘額度
+      balance_remaining_explanation: 不包括已支付的利息
+      borrowed_from: 貸出人
+      principal: 本金
+      principal_explanation: 原始貸款金額

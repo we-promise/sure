@@ -1,0 +1,29 @@
+---
+zh-TW:
+  vehicles:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      color: 顏色
+      color_placeholder: 例如：紅色
+      make: 製造商
+      make_placeholder: 例如：豐田
+      mileage: 里程
+      mileage_placeholder: 0
+      model: 型號
+      model_placeholder: 例如：Camry
+      none: 無
+      placeholder: 0.00
+      vin: 車輛識別號
+      vin_placeholder: VIN 號
+      year: 年份
+      year_placeholder: 例如：2020
+    new:
+      title: 請輸入車輛詳細資訊
+    show:
+      color: 顏色
+      current_value: 目前價值
+      make_and_model: 製造商和型號
+      mileage: 里程
+      vin: 車輛識別號
+      year: 年份

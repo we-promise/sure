@@ -1,0 +1,17 @@
+---
+zh-TW:
+  users:
+    edit:
+      avatar: 大頭貼
+      cancel: 取消
+      first_name: 名字
+      last_name: 姓氏
+      submit: 保存變更
+      title: 編輯個人檔案
+      timezone: 時區
+    profile:
+      email: 電子信箱
+      edit: 編輯個人檔案
+      name: 名字
+      profile: 個人檔案
+      timezone: 時區

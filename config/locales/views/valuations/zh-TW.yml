@@ -1,0 +1,23 @@
+---
+zh-TW:
+  valuations:
+    create:
+      failure: 估值建立失敗。
+      success: 估值已建立。
+    date: 日期
+    destroy:
+      confirm: 您確定要刪除此估值嗎？
+      failure: 估值刪除失敗。
+      success: 估值已刪除。
+    empty: 暫無資產估值
+    form:
+      amount: 金額
+      amount_placeholder: 輸入金額
+      date: 日期
+      submit: 保存估值
+    new:
+      title: 新增資產估值
+    update:
+      failure: 估值更新失敗。
+      success: 估值已更新。
+    value: 價值

@@ -1,0 +1,27 @@
+---
+zh-TW:
+  transfers:
+    amount: 金額
+    confirmation_message: 轉帳已 %{action}
+    create:
+      failure: 轉帳建立失敗。
+      success: 轉帳已建立。
+    date: 日期
+    delete:
+      confirm: 您確定要刪除此轉帳嗎？
+      failure: 轉帳刪除失敗。
+      success: 轉帳已刪除。
+    edit:
+      title: 編輯轉帳
+    empty: 暫無轉帳
+    from_account: 轉出帳戶
+    new:
+      title: 新建轉帳
+    notes: 備註
+    success_message: 轉帳已更新
+    tags: 標籤
+    to_account: 轉入帳戶
+    transfers: 轉帳
+    update:
+      failure: 轉帳更新失敗。
+      success: 轉帳已更新。

@@ -1,0 +1,24 @@
+---
+zh-TW:
+  tags:
+    destroy:
+      failure: 刪除標籤時出現問題。
+      success: 標籤已刪除。
+    edit:
+      submit: 更新標籤
+      title: 編輯標籤
+    empty:
+      description: 為交易新增標籤以便追蹤和組織。
+      new: 新建標籤
+    form:
+      color: 顏色
+      color_placeholder: 選擇顏色
+      name: 標籤名稱
+      name_placeholder: 例如：餐飲、工作、休假
+    index:
+      create: 新建標籤
+      no_tags: 暫無標籤
+      title: 標籤管理
+    new:
+      submit: 建立標籤
+      title: 新建標籤

@@ -1,0 +1,33 @@
+---
+zh-TW:
+  reports:
+    create:
+      cancel: 取消
+      failure: 報告建立失敗。
+      success: 報告建立成功！
+    edit:
+      cancel: 取消
+      delete: 刪除
+      delete_confirmation: 您確定要刪除此報告嗎？
+      submit: 更新報告
+      title: 編輯報告
+    empty:
+      title: 暫無分析報告
+    index:
+      description: 建立自訂分析報告以跟蹤您的財務數據。
+      new_report: 新建報告
+      title: 分析報告
+    new:
+      submit: 建立報告
+      title: 新建報告
+    report_form:
+      account_filter: 帳戶篩選
+      currency: 幣別
+      date_range: 日期範圍
+      filter_by_accounts: 按帳戶篩選
+      frequency: 頻率
+      name_label: 報告名稱
+      name_placeholder: 例如：每月花費報告
+      report_config: 報告設定
+      report_type_label: 報告類型
+      select_report_type: 選擇報告類型

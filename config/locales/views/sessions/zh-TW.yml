@@ -1,0 +1,17 @@
+---
+zh-TW:
+  sessions:
+    create:
+      failure: 登入失敗。請檢查您的電子信箱和密碼。
+      success: 登入成功。
+    destroy:
+      success: 您已登出。
+    new:
+      email: 電子信箱
+      email_placeholder: name@example.com
+      forgot_password: 忘記密碼？
+      password: 密碼
+      password_placeholder: 輸入您的密碼
+      sign_up: 建立新帳戶
+      submit: 登入
+      title: 登入

@@ -1,0 +1,47 @@
+---
+zh-TW:
+  settings:
+    account_settings:
+      account_settings_description: 管理您的帳戶設定，包括電子信箱和密碼。
+      title: 帳戶設定
+    admin_settings:
+      title: 管理設定
+    backup_and_restore:
+      title: 備份與還原
+    billing:
+      description: 管理您的訂閱和帳單
+      title: 帳單
+    connected_services:
+      description: 管理已連接的服務和資料提供商
+      title: 已連接的服務
+    data_import_export:
+      description: 匯入或導出您的財務資料
+      title: 資料匯入/匯出
+    family:
+      description: 管理家庭成員和角色
+      title: 家庭成員
+    general:
+      currency: 預設幣別
+      language: 語言
+      language_and_region: 語言和地區
+      region: 地區
+      timezone: 時區
+      title: 常規設定
+    index:
+      account_settings: 帳戶設定
+      billing: 帳單
+      connected_services: 已連接的服務
+      data_import_export: 資料匯入/匯出
+      family: 家庭設定
+      general: 常規設定
+      help_and_support: 說明與支援
+      notification: 通知設定
+      privacy_and_security: 隱私與安全
+      settings: 設定
+      title: 設定
+    notification:
+      description: 管理您的通知偏好設定
+      title: 通知設定
+    privacy_and_security:
+      description: 管理您的隱私和安全設定
+      title: 隱私與安全

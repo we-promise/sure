@@ -1,0 +1,15 @@
+---
+zh-TW:
+  properties:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      address_placeholder: 街道地址
+      none: 無
+      placeholder: 0.00
+    new:
+      title: 請輸入房地產詳細資訊
+    show:
+      address: 地址
+      current_value: 目前價值
+      current_value_explanation: 財產的目前估計價值
