@@ -197,6 +197,22 @@ simplefin:
   - The CNPG `spec.backup` schema does not support keys like `ttl` or `volumeSnapshot.enabled`; this chart strips those keys to avoid CRD warnings.
   - Unknown `backup.method` values are passed through and left for CNPG to validate.
 
+Example (barman-cloud plugin for WAL archiving + snapshot backups):
+
+```yaml
+cnpg:
+  cluster:
+    plugins:
+      - name: barman-cloud.cloudnative-pg.io
+        isWALArchiver: true
+        parameters:
+          barmanObjectName: minio-backups  # references an ObjectStore CR
+    backup:
+      method: volumeSnapshot
+      volumeSnapshot:
+        className: longhorn
+```
+
 Additional default hardening:
 
 - `DATABASE_URL` includes `?sslmode=prefer`.

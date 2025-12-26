@@ -100,6 +100,17 @@ cnpg:
     #     isWALArchiver: true
     #     parameters:
     #       barmanObjectName: minio-backups
+    #
+    # Example (complete setup: WAL archiving via barman-cloud plugin + snapshot backups):
+    # plugins:
+    #   - name: barman-cloud.cloudnative-pg.io
+    #     isWALArchiver: true
+    #     parameters:
+    #       barmanObjectName: minio-backups  # references an ObjectStore CR
+    # backup:
+    #   method: volumeSnapshot
+    #   volumeSnapshot:
+    #     className: longhorn
     plugins: []
     # auth config for application user
     appUser: sure
