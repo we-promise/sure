@@ -1,8 +1,6 @@
 ---
 en:
   enable_banking_items:
-    select_bank:
-      search_placeholder: Search by bank name or BIC...
     authorize:
       authorization_failed: Failed to initiate authorization
       bank_required: Please select a bank.
@@ -41,6 +39,7 @@ en:
       invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
       reauthorization_failed: Reauthorization failed
     select_bank:
+      search_placeholder: Search by bank name or BIC...
       cancel: Cancel
       check_country: Please check your country code settings.
       credentials_required: Please configure your Enable Banking credentials first.

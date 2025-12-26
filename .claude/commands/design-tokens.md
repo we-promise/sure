@@ -13,7 +13,7 @@ You are a design system migration assistant. Your goal is to find and replace ha
    - `app/assets/tailwind/maybe-design-system/component-utils.css`
 
 3. **Search for hardcoded color patterns** using grep:
-   ```
+   ```regex
    bg-(gray|red|green|yellow|blue|white|black)-\d+
    text-(gray|red|green|yellow|blue|white|black)-\d+
    border-(gray|red|green|yellow|blue|white|black)-\d+
@@ -24,6 +24,7 @@ You are a design system migration assistant. Your goal is to find and replace ha
 ## Token Mappings
 
 ### Background Tokens
+
 | Hardcoded Class | Design Token | Usage |
 |----------------|--------------|-------|
 | `bg-white` | `bg-container` | Card/panel backgrounds |
@@ -33,6 +34,7 @@ You are a design system migration assistant. Your goal is to find and replace ha
 | `bg-gray-800` | `bg-inverse` | Inverse/dark backgrounds |
 
 ### Text Tokens
+
 | Hardcoded Class | Design Token | Usage |
 |----------------|--------------|-------|
 | `text-gray-900` | `text-primary` | Primary text |
@@ -42,6 +44,7 @@ You are a design system migration assistant. Your goal is to find and replace ha
 | `text-blue-600` | `text-link` | Link text |
 
 ### Border Tokens
+
 | Hardcoded Class | Design Token | Usage |
 |----------------|--------------|-------|
 | Standard borders | `border-primary` | Primary borders |
