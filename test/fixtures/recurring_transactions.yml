@@ -19,3 +19,15 @@ inactive_subscription:
   next_expected_date: <%= 2.months.ago.to_date %>
   status: inactive
   occurrence_count: 2
+
+manual_subscription:
+  family: dylan_family
+  name: "Gym Membership"
+  amount: 45.00
+  currency: USD
+  expected_day_of_month: 10
+  last_occurrence_date: <%= 1.month.ago.to_date %>
+  next_expected_date: <%= 20.days.from_now.to_date %>
+  status: active
+  occurrence_count: 5
+  manual: true
