@@ -1,0 +1,2 @@
+# Empty fixture to ensure the simplefin_items table is truncated during tests.
+# Tests create SimplefinItem records explicitly in setup.
