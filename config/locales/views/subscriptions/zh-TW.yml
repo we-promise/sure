@@ -1,0 +1,8 @@
+---
+zh-TW:
+  subscriptions:
+    index:
+      billing_cycle: 帳單週期
+      price: 價格
+      status: 狀態
+      subscription_details: 訂閱詳情

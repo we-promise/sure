@@ -1,0 +1,14 @@
+---
+zh-TW:
+  password_resets:
+    create:
+      failure: 重設失敗。請確保您輸入的電子信箱地址正確。
+      success: 我們已向您的電子信箱傳送密碼重設連結。請檢查您的收件箱。
+    edit:
+      submit: 重設密碼
+      title: 重設密碼
+    new:
+      email: 電子信箱地址
+      email_placeholder: name@example.com
+      submit: 傳送重設連結
+      title: 忘記密碼？

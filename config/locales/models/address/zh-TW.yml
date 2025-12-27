@@ -1,0 +1,11 @@
+---
+zh-TW:
+  address:
+    attributes:
+      country: 國家/地區
+      line1: 地址列 1
+      line2: 地址列 2
+      locality: 城市/地區
+      postal_code: 郵遞區號
+      region: 縣市/區域/鄉鎮
+    format: "%{country}%{region}%{locality}%{line1}%{line2} %{postal_code}"

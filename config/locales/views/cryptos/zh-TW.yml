@@ -1,0 +1,7 @@
+---
+zh-TW:
+  cryptos:
+    edit:
+      edit: 編輯 %{account}
+    new:
+      title: 請輸入帳戶餘額

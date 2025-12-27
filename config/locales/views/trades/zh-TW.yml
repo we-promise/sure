@@ -1,0 +1,26 @@
+---
+zh-TW:
+  trades:
+    destroy:
+      confirm: 您確定要刪除此交易嗎？
+      failure: 交易刪除失敗。
+      success: 交易已刪除。
+    edit:
+      title: 編輯交易
+    form:
+      account: 帳戶
+      commission: 手續費
+      date: 日期
+      currency_code: 幣別
+      price: 股價
+      quantity: 數量
+      security_placeholder: 搜尋股票或代號
+      submit: 保存交易
+      trade_type: 交易類型
+      type_buy: 買入
+      type_sell: 賣出
+    new:
+      title: 新建交易記錄
+    row_action_buttons:
+      delete: 刪除
+      edit: 編輯

@@ -1,0 +1,8 @@
+---
+zh-TW:
+  password_mailer:
+    reset_email:
+      button: 重設密碼
+      expires_notice: 此連結將在 2 小時後過期
+      greeting: 歡迎使用 %{product_name}！
+      reset_text: 您要求重設密碼。點擊下方按鈕重設密碼。

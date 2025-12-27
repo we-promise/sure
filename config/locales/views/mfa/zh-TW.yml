@@ -1,0 +1,8 @@
+---
+zh-TW:
+  mfa:
+    index:
+      title: 多因素驗證設定
+    otp:
+      backup_codes: 備份碼
+      verify_setup: 驗證設定

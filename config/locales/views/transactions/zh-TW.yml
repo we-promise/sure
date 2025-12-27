@@ -1,0 +1,37 @@
+---
+zh-TW:
+  transactions:
+    all_accounts: 全部帳戶
+    amount: 金額
+    amount_on_transaction: 金額
+    category: 分類
+    category_placeholder: 選擇分類
+    confirmation_message: 交易已 %{action}
+    create:
+      failure: 交易建立失敗。
+      success: 交易已建立。
+    date: 日期
+    delete:
+      failure: 交易刪除失敗。
+      success: 交易已刪除。
+    deleted: 已刪除
+    description: 描述
+    edit:
+      title: 編輯交易
+    empty: 暫無交易
+    entry_type: 交易類型
+    from_account: 來源帳戶
+    income: 收入
+    new:
+      title: 新交易
+    notes: 備註
+    pending: 待處理
+    success_message: 交易已更新
+    tags: 標籤
+    tags_placeholder: 選擇或建立標籤
+    to_account: 目標帳戶
+    transaction_details: 交易詳情
+    transactions: 交易記錄
+    update:
+      failure: 交易更新失敗。
+      success: 交易已更新。

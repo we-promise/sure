@@ -1,0 +1,88 @@
+---
+zh-TW:
+  import:
+    cleans:
+      show:
+        description: 請在下方表格中編輯您的資料。紅色儲存格表示無效資料。
+        errors_notice: 您的資料中存在錯誤。將滑鼠懸停在錯誤上可檢視詳情。
+        errors_notice_mobile: 您的資料中存在錯誤。點擊錯誤提示可檢視詳情。
+        title: 資料清洗
+    configurations:
+      category_import:
+        button_label: 繼續
+        description: 上傳簡單的 CSV 檔案（例如我們導出資料時產生的檔案格式）。我們將自動為您對應欄位。
+        instructions: 選擇繼續以解析您的 CSV 檔案並進入清洗步驟。
+      mint_import:
+        date_format_label: 日期格式
+      rule_import:
+        description: 設定您的規則匯入。規則將根據 CSV 資料建立或更新。
+        process_button: 處理規則
+        process_help: 點擊下方按鈕處理您的 CSV 並產生規則行。
+      show:
+        description: 請選擇 CSV 檔案中各欄對應的欄位。
+        title: 設定匯入設定
+      trade_import:
+        date_format_label: 日期格式
+      transaction_import:
+        date_format_label: 日期格式
+    confirms:
+      mappings:
+        create_account: 新建帳戶
+        csv_mapping_label: CSV 中的 %{mapping}
+        no_accounts: 您目前沒有任何帳戶。請建立一個帳戶用於處理 CSV 中的（未分配）行，或返回上一步的「清洗」環節提供一個可用的帳戶名稱。
+        rows_label: 行數
+        sure_mapping_label: "%{product_name} 中的 %{mapping}"
+        unassigned_account: 需要為未分配行建立新帳戶？
+      show:
+        account_mapping_description: 將匯入檔案中的所有帳戶分配到 %{product_name} 的現有帳戶。您也可以新建帳戶或保留為未分類。
+        account_mapping_title: 分配帳戶
+        account_type_mapping_description: 將匯入檔案中的所有帳戶類型分配到 %{product_name} 的帳戶類型
+        account_type_mapping_title: 分配帳戶類型
+        category_mapping_description: 將匯入檔案中的所有分類分配到 %{product_name} 的現有分類。您也可以新建分類或保留為未分類。
+        category_mapping_title: 分配分類
+        tag_mapping_description: 將匯入檔案中的所有標籤分配到 %{product_name} 的現有標籤。您也可以新建標籤或保留為未分類。
+        tag_mapping_title: 分配標籤
+    uploads:
+      show:
+        description: 請在下方貼上或上傳您的 CSV 檔案。開始前請仔細閱讀下表中的說明。
+        instructions_1: 下方是可供匯入的 CSV 範例檔案及欄說明。
+        instructions_2: 您的 CSV 檔案必須包含表頭列
+        instructions_3: 您可以為各欄自由命名，稍後步驟中將進行欄位對應。
+        instructions_4: 標有星號 (*) 的欄為必填資料。
+        instructions_5: 數字中請勿包含逗號、貨幣符號或括號。
+        title: 匯入資料
+  imports:
+    empty:
+      message: 暫無匯入記錄。
+      new: 新建匯入
+    import:
+      complete: 已完成
+      delete: 刪除
+      failed: 已失敗
+      in_progress: 進行中
+      label: "%{type}：%{datetime}"
+      revert_failed: 回復失敗
+      reverting: 回復中
+      uploading: 處理行資料中
+      view: 檢視
+    index:
+      exports: 導出記錄
+      imports: 匯入記錄
+      new: 新建匯入
+      new_export: 新建導出
+      no_exports: 暫無導出記錄
+      title: 匯入/導出管理
+    new:
+      description: 您可以透過 CSV 手動匯入多種類型資料，或使用我們的匯入範本（如 Mint 格式）。
+      import_accounts: 匯入帳戶
+      import_categories: 匯入分類
+      import_mint: 從 Mint 匯入
+      import_portfolio: 匯入投資資料
+      import_rules: 匯入規則
+      import_transactions: 匯入交易記錄
+      resume: 繼續 %{type}
+      sources: 資料來源
+      title: 新建 CSV 匯入
+    ready:
+      description: 以下是發佈匯入後將新增到您帳戶的新項目摘要。
+      title: 確認匯入資料

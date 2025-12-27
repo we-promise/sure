@@ -1,0 +1,14 @@
+---
+zh-TW:
+  other_assets:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      none: 無
+      owner_placeholder: 車輛所有者名字
+      placeholder: 0.00
+    new:
+      title: 請輸入資產詳細資訊
+    show:
+      account_holder: 所有者
+      current_value: 目前價值

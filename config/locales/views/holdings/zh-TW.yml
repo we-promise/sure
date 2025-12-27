@@ -1,0 +1,35 @@
+---
+zh-TW:
+  holdings:
+    cash:
+      brokerage_cash: 經紀帳戶現金
+    destroy:
+      success: 持股已刪除
+    holding:
+      per_share: 每股
+      shares: "%{qty} 股"
+    index:
+      average_cost: 平均成本
+      holdings: 持股
+      name: 名稱
+      new_holding: 新建交易
+      no_holdings: 暫無持股記錄
+      return: 總收益
+      weight: 權重
+    missing_price_tooltip:
+      description: 此投資缺少價格資料，無法計算其收益或價值。
+      missing_data: 資料缺失
+    show:
+      avg_cost_label: 平均成本
+      current_market_price_label: 目前市價
+      delete: 刪除
+      delete_subtitle: 此操作將刪除該持股及相關所有交易記錄，且不可復原。
+      delete_title: 刪除持股
+      history: 歷史記錄
+      overview: 概覽
+      portfolio_weight_label: 投資組合權重
+      settings: 設定
+      ticker_label: 股票代碼
+      total_return_label: 總收益
+      trade_history_entry: "%{qty} 股 %{security} @ %{price}"
+      unknown: 未知

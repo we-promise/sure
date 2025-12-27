@@ -1,0 +1,21 @@
+---
+zh-TW:
+  recurring_transactions:
+    confirm_delete: 您確定要刪除此定期交易嗎？
+    delete: 刪除
+    edit: 編輯定期交易
+    empty: 暫無定期交易
+    every_x_days: 每 %{count} 天
+    every_x_months: 每 %{count} 個月
+    every_x_weeks: 每 %{count} 週
+    every_x_years: 每 %{count} 年
+    frequency_label: 頻率
+    frequency_week_plural: 每 %{count} 週
+    frequency_week_singular: 每週
+    frequency_month_plural: 每 %{count} 個月
+    frequency_month_singular: 每月
+    frequency_year_plural: 每 %{count} 年
+    frequency_year_singular: 每年
+    frequency_day_plural: 每 %{count} 天
+    frequency_day_singular: 每天
+    new_entry: 新增定期交易

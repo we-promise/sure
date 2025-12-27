@@ -1,0 +1,33 @@
+---
+zh-TW:
+  layout:
+    all_accounts: 全部帳戶
+    all_transactions: 全部交易
+    budgets: 預算
+    categories: 分類
+    chat_ai_title: 家庭財務助手
+    chat_with_ai: 與 AI 對話
+    export: 導出
+    feedback: 意見反饋
+    import: 匯入
+    insights: 分析報告
+    links:
+      settings: 設定
+      view_all: 檢視全部
+    managed_mode: 受管理模式
+    my_accounts: 我的帳戶
+    my_net_worth: 我的淨資產
+    net_worth: 淨資產
+    nothing_here: 暫無任何內容
+    overview: 概覽
+    reports: 分析報告
+    rules: 規則設定
+    settings: 設定
+    something_went_wrong: 糟糕！出現了問題，請稍後重試。
+    tags: 標籤
+    transactions: 交易記錄
+    transfers: 轉帳
+    try_again: 重試
+    try_demo: 體驗示範
+    version: 版本 %{version}
+    view_all_accounts: 檢視全部帳戶

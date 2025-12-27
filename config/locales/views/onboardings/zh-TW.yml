@@ -1,0 +1,69 @@
+---
+zh-TW:
+  onboardings:
+    budget_setup:
+      back: 返回
+      back_button: 返回上一步
+      budget_name: 預算名稱
+      budget_name_placeholder: 例如：每月購物預算
+      category: 分類
+      category_placeholder: 選擇分類
+      create: 建立預算
+      description: 為您經常花費的每個分類設定預算，並跟蹤進度。
+      enter_budget_amount: 請輸入預算金額
+      enter_budget_name: 請輸入預算名稱
+      monthly_budget_amount: 每月預算額度
+      skip: 跳過
+      title: 設定預算
+      validation_error: 請確保所有欄位都已填妥。
+    complete:
+      description: 您已準備好開始追蹤您的財務。
+      start: 開始使用 %{product_name}
+      title: 完成！
+    demo_mode:
+      demo_account_name: 示範帳戶
+      demo_account_type: 銀行帳戶
+      demo_starting_balance: 2,500.00
+      demo_transaction_1: 咖啡館 - 5.00
+      demo_transaction_2: 雜貨店 - 125.50
+      demo_transaction_3: 電費 - 85.00
+      description: 我們已在您的帳戶中建立了一個具有樣本交易的示範帳戶。您可以探索該功能或將其刪除並新建您自己的帳戶。
+      title: 您已建立帳戶！
+    family_setup:
+      add_family_member: 新增成員
+      description: 邀請您的家庭成員分享和追蹤共同財務。
+      email_address: 電子信箱地址
+      email_address_placeholder: name@example.com
+      email_field_error: 請輸入有效的電子信箱地址。
+      member_role: 成員角色
+      role_helper_text: 管理員可以管理帳戶和邀請，成員可以檢視財務資料。
+      skip: 跳過
+      submit: 傳送邀請
+      title: 邀請成員
+    name_setup:
+      description: 告訴我們您的名字和姓氏。
+      first_name: 名字
+      first_name_placeholder: 例如：李
+      last_name: 姓氏
+      last_name_placeholder: 例如：明
+      submit: 繼續
+      title: 建立您的檔案
+    password:
+      back: 返回
+      description: 建立安全的密碼以保護您的帳戶。密碼長度至少需要 8 個字元。
+      password_confirm: 確認密碼
+      password_confirm_placeholder: 確認您的密碼
+      password_placeholder: 輸入您的密碼
+      password_strength: 密碼強度
+      strong: 強
+      submit: 繼續
+      title: 設定密碼
+      weak: 弱
+    sign_up:
+      description: 立即開始使用 %{product_name}，免費追蹤您的財務。
+      email: 電子信箱地址
+      email_placeholder: name@example.com
+      email_taken_error: 此電子信箱地址已被使用。請嘗試登入或使用其他電子信箱地址。
+      error_message: 提示：請重新檢查您的資訊並重試。
+      submit: 繼續
+      title: 建立帳戶

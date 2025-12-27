@@ -1,0 +1,13 @@
+---
+zh-TW:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: 必須與 previous 的資料類型相同
+              must_be_of_type_money_numeric_or_nil: 必須是 Money、Numeric 或 nil 類型
+            previous:
+              must_be_of_the_same_type_as_current: 必須與 current 的資料類型相同
+              must_be_of_type_money_numeric_or_nil: 必須是 Money、Numeric 或 nil 類型
