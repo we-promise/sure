@@ -1,0 +1,18 @@
+---
+zh-CN:
+  shared:
+    confirm_modal:
+      accept: 确认
+      body_html: "<p>此操作不可撤销</p>"
+      cancel: 取消
+      title: 确定要执行此操作？
+    money_field:
+      label: 金额
+    syncing_notice:
+      syncing: 账户数据同步中...
+    transaction_tabs:
+      expense: 支出
+      income: 收入
+      transfer: 转账
+    trend_change:
+      no_change: 无变化
