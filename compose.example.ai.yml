@@ -78,11 +78,11 @@ services:
     image: ghcr.io/open-webui/open-webui
     container_name: ollama-webui
     volumes:
-      - ollama:/app/backend/data
+      - ollama-webui:/app/backend/data
     depends_on:
       - ollama
     ports:
-      - "4000:8080"
+      - "8080:8080"
     environment: # https://docs.openwebui.com/getting-started/env-configuration#default_models
       - OLLAMA_BASE_URLS=http://host.docker.internal:11434 #comma separated ollama hosts
       - ENV=dev
@@ -163,6 +163,7 @@ volumes:
   postgres-data:
   redis-data:
   ollama:
+  ollama-webui:
 
 networks:
   sure_net:
