@@ -46,6 +46,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_22_120100) do
     t.jsonb "locked_attributes", default: {}
     t.string "status", default: "active"
     t.uuid "simplefin_account_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.text "notes"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"

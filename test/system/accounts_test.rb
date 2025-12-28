@@ -109,9 +109,16 @@ class AccountsTest < ApplicationSystemTestCase
       click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto Loan CreditCard])
 
       account_name = "[system test] #{accountable_type} Account"
+      institution_name = "[system test] Institution"
+      institution_domain = "example.com"
+      notes = "Test notes for #{accountable_type}"
 
       fill_in "Account name*", with: account_name
       fill_in "account[balance]", with: 100.99
+      find("summary", text: "Additional details").click
+      fill_in "Institution name", with: institution_name
+      fill_in "Institution domain", with: institution_domain
+      fill_in "Notes", with: notes
 
       yield if block_given?
 
@@ -127,6 +134,9 @@ class AccountsTest < ApplicationSystemTestCase
       assert_text account_name
 
       created_account = Account.order(:created_at).last
+      assert_equal institution_name, created_account[:institution_name]
+      assert_equal institution_domain, created_account[:institution_domain]
+      assert_equal notes, created_account[:notes]
 
       visit account_url(created_account)
 
@@ -135,9 +145,22 @@ class AccountsTest < ApplicationSystemTestCase
         click_on "Edit"
       end
 
+      updated_institution_name = "[system test] Updated Institution"
+      updated_institution_domain = "updated.example.com"
+      updated_notes = "Updated notes for #{accountable_type}"
+
       fill_in "Account name", with: "Updated account name"
+      find("summary", text: "Additional details").click
+      fill_in "Institution name", with: updated_institution_name
+      fill_in "Institution domain", with: updated_institution_domain
+      fill_in "Notes", with: updated_notes
       click_button "Update Account"
       assert_selector "h2", text: "Updated account name"
+
+      created_account.reload
+      assert_equal updated_institution_name, created_account[:institution_name]
+      assert_equal updated_institution_domain, created_account[:institution_domain]
+      assert_equal updated_notes, created_account[:notes]
     end
 
     def humanized_accountable(accountable_type)

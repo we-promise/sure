@@ -86,3 +86,5 @@ en:
         equal_to: equal to
         greater_than: greater than
         less_than: less than
+      form:
+        toggle_selection_checkboxes: Toggle all checkboxes

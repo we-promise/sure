@@ -80,3 +80,5 @@ tr:
         equal_to: eşit
         greater_than: daha büyük
         less_than: daha küçük
+      form:
+        toggle_selection_checkboxes: Tüm onay kutularını değiştir
