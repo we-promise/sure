@@ -82,18 +82,18 @@ class Provider::CoinstatsAdapter < Provider::Base
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
 
-    metadata["name"] || item&.institution_name
+    metadata["name"]
   end
 
   def institution_url
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
 
-    metadata["url"] || item&.institution_url
+    metadata["url"]
   end
 
   def institution_color
-    item&.institution_color
+    nil # CoinStats doesn't provide institution colors
   end
 
   def logo_url

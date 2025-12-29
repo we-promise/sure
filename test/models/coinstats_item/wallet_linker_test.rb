@@ -11,8 +11,12 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
   end
 
   test "link returns failure when no tokens found" do
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
-      .with("0x123abc", "ethereum")
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .with("ethereum:0x123abc")
+      .returns([])
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
+      .with([], "0x123abc", "ethereum")
       .returns([])
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0x123abc", blockchain: "ethereum")
@@ -35,8 +39,16 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
-      .with("0x123abc", "ethereum")
+    bulk_response = [
+      { blockchain: "ethereum", address: "0x123abc", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .with("ethereum:0x123abc")
+      .returns(bulk_response)
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
+      .with(bulk_response, "0x123abc", "ethereum")
       .returns(token_data)
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0x123abc", blockchain: "ethereum")
@@ -57,7 +69,7 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
 
     account = coinstats_account.account
     # Account name is set before upsert_coinstats_snapshot so it keeps the formatted name
-    assert_equal "Ethereum (...3abc)", account.name
+    assert_equal "Ethereum (0x12...3abc)", account.name
     assert_equal 3000.0, account.balance.to_f
     assert_equal "USD", account.currency
     assert_equal "Crypto", account.accountable_type
@@ -69,8 +81,16 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       { coinId: "dai", name: "Dai Stablecoin", symbol: "DAI", amount: 1000, price: 1 }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
-      .with("0xmulti", "ethereum")
+    bulk_response = [
+      { blockchain: "ethereum", address: "0xmulti", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .with("ethereum:0xmulti")
+      .returns(bulk_response)
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
+      .with(bulk_response, "0xmulti", "ethereum")
       .returns(token_data)
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0xmulti", blockchain: "ethereum")
@@ -89,7 +109,12 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       { coinId: "ethereum", name: "Ethereum", amount: 1.0, price: 2000 }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance).returns(token_data)
+    bulk_response = [
+      { blockchain: "ethereum", address: "0x123", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances).returns(bulk_response)
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance).returns(token_data)
     @coinstats_item.expects(:sync_later).once
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0x123", blockchain: "ethereum")
@@ -97,7 +122,8 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
   end
 
   test "link does not trigger sync when no accounts created" do
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance).returns([])
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances).returns([])
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance).returns([])
     @coinstats_item.expects(:sync_later).never
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0x123", blockchain: "ethereum")
@@ -116,8 +142,16 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
-      .with("0xtest123", "ethereum")
+    bulk_response = [
+      { blockchain: "ethereum", address: "0xtest123", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .with("ethereum:0xtest123")
+      .returns(bulk_response)
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
+      .with(bulk_response, "0xtest123", "ethereum")
       .returns(token_data)
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0xtest123", blockchain: "ethereum")
@@ -137,7 +171,12 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       { coinId: "bad", name: nil, amount: 1.0, price: 100 } # Will fail validation
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance).returns(token_data)
+    bulk_response = [
+      { blockchain: "ethereum", address: "0xtest", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances).returns(bulk_response)
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance).returns(token_data)
 
     # We need to mock the error scenario - name can't be blank
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0xtest", blockchain: "ethereum")
@@ -154,14 +193,19 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       { coinId: "ethereum", name: "Ethereum", amount: 1.0, price: 2000 }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance).returns(token_data)
+    bulk_response = [
+      { blockchain: "ethereum", address: "0xABCDEF123456", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances).returns(bulk_response)
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance).returns(token_data)
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0xABCDEF123456", blockchain: "ethereum")
     linker.link
 
     # Account name includes the address suffix (created before upsert_coinstats_snapshot)
     account = @coinstats_item.accounts.last
-    assert_equal "Ethereum (...3456)", account.name
+    assert_equal "Ethereum (0xAB...3456)", account.name
   end
 
   test "link handles single token as hash instead of array" do
@@ -173,7 +217,12 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       price: 40000
     }
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance).returns(token_data)
+    bulk_response = [
+      { blockchain: "bitcoin", address: "bc1qtest", connectionId: "bitcoin", balances: [ token_data ] }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances).returns(bulk_response)
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance).returns(token_data)
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "bc1qtest", blockchain: "bitcoin")
 
@@ -191,7 +240,12 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       { coinId: "unique_token_123", name: "My Token", amount: 100, price: 1 }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance).returns(token_data)
+    bulk_response = [
+      { blockchain: "ethereum", address: "0xtest", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances).returns(bulk_response)
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance).returns(token_data)
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0xtest", blockchain: "ethereum")
     linker.link
@@ -205,7 +259,12 @@ class CoinstatsItem::WalletLinkerTest < ActiveSupport::TestCase
       { id: "fallback_id_456", name: "Fallback Token", amount: 50, price: 2 }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance).returns(token_data)
+    bulk_response = [
+      { blockchain: "ethereum", address: "0xtest", connectionId: "ethereum", balances: token_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances).returns(bulk_response)
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance).returns(token_data)
 
     linker = CoinstatsItem::WalletLinker.new(@coinstats_item, address: "0xtest", blockchain: "ethereum")
     linker.link

@@ -210,7 +210,7 @@ class CoinstatsEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "builds name with coin name from nested transactions" do
+  test "builds name with symbol preferring it over coin name" do
     transaction_data = {
       type: "Received",
       date: "2025-01-15T10:00:00.000Z",
@@ -226,7 +226,7 @@ class CoinstatsEntry::ProcessorTest < ActiveSupport::TestCase
     processor.process
 
     entry = @account.entries.last
-    assert_equal "Received Wrapped Ether (WETH)", entry.name
+    assert_equal "Received WETH", entry.name
   end
 
   test "handles swap out as outgoing transaction" do

@@ -49,80 +49,89 @@ class Provider::Coinstats
     []
   end
 
-  # Get cryptocurrency balances for any blockchain wallet
-  # https://coinstats.app/api-docs/openapi/get-wallet-balance
-  def get_wallet_balance(address, blockchain)
+  # Get cryptocurrency balances for multiple wallets in a single request
+  # https://coinstats.app/api-docs/openapi/get-wallet-balances
+  # @param wallets [String] Comma-separated list of wallet addresses in format "blockchain:address"
+  #   Example: "ethereum:0x123abc,bitcoin:bc1qxyz"
+  # @return [Array<Hash>] Array of wallet balance data with blockchain, address, connectionId, and balances
+  def get_wallet_balances(wallets)
+    return [] if wallets.blank?
+
     res = self.class.get(
-      "#{BASE_URL}/wallet/balance",
+      "#{BASE_URL}/wallet/balances",
       headers: auth_headers,
-      query: { address: address, connectionId: blockchain }
+      query: { wallets: wallets }
     )
 
     handle_response(res)
   end
 
-  # Get transaction data for wallet addresses
+  # Extract balance data for a specific wallet from bulk response
+  # @param bulk_data [Array<Hash>] Response from get_wallet_balances
+  # @param address [String] Wallet address to find
+  # @param blockchain [String] Blockchain/connectionId to find
+  # @return [Array<Hash>] Token balances for the wallet, or empty array if not found
+  def extract_wallet_balance(bulk_data, address, blockchain)
+    return [] unless bulk_data.is_a?(Array)
+
+    wallet_data = bulk_data.find do |entry|
+      entry = entry.with_indifferent_access
+      entry[:address]&.downcase == address&.downcase &&
+        (entry[:connectionId]&.downcase == blockchain&.downcase ||
+         entry[:blockchain]&.downcase == blockchain&.downcase)
+    end
+
+    return [] unless wallet_data
+
+    wallet_data = wallet_data.with_indifferent_access
+    wallet_data[:balances] || []
+  end
+
+  # Get transaction data for multiple wallet addresses in a single request
   # https://coinstats.app/api-docs/openapi/get-wallet-transactions
-  def get_wallet_transactions(address, blockchain)
-    # Initiate syncing process to update transaction data
-    # https://coinstats.app/api-docs/openapi/transactions-sync
-    self.class.patch(
+  # @param wallets [String] Comma-separated list of wallet addresses in format "blockchain:address"
+  #   Example: "ethereum:0x123abc,bitcoin:bc1qxyz"
+  # @return [Array<Hash>] Array of wallet transaction data with blockchain, address, and transactions
+  def get_wallet_transactions(wallets)
+    return [] if wallets.blank?
+
+    res = self.class.get(
       "#{BASE_URL}/wallet/transactions",
       headers: auth_headers,
-      query: { address: address, connectionId: blockchain }
+      query: { wallets: wallets }
     )
 
-    sync_retry_current = 0
-    sync_retry_max = 10
-    sync_retry_delay = 5
+    handle_response(res)
+  end
 
-    loop do
-      sync_retry_current += 1
-
-      # Get the syncing status of the provided wallet address with the blockchain network.
-      # https://coinstats.app/api-docs/openapi/get-wallet-sync-status
-      sync_res = self.class.get(
-        "#{BASE_URL}/wallet/status",
-        headers: auth_headers,
-        query: { address: address, connectionId: blockchain }
-      )
-      sync_data = handle_response(sync_res)
-
-      break if sync_data[:status] == "synced"
-
-      if sync_retry_current >= sync_retry_max
-        raise StandardError, "CoinStats wallet transactions sync timeout after #{sync_retry_current} attempts"
-      end
-
-      # Exponential backoff
-      sleep sync_retry_delay * sync_retry_current
+  # Extract transaction data for a specific wallet from bulk response
+  # The transactions API returns {result: Array<transactions>, meta: {...}}
+  # All transactions in the response belong to the requested wallets
+  # @param bulk_data [Hash, Array] Response from get_wallet_transactions
+  # @param address [String] Wallet address to filter by (currently unused as API returns flat list)
+  # @param blockchain [String] Blockchain/connectionId to filter by (currently unused)
+  # @return [Array<Hash>] Transactions for the wallet, or empty array if not found
+  def extract_wallet_transactions(bulk_data, address, blockchain)
+    # Handle Hash response with :result key (current API format)
+    if bulk_data.is_a?(Hash)
+      bulk_data = bulk_data.with_indifferent_access
+      return bulk_data[:result] || []
     end
 
-    # Paginate through all transactions using max limit
-    all_transactions = []
-    page = 1
-    limit = 100 # Maximum allowed by API
+    # Handle legacy Array format (per-wallet structure)
+    return [] unless bulk_data.is_a?(Array)
 
-    loop do
-      res = self.class.get(
-        "#{BASE_URL}/wallet/transactions",
-        headers: auth_headers,
-        query: { address: address, connectionId: blockchain, page: page, limit: limit }
-      )
-
-      data = handle_response(res)
-      transactions = data[:result] || data[:transactions] || data[:data] || []
-      break if transactions.empty?
-
-      all_transactions.concat(transactions)
-
-      # Stop if we received fewer than the limit (last page)
-      break if transactions.size < limit
-
-      page += 1
+    wallet_data = bulk_data.find do |entry|
+      entry = entry.with_indifferent_access
+      entry[:address]&.downcase == address&.downcase &&
+        (entry[:connectionId]&.downcase == blockchain&.downcase ||
+         entry[:blockchain]&.downcase == blockchain&.downcase)
     end
 
-    all_transactions
+    return [] unless wallet_data
+
+    wallet_data = wallet_data.with_indifferent_access
+    wallet_data[:transactions] || []
   end
 
   private

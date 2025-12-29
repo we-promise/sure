@@ -30,11 +30,6 @@ class CoinstatsAccount::Processor
   private
 
     def process_account!
-      if coinstats_account.current_account.blank?
-        Rails.logger.error("Coinstats account #{coinstats_account.id} has no associated Account")
-        return
-      end
-
       account = coinstats_account.current_account
       balance = coinstats_account.current_balance || 0
       currency = parse_currency(coinstats_account.currency) || account.currency || "USD"

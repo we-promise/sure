@@ -1,5 +1,5 @@
 class CoinstatsEntry::Processor
-  include CurrencyNormalizable
+  include CoinstatsTransactionIdentifiable
 
   # CoinStats API transaction structure (from /wallet/transactions endpoint):
   # {
@@ -122,22 +122,7 @@ class CoinstatsEntry::Processor
     end
 
     def external_id
-      # Extract unique transaction ID - different blockchains have different ID locations:
-      # - Ethereum/EVM: hash.id (transaction hash)
-      # - Bitcoin/UTXO: transactions[0].items[0].id
-      tx_id = hash_data[:id].presence ||
-              data.dig(:transactions, 0, :items, 0, :id).presence
-
-      # Fallback: generate ID from date + type + amount
-      if tx_id.blank?
-        date = data[:date]
-        type = data[:type]
-        amount = coin_data[:count]
-        if date.present? && type.present? && amount.present?
-          tx_id = "#{date}_#{type}_#{amount}"
-        end
-      end
-
+      tx_id = extract_coinstats_transaction_id(data)
       raise ArgumentError, "CoinStats transaction missing unique identifier: #{data.inspect}" unless tx_id.present?
       "coinstats_#{tx_id}"
     end
@@ -146,12 +131,10 @@ class CoinstatsEntry::Processor
       tx_type = transaction_type || "Transaction"
       symbol = coin_data[:symbol]
 
-      # Get coin name from nested transaction items if available
+      # Get coin name from nested transaction items if available (used as fallback)
       coin_name = transactions_data.dig(0, :items, 0, :coin, :name)
 
-      if symbol.present? && coin_name.present?
-        "#{tx_type} #{coin_name} (#{symbol})"
-      elsif symbol.present?
+      if symbol.present?
         "#{tx_type} #{symbol}"
       elsif coin_name.present?
         "#{tx_type} #{coin_name}"
@@ -197,12 +180,8 @@ class CoinstatsEntry::Processor
     end
 
     def currency
-      # CoinStats typically returns values in USD
+      # CoinStats values are always in USD
       "USD"
-    end
-
-    def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency code '#{currency_value}' in CoinStats transaction #{external_id}")
     end
 
     def date

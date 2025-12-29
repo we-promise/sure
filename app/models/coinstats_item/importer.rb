@@ -28,9 +28,15 @@ class CoinstatsItem::Importer
     accounts_failed = 0
     transactions_imported = 0
 
+    # Fetch balance data using bulk endpoint
+    bulk_balance_data = fetch_balances_for_accounts(linked_accounts)
+
+    # Fetch transaction data using bulk endpoint
+    bulk_transactions_data = fetch_transactions_for_accounts(linked_accounts)
+
     linked_accounts.each do |coinstats_account|
       begin
-        result = update_account(coinstats_account)
+        result = update_account(coinstats_account, bulk_balance_data: bulk_balance_data, bulk_transactions_data: bulk_transactions_data)
         accounts_updated += 1 if result[:success]
         transactions_imported += result[:transactions_count] || 0
       rescue => e
@@ -51,7 +57,57 @@ class CoinstatsItem::Importer
 
   private
 
-    def update_account(coinstats_account)
+    # Fetch balance data for all linked accounts using the bulk endpoint
+    # @param linked_accounts [Array<CoinstatsAccount>] Accounts to fetch balances for
+    # @return [Array<Hash>, nil] Bulk balance data, or nil on error
+    def fetch_balances_for_accounts(linked_accounts)
+      # Extract unique wallet addresses and blockchains
+      wallets = linked_accounts.filter_map do |account|
+        raw = account.raw_payload || {}
+        address = raw["address"] || raw[:address]
+        blockchain = raw["blockchain"] || raw[:blockchain]
+        next unless address.present? && blockchain.present?
+
+        { address: address, blockchain: blockchain }
+      end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
+
+      return nil if wallets.empty?
+
+      Rails.logger.info "CoinstatsItem::Importer - Fetching balances for #{wallets.size} wallet(s) via bulk endpoint"
+      # Build comma-separated string in format "blockchain:address"
+      wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
+      coinstats_provider.get_wallet_balances(wallets_param)
+    rescue => e
+      Rails.logger.warn "CoinstatsItem::Importer - Bulk balance fetch failed: #{e.message}"
+      nil
+    end
+
+    # Fetch transaction data for all linked accounts using the bulk endpoint
+    # @param linked_accounts [Array<CoinstatsAccount>] Accounts to fetch transactions for
+    # @return [Array<Hash>, nil] Bulk transaction data, or nil on error
+    def fetch_transactions_for_accounts(linked_accounts)
+      # Extract unique wallet addresses and blockchains
+      wallets = linked_accounts.filter_map do |account|
+        raw = account.raw_payload || {}
+        address = raw["address"] || raw[:address]
+        blockchain = raw["blockchain"] || raw[:blockchain]
+        next unless address.present? && blockchain.present?
+
+        { address: address, blockchain: blockchain }
+      end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
+
+      return nil if wallets.empty?
+
+      Rails.logger.info "CoinstatsItem::Importer - Fetching transactions for #{wallets.size} wallet(s) via bulk endpoint"
+      # Build comma-separated string in format "blockchain:address"
+      wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
+      coinstats_provider.get_wallet_transactions(wallets_param)
+    rescue => e
+      Rails.logger.warn "CoinstatsItem::Importer - Bulk transaction fetch failed: #{e.message}"
+      nil
+    end
+
+    def update_account(coinstats_account, bulk_balance_data:, bulk_transactions_data:)
       # Get the wallet address and blockchain from the raw payload
       raw = coinstats_account.raw_payload || {}
       address = raw["address"] || raw[:address]
@@ -62,24 +118,37 @@ class CoinstatsItem::Importer
         return { success: false, error: "Missing address or blockchain" }
       end
 
-      # Fetch current balance from CoinStats API
-      balance_data = coinstats_provider.get_wallet_balance(address, blockchain)
+      # Extract balance data for this specific wallet from the bulk response
+      balance_data = if bulk_balance_data.present?
+        coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
+      else
+        []
+      end
 
       # Update the coinstats account with new balance data
       coinstats_account.upsert_coinstats_snapshot!(normalize_balance_data(balance_data, coinstats_account))
 
-      # Fetch and merge transactions
-      transactions_count = fetch_and_merge_transactions(coinstats_account, address, blockchain)
+      # Extract and merge transactions from bulk response
+      transactions_count = fetch_and_merge_transactions(coinstats_account, address, blockchain, bulk_transactions_data)
 
       { success: true, transactions_count: transactions_count }
     end
 
-    def fetch_and_merge_transactions(coinstats_account, address, blockchain)
-      transactions_data = coinstats_provider.get_wallet_transactions(address, blockchain)
+    def fetch_and_merge_transactions(coinstats_account, address, blockchain, bulk_transactions_data)
+      # Extract transactions for this specific wallet from the bulk response
+      transactions_data = if bulk_transactions_data.present?
+        coinstats_provider.extract_wallet_transactions(bulk_transactions_data, address, blockchain)
+      else
+        []
+      end
 
-      # get_wallet_transactions returns a flat array of all transactions (paginated internally)
       new_transactions = transactions_data.is_a?(Array) ? transactions_data : (transactions_data[:result] || [])
       return 0 if new_transactions.empty?
+
+      # Filter transactions to only include those relevant to this coin/token
+      coin_id = coinstats_account.account_id
+      relevant_transactions = filter_transactions_by_coin(new_transactions, coin_id)
+      return 0 if relevant_transactions.empty?
 
       # Get existing transactions (already extracted as array)
       existing_transactions = coinstats_account.raw_transactions_payload.to_a
@@ -88,7 +157,7 @@ class CoinstatsItem::Importer
       existing_ids = existing_transactions.map { |tx| extract_coinstats_transaction_id(tx) }.compact.to_set
 
       # Filter to only new transactions
-      transactions_to_add = new_transactions.select do |tx|
+      transactions_to_add = relevant_transactions.select do |tx|
         tx_id = extract_coinstats_transaction_id(tx)
         tx_id.present? && !existing_ids.include?(tx_id)
       end
@@ -100,14 +169,46 @@ class CoinstatsItem::Importer
         Rails.logger.info "CoinstatsItem::Importer - Added #{transactions_to_add.count} new transactions for account #{coinstats_account.id}"
       end
 
-      new_transactions.count
-    rescue Provider::Coinstats::RateLimitError => e
-      Rails.logger.warn "CoinstatsItem::Importer - Rate limited fetching transactions for #{coinstats_account.id}: #{e.message}"
-      0
-    rescue => e
-      Rails.logger.warn "CoinstatsItem::Importer - Failed to fetch transactions for #{coinstats_account.id}: #{e.message}"
-      # Continue without transactions - balance update is more important
-      0
+      relevant_transactions.count
+    end
+
+    # Filter transactions to only include those relevant to a specific coin
+    # Transactions can be matched by:
+    # - coinData.symbol matching the coin (case-insensitive)
+    # - transactions[].items[].coin.id matching the coin_id
+    # @param transactions [Array<Hash>] Array of transaction objects
+    # @param coin_id [String] The coin ID to filter by (e.g., "chainlink", "ethereum")
+    # @return [Array<Hash>] Filtered transactions
+    def filter_transactions_by_coin(transactions, coin_id)
+      return [] if coin_id.blank?
+
+      coin_id_downcase = coin_id.to_s.downcase
+
+      transactions.select do |tx|
+        tx = tx.with_indifferent_access
+
+        # Check coinData for coin match
+        coin_data = tx[:coinData]
+        if coin_data.present?
+          # Some transactions have symbol in coinData
+          # We'll match by checking if any inner transaction items have this coin
+        end
+
+        # Check nested transactions items for coin match
+        inner_transactions = tx[:transactions] || []
+        inner_transactions.any? do |inner_tx|
+          inner_tx = inner_tx.with_indifferent_access
+          items = inner_tx[:items] || []
+          items.any? do |item|
+            item = item.with_indifferent_access
+            coin = item[:coin]
+            next false unless coin.present?
+
+            coin = coin.with_indifferent_access
+            coin[:id]&.downcase == coin_id_downcase
+          end
+        end
+      end
     end
 
     def normalize_balance_data(balance_data, coinstats_account)
@@ -141,25 +242,24 @@ class CoinstatsItem::Importer
     # Find the token in balance_data that matches this coinstats_account
     # Tries to match by account_id first, then falls back to name matching
     def find_matching_token(balance_data, coinstats_account)
-      tokens = normalize_tokens(balance_data)
+      tokens = normalize_tokens(balance_data).map(&:with_indifferent_access)
       return nil if tokens.empty?
 
       # First try to match by account_id (coinId) if available
       if coinstats_account.account_id.present?
+        account_id = coinstats_account.account_id.to_s
         matching = tokens.find do |token|
-          token = token.with_indifferent_access
           token_id = (token[:coinId] || token[:id])&.to_s
-          token_id == coinstats_account.account_id.to_s
+          token_id == account_id
         end
-        return matching&.with_indifferent_access if matching
+        return matching if matching
       end
 
       # Fall back to matching by name (handles legacy accounts without account_id)
       account_name = coinstats_account.name&.downcase
       return nil if account_name.blank?
 
-      matching = tokens.find do |token|
-        token = token.with_indifferent_access
+      tokens.find do |token|
         token_name = token[:name]&.to_s&.downcase
         token_symbol = token[:symbol]&.to_s&.downcase
 
@@ -167,8 +267,6 @@ class CoinstatsItem::Importer
         account_name.include?(token_name) || token_name.include?(account_name) ||
           (token_symbol.present? && (account_name.include?(token_symbol) || token_symbol == account_name))
       end
-
-      matching&.with_indifferent_access
     end
 
     def normalize_tokens(balance_data)
@@ -181,29 +279,13 @@ class CoinstatsItem::Importer
       end
     end
 
-    # Calculate balance for a single token
-    # Used when syncing individual coinstats_accounts that each represent one token
+    # Calculate balance for a single token (amount * price = USD value)
+    # Token should already be an indifferent access hash from find_matching_token
     def calculate_token_balance(token)
       return 0 if token.blank?
 
-      token = token.with_indifferent_access
       amount = token[:amount] || token[:balance] || 0
       price = token[:price] || token[:priceUsd] || 0
       (amount.to_f * price.to_f)
-    end
-
-    def calculate_total_balance(balance_data)
-      # CoinStats get_wallet_balance returns an array of token balances directly
-      # Each token has: amount, price (USD), symbol, name, etc.
-      tokens = normalize_tokens(balance_data)
-      return 0 if tokens.empty?
-
-      tokens.sum do |token|
-        token = token.with_indifferent_access
-        # Calculate USD value: amount * price
-        amount = token[:amount] || token[:balance] || 0
-        price = token[:price] || token[:priceUsd] || 0
-        (amount.to_f * price.to_f)
-      end
     end
 end

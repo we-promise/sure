@@ -39,12 +39,16 @@ class CoinstatsItem::WalletLinker
 
     def fetch_balance_data
       provider = Provider::Coinstats.new(coinstats_item.api_key)
-      provider.get_wallet_balance(address, blockchain)
+      wallets_param = "#{blockchain}:#{address}"
+      bulk_data = provider.get_wallet_balances(wallets_param)
+      provider.extract_wallet_balance(bulk_data, address, blockchain)
     end
 
     def normalize_tokens(balance_data)
       if balance_data.is_a?(Array)
         balance_data
+      elsif balance_data.is_a?(Hash)
+        balance_data[:result] || balance_data[:tokens] || [ balance_data ]
       elsif balance_data.present?
         [ balance_data ]
       else
@@ -116,7 +120,6 @@ class CoinstatsItem::WalletLinker
       token.to_h.merge(
         id: (token[:coinId] || token[:id])&.to_s,
         balance: current_balance,
-        current_balance: current_balance,
         currency: "USD",
         address: address,
         blockchain: blockchain,

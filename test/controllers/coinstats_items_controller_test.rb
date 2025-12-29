@@ -112,8 +112,16 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
       { coinId: "ethereum", name: "Ethereum", symbol: "ETH", amount: 1.5, price: 2000 }
     ]
 
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
-      .with("0x123abc", "ethereum")
+    bulk_response = [
+      { blockchain: "ethereum", address: "0x123abc", connectionId: "ethereum", balances: balance_data }
+    ]
+
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .with("ethereum:0x123abc")
+      .returns(bulk_response)
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
+      .with(bulk_response, "0x123abc", "ethereum")
       .returns(balance_data)
 
     assert_difference("Account.count", 1) do
@@ -130,7 +138,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "link_wallet handles authentication errors" do
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
       .raises(Provider::Coinstats::AuthenticationError.new("Invalid API key"))
 
     post link_wallet_coinstats_items_url, params: {
@@ -144,7 +152,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "link_wallet handles rate limit errors" do
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
       .raises(Provider::Coinstats::RateLimitError.new("Too many requests"))
 
     post link_wallet_coinstats_items_url, params: {
@@ -158,7 +166,10 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "link_wallet handles no tokens found" do
-    Provider::Coinstats.any_instance.expects(:get_wallet_balance)
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .returns([])
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
       .returns([])
 
     post link_wallet_coinstats_items_url, params: {
