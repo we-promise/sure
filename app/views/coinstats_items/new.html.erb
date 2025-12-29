@@ -3,30 +3,41 @@
     <% dialog.with_header(title: t(".title")) %>
 
     <% dialog.with_body do %>
+        <% error_msg = local_assigns[:error_message] || @error_message %>
+        <% if error_msg.present? %>
+          <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden mb-3">
+            <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+          </div>
+        <% end %>
+
         <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: nil) %>
         <% if items&.any? %>
           <% selected_item = items.first %>
           <% blockchains = Provider::Coinstats.new(selected_item.api_key).blockchain_options rescue [] %>
+          <% address_value = local_assigns[:address] || @address %>
+          <% blockchain_value = local_assigns[:blockchain] || @blockchain %>
           <%= styled_form_with url: link_wallet_coinstats_items_path,
                               method: :post,
-                              data: { turbo: true, turbo_frame: "_top" },
+                              data: { turbo: true },
                               class: "space-y-3" do |form| %>
             <%= form.hidden_field :coinstats_item_id, value: selected_item.id %>
 
             <%= form.text_field :address,
                                 label: t(".address_label"),
-                                placeholder: t(".address_placeholder") %>
+                                placeholder: t(".address_placeholder"),
+                                value: address_value %>
 
             <% if blockchains.present? %>
               <%= form.select :blockchain,
-                              options_for_select(blockchains),
+                              options_for_select(blockchains, blockchain_value),
                               { include_blank: t(".blockchain_select_blank") },
                               label: t(".blockchain_label"),
                               class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
             <% else %>
               <%= form.text_field :blockchain,
                                   label: t(".blockchain_label"),
-                                  placeholder: t(".blockchain_placeholder") %>
+                                  placeholder: t(".blockchain_placeholder"),
+                                  value: blockchain_value %>
             <% end %>
 
             <div class="flex justify-end">

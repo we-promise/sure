@@ -62,30 +62,30 @@ class CoinstatsItemsController < ApplicationController
 
   def link_wallet
     coinstats_item_id = params[:coinstats_item_id].presence
-    address = params[:address]&.to_s&.strip.presence
-    blockchain = params[:blockchain]&.to_s&.strip.presence
+    @address = params[:address]&.to_s&.strip.presence
+    @blockchain = params[:blockchain]&.to_s&.strip.presence
 
-    unless coinstats_item_id && address && blockchain
-      return redirect_to accounts_path, alert: t(".missing_params"), status: :unprocessable_entity
+    unless coinstats_item_id && @address && @blockchain
+      return render_link_wallet_error(t(".missing_params"))
     end
 
     @coinstats_item = Current.family.coinstats_items.find(coinstats_item_id)
 
-    result = CoinstatsItem::WalletLinker.new(@coinstats_item, address: address, blockchain: blockchain).link
+    result = CoinstatsItem::WalletLinker.new(@coinstats_item, address: @address, blockchain: @blockchain).link
 
     if result.success?
       redirect_to accounts_path, notice: t(".success", count: result.created_count), status: :see_other
     else
       error_msg = result.errors.join("; ").presence || t(".failed")
-      redirect_to accounts_path, alert: error_msg, status: :unprocessable_entity
+      render_link_wallet_error(error_msg)
     end
   rescue Provider::Coinstats::AuthenticationError => e
-    redirect_to accounts_path, alert: t(".auth_failed", message: e.message), status: :unprocessable_entity
+    render_link_wallet_error(t(".auth_failed", message: e.message))
   rescue Provider::Coinstats::RateLimitError => e
-    redirect_to accounts_path, alert: t(".rate_limit", message: e.message), status: :unprocessable_entity
+    render_link_wallet_error(t(".rate_limit", message: e.message))
   rescue => e
     Rails.logger.error("CoinStats link wallet error: #{e.class} - #{e.message}")
-    redirect_to accounts_path, alert: t(".error", message: e.message), status: :unprocessable_entity
+    render_link_wallet_error(t(".error", message: e.message))
   end
 
   private
@@ -145,5 +145,11 @@ class CoinstatsItemsController < ApplicationController
       else
         redirect_to settings_providers_path, notice: t(notice_key), status: :see_other
       end
+    end
+
+    def render_link_wallet_error(error_message)
+      @error_message = error_message
+      @coinstats_items = Current.family.coinstats_items.where.not(api_key: nil)
+      render :new, status: :unprocessable_entity
     end
 end

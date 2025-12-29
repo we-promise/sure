@@ -148,7 +148,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_match(/Authentication failed/, flash[:alert])
+    assert_match(/Authentication failed/, response.body)
   end
 
   test "link_wallet handles rate limit errors" do
@@ -162,7 +162,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_match(/Rate limit exceeded/, flash[:alert])
+    assert_match(/Rate limit exceeded/, response.body)
   end
 
   test "link_wallet handles no tokens found" do
@@ -179,6 +179,6 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_match(/No tokens found/, flash[:alert])
+    assert_match(/No tokens found/, response.body)
   end
 end
