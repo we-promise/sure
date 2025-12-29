@@ -205,13 +205,6 @@ class CoinstatsItem::Importer
       transactions.select do |tx|
         tx = tx.with_indifferent_access
 
-        # Check coinData for coin match
-        coin_data = tx[:coinData]
-        if coin_data.present?
-          # Some transactions have symbol in coinData
-          # We'll match by checking if any inner transaction items have this coin
-        end
-
         # Check nested transactions items for coin match
         inner_transactions = tx[:transactions] || []
         inner_transactions.any? do |inner_tx|
