@@ -1,3 +1,5 @@
+# Represents a single crypto token/coin within a CoinStats wallet.
+# Each wallet address may have multiple CoinstatsAccounts (one per token).
 class CoinstatsAccount < ApplicationRecord
   include CurrencyNormalizable
 
@@ -13,6 +15,8 @@ class CoinstatsAccount < ApplicationRecord
   # Alias for compatibility with provider adapter pattern
   alias_method :current_account, :account
 
+  # Updates account with latest balance data from CoinStats API.
+  # @param account_snapshot [Hash] Normalized balance data from API
   def upsert_coinstats_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
     snapshot = account_snapshot.with_indifferent_access
@@ -38,6 +42,8 @@ class CoinstatsAccount < ApplicationRecord
     update!(attrs)
   end
 
+  # Stores transaction data from CoinStats API for later processing.
+  # @param transactions_snapshot [Hash, Array] Raw transactions response or array
   def upsert_coinstats_transactions_snapshot!(transactions_snapshot)
     # CoinStats API returns: { meta: { page, limit }, result: [...] }
     # Extract just the result array for storage, or use directly if already an array

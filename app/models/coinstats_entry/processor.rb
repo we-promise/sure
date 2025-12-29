@@ -1,21 +1,30 @@
+# Processes a single CoinStats transaction into a local Transaction record.
+# Extracts amount, date, and metadata from the CoinStats API format.
+#
+# CoinStats API transaction structure (from /wallet/transactions endpoint):
+# {
+#   type: "Sent" | "Received" | "Swap" | ...,
+#   date: "2025-06-07T11:58:11.000Z",
+#   coinData: { count: -0.00636637, symbol: "ETH", currentValue: 29.21 },
+#   profitLoss: { profit: -13.41, profitPercent: -84.44, currentValue: 29.21 },
+#   hash: { id: "0x...", explorerUrl: "https://etherscan.io/tx/0x..." },
+#   fee: { coin: { id, name, symbol, icon }, count: 0.00003, totalWorth: 0.08 },
+#   transactions: [{ action: "Sent", items: [{ id, count, totalWorth, coin: {...} }] }]
+# }
 class CoinstatsEntry::Processor
   include CoinstatsTransactionIdentifiable
 
-  # CoinStats API transaction structure (from /wallet/transactions endpoint):
-  # {
-  #   type: "Sent" | "Received" | "Swap" | ...,
-  #   date: "2025-06-07T11:58:11.000Z",
-  #   coinData: { count: -0.00636637, symbol: "ETH", currentValue: 29.21 },
-  #   profitLoss: { profit: -13.41, profitPercent: -84.44, currentValue: 29.21 },
-  #   hash: { id: "0x...", explorerUrl: "https://etherscan.io/tx/0x..." },
-  #   fee: { coin: { id, name, symbol, icon }, count: 0.00003, totalWorth: 0.08 },
-  #   transactions: [{ action: "Sent", items: [{ id, count, totalWorth, coin: {...} }] }]
-  # }
+  # @param coinstats_transaction [Hash] Raw transaction data from API
+  # @param coinstats_account [CoinstatsAccount] Parent account for context
   def initialize(coinstats_transaction, coinstats_account:)
     @coinstats_transaction = coinstats_transaction
     @coinstats_account = coinstats_account
   end
 
+  # Imports the transaction into the linked account.
+  # @return [Transaction, nil] Created transaction or nil if no linked account
+  # @raise [ArgumentError] If transaction data is invalid
+  # @raise [StandardError] If import fails
   def process
     unless account.present?
       Rails.logger.warn "CoinstatsEntry::Processor - No linked account for coinstats_account #{coinstats_account.id}, skipping transaction #{external_id}"

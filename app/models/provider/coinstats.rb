@@ -1,3 +1,5 @@
+# API client for CoinStats cryptocurrency data provider.
+# Handles authentication and requests to the CoinStats OpenAPI.
 class Provider::Coinstats
   include HTTParty
 
@@ -11,6 +13,7 @@ class Provider::Coinstats
 
   attr_reader :api_key
 
+  # @param api_key [String] CoinStats API key for authentication
   def initialize(api_key)
     @api_key = api_key
   end

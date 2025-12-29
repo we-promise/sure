@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
+# Provides unlinking functionality for CoinStats items.
+# Allows disconnecting provider accounts while preserving account data.
 module CoinstatsItem::Unlinking
-  # Concern that encapsulates unlinking logic for a Coinstats item.
   extend ActiveSupport::Concern
 
-  # Idempotently remove all connections between this Coinstats item and local accounts.
-  # - Detaches any AccountProvider links for each CoinstatsAccount
-  # - Detaches Holdings that point at the AccountProvider links
-  # Returns a per-account result payload for observability
+  # Removes all connections between this item and local accounts.
+  # Detaches AccountProvider links and nullifies associated Holdings.
+  # @param dry_run [Boolean] If true, returns results without making changes
+  # @return [Array<Hash>] Results per account with :provider_account_id, :name, :provider_link_ids
   def unlink_all!(dry_run: false)
     results = []
 

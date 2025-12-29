@@ -1,9 +1,12 @@
+# Represents a CoinStats API connection for a family.
+# Stores credentials and manages associated crypto wallet accounts.
 class CoinstatsItem < ApplicationRecord
   include Syncable, Provided, Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
-  # Helper to detect if ActiveRecord Encryption is configured for this app
+  # Checks if ActiveRecord Encryption is properly configured.
+  # @return [Boolean] true if encryption keys are available
   def self.encryption_ready?
     creds_ready = Rails.application.credentials.active_record_encryption.present?
     env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
@@ -28,11 +31,14 @@ class CoinstatsItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # Schedules this item for async deletion.
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
+  # Fetches latest wallet data from CoinStats API and updates local records.
+  # @raise [StandardError] if provider is not configured or import fails
   def import_latest_coinstats_data
     provider = coinstats_provider
     unless provider
@@ -45,6 +51,8 @@ class CoinstatsItem < ApplicationRecord
     raise
   end
 
+  # Processes holdings for all linked visible accounts.
+  # @return [Array<Hash>] Results with success status per account
   def process_accounts
     return [] if coinstats_accounts.empty?
 
@@ -62,6 +70,11 @@ class CoinstatsItem < ApplicationRecord
     results
   end
 
+  # Queues balance sync jobs for all visible accounts.
+  # @param parent_sync [Sync, nil] Parent sync for tracking
+  # @param window_start_date [Date, nil] Start of sync window
+  # @param window_end_date [Date, nil] End of sync window
+  # @return [Array<Hash>] Results with success status per account
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
@@ -83,15 +96,19 @@ class CoinstatsItem < ApplicationRecord
     results
   end
 
+  # Persists raw API response for debugging and reprocessing.
+  # @param accounts_snapshot [Hash] Raw API response data
   def upsert_coinstats_snapshot!(accounts_snapshot)
     assign_attributes(raw_payload: accounts_snapshot)
     save!
   end
 
+  # @return [Boolean] true if at least one account has been linked
   def has_completed_initial_setup?
     accounts.any?
   end
 
+  # @return [String] Human-readable summary of sync status
   def sync_status_summary
     total_accounts = total_accounts_count
     linked_count = linked_accounts_count
@@ -106,23 +123,27 @@ class CoinstatsItem < ApplicationRecord
     end
   end
 
+  # @return [Integer] Number of accounts with provider links
   def linked_accounts_count
     coinstats_accounts.joins(:account_provider).count
   end
 
+  # @return [Integer] Number of accounts without provider links
   def unlinked_accounts_count
     coinstats_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
   end
 
+  # @return [Integer] Total number of coinstats accounts
   def total_accounts_count
     coinstats_accounts.count
   end
 
-  # Display name for the CoinStats connection
+  # @return [String] Display name for the CoinStats connection
   def institution_display_name
     name.presence || "CoinStats"
   end
 
+  # @return [Boolean] true if API key is set
   def credentials_configured?
     api_key.present?
   end

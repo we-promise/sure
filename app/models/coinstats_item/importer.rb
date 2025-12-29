@@ -1,13 +1,19 @@
+# Imports wallet data from CoinStats API for linked accounts.
+# Fetches balances and transactions, then updates local records.
 class CoinstatsItem::Importer
   include CoinstatsTransactionIdentifiable
 
   attr_reader :coinstats_item, :coinstats_provider
 
+  # @param coinstats_item [CoinstatsItem] Item containing accounts to import
+  # @param coinstats_provider [Provider::Coinstats] API client instance
   def initialize(coinstats_item, coinstats_provider:)
     @coinstats_item = coinstats_item
     @coinstats_provider = coinstats_provider
   end
 
+  # Imports balance and transaction data for all linked accounts.
+  # @return [Hash] Result with :success, :accounts_updated, :transactions_imported
   def import
     Rails.logger.info "CoinstatsItem::Importer - Starting import for item #{coinstats_item.id}"
 
@@ -107,6 +113,11 @@ class CoinstatsItem::Importer
       nil
     end
 
+    # Updates a single account with balance and transaction data.
+    # @param coinstats_account [CoinstatsAccount] Account to update
+    # @param bulk_balance_data [Array, nil] Pre-fetched balance data
+    # @param bulk_transactions_data [Array, nil] Pre-fetched transaction data
+    # @return [Hash] Result with :success and :transactions_count
     def update_account(coinstats_account, bulk_balance_data:, bulk_transactions_data:)
       # Get the wallet address and blockchain from the raw payload
       raw = coinstats_account.raw_payload || {}
@@ -134,6 +145,13 @@ class CoinstatsItem::Importer
       { success: true, transactions_count: transactions_count }
     end
 
+    # Extracts and merges new transactions for an account.
+    # Deduplicates by transaction ID to avoid duplicate imports.
+    # @param coinstats_account [CoinstatsAccount] Account to update
+    # @param address [String] Wallet address
+    # @param blockchain [String] Blockchain identifier
+    # @param bulk_transactions_data [Array, nil] Pre-fetched transaction data
+    # @return [Integer] Number of relevant transactions found
     def fetch_and_merge_transactions(coinstats_account, address, blockchain, bulk_transactions_data)
       # Extract transactions for this specific wallet from the bulk response
       transactions_data = if bulk_transactions_data.present?
@@ -211,6 +229,10 @@ class CoinstatsItem::Importer
       end
     end
 
+    # Normalizes API balance data to a consistent schema for storage.
+    # @param balance_data [Array<Hash>] Raw token balances from API
+    # @param coinstats_account [CoinstatsAccount] Account for context
+    # @return [Hash] Normalized snapshot with id, balance, address, etc.
     def normalize_balance_data(balance_data, coinstats_account)
       # CoinStats get_wallet_balance returns an array of token balances directly
       # Normalize it to match our expected schema
@@ -239,8 +261,11 @@ class CoinstatsItem::Importer
       }
     end
 
-    # Find the token in balance_data that matches this coinstats_account
-    # Tries to match by account_id first, then falls back to name matching
+    # Finds the token in balance_data that matches this account.
+    # Matches by account_id (coinId) first, then falls back to name.
+    # @param balance_data [Array<Hash>] Token balances from API
+    # @param coinstats_account [CoinstatsAccount] Account to match
+    # @return [Hash, nil] Matching token data or nil
     def find_matching_token(balance_data, coinstats_account)
       tokens = normalize_tokens(balance_data).map(&:with_indifferent_access)
       return nil if tokens.empty?
@@ -269,6 +294,9 @@ class CoinstatsItem::Importer
       end
     end
 
+    # Normalizes various response formats to an array of tokens.
+    # @param balance_data [Array, Hash, nil] Raw balance response
+    # @return [Array<Hash>] Array of token hashes
     def normalize_tokens(balance_data)
       if balance_data.is_a?(Array)
         balance_data
@@ -279,8 +307,9 @@ class CoinstatsItem::Importer
       end
     end
 
-    # Calculate balance for a single token (amount * price = USD value)
-    # Token should already be an indifferent access hash from find_matching_token
+    # Calculates USD balance from token amount and price.
+    # @param token [Hash, nil] Token with :amount/:balance and :price/:priceUsd
+    # @return [Float] Balance in USD (0 if token is nil)
     def calculate_token_balance(token)
       return 0 if token.blank?
 

@@ -9,7 +9,10 @@ module CoinstatsTransactionIdentifiable
 
   private
 
-    # Extract unique transaction ID from CoinStats transaction data
+    # Extracts a unique transaction ID from CoinStats transaction data.
+    # Handles different blockchain formats and generates fallback IDs.
+    # @param transaction_data [Hash] Raw transaction data from API
+    # @return [String, nil] Unique transaction identifier or nil
     def extract_coinstats_transaction_id(transaction_data)
       tx = transaction_data.is_a?(Hash) ? transaction_data.with_indifferent_access : {}
 

@@ -1,10 +1,15 @@
+# Orchestrates the sync process for a CoinStats connection.
+# Imports data, processes holdings, and schedules account syncs.
 class CoinstatsItem::Syncer
   attr_reader :coinstats_item
 
+  # @param coinstats_item [CoinstatsItem] Item to sync
   def initialize(coinstats_item)
     @coinstats_item = coinstats_item
   end
 
+  # Runs the full sync workflow: import, process, and schedule.
+  # @param sync [Sync] Sync record for status tracking
   def perform_sync(sync)
     # Phase 1: Import data from CoinStats API
     sync.update!(status_text: "Importing wallets from CoinStats...") if sync.respond_to?(:status_text)
@@ -49,6 +54,7 @@ class CoinstatsItem::Syncer
     end
   end
 
+  # Hook called after sync completion. Currently a no-op.
   def perform_post_sync
     # no-op
   end

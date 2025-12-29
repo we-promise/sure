@@ -1,3 +1,5 @@
+# Provider adapter for CoinStats cryptocurrency wallet integration.
+# Handles sync operations and institution metadata for crypto accounts.
 class Provider::CoinstatsAdapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
@@ -5,12 +7,14 @@ class Provider::CoinstatsAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("CoinstatsAccount", self)
 
-  # Define which account types this provider supports
+  # @return [Array<String>] Account types supported by this provider
   def self.supported_account_types
     %w[Crypto]
   end
 
   # Returns connection configurations for this provider
+  # @param family [Family] The family to check connection eligibility
+  # @return [Array<Hash>] Connection config with name, description, and paths
   def self.connection_configs(family:)
     return [] unless family.can_connect_coinstats?
 
@@ -30,6 +34,7 @@ class Provider::CoinstatsAdapter < Provider::Base
     } ]
   end
 
+  # @return [String] Unique identifier for this provider
   def provider_name
     "coinstats"
   end
@@ -47,18 +52,23 @@ class Provider::CoinstatsAdapter < Provider::Base
     Provider::Coinstats.new(coinstats_item.api_key)
   end
 
+  # @return [String] URL path for triggering a sync
   def sync_path
     Rails.application.routes.url_helpers.sync_coinstats_item_path(item)
   end
 
+  # @return [CoinstatsItem] The parent item containing API credentials
   def item
     provider_account.coinstats_item
   end
 
+  # @return [Boolean] Whether holdings can be manually deleted
   def can_delete_holdings?
     false
   end
 
+  # Extracts institution domain from metadata, deriving from URL if needed.
+  # @return [String, nil] Domain name or nil if unavailable
   def institution_domain
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
@@ -78,6 +88,7 @@ class Provider::CoinstatsAdapter < Provider::Base
     domain
   end
 
+  # @return [String, nil] Institution display name
   def institution_name
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
@@ -85,6 +96,7 @@ class Provider::CoinstatsAdapter < Provider::Base
     metadata["name"]
   end
 
+  # @return [String, nil] Institution website URL
   def institution_url
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
@@ -92,10 +104,12 @@ class Provider::CoinstatsAdapter < Provider::Base
     metadata["url"]
   end
 
+  # @return [nil] CoinStats doesn't provide institution colors
   def institution_color
     nil # CoinStats doesn't provide institution colors
   end
 
+  # @return [String, nil] URL for institution/token logo
   def logo_url
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?

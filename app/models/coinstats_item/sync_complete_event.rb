@@ -1,10 +1,14 @@
+# Broadcasts Turbo Stream updates when a CoinStats sync completes.
+# Updates account views and notifies the family of sync completion.
 class CoinstatsItem::SyncCompleteEvent
   attr_reader :coinstats_item
 
+  # @param coinstats_item [CoinstatsItem] The item that completed syncing
   def initialize(coinstats_item)
     @coinstats_item = coinstats_item
   end
 
+  # Broadcasts sync completion to update UI components.
   def broadcast
     # Update UI with latest account data
     coinstats_item.accounts.each do |account|

@@ -1,12 +1,18 @@
+# Processes stored transactions for a CoinStats account.
+# Filters transactions by token and delegates to entry processor.
 class CoinstatsAccount::Transactions::Processor
   include CoinstatsTransactionIdentifiable
 
   attr_reader :coinstats_account
 
+  # @param coinstats_account [CoinstatsAccount] Account with transactions to process
   def initialize(coinstats_account)
     @coinstats_account = coinstats_account
   end
 
+  # Processes all stored transactions for this account.
+  # Filters to relevant token and imports each transaction.
+  # @return [Hash] Result with :success, :total, :imported, :failed, :errors
   def process
     unless coinstats_account.raw_transactions_payload.present?
       Rails.logger.info "CoinstatsAccount::Transactions::Processor - No transactions in raw_transactions_payload for coinstats_account #{coinstats_account.id}"
@@ -74,9 +80,11 @@ class CoinstatsAccount::Transactions::Processor
 
   private
 
-    # Filter transactions to only include ones for this specific token
-    # CoinStats returns all transactions for a wallet address, but each coinstats_account
-    # represents a single token, so we filter by matching coin ID
+    # Filters transactions to only include ones for this specific token.
+    # CoinStats returns all wallet transactions, but each CoinstatsAccount
+    # represents a single token, so we filter by matching coin ID or symbol.
+    # @param transactions [Array<Hash>] Raw transactions from storage
+    # @return [Array<Hash>] Transactions matching this account's token
     def filter_transactions_for_account(transactions)
       return [] unless transactions.present?
       return transactions unless coinstats_account.account_id.present?
