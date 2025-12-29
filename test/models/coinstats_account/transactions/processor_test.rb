@@ -226,4 +226,125 @@ class CoinstatsAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     assert_equal "0xinvalid", error[:transaction_id]
     assert_match(/Validation error/, error[:error])
   end
+
+  # Tests for strict symbol matching to avoid false positives
+  # (e.g., "ETH" should not match "Ethereum Classic" which has symbol "ETC")
+
+  test "symbol matching does not cause false positives with similar names" do
+    # Ethereum Classic wallet should NOT match ETH transactions
+    @coinstats_account.update!(
+      name: "Ethereum Classic (0x1234abcd...)",
+      account_id: "ethereum-classic",
+      raw_transactions_payload: [
+        {
+          type: "Received",
+          date: "2025-01-15T10:00:00.000Z",
+          coinData: { count: 1.0, symbol: "ETH", currentValue: 2000 },
+          hash: { id: "0xfalsepositive1" }
+          # No coin.id, relies on symbol matching fallback
+        }
+      ]
+    )
+
+    processor = CoinstatsAccount::Transactions::Processor.new(@coinstats_account)
+
+    # Should NOT process - "ETH" should not match "Ethereum Classic"
+    assert_no_difference "Entry.count" do
+      result = processor.process
+      assert result[:success]
+      assert_equal 0, result[:total]
+    end
+  end
+
+  test "symbol matching works with parenthesized token format" do
+    @coinstats_account.update!(
+      name: "Ethereum (ETH)",
+      account_id: "ethereum",
+      raw_transactions_payload: [
+        {
+          type: "Received",
+          date: "2025-01-15T10:00:00.000Z",
+          coinData: { count: 1.0, symbol: "ETH", currentValue: 2000 },
+          hash: { id: "0xparenthesized1" }
+        }
+      ]
+    )
+
+    processor = CoinstatsAccount::Transactions::Processor.new(@coinstats_account)
+
+    assert_difference "Entry.count", 1 do
+      result = processor.process
+      assert result[:success]
+    end
+  end
+
+  test "symbol matching works with symbol as whole word in name" do
+    @coinstats_account.update!(
+      name: "ETH Wallet",
+      account_id: "ethereum",
+      raw_transactions_payload: [
+        {
+          type: "Received",
+          date: "2025-01-15T10:00:00.000Z",
+          coinData: { count: 1.0, symbol: "ETH", currentValue: 2000 },
+          hash: { id: "0xwholeword1" }
+        }
+      ]
+    )
+
+    processor = CoinstatsAccount::Transactions::Processor.new(@coinstats_account)
+
+    assert_difference "Entry.count", 1 do
+      result = processor.process
+      assert result[:success]
+    end
+  end
+
+  test "symbol matching does not match partial substrings" do
+    # WETH wallet should NOT match ETH transactions via symbol fallback
+    @coinstats_account.update!(
+      name: "WETH Wrapped Ethereum",
+      account_id: "weth",
+      raw_transactions_payload: [
+        {
+          type: "Received",
+          date: "2025-01-15T10:00:00.000Z",
+          coinData: { count: 1.0, symbol: "ETH", currentValue: 2000 },
+          hash: { id: "0xpartial1" }
+          # No coin.id, relies on symbol matching fallback
+        }
+      ]
+    )
+
+    processor = CoinstatsAccount::Transactions::Processor.new(@coinstats_account)
+
+    # Should NOT process - "ETH" is a substring of "WETH" but not a whole word match
+    assert_no_difference "Entry.count" do
+      result = processor.process
+      assert result[:success]
+      assert_equal 0, result[:total]
+    end
+  end
+
+  test "symbol matching is case insensitive" do
+    @coinstats_account.update!(
+      name: "eth wallet",
+      account_id: "ethereum",
+      raw_transactions_payload: [
+        {
+          type: "Received",
+          date: "2025-01-15T10:00:00.000Z",
+          coinData: { count: 1.0, symbol: "ETH", currentValue: 2000 },
+          hash: { id: "0xcaseinsensitive1" }
+        }
+      ]
+    )
+
+    processor = CoinstatsAccount::Transactions::Processor.new(@coinstats_account)
+
+    assert_difference "Entry.count", 1 do
+      result = processor.process
+      assert result[:success]
+    end
+  end
 end

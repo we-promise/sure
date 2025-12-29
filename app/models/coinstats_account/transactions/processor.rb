@@ -100,9 +100,39 @@ class CoinstatsAccount::Transactions::Processor
         # Also check coinData for symbol match as fallback
         coin_symbol = tx.dig(:coinData, :symbol)&.to_s&.downcase
 
-        # Match if coin ID equals account_id, or if symbol matches account name
+        # Match if coin ID equals account_id, or if symbol matches account name precisely.
+        # We use strict matching to avoid false positives (e.g., "ETH" should not match
+        # "Ethereum Classic" which has symbol "ETC"). The symbol must appear as:
+        # - A whole word (bounded by word boundaries), OR
+        # - Inside parentheses like "(ETH)" which is common in wallet naming conventions
         coin_id == account_id ||
-          (coin_symbol.present? && coinstats_account.name&.downcase&.include?(coin_symbol))
+          (coin_symbol.present? && symbol_matches_name?(coin_symbol, coinstats_account.name))
       end
+    end
+
+    # Checks if a coin symbol matches the account name using strict matching.
+    # Avoids false positives from partial substring matches (e.g., "ETH" matching
+    # "Ethereum Classic (0x123...)" which should only match "ETC").
+    #
+    # @param symbol [String] The coin symbol to match (already downcased)
+    # @param name [String, nil] The account name to match against
+    # @return [Boolean] true if symbol matches name precisely
+    def symbol_matches_name?(symbol, name)
+      return false if name.blank?
+
+      normalized_name = name.to_s.downcase
+
+      # Match symbol as a whole word using word boundaries, or within parentheses.
+      # Examples that SHOULD match:
+      #   - "ETH" matches "ETH Wallet", "My ETH", "Ethereum (ETH)"
+      #   - "BTC" matches "BTC", "(BTC) Savings", "Bitcoin (BTC)"
+      # Examples that should NOT match:
+      #   - "ETH" should NOT match "Ethereum Classic" (symbol is "ETC")
+      #   - "ETH" should NOT match "WETH Wrapped" (different token)
+      #   - "BTC" should NOT match "BTCB" (different token)
+      word_boundary_pattern = /\b#{Regexp.escape(symbol)}\b/
+      parenthesized_pattern = /\(#{Regexp.escape(symbol)}\)/
+
+      word_boundary_pattern.match?(normalized_name) || parenthesized_pattern.match?(normalized_name)
     end
 end
