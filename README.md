@@ -66,12 +66,15 @@ The instructions below are for developers to get started with contributing to th
 ```sh
 cd sure
 cp .env.local.example .env.local
-bin/setup
+mise install
 bin/dev
 
 # Optionally, load demo data
 rake demo_data:default
 ```
+
+`mise install` sets up Ruby/Node/Postgres/Redis and runs the project install task
+(bundle, npm, and db:prepare). If you prefer the legacy setup, use `bin/setup`.
 
 Visit http://localhost:3000 to view the app. You can log in with these demo credentials (from the DB seed):
 
