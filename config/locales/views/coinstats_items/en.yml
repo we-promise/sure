@@ -38,7 +38,7 @@ en:
       not_configured_step3_html: Follow the provided <strong>setup Instructions</strong> to complete provider configuration
       go_to_settings: Go to Provider Settings
       setup_instructions: "Setup Instructions:"
-      step1_html: Visit the <a href="https://openapi.coinstats.app/" class="link" target="_blank">CoinStats Public API Dashboard</a> to obtain an API key.
+      step1_html: Visit the <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> to obtain an API key.
       step2: Enter your API key below and click Configure.
       step3_html: After a successful connection, visit the <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Accounts</a> tab to set up crypto wallets.
       api_key_label: API Key
