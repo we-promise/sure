@@ -5,14 +5,10 @@ en:
       success: CoinStats provider connection configured successfully.
       default_name: CoinStats Connection
       errors:
-        invalid_api_key: "Invalid API key: %{message}."
-        rate_limit: "Rate limit exceeded: %{message}."
         validation_failed: "Validation failed: %{message}."
     update:
       success: CoinStats provider connection updated successfully.
       errors:
-        invalid_api_key: "Invalid API key: %{message}."
-        rate_limit: "Rate limit exceeded: %{message}."
         validation_failed: "Validation failed: %{message}."
     destroy:
       success: CoinStats provider connection scheduled for deletion.
@@ -20,14 +16,10 @@ en:
       success: "%{count} crypto wallet(s) linked successfully."
       missing_params: "Missing required parameters: address and blockchain."
       failed: Crypto wallet linking failed.
-      auth_failed: "Authentication failed: %{message}."
-      rate_limit: "Rate limit exceeded: %{message}."
       error: "Crypto wallet linking failed: %{message}."
     new:
       title: Link a Crypto Wallet with CoinStats
       blockchain_fetch_error: Failed load Blockchains. Please try again later.
-      blockchain_fetch_auth_error: Failed to load Blockchains due to an authentication error. Please check the provider configuration.
-      blockchain_fetch_rate_limit_error: Failed to load Blockchains. Rate limit exceeded, please try again later.
       address_label: Address
       address_placeholder: Required
       blockchain_label: Blockchain

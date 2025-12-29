@@ -11,6 +11,15 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  # Helper to wrap data in Provider::Response
+  def success_response(data)
+    Provider::Response.new(success?: true, data: data, error: nil)
+  end
+
+  def error_response(message)
+    Provider::Response.new(success?: false, data: nil, error: Provider::Error.new(message))
+  end
+
   test "should get new" do
     get new_coinstats_item_url
     assert_response :success
@@ -18,7 +27,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "should create coinstats item with valid api key" do
     # Mock the API key validation
-    Provider::Coinstats.any_instance.expects(:get_blockchains).returns([]).once
+    Provider::Coinstats.any_instance.expects(:get_blockchains).returns(success_response([])).once
 
     assert_difference("CoinstatsItem.count", 1) do
       post coinstats_items_url, params: {
@@ -33,7 +42,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
   test "should not create coinstats item with invalid api key" do
     # Mock the API key validation to fail
     Provider::Coinstats.any_instance.expects(:get_blockchains)
-      .raises(Provider::Coinstats::AuthenticationError.new("Invalid API key"))
+      .returns(error_response("Invalid API key"))
 
     assert_no_difference("CoinstatsItem.count") do
       post coinstats_items_url, params: {
@@ -67,7 +76,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should update coinstats item with valid api key" do
-    Provider::Coinstats.any_instance.expects(:get_blockchains).returns([]).once
+    Provider::Coinstats.any_instance.expects(:get_blockchains).returns(success_response([])).once
 
     patch coinstats_item_url(@coinstats_item), params: {
       coinstats_item: {
@@ -82,7 +91,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "should not update coinstats item with invalid api key" do
     Provider::Coinstats.any_instance.expects(:get_blockchains)
-      .raises(Provider::Coinstats::AuthenticationError.new("Invalid API key"))
+      .returns(error_response("Invalid API key"))
 
     original_name = @coinstats_item.name
 
@@ -118,7 +127,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
 
     Provider::Coinstats.any_instance.expects(:get_wallet_balances)
       .with("ethereum:0x123abc")
-      .returns(bulk_response)
+      .returns(success_response(bulk_response))
 
     Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
       .with(bulk_response, "0x123abc", "ethereum")
@@ -137,9 +146,9 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
-  test "link_wallet handles authentication errors" do
+  test "link_wallet handles provider errors" do
     Provider::Coinstats.any_instance.expects(:get_wallet_balances)
-      .raises(Provider::Coinstats::AuthenticationError.new("Invalid API key"))
+      .raises(Provider::Coinstats::Error.new("Invalid API key"))
 
     post link_wallet_coinstats_items_url, params: {
       coinstats_item_id: @coinstats_item.id,
@@ -148,26 +157,11 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_match(/Authentication failed/, response.body)
-  end
-
-  test "link_wallet handles rate limit errors" do
-    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
-      .raises(Provider::Coinstats::RateLimitError.new("Too many requests"))
-
-    post link_wallet_coinstats_items_url, params: {
-      coinstats_item_id: @coinstats_item.id,
-      address: "0x123abc",
-      blockchain: "ethereum"
-    }
-
-    assert_response :unprocessable_entity
-    assert_match(/Rate limit exceeded/, response.body)
   end
 
   test "link_wallet handles no tokens found" do
     Provider::Coinstats.any_instance.expects(:get_wallet_balances)
-      .returns([])
+      .returns(success_response([]))
 
     Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
       .returns([])

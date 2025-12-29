@@ -12,6 +12,15 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     @mock_provider = mock("Provider::Coinstats")
   end
 
+  # Helper to wrap data in Provider::Response
+  def success_response(data)
+    Provider::Response.new(success?: true, data: data, error: nil)
+  end
+
+  def error_response(message)
+    Provider::Response.new(success?: false, data: nil, error: Provider::Error.new(message))
+  end
+
   test "returns early when no linked accounts" do
     importer = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider)
 
@@ -49,7 +58,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_balances)
       .with("ethereum:0x123abc")
-      .returns(bulk_response)
+      .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
       .with(bulk_response, "0x123abc", "ethereum")
@@ -61,7 +70,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_transactions)
       .with("ethereum:0x123abc")
-      .returns(bulk_transactions_response)
+      .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
       .with(bulk_transactions_response, "0x123abc", "ethereum")
@@ -130,7 +139,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_balances)
       .with("ethereum:0x123abc")
-      .returns(bulk_response)
+      .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
       .with(bulk_response, "0x123abc", "ethereum")
@@ -147,7 +156,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_transactions)
       .with("ethereum:0x123abc")
-      .returns(bulk_transactions_response)
+      .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
       .with(bulk_transactions_response, "0x123abc", "ethereum")
@@ -189,16 +198,16 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_balances)
       .with("ethereum:0x123abc")
-      .returns(bulk_response)
+      .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
       .with(bulk_response, "0x123abc", "ethereum")
       .returns(balance_data)
 
-    # Bulk transaction fetch fails with rate limit - returns nil from fetch_transactions_for_accounts
+    # Bulk transaction fetch fails with error - returns error response from fetch_transactions_for_accounts
     @mock_provider.expects(:get_wallet_transactions)
       .with("ethereum:0x123abc")
-      .raises(Provider::Coinstats::RateLimitError.new("Rate limited"))
+      .raises(Provider::Coinstats::Error.new("Rate limited"))
 
     # When bulk fetch fails, extract_wallet_transactions is not called (bulk_transactions_data is nil)
 
@@ -256,7 +265,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_balances)
       .with("ethereum:0xmulti")
-      .returns(bulk_response)
+      .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
       .with(bulk_response, "0xmulti", "ethereum")
@@ -269,7 +278,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_transactions)
       .with("ethereum:0xmulti")
-      .returns(bulk_transactions_response)
+      .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
       .with(bulk_transactions_response, "0xmulti", "ethereum")
@@ -332,7 +341,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_balances)
       .with("ethereum:0xworking,ethereum:0xfailing")
-      .returns(bulk_response)
+      .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
       .with(bulk_response, "0xworking", "ethereum")
@@ -353,7 +362,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_transactions)
       .with("ethereum:0xworking,ethereum:0xfailing")
-      .returns(bulk_transactions_response)
+      .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
       .with(bulk_transactions_response, "0xworking", "ethereum")
@@ -419,7 +428,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_balances)
       .with("ethereum:0xeth123,bitcoin:bc1qbtc456")
-      .returns(bulk_response)
+      .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
       .with(bulk_response, "0xeth123", "ethereum")
@@ -446,7 +455,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_wallet_transactions)
       .with("ethereum:0xeth123,bitcoin:bc1qbtc456")
-      .returns(bulk_transactions_response)
+      .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
       .with(bulk_transactions_response, "0xeth123", "ethereum")

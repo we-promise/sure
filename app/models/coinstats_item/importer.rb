@@ -82,7 +82,8 @@ class CoinstatsItem::Importer
       Rails.logger.info "CoinstatsItem::Importer - Fetching balances for #{wallets.size} wallet(s) via bulk endpoint"
       # Build comma-separated string in format "blockchain:address"
       wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
-      coinstats_provider.get_wallet_balances(wallets_param)
+      response = coinstats_provider.get_wallet_balances(wallets_param)
+      response.success? ? response.data : nil
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - Bulk balance fetch failed: #{e.message}"
       nil
@@ -107,7 +108,8 @@ class CoinstatsItem::Importer
       Rails.logger.info "CoinstatsItem::Importer - Fetching transactions for #{wallets.size} wallet(s) via bulk endpoint"
       # Build comma-separated string in format "blockchain:address"
       wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
-      coinstats_provider.get_wallet_transactions(wallets_param)
+      response = coinstats_provider.get_wallet_transactions(wallets_param)
+      response.success? ? response.data : nil
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - Bulk transaction fetch failed: #{e.message}"
       nil

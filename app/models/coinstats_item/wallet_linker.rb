@@ -49,8 +49,11 @@ class CoinstatsItem::WalletLinker
     def fetch_balance_data
       provider = Provider::Coinstats.new(coinstats_item.api_key)
       wallets_param = "#{blockchain}:#{address}"
-      bulk_data = provider.get_wallet_balances(wallets_param)
-      provider.extract_wallet_balance(bulk_data, address, blockchain)
+      response = provider.get_wallet_balances(wallets_param)
+
+      return [] unless response.success?
+
+      provider.extract_wallet_balance(response.data, address, blockchain)
     end
 
     # Normalizes various balance data formats to an array of tokens.

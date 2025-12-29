@@ -81,10 +81,8 @@ class CoinstatsItemsController < ApplicationController
       error_msg = result.errors.join("; ").presence || t(".failed")
       render_link_wallet_error(error_msg)
     end
-  rescue Provider::Coinstats::AuthenticationError => e
-    render_link_wallet_error(t(".auth_failed", message: e.message))
-  rescue Provider::Coinstats::RateLimitError => e
-    render_link_wallet_error(t(".rate_limit", message: e.message))
+  rescue Provider::Coinstats::Error => e
+    render_link_wallet_error(t(".error", message: e.message))
   rescue => e
     Rails.logger.error("CoinStats link wallet error: #{e.class} - #{e.message}")
     render_link_wallet_error(t(".error", message: e.message))
@@ -107,14 +105,13 @@ class CoinstatsItemsController < ApplicationController
     def validate_api_key(api_key)
       return true if api_key.blank?
 
-      Provider::Coinstats.new(api_key).get_blockchains
-      true
-    rescue Provider::Coinstats::AuthenticationError => e
-      @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.invalid_api_key", message: e.message))
-      false
-    rescue Provider::Coinstats::RateLimitError => e
-      @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.rate_limit", message: e.message))
-      false
+      response = Provider::Coinstats.new(api_key).get_blockchains
+      if response.success?
+        true
+      else
+        @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.validation_failed", message: response.error&.message))
+        false
+      end
     rescue => e
       @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.validation_failed", message: e.message))
       false
@@ -160,13 +157,9 @@ class CoinstatsItemsController < ApplicationController
       return [] unless coinstats_item&.api_key.present?
 
       Provider::Coinstats.new(coinstats_item.api_key).blockchain_options
-    rescue Provider::Coinstats::AuthenticationError => e
-      Rails.logger.error("CoinStats blockchain fetch failed (auth): item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
-      flash.now[:alert] = t("coinstats_items.new.blockchain_fetch_auth_error")
-      []
-    rescue Provider::Coinstats::RateLimitError => e
-      Rails.logger.error("CoinStats blockchain fetch failed (rate limit): item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
-      flash.now[:alert] = t("coinstats_items.new.blockchain_fetch_rate_limit_error")
+    rescue Provider::Coinstats::Error => e
+      Rails.logger.error("CoinStats blockchain fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
+      flash.now[:alert] = t("coinstats_items.new.blockchain_fetch_error")
       []
     rescue StandardError => e
       Rails.logger.error("CoinStats blockchain fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
