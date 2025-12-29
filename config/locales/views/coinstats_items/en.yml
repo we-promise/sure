@@ -55,6 +55,12 @@ en:
       deletion_in_progress: Crypto wallet data is being deleted…
       provider_name: CoinStats
       syncing: Syncing…
+      sync_status:
+        no_accounts: No crypto wallets found
+        all_synced:
+          one: "%{count} crypto wallet synced"
+          other: "%{count} crypto wallets synced"
+        partial_sync: "%{linked_count} crypto wallets synced, %{unlinked_count} need setup"
       reconnect: Reconnect
       status: Last synced %{timestamp} ago
       status_never: Never synced
