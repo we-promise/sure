@@ -11,6 +11,10 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
+if [ ! -f .env.local ]; then
+  cp .env.local.example .env.local
+fi
+
 bundle check >/dev/null 2>&1 || bundle install
 npm install
 

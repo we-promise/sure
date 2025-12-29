@@ -74,7 +74,8 @@ rake demo_data:default
 ```
 
 `mise install` sets up Ruby/Node/Postgres/Redis and runs the project install task
-(bundle, npm, and db:prepare). If you prefer the legacy setup, use `bin/setup`.
+(creates `.env.local` if missing, then bundle, npm, and db:prepare). If you prefer
+the legacy setup, use `bin/setup`.
 
 Visit http://localhost:3000 to view the app. You can log in with these demo credentials (from the DB seed):
 
