@@ -94,10 +94,15 @@ class Account::ProviderImportAdapter
 
     # ProviderMerchant has a unique index on [source, name], so find by those first
     # This handles cases where the provider_merchant_id format changes
-    merchant = ProviderMerchant.find_or_create_by!(source: source, name: name) do |m|
-      m.provider_merchant_id = provider_merchant_id
-      m.website_url = website_url
-      m.logo_url = logo_url
+    merchant = begin
+      ProviderMerchant.find_or_create_by!(source: source, name: name) do |m|
+        m.provider_merchant_id = provider_merchant_id
+        m.website_url = website_url
+        m.logo_url = logo_url
+      end
+    rescue ActiveRecord::RecordNotUnique
+      # Handle race condition where another process created the record
+      ProviderMerchant.find_by(source: source, name: name)
     end
 
     # Update provider_merchant_id if it changed (e.g., format update)
