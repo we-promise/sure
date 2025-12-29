@@ -57,7 +57,7 @@ class CoinstatsItem < ApplicationRecord
     return [] if coinstats_accounts.empty?
 
     results = []
-    coinstats_accounts.joins(:account).merge(Account.visible).each do |coinstats_account|
+    coinstats_accounts.includes(:account).joins(:account).merge(Account.visible).each do |coinstats_account|
       begin
         result = CoinstatsAccount::Processor.new(coinstats_account).process
         results << { coinstats_account_id: coinstats_account.id, success: true, result: result }
