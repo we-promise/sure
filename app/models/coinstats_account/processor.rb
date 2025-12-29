@@ -50,7 +50,7 @@ class CoinstatsAccount::Processor
     # Delegates transaction processing to the specialized processor.
     def process_transactions
       CoinstatsAccount::Transactions::Processor.new(coinstats_account).process
-    rescue => e
+    rescue StandardError => e
       report_exception(e, "transactions")
     end
 
