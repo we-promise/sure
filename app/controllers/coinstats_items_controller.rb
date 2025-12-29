@@ -14,7 +14,7 @@ class CoinstatsItemsController < ApplicationController
 
   def create
     @coinstats_item = Current.family.coinstats_items.build(coinstats_item_params)
-    @coinstats_item.name ||= "CoinStats Provider"
+    @coinstats_item.name ||= t(".default_name")
 
     # Validate API key before saving
     unless validate_api_key(@coinstats_item.api_key)
@@ -46,7 +46,7 @@ class CoinstatsItemsController < ApplicationController
 
   def destroy
     @coinstats_item.destroy_later
-    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled CoinStats connection for deletion.")
+    redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   end
 
   def sync
@@ -66,7 +66,7 @@ class CoinstatsItemsController < ApplicationController
     blockchain = params[:blockchain]&.to_s&.strip.presence
 
     unless coinstats_item_id && address && blockchain
-      return redirect_to accounts_path, alert: "Missing required parameters: address and blockchain", status: :unprocessable_entity
+      return redirect_to accounts_path, alert: t(".missing_params"), status: :unprocessable_entity
     end
 
     @coinstats_item = Current.family.coinstats_items.find(coinstats_item_id)
@@ -74,18 +74,18 @@ class CoinstatsItemsController < ApplicationController
     result = CoinstatsItem::WalletLinker.new(@coinstats_item, address: address, blockchain: blockchain).link
 
     if result.success?
-      redirect_to accounts_path, notice: t(".success", count: result.created_count, default: "Successfully linked %{count} wallet(s)."), status: :see_other
+      redirect_to accounts_path, notice: t(".success", count: result.created_count), status: :see_other
     else
-      error_msg = result.errors.join("; ").presence || "Failed to link wallet"
+      error_msg = result.errors.join("; ").presence || t(".failed")
       redirect_to accounts_path, alert: error_msg, status: :unprocessable_entity
     end
   rescue Provider::Coinstats::AuthenticationError => e
-    redirect_to accounts_path, alert: "Authentication failed: #{e.message}", status: :unprocessable_entity
+    redirect_to accounts_path, alert: t(".auth_failed", message: e.message), status: :unprocessable_entity
   rescue Provider::Coinstats::RateLimitError => e
-    redirect_to accounts_path, alert: "Rate limit exceeded: #{e.message}", status: :unprocessable_entity
+    redirect_to accounts_path, alert: t(".rate_limit", message: e.message), status: :unprocessable_entity
   rescue => e
     Rails.logger.error("CoinStats link wallet error: #{e.class} - #{e.message}")
-    redirect_to accounts_path, alert: "Failed to link wallet: #{e.message}", status: :unprocessable_entity
+    redirect_to accounts_path, alert: t(".error", message: e.message), status: :unprocessable_entity
   end
 
   private
@@ -108,13 +108,13 @@ class CoinstatsItemsController < ApplicationController
       Provider::Coinstats.new(api_key).get_blockchains
       true
     rescue Provider::Coinstats::AuthenticationError => e
-      @coinstats_item.errors.add(:api_key, "Invalid API key: #{e.message}")
+      @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.invalid_api_key", message: e.message))
       false
     rescue Provider::Coinstats::RateLimitError => e
-      @coinstats_item.errors.add(:api_key, "Rate limit exceeded: #{e.message}")
+      @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.rate_limit", message: e.message))
       false
     rescue => e
-      @coinstats_item.errors.add(:api_key, "Failed to validate: #{e.message}")
+      @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.validation_failed", message: e.message))
       false
     end
 

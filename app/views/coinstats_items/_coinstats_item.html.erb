@@ -16,29 +16,30 @@
           <div class="flex items-center gap-2">
             <%= tag.p coinstats_item.institution_display_name, class: "font-medium text-primary" %>
             <% if coinstats_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse">Wallet data deletion in progress...</p>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
-          <p class="text-xs text-secondary">CoinStats</p>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
           <% if coinstats_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>
-              <%= tag.span "Syncing..." %>
+              <%= tag.span t(".syncing") %>
             </div>
           <% elsif coinstats_item.requires_update? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span "Reconnect" %>
+              <%= tag.span t(".reconnect") %>
             </div>
           <% else %>
             <p class="text-secondary">
               <% if coinstats_item.last_synced_at %>
-                Last synced <%= time_ago_in_words(coinstats_item.last_synced_at) %> ago
                 <% if coinstats_item.sync_status_summary %>
-                  · <%= coinstats_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(coinstats_item.last_synced_at), summary: coinstats_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(coinstats_item.last_synced_at)) %>
                 <% end %>
               <% else %>
-                Never synced
+                <%= t(".status_never") %>
               <% end %>
             </p>
           <% end %>
@@ -48,7 +49,7 @@
       <div class="flex items-center gap-2">
         <% if coinstats_item.requires_update? %>
           <%= render DS::Link.new(
-            text: "Update API Key",
+            text: t(".update_api_key"),
             icon: "refresh-cw",
             variant: "secondary",
             href: settings_providers_path,
@@ -65,7 +66,7 @@
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
-            text: "Delete",
+            text: t(".delete"),
             icon: "trash-2",
             href: coinstats_item_path(coinstats_item),
             method: :delete,
@@ -81,8 +82,8 @@
           <%= render "accounts/index/account_groups", accounts: coinstats_item.accounts %>
         <% else %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm">No wallets found</p>
-            <p class="text-secondary text-sm">No wallets were found connected to CoinStats.</p>
+            <p class="text-primary font-medium text-sm"><%= t(".no_wallets_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_wallets_message") %></p>
           </div>
         <% end %>
       </div>

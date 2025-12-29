@@ -1,7 +1,7 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Link Crypto Wallet using CoinStats") %>
-    
+    <% dialog.with_header(title: t(".title")) %>
+
     <% dialog.with_body do %>
         <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: nil) %>
         <% if items&.any? %>
@@ -12,26 +12,26 @@
                               data: { turbo: true, turbo_frame: "_top" },
                               class: "space-y-3" do |form| %>
             <%= form.hidden_field :coinstats_item_id, value: selected_item.id %>
-            
+
             <%= form.text_field :address,
-                                label: "Address",
-                                placeholder: "Required"%>
+                                label: t(".address_label"),
+                                placeholder: t(".address_placeholder") %>
 
             <% if blockchains.present? %>
               <%= form.select :blockchain,
                               options_for_select(blockchains),
-                              { include_blank: "Select blockchain" },
-                              label: "Blockchain",
+                              { include_blank: t(".blockchain_select_blank") },
+                              label: t(".blockchain_label"),
                               class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
             <% else %>
               <%= form.text_field :blockchain,
-                                  label: "Blockchain",
-                                  placeholder: "Required"%>
+                                  label: t(".blockchain_label"),
+                                  placeholder: t(".blockchain_placeholder") %>
             <% end %>
 
             <div class="flex justify-end">
-              <%= form.submit "Link",
-                              class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+              <%= form.submit t(".link"),
+                              class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
             </div>
           <% end %>
         <% else %>
@@ -39,16 +39,16 @@
                 <div class="flex items-start gap-3">
                 <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
                 <div class="text-sm text-secondary">
-                    <p class="font-medium text-primary mb-2">CoinStats not configured</p>
-                    <p>To link a crypto wallet with CoinStats, first configure the provider.</p>
+                    <p class="font-medium text-primary mb-2"><%= t(".not_configured_title") %></p>
+                    <p><%= t(".not_configured_message") %></p>
                 </div>
                 </div>
 
                 <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
                 <ol class="list-decimal list-inside space-y-1 text-secondary">
-                    <li>Go to <strong>Settings → Providers</strong></li>
-                    <li>Find the <strong>CoinStats</strong> section</li>
-                    <li>Follow the provided <strong>Setup Instructions</strong></li>
+                    <li><%= t(".not_configured_step1_html").html_safe %></li>
+                    <li><%= t(".not_configured_step2_html").html_safe %></li>
+                    <li><%= t(".not_configured_step3_html").html_safe %></li>
                 </ol>
                 </div>
 
@@ -56,7 +56,7 @@
                 <%= link_to settings_providers_path,
                             class: "w-full inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap rounded-lg hidden md:inline-flex px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
                             data: { turbo: false } do %>
-                    Go to Provider Settings
+                    <%= t(".go_to_settings") %>
                 <% end %>
                 </div>
             </div>
