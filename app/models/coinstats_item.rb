@@ -19,7 +19,7 @@ class CoinstatsItem < ApplicationRecord
   encrypts :api_key, deterministic: true if encryption_ready?
 
   validates :name, presence: true
-  validates :api_key, presence: true, on: :create
+  validates :api_key, presence: true
 
   belongs_to :family
   has_one_attached :logo

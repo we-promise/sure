@@ -49,12 +49,19 @@ class CoinstatsItemTest < ActiveSupport::TestCase
     assert_includes coinstats_item.errors[:name], "can't be blank"
   end
 
-  test "requires api_key to be present on create" do
+  test "requires api_key to be present" do
     coinstats_item = CoinstatsItem.new(family: @family, name: "Test")
     coinstats_item.api_key = nil
 
     assert_not coinstats_item.valid?
     assert_includes coinstats_item.errors[:api_key], "can't be blank"
+  end
+
+  test "requires api_key to be present on update" do
+    @coinstats_item.api_key = ""
+
+    assert_not @coinstats_item.valid?
+    assert_includes @coinstats_item.errors[:api_key], "can't be blank"
   end
 
   test "scopes work correctly" do
