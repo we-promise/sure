@@ -25,7 +25,7 @@ class CreateCoinstatsItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.jsonb :raw_institution_payload
 
       # Provider-specific credential fields
-      t.string :api_key
+      t.string :api_key, null: false
 
       t.timestamps
     end

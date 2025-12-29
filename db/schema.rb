@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_12_22_120100) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_21_060111) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -229,10 +229,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_22_120100) do
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.jsonb "raw_institution_payload"
-    t.string "api_key"
+    t.string "api_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.datetime "last_synced_at"
     t.index ["family_id"], name: "index_coinstats_items_on_family_id"
     t.index ["status"], name: "index_coinstats_items_on_status"
   end
