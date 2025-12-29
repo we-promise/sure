@@ -13,7 +13,7 @@ module CoinstatsItem::Unlinking
     results = []
 
     coinstats_accounts.find_each do |provider_account|
-      links = AccountProvider.where(provider_type: "CoinstatsAccount", provider_id: provider_account.id).to_a
+      links = AccountProvider.where(provider_type: CoinstatsAccount.name, provider_id: provider_account.id).to_a
       link_ids = links.map(&:id)
       result = {
         provider_account_id: provider_account.id,
