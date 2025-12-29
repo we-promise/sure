@@ -1,6 +1,6 @@
 ### 0.0.0
 
-- First (nightly/test) releases via https://we-promise.github.io/sure/index.yaml
+- First (nightly/test) releases via <https://we-promise.github.io/sure/index.yaml>
 
 ### 0.6.5
 
