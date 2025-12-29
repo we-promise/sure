@@ -212,6 +212,12 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :rule_runs, only: [] do
+    member do
+      get :download_metadata
+    end
+  end
+
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync
