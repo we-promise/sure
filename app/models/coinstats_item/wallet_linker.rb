@@ -94,7 +94,7 @@ class CoinstatsItem::WalletLinker
           name: account_name,
           balance: current_balance,
           cash_balance: current_balance,
-          currency: "USD",
+          currency: coinstats_account.currency,
           status: "active"
         )
 
