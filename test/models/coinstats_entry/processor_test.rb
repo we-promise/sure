@@ -121,7 +121,8 @@ class CoinstatsEntry::ProcessorTest < ActiveSupport::TestCase
     processor.process
 
     entry = @account.entries.last
-    assert_match(/^coinstats_2025-01-15T10:00:00.000Z_Swap_100$/, entry.external_id)
+    # Fallback IDs use a hash digest format: "coinstats_fallback_<16-char-hex>"
+    assert_match(/^coinstats_fallback_[a-f0-9]{16}$/, entry.external_id)
   end
 
   test "raises error when transaction missing identifier" do
