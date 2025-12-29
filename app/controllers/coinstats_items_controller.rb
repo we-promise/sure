@@ -10,6 +10,8 @@ class CoinstatsItemsController < ApplicationController
 
   def new
     @coinstats_item = Current.family.coinstats_items.build
+    @coinstats_items = Current.family.coinstats_items.where.not(api_key: nil)
+    @blockchains = fetch_blockchain_options(@coinstats_items.first)
   end
 
   def create
@@ -150,6 +152,25 @@ class CoinstatsItemsController < ApplicationController
     def render_link_wallet_error(error_message)
       @error_message = error_message
       @coinstats_items = Current.family.coinstats_items.where.not(api_key: nil)
+      @blockchains = fetch_blockchain_options(@coinstats_items.first)
       render :new, status: :unprocessable_entity
+    end
+
+    def fetch_blockchain_options(coinstats_item)
+      return [] unless coinstats_item&.api_key.present?
+
+      Provider::Coinstats.new(coinstats_item.api_key).blockchain_options
+    rescue Provider::Coinstats::AuthenticationError => e
+      Rails.logger.error("CoinStats blockchain fetch failed (auth): item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
+      flash.now[:alert] = t("coinstats_items.new.blockchain_fetch_auth_error")
+      []
+    rescue Provider::Coinstats::RateLimitError => e
+      Rails.logger.error("CoinStats blockchain fetch failed (rate limit): item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
+      flash.now[:alert] = t("coinstats_items.new.blockchain_fetch_rate_limit_error")
+      []
+    rescue StandardError => e
+      Rails.logger.error("CoinStats blockchain fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
+      flash.now[:alert] = t("coinstats_items.new.blockchain_fetch_error")
+      []
     end
 end

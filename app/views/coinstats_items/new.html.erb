@@ -13,7 +13,7 @@
         <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: nil) %>
         <% if items&.any? %>
           <% selected_item = items.first %>
-          <% blockchains = Provider::Coinstats.new(selected_item.api_key).blockchain_options rescue [] %>
+          <% blockchains = local_assigns[:blockchains] || @blockchains || [] %>
           <% address_value = local_assigns[:address] || @address %>
           <% blockchain_value = local_assigns[:blockchain] || @blockchain %>
           <%= styled_form_with url: link_wallet_coinstats_items_path,
