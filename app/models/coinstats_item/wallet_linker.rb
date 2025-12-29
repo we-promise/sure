@@ -92,17 +92,17 @@ class CoinstatsItem::WalletLinker
     end
 
     def build_account_name(token)
-      raw_name = token[:name].to_s.strip
-      raw_symbol = token[:symbol].to_s.strip
+      token_name = token[:name].to_s.strip
+      truncated_address = address.present? ? "#{address.first(4)}...#{address.last(4)}" : nil
 
-      if raw_name.present? && raw_symbol.present?
-        "#{raw_name} (#{raw_symbol})"
-      elsif raw_name.present?
-        raw_name
-      elsif raw_symbol.present?
-        raw_symbol
+      if token_name.present? && truncated_address.present?
+        "#{token_name} (#{truncated_address})"
+      elsif token_name.present?
+        token_name
+      elsif truncated_address.present?
+        "#{blockchain.capitalize} (#{truncated_address})"
       else
-        "#{blockchain.capitalize} #{address[0..6]}..."
+        "Crypto Wallet"
       end
     end
 

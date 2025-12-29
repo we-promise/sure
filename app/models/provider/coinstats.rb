@@ -98,13 +98,31 @@ class Provider::Coinstats
       sleep sync_retry_delay * sync_retry_current
     end
 
-    res = self.class.get(
-      "#{BASE_URL}/wallet/transactions",
-      headers: auth_headers,
-      query: { address: address, connectionId: blockchain }
-    )
+    # Paginate through all transactions using max limit
+    all_transactions = []
+    page = 1
+    limit = 100 # Maximum allowed by API
 
-    handle_response(res)
+    loop do
+      res = self.class.get(
+        "#{BASE_URL}/wallet/transactions",
+        headers: auth_headers,
+        query: { address: address, connectionId: blockchain, page: page, limit: limit }
+      )
+
+      data = handle_response(res)
+      transactions = data[:result] || data[:transactions] || data[:data] || []
+      break if transactions.empty?
+
+      all_transactions.concat(transactions)
+
+      # Stop if we received fewer than the limit (last page)
+      break if transactions.size < limit
+
+      page += 1
+    end
+
+    all_transactions
   end
 
   private

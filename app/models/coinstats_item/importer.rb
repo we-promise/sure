@@ -77,8 +77,8 @@ class CoinstatsItem::Importer
     def fetch_and_merge_transactions(coinstats_account, address, blockchain)
       transactions_data = coinstats_provider.get_wallet_transactions(address, blockchain)
 
-      # CoinStats returns: { meta: { page, limit }, result: [...] }
-      new_transactions = transactions_data[:result] || []
+      # get_wallet_transactions returns a flat array of all transactions (paginated internally)
+      new_transactions = transactions_data.is_a?(Array) ? transactions_data : (transactions_data[:result] || [])
       return 0 if new_transactions.empty?
 
       # Get existing transactions (already extracted as array)
@@ -116,14 +116,18 @@ class CoinstatsItem::Importer
       # Preserve existing address/blockchain from raw_payload
       existing_raw = coinstats_account.raw_payload || {}
 
-      # Find the matching token for this account to extract id and logo
+      # Find the matching token for this account to extract id, logo, and balance
       matching_token = find_matching_token(balance_data, coinstats_account)
+
+      # Calculate balance from the matching token only, not all tokens
+      # Each coinstats_account represents a single token/coin in the wallet
+      token_balance = calculate_token_balance(matching_token)
 
       {
         # Use existing account_id if set, otherwise extract from matching token
         id: coinstats_account.account_id.presence || matching_token&.dig(:coinId) || matching_token&.dig(:id),
         name: coinstats_account.name,
-        balance: calculate_total_balance(balance_data),
+        balance: token_balance,
         currency: "USD", # CoinStats returns values in USD
         address: existing_raw["address"] || existing_raw[:address],
         blockchain: existing_raw["blockchain"] || existing_raw[:blockchain],
@@ -175,6 +179,17 @@ class CoinstatsItem::Importer
       else
         []
       end
+    end
+
+    # Calculate balance for a single token
+    # Used when syncing individual coinstats_accounts that each represent one token
+    def calculate_token_balance(token)
+      return 0 if token.blank?
+
+      token = token.with_indifferent_access
+      amount = token[:amount] || token[:balance] || 0
+      price = token[:price] || token[:priceUsd] || 0
+      (amount.to_f * price.to_f)
     end
 
     def calculate_total_balance(balance_data)
