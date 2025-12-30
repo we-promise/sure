@@ -7,6 +7,8 @@ en:
       description: View the execution history of your rules including success/failure status and transaction counts.
       unnamed_rule: Unnamed Rule
       download_metadata: Download run metadata
+      metadata_preview: Run Metadata
+      click_to_download: Click to download
       columns:
         date_time: Date/Time
         execution_type: Type
