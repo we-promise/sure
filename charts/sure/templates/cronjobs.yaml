@@ -1,0 +1,70 @@
+{{- if and .Values.cronjobs.enabled .Values.cronjobs.items }}
+{{- range .Values.cronjobs.items }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "sure.fullname" $ }}-{{ .name }}
+  labels:
+    {{- include "sure.labels" $ | nindent 4 }}
+spec:
+  schedule: {{ .schedule | quote }}
+  concurrencyPolicy: {{ default "Forbid" .concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ default 1 .successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ default 3 .failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      {{- if .ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ .ttlSecondsAfterFinished }}
+      {{- end }}
+      template:
+        metadata:
+          labels:
+            {{- include "sure.selectorLabels" $ | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          {{- with .nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml $.Values.podSecurityContext | nindent 12 }}
+          {{- if $.Values.image.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml $.Values.image.imagePullSecrets | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .name }}
+              image: {{ include "sure.image" $ }}
+              imagePullPolicy: {{ $.Values.image.pullPolicy }}
+              command:
+                {{- toYaml .command | nindent 16 }}
+              {{- if .args }}
+              args:
+                {{- toYaml .args | nindent 16 }}
+              {{- end }}
+              env:
+                {{- include "sure.env" (dict "ctx" $ "includeDatabase" true "includeRedis" true "extraEnv" .env) | nindent 16 }}
+              {{- if or $.Values.rails.extraEnvFrom .envFrom }}
+              envFrom:
+                {{- with $.Values.rails.extraEnvFrom }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+                {{- with .envFrom }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- end }}
+              securityContext:
+                {{- toYaml $.Values.securityContext | nindent 16 }}
+              resources:
+                {{- toYaml .resources | nindent 16 }}
+---
+{{- end }}
+{{- end }}

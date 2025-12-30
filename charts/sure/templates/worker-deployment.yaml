@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sure.fullname" . }}-worker
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+      {{- include "sure.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+        {{- include "sure.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- toYaml .Values.worker.podAnnotations | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.image.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.image.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: sidekiq
+          image: {{ include "sure.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.worker.command }}
+          command:
+            {{- toYaml .Values.worker.command | nindent 12 }}
+          {{- else }}
+          command: ["bash", "-lc"]
+          {{- end }}
+          {{- if .Values.worker.args }}
+          args:
+            {{- toYaml .Values.worker.args | nindent 12 }}
+          {{- else }}
+          # Default: use Sidekiq's config/sidekiq.yml so all priority queues are polled
+          args:
+            - |
+              bundle exec sidekiq -C config/sidekiq.yml
+          {{- end }}
+          env:
+            {{- include "sure.env" (dict "ctx" . "includeDatabase" true "includeRedis" true "extraEnv" .Values.worker.extraEnv) | nindent 12 }}
+          {{- if or .Values.rails.extraEnvFrom .Values.worker.extraEnvFrom }}
+          envFrom:
+            {{- with .Values.rails.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.worker.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.worker.extraVolumeMounts | nindent 12 }}
+            {{- if .Values.writableTmp.enabled }}
+            - name: tmp
+              mountPath: /tmp
+            {{- end }}
+      volumes:
+        {{- toYaml .Values.worker.extraVolumes | nindent 8 }}
+        {{- if .Values.writableTmp.enabled }}
+        - name: tmp
+          emptyDir: {}
+        {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.worker.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.worker.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.worker.tolerations | nindent 8 }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.worker.topologySpreadConstraints | nindent 8 }}

@@ -177,6 +177,15 @@
   }
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display:none
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width:none
+}
+
 .invite_code [data-clipboard-target="iconDefault"],
 .invite_code [data-clipboard-target="iconSuccess"] {
   transition: opacity 0.2s;
