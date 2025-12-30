@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_29_141157) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -876,9 +876,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.integer "transactions_processed", default: 0, null: false
     t.integer "transactions_modified", default: 0, null: false
     t.integer "pending_jobs_count", default: 0, null: false
-    t.datetime "executed_at", null: false
     t.text "error_message"
+    t.jsonb "run_metadata", default: {}
     t.datetime "created_at", null: false
+    t.datetime "executed_at", null: false
     t.datetime "updated_at", null: false
     t.index ["executed_at"], name: "index_rule_runs_on_executed_at"
     t.index ["rule_id", "executed_at"], name: "index_rule_runs_on_rule_id_and_executed_at"
