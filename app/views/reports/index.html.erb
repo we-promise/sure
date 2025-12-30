@@ -26,10 +26,24 @@
     }
 
     [data-app-layout-target="content"] {
-      max-width: 1080px !important;
+      max-width: none !important;
+      max-height: none !important;
+      height: auto !important;
       padding: 0 !important;
-      margin: 0 auto !important;
+      margin: 0 !important;
       overflow: visible !important;
+    }
+
+    body,
+    html {
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    main {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
     }
 
     [data-app-layout-target="content"] > .hidden.lg\:flex {
