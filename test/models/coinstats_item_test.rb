@@ -185,7 +185,7 @@ class CoinstatsItemTest < ActiveSupport::TestCase
   end
 
   test "sync_status_summary shows no accounts message" do
-    assert_equal "No accounts found", @coinstats_item.sync_status_summary
+    assert_equal "No crypto wallets found", @coinstats_item.sync_status_summary
   end
 
   test "sync_status_summary shows all synced message" do
@@ -202,7 +202,7 @@ class CoinstatsItemTest < ActiveSupport::TestCase
     )
     AccountProvider.create!(account: account, provider: coinstats_account)
 
-    assert_equal "1 wallet synced", @coinstats_item.sync_status_summary
+    assert_equal "1 crypto wallet synced", @coinstats_item.sync_status_summary
   end
 
   test "sync_status_summary shows mixed status message" do
@@ -226,6 +226,6 @@ class CoinstatsItemTest < ActiveSupport::TestCase
       currency: "USD"
     )
 
-    assert_equal "1 synced, 1 need setup", @coinstats_item.sync_status_summary
+    assert_equal "1 crypto wallets synced, 1 need setup", @coinstats_item.sync_status_summary
   end
 end
