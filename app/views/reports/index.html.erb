@@ -1,13 +1,18 @@
 <% content_for :head do %>
   <style media="print">
+    /* Print-specific custom property overrides for values using --alpha() */
+    :root {
+      --print-shadow-color: rgba(11, 11, 11, 0.06);
+    }
+
     @page {
       margin: 0.75in;
     }
 
     body {
-      background: #f5f6f8;
-      color: #0f172a;
-      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--color-gray-50);
+      color: var(--color-gray-900);
+      font-family: var(--font-sans);
     }
 
     #notification-tray,
@@ -26,10 +31,24 @@
     }
 
     [data-app-layout-target="content"] {
-      max-width: 1080px !important;
+      max-width: none !important;
+      max-height: none !important;
+      height: auto !important;
       padding: 0 !important;
-      margin: 0 auto !important;
+      margin: 0 !important;
       overflow: visible !important;
+    }
+
+    body,
+    html {
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    main {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
     }
 
     [data-app-layout-target="content"] > .hidden.lg\:flex {
@@ -42,10 +61,10 @@
     }
 
     .reports-print-sheet {
-      background: #fff;
+      background: var(--color-white);
       border-radius: 16px;
       padding: 0.75in 0.65in;
-      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 10px 25px var(--print-shadow-color);
     }
 
     .reports-page section {
