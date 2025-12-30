@@ -2,8 +2,42 @@ apiVersion: v1
 entries:
   sure:
   - apiVersion: v2
+    appVersion: 0.6.6-alpha
+    created: "2025-12-30T17:54:54.272792582Z"
+    dependencies:
+    - condition: cnpg.enabled
+      name: cloudnative-pg
+      repository: https://cloudnative-pg.github.io/charts
+      version: 0.22.0
+    - alias: redisOperator
+      condition: redisOperator.enabled
+      name: redis-operator
+      repository: https://ot-container-kit.github.io/helm-charts
+      version: ~0.21.0
+    description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq)
+      on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
+    digest: 90ce5827bdda0cc7875ea058cc62c7df282352a65c320cefca782b5f6f832736
+    home: https://github.com/we-promise/sure
+    keywords:
+    - rails
+    - sidekiq
+    - personal-finance
+    - cloudnativepg
+    - redis
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: Sure maintainers
+      url: https://github.com/we-promise/sure
+    name: sure
+    sources:
+    - https://github.com/we-promise/sure
+    type: application
+    urls:
+    - https://we-promise.github.io/sure/sure-0.0.0-nightly.20251230.175452.tgz
+    version: 0.0.0-nightly.20251230.175452
+  - apiVersion: v2
     appVersion: 0.6.5
-    created: "2025-12-30T17:46:25.464591647Z"
+    created: "2025-12-30T17:54:54.260650397Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -37,7 +71,7 @@ entries:
     version: 0.0.0-nightly.20251230.174623
   - apiVersion: v2
     appVersion: 0.6.5
-    created: "2025-12-30T17:46:25.453048226Z"
+    created: "2025-12-30T17:54:54.248771245Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -71,7 +105,7 @@ entries:
     version: 0.0.0-nightly.20251230.173623
   - apiVersion: v2
     appVersion: 0.6.5
-    created: "2025-12-30T17:46:25.441493277Z"
+    created: "2025-12-30T17:54:54.236309098Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -103,4 +137,4 @@ entries:
     urls:
     - https://we-promise.github.io/sure/sure-0.0.0-nightly.20251213.190247.tgz
     version: 0.0.0-nightly.20251213.190247
-generated: "2025-12-30T17:46:25.428588388Z"
+generated: "2025-12-30T17:54:54.222677742Z"
