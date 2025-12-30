@@ -19,12 +19,16 @@ export default class extends Controller {
   }
 
   toggleLeftSidebar() {
+    if (!this.hasLeftSidebarTarget) return;
+
     const isOpen = this.leftSidebarTarget.classList.contains("w-full");
     this.#updateUserPreference("show_sidebar", !isOpen);
     this.#toggleSidebarWidth(this.leftSidebarTarget, isOpen);
   }
 
   toggleRightSidebar() {
+    if (!this.hasRightSidebarTarget) return;
+
     const isOpen = this.rightSidebarTarget.classList.contains("w-full");
     this.#updateUserPreference("show_ai_sidebar", !isOpen);
     this.#toggleSidebarWidth(this.rightSidebarTarget, isOpen);

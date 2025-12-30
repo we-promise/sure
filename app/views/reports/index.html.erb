@@ -1,5 +1,84 @@
+<% content_for :head do %>
+  <style media="print">
+    @page {
+      margin: 0.75in;
+    }
+
+    body {
+      background: #f5f6f8;
+      color: #0f172a;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #notification-tray,
+    #cta,
+    #chat-container,
+    turbo-frame#modal,
+    turbo-frame#drawer,
+    [data-print="hide"] {
+      display: none !important;
+    }
+
+    [data-controller="app-layout"] {
+      height: auto !important;
+      overflow: visible !important;
+      display: block !important;
+    }
+
+    [data-app-layout-target="content"] {
+      max-width: 1080px !important;
+      padding: 0 !important;
+      margin: 0 auto !important;
+      overflow: visible !important;
+    }
+
+    [data-app-layout-target="content"] > .hidden.lg\:flex {
+      display: none !important;
+    }
+
+    .reports-page {
+      background: transparent;
+      padding: 0 !important;
+    }
+
+    .reports-print-sheet {
+      background: #fff;
+      border-radius: 16px;
+      padding: 0.75in 0.65in;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    }
+
+    .reports-page section {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .reports-print-hide,
+    [data-reports-section-target="button"],
+    [data-reports-sortable-target="handle"] {
+      display: none !important;
+    }
+
+    [data-reports-section-target="content"] {
+      display: block !important;
+    }
+
+    section[data-section-key="transactions_breakdown"] {
+      break-before: page;
+      page-break-before: always;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
+
+    .reports-page table th,
+    .reports-page table td {
+      padding-inline: 0.5rem !important;
+    }
+  </style>
+<% end %>
+
 <% content_for :page_header do %>
-  <div class="space-y-4 mb-6">
+  <div class="space-y-4 mb-6 reports-print-hide">
     <div class="space-y-1">
       <h1 class="text-xl lg:text-3xl font-medium text-primary">
         <%= t("reports.index.title") %>
@@ -17,7 +96,7 @@
     <% end %>
 
     <%# Period Navigation Tabs %>
-    <div class="flex items-center gap-2 overflow-x-auto pb-2">
+    <div class="reports-print-hide flex items-center gap-2 overflow-x-auto pb-2">
       <%= render DS::Link.new(
         text: t("reports.index.periods.monthly"),
         variant: @period_type == :monthly ? "secondary" : "ghost",
@@ -52,7 +131,7 @@
 
     <%# Custom Date Range Picker (only shown when custom is selected) %>
     <% if @period_type == :custom %>
-      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
+      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "reports-print-hide flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
         <%= f.hidden_field :period_type, value: :custom %>
 
         <div class="flex items-center gap-2">
@@ -84,7 +163,7 @@
   </div>
 <% end %>
 
-<div class="w-full space-y-6 pb-24">
+<div class="reports-page w-full space-y-6 pb-24 reports-print-sheet">
   <% if Current.family.transactions.any? %>
     <%# Summary Dashboard - Always visible, not collapsible %>
     <section>
