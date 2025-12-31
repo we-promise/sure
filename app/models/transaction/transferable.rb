@@ -14,11 +14,11 @@ module Transaction::Transferable
     transfer_as_inflow || transfer_as_outflow
   end
 
-  def transfer_match_candidates
+  def transfer_match_candidates(date_window: 30)
     candidates_scope = if self.entry.amount.negative?
-      family_matches_scope.where("inflow_candidates.entryable_id = ?", self.id)
+      family_matches_scope(date_window: date_window).where("inflow_candidates.entryable_id = ?", self.id)
     else
-      family_matches_scope.where("outflow_candidates.entryable_id = ?", self.id)
+      family_matches_scope(date_window: date_window).where("outflow_candidates.entryable_id = ?", self.id)
     end
 
     candidates_scope.map do |match|
@@ -30,7 +30,7 @@ module Transaction::Transferable
   end
 
   private
-    def family_matches_scope
-      self.entry.account.family.transfer_match_candidates
+    def family_matches_scope(date_window:)
+      self.entry.account.family.transfer_match_candidates(date_window: date_window)
     end
 end
