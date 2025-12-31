@@ -57,6 +57,10 @@ class Account::ProviderImportAdapter
       # Use enrichment pattern to respect user overrides
       entry.enrich_attribute(:name, name, source: source)
 
+      # Preserve existing tags - they're set by rules/users, never by providers
+      # We need to explicitly preserve them because the transaction will be saved multiple times
+      preserved_tag_ids = entry.transaction.persisted? ? entry.transaction.tag_ids.dup : []
+
       # Enrich transaction-specific attributes
       if category_id
         entry.transaction.enrich_attribute(:category_id, category_id, source: source)
@@ -83,8 +87,15 @@ class Account::ProviderImportAdapter
         end
       end
       
-      # Reload entry to ensure all associations are fresh after transaction saves
-      entry.reload
+      # Restore tags if they were lost during the save operations above
+      # This is a defensive measure to ensure tags are never cleared during provider sync
+      entry.transaction.reload
+      if preserved_tag_ids.any? && entry.transaction.tag_ids.sort != preserved_tag_ids.sort
+        Rails.logger.info("Restoring #{preserved_tag_ids.length} tags that were cleared during sync for transaction #{entry.transaction.id}")
+        entry.transaction.tag_ids = preserved_tag_ids
+        entry.transaction.save!
+      end
+      
       entry
     end
   end
