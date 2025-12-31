@@ -2,8 +2,42 @@ apiVersion: v1
 entries:
   sure:
   - apiVersion: v2
+    appVersion: 0.6.6
+    created: "2025-12-31T14:37:30.069911094Z"
+    dependencies:
+    - condition: cnpg.enabled
+      name: cloudnative-pg
+      repository: https://cloudnative-pg.github.io/charts
+      version: 0.22.0
+    - alias: redisOperator
+      condition: redisOperator.enabled
+      name: redis-operator
+      repository: https://ot-container-kit.github.io/helm-charts
+      version: ~0.21.0
+    description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq)
+      on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
+    digest: 6ae30542ec2824ad4ebc81e98ab07e4fce52faa2041fb6dd32e230ac20f2f34f
+    home: https://github.com/we-promise/sure
+    keywords:
+    - rails
+    - sidekiq
+    - personal-finance
+    - cloudnativepg
+    - redis
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: Sure maintainers
+      url: https://github.com/we-promise/sure
+    name: sure
+    sources:
+    - https://github.com/we-promise/sure
+    type: application
+    urls:
+    - https://we-promise.github.io/sure/sure-0.0.0-nightly.20251231.143726.tgz
+    version: 0.0.0-nightly.20251231.143726
+  - apiVersion: v2
     appVersion: 0.6.6-alpha
-    created: "2025-12-30T21:11:00.760983544Z"
+    created: "2025-12-31T14:37:30.058576848Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -37,7 +71,7 @@ entries:
     version: 0.0.0-nightly.20251230.211058
   - apiVersion: v2
     appVersion: 0.6.6-alpha
-    created: "2025-12-30T21:11:00.749615723Z"
+    created: "2025-12-31T14:37:30.046865493Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -71,7 +105,7 @@ entries:
     version: 0.0.0-nightly.20251230.175452
   - apiVersion: v2
     appVersion: 0.6.5
-    created: "2025-12-30T21:11:00.738402919Z"
+    created: "2025-12-31T14:37:30.03539103Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -105,7 +139,7 @@ entries:
     version: 0.0.0-nightly.20251230.174623
   - apiVersion: v2
     appVersion: 0.6.5
-    created: "2025-12-30T21:11:00.726976333Z"
+    created: "2025-12-31T14:37:30.023772927Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -139,7 +173,7 @@ entries:
     version: 0.0.0-nightly.20251230.173623
   - apiVersion: v2
     appVersion: 0.6.5
-    created: "2025-12-30T21:11:00.715334311Z"
+    created: "2025-12-31T14:37:30.011875414Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -171,4 +205,4 @@ entries:
     urls:
     - https://we-promise.github.io/sure/sure-0.0.0-nightly.20251213.190247.tgz
     version: 0.0.0-nightly.20251213.190247
-generated: "2025-12-30T21:11:00.702454895Z"
+generated: "2025-12-31T14:37:29.998848245Z"
