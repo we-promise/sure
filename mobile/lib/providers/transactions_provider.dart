@@ -28,7 +28,6 @@ class TransactionsProvider with ChangeNotifier {
     );
 
     _isLoading = false;
-    notifyListeners();
 
     if (result['success'] == true && result.containsKey('transactions')) {
       _transactions = (result['transactions'] as List<dynamic>?)?.cast<Transaction>() ?? [];

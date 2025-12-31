@@ -67,22 +67,30 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       );
 
       if (sessionsResponse.statusCode >= 200 && sessionsResponse.statusCode < 400) {
-        setState(() {
-          _successMessage = 'Connection successful! Sure backend is reachable.';
-        });
+        if (mounted) {
+          setState(() {
+            _successMessage = 'Connection successful! Sure backend is reachable.';
+          });
+        }
       } else {
-        setState(() {
-          _errorMessage = 'Server responded with status ${sessionsResponse.statusCode}. Please check if this is a Sure backend server.';
-        });
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Server responded with status ${sessionsResponse.statusCode}. Please check if this is a Sure backend server.';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Connection failed: ${e.toString()}';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Connection failed: ${e.toString()}';
+        });
+      }
     } finally {
-      setState(() {
-        _isTesting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isTesting = false;
+        });
+      }
     }
   }
 
@@ -109,13 +117,17 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
         widget.onConfigSaved!();
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to save URL: ${e.toString()}';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to save URL: ${e.toString()}';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

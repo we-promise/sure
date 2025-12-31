@@ -121,10 +121,12 @@ class _AppWrapperState extends State<AppWrapper> {
 
   Future<void> _checkBackendConfig() async {
     final hasUrl = await ApiConfig.initialize();
-    setState(() {
-      _hasBackendUrl = hasUrl;
-      _isCheckingConfig = false;
-    });
+    if (mounted) {
+      setState(() {
+        _hasBackendUrl = hasUrl;
+        _isCheckingConfig = false;
+      });
+    }
   }
 
   void _onBackendConfigSaved() {
