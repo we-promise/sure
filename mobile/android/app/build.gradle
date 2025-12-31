@@ -11,7 +11,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.sure.mobile"
+    namespace "am.sure.mobile"
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
