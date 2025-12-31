@@ -201,4 +201,74 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal business_category, transaction_entry.transaction.category, "Transaction with 'business' in notes should be categorized"
     assert_nil transaction_entry2.transaction.category, "Transaction without 'business' in notes should not be categorized"
   end
+
+  test "set transaction name rule" do
+    # Create transactions with names containing "Paycheck"
+    transaction_entry1 = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "Paycheck - 12/15"
+    )
+    transaction_entry2 = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "Paycheck - 12/31"
+    )
+
+    # Create a transaction that shouldn't match
+    transaction_entry3 = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "Coffee"
+    )
+
+    # Create rule to rename transactions containing "Paycheck"
+    income_category = @family.categories.create!(name: "Income")
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Paycheck") ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_name", value: "WORK - Salary"),
+        Rule::Action.new(action_type: "set_transaction_category", value: income_category.id)
+      ]
+    )
+
+    rule.apply
+
+    transaction_entry1.reload
+    transaction_entry2.reload
+    transaction_entry3.reload
+
+    assert_equal "WORK - Salary", transaction_entry1.name, "Transaction name should be updated"
+    assert_equal "WORK - Salary", transaction_entry2.name, "Transaction name should be updated"
+    assert_equal "Coffee", transaction_entry3.name, "Transaction name should not be changed"
+    assert_equal income_category, transaction_entry1.transaction.category
+    assert_equal income_category, transaction_entry2.transaction.category
+    assert_nil transaction_entry3.transaction.category
+  end
+
+  test "set transaction name rule respects attribute locks" do
+    transaction_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "Paycheck - 12/15"
+    )
+    transaction_entry.lock_attr!(:name)
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Paycheck") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_name", value: "WORK - Salary") ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+
+    assert_equal "Paycheck - 12/15", transaction_entry.name, "Transaction name should not be changed when attribute is locked"
+  end
 end
