@@ -74,9 +74,17 @@ class Account::ProviderImportAdapter
       if extra.present? && entry.entryable.is_a?(Transaction)
         existing = entry.transaction.extra || {}
         incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-        entry.transaction.extra = existing.deep_merge(incoming)
+        merged_extra = existing.deep_merge(incoming)
+        
+        # Only update extra if it actually changed to avoid unnecessary saves
+        if entry.transaction.extra != merged_extra
+          entry.transaction.extra = merged_extra
+          entry.transaction.save!
+        end
       end
-      entry.save!
+      
+      # Reload entry to ensure all associations are fresh after transaction saves
+      entry.reload
       entry
     end
   end

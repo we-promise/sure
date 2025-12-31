@@ -785,4 +785,46 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_nil newer_entry.reload.external_id
     end
   end
+
+  test "preserves tags when syncing existing transaction" do
+    # Create a tag for testing
+    tag = Tag.create!(
+      name: "Test Tag",
+      family: @family
+    )
+
+    # Create initial transaction
+    entry = @adapter.import_transaction(
+      external_id: "plaid_tag_test",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Original Name",
+      source: "plaid"
+    )
+
+    # Add tags to the transaction (simulating what a rule would do)
+    entry.transaction.tags << tag
+    entry.transaction.reload
+    assert_equal 1, entry.transaction.tags.count, "Transaction should have 1 tag"
+
+    # Re-sync the same transaction with updated data
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "plaid_tag_test",
+        amount: 200.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Updated Name",
+        source: "plaid"
+      )
+
+      assert_equal entry.id, updated_entry.id
+      assert_equal 200.00, updated_entry.amount
+      assert_equal "Updated Name", updated_entry.name
+      # Tags should be preserved after sync
+      assert_equal 1, updated_entry.transaction.tags.count, "Tags should be preserved after sync"
+      assert_includes updated_entry.transaction.tags, tag
+    end
+  end
 end
