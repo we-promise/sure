@@ -81,12 +81,10 @@ class Account::ProviderImportAdapter
         incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
         merged_extra = existing.deep_merge(incoming)
         
-        # Only update extra if it actually changed to avoid unnecessary saves
-        # Direct comparison works for most cases; deep_merge creates new hash structure
-        unless existing == merged_extra
-          entry.transaction.extra = merged_extra
-          entry.transaction.save!
-        end
+        # Always update extra to ensure provider metadata is current
+        # The deep_merge ensures existing data is preserved while adding new provider data
+        entry.transaction.extra = merged_extra
+        entry.transaction.save!
       end
       
       # Ensure entry is saved if enrich_attribute calls didn't trigger a save
@@ -100,7 +98,7 @@ class Account::ProviderImportAdapter
         current_tag_ids = entry.transaction.tag_ids
         # Compare sorted arrays to handle different orderings
         if current_tag_ids.sort != preserved_tag_ids.sort
-          Rails.logger.info("Restoring #{preserved_tag_ids.length} tags that were cleared during sync for transaction #{entry.transaction.id}")
+          Rails.logger.debug("Restoring #{preserved_tag_ids.length} tags for transaction #{entry.transaction.id} after sync")
           entry.transaction.tag_ids = preserved_tag_ids
           entry.transaction.save!
           # Reload entry to reflect the tag restoration
