@@ -19,7 +19,7 @@
       <% if action.executor.type == "select" %>
         <%= form.select :value, action.options || [], {} %>
       <% elsif action.executor.type == "text" %>
-        <%= form.text_field :value, placeholder: "Enter a value" %>
+        <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
       <% end %>
     <% end %>
   </div>
@@ -38,7 +38,7 @@
 
   <template data-rule--actions-target="textTemplate">
     <span class="font-medium text-primary uppercase text-xs">to</span>
-    <%= form.text_field :value, placeholder: "Enter a value" %>
+    <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
   </template>
 
   <%# The function type doesn't need an input, so no template is required.%>
