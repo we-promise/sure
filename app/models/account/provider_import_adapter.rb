@@ -95,16 +95,19 @@ class Account::ProviderImportAdapter
       
       # Restore tags if they were lost during the save operations above
       # This is a defensive measure to ensure tags are never cleared during provider sync
-      entry.transaction.reload
-      current_tag_ids = entry.transaction.tag_ids
-      if preserved_tag_ids.any? && current_tag_ids != preserved_tag_ids && current_tag_ids.sort != preserved_tag_ids.sort
-        Rails.logger.info("Restoring #{preserved_tag_ids.length} tags that were cleared during sync for transaction #{entry.transaction.id}")
-        entry.transaction.tag_ids = preserved_tag_ids
-        entry.transaction.save!
+      if preserved_tag_ids.any?
+        entry.transaction.reload
+        current_tag_ids = entry.transaction.tag_ids
+        # Compare sorted arrays to handle different orderings
+        if current_tag_ids.sort != preserved_tag_ids.sort
+          Rails.logger.info("Restoring #{preserved_tag_ids.length} tags that were cleared during sync for transaction #{entry.transaction.id}")
+          entry.transaction.tag_ids = preserved_tag_ids
+          entry.transaction.save!
+          # Reload entry to reflect the tag restoration
+          entry.reload
+        end
       end
       
-      # Reload entry to ensure it reflects the final persisted state including any tag restorations
-      entry.reload
       entry
     end
   end
