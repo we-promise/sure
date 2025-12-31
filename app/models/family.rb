@@ -12,6 +12,7 @@ class Family < ApplicationRecord
     [ "D/MM/YYYY", "%e/%m/%Y" ],
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
     [ "YYYYMMDD", "%Y%m%d" ]
+    [ "DD/MM/YY", "%d/%m/%y" ]
   ].freeze
 
   has_many :users, dependent: :destroy
