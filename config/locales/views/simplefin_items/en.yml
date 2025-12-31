@@ -44,7 +44,7 @@ en:
       error: Error occurred while syncing data
       no_accounts_description: This connection doesn't have any synchronized accounts yet.
       no_accounts_title: No accounts found
-      requires_update: Requires re-authentication
+      requires_update: Reconnect
       setup_needed: New accounts ready to set up
       setup_description: Choose account types for your newly imported SimpleFin accounts.
       setup_action: Set Up New Accounts
@@ -52,9 +52,20 @@ en:
       status_never: Never synced
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
-      update: Update connection
+      update: Update
     select_existing_account:
       title: "Link %{account_name} to SimpleFIN"
       description: Select a SimpleFIN account to link to your existing account
       cancel: Cancel
       link_account: Link account
+      no_accounts_found: No SimpleFIN accounts found for this family.
+      wait_for_sync: If you just connected or synced, try again after the sync completes.
+      unlink_to_move: To move a link, first unlink it from the account’s actions menu.
+      all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
+      currently_linked_to: "Currently linked to: %{account_name}"
+
+    link_existing_account:
+      success: Account successfully linked to SimpleFIN
+      errors:
+        only_manual: Only manual accounts can be linked
+        invalid_simplefin_account: Invalid SimpleFIN account selected

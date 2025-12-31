@@ -403,6 +403,10 @@ class SimplefinItem::Importer
     # Returns a Hash payload with keys like :accounts, or nil when an error is
     # handled internally via `handle_errors`.
     def fetch_accounts_data(start_date:, end_date: nil, pending: nil)
+      # Determine whether to include pending based on explicit arg or global config.
+      # `Rails.configuration.x.simplefin.include_pending` is ENV-backed.
+      effective_pending = pending.nil? ? Rails.configuration.x.simplefin.include_pending : pending
+
       # Debug logging to track exactly what's being sent to SimpleFin API
       start_str = start_date.respond_to?(:strftime) ? start_date.strftime("%Y-%m-%d") : "none"
       end_str = end_date.respond_to?(:strftime) ? end_date.strftime("%Y-%m-%d") : "current"
@@ -411,7 +415,7 @@ class SimplefinItem::Importer
       else
         "unknown"
       end
-      Rails.logger.info "SimplefinItem::Importer - API Request: #{start_str} to #{end_str} (#{days_requested} days)"
+      Rails.logger.info "SimplefinItem::Importer - API Request: #{start_str} to #{end_str} (#{days_requested} days) pending=#{effective_pending ? 1 : 0}"
 
       begin
         # Track API request count for quota awareness
@@ -420,7 +424,7 @@ class SimplefinItem::Importer
           simplefin_item.access_url,
           start_date: start_date,
           end_date: end_date,
-          pending: pending
+          pending: effective_pending
         )
         # Soft warning when approaching SimpleFin daily refresh guidance
         if stats["api_requests"].to_i >= 20
@@ -434,6 +438,11 @@ class SimplefinItem::Importer
         else
           raise e
         end
+      end
+
+      # Optional raw payload debug logging (guarded by ENV to avoid spam)
+      if Rails.configuration.x.simplefin.debug_raw
+        Rails.logger.debug("SimpleFIN raw: #{accounts_data.inspect}")
       end
 
       # Handle errors if present in response
@@ -499,14 +508,68 @@ class SimplefinItem::Importer
         org_data: account_data[:org]
       }
 
-      # Merge transactions from chunked imports (accumulate historical data)
+      # Merge transactions from chunked/regular imports (accumulate history).
+      # Prefer non-pending records with a real posted timestamp over earlier
+      # pending placeholders that sometimes come back with posted: 0.
       if transactions.is_a?(Array) && transactions.any?
         existing_transactions = simplefin_account.raw_transactions_payload.to_a
-        merged_transactions = (existing_transactions + transactions).uniq do |tx|
-          tx = tx.with_indifferent_access
-          tx[:id] || tx[:fitid] || [ tx[:posted], tx[:amount], tx[:description] ]
+
+        # Build a map of key => best_tx
+        best_by_key = {}
+
+        comparator = lambda do |a, b|
+          ax = a.with_indifferent_access
+          bx = b.with_indifferent_access
+
+          # Key dates
+          a_posted = ax[:posted].to_i
+          b_posted = bx[:posted].to_i
+          a_trans  = ax[:transacted_at].to_i
+          b_trans  = bx[:transacted_at].to_i
+
+          a_pending = !!ax[:pending]
+          b_pending = !!bx[:pending]
+
+          # 1) Prefer real posted date over 0/blank
+          a_has_posted = a_posted > 0
+          b_has_posted = b_posted > 0
+          return a if a_has_posted && !b_has_posted
+          return b if b_has_posted && !a_has_posted
+
+          # 2) Prefer later posted date
+          if a_posted != b_posted
+            return a_posted > b_posted ? a : b
+          end
+
+          # 3) Prefer non-pending over pending
+          if a_pending != b_pending
+            return a_pending ? b : a
+          end
+
+          # 4) Prefer later transacted_at
+          if a_trans != b_trans
+            return a_trans > b_trans ? a : b
+          end
+
+          # 5) Stable: keep 'a'
+          a
         end
-        attrs[:raw_transactions_payload] = merged_transactions
+
+        build_key = lambda do |tx|
+          t = tx.with_indifferent_access
+          t[:id] || t[:fitid] || [ t[:posted], t[:amount], t[:description] ]
+        end
+
+        (existing_transactions + transactions).each do |tx|
+          key = build_key.call(tx)
+          if (cur = best_by_key[key])
+            best_by_key[key] = comparator.call(cur, tx)
+          else
+            best_by_key[key] = tx
+          end
+        end
+
+        attrs[:raw_transactions_payload] = best_by_key.values
       end
 
       # Track whether incoming holdings are new/changed so we can materialize and refresh balances

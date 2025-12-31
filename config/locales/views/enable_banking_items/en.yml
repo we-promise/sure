@@ -1,0 +1,49 @@
+---
+en:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Failed to initiate authorization
+      bank_required: Please select a bank.
+      invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
+      redirect_uri_not_allowed: Redirect not allowed. Please configure `%{callback_url}` in your Enable Banking app settings.
+      unexpected_error: An unexpected error occurred. Please try again.
+    callback:
+      authorization_error: Authorization failed
+      invalid_callback: Invalid callback parameters.
+      item_not_found: Connection not found.
+      session_failed: Unable to complete authorization
+      success: Successfully connected to your bank. Your accounts are syncing.
+      unexpected_error: An unexpected error occurred. Please try again.
+    complete_account_setup:
+      all_skipped: All accounts were skipped. You can set them up later on the accounts page.
+      no_accounts: No accounts available to set up.
+      success: Successfully created %{count} accounts!
+    create:
+      success: Enable Banking configuration successful.
+    destroy:
+      success: Enable Banking connection has been queued for deletion.
+    link_accounts:
+      already_linked: The selected accounts are already linked.
+      link_failed: Failed to link accounts
+      no_accounts_selected: No accounts selected.
+      no_session: No active Enable Banking connection. Please connect to a bank first.
+      success: Successfully linked %{count} accounts.
+    link_existing_account:
+      success: Account successfully linked to Enable Banking
+      errors:
+        only_manual: Only manual accounts can be linked
+        invalid_enable_banking_account: Invalid Enable Banking account selected
+    new:
+      link_enable_banking_title: Link Enable Banking
+    reauthorize:
+      invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
+      reauthorization_failed: Reauthorization failed
+    select_bank:
+      cancel: Cancel
+      check_country: Please check your country code settings.
+      credentials_required: Please configure your Enable Banking credentials first.
+      description: Select the bank you want to connect to your accounts.
+      no_banks: No banks available for this country/region.
+      title: Select Your Bank
+    update:
+      success: Enable Banking configuration updated.

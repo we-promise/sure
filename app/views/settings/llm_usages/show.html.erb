@@ -6,16 +6,16 @@
 
   <!-- Date Range Filter -->
   <div class="mb-6">
-    <%= form_with url: settings_llm_usage_path, method: :get, class: "flex gap-4 items-end" do |f| %>
-      <div>
+    <%= form_with url: settings_llm_usage_path, method: :get, class: "flex gap-4 items-end flex-wrap" do |f| %>
+      <div class="w-full md:w-auto">
         <%= f.label :start_date, "Start Date", class: "block text-sm font-medium text-primary mb-1" %>
-        <%= f.date_field :start_date, value: @start_date, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+        <%= f.date_field :start_date, value: @start_date, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
       </div>
-      <div>
+      <div class="w-full md:w-auto">
         <%= f.label :end_date, "End Date", class: "block text-sm font-medium text-primary mb-1" %>
-        <%= f.date_field :end_date, value: @end_date, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+        <%= f.date_field :end_date, value: @end_date, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
       </div>
-      <%= render DS::Button.new(variant: :secondary, size: :md, type: "submit", text: "Filter") %>
+      <%= render DS::Button.new(variant: :primary, size: :md, type: "submit", text: "Filter", class: "md:w-auto w-full justify-center") %>
     <% end %>
   </div>
 

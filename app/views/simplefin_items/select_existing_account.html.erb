@@ -6,10 +6,10 @@
     <% dialog.with_body do %>
       <% if @available_simplefin_accounts.blank? %>
         <div class="p-4 text-sm text-secondary">
-          <p class="mb-2">All SimpleFIN accounts appear to be linked already.</p>
+          <p class="mb-2"><%= t("simplefin_items.select_existing_account.no_accounts_found") %></p>
           <ul class="list-disc list-inside space-y-1">
-            <li>If you just connected or synced, try again after the sync completes.</li>
-            <li>To link a different account, first unlink it from the account’s actions menu.</li>
+            <li><%= t("simplefin_items.select_existing_account.wait_for_sync") %></li>
+            <li><%= t("simplefin_items.select_existing_account.check_provider_health") %></li>
           </ul>
         </div>
       <% else %>
@@ -24,6 +24,9 @@
                   <span class="text-xs text-secondary">
                     <%= sfa.currency %> • Balance: <%= number_to_currency((sfa.current_balance || sfa.available_balance || 0), unit: sfa.currency) %>
                   </span>
+                  <% if sfa.current_account.present? %>
+                    <span class="text-xs text-secondary"><%= t("simplefin_items.select_existing_account.currently_linked_to", account_name: sfa.current_account.name) %></span>
+                  <% end %>
                 </div>
               </label>
             <% end %>

@@ -1,0 +1,38 @@
+---
+zh-CN:
+  trades:
+    form:
+      account: 转账账户（可选）
+      account_prompt: 搜索账户
+      amount: 金额
+      holding: 股票代码
+      price: 每股价格
+      qty: 数量
+      submit: 添加交易
+      ticker_placeholder: AAPL
+      type: 交易类型
+    header:
+      buy: 买入
+      current_market_price_label: 当前市价
+      overview: 概览
+      purchase_price_label: 买入价格
+      purchase_qty_label: 买入数量
+      sell: 卖出
+      symbol_label: 股票代码
+      total_return_label: 未实现盈亏
+    new:
+      title: 新建交易
+    show:
+      additional: 附加信息
+      cost_per_share_label: 每股成本
+      date_label: 日期
+      delete: 删除
+      delete_subtitle: 此操作不可撤销
+      delete_title: 删除交易
+      details: 详情
+      exclude_subtitle: 此交易将不计入报表和计算
+      exclude_title: 从分析中排除
+      note_label: 备注
+      note_placeholder: 在此添加额外备注...
+      quantity_label: 数量
+      settings: 设置

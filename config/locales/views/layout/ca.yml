@@ -1,6 +1,13 @@
 ---
 ca:
   layouts:
+    application:
+      nav:
+        assistant: Assistent
+        budgets: Pressupostos
+        home: Inici
+        reports: Informes
+        transactions: Transaccions
     auth:
       existing_account: Ja tens un compte?
       no_account: Nou a %{product_name}?
@@ -10,4 +17,3 @@ ca:
       footer:
         privacy_policy: Política de privacitat
         terms_of_service: Termes del servei
-

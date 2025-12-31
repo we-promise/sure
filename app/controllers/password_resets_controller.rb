@@ -3,6 +3,7 @@ class PasswordResetsController < ApplicationController
 
   layout "auth"
 
+  before_action :ensure_password_resets_enabled
   before_action :set_user_by_token, only: %i[edit update]
 
   def new
@@ -32,6 +33,12 @@ class PasswordResetsController < ApplicationController
   end
 
   private
+
+    def ensure_password_resets_enabled
+      return if AuthConfig.password_features_enabled?
+
+      redirect_to new_session_path, alert: t("password_resets.disabled")
+    end
 
     def set_user_by_token
       @user = User.find_by_token_for(:password_reset, params[:token])

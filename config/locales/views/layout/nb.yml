@@ -1,6 +1,13 @@
 ---
 nb:
   layouts:
+    application:
+      nav:
+        assistant: Assistent
+        budgets: Budsjett
+        home: Hjem
+        reports: Rapporter
+        transactions: Transaksjoner
     auth:
       existing_account: Har du allerede en konto?
       no_account: Ny hos %{product_name}?

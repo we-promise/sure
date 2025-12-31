@@ -28,6 +28,123 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "balances enqueues SyncJob and returns sync id as JSON" do
+    # Expect a Sync to be enqueued via SyncJob
+    SyncJob.expects(:perform_later).with do |sync, opts|
+      sync.is_a?(Sync) && opts.is_a?(Hash) && opts[:balances_only] == true
+    end.once
+
+    post balances_simplefin_item_url(@simplefin_item, format: :json)
+
+    assert_response :success
+    body = JSON.parse(@response.body)
+    assert_equal true, body["ok"], "expected ok: true"
+    assert body["sync_id"].present?, "expected sync_id to be present"
+  end
+
+  test "relink does not disable a previously linked account that still has other provider links" do
+    # Create two manual accounts A and B
+    account_a = Account.create!(
+      family: @family,
+      name: "Manual A",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+
+    account_b = Account.create!(
+      family: @family,
+      name: "Manual B",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "savings")
+    )
+
+    # Create a SimpleFIN account under the same item
+    sfa_primary = SimplefinAccount.create!(
+      simplefin_item: @simplefin_item,
+      name: "SF A",
+      account_id: "sf_a",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+
+    # Link the primary SimpleFIN provider to account A via AccountProvider (legacy link cleared by action)
+    AccountProvider.create!(account: account_a, provider: sfa_primary)
+
+    # Also link a different provider TYPE (Plaid) to account A so it is NOT orphaned
+    plaid_item = PlaidItem.create!(family: @family, name: "Plaid Conn", access_token: "test-token", plaid_id: "test-plaid-id")
+    plaid_acct = PlaidAccount.create!(
+      plaid_item: plaid_item,
+      plaid_id: "test-plaid-acct",
+      name: "Plaid A",
+      plaid_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: account_a, provider: plaid_acct)
+
+    # Perform relink: point sfa_primary at account B
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account_b.id,
+      simplefin_account_id: sfa_primary.id
+    }
+
+    assert_response :see_other
+
+    # Reload and assert: account A should not be hidden because it has another provider link
+    account_a.reload
+    assert account_a.account_providers.any?, "expected previous account to still have provider links"
+    refute_equal "pending_deletion", account_a.status, "previous account should not be hidden when still linked to other providers"
+
+    # And the AccountProvider for sfa_primary should now point to account B
+    ap = AccountProvider.find_by(provider: sfa_primary)
+    assert_equal account_b.id, ap.account_id
+  end
+
+  test "relink hides a previously linked orphaned duplicate account" do
+    account_a = Account.create!(
+      family: @family,
+      name: "Duplicate A",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+
+    account_b = Account.create!(
+      family: @family,
+      name: "Target B",
+      balance: 0,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "savings")
+    )
+
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "SF For Duplicate",
+      account_id: "sf_dup_1",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+
+    AccountProvider.create!(account: account_a, provider: sfa)
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account_b.id,
+      simplefin_account_id: sfa.id
+    }
+
+    assert_response :see_other
+
+    account_a.reload
+    assert_equal "pending_deletion", account_a.status, "expected orphaned duplicate to be hidden after relink"
+  end
+
   test "should get edit" do
     @simplefin_item.update!(status: :requires_update)
     get edit_simplefin_item_url(@simplefin_item)
@@ -224,12 +341,70 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert @simplefin_item.scheduled_for_deletion?
   end
 
-  test "select_existing_account renders empty-state modal when no available simplefin accounts" do
+  test "select_existing_account renders empty-state modal when no simplefin accounts exist" do
     account = accounts(:depository)
 
     get select_existing_account_simplefin_items_url(account_id: account.id)
     assert_response :success
-    assert_includes @response.body, "All SimpleFIN accounts appear to be linked already."
+    assert_includes @response.body, "No SimpleFIN accounts found for this family."
+  end
+
+  test "select_existing_account lists simplefin accounts even when they are already linked" do
+    account = accounts(:depository)
+
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Linked SF",
+      account_id: "sf_linked_123",
+      currency: "USD",
+      current_balance: 10,
+      account_type: "depository"
+    )
+
+    linked_account = Account.create!(
+      family: @family,
+      name: "Existing Linked Account",
+      currency: "USD",
+      balance: 0,
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    # Model the pre-relink state: the provider account is linked to a newly set up duplicate
+    # via the legacy FK, and may also have an AccountProvider.
+    linked_account.update!(simplefin_account_id: sfa.id)
+    sfa.update!(account: linked_account)
+    AccountProvider.create!(account: linked_account, provider: sfa)
+
+    get select_existing_account_simplefin_items_url(account_id: account.id)
+    assert_response :success
+    assert_includes @response.body, "Linked SF"
+    assert_includes @response.body, "Currently linked to: Existing Linked Account"
+  end
+
+  test "select_existing_account hides simplefin accounts after they have been relinked" do
+    account = accounts(:depository)
+
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Relinked SF",
+      account_id: "sf_relinked_123",
+      currency: "USD",
+      current_balance: 10,
+      account_type: "depository"
+    )
+
+    # Simulate post-relink state: legacy link cleared, AccountProvider exists.
+    linked_account = Account.create!(
+      family: @family,
+      name: "Final Linked Account",
+      currency: "USD",
+      balance: 0,
+      accountable_type: "Depository",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    AccountProvider.create!(account: linked_account, provider: sfa)
+
+    get select_existing_account_simplefin_items_url(account_id: account.id)
+    assert_response :success
+    refute_includes @response.body, "Relinked SF"
   end
   test "destroy should unlink provider links and legacy fk" do
     # Create SFA and linked Account with AccountProvider

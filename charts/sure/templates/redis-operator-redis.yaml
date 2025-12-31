@@ -1,0 +1,26 @@
+{{- if and .Values.redisOperator.enabled .Values.redisOperator.managed.enabled (eq (.Values.redisOperator.mode | default "sentinel") "sentinel") }}
+{{- $name := .Values.redisOperator.name | default (printf "%s-redis" (include "sure.fullname" .)) -}}
+{{- $imgRepo := .Values.redisOperator.sentinel.image.repository | default "quay.io/opstree/redis-sentinel" -}}
+{{- $imgTag := .Values.redisOperator.sentinel.image.tag | default "v7.2.4" -}}
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisSentinel
+metadata:
+  name: {{ $name | quote }}
+  labels:
+    app.kubernetes.io/component: redis
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  clusterSize: {{ .Values.redisOperator.replicas | default 3 }}
+  redisSentinelConfig:
+    redisReplicationName: {{ $name | quote }}
+    masterGroupName: {{ (.Values.redisOperator.sentinel.masterGroupName | default "mymaster") | quote }}
+  kubernetesConfig:
+    image: {{ printf "%s:%s" $imgRepo $imgTag | quote }}
+    redisSecret:
+      name: {{ include "sure.redisSecretName" . }}
+      key: {{ include "sure.redisPasswordKey" . }}
+    {{- with .Values.redisOperator.workloadResources }}
+    resources:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

@@ -12,12 +12,11 @@ class SimplefinItem::Syncer
     begin
       if simplefin_item.simplefin_accounts.joins(:account).count == 0
         sync.update!(status_text: "Discovering accounts (balances only)...") if sync.respond_to?(:status_text)
-        # Pre-mark the sync as balances_only so downstream completion code does not
-        # bump last_synced_at. The importer also sets this flag, but setting it here
-        # guarantees the guard is present even if the importer exits early.
-        if sync.respond_to?(:sync_stats)
-          existing = (sync.sync_stats || {})
-          sync.update_columns(sync_stats: existing.merge("balances_only" => true))
+        # Pre-mark the sync as balances_only for runtime only (no persistence)
+        begin
+          sync.define_singleton_method(:balances_only?) { true }
+        rescue => e
+          Rails.logger.warn("SimplefinItem::Syncer: failed to attach balances_only? flag: #{e.class} - #{e.message}")
         end
         SimplefinItem::Importer.new(simplefin_item, simplefin_provider: simplefin_item.simplefin_provider, sync: sync).import_balances_only
         finalize_setup_counts(sync)
@@ -30,7 +29,7 @@ class SimplefinItem::Syncer
     end
 
     # Balances-only fast path
-    if sync.respond_to?(:sync_stats) && (sync.sync_stats || {})["balances_only"]
+    if sync.respond_to?(:balances_only?) && sync.balances_only?
       sync.update!(status_text: "Refreshing balances only...") if sync.respond_to?(:status_text)
       begin
         # Use the Importer to run balances-only path

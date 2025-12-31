@@ -1,0 +1,20 @@
+
+---
+zh-CN:
+  layouts:
+    application:
+      nav:
+        assistant: 智能助手
+        budgets: 预算管理
+        home: 首页
+        reports: 财务报告
+        transactions: 交易记录
+    auth:
+      existing_account: 已有账户？
+      no_account: 新用户？
+      sign_in: 登录
+      sign_up: 注册账户
+    shared:
+      footer:
+        privacy_policy: 隐私政策
+        terms_of_service: 服务条款

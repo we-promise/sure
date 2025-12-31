@@ -27,7 +27,7 @@ class Investment < ApplicationRecord
     end
 
     def icon
-      "line-chart"
+      "chart-line"
     end
   end
 end

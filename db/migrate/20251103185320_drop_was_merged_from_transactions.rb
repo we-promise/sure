@@ -7,9 +7,9 @@ class DropWasMergedFromTransactions < ActiveRecord::Migration[7.2]
   end
 
   def down
-    # Recreate the column for rollback compatibility
+    # Recreate the column for rollback compatibility with original constraints
     unless column_exists?(:transactions, :was_merged)
-      add_column :transactions, :was_merged, :boolean
+      add_column :transactions, :was_merged, :boolean, null: false, default: false
     end
   end
 end

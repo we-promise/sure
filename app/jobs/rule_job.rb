@@ -83,7 +83,7 @@ class RuleJob < ApplicationJob
             error_message: error_message
           )
         rescue => e
-          Rails.logger.error("RuleJob: Failed to create RuleRun for rule #{rule.id}: #{create_error.message}")
+          Rails.logger.error("RuleJob: Failed to create RuleRun for rule #{rule.id}: #{e.message}")
         end
       end
 

@@ -57,7 +57,7 @@ module LanguagesHelper
     tr: "Turkish",
     uk: "Ukrainian",
     vi: "Vietnamese",
-    'zh-CN': "Chinese (Simplified)",
+    'zh-CN': "简体中文",
     'zh-TW': "Chinese (Traditional)",
     af: "Afrikaans",
     az: "Azerbaijani",
@@ -155,14 +155,15 @@ module LanguagesHelper
 
   # Locales with complete/extensive translations
   SUPPORTED_LOCALES = [
-    "en",   # English - 61 translation files
+    "en",   # English - 62 translation files
     "de",   # German - 62 translation files
-    "es",   # Spanish - 60 translation files
-    "tr",   # Turkish - 57 translation files
-    "nb",   # Norwegian Bokmål - 56 translation files
-    "ca",   # Catalan - 56 translation files
-    "ro",    # Romanian - 61 translation files
-    "pt-BR"    # Brazilian Portuguese - 60 translation files
+    "es",   # Spanish - 61 translation files
+    "tr",   # Turkish - 58 translation files
+    "nb",   # Norwegian Bokmål - 57 translation files
+    "ca",   # Catalan - 57 translation files
+    "ro",   # Romanian - 62 translation files
+    "pt-BR", # Brazilian Portuguese - 60 translation files
+    "zh-CN"  # Chinese (Simplified) - 59 translation files
   ].freeze
 
   COUNTRY_MAPPING = {

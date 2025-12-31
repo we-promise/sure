@@ -2,10 +2,12 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
-  resources :enable_banking_items, only: [ :create, :update, :destroy ] do
+  resources :enable_banking_items, only: [ :new, :create, :update, :destroy ] do
     collection do
       get :callback
       post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
     end
     member do
       post :sync
@@ -169,6 +171,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :clear_filter
+      patch :update_preferences
     end
 
     member do
@@ -180,6 +183,7 @@ Rails.application.routes.draw do
     collection do
       match :identify, via: [ :get, :post ]
       match :cleanup, via: [ :get, :post ]
+      patch :update_settings
     end
 
     member do
@@ -265,8 +269,10 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index ]
+      resources :categories, only: [ :index, :show ]
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resource :usage, only: [ :show ], controller: "usage"
+      resource :sync, only: [ :create ], controller: "sync"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do

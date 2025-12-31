@@ -146,8 +146,9 @@ class SimplefinItemsController < ApplicationController
 
   # Starts a balances-only sync for this SimpleFin item
   def balances
-    sync = @simplefin_item.syncs.create!(status: :pending, sync_stats: { "balances_only" => true })
-    SimplefinItem::Syncer.new(@simplefin_item).perform_sync(sync)
+    # Create a Sync and enqueue it to run asynchronously with a runtime-only flag
+    sync = @simplefin_item.syncs.create!(status: :pending)
+    SyncJob.perform_later(sync, balances_only: true)
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -322,12 +323,20 @@ class SimplefinItemsController < ApplicationController
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
 
-    # Filter out SimpleFIN accounts that are already linked to any account
-    # (either via account_provider or legacy account association)
+    # Allow explicit relinking by listing all available SimpleFIN accounts for the family.
+    # The UI will surface the current mapping (if any), and the action will move the link.
     @available_simplefin_accounts = Current.family.simplefin_items
-      .includes(:simplefin_accounts)
+      .includes(simplefin_accounts: [ :account, { account_provider: :account } ])
       .flat_map(&:simplefin_accounts)
-      .reject { |sfa| sfa.account_provider.present? || sfa.account.present? }
+      # After provider setup, SFAs may already have an AccountProvider (linked to the freshly
+      # created duplicate accounts). During relink, we need to show those SFAs until the legacy
+      # link (`Account.simplefin_account_id`) has been cleared.
+      #
+      # Eligibility rule:
+      # - Show SFAs that are still legacy-linked (`sfa.account.present?`) => candidates to move.
+      # - Show SFAs that are fully unlinked (no legacy account and no account_provider) => candidates to link.
+      # - Hide SFAs that are linked via AccountProvider but no longer legacy-linked => already relinked.
+      .select { |sfa| sfa.account.present? || sfa.account_provider.nil? }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
@@ -341,7 +350,7 @@ class SimplefinItemsController < ApplicationController
 
     # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
     if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
-      flash[:alert] = "Only manual accounts can be linked"
+      flash[:alert] = t("simplefin_items.link_existing_account.errors.only_manual")
       if turbo_frame_request?
         return render turbo_stream: Array(flash_notification_stream_items)
       else
@@ -351,7 +360,7 @@ class SimplefinItemsController < ApplicationController
 
     # Verify the SimpleFIN account belongs to this family's SimpleFIN items
     unless Current.family.simplefin_items.include?(simplefin_account.simplefin_item)
-      flash[:alert] = "Invalid SimpleFIN account selected"
+      flash[:alert] = t("simplefin_items.link_existing_account.errors.invalid_simplefin_account")
       if turbo_frame_request?
         render turbo_stream: Array(flash_notification_stream_items)
       else
@@ -363,9 +372,10 @@ class SimplefinItemsController < ApplicationController
     # Relink behavior: detach any legacy link and point provider link at the chosen account
     Account.transaction do
       simplefin_account.lock!
-      # Clear legacy association if present
-      if simplefin_account.account_id.present?
-        simplefin_account.update!(account_id: nil)
+
+      # Clear legacy association if present (Account.simplefin_account_id)
+      if (legacy_account = simplefin_account.account)
+        legacy_account.update!(simplefin_account_id: nil)
       end
 
       # Upsert the AccountProvider mapping deterministically
@@ -379,7 +389,21 @@ class SimplefinItemsController < ApplicationController
       # visible manual list. This mirrors the unified flow expectation that the provider
       # follows the chosen account.
       if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
-        previous_account.disable! rescue nil
+        begin
+          previous_account.reload
+          # Only hide if the previous account is truly orphaned (no other provider links)
+          if previous_account.account_providers.none?
+            # Disabled accounts still appear (greyed-out) in the manual list; for relink
+            # consolidation we want the duplicate to disappear from the UI.
+            # Use the app's standard deletion path (async) so the "pending_deletion" state
+            # remains truthful in the UI.
+            previous_account.destroy_later if previous_account.may_mark_for_deletion?
+          else
+            Rails.logger.info("Skipped disabling account ##{previous_account.id} after relink because it still has active provider links")
+          end
+        rescue => e
+          Rails.logger.warn("Failed disabling-orphan check for account ##{previous_account&.id}: #{e.class} - #{e.message}")
+        end
       end
     end
 
@@ -399,7 +423,7 @@ class SimplefinItemsController < ApplicationController
       @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
       build_simplefin_maps_for(@simplefin_items)
 
-      flash[:notice] = "Account successfully linked to SimpleFIN"
+      flash[:notice] = t("simplefin_items.link_existing_account.success")
       @account.reload
       manual_accounts_stream = if @manual_accounts.any?
         turbo_stream.update(
@@ -423,117 +447,12 @@ class SimplefinItemsController < ApplicationController
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: "Account successfully linked to SimpleFIN", status: :see_other
+      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: t("simplefin_items.link_existing_account.success"), status: :see_other
     end
   end
 
 
   private
-
-    NAME_NORM_RE = /\s+/.freeze
-
-
-    def normalize_name(str)
-      s = str.to_s.downcase.strip
-      return s if s.empty?
-      s.gsub(NAME_NORM_RE, " ")
-    end
-
-    def compute_relink_candidates
-      # Best-effort dedup before building candidates
-      @simplefin_item.dedup_simplefin_accounts! rescue nil
-
-      family = @simplefin_item.family
-      manuals = Account.visible_manual.where(family_id: family.id).to_a
-
-      # Evaluate only one SimpleFin account per upstream account_id (prefer linked, else newest)
-      grouped = @simplefin_item.simplefin_accounts.group_by(&:account_id)
-      sfas = grouped.values.map { |list| list.find { |s| s.current_account.present? } || list.max_by(&:updated_at) }
-
-      Rails.logger.info("SimpleFin compute_relink_candidates: manuals=#{manuals.size} sfas=#{sfas.size} (item_id=#{@simplefin_item.id})")
-
-      used_manual_ids = Set.new
-      pairs = []
-
-      sfas.each do |sfa|
-        next if sfa.name.blank?
-        # Heuristics (with ambiguity guards): last4 > balance ±0.01 > name
-        raw = (sfa.raw_payload || {}).with_indifferent_access
-        sfa_last4 = raw[:mask] || raw[:last4] || raw[:"last-4"] || raw[:"account_number_last4"]
-        sfa_last4 = sfa_last4.to_s.strip.presence
-        sfa_balance = (sfa.current_balance || sfa.available_balance).to_d rescue 0.to_d
-
-        chosen = nil
-        reason = nil
-
-        # 1) last4 match: compute all candidates not yet used
-        if sfa_last4.present?
-          last4_matches = manuals.reject { |a| used_manual_ids.include?(a.id) }.select do |a|
-            a_last4 = nil
-            %i[mask last4 number_last4 account_number_last4].each do |k|
-              if a.respond_to?(k)
-                val = a.public_send(k)
-                a_last4 = val.to_s.strip.presence if val.present?
-                break if a_last4
-              end
-            end
-            a_last4.present? && a_last4 == sfa_last4
-          end
-          # Ambiguity guard: skip if multiple matches
-          if last4_matches.size == 1
-            cand = last4_matches.first
-            # Conflict guard: if both have balances and differ wildly, skip
-            begin
-              ab = (cand.balance || cand.cash_balance || 0).to_d
-              if sfa_balance.nonzero? && ab.nonzero? && (ab - sfa_balance).abs > BigDecimal("1.00")
-                cand = nil
-              end
-            rescue
-              # ignore balance parsing errors
-            end
-            if cand
-              chosen = cand
-              reason = "last4"
-            end
-          end
-        end
-
-        # 2) balance proximity
-        if chosen.nil? && sfa_balance.nonzero?
-          balance_matches = manuals.reject { |a| used_manual_ids.include?(a.id) }.select do |a|
-            begin
-              ab = (a.balance || a.cash_balance || 0).to_d
-              (ab - sfa_balance).abs <= BigDecimal("0.01")
-            rescue
-              false
-            end
-          end
-          if balance_matches.size == 1
-            chosen = balance_matches.first
-            reason = "balance"
-          end
-        end
-
-        # 3) exact normalized name
-        if chosen.nil?
-          name_matches = manuals.reject { |a| used_manual_ids.include?(a.id) }.select { |a| normalize_name(a.name) == normalize_name(sfa.name) }
-          if name_matches.size == 1
-            chosen = name_matches.first
-            reason = "name"
-          end
-        end
-
-        if chosen
-          used_manual_ids << chosen.id
-          pairs << { sfa_id: sfa.id, sfa_name: sfa.name, manual_id: chosen.id, manual_name: chosen.name, reason: reason }
-        end
-      end
-
-      Rails.logger.info("SimpleFin compute_relink_candidates: built #{pairs.size} pairs (item_id=#{@simplefin_item.id})")
-
-      # Return without the reason field to the view
-      pairs.map { |p| p.slice(:sfa_id, :sfa_name, :manual_id, :manual_name) }
-    end
 
     def set_simplefin_item
       @simplefin_item = Current.family.simplefin_items.find(params[:id])
