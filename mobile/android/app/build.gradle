@@ -34,7 +34,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.sure.mobile"
+        applicationId "am.sure.mobile"
         minSdkVersion 21
         targetSdkVersion flutter.targetSdkVersion
         versionCode 1
