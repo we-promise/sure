@@ -81,7 +81,8 @@ class Account::ProviderImportAdapter
         merged_extra = existing.deep_merge(incoming)
         
         # Only update extra if it actually changed to avoid unnecessary saves
-        if entry.transaction.extra != merged_extra
+        # Use to_json for deep comparison since extra can contain nested hashes
+        if (existing.to_json rescue nil) != (merged_extra.to_json rescue nil)
           entry.transaction.extra = merged_extra
           entry.transaction.save!
         end
@@ -96,6 +97,8 @@ class Account::ProviderImportAdapter
         entry.transaction.save!
       end
       
+      # Reload entry to ensure it reflects the final persisted state including any tag restorations
+      entry.reload
       entry
     end
   end
