@@ -55,6 +55,7 @@ class Account::ProviderImportAdapter
       )
 
       # Use enrichment pattern to respect user overrides
+      # This will save the entry including the amount, currency, date set above
       entry.enrich_attribute(:name, name, source: source)
 
       # Preserve existing tags - they're set by rules/users, never by providers
@@ -81,17 +82,22 @@ class Account::ProviderImportAdapter
         merged_extra = existing.deep_merge(incoming)
         
         # Only update extra if it actually changed to avoid unnecessary saves
-        # Use to_json for deep comparison since extra can contain nested hashes
-        if (existing.to_json rescue nil) != (merged_extra.to_json rescue nil)
+        # Direct comparison works for most cases; deep_merge creates new hash structure
+        unless existing == merged_extra
           entry.transaction.extra = merged_extra
           entry.transaction.save!
         end
       end
       
+      # Ensure entry is saved if enrich_attribute calls didn't trigger a save
+      # This can happen if the name was already correct and no enrichment was needed
+      entry.save! if entry.changed?
+      
       # Restore tags if they were lost during the save operations above
       # This is a defensive measure to ensure tags are never cleared during provider sync
       entry.transaction.reload
-      if preserved_tag_ids.any? && entry.transaction.tag_ids.sort != preserved_tag_ids.sort
+      current_tag_ids = entry.transaction.tag_ids
+      if preserved_tag_ids.any? && current_tag_ids != preserved_tag_ids && current_tag_ids.sort != preserved_tag_ids.sort
         Rails.logger.info("Restoring #{preserved_tag_ids.length} tags that were cleared during sync for transaction #{entry.transaction.id}")
         entry.transaction.tag_ids = preserved_tag_ids
         entry.transaction.save!
