@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
+import '../models/transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../screens/transaction_form_screen.dart';
@@ -92,12 +93,22 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
 
     final accessToken = await authProvider.getValidAccessToken();
-    if (accessToken != null) {
-      await transactionsProvider.fetchTransactions(
-        accessToken: accessToken,
-        accountId: widget.account.id,
-      );
+    if (accessToken == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Authentication failed: Please log in again'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
     }
+
+    await transactionsProvider.fetchTransactions(
+      accessToken: accessToken,
+      accountId: widget.account.id,
+    );
   }
 
   void _toggleSelectionMode() {
@@ -177,6 +188,63 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   }
 
+  Future<bool> _confirmAndDeleteTransaction(Transaction transaction) async {
+    if (transaction.id == null) return false;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Transaction'),
+        content: Text('Are you sure you want to delete "${transaction.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return false;
+
+    // Perform the deletion
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+    final accessToken = await authProvider.getValidAccessToken();
+
+    if (accessToken == null) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to delete: No access token'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    final success = await transactionsProvider.deleteTransaction(
+      accessToken: accessToken,
+      transactionId: transaction.id!,
+    );
+
+    if (mounted) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Transaction deleted' : 'Failed to delete transaction'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+
+    return success;
+  }
 
   void _showAddTransactionForm() {
     showModalBottomSheet(
@@ -217,20 +285,29 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           }
 
           if (transactionsProvider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    transactionsProvider.error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadTransactions,
-                    child: const Text('Retry'),
+            return RefreshIndicator(
+              onRefresh: _loadTransactions,
+              child: CustomScrollView(
+                slivers: [
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            transactionsProvider.error!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadTransactions,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -240,29 +317,38 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           final transactions = transactionsProvider.transactions;
 
           if (transactions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 64,
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No transactions yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap + to add your first transaction',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            return RefreshIndicator(
+              onRefresh: _loadTransactions,
+              child: CustomScrollView(
+                slivers: [
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 64,
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No transactions yet',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap + to add your first transaction',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -299,73 +385,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                     ),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  confirmDismiss: (direction) async {
-                    if (transaction.id == null) return false;
-
-                    // Show confirmation dialog
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Transaction'),
-                        content: Text('Are you sure you want to delete "${transaction.name}"?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(foregroundColor: Colors.red),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    // If user cancelled, don't dismiss
-                    if (confirmed != true) return false;
-
-                    // Perform the deletion before allowing dismissal
-                    final scaffoldMessenger = ScaffoldMessenger.of(context);
-                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                    final accessToken = await authProvider.getValidAccessToken();
-
-                    if (accessToken == null) {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Failed to delete: No access token'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return false;
-                    }
-
-                    final success = await transactionsProvider.deleteTransaction(
-                      accessToken: accessToken,
-                      transactionId: transaction.id!,
-                    );
-
-                    // Show appropriate message based on success/failure
-                    if (mounted) {
-                      if (success) {
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Transaction deleted'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } else {
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Failed to delete transaction'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-
-                    return success;
-                  },
+                  confirmDismiss: (direction) => _confirmAndDeleteTransaction(transaction),
                   child: Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: InkWell(
