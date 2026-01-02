@@ -27,29 +27,64 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     _loadTransactions();
   }
 
-  // Calculate the number of negative signs and determine display logic
+  // Parse and display amount information
+  // Amount is a currency-formatted string returned by the API (e.g. may include
+  // currency symbol, grouping separators, locale-dependent decimal separator,
+  // and a sign either before or after the symbol)
   Map<String, dynamic> _getAmountDisplayInfo(String amount, bool isAsset) {
-    // Count the number of negative signs
-    int negativeCount = '-'.allMatches(amount).length;
+    try {
+      // Trim whitespace
+      String trimmedAmount = amount.trim();
 
-    // For asset accounts, adjust the negative count by +1
-    if (isAsset) {
-      negativeCount += 1;
+      // Normalize common minus characters (U+002D HYPHEN-MINUS, U+2212 MINUS SIGN)
+      trimmedAmount = trimmedAmount.replaceAll('\u2212', '-');
+
+      // Detect if the amount has a negative sign (leading or trailing)
+      bool hasNegativeSign = trimmedAmount.startsWith('-') || trimmedAmount.endsWith('-');
+
+      // Remove all non-numeric characters except decimal point and minus sign
+      String numericString = trimmedAmount.replaceAll(RegExp(r'[^\d.\-]'), '');
+
+      // Parse the numeric value
+      double numericValue = double.tryParse(numericString.replaceAll('-', '')) ?? 0.0;
+
+      // Apply the sign from the string
+      if (hasNegativeSign) {
+        numericValue = -numericValue;
+      }
+
+      // For asset accounts, flip the sign to match accounting conventions
+      if (isAsset) {
+        numericValue = -numericValue;
+      }
+
+      // Determine if the final value is positive
+      bool isPositive = numericValue >= 0;
+
+      // Get the display amount by removing the sign and currency symbols
+      String displayAmount = trimmedAmount
+          .replaceAll('-', '')
+          .replaceAll('\u2212', '')
+          .trim();
+
+      return {
+        'isPositive': isPositive,
+        'displayAmount': displayAmount,
+        'color': isPositive ? Colors.green : Colors.red,
+        'icon': isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+        'prefix': isPositive ? '' : '-',
+      };
+    } catch (e) {
+      // Fallback if parsing fails - log and return neutral state
+      debugPrint('Failed to parse amount "$amount": $e');
+      return {
+        'isPositive': true,
+        'displayAmount': amount,
+        'color': Colors.grey,
+        'icon': Icons.help_outline,
+        'prefix': '',
+      };
     }
-
-    // Remove all negative signs to get the clean number
-    String cleanAmount = amount.replaceAll('-', '');
-
-    // Even number of negatives = positive, odd number = negative
-    bool isPositive = negativeCount % 2 == 0;
-
-    return {
-      'isPositive': isPositive,
-      'displayAmount': cleanAmount,
-      'color': isPositive ? Colors.green : Colors.red,
-      'icon': isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-      'prefix': isPositive ? '' : '-',
-    };
   }
 
   Future<void> _loadTransactions() async {
@@ -261,7 +296,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   ),
                   confirmDismiss: (direction) async {
                     if (transaction.id == null) return false;
-                    return await showDialog<bool>(
+
+                    // Show confirmation dialog
+                    final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('Delete Transaction'),
@@ -279,28 +316,51 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                         ],
                       ),
                     );
-                  },
-                  onDismissed: (direction) async {
-                    if (transaction.id != null) {
-                      final scaffoldMessenger = ScaffoldMessenger.of(context);
-                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                      final accessToken = await authProvider.getValidAccessToken();
-                      if (accessToken != null) {
-                        final success = await transactionsProvider.deleteTransaction(
-                          accessToken: accessToken,
-                          transactionId: transaction.id!,
-                        );
 
-                        if (mounted && success) {
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Transaction deleted'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                      }
+                    // If user cancelled, don't dismiss
+                    if (confirmed != true) return false;
+
+                    // Perform the deletion before allowing dismissal
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                    final accessToken = await authProvider.getValidAccessToken();
+
+                    if (accessToken == null) {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to delete: No access token'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return false;
                     }
+
+                    final success = await transactionsProvider.deleteTransaction(
+                      accessToken: accessToken,
+                      transactionId: transaction.id!,
+                    );
+
+                    // Only allow dismissal if deletion succeeded
+                    if (!success && mounted) {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to delete transaction'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return false;
+                    }
+
+                    return success;
+                  },
+                  onDismissed: (direction) {
+                    // Show success message after successful dismissal
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Transaction deleted'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
                   },
                   child: Card(
                     margin: const EdgeInsets.only(bottom: 12),
