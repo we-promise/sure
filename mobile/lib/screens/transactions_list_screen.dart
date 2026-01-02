@@ -244,6 +244,11 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 final transaction = transactions[index];
                 final isSelected = transaction.id != null &&
                     _selectedTransactions.contains(transaction.id);
+                // Compute display info once to avoid duplicate parsing
+                final displayInfo = _getAmountDisplayInfo(
+                  transaction.amount,
+                  widget.account.isAsset,
+                );
 
                 return Dismissible(
                   key: Key(transaction.id ?? 'transaction_$index'),
@@ -323,25 +328,17 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                       : null,
                                 ),
                               ),
-                            Builder(
-                              builder: (context) {
-                                final displayInfo = _getAmountDisplayInfo(
-                                  transaction.amount,
-                                  widget.account.isAsset,
-                                );
-                                return Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: (displayInfo['color'] as Color).withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    displayInfo['icon'] as IconData,
-                                    color: displayInfo['color'] as Color,
-                                  ),
-                                );
-                              },
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: (displayInfo['color'] as Color).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                displayInfo['icon'] as IconData,
+                                color: displayInfo['color'] as Color,
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -364,32 +361,24 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                 ],
                               ),
                             ),
-                            Builder(
-                              builder: (context) {
-                                final displayInfo = _getAmountDisplayInfo(
-                                  transaction.amount,
-                                  widget.account.isAsset,
-                                );
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '${displayInfo['prefix']}${displayInfo['displayAmount']}',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: displayInfo['color'] as Color,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      transaction.currency,
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                  ],
-                                );
-                              },
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: displayInfo['color'] as Color,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  transaction.currency,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
