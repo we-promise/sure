@@ -27,20 +27,20 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     _loadTransactions();
   }
 
-  // 計算負號個數並決定顯示邏輯
+  // Calculate the number of negative signs and determine display logic
   Map<String, dynamic> _getAmountDisplayInfo(String amount, bool isAsset) {
-    // 計算負號個數
+    // Count the number of negative signs
     int negativeCount = '-'.allMatches(amount).length;
 
-    // Asset 帳戶需要在負號個數上 +1 進行微調
+    // For asset accounts, adjust the negative count by +1
     if (isAsset) {
       negativeCount += 1;
     }
 
-    // 移除所有負號以獲取純數字
+    // Remove all negative signs to get the clean number
     String cleanAmount = amount.replaceAll('-', '');
 
-    // 偶數個負號 = 正數，奇數個負號 = 負數
+    // Even number of negatives = positive, odd number = negative
     bool isPositive = negativeCount % 2 == 0;
 
     return {

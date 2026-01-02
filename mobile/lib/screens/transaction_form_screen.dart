@@ -105,8 +105,8 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       }
 
       // Convert date format from yyyy/MM/dd to yyyy-MM-dd
-      final dateParts = _dateController.text.split('/');
-      final apiDate = '${dateParts[0]}-${dateParts[1]}-${dateParts[2]}';
+      final parsedDate = DateFormat('yyyy/MM/dd').parse(_dateController.text);
+      final apiDate = DateFormat('yyyy-MM-dd').format(parsedDate);
 
       final result = await _transactionsService.createTransaction(
         accessToken: accessToken,
