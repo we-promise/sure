@@ -345,27 +345,26 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                       transactionId: transaction.id!,
                     );
 
-                    // Only allow dismissal if deletion succeeded
-                    if (!success && mounted) {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Failed to delete transaction'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return false;
+                    // Show appropriate message based on success/failure
+                    if (mounted) {
+                      if (success) {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Transaction deleted'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to delete transaction'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
 
                     return success;
-                  },
-                  onDismissed: (direction) {
-                    // Show success message after successful dismissal
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Transaction deleted'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
                   },
                   child: Card(
                     margin: const EdgeInsets.only(bottom: 12),

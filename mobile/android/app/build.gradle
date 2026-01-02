@@ -7,7 +7,11 @@ plugins {
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    try {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    } catch (Exception e) {
+        throw new GradleException("Failed to load key.properties: ${e.message}")
+    }
 }
 
 android {
