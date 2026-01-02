@@ -52,10 +52,11 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     });
 
     try {
-      final url = _urlController.text.trim();
+      // Normalize base URL by removing trailing slashes
+      final normalizedUrl = _urlController.text.trim().replaceAll(RegExp(r'/+$'), '');
 
       // Check /sessions/new page to verify it's a Sure backend
-      final sessionsUrl = Uri.parse('$url/sessions/new');
+      final sessionsUrl = Uri.parse('$normalizedUrl/sessions/new');
       final sessionsResponse = await http.get(
         sessionsUrl,
         headers: {'Accept': 'text/html'},
@@ -103,14 +104,15 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     });
 
     try {
-      final url = _urlController.text.trim();
+      // Normalize base URL by removing trailing slashes
+      final normalizedUrl = _urlController.text.trim().replaceAll(RegExp(r'/+$'), '');
 
       // Save URL to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('backend_url', url);
+      await prefs.setString('backend_url', normalizedUrl);
 
       // Update ApiConfig
-      ApiConfig.setBaseUrl(url);
+      ApiConfig.setBaseUrl(normalizedUrl);
 
       // Notify parent that config is saved
       if (mounted && widget.onConfigSaved != null) {
