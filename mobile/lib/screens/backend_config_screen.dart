@@ -35,7 +35,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
   Future<void> _loadSavedUrl() async {
     final prefs = await SharedPreferences.getInstance();
     final savedUrl = prefs.getString('backend_url');
-    if (savedUrl != null && savedUrl.isNotEmpty) {
+    if (mounted && savedUrl != null && savedUrl.isNotEmpty) {
       setState(() {
         _urlController.text = savedUrl;
       });
