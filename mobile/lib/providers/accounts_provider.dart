@@ -4,14 +4,16 @@ import '../services/accounts_service.dart';
 
 class AccountsProvider with ChangeNotifier {
   final AccountsService _accountsService = AccountsService();
-  
+
   List<Account> _accounts = [];
   bool _isLoading = false;
+  bool _isInitializing = true; // Track if we've fetched accounts at least once
   String? _errorMessage;
   Map<String, dynamic>? _pagination;
 
   List<Account> get accounts => _accounts;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing; // Expose initialization state
   String? get errorMessage => _errorMessage;
   Map<String, dynamic>? get pagination => _pagination;
 
@@ -82,17 +84,20 @@ class AccountsProvider with ChangeNotifier {
         _accounts = (result['accounts'] as List<dynamic>?)?.cast<Account>() ?? [];
         _pagination = result['pagination'] as Map<String, dynamic>?;
         _isLoading = false;
+        _isInitializing = false; // Mark as initialized after first fetch
         notifyListeners();
         return true;
       } else {
         _errorMessage = result['error'] as String? ?? 'Failed to fetch accounts';
         _isLoading = false;
+        _isInitializing = false; // Mark as initialized even on error
         notifyListeners();
         return false;
       }
     } catch (e) {
       _errorMessage = 'Connection error. Please check your internet connection.';
       _isLoading = false;
+      _isInitializing = false; // Mark as initialized even on error
       notifyListeners();
       return false;
     }
@@ -102,6 +107,7 @@ class AccountsProvider with ChangeNotifier {
     _accounts = [];
     _pagination = null;
     _errorMessage = null;
+    _isInitializing = true; // Reset initialization state on clear
     notifyListeners();
   }
 

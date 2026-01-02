@@ -207,8 +207,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Consumer2<AuthProvider, AccountsProvider>(
         builder: (context, authProvider, accountsProvider, _) {
-          // Show loading state
-          if (accountsProvider.isLoading) {
+          // Show loading state during initialization or when loading
+          if (accountsProvider.isInitializing || accountsProvider.isLoading) {
             return const Center(
               child: CircularProgressIndicator(),
             );
