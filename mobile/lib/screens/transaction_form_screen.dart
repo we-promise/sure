@@ -71,7 +71,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       lastDate: DateTime(2100),
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _dateController.text = DateFormat('yyyy/MM/dd').format(picked);
       });

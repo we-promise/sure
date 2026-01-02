@@ -8,7 +8,6 @@ build/
 .flutter-plugins-dependencies
 *.iml
 .metadata
-pubspec.lock
 
 # Android
 android/.gradle/
