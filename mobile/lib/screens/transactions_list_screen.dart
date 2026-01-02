@@ -150,7 +150,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => TransactionFormScreen(account: widget.account),
     ).then((_) {
-      _loadTransactions();
+      if (mounted) {
+        _loadTransactions();
+      }
     });
   }
 
