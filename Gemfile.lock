@@ -121,7 +121,7 @@ GEM
       erubi (~> 1.4)
       parser (>= 2.4)
       smart_properties
-    bigdecimal (3.2.2)
+    bigdecimal (3.3.1)
     bindata (2.5.1)
     bindex (0.8.1)
     bootsnap (1.18.6)
@@ -249,7 +249,7 @@ GEM
       turbo-rails (>= 1.2)
     htmlbeautifier (1.4.3)
     htmlentities (4.3.4)
-    httparty (0.23.1)
+    httparty (0.24.0)
       csv
       mini_mime (>= 1.0.0)
       multi_xml (>= 0.5.2)
@@ -359,8 +359,8 @@ GEM
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
     msgpack (1.8.0)
-    multi_xml (0.7.2)
-      bigdecimal (~> 3.1)
+    multi_xml (0.8.0)
+      bigdecimal (>= 3.1, < 5)
     multipart-post (2.4.1)
     mutex_m (0.3.0)
     net-http (0.6.0)

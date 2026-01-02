@@ -96,6 +96,7 @@ jobs:
                 BASE_CONFIG+=$'\n'"type=raw,value=latest"
               else
                 BASE_CONFIG+=$'\n'"type=raw,value=stable"
+                BASE_CONFIG+=$'\n'"type=raw,value=latest"
               fi
             fi
           fi
