@@ -346,20 +346,22 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                     );
 
                     // Show appropriate message based on success/failure
-                    if (success) {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Transaction deleted'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } else {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Failed to delete transaction'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                    if (mounted) {
+                      if (success) {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Transaction deleted'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to delete transaction'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
 
                     return success;
