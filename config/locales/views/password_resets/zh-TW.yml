@@ -1,14 +1,14 @@
 ---
 zh-TW:
   password_resets:
-    create:
-      failure: 重設失敗。請確保您輸入的電子信箱地址正確。
-      success: 我們已向您的電子信箱傳送密碼重設連結。請檢查您的收件箱。
+    disabled: 透過 Sure 重設密碼的功能已停用。請透過您的身份驗證提供商（Identity Provider）來重設密碼。
     edit:
-      submit: 重設密碼
       title: 重設密碼
     new:
-      email: 電子信箱地址
-      email_placeholder: name@example.com
-      submit: 傳送重設連結
-      title: 忘記密碼？
+      requested: 請檢查您的電子郵件，以取得重設密碼的連結。
+      submit: 重設密碼
+      title: 重設密碼
+      back: 返回
+    update:
+      invalid_token: 權杖（Token）無效。
+      success: 您的密碼已成功重設。

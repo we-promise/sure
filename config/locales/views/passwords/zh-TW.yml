@@ -1,15 +1,10 @@
 ---
 zh-TW:
   passwords:
-    create:
-      success: 密碼已重設。您現在可以使用新密碼登入。
     edit:
+      password: 新密碼
+      password_challenge: 目前密碼
       submit: 重設密碼
-      title: 重設密碼
+      title: 更新密碼
     update:
-      current_password: 目前密碼
-      failure: 密碼更新失敗。請檢查您的目前密碼。
-      new_password: 新密碼
-      new_password_confirmation: 確認新密碼
-      success: 密碼已更新。
-      title: 變更密碼
+      success: 您的密碼已重設。

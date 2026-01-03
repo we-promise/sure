@@ -4,26 +4,22 @@ zh-TW:
     edit:
       edit: 編輯 %{account}
     form:
-      color: 顏色
-      color_placeholder: 例如：紅色
-      make: 製造商
-      make_placeholder: 例如：豐田
-      mileage: 里程
-      mileage_placeholder: 0
-      model: 型號
+      make: 廠牌
+      make_placeholder: 例如：Toyota
+      mileage: 里程數
+      mileage_placeholder: '15000'
+      mileage_unit: 單位
+      model: 車型
       model_placeholder: 例如：Camry
-      none: 無
-      placeholder: 0.00
-      vin: 車輛識別號
-      vin_placeholder: VIN 號
       year: 年份
-      year_placeholder: 例如：2020
+      year_placeholder: '2023'
     new:
-      title: 請輸入車輛詳細資訊
-    show:
-      color: 顏色
-      current_value: 目前價值
-      make_and_model: 製造商和型號
-      mileage: 里程
-      vin: 車輛識別號
+      title: 輸入車輛詳情
+    overview:
+      current_price: 目前價值
+      make_model: 廠牌與車型
+      mileage: 里程數
+      purchase_price: 買入價格
+      trend: 趨勢
+      unknown: 未知
       year: 年份

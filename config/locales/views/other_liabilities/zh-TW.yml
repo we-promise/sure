@@ -3,11 +3,5 @@ zh-TW:
   other_liabilities:
     edit:
       edit: 編輯 %{account}
-    form:
-      none: 無
-      placeholder: 0.00
     new:
-      title: 請輸入債務詳細資訊
-    show:
-      balance: 餘額
-      balance_explanation: 您還欠的金額
+      title: 輸入負債詳情

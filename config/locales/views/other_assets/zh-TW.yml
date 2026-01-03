@@ -3,12 +3,7 @@ zh-TW:
   other_assets:
     edit:
       edit: 編輯 %{account}
-    form:
-      none: 無
-      owner_placeholder: 車輛所有者名字
-      placeholder: 0.00
+      balance_tracking_info: "「其他資產」是透過「新餘額」進行手動估值來追蹤，而非透過交易紀錄。現金流不會影響帳戶餘額。"
     new:
-      title: 請輸入資產詳細資訊
-    show:
-      account_holder: 所有者
-      current_value: 目前價值
+      title: 輸入資產詳情
+      balance_tracking_info: "「其他資產」是透過「新餘額」進行手動估值來追蹤，而非透過交易紀錄。現金流不會影響帳戶餘額。"

@@ -1,33 +1,19 @@
 ---
 zh-TW:
-  layout:
-    all_accounts: 全部帳戶
-    all_transactions: 全部交易
-    budgets: 預算
-    categories: 分類
-    chat_ai_title: 家庭財務助手
-    chat_with_ai: 與 AI 對話
-    export: 導出
-    feedback: 意見反饋
-    import: 匯入
-    insights: 分析報告
-    links:
-      settings: 設定
-      view_all: 檢視全部
-    managed_mode: 受管理模式
-    my_accounts: 我的帳戶
-    my_net_worth: 我的淨資產
-    net_worth: 淨資產
-    nothing_here: 暫無任何內容
-    overview: 概覽
-    reports: 分析報告
-    rules: 規則設定
-    settings: 設定
-    something_went_wrong: 糟糕！出現了問題，請稍後重試。
-    tags: 標籤
-    transactions: 交易記錄
-    transfers: 轉帳
-    try_again: 重試
-    try_demo: 體驗示範
-    version: 版本 %{version}
-    view_all_accounts: 檢視全部帳戶
+  layouts:
+    application:
+      nav:
+        assistant: 助手
+        budgets: 預算
+        home: 首頁
+        reports: 報表
+        transactions: 交易紀錄
+    auth:
+      existing_account: 已經有帳號了？
+      no_account: 第一次使用 %{product_name} 嗎？
+      sign_in: 登入
+      sign_up: 建立帳號
+    shared:
+      footer:
+        privacy_policy: 隱私權政策
+        terms_of_service: 服務條款

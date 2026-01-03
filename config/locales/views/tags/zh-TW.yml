@@ -1,24 +1,23 @@
 ---
 zh-TW:
   tags:
+    create:
+      created: 標籤已建立
+      error: '建立標籤時發生錯誤：%{error}'
     destroy:
-      failure: 刪除標籤時出現問題。
-      success: 標籤已刪除。
+      deleted: 標籤已刪除
     edit:
-      submit: 更新標籤
-      title: 編輯標籤
-    empty:
-      description: 為交易新增標籤以便追蹤和組織。
-      new: 新建標籤
+      edit: 編輯標籤
     form:
-      color: 顏色
-      color_placeholder: 選擇顏色
-      name: 標籤名稱
-      name_placeholder: 例如：餐飲、工作、休假
+      placeholder: 標籤名稱
     index:
-      create: 新建標籤
-      no_tags: 暫無標籤
-      title: 標籤管理
+      empty: 尚無標籤
+      new: 新增標籤
+      tags: 標籤
     new:
-      submit: 建立標籤
-      title: 新建標籤
+      new: 新增標籤
+    tag:
+      delete: 刪除
+      edit: 編輯
+    update:
+      updated: 標籤已更新

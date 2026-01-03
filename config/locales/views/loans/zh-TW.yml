@@ -4,16 +4,20 @@ zh-TW:
     edit:
       edit: 編輯 %{account}
     form:
-      balance_placeholder: 0.00
-      lender_placeholder: 銀行名稱、朋友名字等
-      none: 無
-      original_balance_placeholder: 0.00
-      provider_select: 選擇貸款人
+      interest_rate: 利率
+      interest_rate_placeholder: '5.25'
+      initial_balance: 原始貸款餘額
+      rate_type: 利率類型
+      term_months: 貸款期限（月）
+      term_months_placeholder: '360'
     new:
-      title: 請輸入帳戶詳細資訊
-    show:
-      balance_remaining: 剩餘額度
-      balance_remaining_explanation: 不包括已支付的利息
-      borrowed_from: 貸出人
-      principal: 本金
-      principal_explanation: 原始貸款金額
+      title: 輸入貸款詳情
+    overview:
+      interest_rate: 利率
+      monthly_payment: 每月還款額
+      not_applicable: 不適用
+      original_principal: 原始本金
+      remaining_principal: 剩餘本金
+      term: 貸款期限
+      type: 類型
+      unknown: 未知

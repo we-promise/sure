@@ -1,8 +1,4 @@
 ---
 zh-TW:
   subscriptions:
-    index:
-      billing_cycle: 帳單週期
-      price: 價格
-      status: 狀態
-      subscription_details: 訂閱詳情
+    self_hosted_alert: "在自行代管模式下不支援 %{product_name}。"

@@ -1,26 +1,38 @@
 ---
 zh-TW:
   trades:
-    destroy:
-      confirm: 您確定要刪除此交易嗎？
-      failure: 交易刪除失敗。
-      success: 交易已刪除。
-    edit:
-      title: 編輯交易
     form:
-      account: 帳戶
-      commission: 手續費
-      date: 日期
-      currency_code: 幣別
-      price: 股價
-      quantity: 數量
-      security_placeholder: 搜尋股票或代號
-      submit: 保存交易
-      trade_type: 交易類型
-      type_buy: 買入
-      type_sell: 賣出
+      account: 轉帳帳戶（選填）
+      account_prompt: 搜尋帳戶
+      amount: 金額
+      holding: 股票代碼
+      price: 每股價格
+      qty: 數量
+      submit: 新增交易
+      ticker_placeholder: AAPL
+      type: 類型
+    header:
+      buy: 買入
+      current_market_price_label: 目前市價
+      overview: 概覽
+      purchase_price_label: 買入價格
+      purchase_qty_label: 買入數量
+      sell: 賣出
+      symbol_label: 代碼
+      total_return_label: 未實現損益
     new:
-      title: 新建交易記錄
-    row_action_buttons:
+      title: 新增交易
+    show:
+      additional: 額外資訊
+      cost_per_share_label: 每股成本
+      date_label: 日期
       delete: 刪除
-      edit: 編輯
+      delete_subtitle: 此操作將無法復原
+      delete_title: 刪除交易紀錄
+      details: 詳情
+      exclude_subtitle: 此筆交易將不計入報表與分析計算
+      exclude_title: 從分析中排除
+      note_label: 備註
+      note_placeholder: 在此新增額外備註...
+      quantity_label: 數量
+      settings: 設定
