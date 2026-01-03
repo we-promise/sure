@@ -2,33 +2,33 @@
 zh-TW:
   simplefin_items:
     new:
-      title: 連結 SimpleFin
+      title: 連結 SimpleFIN
       setup_token: 設定權杖 (Setup token)
-      setup_token_placeholder: 貼上您的 SimpleFin 設定權杖
+      setup_token_placeholder: 貼上您的 SimpleFIN 設定權杖
       connect: 連結
       cancel: 取消
     create:
-      success: SimpleFin 連線已成功新增！您的帳戶將在背景同步完成後顯示。
+      success: SimpleFIN 連線已成功新增！您的帳戶將在背景同步完成後顯示。
       errors:
-        blank_token: 請輸入 SimpleFin 設定權杖。
-        invalid_token: 權杖無效。請確認您從 SimpleFin Bridge 複製的是完整的權杖。
+        blank_token: 請輸入 SimpleFIN 設定權杖。
+        invalid_token: 權杖無效。請確認您從 SimpleFIN Bridge 複製的是完整的權杖。
         token_compromised: 此權杖可能已外洩、過期或已被使用。請建立一個新權杖。
         create_failed: "連結失敗：%{message}"
         unexpected: 發生預期之外的錯誤。請再試一次或聯絡支援團隊。
     destroy:
-      success: SimpleFin 連線將被移除
+      success: SimpleFIN 連線將被移除
     update:
-      success: SimpleFin 連線已成功更新！您的帳戶正在重新連線。
+      success: SimpleFIN 連線已成功更新！您的帳戶正在重新連線。
       errors:
-        blank_token: 請輸入 SimpleFin 設定權杖。
-        invalid_token: 權杖無效。請確認您從 SimpleFin Bridge 複製的是完整的權杖。
+        blank_token: 請輸入 SimpleFIN 設定權杖。
+        invalid_token: 權杖無效。請確認您從 SimpleFIN Bridge 複製的是完整的權杖。
         token_compromised: 此權杖可能已外洩、過期或已被使用。請建立一個新權杖。
         update_failed: "更新連線失敗：%{message}"
         unexpected: 發生預期之外的錯誤。請再試一次或聯絡支援團隊。
     edit:
       setup_token:
-        label: "SimpleFin 設定權杖："
-        placeholder: "在此貼上您的 SimpleFin 設定權杖..."
+        label: "SimpleFIN 設定權杖："
+        placeholder: "在此貼上您的 SimpleFIN 設定權杖..."
         help_text: "權杖應為一串由字母和數字組成的長字串"
     complete_account_setup:
       all_skipped: "已跳過所有帳戶。未建立任何帳戶。"
@@ -38,7 +38,7 @@ zh-TW:
       add_new: 新增連線
       confirm_accept: 刪除連線
       confirm_body: 這將永久刪除此群組中的所有帳戶及相關資料。
-      confirm_title: 確定要刪除 SimpleFin 連線嗎？
+      confirm_title: 確定要刪除 SimpleFIN 連線嗎？
       delete: 刪除
       deletion_in_progress: "(正在刪除...)"
       error: 同步資料時發生錯誤
@@ -46,7 +46,7 @@ zh-TW:
       no_accounts_title: 找不到帳戶
       requires_update: 重新連線
       setup_needed: 新帳戶已準備好進行設定
-      setup_description: 請為您新匯入的 SimpleFin 帳戶選擇帳戶類型。
+      setup_description: 請為您新匯入的 SimpleFIN 帳戶選擇帳戶類型。
       setup_action: 設定新帳戶
       status: "%{timestamp} 前已同步"
       status_never: 從未同步
