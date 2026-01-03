@@ -1,4 +1,3 @@
----
 zh-TW:
   activerecord:
     errors:
@@ -6,13 +5,13 @@ zh-TW:
         transfer:
           attributes:
             base:
-              inflow_cannot_be_in_multiple_transfers: 入帳交易不能參與多次轉帳
-              must_be_from_different_accounts: 轉帳雙方帳戶必須是不同的帳戶
-              must_be_from_same_family: 轉帳雙方必須屬於同一家庭
-              must_be_within_date_range: 轉帳交易的日期差必須在 4 天以內
-              must_have_opposite_amounts: 轉帳交易的金額必須互為相反數
-              must_have_single_currency: 轉帳必須使用單一貨幣
-              outflow_cannot_be_in_multiple_transfers: 出帳交易不能參與多次轉帳
+              inflow_cannot_be_in_multiple_transfers: 流入交易不能同時屬於多筆轉帳
+              must_be_from_different_accounts: 轉帳的來源與目的帳戶必須不同
+              must_be_from_same_family: 轉帳必須屬於同一個家庭
+              must_be_within_date_range: 轉帳交易日期的差距不能超過 4 天
+              must_have_opposite_amounts: 轉帳交易的金額正負號必須相反
+              must_have_single_currency: 轉帳必須使用單一幣別
+              outflow_cannot_be_in_multiple_transfers: 流出交易不能同時屬於多筆轉帳
   transfer:
     name: 轉帳至 %{to_account}
     payment_name: 付款至 %{to_account}

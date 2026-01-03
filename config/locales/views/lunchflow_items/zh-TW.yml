@@ -2,7 +2,7 @@
 zh-TW:
   lunchflow_items:
     new:
-      description: 透過 Lunchflow 連接您的帳戶。
+      description: 透過 Lunch flow 連接您的帳戶。
       no_accounts: 未找到任何帳戶
       start_connection: 開始連接
       title: 連接帳戶
