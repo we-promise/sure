@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
+import '../models/offline_transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../screens/transaction_form_screen.dart';
+import '../widgets/sync_status_badge.dart';
 
 class TransactionsListScreen extends StatefulWidget {
   final Account account;
@@ -314,7 +316,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
             );
           }
 
-          final transactions = transactionsProvider.transactions;
+          final transactions = transactionsProvider.offlineTransactions;
 
           if (transactions.isEmpty) {
             return RefreshIndicator(
@@ -365,6 +367,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 final transaction = transactions[index];
                 final isSelected = transaction.id != null &&
                     _selectedTransactions.contains(transaction.id);
+                final isPending = transaction.syncStatus == SyncStatus.pending;
+                final isFailed = transaction.syncStatus == SyncStatus.failed;
+
                 // Compute display info once to avoid duplicate parsing
                 final displayInfo = _getAmountDisplayInfo(
                   transaction.amount,
@@ -386,17 +391,19 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
                   confirmDismiss: (direction) => _confirmAndDeleteTransaction(transaction),
-                  child: Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: InkWell(
-                      onTap: _isSelectionMode && transaction.id != null
-                          ? () => _toggleTransactionSelection(transaction.id!)
-                          : null,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
+                  child: Opacity(
+                    opacity: isPending ? 0.5 : 1.0,
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: _isSelectionMode && transaction.id != null
+                            ? () => _toggleTransactionSelection(transaction.id!)
+                            : null,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
                             if (_isSelectionMode)
                               Padding(
                                 padding: const EdgeInsets.only(right: 12),
@@ -443,12 +450,25 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  '${displayInfo['prefix']}${displayInfo['displayAmount']}',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: displayInfo['color'] as Color,
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isPending || isFailed)
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 8),
+                                        child: SyncStatusBadge(
+                                          syncStatus: transaction.syncStatus,
+                                          compact: true,
+                                        ),
                                       ),
+                                    Text(
+                                      '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: displayInfo['color'] as Color,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -460,6 +480,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                               ],
                             ),
                           ],
+                        ),
                         ),
                       ),
                     ),

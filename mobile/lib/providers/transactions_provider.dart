@@ -133,9 +133,31 @@ class TransactionsProvider with ChangeNotifier {
     try {
       final isOnline = _connectivityService?.isOnline ?? false;
 
+      _log.info('TransactionsProvider', 'Creating transaction: $name, amount: $amount, online: $isOnline');
+
+      // ALWAYS save locally first (offline-first strategy)
+      final localTransaction = await _offlineStorage.saveTransaction(
+        accountId: accountId,
+        name: name,
+        date: date,
+        amount: amount,
+        currency: currency,
+        nature: nature,
+        notes: notes,
+        syncStatus: SyncStatus.pending, // Start as pending
+      );
+
+      _log.info('TransactionsProvider', 'Transaction saved locally with ID: ${localTransaction.localId}');
+
+      // Reload transactions to show the new one immediately
+      await fetchTransactions(accessToken: accessToken, accountId: accountId);
+
+      // If online, try to upload in background
       if (isOnline) {
-        // Try to create on server first
-        final result = await _transactionsService.createTransaction(
+        _log.info('TransactionsProvider', 'Attempting to upload transaction to server...');
+
+        // Don't await - upload in background
+        _transactionsService.createTransaction(
           accessToken: accessToken,
           accountId: accountId,
           name: name,
@@ -144,61 +166,31 @@ class TransactionsProvider with ChangeNotifier {
           currency: currency,
           nature: nature,
           notes: notes,
-        );
-
-        if (result['success'] == true) {
-          // Save to local storage as synced
-          final serverTransaction = result['transaction'] as Transaction;
-          await _offlineStorage.saveTransaction(
-            accountId: accountId,
-            name: name,
-            date: date,
-            amount: amount,
-            currency: currency,
-            nature: nature,
-            notes: notes,
-            serverId: serverTransaction.id,
-            syncStatus: SyncStatus.synced,
-          );
-
-          // Reload transactions
-          await fetchTransactions(accessToken: accessToken);
-          return true;
-        } else {
-          // If server creation fails but we're online, save locally as pending
-          await _offlineStorage.saveTransaction(
-            accountId: accountId,
-            name: name,
-            date: date,
-            amount: amount,
-            currency: currency,
-            nature: nature,
-            notes: notes,
-            syncStatus: SyncStatus.pending,
-          );
-
-          _error = result['error'] as String? ?? 'Failed to create transaction';
-          await fetchTransactions(accessToken: accessToken);
-          return false;
-        }
+        ).then((result) async {
+          if (result['success'] == true) {
+            _log.info('TransactionsProvider', 'Transaction uploaded successfully');
+            final serverTransaction = result['transaction'] as Transaction;
+            // Update local transaction with server ID and mark as synced
+            await _offlineStorage.updateTransactionSyncStatus(
+              localId: localTransaction.localId,
+              syncStatus: SyncStatus.synced,
+              serverId: serverTransaction.id,
+            );
+            // Reload to update UI
+            await fetchTransactions(accessToken: accessToken, accountId: accountId);
+          } else {
+            _log.warning('TransactionsProvider', 'Server upload failed: ${result['error']}. Transaction will sync later.');
+          }
+        }).catchError((e) {
+          _log.error('TransactionsProvider', 'Exception during upload: $e');
+        });
       } else {
-        // Offline - save locally as pending
-        await _offlineStorage.saveTransaction(
-          accountId: accountId,
-          name: name,
-          date: date,
-          amount: amount,
-          currency: currency,
-          nature: nature,
-          notes: notes,
-          syncStatus: SyncStatus.pending,
-        );
-
-        // Reload transactions
-        await fetchTransactions(accessToken: accessToken);
-        return true; // Return true because it was saved locally
+        _log.info('TransactionsProvider', 'Offline: Transaction will sync when online');
       }
+
+      return true; // Always return true because it's saved locally
     } catch (e) {
+      _log.error('TransactionsProvider', 'Failed to create transaction: $e');
       _error = e.toString();
       notifyListeners();
       return false;

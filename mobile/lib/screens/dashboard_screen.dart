@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/account.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
+import '../providers/transactions_provider.dart';
 import '../widgets/account_card.dart';
 import '../widgets/connectivity_banner.dart';
 import 'transaction_form_screen.dart';
@@ -19,11 +20,50 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _assetsExpanded = true;
   bool _liabilitiesExpanded = true;
+  bool _showSyncSuccess = false;
+  int _previousPendingCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadAccounts();
+
+    // Listen for sync completion to show success indicator
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+      _previousPendingCount = transactionsProvider.pendingCount;
+      transactionsProvider.addListener(_onTransactionsChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+    transactionsProvider.removeListener(_onTransactionsChanged);
+    super.dispose();
+  }
+
+  void _onTransactionsChanged() {
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+    final currentPendingCount = transactionsProvider.pendingCount;
+
+    // If pending count decreased, it means transactions were synced
+    if (_previousPendingCount > 0 && currentPendingCount < _previousPendingCount) {
+      setState(() {
+        _showSyncSuccess = true;
+      });
+
+      // Hide the success indicator after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _showSyncSuccess = false;
+          });
+        }
+      });
+    }
+
+    _previousPendingCount = currentPendingCount;
   }
 
   Future<void> _loadAccounts() async {
@@ -195,6 +235,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          if (_showSyncSuccess)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: AnimatedOpacity(
+                opacity: _showSyncSuccess ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: const Icon(
+                  Icons.cloud_done,
+                  color: Colors.green,
+                  size: 28,
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.bug_report),
             onPressed: () {
