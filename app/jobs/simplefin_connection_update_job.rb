@@ -1,18 +1,45 @@
 class SimplefinConnectionUpdateJob < ApplicationJob
   queue_as :high_priority
 
+  # Disable automatic retries for this job since the setup token is single-use.
+  # If the token claim succeeds but import fails, retrying would fail at claim.
+  discard_on Provider::Simplefin::SimplefinError do |job, error|
+    Rails.logger.error(
+      "SimplefinConnectionUpdateJob discarded: #{error.class} - #{error.message} " \
+      "(family_id=#{job.arguments.first[:family_id]}, old_item_id=#{job.arguments.first[:old_simplefin_item_id]})"
+    )
+  end
+
   def perform(family_id:, old_simplefin_item_id:, setup_token:)
     family = Family.find(family_id)
     old_item = family.simplefin_items.find(old_simplefin_item_id)
 
+    # Step 1: Claim the token and create the new item.
+    # This is the critical step - if it fails, we can safely retry.
+    # If it succeeds, the token is consumed and we must not retry the claim.
     updated_item = family.create_simplefin_item!(
       setup_token: setup_token,
       item_name: old_item.name
     )
 
-    # Ensure new SimpleFin accounts exist so we can preserve legacy links.
-    updated_item.import_latest_simplefin_data
+    # Step 2: Import accounts from SimpleFin.
+    # If this fails, we have an orphaned item but the token is already consumed.
+    # We handle this gracefully by marking the item and continuing.
+    begin
+      updated_item.import_latest_simplefin_data
+    rescue => e
+      Rails.logger.error(
+        "SimplefinConnectionUpdateJob: import failed for new item #{updated_item.id}: " \
+        "#{e.class} - #{e.message}. Item created but may need manual sync."
+      )
+      # Mark the item as needing attention but don't fail the job entirely.
+      # The item exists and can be synced manually later.
+      updated_item.update!(status: :requires_update)
+      # Still proceed to transfer accounts and schedule old item deletion
+    end
 
+    # Step 3: Transfer account links from old to new item.
+    # This is idempotent and safe to retry.
     ActiveRecord::Base.transaction do
       old_item.simplefin_accounts.each do |old_account|
         next unless old_account.account.present?
@@ -26,7 +53,8 @@ class SimplefinConnectionUpdateJob < ApplicationJob
       old_item.destroy_later
     end
 
-    updated_item.update!(status: :good)
+    # Only mark as good if import succeeded (status wasn't set to requires_update above)
+    updated_item.update!(status: :good) unless updated_item.requires_update?
   end
 
   private
