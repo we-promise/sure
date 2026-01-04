@@ -10,7 +10,15 @@ class SimplefinItem::Syncer
     # can review and manually link accounts first. This mirrors the historical flow
     # users expect: initial 7-day balances snapshot, then full chunked history after linking.
     begin
-      if simplefin_item.simplefin_accounts.joins(:account).count == 0
+      # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
+      # the new AccountProvider system. An account is "linked" if either association exists.
+      linked_via_legacy = simplefin_item.simplefin_accounts.joins(:account).count
+      linked_via_provider = simplefin_item.simplefin_accounts.joins(:account_provider).count
+      total_linked = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }.count
+
+      Rails.logger.info("SimplefinItem::Syncer - linked check: legacy=#{linked_via_legacy}, provider=#{linked_via_provider}, total=#{total_linked}")
+
+      if total_linked == 0
         sync.update!(status_text: "Discovering accounts (balances only)...") if sync.respond_to?(:status_text)
         # Pre-mark the sync as balances_only for runtime only (no persistence)
         begin
@@ -52,8 +60,9 @@ class SimplefinItem::Syncer
     finalize_setup_counts(sync)
 
     # Process transactions/holdings only for linked accounts
-    linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
-    if linked_accounts.any?
+    # Check both legacy FK and AccountProvider associations
+    linked_simplefin_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
+    if linked_simplefin_accounts.any?
       sync.update!(status_text: "Processing transactions and holdings...") if sync.respond_to?(:status_text)
       simplefin_item.process_accounts
 
@@ -77,7 +86,11 @@ class SimplefinItem::Syncer
     def finalize_setup_counts(sync)
       sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
       total_accounts = simplefin_item.simplefin_accounts.count
-      linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
+
+      # Count linked accounts using both legacy FK and AccountProvider associations
+      linked_count = simplefin_item.simplefin_accounts.count { |sfa| sfa.current_account.present? }
+
+      # Unlinked = no legacy FK AND no AccountProvider
       unlinked_accounts = simplefin_item.simplefin_accounts
         .left_joins(:account, :account_provider)
         .where(accounts: { id: nil }, account_providers: { id: nil })
@@ -93,7 +106,7 @@ class SimplefinItem::Syncer
         existing = (sync.sync_stats || {})
         setup_stats = {
           "total_accounts" => total_accounts,
-          "linked_accounts" => linked_accounts.count,
+          "linked_accounts" => linked_count,
           "unlinked_accounts" => unlinked_accounts.count
         }
         sync.update!(sync_stats: existing.merge(setup_stats))
