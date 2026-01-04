@@ -40,14 +40,29 @@ class SimplefinConnectionUpdateJob < ApplicationJob
 
     # Step 3: Transfer account links from old to new item.
     # This is idempotent and safe to retry.
+    # Check for linked accounts via BOTH legacy FK and AccountProvider.
     ActiveRecord::Base.transaction do
-      old_item.simplefin_accounts.each do |old_account|
-        next unless old_account.account.present?
+      old_item.simplefin_accounts.includes(:account, account_provider: :account).each do |old_account|
+        # Get the linked account via either system
+        linked_account = old_account.current_account
+        next unless linked_account.present?
 
-        new_account = find_matching_simplefin_account(old_account, updated_item.simplefin_accounts)
-        next unless new_account
+        new_simplefin_account = find_matching_simplefin_account(old_account, updated_item.simplefin_accounts)
+        next unless new_simplefin_account
 
-        old_account.account.update!(simplefin_account_id: new_account.id)
+        # Update legacy FK
+        linked_account.update!(simplefin_account_id: new_simplefin_account.id)
+
+        # Also migrate AccountProvider if it exists
+        if old_account.account_provider.present?
+          old_account.account_provider.update!(
+            provider_type: "SimplefinAccount",
+            provider_id: new_simplefin_account.id
+          )
+        else
+          # Create AccountProvider for consistency
+          new_simplefin_account.ensure_account_provider!
+        end
       end
 
       old_item.destroy_later

@@ -56,7 +56,10 @@ class SimplefinItem < ApplicationRecord
   end
 
   def process_accounts
-    simplefin_accounts.joins(:account).each do |simplefin_account|
+    # Process accounts linked via BOTH legacy FK and AccountProvider
+    simplefin_accounts.includes(:account, account_provider: :account).each do |simplefin_account|
+      # Only process if there's a linked account (via either system)
+      next unless simplefin_account.current_account.present?
       SimplefinAccount::Processor.new(simplefin_account).process
     end
   end

@@ -16,9 +16,31 @@
           <% end %>
         </div>
 
+        <%# Compute unlinked count early for badge display %>
+        <% header_unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
+             @simplefin_unlinked_count_map[simplefin_item.id] || 0
+           else
+             begin
+               simplefin_item.simplefin_accounts
+                 .left_joins(:account, :account_provider)
+                 .where(accounts: { id: nil }, account_providers: { id: nil })
+                 .count
+             rescue => e
+               0
+             end
+           end %>
+
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
             <%= tag.p simplefin_item.name, class: "font-medium text-primary" %>
+            <% if header_unlinked_count.to_i > 0 %>
+              <%= link_to setup_accounts_simplefin_item_path(simplefin_item),
+                          data: { turbo_frame: :modal },
+                          class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors" do %>
+                <%= icon "alert-circle", size: "xs" %>
+                <span><%= header_unlinked_count %> <%= header_unlinked_count == 1 ? "account" : "accounts" %> need setup</span>
+              <% end %>
+            <% end %>
             <% if simplefin_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
@@ -130,8 +152,6 @@
           ) %>
         <% end %>
 
-
-
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
@@ -150,7 +170,6 @@
         <% if simplefin_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
         <% end %>
-
 
         <%# Sync summary (collapsible)
             Prefer controller-provided map; fallback to latest sync stats so Turbo broadcasts
@@ -197,7 +216,7 @@
               <div>
                 <h4 class="text-primary font-medium mb-1">Holdings</h4>
                 <div class="flex items-center gap-3">
-                  <span>Processed: <%= stats["holdings_processed"].to_i %></span>
+                  <span>Found: <%= stats["holdings_found"].to_i %></span>
                 </div>
               </div>
               <div>
@@ -210,53 +229,15 @@
                       <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
                     <% end %>
                     <% total_errors = stats["total_errors"].to_i %>
+                    <% import_started = stats["import_started"].present? %>
                     <% if total_errors > 0 %>
                       <span class="text-destructive">Errors: <%= total_errors %></span>
+                    <% elsif import_started %>
+                      <span class="text-success">Errors: 0</span>
                     <% else %>
                       <span>Errors: 0</span>
                     <% end %>
                   </div>
-                  <%# Reconciliation warnings %>
-                  <% reconciliation_warnings = stats["reconciliation_warnings"].to_i %>
-                  <% reconciliation_notices = stats["reconciliation_notices"].to_i %>
-                  <% if reconciliation_warnings > 0 || reconciliation_notices > 0 %>
-                    <div class="flex items-center gap-2 mt-1">
-                      <% if reconciliation_warnings > 0 %>
-                        <%= render DS::Tooltip.new(
-                          text: "#{reconciliation_warnings} data integrity warning(s) detected. Check for missing transactions or gaps in history.",
-                          icon: "alert-triangle",
-                          size: "sm",
-                          color: "warning"
-                        ) %>
-                        <span class="text-warning text-xs">Data warnings: <%= reconciliation_warnings %></span>
-                      <% end %>
-                      <% if reconciliation_notices > 0 %>
-                        <%= render DS::Tooltip.new(
-                          text: "#{reconciliation_notices} minor data notice(s). Some transaction gaps or stale data detected.",
-                          icon: "info",
-                          size: "sm"
-                        ) %>
-                        <span class="text-secondary text-xs">Notices: <%= reconciliation_notices %></span>
-                      <% end %>
-                    </div>
-                  <% end %>
-                  <%# Show specific reconciliation issues if present %>
-                  <% reconciliation = stats["reconciliation"] %>
-                  <% if reconciliation.is_a?(Hash) && reconciliation.any? %>
-                    <details class="mt-2">
-                      <summary class="text-xs text-secondary cursor-pointer hover:text-primary">View data quality details</summary>
-                      <div class="mt-1 text-xs space-y-1 pl-2 border-l-2 border-surface-inset">
-                        <% reconciliation.each do |account_id, data| %>
-                          <% issues = data.is_a?(Hash) ? (data[:issues] || data["issues"]) : [] %>
-                          <% issues.to_a.each do |issue| %>
-                            <div class="<%= issue[:severity] == 'high' || issue['severity'] == 'high' ? 'text-warning' : 'text-secondary' %>">
-                              <%= issue[:message] || issue["message"] %>
-                            </div>
-                          <% end %>
-                        <% end %>
-                      </div>
-                    </details>
-                  <% end %>
                 </div>
               </div>
             </div>

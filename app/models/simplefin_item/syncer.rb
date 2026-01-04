@@ -198,7 +198,8 @@ class SimplefinItem::Syncer
       window_start = sync.created_at || 30.minutes.ago
       window_end   = Time.current
 
-      account_ids = simplefin_item.simplefin_accounts.joins(:account).pluck("accounts.id")
+      # Get account IDs via BOTH legacy FK and AccountProvider to ensure we capture all linked accounts
+      account_ids = simplefin_item.simplefin_accounts.filter_map { |sfa| sfa.current_account&.id }
       return {} if account_ids.empty?
 
       tx_scope = Entry.where(account_id: account_ids, source: "simplefin", entryable_type: "Transaction")
@@ -206,14 +207,16 @@ class SimplefinItem::Syncer
       tx_updated  = tx_scope.where(updated_at: window_start..window_end).where.not(created_at: window_start..window_end).count
       tx_seen     = tx_imported + tx_updated
 
-      holdings_scope = Holding.where(account_id: account_ids)
-      holdings_processed = holdings_scope.where(created_at: window_start..window_end).count
+      # Count holdings from raw_holdings_payload (what the sync found) rather than
+      # the database. Holdings are applied asynchronously via SimplefinHoldingsApplyJob,
+      # so database counts would always be 0 at this point.
+      holdings_found = simplefin_item.simplefin_accounts.sum { |sfa| Array(sfa.raw_holdings_payload).size }
 
       {
         "tx_imported" => tx_imported,
         "tx_updated" => tx_updated,
         "tx_seen" => tx_seen,
-        "holdings_processed" => holdings_processed,
+        "holdings_found" => holdings_found,
         "window_start" => window_start,
         "window_end" => window_end
       }

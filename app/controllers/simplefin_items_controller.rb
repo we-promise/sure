@@ -135,12 +135,16 @@ class SimplefinItemsController < ApplicationController
   end
 
   def setup_accounts
-    @simplefin_accounts = @simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
+    # Only show unlinked accounts - check both legacy FK and AccountProvider
+    @simplefin_accounts = @simplefin_item.simplefin_accounts
+      .left_joins(:account, :account_provider)
+      .where(accounts: { id: nil }, account_providers: { id: nil })
     @account_type_options = [
       [ "Skip this account", "skip" ],
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
+      [ "Crypto Account", "Crypto" ],
       [ "Loan or Mortgage", "Loan" ],
       [ "Other Asset", "OtherAsset" ]
     ]
@@ -186,6 +190,11 @@ class SimplefinItemsController < ApplicationController
         label: "Loan Type:",
         options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
       },
+      "Crypto" => {
+        label: nil,
+        options: [],
+        message: "Crypto accounts track cryptocurrency holdings."
+      },
       "OtherAsset" => {
         label: nil,
         options: [],
@@ -203,8 +212,8 @@ class SimplefinItemsController < ApplicationController
       @simplefin_item.update!(sync_start_date: params[:sync_start_date])
     end
 
-    # Valid account types for this provider (plus OtherAsset which SimpleFIN UI allows)
-    valid_types = Provider::SimplefinAdapter.supported_account_types + [ "OtherAsset" ]
+    # Valid account types for this provider (plus Crypto and OtherAsset which SimpleFIN UI allows)
+    valid_types = Provider::SimplefinAdapter.supported_account_types + [ "Crypto", "OtherAsset" ]
 
     created_accounts = []
     skipped_count = 0
@@ -247,6 +256,8 @@ class SimplefinItemsController < ApplicationController
         selected_subtype
       )
       simplefin_account.update!(account: account)
+      # Also create AccountProvider for consistency with the new linking system
+      simplefin_account.ensure_account_provider!
       created_accounts << account
     end
 

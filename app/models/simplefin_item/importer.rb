@@ -15,11 +15,23 @@ class SimplefinItem::Importer
     Rails.logger.info "SimplefinItem::Importer - last_synced_at: #{simplefin_item.last_synced_at.inspect}"
     Rails.logger.info "SimplefinItem::Importer - sync_start_date: #{simplefin_item.sync_start_date.inspect}"
 
+    # Clear stale error and reconciliation stats from previous syncs at the start of a full import
+    # This ensures the UI doesn't show outdated warnings from old sync runs
+    if sync.respond_to?(:sync_stats)
+      sync.update_columns(sync_stats: {
+        "cleared_at" => Time.current.iso8601,
+        "import_started" => true
+      })
+    end
+
     begin
       # Defensive guard: If last_synced_at is set but there are linked accounts
       # with no transactions captured yet (typical after a balances-only run),
       # force the first full run to use chunked history to backfill.
-      linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
+      #
+      # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
+      # the new AccountProvider system. An account is "linked" if either association exists.
+      linked_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
       no_txns_yet = linked_accounts.any? && linked_accounts.all? { |sfa| sfa.raw_transactions_payload.blank? }
 
       if simplefin_item.last_synced_at.nil? || no_txns_yet
@@ -572,12 +584,15 @@ class SimplefinItem::Importer
         merged_transactions = best_by_key.values
         attrs[:raw_transactions_payload] = merged_transactions
 
-        # Run reconciliation to detect potential data issues (non-blocking)
-        begin
-          reconcile_transactions(simplefin_account, merged_transactions)
-        rescue => e
-          Rails.logger.warn("SimpleFin: reconciliation failed for sfa=#{simplefin_account.id || account_id}: #{e.class} - #{e.message}")
-        end
+        # NOTE: Reconciliation disabled - it analyzes the SimpleFin API response
+        # which only contains ~90 days of history, creating misleading "gap" warnings
+        # that don't reflect actual database state. Re-enable if we improve it to
+        # compare against database transactions instead of just the API response.
+        # begin
+        #   reconcile_transactions(simplefin_account, merged_transactions)
+        # rescue => e
+        #   Rails.logger.warn("SimpleFin: reconciliation failed for sfa=#{simplefin_account.id || account_id}: #{e.class} - #{e.message}")
+        # end
       end
 
       # Track whether incoming holdings are new/changed so we can materialize and refresh balances
