@@ -8,6 +8,7 @@ import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
+import 'services/log_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +23,7 @@ class SureApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => LogService.instance),
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProxyProvider<ConnectivityService, AccountsProvider>(

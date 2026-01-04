@@ -7,6 +7,7 @@ import '../widgets/account_card.dart';
 import '../widgets/connectivity_banner.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
+import 'log_viewer_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -194,6 +195,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LogViewerScreen()),
+              );
+            },
+            tooltip: 'Debug Logs',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _handleRefresh,

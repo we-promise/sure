@@ -6,11 +6,13 @@ import '../services/transactions_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/sync_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/log_service.dart';
 
 class TransactionsProvider with ChangeNotifier {
   final TransactionsService _transactionsService = TransactionsService();
   final OfflineStorageService _offlineStorage = OfflineStorageService();
   final SyncService _syncService = SyncService();
+  final LogService _log = LogService.instance;
 
   List<OfflineTransaction> _transactions = [];
   bool _isLoading = false;
@@ -45,13 +47,14 @@ class TransactionsProvider with ChangeNotifier {
         hasPendingTransactions &&
         _lastAccessToken != null &&
         !_isAutoSyncing) {
-      debugPrint('[TransactionsProvider] Connectivity restored, auto-syncing pending transactions');
+      _log.info('TransactionsProvider', 'Connectivity restored, auto-syncing $pendingCount pending transactions');
       _isAutoSyncing = true;
 
       try {
         await syncTransactions(accessToken: _lastAccessToken!);
+        _log.info('TransactionsProvider', 'Auto-sync completed successfully');
       } catch (e) {
-        debugPrint('[TransactionsProvider] Auto-sync failed: $e');
+        _log.error('TransactionsProvider', 'Auto-sync failed: $e');
       } finally {
         _isAutoSyncing = false;
       }
