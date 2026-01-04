@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -76,11 +77,13 @@ class DatabaseHelper {
   // Transaction CRUD operations
   Future<String> insertTransaction(Map<String, dynamic> transaction) async {
     final db = await database;
+    debugPrint('[DatabaseHelper] Inserting transaction: local_id=${transaction['local_id']}, account_id="${transaction['account_id']}", server_id=${transaction['server_id']}');
     await db.insert(
       'transactions',
       transaction,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    debugPrint('[DatabaseHelper] Transaction inserted successfully');
     return transaction['local_id'] as String;
   }
 
@@ -88,17 +91,23 @@ class DatabaseHelper {
     final db = await database;
 
     if (accountId != null) {
-      return await db.query(
+      debugPrint('[DatabaseHelper] Querying transactions WHERE account_id = "$accountId"');
+      final results = await db.query(
         'transactions',
         where: 'account_id = ?',
         whereArgs: [accountId],
         orderBy: 'date DESC, created_at DESC',
       );
+      debugPrint('[DatabaseHelper] Query returned ${results.length} results');
+      return results;
     } else {
-      return await db.query(
+      debugPrint('[DatabaseHelper] Querying ALL transactions');
+      final results = await db.query(
         'transactions',
         orderBy: 'date DESC, created_at DESC',
       );
+      debugPrint('[DatabaseHelper] Query returned ${results.length} results');
+      return results;
     }
   }
 
