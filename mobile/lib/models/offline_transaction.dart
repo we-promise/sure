@@ -13,30 +13,20 @@ class OfflineTransaction extends Transaction {
   final DateTime updatedAt;
 
   OfflineTransaction({
-    String? id,
+    super.id,
     required this.localId,
-    required String accountId,
-    required String name,
-    required String date,
-    required String amount,
-    required String currency,
-    required String nature,
-    String? notes,
+    required super.accountId,
+    required super.name,
+    required super.date,
+    required super.amount,
+    required super.currency,
+    required super.nature,
+    super.notes,
     this.syncStatus = SyncStatus.pending,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now(),
-        super(
-          id: id,
-          accountId: accountId,
-          name: name,
-          date: date,
-          amount: amount,
-          currency: currency,
-          nature: nature,
-          notes: notes,
-        );
+        updatedAt = updatedAt ?? DateTime.now();
 
   factory OfflineTransaction.fromTransaction(
     Transaction transaction, {
