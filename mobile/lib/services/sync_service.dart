@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/offline_transaction.dart';
 import '../models/transaction.dart';
 import 'offline_storage_service.dart';
@@ -117,6 +118,7 @@ class SyncService with ChangeNotifier {
     String? accountId,
   }) async {
     try {
+      debugPrint('[SyncService] Fetching transactions from server (accountId: $accountId)');
       final result = await _transactionsService.getTransactions(
         accessToken: accessToken,
         accountId: accountId,
@@ -126,13 +128,18 @@ class SyncService with ChangeNotifier {
         final transactions = (result['transactions'] as List<dynamic>?)
             ?.cast<Transaction>() ?? [];
 
+        debugPrint('[SyncService] Received ${transactions.length} transactions from server');
+
         // Update local cache with server data
         if (accountId == null) {
+          debugPrint('[SyncService] Full sync - clearing and replacing all transactions');
           // Full sync - replace all transactions
           await _offlineStorage.syncTransactionsFromServer(transactions);
         } else {
+          debugPrint('[SyncService] Partial sync - upserting ${transactions.length} transactions for account $accountId');
           // Partial sync - upsert transactions
           for (final transaction in transactions) {
+            debugPrint('[SyncService] Upserting transaction ${transaction.id} for account ${transaction.accountId}');
             await _offlineStorage.upsertTransactionFromServer(transaction);
           }
         }
@@ -145,12 +152,14 @@ class SyncService with ChangeNotifier {
           syncedCount: transactions.length,
         );
       } else {
+        debugPrint('[SyncService] Server returned error: ${result['error']}');
         return SyncResult(
           success: false,
           error: result['error'] as String? ?? 'Failed to sync from server',
         );
       }
     } catch (e) {
+      debugPrint('[SyncService] Exception in syncFromServer: $e');
       return SyncResult(
         success: false,
         error: e.toString(),

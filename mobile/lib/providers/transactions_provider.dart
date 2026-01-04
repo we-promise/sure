@@ -61,29 +61,39 @@ class TransactionsProvider with ChangeNotifier {
       final localTransactions = await _offlineStorage.getTransactions(
         accountId: accountId,
       );
+
+      debugPrint('[TransactionsProvider] Loaded ${localTransactions.length} transactions from local storage (accountId: $accountId)');
+
       _transactions = localTransactions;
       notifyListeners();
 
       // If online and force sync, or if local storage is empty, sync from server
-      if (_connectivityService?.isOnline == true &&
-          (forceSync || localTransactions.isEmpty)) {
+      final isOnline = _connectivityService?.isOnline ?? true;
+      debugPrint('[TransactionsProvider] Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
+
+      if (isOnline && (forceSync || localTransactions.isEmpty)) {
+        debugPrint('[TransactionsProvider] Syncing from server for accountId: $accountId');
         final result = await _syncService.syncFromServer(
           accessToken: accessToken,
           accountId: accountId,
         );
 
         if (result.success) {
+          debugPrint('[TransactionsProvider] Sync successful, synced ${result.syncedCount} transactions');
           // Reload from local storage after sync
           final updatedTransactions = await _offlineStorage.getTransactions(
             accountId: accountId,
           );
+          debugPrint('[TransactionsProvider] After sync, loaded ${updatedTransactions.length} transactions from local storage');
           _transactions = updatedTransactions;
           _error = null;
         } else {
+          debugPrint('[TransactionsProvider] Sync failed: ${result.error}');
           _error = result.error;
         }
       }
     } catch (e) {
+      debugPrint('[TransactionsProvider] Error in fetchTransactions: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
