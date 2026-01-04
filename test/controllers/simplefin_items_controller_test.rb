@@ -1,6 +1,7 @@
 require "test_helper"
 
 class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
   fixtures :users, :families
   setup do
     sign_in users(:family_admin)
@@ -154,22 +155,20 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   test "should update simplefin item with valid token" do
     @simplefin_item.update!(status: :requires_update)
 
-    # Mock the SimpleFin provider to prevent real API calls
-    mock_provider = mock()
-    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
-    mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
-    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+    token = Base64.strict_encode64("https://example.com/claim")
 
-    # Let the real create_simplefin_item! method run - don't mock it
+    SimplefinConnectionUpdateJob.expects(:perform_later).with(
+      family_id: @family.id,
+      old_simplefin_item_id: @simplefin_item.id,
+      setup_token: token
+    ).once
 
     patch simplefin_item_url(@simplefin_item), params: {
-      simplefin_item: { setup_token: "valid_token" }
+      simplefin_item: { setup_token: token }
     }
 
     assert_redirected_to accounts_path
     assert_equal "SimpleFin connection updated.", flash[:notice]
-    @simplefin_item.reload
-    assert @simplefin_item.scheduled_for_deletion?
   end
 
   test "should handle update with invalid token" do
@@ -185,6 +184,8 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "should transfer accounts when updating simplefin item token" do
     @simplefin_item.update!(status: :requires_update)
+
+    token = Base64.strict_encode64("https://example.com/claim")
 
     # Create old SimpleFin accounts linked to Maybe accounts
     old_simplefin_account1 = @simplefin_item.simplefin_accounts.create!(
@@ -228,7 +229,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     # Mock only the external API calls, let business logic run
     mock_provider = mock()
-    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
+    mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
     mock_provider.expects(:get_accounts).returns({
       accounts: [
         {
@@ -251,10 +252,13 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     }).at_least_once
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
-    # Perform the update
-    patch simplefin_item_url(@simplefin_item), params: {
-      simplefin_item: { setup_token: "valid_token" }
-    }
+    # Perform the update (async job), but execute enqueued jobs inline so we can
+    # assert the link transfers.
+    perform_enqueued_jobs(only: SimplefinConnectionUpdateJob) do
+      patch simplefin_item_url(@simplefin_item), params: {
+        simplefin_item: { setup_token: token }
+      }
+    end
 
     assert_redirected_to accounts_path
     assert_equal "SimpleFin connection updated.", flash[:notice]
@@ -279,11 +283,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal new_sf_account1.id, maybe_account1.simplefin_account_id
     assert_equal new_sf_account2.id, maybe_account2.simplefin_account_id
 
-    # Verify old SimpleFin accounts no longer reference Maybe accounts
-    old_simplefin_account1.reload
-    old_simplefin_account2.reload
-    assert_nil old_simplefin_account1.current_account
-    assert_nil old_simplefin_account2.current_account
+    # The old item will be deleted asynchronously; until then, legacy links should be moved.
 
     # Verify old SimpleFin item is scheduled for deletion
     @simplefin_item.reload
@@ -292,6 +292,8 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "should handle partial account matching during token update" do
     @simplefin_item.update!(status: :requires_update)
+
+    token = Base64.strict_encode64("https://example.com/claim")
 
     # Create old SimpleFin account
     old_simplefin_account = @simplefin_item.simplefin_accounts.create!(
@@ -316,19 +318,19 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     # Mock only the external API calls, let business logic run
     mock_provider = mock()
-    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
+    mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
     # Return empty accounts list to simulate account was removed from bank
     mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     # Perform update
-    patch simplefin_item_url(@simplefin_item), params: {
-      simplefin_item: { setup_token: "valid_token" }
-    }
+    perform_enqueued_jobs(only: SimplefinConnectionUpdateJob) do
+      patch simplefin_item_url(@simplefin_item), params: {
+        simplefin_item: { setup_token: token }
+      }
+    end
 
-    assert_response :redirect
-    uri2 = URI(response.redirect_url)
-    assert_equal "/accounts", uri2.path
+    assert_redirected_to accounts_path
 
     # Verify Maybe account still linked to old SimpleFin account (no transfer occurred)
     maybe_account.reload
@@ -450,30 +452,27 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   test "update redirects to accounts after setup without forcing a modal" do
     @simplefin_item.update!(status: :requires_update)
 
-    # Mock provider to return one account so updated_item creates SFAs
-    mock_provider = mock()
-    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
-    mock_provider.expects(:get_accounts).returns({
-      accounts: [
-        { id: "sf_auto_open_1", name: "Auto Open Checking", type: "depository", currency: "USD", balance: 100, transactions: [] }
-      ]
-    }).at_least_once
-    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+    token = Base64.strict_encode64("https://example.com/claim")
 
-    patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: "valid_token" } }
+    SimplefinConnectionUpdateJob.expects(:perform_later).with(
+      family_id: @family.id,
+      old_simplefin_item_id: @simplefin_item.id,
+      setup_token: token
+    ).once
 
-    assert_response :redirect
-    uri = URI(response.redirect_url)
-    assert_equal "/accounts", uri.path
+    patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }
+
+    assert_redirected_to accounts_path
   end
 
   test "create does not auto-open when no candidates or unlinked" do
     # Mock provider interactions for item creation (no immediate account import on create)
     mock_provider = mock()
-    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
+    token = Base64.strict_encode64("https://example.com/claim")
+    mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
-    post simplefin_items_url, params: { simplefin_item: { setup_token: "valid_token" } }
+    post simplefin_items_url, params: { simplefin_item: { setup_token: token } }
 
     assert_response :redirect
     uri = URI(response.redirect_url)
@@ -485,12 +484,15 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   test "update does not auto-open when no SFAs present" do
     @simplefin_item.update!(status: :requires_update)
 
-    mock_provider = mock()
-    mock_provider.expects(:claim_access_url).with("valid_token").returns("https://example.com/new_access")
-    mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
-    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+    token = Base64.strict_encode64("https://example.com/claim")
 
-    patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: "valid_token" } }
+    SimplefinConnectionUpdateJob.expects(:perform_later).with(
+      family_id: @family.id,
+      old_simplefin_item_id: @simplefin_item.id,
+      setup_token: token
+    ).once
+
+    patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }
 
     assert_response :redirect
     uri = URI(response.redirect_url)

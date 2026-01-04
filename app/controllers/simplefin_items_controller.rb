@@ -21,58 +21,21 @@ class SimplefinItemsController < ApplicationController
     return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
-      # Create new SimpleFin item data with updated token
-      updated_item = Current.family.create_simplefin_item!(
-        setup_token: setup_token,
-        item_name: @simplefin_item.name
+      # Validate token shape early so the user gets immediate feedback.
+      claim_url = Base64.decode64(setup_token)
+      URI.parse(claim_url)
+
+      # Updating a SimpleFin connection can involve network retries/backoff and account import.
+      # Do it asynchronously so web requests aren't blocked by retry sleeps.
+      SimplefinConnectionUpdateJob.perform_later(
+        family_id: Current.family.id,
+        old_simplefin_item_id: @simplefin_item.id,
+        setup_token: setup_token
       )
 
-      # Ensure new simplefin_accounts are created & have account_id set
-      updated_item.import_latest_simplefin_data
-
-      # Transfer accounts from old item to new item using smart matching
-      # When SimpleFin connections are recreated, account IDs may change.
-      # We use fingerprint matching (name + institution + type) as fallback.
-      unmatched_accounts = []
-      matched_count = 0
-
-      ActiveRecord::Base.transaction do
-        @simplefin_item.simplefin_accounts.each do |old_account|
-          next unless old_account.account.present?
-
-          # Try to find matching account in new item
-          new_account = find_matching_simplefin_account(old_account, updated_item.simplefin_accounts)
-
-          if new_account
-            # Transfer the account directly to the new SimpleFin account
-            old_account.account.update!(simplefin_account_id: new_account.id)
-            matched_count += 1
-            Rails.logger.info("SimpleFin update: Matched account '#{old_account.name}' (old_id: #{old_account.account_id}) to new account (new_id: #{new_account.account_id})")
-          else
-            unmatched_accounts << old_account
-            Rails.logger.warn("SimpleFin update: Could not match account '#{old_account.name}' (account_id: #{old_account.account_id}) - may need manual relinking")
-          end
-        end
-
-        # Mark old item for deletion
-        @simplefin_item.destroy_later
-      end
-
-      # Log summary for debugging
-      if unmatched_accounts.any?
-        Rails.logger.warn("SimpleFin update: #{unmatched_accounts.size} account(s) could not be auto-matched and may need manual relinking: #{unmatched_accounts.map(&:name).join(', ')}")
-      end
-
-      # Clear any requires_update status on new item
-      updated_item.update!(status: :good)
-
       if turbo_frame_request?
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "simplefin-providers-panel",
-          partial: "settings/providers/simplefin_panel",
-          locals: { simplefin_items: @simplefin_items }
-        )
+        flash.now[:notice] = t(".success")
+        render turbo_stream: Array(flash_notification_stream_items)
       else
         redirect_to accounts_path, notice: t(".success"), status: :see_other
       end
