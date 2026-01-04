@@ -64,9 +64,11 @@ class SimplefinConnectionUpdateJob < ApplicationJob
           new_simplefin_account.ensure_account_provider!
         end
       end
-
-      old_item.destroy_later
     end
+
+    # Schedule deletion outside transaction to avoid race condition where
+    # the job is enqueued even if the transaction rolls back
+    old_item.destroy_later
 
     # Only mark as good if import succeeded (status wasn't set to requires_update above)
     updated_item.update!(status: :good) unless updated_item.requires_update?
@@ -131,8 +133,35 @@ class SimplefinConnectionUpdateJob < ApplicationJob
       longer = [ name1.length, name2.length ].max
       return false if longer == 0
 
-      common_chars = (name1.chars & name2.chars).length
-      similarity = common_chars.to_f / longer
+      # Use Levenshtein distance for more accurate similarity
+      distance = levenshtein_distance(name1, name2)
+      similarity = 1.0 - (distance.to_f / longer)
       similarity >= 0.8
+    end
+
+    # Compute Levenshtein edit distance between two strings
+    def levenshtein_distance(s1, s2)
+      m, n = s1.length, s2.length
+      return n if m.zero?
+      return m if n.zero?
+
+      # Use a single array and update in place for memory efficiency
+      prev_row = (0..n).to_a
+      curr_row = []
+
+      (1..m).each do |i|
+        curr_row[0] = i
+        (1..n).each do |j|
+          cost = s1[i - 1] == s2[j - 1] ? 0 : 1
+          curr_row[j] = [
+            prev_row[j] + 1,      # deletion
+            curr_row[j - 1] + 1,  # insertion
+            prev_row[j - 1] + cost # substitution
+          ].min
+        end
+        prev_row, curr_row = curr_row, prev_row
+      end
+
+      prev_row[n]
     end
 end

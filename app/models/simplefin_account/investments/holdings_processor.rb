@@ -22,8 +22,11 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
         # If symbol is missing but we have a description, create a synthetic ticker
         # This allows tracking holdings like 401k funds that don't have standard symbols
+        # Append a hash suffix to ensure uniqueness for similar descriptions
         if symbol.blank? && description.present?
-          symbol = "CUSTOM:#{description.gsub(/[^a-zA-Z0-9]/, '_').upcase.truncate(30, omission: '')}"
+          normalized = description.gsub(/[^a-zA-Z0-9]/, "_").upcase.truncate(24, omission: "")
+          hash_suffix = Digest::MD5.hexdigest(description)[0..4].upcase
+          symbol = "CUSTOM:#{normalized}_#{hash_suffix}"
           Rails.logger.info("SimpleFin: using synthetic ticker #{symbol} for holding #{holding_id} (#{description})")
         end
 
