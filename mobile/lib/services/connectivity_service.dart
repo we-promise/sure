@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'log_service.dart';
 
 class ConnectivityService with ChangeNotifier {
   final Connectivity _connectivity = Connectivity();
+  final LogService _log = LogService.instance;
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
   bool _isOnline = true;
@@ -11,6 +13,7 @@ class ConnectivityService with ChangeNotifier {
   bool get isOffline => !_isOnline;
 
   ConnectivityService() {
+    _log.info('ConnectivityService', 'Initializing connectivity service');
     _initConnectivity();
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
   }
@@ -18,9 +21,11 @@ class ConnectivityService with ChangeNotifier {
   Future<void> _initConnectivity() async {
     try {
       final result = await _connectivity.checkConnectivity();
+      _log.info('ConnectivityService', 'Initial connectivity check: $result');
       _updateConnectionStatus(result);
     } catch (e) {
       // If we can't determine connectivity, assume we're offline
+      _log.error('ConnectivityService', 'Failed to check connectivity: $e');
       _isOnline = false;
       notifyListeners();
     }
@@ -34,8 +39,11 @@ class ConnectivityService with ChangeNotifier {
         result == ConnectivityResult.wifi ||
         result == ConnectivityResult.ethernet;
 
+    _log.info('ConnectivityService', 'Connectivity changed: $result -> ${_isOnline ? "ONLINE" : "OFFLINE"}');
+
     // Only notify if the status changed
     if (wasOnline != _isOnline) {
+      _log.info('ConnectivityService', 'Connection status changed from ${wasOnline ? "ONLINE" : "OFFLINE"} to ${_isOnline ? "ONLINE" : "OFFLINE"}');
       notifyListeners();
     }
   }

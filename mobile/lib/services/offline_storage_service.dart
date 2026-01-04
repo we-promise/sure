@@ -4,10 +4,12 @@ import '../models/offline_transaction.dart';
 import '../models/transaction.dart';
 import '../models/account.dart';
 import 'database_helper.dart';
+import 'log_service.dart';
 
 class OfflineStorageService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final Uuid _uuid = const Uuid();
+  final LogService _log = LogService.instance;
 
   // Transaction operations
   Future<OfflineTransaction> saveTransaction({
@@ -21,6 +23,8 @@ class OfflineStorageService {
     String? serverId,
     SyncStatus syncStatus = SyncStatus.pending,
   }) async {
+    _log.info('OfflineStorage', 'saveTransaction called: name=$name, amount=$amount, accountId=$accountId, syncStatus=$syncStatus');
+
     final localId = _uuid.v4();
     final transaction = OfflineTransaction(
       id: serverId,
@@ -35,27 +39,33 @@ class OfflineStorageService {
       syncStatus: syncStatus,
     );
 
-    await _dbHelper.insertTransaction(transaction.toDatabaseMap());
-    return transaction;
+    try {
+      await _dbHelper.insertTransaction(transaction.toDatabaseMap());
+      _log.info('OfflineStorage', 'Transaction saved successfully with localId: $localId');
+      return transaction;
+    } catch (e) {
+      _log.error('OfflineStorage', 'Failed to save transaction: $e');
+      rethrow;
+    }
   }
 
   Future<List<OfflineTransaction>> getTransactions({String? accountId}) async {
-    debugPrint('[OfflineStorage] getTransactions called with accountId: $accountId');
+    _log.debug('OfflineStorage', 'getTransactions called with accountId: $accountId');
     final transactionMaps = await _dbHelper.getTransactions(accountId: accountId);
-    debugPrint('[OfflineStorage] Retrieved ${transactionMaps.length} transaction maps from database');
+    _log.debug('OfflineStorage', 'Retrieved ${transactionMaps.length} transaction maps from database');
 
     if (transactionMaps.isNotEmpty && accountId != null) {
-      debugPrint('[OfflineStorage] Sample transaction account_ids:');
+      _log.debug('OfflineStorage', 'Sample transaction account_ids:');
       for (int i = 0; i < transactionMaps.take(3).length; i++) {
         final map = transactionMaps[i];
-        debugPrint('  - Transaction ${map['server_id']}: account_id="${map['account_id']}"');
+        _log.debug('OfflineStorage', '  - Transaction ${map['server_id']}: account_id="${map['account_id']}"');
       }
     }
 
     final transactions = transactionMaps
         .map((map) => OfflineTransaction.fromDatabaseMap(map))
         .toList();
-    debugPrint('[OfflineStorage] Returning ${transactions.length} transactions');
+    _log.debug('OfflineStorage', 'Returning ${transactions.length} transactions');
     return transactions;
   }
 

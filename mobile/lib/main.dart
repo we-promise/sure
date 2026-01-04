@@ -13,6 +13,10 @@ import 'services/log_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiConfig.initialize();
+
+  // Add initial log entry
+  LogService.instance.info('App', 'Sure Finance app starting...');
+
   runApp(const SureApp());
 }
 

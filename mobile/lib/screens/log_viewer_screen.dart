@@ -16,6 +16,13 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   bool _autoScroll = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Add a test log to confirm logging is working
+    LogService.instance.info('LogViewer', 'Log viewer screen opened');
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
