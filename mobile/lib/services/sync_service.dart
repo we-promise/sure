@@ -1,0 +1,268 @@
+import 'package:flutter/foundation.dart';
+import '../models/offline_transaction.dart';
+import '../models/transaction.dart';
+import 'offline_storage_service.dart';
+import 'transactions_service.dart';
+import 'accounts_service.dart';
+import 'connectivity_service.dart';
+
+class SyncService with ChangeNotifier {
+  final OfflineStorageService _offlineStorage = OfflineStorageService();
+  final TransactionsService _transactionsService = TransactionsService();
+  final AccountsService _accountsService = AccountsService();
+
+  bool _isSyncing = false;
+  String? _syncError;
+  DateTime? _lastSyncTime;
+
+  bool get isSyncing => _isSyncing;
+  String? get syncError => _syncError;
+  DateTime? get lastSyncTime => _lastSyncTime;
+
+  /// Sync pending transactions to server
+  Future<SyncResult> syncPendingTransactions(String accessToken) async {
+    if (_isSyncing) {
+      return SyncResult(success: false, error: 'Sync already in progress');
+    }
+
+    _isSyncing = true;
+    _syncError = null;
+    notifyListeners();
+
+    int successCount = 0;
+    int failureCount = 0;
+    String? lastError;
+
+    try {
+      final pendingTransactions = await _offlineStorage.getPendingTransactions();
+
+      if (pendingTransactions.isEmpty) {
+        _isSyncing = false;
+        _lastSyncTime = DateTime.now();
+        notifyListeners();
+        return SyncResult(success: true, syncedCount: 0);
+      }
+
+      for (final transaction in pendingTransactions) {
+        try {
+          // Upload transaction to server
+          final result = await _transactionsService.createTransaction(
+            accessToken: accessToken,
+            accountId: transaction.accountId,
+            name: transaction.name,
+            date: transaction.date,
+            amount: transaction.amount,
+            currency: transaction.currency,
+            nature: transaction.nature,
+            notes: transaction.notes,
+          );
+
+          if (result['success'] == true) {
+            // Update local transaction with server ID and mark as synced
+            final serverTransaction = result['transaction'] as Transaction;
+            await _offlineStorage.updateTransactionSyncStatus(
+              localId: transaction.localId,
+              syncStatus: SyncStatus.synced,
+              serverId: serverTransaction.id,
+            );
+            successCount++;
+          } else {
+            // Mark as failed
+            await _offlineStorage.updateTransactionSyncStatus(
+              localId: transaction.localId,
+              syncStatus: SyncStatus.failed,
+            );
+            failureCount++;
+            lastError = result['error'] as String?;
+          }
+        } catch (e) {
+          // Mark as failed
+          await _offlineStorage.updateTransactionSyncStatus(
+            localId: transaction.localId,
+            syncStatus: SyncStatus.failed,
+          );
+          failureCount++;
+          lastError = e.toString();
+        }
+      }
+
+      _isSyncing = false;
+      _lastSyncTime = DateTime.now();
+      _syncError = failureCount > 0 ? lastError : null;
+      notifyListeners();
+
+      return SyncResult(
+        success: failureCount == 0,
+        syncedCount: successCount,
+        failedCount: failureCount,
+        error: _syncError,
+      );
+    } catch (e) {
+      _isSyncing = false;
+      _syncError = e.toString();
+      notifyListeners();
+
+      return SyncResult(
+        success: false,
+        syncedCount: successCount,
+        failedCount: failureCount,
+        error: _syncError,
+      );
+    }
+  }
+
+  /// Download transactions from server and update local cache
+  Future<SyncResult> syncFromServer({
+    required String accessToken,
+    String? accountId,
+  }) async {
+    try {
+      final result = await _transactionsService.getTransactions(
+        accessToken: accessToken,
+        accountId: accountId,
+      );
+
+      if (result['success'] == true) {
+        final transactions = (result['transactions'] as List<dynamic>?)
+            ?.cast<Transaction>() ?? [];
+
+        // Update local cache with server data
+        if (accountId == null) {
+          // Full sync - replace all transactions
+          await _offlineStorage.syncTransactionsFromServer(transactions);
+        } else {
+          // Partial sync - upsert transactions
+          for (final transaction in transactions) {
+            await _offlineStorage.upsertTransactionFromServer(transaction);
+          }
+        }
+
+        _lastSyncTime = DateTime.now();
+        notifyListeners();
+
+        return SyncResult(
+          success: true,
+          syncedCount: transactions.length,
+        );
+      } else {
+        return SyncResult(
+          success: false,
+          error: result['error'] as String? ?? 'Failed to sync from server',
+        );
+      }
+    } catch (e) {
+      return SyncResult(
+        success: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Sync accounts from server and update local cache
+  Future<SyncResult> syncAccounts(String accessToken) async {
+    try {
+      final result = await _accountsService.getAccounts(accessToken: accessToken);
+
+      if (result['success'] == true) {
+        final accountsList = result['accounts'] as List<dynamic>? ?? [];
+
+        // Clear and update local account cache
+        await _offlineStorage.clearAccounts();
+
+        // The accounts list contains Account objects, not raw JSON
+        for (final account in accountsList) {
+          await _offlineStorage.saveAccount(account);
+        }
+
+        notifyListeners();
+
+        return SyncResult(
+          success: true,
+          syncedCount: accountsList.length,
+        );
+      } else {
+        return SyncResult(
+          success: false,
+          error: result['error'] as String? ?? 'Failed to sync accounts',
+        );
+      }
+    } catch (e) {
+      return SyncResult(
+        success: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Full sync - upload pending transactions and download from server
+  Future<SyncResult> performFullSync(String accessToken) async {
+    if (_isSyncing) {
+      return SyncResult(success: false, error: 'Sync already in progress');
+    }
+
+    _isSyncing = true;
+    _syncError = null;
+    notifyListeners();
+
+    try {
+      // Step 1: Upload pending transactions
+      final uploadResult = await syncPendingTransactions(accessToken);
+
+      // Step 2: Download transactions from server
+      final downloadResult = await syncFromServer(accessToken: accessToken);
+
+      // Step 3: Sync accounts
+      await syncAccounts(accessToken);
+
+      _isSyncing = false;
+      _lastSyncTime = DateTime.now();
+
+      final allSuccess = uploadResult.success && downloadResult.success;
+      _syncError = allSuccess ? null : (uploadResult.error ?? downloadResult.error);
+
+      notifyListeners();
+
+      return SyncResult(
+        success: allSuccess,
+        syncedCount: (uploadResult.syncedCount ?? 0) + (downloadResult.syncedCount ?? 0),
+        failedCount: uploadResult.failedCount,
+        error: _syncError,
+      );
+    } catch (e) {
+      _isSyncing = false;
+      _syncError = e.toString();
+      notifyListeners();
+
+      return SyncResult(
+        success: false,
+        error: _syncError,
+      );
+    }
+  }
+
+  /// Auto sync if online - to be called when app regains connectivity
+  Future<void> autoSync(String accessToken, ConnectivityService connectivityService) async {
+    if (connectivityService.isOnline && !_isSyncing) {
+      await performFullSync(accessToken);
+    }
+  }
+
+  void clearSyncError() {
+    _syncError = null;
+    notifyListeners();
+  }
+}
+
+class SyncResult {
+  final bool success;
+  final int? syncedCount;
+  final int? failedCount;
+  final String? error;
+
+  SyncResult({
+    required this.success,
+    this.syncedCount,
+    this.failedCount,
+    this.error,
+  });
+}

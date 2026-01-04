@@ -16,6 +16,10 @@ dependencies:
   shared_preferences: ^2.2.2
   flutter_secure_storage: ^10.0.0
   intl: ^0.18.1
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  connectivity_plus: ^5.0.2
+  uuid: ^4.2.1
 
 dev_dependencies:
   flutter_test:

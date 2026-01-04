@@ -4,6 +4,7 @@ import '../models/account.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../widgets/account_card.dart';
+import '../widgets/connectivity_banner.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
 
@@ -205,14 +206,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: Consumer2<AuthProvider, AccountsProvider>(
-        builder: (context, authProvider, accountsProvider, _) {
-          // Show loading state during initialization or when loading
-          if (accountsProvider.isInitializing || accountsProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+      body: Column(
+        children: [
+          const ConnectivityBanner(),
+          Expanded(
+            child: Consumer2<AuthProvider, AccountsProvider>(
+              builder: (context, authProvider, accountsProvider, _) {
+                // Show loading state during initialization or when loading
+                if (accountsProvider.isInitializing || accountsProvider.isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
           // Show error state
           if (accountsProvider.errorMessage != null && 
@@ -418,7 +423,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           );
-        },
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
