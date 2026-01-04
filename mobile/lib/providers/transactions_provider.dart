@@ -16,6 +16,8 @@ class TransactionsProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   ConnectivityService? _connectivityService;
+  String? _lastAccessToken;
+  bool _isAutoSyncing = false;
 
   List<Transaction> get transactions =>
       UnmodifiableListView(_transactions.map((t) => t.toTransaction()));
@@ -37,12 +39,22 @@ class TransactionsProvider with ChangeNotifier {
     _connectivityService?.addListener(_onConnectivityChanged);
   }
 
-  void _onConnectivityChanged() {
+  void _onConnectivityChanged() async {
     // Auto-sync when connectivity is restored
-    if (_connectivityService?.isOnline == true && hasPendingTransactions) {
-      // Trigger sync in background (don't await)
-      // The actual sync will be triggered by the UI or manually
-      notifyListeners();
+    if (_connectivityService?.isOnline == true &&
+        hasPendingTransactions &&
+        _lastAccessToken != null &&
+        !_isAutoSyncing) {
+      debugPrint('[TransactionsProvider] Connectivity restored, auto-syncing pending transactions');
+      _isAutoSyncing = true;
+
+      try {
+        await syncTransactions(accessToken: _lastAccessToken!);
+      } catch (e) {
+        debugPrint('[TransactionsProvider] Auto-sync failed: $e');
+      } finally {
+        _isAutoSyncing = false;
+      }
     }
   }
 
@@ -52,6 +64,7 @@ class TransactionsProvider with ChangeNotifier {
     String? accountId,
     bool forceSync = false,
   }) async {
+    _lastAccessToken = accessToken; // Store for auto-sync
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -112,6 +125,8 @@ class TransactionsProvider with ChangeNotifier {
     required String nature,
     String? notes,
   }) async {
+    _lastAccessToken = accessToken; // Store for auto-sync
+
     try {
       final isOnline = _connectivityService?.isOnline ?? false;
 

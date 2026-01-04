@@ -139,8 +139,11 @@ class SyncService with ChangeNotifier {
           debugPrint('[SyncService] Partial sync - upserting ${transactions.length} transactions for account $accountId');
           // Partial sync - upsert transactions
           for (final transaction in transactions) {
-            debugPrint('[SyncService] Upserting transaction ${transaction.id} for account ${transaction.accountId}');
-            await _offlineStorage.upsertTransactionFromServer(transaction);
+            debugPrint('[SyncService] Upserting transaction ${transaction.id} (accountId from server: "${transaction.accountId}", provided: "$accountId")');
+            await _offlineStorage.upsertTransactionFromServer(
+              transaction,
+              accountId: accountId,
+            );
           }
         }
 

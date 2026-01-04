@@ -104,25 +104,47 @@ class OfflineStorageService {
     }
   }
 
-  Future<void> upsertTransactionFromServer(Transaction transaction) async {
+  Future<void> upsertTransactionFromServer(
+    Transaction transaction, {
+    String? accountId,
+  }) async {
     if (transaction.id == null) return;
+
+    // If accountId is provided and transaction.accountId is empty, use the provided one
+    final effectiveAccountId = transaction.accountId.isEmpty && accountId != null
+        ? accountId
+        : transaction.accountId;
 
     // Check if we already have this transaction
     final existing = await getTransactionByServerId(transaction.id!);
 
     if (existing != null) {
       // Update existing transaction
-      final updated = OfflineTransaction.fromTransaction(
-        transaction,
+      final updated = OfflineTransaction(
+        id: transaction.id,
         localId: existing.localId,
+        accountId: effectiveAccountId,
+        name: transaction.name,
+        date: transaction.date,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        nature: transaction.nature,
+        notes: transaction.notes,
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
     } else {
       // Insert new transaction
-      final offlineTransaction = OfflineTransaction.fromTransaction(
-        transaction,
+      final offlineTransaction = OfflineTransaction(
+        id: transaction.id,
         localId: _uuid.v4(),
+        accountId: effectiveAccountId,
+        name: transaction.name,
+        date: transaction.date,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        nature: transaction.nature,
+        notes: transaction.notes,
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
