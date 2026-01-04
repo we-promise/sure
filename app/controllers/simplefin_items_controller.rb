@@ -30,22 +30,37 @@ class SimplefinItemsController < ApplicationController
       # Ensure new simplefin_accounts are created & have account_id set
       updated_item.import_latest_simplefin_data
 
-      # Transfer accounts from old item to new item
+      # Transfer accounts from old item to new item using smart matching
+      # When SimpleFin connections are recreated, account IDs may change.
+      # We use fingerprint matching (name + institution + type) as fallback.
+      unmatched_accounts = []
+      matched_count = 0
+
       ActiveRecord::Base.transaction do
         @simplefin_item.simplefin_accounts.each do |old_account|
-          if old_account.account.present?
-            # Find matching account in new item by account_id
-            new_account = updated_item.simplefin_accounts.find_by(account_id: old_account.account_id)
-            if new_account
-              # Transfer the account directly to the new SimpleFin account
-              # This will automatically break the old association
-              old_account.account.update!(simplefin_account_id: new_account.id)
-            end
+          next unless old_account.account.present?
+
+          # Try to find matching account in new item
+          new_account = find_matching_simplefin_account(old_account, updated_item.simplefin_accounts)
+
+          if new_account
+            # Transfer the account directly to the new SimpleFin account
+            old_account.account.update!(simplefin_account_id: new_account.id)
+            matched_count += 1
+            Rails.logger.info("SimpleFin update: Matched account '#{old_account.name}' (old_id: #{old_account.account_id}) to new account (new_id: #{new_account.account_id})")
+          else
+            unmatched_accounts << old_account
+            Rails.logger.warn("SimpleFin update: Could not match account '#{old_account.name}' (account_id: #{old_account.account_id}) - may need manual relinking")
           end
         end
 
         # Mark old item for deletion
         @simplefin_item.destroy_later
+      end
+
+      # Log summary for debugging
+      if unmatched_accounts.any?
+        Rails.logger.warn("SimpleFin update: #{unmatched_accounts.size} account(s) could not be auto-matched and may need manual relinking: #{unmatched_accounts.map(&:name).join(', ')}")
       end
 
       # Clear any requires_update status on new item
@@ -482,5 +497,87 @@ class SimplefinItemsController < ApplicationController
       else
         render context, status: :unprocessable_entity
       end
+    end
+
+    # Find a matching SimpleFin account in the new item's accounts.
+    # Uses a multi-tier matching strategy:
+    # 1. Exact account_id match (preferred)
+    # 2. Fingerprint match (name + institution + account_type)
+    # 3. Fuzzy name match with same institution (fallback)
+    def find_matching_simplefin_account(old_account, new_accounts)
+      # Tier 1: Exact account_id match
+      exact_match = new_accounts.find_by(account_id: old_account.account_id)
+      return exact_match if exact_match
+
+      # Tier 2: Fingerprint match (name + institution + type)
+      old_fingerprint = account_fingerprint(old_account)
+      fingerprint_match = new_accounts.find do |new_account|
+        account_fingerprint(new_account) == old_fingerprint
+      end
+      return fingerprint_match if fingerprint_match
+
+      # Tier 3: Fuzzy match - same institution and similar name
+      old_institution = extract_institution_id(old_account)
+      old_name_normalized = normalize_account_name(old_account.name)
+
+      fuzzy_match = new_accounts.find do |new_account|
+        new_institution = extract_institution_id(new_account)
+        new_name_normalized = normalize_account_name(new_account.name)
+
+        # Must be same institution
+        next false unless old_institution.present? && old_institution == new_institution
+
+        # Name similarity check (contains or high overlap)
+        names_similar?(old_name_normalized, new_name_normalized)
+      end
+
+      fuzzy_match
+    end
+
+    # Generate a fingerprint for matching accounts across SimpleFin reconnections
+    def account_fingerprint(simplefin_account)
+      institution_id = extract_institution_id(simplefin_account)
+      name_normalized = normalize_account_name(simplefin_account.name)
+      account_type = simplefin_account.account_type.to_s.downcase
+
+      "#{institution_id}:#{name_normalized}:#{account_type}"
+    end
+
+    # Extract institution identifier from org_data
+    def extract_institution_id(simplefin_account)
+      org_data = simplefin_account.org_data
+      return nil unless org_data.is_a?(Hash)
+
+      # Try various fields that identify the institution
+      org_data["id"] || org_data["domain"] || org_data["name"]&.downcase&.gsub(/\s+/, "_")
+    end
+
+    # Normalize account name for comparison
+    def normalize_account_name(name)
+      return "" if name.blank?
+
+      name.to_s
+          .downcase
+          .gsub(/[^a-z0-9]/, "") # Remove non-alphanumeric
+    end
+
+    # Check if two normalized names are similar enough to be the same account
+    def names_similar?(name1, name2)
+      return false if name1.blank? || name2.blank?
+
+      # Exact match after normalization
+      return true if name1 == name2
+
+      # One contains the other (handles "Checking" vs "Chase Checking")
+      return true if name1.include?(name2) || name2.include?(name1)
+
+      # Check character overlap (at least 80% similar)
+      longer = [ name1.length, name2.length ].max
+      return false if longer == 0
+
+      # Simple Levenshtein-like similarity
+      common_chars = (name1.chars & name2.chars).length
+      similarity = common_chars.to_f / longer
+      similarity >= 0.8
     end
 end

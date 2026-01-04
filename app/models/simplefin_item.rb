@@ -192,6 +192,58 @@ class SimplefinItem < ApplicationRecord
     end
   end
 
+  # Detect if sync data appears stale (no new transactions for extended period)
+  # Returns a hash with :stale (boolean) and :message (string) if stale
+  def stale_sync_status
+    return { stale: false } unless last_synced_at.present?
+
+    # Check if last sync was more than 3 days ago
+    days_since_sync = (Date.current - last_synced_at.to_date).to_i
+    if days_since_sync > 3
+      return {
+        stale: true,
+        days_since_sync: days_since_sync,
+        message: "Last successful sync was #{days_since_sync} days ago. Your SimpleFin connection may need attention."
+      }
+    end
+
+    # Check if linked accounts have recent transactions
+    linked_accounts = accounts
+    return { stale: false } if linked_accounts.empty?
+
+    # Find the most recent transaction date across all linked accounts
+    latest_transaction_date = Entry.where(account_id: linked_accounts.map(&:id))
+                                   .where(entryable_type: "Transaction")
+                                   .maximum(:date)
+
+    if latest_transaction_date.present?
+      days_since_transaction = (Date.current - latest_transaction_date).to_i
+      if days_since_transaction > 14
+        return {
+          stale: true,
+          days_since_transaction: days_since_transaction,
+          message: "No new transactions in #{days_since_transaction} days. Check your SimpleFin dashboard to ensure your bank connections are active."
+        }
+      end
+    end
+
+    { stale: false }
+  end
+
+  # Check if the SimpleFin connection needs user attention
+  def needs_attention?
+    requires_update? || stale_sync_status[:stale] || pending_account_setup?
+  end
+
+  # Get a summary of issues requiring attention
+  def attention_summary
+    issues = []
+    issues << "Connection needs update" if requires_update?
+    issues << stale_sync_status[:message] if stale_sync_status[:stale]
+    issues << "Accounts need setup" if pending_account_setup?
+    issues
+  end
+
   private
     def remove_simplefin_item
       # SimpleFin doesn't require server-side cleanup like Plaid

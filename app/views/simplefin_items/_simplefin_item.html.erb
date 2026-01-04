@@ -77,6 +77,11 @@
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
               <%= tag.span t(".requires_update") %>
             </div>
+          <% elsif (stale_status = simplefin_item.stale_sync_status)[:stale] %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-circle", size: "sm", color: "warning" %>
+              <%= tag.span stale_status[:message], class: "text-sm" %>
+            </div>
           <% elsif simplefin_item.rate_limited_message.present? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "clock", size: "sm", color: "warning" %>
@@ -197,17 +202,60 @@
               </div>
               <div>
                 <h4 class="text-primary font-medium mb-1">Health</h4>
-                <div class="flex items-center gap-3">
-                  <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
-                    <% ts = stats["rate_limited_at"] %>
-                    <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
-                    <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-3">
+                    <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
+                      <% ts = stats["rate_limited_at"] %>
+                      <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
+                      <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
+                    <% end %>
+                    <% total_errors = stats["total_errors"].to_i %>
+                    <% if total_errors > 0 %>
+                      <span class="text-destructive">Errors: <%= total_errors %></span>
+                    <% else %>
+                      <span>Errors: 0</span>
+                    <% end %>
+                  </div>
+                  <%# Reconciliation warnings %>
+                  <% reconciliation_warnings = stats["reconciliation_warnings"].to_i %>
+                  <% reconciliation_notices = stats["reconciliation_notices"].to_i %>
+                  <% if reconciliation_warnings > 0 || reconciliation_notices > 0 %>
+                    <div class="flex items-center gap-2 mt-1">
+                      <% if reconciliation_warnings > 0 %>
+                        <%= render DS::Tooltip.new(
+                          text: "#{reconciliation_warnings} data integrity warning(s) detected. Check for missing transactions or gaps in history.",
+                          icon: "alert-triangle",
+                          size: "sm",
+                          color: "warning"
+                        ) %>
+                        <span class="text-warning text-xs">Data warnings: <%= reconciliation_warnings %></span>
+                      <% end %>
+                      <% if reconciliation_notices > 0 %>
+                        <%= render DS::Tooltip.new(
+                          text: "#{reconciliation_notices} minor data notice(s). Some transaction gaps or stale data detected.",
+                          icon: "info",
+                          size: "sm"
+                        ) %>
+                        <span class="text-secondary text-xs">Notices: <%= reconciliation_notices %></span>
+                      <% end %>
+                    </div>
                   <% end %>
-                  <% total_errors = stats["total_errors"].to_i %>
-                  <% if total_errors > 0 %>
-                    <span class="text-destructive">Errors: <%= total_errors %></span>
-                  <% else %>
-                    <span>Errors: 0</span>
+                  <%# Show specific reconciliation issues if present %>
+                  <% reconciliation = stats["reconciliation"] %>
+                  <% if reconciliation.is_a?(Hash) && reconciliation.any? %>
+                    <details class="mt-2">
+                      <summary class="text-xs text-secondary cursor-pointer hover:text-primary">View data quality details</summary>
+                      <div class="mt-1 text-xs space-y-1 pl-2 border-l-2 border-surface-inset">
+                        <% reconciliation.each do |account_id, data| %>
+                          <% issues = data.is_a?(Hash) ? (data[:issues] || data["issues"]) : [] %>
+                          <% issues.to_a.each do |issue| %>
+                            <div class="<%= issue[:severity] == 'high' || issue['severity'] == 'high' ? 'text-warning' : 'text-secondary' %>">
+                              <%= issue[:message] || issue["message"] %>
+                            </div>
+                          <% end %>
+                        <% end %>
+                      </div>
+                    </details>
                   <% end %>
                 </div>
               </div>
