@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../models/offline_transaction.dart';
 import '../models/transaction.dart';
@@ -39,10 +40,23 @@ class OfflineStorageService {
   }
 
   Future<List<OfflineTransaction>> getTransactions({String? accountId}) async {
+    debugPrint('[OfflineStorage] getTransactions called with accountId: $accountId');
     final transactionMaps = await _dbHelper.getTransactions(accountId: accountId);
-    return transactionMaps
+    debugPrint('[OfflineStorage] Retrieved ${transactionMaps.length} transaction maps from database');
+
+    if (transactionMaps.isNotEmpty && accountId != null) {
+      debugPrint('[OfflineStorage] Sample transaction account_ids:');
+      for (int i = 0; i < transactionMaps.take(3).length; i++) {
+        final map = transactionMaps[i];
+        debugPrint('  - Transaction ${map['server_id']}: account_id="${map['account_id']}"');
+      }
+    }
+
+    final transactions = transactionMaps
         .map((map) => OfflineTransaction.fromDatabaseMap(map))
         .toList();
+    debugPrint('[OfflineStorage] Returning ${transactions.length} transactions');
+    return transactions;
   }
 
   Future<OfflineTransaction?> getTransactionByLocalId(String localId) async {
@@ -108,17 +122,26 @@ class OfflineStorageService {
     Transaction transaction, {
     String? accountId,
   }) async {
-    if (transaction.id == null) return;
+    if (transaction.id == null) {
+      debugPrint('[OfflineStorage] Skipping transaction with null ID');
+      return;
+    }
 
     // If accountId is provided and transaction.accountId is empty, use the provided one
     final effectiveAccountId = transaction.accountId.isEmpty && accountId != null
         ? accountId
         : transaction.accountId;
 
+    debugPrint('[OfflineStorage] Upserting transaction ${transaction.id}:');
+    debugPrint('  - accountId from transaction: "${transaction.accountId}"');
+    debugPrint('  - accountId provided: "$accountId"');
+    debugPrint('  - effectiveAccountId: "$effectiveAccountId"');
+
     // Check if we already have this transaction
     final existing = await getTransactionByServerId(transaction.id!);
 
     if (existing != null) {
+      debugPrint('[OfflineStorage] Updating existing transaction (localId: ${existing.localId})');
       // Update existing transaction
       final updated = OfflineTransaction(
         id: transaction.id,
@@ -133,7 +156,9 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
+      debugPrint('[OfflineStorage] Transaction updated successfully');
     } else {
+      debugPrint('[OfflineStorage] Inserting new transaction');
       // Insert new transaction
       final offlineTransaction = OfflineTransaction(
         id: transaction.id,
@@ -148,6 +173,7 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
+      debugPrint('[OfflineStorage] Transaction inserted successfully');
     }
   }
 
