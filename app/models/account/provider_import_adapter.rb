@@ -75,6 +75,7 @@ class Account::ProviderImportAdapter
         existing = entry.transaction.extra || {}
         incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
         entry.transaction.extra = existing.deep_merge(incoming)
+        entry.transaction.save!
       end
       entry.save!
       entry

@@ -34,12 +34,13 @@ class SimplefinEntry::Processor
       # Include provider-supplied extra hash if present
       sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
 
-      # Pending detection: honor provider flag or infer from missing/zero posted with present transacted_at
-      posted_val = data[:posted]
-      posted_missing = posted_val.blank? || posted_val == 0 || posted_val == "0"
-      if ActiveModel::Type::Boolean.new.cast(data[:pending]) || (posted_missing && data[:transacted_at].present?)
+      # Pending detection: only use explicit provider flag
+      # We always set the key (true or false) to ensure deep_merge overwrites any stale value
+      if ActiveModel::Type::Boolean.new.cast(data[:pending])
         sf["pending"] = true
         Rails.logger.debug("SimpleFIN: flagged pending transaction #{external_id}")
+      else
+        sf["pending"] = false
       end
 
       # FX metadata: when tx currency differs from account currency
@@ -142,7 +143,7 @@ class SimplefinEntry::Processor
 
     def posted_date
       val = data[:posted]
-      # Treat 0 / "0" as missing to avoid Unix epoch 1970-01-01 for pendings
+      # Treat 0 / "0" as missing to avoid Unix epoch 1970-01-01
       return nil if val == 0 || val == "0"
       Simplefin::DateUtils.parse_provider_date(val)
     end
