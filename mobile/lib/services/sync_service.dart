@@ -22,17 +22,8 @@ class SyncService with ChangeNotifier {
   String? get syncError => _syncError;
   DateTime? get lastSyncTime => _lastSyncTime;
 
-  /// Sync pending transactions to server
-  Future<SyncResult> syncPendingTransactions(String accessToken) async {
-    if (_isSyncing) {
-      return SyncResult(success: false, error: 'Sync already in progress');
-    }
-
-    _log.info('SyncService', 'syncPendingTransactions started');
-    _isSyncing = true;
-    _syncError = null;
-    notifyListeners();
-
+  /// Sync pending transactions to server (internal method without sync lock check)
+  Future<SyncResult> _syncPendingTransactionsInternal(String accessToken) async {
     int successCount = 0;
     int failureCount = 0;
     String? lastError;
@@ -42,9 +33,6 @@ class SyncService with ChangeNotifier {
       _log.info('SyncService', 'Found ${pendingTransactions.length} pending transactions to upload');
 
       if (pendingTransactions.isEmpty) {
-        _isSyncing = false;
-        _lastSyncTime = DateTime.now();
-        notifyListeners();
         return SyncResult(success: true, syncedCount: 0);
       }
 
@@ -97,26 +85,51 @@ class SyncService with ChangeNotifier {
 
       _log.info('SyncService', 'Upload complete: $successCount success, $failureCount failed');
 
-      _isSyncing = false;
-      _lastSyncTime = DateTime.now();
-      _syncError = failureCount > 0 ? lastError : null;
-      notifyListeners();
-
       return SyncResult(
         success: failureCount == 0,
         syncedCount: successCount,
         failedCount: failureCount,
-        error: _syncError,
+        error: failureCount > 0 ? lastError : null,
       );
     } catch (e) {
+      _log.error('SyncService', 'Sync pending transactions exception: $e');
+      return SyncResult(
+        success: false,
+        syncedCount: successCount,
+        failedCount: failureCount,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Sync pending transactions to server
+  Future<SyncResult> syncPendingTransactions(String accessToken) async {
+    if (_isSyncing) {
+      return SyncResult(success: false, error: 'Sync already in progress');
+    }
+
+    _log.info('SyncService', 'syncPendingTransactions started');
+    _isSyncing = true;
+    _syncError = null;
+    notifyListeners();
+
+    try {
+      final result = await _syncPendingTransactionsInternal(accessToken);
+
+      _isSyncing = false;
+      _lastSyncTime = DateTime.now();
+      _syncError = result.success ? null : result.error;
+      notifyListeners();
+
+      return result;
+    } catch (e) {
+      _log.error('SyncService', 'syncPendingTransactions exception: $e');
       _isSyncing = false;
       _syncError = e.toString();
       notifyListeners();
 
       return SyncResult(
         success: false,
-        syncedCount: successCount,
-        failedCount: failureCount,
         error: _syncError,
       );
     }
@@ -228,9 +241,9 @@ class SyncService with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step 1: Upload pending transactions
+      // Step 1: Upload pending transactions (use internal method to avoid sync lock check)
       _log.info('SyncService', 'Step 1: Uploading pending transactions');
-      final uploadResult = await syncPendingTransactions(accessToken);
+      final uploadResult = await _syncPendingTransactionsInternal(accessToken);
       _log.info('SyncService', 'Step 1 complete: ${uploadResult.syncedCount ?? 0} uploaded, ${uploadResult.failedCount ?? 0} failed');
 
       // Step 2: Download transactions from server
