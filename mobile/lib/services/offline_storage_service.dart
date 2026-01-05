@@ -114,25 +114,18 @@ class OfflineStorageService {
   Future<void> syncTransactionsFromServer(List<Transaction> serverTransactions) async {
     _log.info('OfflineStorage', 'syncTransactionsFromServer called with ${serverTransactions.length} transactions from server');
 
-    // Clear only synced transactions (keep pending/failed ones)
-    _log.info('OfflineStorage', 'Clearing only synced transactions, preserving pending/failed');
-    await _dbHelper.clearSyncedTransactions();
+    // Use upsert logic instead of clear + insert to preserve recently uploaded transactions
+    _log.info('OfflineStorage', 'Upserting all transactions from server (preserving pending/failed)');
 
-    // Insert all server transactions as synced
-    int insertedCount = 0;
+    int upsertedCount = 0;
     for (final transaction in serverTransactions) {
       if (transaction.id != null) {
-        final offlineTransaction = OfflineTransaction.fromTransaction(
-          transaction,
-          localId: _uuid.v4(),
-          syncStatus: SyncStatus.synced,
-        );
-        await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
-        insertedCount++;
+        await upsertTransactionFromServer(transaction);
+        upsertedCount++;
       }
     }
 
-    _log.info('OfflineStorage', 'Inserted $insertedCount transactions from server');
+    _log.info('OfflineStorage', 'Upserted $upsertedCount transactions from server');
   }
 
   Future<void> upsertTransactionFromServer(
@@ -140,7 +133,7 @@ class OfflineStorageService {
     String? accountId,
   }) async {
     if (transaction.id == null) {
-      debugPrint('[OfflineStorage] Skipping transaction with null ID');
+      _log.warning('OfflineStorage', 'Skipping transaction with null ID');
       return;
     }
 
@@ -149,21 +142,19 @@ class OfflineStorageService {
         ? accountId
         : transaction.accountId;
 
-    debugPrint('[OfflineStorage] Upserting transaction ${transaction.id}:');
-    debugPrint('  - accountId from transaction: "${transaction.accountId}"');
-    debugPrint('  - accountId provided: "$accountId"');
-    debugPrint('  - effectiveAccountId: "$effectiveAccountId"');
+    _log.debug('OfflineStorage', 'Upserting transaction ${transaction.id}: accountId="${transaction.accountId}" -> effective="$effectiveAccountId"');
 
     // Check if we already have this transaction
     final existing = await getTransactionByServerId(transaction.id!);
 
     if (existing != null) {
-      debugPrint('[OfflineStorage] Updating existing transaction (localId: ${existing.localId})');
-      // Update existing transaction
+      _log.debug('OfflineStorage', 'Updating existing transaction (localId: ${existing.localId}, was ${existing.syncStatus})');
+      // Update existing transaction, preserving its accountId if effectiveAccountId is empty
+      final finalAccountId = effectiveAccountId.isEmpty ? existing.accountId : effectiveAccountId;
       final updated = OfflineTransaction(
         id: transaction.id,
         localId: existing.localId,
-        accountId: effectiveAccountId,
+        accountId: finalAccountId,
         name: transaction.name,
         date: transaction.date,
         amount: transaction.amount,
@@ -173,9 +164,9 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
-      debugPrint('[OfflineStorage] Transaction updated successfully');
+      _log.debug('OfflineStorage', 'Transaction updated successfully with accountId="$finalAccountId"');
     } else {
-      debugPrint('[OfflineStorage] Inserting new transaction');
+      _log.debug('OfflineStorage', 'Inserting new transaction with accountId="$effectiveAccountId"');
       // Insert new transaction
       final offlineTransaction = OfflineTransaction(
         id: transaction.id,
@@ -190,7 +181,7 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
-      debugPrint('[OfflineStorage] Transaction inserted successfully');
+      _log.debug('OfflineStorage', 'Transaction inserted successfully');
     }
   }
 
