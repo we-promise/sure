@@ -88,7 +88,7 @@ class SimplefinEntry::Processor
       elsif description.present?
         description
       else
-        data[:memo] || "Unknown transaction"
+        data[:memo] || I18n.t("transactions.unknown_name")
       end
     end
 
