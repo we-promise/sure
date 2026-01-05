@@ -2,6 +2,8 @@ class AccountProvider < ApplicationRecord
   belongs_to :account
   belongs_to :provider, polymorphic: true
 
+  has_many :holdings, dependent: :nullify
+
   validates :account_id, uniqueness: { scope: :provider_type }
   validates :provider_id, uniqueness: { scope: :provider_type }
 

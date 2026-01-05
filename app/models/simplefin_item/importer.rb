@@ -15,11 +15,23 @@ class SimplefinItem::Importer
     Rails.logger.info "SimplefinItem::Importer - last_synced_at: #{simplefin_item.last_synced_at.inspect}"
     Rails.logger.info "SimplefinItem::Importer - sync_start_date: #{simplefin_item.sync_start_date.inspect}"
 
+    # Clear stale error and reconciliation stats from previous syncs at the start of a full import
+    # This ensures the UI doesn't show outdated warnings from old sync runs
+    if sync.respond_to?(:sync_stats)
+      sync.update_columns(sync_stats: {
+        "cleared_at" => Time.current.iso8601,
+        "import_started" => true
+      })
+    end
+
     begin
       # Defensive guard: If last_synced_at is set but there are linked accounts
       # with no transactions captured yet (typical after a balances-only run),
       # force the first full run to use chunked history to backfill.
-      linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
+      #
+      # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
+      # the new AccountProvider system. An account is "linked" if either association exists.
+      linked_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
       no_txns_yet = linked_accounts.any? && linked_accounts.all? { |sfa| sfa.raw_transactions_payload.blank? }
 
       if simplefin_item.last_synced_at.nil? || no_txns_yet
@@ -569,7 +581,18 @@ class SimplefinItem::Importer
           end
         end
 
-        attrs[:raw_transactions_payload] = best_by_key.values
+        merged_transactions = best_by_key.values
+        attrs[:raw_transactions_payload] = merged_transactions
+
+        # NOTE: Reconciliation disabled - it analyzes the SimpleFin API response
+        # which only contains ~90 days of history, creating misleading "gap" warnings
+        # that don't reflect actual database state. Re-enable if we improve it to
+        # compare against database transactions instead of just the API response.
+        # begin
+        #   reconcile_transactions(simplefin_account, merged_transactions)
+        # rescue => e
+        #   Rails.logger.warn("SimpleFin: reconciliation failed for sfa=#{simplefin_account.id || account_id}: #{e.class} - #{e.message}")
+        # end
       end
 
       # Track whether incoming holdings are new/changed so we can materialize and refresh balances
@@ -782,5 +805,165 @@ class SimplefinItem::Importer
     def sync_buffer_period
       # Default to 7 days buffer for subsequent syncs
       7
+    end
+
+    # Transaction reconciliation: detect potential data gaps or missing transactions
+    # This helps identify when SimpleFin may not be returning complete data
+    def reconcile_transactions(simplefin_account, new_transactions)
+      return if new_transactions.blank?
+
+      account_id = simplefin_account.account_id
+      existing_transactions = simplefin_account.raw_transactions_payload.to_a
+      reconciliation = { account_id: account_id, issues: [] }
+
+      # 1. Check for unexpected transaction count drops
+      # If we previously had more transactions and now have fewer (after merge),
+      # something may have been removed upstream
+      if existing_transactions.any?
+        existing_count = existing_transactions.size
+        new_count = new_transactions.size
+
+        # After merging, we should have at least as many as before
+        # A significant drop (>10%) could indicate data loss
+        if new_count < existing_count
+          drop_pct = ((existing_count - new_count).to_f / existing_count * 100).round(1)
+          if drop_pct > 10
+            reconciliation[:issues] << {
+              type: "transaction_count_drop",
+              message: "Transaction count dropped from #{existing_count} to #{new_count} (#{drop_pct}% decrease)",
+              severity: drop_pct > 25 ? "high" : "medium"
+            }
+          end
+        end
+      end
+
+      # 2. Detect gaps in transaction history
+      # Look for periods with no transactions that seem unusual
+      gaps = detect_transaction_gaps(new_transactions)
+      if gaps.any?
+        reconciliation[:issues] += gaps.map do |gap|
+          {
+            type: "transaction_gap",
+            message: "No transactions between #{gap[:start_date]} and #{gap[:end_date]} (#{gap[:days]} days)",
+            severity: gap[:days] > 30 ? "high" : "medium",
+            gap_start: gap[:start_date],
+            gap_end: gap[:end_date],
+            gap_days: gap[:days]
+          }
+        end
+      end
+
+      # 3. Check for stale data (most recent transaction is old)
+      latest_tx_date = extract_latest_transaction_date(new_transactions)
+      if latest_tx_date.present?
+        days_since_latest = (Date.current - latest_tx_date).to_i
+        if days_since_latest > 7
+          reconciliation[:issues] << {
+            type: "stale_transactions",
+            message: "Most recent transaction is #{days_since_latest} days old",
+            severity: days_since_latest > 14 ? "high" : "medium",
+            latest_date: latest_tx_date.to_s,
+            days_stale: days_since_latest
+          }
+        end
+      end
+
+      # 4. Check for duplicate transaction IDs (data integrity issue)
+      duplicate_ids = find_duplicate_transaction_ids(new_transactions)
+      if duplicate_ids.any?
+        reconciliation[:issues] << {
+          type: "duplicate_ids",
+          message: "Found #{duplicate_ids.size} duplicate transaction ID(s)",
+          severity: "low",
+          duplicate_count: duplicate_ids.size
+        }
+      end
+
+      # Record reconciliation results in stats
+      if reconciliation[:issues].any?
+        stats["reconciliation"] ||= {}
+        stats["reconciliation"][account_id] = reconciliation
+
+        # Count issues by severity
+        high_severity = reconciliation[:issues].count { |i| i[:severity] == "high" }
+        medium_severity = reconciliation[:issues].count { |i| i[:severity] == "medium" }
+
+        if high_severity > 0
+          stats["reconciliation_warnings"] = stats.fetch("reconciliation_warnings", 0) + high_severity
+          Rails.logger.warn("SimpleFin reconciliation: #{high_severity} high-severity issue(s) for account #{account_id}")
+
+          ActiveSupport::Notifications.instrument(
+            "simplefin.reconciliation_warning",
+            item_id: simplefin_item.id,
+            account_id: account_id,
+            issues: reconciliation[:issues]
+          )
+        end
+
+        if medium_severity > 0
+          stats["reconciliation_notices"] = stats.fetch("reconciliation_notices", 0) + medium_severity
+        end
+
+        persist_stats!
+      end
+
+      reconciliation
+    end
+
+    # Detect gaps in transaction history (periods with no activity)
+    def detect_transaction_gaps(transactions)
+      return [] if transactions.blank? || transactions.size < 2
+
+      # Extract and sort transaction dates
+      dates = transactions.map do |tx|
+        t = tx.with_indifferent_access
+        posted = t[:posted]
+        next nil if posted.blank? || posted.to_i <= 0
+        Time.at(posted.to_i).to_date
+      end.compact.uniq.sort
+
+      return [] if dates.size < 2
+
+      gaps = []
+      min_gap_days = 14 # Only report gaps of 2+ weeks
+
+      dates.each_cons(2) do |earlier, later|
+        gap_days = (later - earlier).to_i
+        if gap_days >= min_gap_days
+          gaps << {
+            start_date: earlier.to_s,
+            end_date: later.to_s,
+            days: gap_days
+          }
+        end
+      end
+
+      # Limit to top 3 largest gaps to avoid noise
+      gaps.sort_by { |g| -g[:days] }.first(3)
+    end
+
+    # Extract the most recent transaction date
+    def extract_latest_transaction_date(transactions)
+      return nil if transactions.blank?
+
+      latest_timestamp = transactions.map do |tx|
+        t = tx.with_indifferent_access
+        posted = t[:posted]
+        posted.to_i if posted.present? && posted.to_i > 0
+      end.compact.max
+
+      latest_timestamp ? Time.at(latest_timestamp).to_date : nil
+    end
+
+    # Find duplicate transaction IDs
+    def find_duplicate_transaction_ids(transactions)
+      return [] if transactions.blank?
+
+      ids = transactions.map do |tx|
+        t = tx.with_indifferent_access
+        t[:id] || t[:fitid]
+      end.compact
+
+      ids.group_by(&:itself).select { |_, v| v.size > 1 }.keys
     end
 end

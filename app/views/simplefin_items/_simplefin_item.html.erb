@@ -16,9 +16,31 @@
           <% end %>
         </div>
 
+        <%# Compute unlinked count early for badge display %>
+        <% header_unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
+             @simplefin_unlinked_count_map[simplefin_item.id] || 0
+           else
+             begin
+               simplefin_item.simplefin_accounts
+                 .left_joins(:account, :account_provider)
+                 .where(accounts: { id: nil }, account_providers: { id: nil })
+                 .count
+             rescue => e
+               0
+             end
+           end %>
+
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
             <%= tag.p simplefin_item.name, class: "font-medium text-primary" %>
+            <% if header_unlinked_count.to_i > 0 %>
+              <%= link_to setup_accounts_simplefin_item_path(simplefin_item),
+                          data: { turbo_frame: :modal },
+                          class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors" do %>
+                <%= icon "alert-circle", size: "xs" %>
+                <span><%= header_unlinked_count %> <%= header_unlinked_count == 1 ? "account" : "accounts" %> need setup</span>
+              <% end %>
+            <% end %>
             <% if simplefin_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
@@ -77,6 +99,11 @@
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
               <%= tag.span t(".requires_update") %>
             </div>
+          <% elsif (stale_status = simplefin_item.stale_sync_status)[:stale] %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-circle", size: "sm", color: "warning" %>
+              <%= tag.span stale_status[:message], class: "text-sm" %>
+            </div>
           <% elsif simplefin_item.rate_limited_message.present? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "clock", size: "sm", color: "warning" %>
@@ -125,8 +152,6 @@
           ) %>
         <% end %>
 
-
-
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
@@ -145,7 +170,6 @@
         <% if simplefin_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
         <% end %>
-
 
         <%# Sync summary (collapsible)
             Prefer controller-provided map; fallback to latest sync stats so Turbo broadcasts
@@ -192,23 +216,28 @@
               <div>
                 <h4 class="text-primary font-medium mb-1">Holdings</h4>
                 <div class="flex items-center gap-3">
-                  <span>Processed: <%= stats["holdings_processed"].to_i %></span>
+                  <span>Found: <%= stats["holdings_found"].to_i %></span>
                 </div>
               </div>
               <div>
                 <h4 class="text-primary font-medium mb-1">Health</h4>
-                <div class="flex items-center gap-3">
-                  <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
-                    <% ts = stats["rate_limited_at"] %>
-                    <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
-                    <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
-                  <% end %>
-                  <% total_errors = stats["total_errors"].to_i %>
-                  <% if total_errors > 0 %>
-                    <span class="text-destructive">Errors: <%= total_errors %></span>
-                  <% else %>
-                    <span>Errors: 0</span>
-                  <% end %>
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-3">
+                    <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
+                      <% ts = stats["rate_limited_at"] %>
+                      <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
+                      <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
+                    <% end %>
+                    <% total_errors = stats["total_errors"].to_i %>
+                    <% import_started = stats["import_started"].present? %>
+                    <% if total_errors > 0 %>
+                      <span class="text-destructive">Errors: <%= total_errors %></span>
+                    <% elsif import_started %>
+                      <span class="text-success">Errors: 0</span>
+                    <% else %>
+                      <span>Errors: 0</span>
+                    <% end %>
+                  </div>
                 </div>
               </div>
             </div>
