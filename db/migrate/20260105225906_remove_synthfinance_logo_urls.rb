@@ -5,7 +5,7 @@ class RemoveSynthfinanceLogoUrls < ActiveRecord::Migration[7.2]
     execute <<-SQL
       UPDATE merchants
       SET logo_url = NULL
-      WHERE logo_url LIKE '%synthfinance.com%'
+      WHERE logo_url LIKE '%logo.synthfinance.com%'
     SQL
   end
 
