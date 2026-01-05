@@ -194,6 +194,11 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     if (transaction.id == null) return false;
 
     // Show confirmation dialog
+    // Capture providers before async gap
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -216,9 +221,6 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     if (confirmed != true) return false;
 
     // Perform the deletion
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
     final accessToken = await authProvider.getValidAccessToken();
 
     if (accessToken == null) {

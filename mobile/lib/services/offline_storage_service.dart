@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../models/offline_transaction.dart';
 import '../models/transaction.dart';
