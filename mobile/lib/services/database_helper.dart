@@ -178,6 +178,16 @@ class DatabaseHelper {
     await db.delete('transactions');
   }
 
+  Future<void> clearSyncedTransactions() async {
+    final db = await database;
+    debugPrint('[DatabaseHelper] Clearing only synced transactions, keeping pending/failed');
+    await db.delete(
+      'transactions',
+      where: 'sync_status = ?',
+      whereArgs: ['synced'],
+    );
+  }
+
   // Account CRUD operations (for caching)
   Future<void> insertAccount(Map<String, dynamic> account) async {
     final db = await database;

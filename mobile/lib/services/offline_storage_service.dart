@@ -112,10 +112,14 @@ class OfflineStorageService {
   }
 
   Future<void> syncTransactionsFromServer(List<Transaction> serverTransactions) async {
-    // Clear existing synced transactions
-    await _dbHelper.clearTransactions();
+    _log.info('OfflineStorage', 'syncTransactionsFromServer called with ${serverTransactions.length} transactions from server');
+
+    // Clear only synced transactions (keep pending/failed ones)
+    _log.info('OfflineStorage', 'Clearing only synced transactions, preserving pending/failed');
+    await _dbHelper.clearSyncedTransactions();
 
     // Insert all server transactions as synced
+    int insertedCount = 0;
     for (final transaction in serverTransactions) {
       if (transaction.id != null) {
         final offlineTransaction = OfflineTransaction.fromTransaction(
@@ -124,8 +128,11 @@ class OfflineStorageService {
           syncStatus: SyncStatus.synced,
         );
         await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
+        insertedCount++;
       }
     }
+
+    _log.info('OfflineStorage', 'Inserted $insertedCount transactions from server');
   }
 
   Future<void> upsertTransactionFromServer(

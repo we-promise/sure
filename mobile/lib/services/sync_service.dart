@@ -6,11 +6,13 @@ import 'offline_storage_service.dart';
 import 'transactions_service.dart';
 import 'accounts_service.dart';
 import 'connectivity_service.dart';
+import 'log_service.dart';
 
 class SyncService with ChangeNotifier {
   final OfflineStorageService _offlineStorage = OfflineStorageService();
   final TransactionsService _transactionsService = TransactionsService();
   final AccountsService _accountsService = AccountsService();
+  final LogService _log = LogService.instance;
 
   bool _isSyncing = false;
   String? _syncError;
@@ -26,6 +28,7 @@ class SyncService with ChangeNotifier {
       return SyncResult(success: false, error: 'Sync already in progress');
     }
 
+    _log.info('SyncService', 'syncPendingTransactions started');
     _isSyncing = true;
     _syncError = null;
     notifyListeners();
@@ -36,6 +39,7 @@ class SyncService with ChangeNotifier {
 
     try {
       final pendingTransactions = await _offlineStorage.getPendingTransactions();
+      _log.info('SyncService', 'Found ${pendingTransactions.length} pending transactions to upload');
 
       if (pendingTransactions.isEmpty) {
         _isSyncing = false;
@@ -46,6 +50,7 @@ class SyncService with ChangeNotifier {
 
       for (final transaction in pendingTransactions) {
         try {
+          _log.info('SyncService', 'Uploading transaction ${transaction.localId} (${transaction.name})');
           // Upload transaction to server
           final result = await _transactionsService.createTransaction(
             accessToken: accessToken,
@@ -61,6 +66,7 @@ class SyncService with ChangeNotifier {
           if (result['success'] == true) {
             // Update local transaction with server ID and mark as synced
             final serverTransaction = result['transaction'] as Transaction;
+            _log.info('SyncService', 'Upload success! Server ID: ${serverTransaction.id}');
             await _offlineStorage.updateTransactionSyncStatus(
               localId: transaction.localId,
               syncStatus: SyncStatus.synced,
@@ -69,6 +75,7 @@ class SyncService with ChangeNotifier {
             successCount++;
           } else {
             // Mark as failed
+            _log.error('SyncService', 'Upload failed: ${result['error']}');
             await _offlineStorage.updateTransactionSyncStatus(
               localId: transaction.localId,
               syncStatus: SyncStatus.failed,
@@ -78,6 +85,7 @@ class SyncService with ChangeNotifier {
           }
         } catch (e) {
           // Mark as failed
+          _log.error('SyncService', 'Upload exception: $e');
           await _offlineStorage.updateTransactionSyncStatus(
             localId: transaction.localId,
             syncStatus: SyncStatus.failed,
@@ -86,6 +94,8 @@ class SyncService with ChangeNotifier {
           lastError = e.toString();
         }
       }
+
+      _log.info('SyncService', 'Upload complete: $successCount success, $failureCount failed');
 
       _isSyncing = false;
       _lastSyncTime = DateTime.now();
@@ -212,25 +222,34 @@ class SyncService with ChangeNotifier {
       return SyncResult(success: false, error: 'Sync already in progress');
     }
 
+    _log.info('SyncService', '==== Full Sync Started ====');
     _isSyncing = true;
     _syncError = null;
     notifyListeners();
 
     try {
       // Step 1: Upload pending transactions
+      _log.info('SyncService', 'Step 1: Uploading pending transactions');
       final uploadResult = await syncPendingTransactions(accessToken);
+      _log.info('SyncService', 'Step 1 complete: ${uploadResult.syncedCount ?? 0} uploaded, ${uploadResult.failedCount ?? 0} failed');
 
       // Step 2: Download transactions from server
+      _log.info('SyncService', 'Step 2: Downloading transactions from server');
       final downloadResult = await syncFromServer(accessToken: accessToken);
+      _log.info('SyncService', 'Step 2 complete: ${downloadResult.syncedCount ?? 0} downloaded');
 
       // Step 3: Sync accounts
+      _log.info('SyncService', 'Step 3: Syncing accounts');
       await syncAccounts(accessToken);
+      _log.info('SyncService', 'Step 3 complete');
 
       _isSyncing = false;
       _lastSyncTime = DateTime.now();
 
       final allSuccess = uploadResult.success && downloadResult.success;
       _syncError = allSuccess ? null : (uploadResult.error ?? downloadResult.error);
+
+      _log.info('SyncService', '==== Full Sync Complete: ${allSuccess ? "SUCCESS" : "PARTIAL/FAILED"} ====');
 
       notifyListeners();
 
@@ -241,6 +260,7 @@ class SyncService with ChangeNotifier {
         error: _syncError,
       );
     } catch (e) {
+      _log.error('SyncService', 'Full sync exception: $e');
       _isSyncing = false;
       _syncError = e.toString();
       notifyListeners();
