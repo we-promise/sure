@@ -139,9 +139,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                isOnline 
-                  ? 'Transaction created successfully'
-                  : 'Transaction saved (will sync when online)'
+                isOnline
+                    ? 'Transaction created successfully'
+                    : 'Transaction saved (will sync when online)'
               ),
               backgroundColor: Colors.green,
             ),

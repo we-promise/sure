@@ -57,19 +57,24 @@ class TransactionsProvider with ChangeNotifier {
       _log.info('TransactionsProvider', 'Connectivity restored, auto-syncing $pendingCount pending transactions');
       _isAutoSyncing = true;
 
-      syncTransactions(accessToken: _lastAccessToken!).then((_) {
-        if (!_isDisposed) {
-          _log.info('TransactionsProvider', 'Auto-sync completed successfully');
-        }
-      }).catchError((e) {
-        if (!_isDisposed) {
-          _log.error('TransactionsProvider', 'Auto-sync failed: $e');
-        }
-      }).whenComplete(() {
-        if (!_isDisposed) {
-          _isAutoSyncing = false;
-        }
-      });
+      // Fire and forget - we don't await to avoid blocking connectivity listener
+      // Use callbacks to handle completion and errors asynchronously
+      syncTransactions(accessToken: _lastAccessToken!)
+          .then((_) {
+            if (!_isDisposed) {
+              _log.info('TransactionsProvider', 'Auto-sync completed successfully');
+            }
+          })
+          .catchError((e) {
+            if (!_isDisposed) {
+              _log.error('TransactionsProvider', 'Auto-sync failed: $e');
+            }
+          })
+          .whenComplete(() {
+            if (!_isDisposed) {
+              _isAutoSyncing = false;
+            }
+          });
     }
   }
 
