@@ -21,6 +21,7 @@ class TransactionsProvider with ChangeNotifier {
   String? _lastAccessToken;
   bool _isAutoSyncing = false;
   bool _isListenerAttached = false;
+  bool _isDisposed = false;
 
   List<Transaction> get transactions =>
       UnmodifiableListView(_transactions.map((t) => t.toTransaction()));
@@ -46,7 +47,7 @@ class TransactionsProvider with ChangeNotifier {
   }
 
   void _onConnectivityChanged() {
-    if (!mounted) return;
+    if (_isDisposed) return;
     
     // Auto-sync when connectivity is restored
     if (_connectivityService?.isOnline == true &&
@@ -57,15 +58,15 @@ class TransactionsProvider with ChangeNotifier {
       _isAutoSyncing = true;
 
       syncTransactions(accessToken: _lastAccessToken!).then((_) {
-        if (mounted) {
+        if (!_isDisposed) {
           _log.info('TransactionsProvider', 'Auto-sync completed successfully');
         }
       }).catchError((e) {
-        if (mounted) {
+        if (!_isDisposed) {
           _log.error('TransactionsProvider', 'Auto-sync failed: $e');
         }
       }).whenComplete(() {
-        if (mounted) {
+        if (!_isDisposed) {
           _isAutoSyncing = false;
         }
       });
@@ -73,7 +74,7 @@ class TransactionsProvider with ChangeNotifier {
   }
 
   // Helper to check if object is still valid
-  bool get mounted => _connectivityService != null;
+  bool get mounted => !_isDisposed;
 
   /// Fetch transactions (offline-first approach)
   Future<void> fetchTransactions({
@@ -181,7 +182,7 @@ class TransactionsProvider with ChangeNotifier {
           nature: nature,
           notes: notes,
         ).then((result) async {
-          if (!mounted) return;
+          if (_isDisposed) return;
           
           if (result['success'] == true) {
             _log.info('TransactionsProvider', 'Transaction uploaded successfully');
@@ -198,7 +199,7 @@ class TransactionsProvider with ChangeNotifier {
             _log.warning('TransactionsProvider', 'Server upload failed: ${result['error']}. Transaction will sync later.');
           }
         }).catchError((e) {
-          if (!mounted) return;
+          if (_isDisposed) return;
           
           _log.error('TransactionsProvider', 'Exception during upload: $e');
           _error = 'Background sync failed: ${e.toString()}';
@@ -345,6 +346,7 @@ class TransactionsProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     if (_isListenerAttached && _connectivityService != null) {
       _connectivityService!.removeListener(_onConnectivityChanged);
       _isListenerAttached = false;
