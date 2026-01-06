@@ -130,9 +130,18 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       if (mounted) {
         if (success) {
           _log.info('TransactionForm', 'Transaction created successfully (saved locally)');
+          
+          // Check if we're online to show appropriate message
+          final connectivityService = transactionsProvider.syncService;
+          final isOnline = connectivityService.lastSyncTime != null;
+          
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Transaction created (will sync when online)'),
+            SnackBar(
+              content: Text(
+                isOnline 
+                  ? 'Transaction created successfully'
+                  : 'Transaction saved (will sync when online)'
+              ),
               backgroundColor: Colors.green,
             ),
           );

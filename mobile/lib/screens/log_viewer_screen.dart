@@ -18,12 +18,16 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   @override
   void initState() {
     super.initState();
+    // Set log viewer as active to enable notifications
+    LogService.instance.setLogViewerActive(true);
     // Add a test log to confirm logging is working
     LogService.instance.info('LogViewer', 'Log viewer screen opened');
   }
 
   @override
   void dispose() {
+    // Set log viewer as inactive to disable notifications
+    LogService.instance.setLogViewerActive(false);
     _scrollController.dispose();
     super.dispose();
   }

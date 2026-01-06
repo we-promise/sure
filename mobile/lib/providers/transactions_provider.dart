@@ -20,6 +20,7 @@ class TransactionsProvider with ChangeNotifier {
   ConnectivityService? _connectivityService;
   String? _lastAccessToken;
   bool _isAutoSyncing = false;
+  bool _isListenerAttached = false;
 
   List<Transaction> get transactions =>
       UnmodifiableListView(_transactions.map((t) => t.toTransaction()));
@@ -38,10 +39,15 @@ class TransactionsProvider with ChangeNotifier {
 
   void setConnectivityService(ConnectivityService service) {
     _connectivityService = service;
-    _connectivityService?.addListener(_onConnectivityChanged);
+    if (!_isListenerAttached) {
+      _connectivityService?.addListener(_onConnectivityChanged);
+      _isListenerAttached = true;
+    }
   }
 
-  void _onConnectivityChanged() async {
+  void _onConnectivityChanged() {
+    if (!mounted) return;
+    
     // Auto-sync when connectivity is restored
     if (_connectivityService?.isOnline == true &&
         hasPendingTransactions &&
@@ -50,16 +56,24 @@ class TransactionsProvider with ChangeNotifier {
       _log.info('TransactionsProvider', 'Connectivity restored, auto-syncing $pendingCount pending transactions');
       _isAutoSyncing = true;
 
-      try {
-        await syncTransactions(accessToken: _lastAccessToken!);
-        _log.info('TransactionsProvider', 'Auto-sync completed successfully');
-      } catch (e) {
-        _log.error('TransactionsProvider', 'Auto-sync failed: $e');
-      } finally {
-        _isAutoSyncing = false;
-      }
+      syncTransactions(accessToken: _lastAccessToken!).then((_) {
+        if (mounted) {
+          _log.info('TransactionsProvider', 'Auto-sync completed successfully');
+        }
+      }).catchError((e) {
+        if (mounted) {
+          _log.error('TransactionsProvider', 'Auto-sync failed: $e');
+        }
+      }).whenComplete(() {
+        if (mounted) {
+          _isAutoSyncing = false;
+        }
+      });
     }
   }
+
+  // Helper to check if object is still valid
+  bool get mounted => _connectivityService != null;
 
   /// Fetch transactions (offline-first approach)
   Future<void> fetchTransactions({
@@ -78,38 +92,38 @@ class TransactionsProvider with ChangeNotifier {
         accountId: accountId,
       );
 
-      debugPrint('[TransactionsProvider] Loaded ${localTransactions.length} transactions from local storage (accountId: $accountId)');
+      _log.debug('TransactionsProvider', 'Loaded ${localTransactions.length} transactions from local storage (accountId: $accountId)');
 
       _transactions = localTransactions;
       notifyListeners();
 
       // If online and force sync, or if local storage is empty, sync from server
       final isOnline = _connectivityService?.isOnline ?? true;
-      debugPrint('[TransactionsProvider] Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
+      _log.debug('TransactionsProvider', 'Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
 
       if (isOnline && (forceSync || localTransactions.isEmpty)) {
-        debugPrint('[TransactionsProvider] Syncing from server for accountId: $accountId');
+        _log.debug('TransactionsProvider', 'Syncing from server for accountId: $accountId');
         final result = await _syncService.syncFromServer(
           accessToken: accessToken,
           accountId: accountId,
         );
 
         if (result.success) {
-          debugPrint('[TransactionsProvider] Sync successful, synced ${result.syncedCount} transactions');
+          _log.info('TransactionsProvider', 'Sync successful, synced ${result.syncedCount} transactions');
           // Reload from local storage after sync
           final updatedTransactions = await _offlineStorage.getTransactions(
             accountId: accountId,
           );
-          debugPrint('[TransactionsProvider] After sync, loaded ${updatedTransactions.length} transactions from local storage');
+          _log.debug('TransactionsProvider', 'After sync, loaded ${updatedTransactions.length} transactions from local storage');
           _transactions = updatedTransactions;
           _error = null;
         } else {
-          debugPrint('[TransactionsProvider] Sync failed: ${result.error}');
+          _log.error('TransactionsProvider', 'Sync failed: ${result.error}');
           _error = result.error;
         }
       }
     } catch (e) {
-      debugPrint('[TransactionsProvider] Error in fetchTransactions: $e');
+      _log.error('TransactionsProvider', 'Error in fetchTransactions: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -167,6 +181,8 @@ class TransactionsProvider with ChangeNotifier {
           nature: nature,
           notes: notes,
         ).then((result) async {
+          if (!mounted) return;
+          
           if (result['success'] == true) {
             _log.info('TransactionsProvider', 'Transaction uploaded successfully');
             final serverTransaction = result['transaction'] as Transaction;
@@ -182,7 +198,11 @@ class TransactionsProvider with ChangeNotifier {
             _log.warning('TransactionsProvider', 'Server upload failed: ${result['error']}. Transaction will sync later.');
           }
         }).catchError((e) {
+          if (!mounted) return;
+          
           _log.error('TransactionsProvider', 'Exception during upload: $e');
+          _error = 'Background sync failed: ${e.toString()}';
+          notifyListeners();
         });
       } else {
         _log.info('TransactionsProvider', 'Offline: Transaction will sync when online');
@@ -325,7 +345,11 @@ class TransactionsProvider with ChangeNotifier {
 
   @override
   void dispose() {
-    _connectivityService?.removeListener(_onConnectivityChanged);
+    if (_isListenerAttached && _connectivityService != null) {
+      _connectivityService!.removeListener(_onConnectivityChanged);
+      _isListenerAttached = false;
+    }
+    _connectivityService = null;
     super.dispose();
   }
 }

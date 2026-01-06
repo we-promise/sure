@@ -129,7 +129,21 @@ class AccountsProvider with ChangeNotifier {
     } catch (e) {
       // If we have cached accounts, show them even if sync fails
       if (_accounts.isEmpty) {
-        _errorMessage = 'Connection error. Please check your internet connection.';
+        // Provide more specific error messages based on exception type
+        if (e.toString().contains('SocketException') || 
+            e.toString().contains('HandshakeException') ||
+            e.toString().contains('NetworkException')) {
+          _errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (e.toString().contains('TimeoutException')) {
+          _errorMessage = 'Request timed out. Please check your connection and try again.';
+        } else if (e.toString().contains('FormatException') || 
+                   e.toString().contains('JsonException')) {
+          _errorMessage = 'Server response error. Please try again later.';
+        } else if (e.toString().contains('401') || e.toString().contains('unauthorized')) {
+          _errorMessage = 'unauthorized';
+        } else {
+          _errorMessage = 'An error occurred: ${e.toString()}';
+        }
       }
       _isLoading = false;
       _isInitializing = false;
