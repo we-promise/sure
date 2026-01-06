@@ -402,7 +402,44 @@ class SimplefinItem::Importer
             persist_stats!
           end
         end
+
+        # Clean up orphaned SimplefinAccount records whose account_id no longer exists upstream.
+        # This handles the case where a user deletes and re-adds an institution in SimpleFIN,
+        # which generates new account IDs. Without this cleanup, both old (stale) and new
+        # SimplefinAccount records would appear in the setup UI as duplicates.
+        upstream_account_ids = discovery_data[:accounts].map { |a| a[:id].to_s }.compact
+        prune_orphaned_simplefin_accounts(upstream_account_ids)
       end
+    end
+
+    # Removes SimplefinAccount records that no longer exist upstream and are not linked to any Account.
+    # This prevents duplicate accounts from appearing in the setup UI after a user re-adds an
+    # institution in SimpleFIN (which generates new account IDs).
+    def prune_orphaned_simplefin_accounts(upstream_account_ids)
+      return if upstream_account_ids.blank?
+
+      # Find SimplefinAccount records with account_ids NOT in the upstream set
+      orphaned = simplefin_item.simplefin_accounts
+        .where.not(account_id: upstream_account_ids)
+        .where.not(account_id: nil)
+
+      orphaned.each do |sfa|
+        # Only delete if not linked to any Account (via legacy FK or AccountProvider)
+        # Note: sfa.account checks the legacy FK on Account.simplefin_account_id
+        #       sfa.account_provider checks the new AccountProvider join table
+        linked_via_legacy = sfa.account.present?
+        linked_via_provider = sfa.account_provider.present?
+
+        if !linked_via_legacy && !linked_via_provider
+          Rails.logger.info "SimpleFin: Pruning orphaned SimplefinAccount id=#{sfa.id} account_id=#{sfa.account_id} (no longer exists upstream)"
+          stats["accounts_pruned"] = stats.fetch("accounts_pruned", 0) + 1
+          sfa.destroy
+        else
+          Rails.logger.info "SimpleFin: Keeping stale SimplefinAccount id=#{sfa.id} account_id=#{sfa.account_id} (still linked to Account)"
+        end
+      end
+
+      persist_stats! if stats["accounts_pruned"].to_i > 0
     end
 
     # Fetches accounts (and optionally transactions/holdings) from SimpleFin.
