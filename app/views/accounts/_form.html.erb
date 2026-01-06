@@ -11,7 +11,7 @@
 
     <%= form.text_field :name, placeholder: t(".name_placeholder"), required: "required", label: t(".name_label") %>
 
-    <% unless account.linked? %>
+    <% unless account.linked? || account.accountable_type == "Installment" %>
       <%= form.money_field :balance, label: t(".balance"), required: true, default_currency: Current.family.currency %>
     <% end %>
 

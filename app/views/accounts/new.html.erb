@@ -14,6 +14,7 @@
     <% unless params[:classification] == "asset" %>
       <%= render "account_type", accountable: CreditCard.new %>
       <%= render "account_type", accountable: Loan.new %>
+      <%= render "account_type", accountable: Installment.new %>
     <% end %>
 
     <% unless params[:classification] == "liability" %>

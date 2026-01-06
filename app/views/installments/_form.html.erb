@@ -1,0 +1,47 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-4">
+    <%= form.fields_for :accountable do |installment_form| %>
+      
+      <%# Cost per Installment %>
+      <div class="flex items-center gap-2">
+        <%= installment_form.money_field :installment_cost,
+                                 label: "Cost per Installment",
+                                 default_currency: Current.family.currency,
+                                 required: true %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%# Total Installments %>
+        <%= installment_form.number_field :total_installments,
+                                 label: "Total Installments",
+                                 placeholder: "e.g. 12",
+                                 min: 1,
+                                 step: 1,
+                                 required: true %>
+
+        <%# Payment Period %>
+        <%= installment_form.select :payment_period,
+                           Installment.payment_periods.keys.map { |k| [k.capitalize, k] },
+                           { label: "Payment Period" } %>
+      </div>
+
+      <%# First Payment Date %>
+      <div class="flex items-center gap-2">
+        <%= installment_form.date_field :first_payment_date,
+                                label: "First Payment Date",
+                                required: true,
+                                value: Date.current %>
+      </div>
+
+      <%# Auto Generate Toggle %>
+      <div class="flex items-center gap-2 mt-2">
+        <%= installment_form.check_box :auto_generate, label: "Auto-generate Transactions" %>
+      </div>
+
+    <% end %>
+  </div>
+<% end %>
