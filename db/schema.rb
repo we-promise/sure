@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_06_082248) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -539,6 +539,20 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
     t.index ["family_id"], name: "index_imports_on_family_id"
+  end
+
+  create_table "installments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.integer "total_installments"
+    t.string "payment_period"
+    t.date "first_payment_date"
+    t.integer "installment_cost_cents"
+    t.string "currency"
+    t.boolean "auto_generate", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_installments_on_family_id"
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1083,9 +1097,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.string "kind", default: "standard", null: false
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
+    t.uuid "installment_id"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
     t.index ["extra"], name: "index_transactions_on_extra", using: :gin
+    t.index ["installment_id"], name: "index_transactions_on_installment_id"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
   end
@@ -1188,6 +1204,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
   add_foreign_key "imports", "families"
+  add_foreign_key "installments", "families"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "llm_usages", "families"
@@ -1223,6 +1240,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
   add_foreign_key "trades", "categories"
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
+  add_foreign_key "transactions", "installments"
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
