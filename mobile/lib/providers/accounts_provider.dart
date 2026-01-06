@@ -132,7 +132,7 @@ class AccountsProvider with ChangeNotifier {
       // If we have cached accounts, show them even if sync fails
       if (_accounts.isEmpty) {
         // Provide more specific error messages based on exception type
-        if (e is SocketException || e is HandshakeException) {
+        if (e is SocketException) {
           _errorMessage = 'Network error. Please check your internet connection and try again.';
         } else if (e is TimeoutException) {
           _errorMessage = 'Request timed out. Please check your connection and try again.';
@@ -140,6 +140,10 @@ class AccountsProvider with ChangeNotifier {
           _errorMessage = 'Server response error. Please try again later.';
         } else if (e.toString().contains('401') || e.toString().contains('unauthorized')) {
           _errorMessage = 'unauthorized';
+        } else if (e.toString().contains('HandshakeException') || 
+                   e.toString().contains('certificate') ||
+                   e.toString().contains('SSL')) {
+          _errorMessage = 'Secure connection error. Please check your internet connection and try again.';
         } else {
           _errorMessage = 'An error occurred: ${e.toString()}';
         }

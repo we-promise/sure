@@ -207,7 +207,7 @@ class TransactionsProvider with ChangeNotifier {
           if (_isDisposed) return;
           
           _log.error('TransactionsProvider', 'Exception during upload: $e');
-          _error = 'Background sync failed: ${e.toString()}';
+          _error = 'Transaction upload failed: ${e.toString()}';
           notifyListeners();
         });
       } else {
