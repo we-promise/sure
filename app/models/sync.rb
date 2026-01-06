@@ -19,7 +19,7 @@ class Sync < ApplicationRecord
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
   scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
 
-  after_commit :update_family_sync_timestamp
+  after_commit :update_family_sync_timestamp, on: %i[create update]
 
   serialize :sync_stats, coder: JSON
 
