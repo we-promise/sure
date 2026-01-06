@@ -191,3 +191,8 @@ docker volume rm sure_postgres-data # this is the name of the volume the DB is m
 docker compose up
 docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```
+
+
+### I'm stuck at Processing rows when importing a csv for longer time than expected
+
+Importing a csv requires sure-worker to communicate with Redis. Check your worker logs to see if there are any unexpected error that happens.
