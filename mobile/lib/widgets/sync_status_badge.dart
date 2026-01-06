@@ -60,24 +60,27 @@ class SyncStatusBadge extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: color,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
+      child: Semantics(
+        label: semanticsLabel,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
               color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
