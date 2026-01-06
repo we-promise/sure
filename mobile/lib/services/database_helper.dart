@@ -103,9 +103,10 @@ class DatabaseHelper {
         ON transactions(date DESC)
       ''');
 
+      // Index on server_id for faster lookups by server ID
       await db.execute('''
         CREATE INDEX idx_transactions_server_id
-        ON transactions(server_id) WHERE server_id IS NOT NULL
+        ON transactions(server_id)
       ''');
     } catch (e, stackTrace) {
       _log.error('DatabaseHelper', 'Error creating local database schema: $e');
