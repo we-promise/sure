@@ -57,7 +57,8 @@ class SimplefinItem < ApplicationRecord
 
   def process_accounts
     # Process accounts linked via BOTH legacy FK and AccountProvider
-    all_accounts = simplefin_accounts.includes(:account, account_provider: :account).to_a
+    # Use direct query to ensure fresh data from DB, bypassing any association cache
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, account_provider: :account).to_a
 
     Rails.logger.info "=" * 60
     Rails.logger.info "SimplefinItem#process_accounts START - Item #{id} (#{name})"
@@ -74,8 +75,8 @@ class SimplefinItem < ApplicationRecord
     # First, try to repair stale linkages (old SimplefinAccount linked but new one has data)
     repair_stale_linkages(all_accounts)
 
-    # Re-fetch after repairs - force reload from DB
-    all_accounts = simplefin_accounts.reload.includes(:account, account_provider: :account).to_a
+    # Re-fetch after repairs - use direct query for fresh data
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, account_provider: :account).to_a
 
     linked = all_accounts.select { |sfa| sfa.current_account.present? }
     unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
@@ -126,12 +127,9 @@ class SimplefinItem < ApplicationRecord
 
     # For each unlinked account with data, try to find a matching linked account
     unlinked_with_data.each do |new_sfa|
-      # Find linked SimplefinAccount with same name (case-insensitive) AND no transactions.
-      # We only repair when the old account is truly stale (no transactions), to avoid
-      # accidentally transferring linkage for legitimately different accounts with the same name.
+      # Find linked SimplefinAccount with same name (case-insensitive).
       stale_match = linked.find do |old_sfa|
-        old_sfa.name.to_s.downcase.strip == new_sfa.name.to_s.downcase.strip &&
-          old_sfa.raw_transactions_payload.to_a.empty?
+        old_sfa.name.to_s.downcase.strip == new_sfa.name.to_s.downcase.strip
       end
 
       next unless stale_match
@@ -153,10 +151,10 @@ class SimplefinItem < ApplicationRecord
           new_sfa.update!(raw_transactions_payload: merged)
         end
 
-        # Check if linked via legacy FK
-        if account.simplefin_account_id == stale_match.id
-          Rails.logger.info "SimplefinItem#repair_stale_linkages - Transferring legacy FK linkage from SimplefinAccount #{stale_match.id} to #{new_sfa.id}"
-          account.update!(simplefin_account_id: new_sfa.id)
+        # Check if linked via legacy FK (use to_s for UUID comparison safety)
+        if account.simplefin_account_id.to_s == stale_match.id.to_s
+          account.simplefin_account_id = new_sfa.id
+          account.save!
         end
 
         # Check if linked via AccountProvider
@@ -172,7 +170,9 @@ class SimplefinItem < ApplicationRecord
 
         # Clear transactions from stale SimplefinAccount and leave it orphaned
         # We don't destroy it because has_one :account, dependent: :nullify would nullify the FK we just set
-        stale_match.update!(raw_transactions_payload: [], raw_holdings_payload: [])
+        # IMPORTANT: Use update_all to bypass AR associations - stale_match.update! would
+        # trigger autosave on the preloaded account association, reverting the FK we just set!
+        SimplefinAccount.where(id: stale_match.id).update_all(raw_transactions_payload: [], raw_holdings_payload: [])
         Rails.logger.info "SimplefinItem#repair_stale_linkages - Cleared data from stale SimplefinAccount id=#{stale_match.id} (leaving orphaned)"
       rescue => e
         Rails.logger.error "SimplefinItem#repair_stale_linkages - Failed to transfer linkage: #{e.class} - #{e.message}"

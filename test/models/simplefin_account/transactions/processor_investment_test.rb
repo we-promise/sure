@@ -204,7 +204,7 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
 
     # After repair: new_simplefin_account should be linked
     @account.reload
-    assert_equal new_simplefin_account.id, @account.simplefin_account_id
+    assert_equal new_simplefin_account.id, @account.simplefin_account_id, "Expected linkage to transfer to new_simplefin_account (#{new_simplefin_account.id}) but got #{@account.simplefin_account_id}"
 
     # Old SimplefinAccount should still exist but be cleared of data
     @simplefin_account.reload
@@ -244,8 +244,8 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     assert_equal 0, @account.entries.count
   end
 
-  test "does not repair linkage when old account still has transactions" do
-    # Keep original WITH transactions (not stale)
+  test "repairs linkage and merges transactions when both old and new have data" do
+    # Both accounts have transactions - repair should still happen and merge them
     assert @simplefin_account.raw_transactions_payload.any?
 
     # Create new with same name
@@ -261,15 +261,17 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
       ]
     )
 
-    original_linkage = @account.simplefin_account_id
-
     @simplefin_item.process_accounts
 
-    # Should NOT transfer because old account still has transactions (not stale)
+    # Should transfer linkage to new account (repair by name match)
     @account.reload
-    assert_equal original_linkage, @account.simplefin_account_id
+    assert_equal new_simplefin_account.id, @account.simplefin_account_id
 
-    # Should process transactions from the linked (old) account
-    assert_equal 3, @account.entries.count
+    # Transactions should be merged: 3 from old + 1 from new = 4 total
+    assert_equal 4, @account.entries.count
+
+    # Old account should be cleared
+    @simplefin_account.reload
+    assert_equal [], @simplefin_account.raw_transactions_payload
   end
 end
