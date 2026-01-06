@@ -75,6 +75,8 @@ gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
 gem "activerecord-import"
+gem "ofx", "0.3.8"
+gem "nkf"
 gem "rubyzip", "~> 2.3"
 
 # OpenID Connect & OAuth authentication
