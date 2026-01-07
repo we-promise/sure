@@ -186,7 +186,16 @@ class SimplefinItem < ApplicationRecord
     end
   end
 
-  # Merge two arrays of transactions, deduplicating by ID
+  # Merge two arrays of transactions, deduplicating by ID.
+  # Fallback: uses composite key [posted, amount, description] when ID/fitid missing.
+  #
+  # Known edge cases with composite key fallback:
+  # 1. False positives: Two distinct transactions with identical posted/amount/description
+  #    will be incorrectly merged (rare but possible).
+  # 2. Type inconsistency: If posted varies in type (String vs Integer), keys won't match.
+  # 3. Description variations: Minor differences (whitespace, case) prevent matching.
+  #
+  # SimpleFIN typically provides transaction IDs, so this fallback is rarely needed.
   def merge_transactions(old_txns, new_txns)
     by_id = {}
 
