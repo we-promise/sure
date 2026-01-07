@@ -24,3 +24,9 @@ sync_all_accounts:
   class: "SyncAllJob"
   queue: "scheduled"
   description: "Syncs all accounts for all families"
+
+sync_hourly:
+  cron: "0 * * * *" # every hour at the top of the hour
+  class: "SyncHourlyJob"
+  queue: "scheduled"
+  description: "Syncs provider items that opt-in to hourly syncing"
