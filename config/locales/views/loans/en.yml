@@ -7,7 +7,9 @@ en:
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
       initial_balance: Original loan balance
+      none: None
       rate_type: Rate type
+      subtype_prompt: Select loan type
       term_months: Term (months)
       term_months_placeholder: '360'
     new:
