@@ -192,7 +192,6 @@ docker compose up
 docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```
 
+### Slow `.csv` import (processing rows taking longer than expected)
 
-### I'm stuck at Processing rows when importing a csv for longer time than expected
-
-Importing a csv requires sure-worker to communicate with Redis. Check your worker logs to see if there are any unexpected error that happens.
+Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.
