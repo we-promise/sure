@@ -25,9 +25,10 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
-    assert_redirected_to account_url(Account.last)
-    assert_equal "checking", Account.last.accountable.subtype
-    assert_equal "checking", Account.last.subtype # via delegation
+    created_account = Account.order(:created_at).last
+    assert_redirected_to account_url(created_account)
+    assert_equal "checking", created_account.accountable.subtype
+    assert_equal "checking", created_account.subtype # via delegation
   end
 
   test "updates depository account subtype" do
