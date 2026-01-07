@@ -128,10 +128,15 @@ class SimplefinItem < ApplicationRecord
     # For each unlinked account with data, try to find a matching linked account
     unlinked_with_data.each do |new_sfa|
       # Find linked SimplefinAccount with same name (case-insensitive).
-      stale_match = linked.find do |old_sfa|
+      stale_matches = linked.select do |old_sfa|
         old_sfa.name.to_s.downcase.strip == new_sfa.name.to_s.downcase.strip
       end
 
+      if stale_matches.size > 1
+        Rails.logger.warn "SimplefinItem#repair_stale_linkages - Multiple linked accounts match '#{new_sfa.name}': #{stale_matches.map(&:id).join(', ')}. Using first match."
+      end
+
+      stale_match = stale_matches.first
       next unless stale_match
 
       account = stale_match.current_account
