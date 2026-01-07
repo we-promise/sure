@@ -25,9 +25,10 @@ class InvestmentsControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
-    assert_redirected_to account_url(Account.last)
-    assert_equal "brokerage", Account.last.accountable.subtype
-    assert_equal "brokerage", Account.last.subtype # via delegation
+    created_account = Account.order(:created_at).last
+    assert_redirected_to account_url(created_account)
+    assert_equal "brokerage", created_account.accountable.subtype
+    assert_equal "brokerage", created_account.subtype # via delegation
   end
 
   test "updates investment account subtype" do
