@@ -36,7 +36,7 @@ class InvestmentsControllerTest < ActionDispatch::IntegrationTest
     @account.accountable.update!(subtype: nil)
     @account.reload
 
-    patch account_url(@account), params: {
+    patch investment_url(@account.accountable), params: {
       account: {
         name: @account.name,
         accountable_attributes: {
@@ -46,7 +46,7 @@ class InvestmentsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to account_url(@account)
+    assert_redirected_to investment_url(@account.accountable)
     @account.reload
     assert_equal "retirement", @account.accountable.subtype
     assert_equal "retirement", @account.subtype # via delegation

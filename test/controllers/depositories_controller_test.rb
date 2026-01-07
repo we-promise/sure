@@ -36,7 +36,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     @account.accountable.update!(subtype: "checking")
     @account.reload
 
-    patch account_url(@account), params: {
+    patch depository_url(@account.accountable), params: {
       account: {
         name: @account.name,
         accountable_attributes: {
@@ -46,7 +46,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to account_url(@account)
+    assert_redirected_to depository_url(@account.accountable)
     @account.reload
     assert_equal "savings", @account.accountable.subtype
     assert_equal "savings", @account.subtype # via delegation
