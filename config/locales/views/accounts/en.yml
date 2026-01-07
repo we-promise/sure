@@ -97,6 +97,7 @@ en:
       other_asset: Other Asset
       credit_card: Credit Card
       loan: Loan
+      installment: Installment
       other_liability: Other Liability
     confirm_unlink:
       title: Unlink account from provider?

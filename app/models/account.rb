@@ -39,7 +39,6 @@ class Account < ApplicationRecord
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
-  delegate :subtype, to: :accountable, allow_nil: true
 
   accepts_nested_attributes_for :accountable, update_only: true
 
@@ -241,6 +240,24 @@ class Account < ApplicationRecord
     first_valuation&.amount_money || balance_money
   end
 
+  # Some accountables (like Installment) may not implement subtype yet.
+  # Prefer the accountable subtype when present, otherwise fall back to the account column.
+  def subtype
+    if accountable&.respond_to?(:subtype)
+      accountable.subtype.presence || self[:subtype]
+    else
+      self[:subtype]
+    end
+  end
+
+  def subtype=(value)
+    if accountable&.respond_to?(:subtype=)
+      accountable.subtype = value
+    else
+      self[:subtype] = value
+    end
+  end
+
   # Get short version of the subtype label
   def short_subtype_label
     accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
@@ -262,6 +279,8 @@ class Account < ApplicationRecord
     when "Depository", "CreditCard"
       :cash
     when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
+      :non_cash
+    when "Installment"
       :non_cash
     when "Investment", "Crypto"
       :investment

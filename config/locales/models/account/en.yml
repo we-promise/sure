@@ -15,6 +15,7 @@ en:
       account/depository: Bank Account
       account/investment: Investment
       account/loan: Loan
+      account/installment: Installment
       account/other_asset: Other Asset
       account/other_liability: Other Liability
       account/property: Real Estate
