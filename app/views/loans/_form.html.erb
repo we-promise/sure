@@ -8,7 +8,7 @@
       <%= loan_form.select :subtype,
                          Loan::SUBTYPES.map { |k, v| [v[:long], k] },
                          { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
-      
+
       <div class="flex items-center gap-2">
         <%= loan_form.money_field :initial_balance,
                                  label: t("loans.form.initial_balance"),
