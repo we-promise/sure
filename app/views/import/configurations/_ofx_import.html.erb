@@ -1,0 +1,7 @@
+<%= styled_form_with model: @import, url: import_configuration_path(@import), scope: :import, method: :patch, class: "space-y-4" do |form| %>
+  <div class="rounded-lg bg-container-inset p-4 text-sm text-secondary">
+    <p><%= t(".description") %></p>
+  </div>
+
+  <%= form.submit t(".button_label") %>
+<% end %>

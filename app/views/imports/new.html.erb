@@ -45,6 +45,26 @@
           </li>
         <% end %>
 
+        <% if params[:type].nil? || params[:type] == "OfxImport" %>
+          <li>
+            <%= button_to imports_path(import: { type: "OfxImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
+              <div class="flex items-center gap-2">
+                <div class="bg-indigo-500/5 rounded-md w-8 h-8 flex items-center justify-center">
+                  <span class="text-indigo-500">
+                    <%= icon("file-spreadsheet", color: "current") %>
+                  </span>
+                </div>
+                <span class="text-sm text-primary group-hover:text-secondary">
+                  <%= t(".import_ofx") %>
+                </span>
+              </div>
+              <%= icon("chevron-right") %>
+            <% end %>
+
+            <%= render "shared/ruler" %>
+          </li>
+        <% end %>
+
         <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "TradeImport") %>
           <li>
             <%= button_to imports_path(import: { type: "TradeImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>

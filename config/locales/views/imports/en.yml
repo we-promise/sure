@@ -15,6 +15,9 @@ en:
         description: Upload a simple CSV file (like the one we generate when you
           export your data). We'll automatically map the columns for you.
         instructions: Select continue to parse your CSV and move on to the clean step.
+      ofx_import:
+        button_label: Continue
+        description: We'll parse your OFX file and generate transactions for the selected account.
       mint_import:
         date_format_label: Date format
       rule_import:
@@ -58,6 +61,15 @@ en:
       show:
         description: Paste or upload your CSV file below.  Please review the instructions
           in the table below before beginning.
+        ofx_account_label: Account
+        ofx_account_prompt: Select an account
+        ofx_browse: Browse
+        ofx_browse_suffix: to add your OFX file here
+        ofx_create_account: Create an account
+        ofx_description: Upload an OFX/QFX file to import transactions into a matching account.
+        ofx_no_accounts: You need an account to import OFX transactions.
+        ofx_submit: Upload OFX
+        ofx_title: Import your OFX file
         instructions_1: Below is an example CSV with columns available for import.
         instructions_2: Your CSV must have a header row
         instructions_3: You may name your columns anything you like.  You will map
@@ -92,6 +104,7 @@ en:
       import_accounts: Import accounts
       import_categories: Import categories
       import_mint: Import from Mint
+      import_ofx: Import OFX
       import_portfolio: Import investments
       import_rules: Import rules
       import_transactions: Import transactions
