@@ -47,6 +47,9 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     syncer = Family::Syncer.new(@family)
 
+    # Stub the relation to return our specific instances so expectations work
+    @family.rules.stubs(:where).with(active: true).returns([ active_rule ])
+
     # Expect apply_later to be called only for the active rule
     active_rule.expects(:apply_later).once
     disabled_rule.expects(:apply_later).never
