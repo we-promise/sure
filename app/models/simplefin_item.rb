@@ -58,7 +58,7 @@ class SimplefinItem < ApplicationRecord
   def process_accounts
     # Process accounts linked via BOTH legacy FK and AccountProvider
     # Use direct query to ensure fresh data from DB, bypassing any association cache
-    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, account_provider: :account).to_a
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, :linked_account, account_provider: :account).to_a
 
     Rails.logger.info "=" * 60
     Rails.logger.info "SimplefinItem#process_accounts START - Item #{id} (#{name})"
@@ -76,7 +76,7 @@ class SimplefinItem < ApplicationRecord
     repair_stale_linkages(all_accounts)
 
     # Re-fetch after repairs - use direct query for fresh data
-    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, account_provider: :account).to_a
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, :linked_account, account_provider: :account).to_a
 
     linked = all_accounts.select { |sfa| sfa.current_account.present? }
     unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
