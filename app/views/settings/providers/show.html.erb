@@ -84,5 +84,11 @@
         <%= render "settings/providers/indexa_capital_panel" %>
       </turbo-frame>
     <% end %>
+
+    <%= settings_section title: "Trade Republic (alpha)", collapsible: true, open: false do %>
+      <turbo-frame id="traderepublic-providers-panel">
+        <%= render "settings/providers/traderepublic_panel" %>
+      </turbo-frame>
+    <% end %>
   <% end %>
 </div>
