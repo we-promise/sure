@@ -343,7 +343,7 @@ class User < ApplicationRecord
       if (index = otp_backup_codes.index(code))
         remaining_codes = otp_backup_codes.dup
         remaining_codes.delete_at(index)
-        update_column(:otp_backup_codes, remaining_codes)
+        update!(otp_backup_codes: remaining_codes)
         true
       else
         false
