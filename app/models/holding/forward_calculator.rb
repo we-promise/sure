@@ -18,7 +18,22 @@ class Holding::ForwardCalculator
         current_portfolio = next_portfolio
       end
 
-      Holding.gapfill(holdings)
+      # Inclure aussi la première date où qty=0 pour chaque security (fermeture de position)
+      valid_holdings = []
+      holdings.group_by(&:security_id).each do |security_id, sec_holdings|
+        sorted = sec_holdings.sort_by(&:date)
+        prev_qty = nil
+        sorted.each do |h|
+          if h.qty.to_f > 0 && h.amount.to_f > 0
+            valid_holdings << h
+          elsif h.qty.to_f == 0 && prev_qty && prev_qty > 0
+            # On ajoute la première date où qty=0 après une séquence >0
+            valid_holdings << h
+          end
+          prev_qty = h.qty.to_f
+        end
+      end
+      Holding.gapfill(valid_holdings)   
     end
   end
 

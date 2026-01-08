@@ -1,0 +1,129 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", default: "Verify Device PIN")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <div class="p-4 bg-accent/10 border border-accent rounded-lg">
+          <p class="text-sm text-primary">
+            <%= icon "smartphone", class: "inline-block w-5 h-5 mr-2" %>
+            <%= t(".instruction", default: "A verification code has been sent to your Trade Republic app. Please enter the code below.") %>
+          </p>
+        </div>
+
+        <div id="pin-form" class="space-y-4">
+          <div>
+            <label for="device_pin" class="block text-sm font-medium text-primary mb-2">
+              <%= t(".pin_label", default: "Verification Code") %>
+            </label>
+            <input 
+              type="text" 
+              id="device_pin" 
+              name="device_pin"
+              placeholder="<%= t(".pin_placeholder", default: "Enter 4-digit code") %>"
+              maxlength="4"
+              pattern="[0-9]{4}"
+              autocomplete="off"
+              class="w-full px-4 py-3 border border-primary rounded-lg text-center text-2xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+            <p id="error-message" class="text-xs text-error mt-2 hidden"></p>
+          </div>
+
+          <div id="loading-spinner" class="hidden flex items-center justify-center gap-2 text-sm text-secondary">
+            <%= icon "loader-2", class: "w-4 h-4 animate-spin" %>
+            <span><%= t(".verifying", default: "Verifying...") %></span>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= link_to t(".cancel", default: "Cancel"), traderepublic_items_path,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+            <button 
+              type="button" 
+              id="verify-btn"
+              class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled"
+            >
+              <%= t(".verify", default: "Verify") %>
+            </button>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <script>
+    (function() {
+      const pinInput = document.getElementById('device_pin');
+      const verifyBtn = document.getElementById('verify-btn');
+      const errorMessage = document.getElementById('error-message');
+      const loadingSpinner = document.getElementById('loading-spinner');
+      const pinForm = document.getElementById('pin-form');
+
+      // Auto-focus on input
+      pinInput?.focus();
+
+      // Only allow numbers
+      pinInput?.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        errorMessage.classList.add('hidden');
+      });
+
+      // Submit on Enter
+      pinInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && pinInput.value.length === 4) {
+          verifyBtn?.click();
+        }
+      });
+
+      verifyBtn?.addEventListener('click', async () => {
+        const devicePin = pinInput.value.trim();
+
+        if (devicePin.length !== 4) {
+          errorMessage.textContent = '<%= t(".pin_invalid", default: "Please enter a 4-digit code") %>';
+          errorMessage.classList.remove('hidden');
+          return;
+        }
+
+        // Show loading
+        verifyBtn.disabled = true;
+        loadingSpinner.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+
+        try {
+          const response = await fetch('<%= complete_login_traderepublic_item_path(@traderepublic_item) %>', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+              device_pin: devicePin,
+              accountable_type: '<%= params[:accountable_type] || "Investment" %>',
+              return_to: '<%= @return_to %>'
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            // Redirect to account selection
+            window.location.href = data.redirect_url;
+          } else {
+            errorMessage.textContent = data.error || '<%= t(".verification_failed", default: "Verification failed. Please try again.") %>';
+            errorMessage.classList.remove('hidden');
+            verifyBtn.disabled = false;
+            loadingSpinner.classList.add('hidden');
+            pinInput.value = '';
+            pinInput.focus();
+          }
+        } catch (error) {
+          console.error('Verification error:', error);
+          errorMessage.textContent = '<%= t(".network_error", default: "Network error. Please try again.") %>';
+          errorMessage.classList.remove('hidden');
+          verifyBtn.disabled = false;
+          loadingSpinner.classList.add('hidden');
+        }
+      });
+    })();
+  </script>
+<% end %>

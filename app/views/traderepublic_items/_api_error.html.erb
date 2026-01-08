@@ -1,0 +1,22 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", default: "Connection Error")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <div class="p-4 bg-error/10 border border-error rounded-lg">
+          <p class="text-sm text-error">
+            <%= icon "alert-circle", class: "inline-block w-5 h-5 mr-2" %>
+            <%= local_assigns[:error_message] || t(".generic_error", default: "An error occurred while connecting to Trade Republic.") %>
+          </p>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-4">
+          <%= link_to t(".back", default: "Go Back"), local_assigns[:return_path] || new_account_path,
+              class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover",
+              data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
