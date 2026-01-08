@@ -100,25 +100,25 @@ class BudgetCategory < ApplicationRecord
     else
       # Parent category
       parent_budget = self[:budgeted_spending] || 0
-      
+
       # Get subcategories with and without individual limits
       subcategories_with_limits = subcategories.reject(&:inherits_parent_budget?)
-      
+
       # Ring-fenced budgets for subcategories with individual limits
       subcategories_individual_budgets = subcategories_with_limits.sum { |sc| sc[:budgeted_spending] || 0 }
-      
+
       # Shared pool = parent budget - ring-fenced budgets
       shared_pool = parent_budget - subcategories_individual_budgets
-      
+
       # Get actual spending from income statement (includes all subcategories)
       total_spending = actual_spending
-      
+
       # Subtract spending from subcategories with individual budgets (they use their ring-fenced money)
       subcategories_with_limits_spending = subcategories_with_limits.sum(&:actual_spending)
-      
+
       # Spending from shared pool = total spending - ring-fenced spending
       shared_pool_spending = total_spending - subcategories_with_limits_spending
-      
+
       # Available in shared pool
       shared_pool - shared_pool_spending
     end
@@ -129,7 +129,7 @@ class BudgetCategory < ApplicationRecord
       # For subcategories using parent budget, show their spending as percentage of parent's budget
       parent = parent_budget_category
       return 0 unless parent
-      
+
       parent_budget = parent[:budgeted_spending] || 0
       return 0 if parent_budget == 0 && actual_spending == 0
       return 100 if parent_budget == 0 && actual_spending > 0
@@ -197,13 +197,13 @@ class BudgetCategory < ApplicationRecord
 
     parent_budget_cat = budget.budget_categories.find { |bc| bc.category.id == category.parent_id }
     return nil unless parent_budget_cat
-    
+
     parent_budget = parent_budget_cat[:budgeted_spending] || 0
-    
+
     # Sum budgets of siblings that have individual limits (excluding those that inherit)
     siblings_with_limits = siblings.reject(&:inherits_parent_budget?)
     siblings_budget = siblings_with_limits.sum { |s| s[:budgeted_spending] || 0 }
-    
+
     [ parent_budget - siblings_budget, 0 ].max
   end
 
