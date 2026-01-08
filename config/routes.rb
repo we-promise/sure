@@ -2,6 +2,16 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  # CoinStats routes
+  resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
+    collection do
+      post :link_wallet
+    end
+    member do
+      post :sync
+    end
+  end
+
   resources :enable_banking_items, only: [ :new, :create, :update, :destroy ] do
     collection do
       get :callback
@@ -209,6 +219,8 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      get :confirm_all
+      post :apply_all
     end
   end
 

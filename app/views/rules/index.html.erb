@@ -11,6 +11,13 @@
           method: :delete,
           confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
       <% end %>
+      <%= render DS::Link.new(
+        text: t("rules.apply_all.button"),
+        variant: "secondary",
+        href: confirm_all_rules_path,
+        icon: "play",
+        frame: :modal
+      ) %>
     <% end %>
     <%= render DS::Link.new(
       text: "New rule",
@@ -117,12 +124,12 @@
         </thead>
         <tbody class="divide-y divide-gray-100">
           <% @recent_runs.each do |run| %>
-            <tr class="<%= 'bg-red-50 theme-dark:bg-red-950/30' if run.failed? %>">
+            <tr class="<%= "bg-red-50 theme-dark:bg-red-950/30" if run.failed? %>">
               <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
                 <%= run.executed_at.strftime("%b %d, %Y %I:%M %p") %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center">
-                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.execution_type == 'manual' ? 'bg-blue-50 text-blue-700 theme-dark:bg-blue-950/30 theme-dark:text-blue-400' : 'bg-purple-50 text-purple-700 theme-dark:bg-purple-950/30 theme-dark:text-purple-400' %>">
+                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.execution_type == "manual" ? "bg-blue-50 text-blue-700 theme-dark:bg-blue-950/30 theme-dark:text-blue-400" : "bg-purple-50 text-purple-700 theme-dark:bg-purple-950/30 theme-dark:text-purple-400" %>">
                   <%= t("rules.recent_runs.execution_types.#{run.execution_type}") %>
                 </span>
               </td>

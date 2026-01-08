@@ -21,43 +21,21 @@ class SimplefinItemsController < ApplicationController
     return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
-      # Create new SimpleFin item data with updated token
-      updated_item = Current.family.create_simplefin_item!(
-        setup_token: setup_token,
-        item_name: @simplefin_item.name
+      # Validate token shape early so the user gets immediate feedback.
+      claim_url = Base64.decode64(setup_token)
+      URI.parse(claim_url)
+
+      # Updating a SimpleFin connection can involve network retries/backoff and account import.
+      # Do it asynchronously so web requests aren't blocked by retry sleeps.
+      SimplefinConnectionUpdateJob.perform_later(
+        family_id: Current.family.id,
+        old_simplefin_item_id: @simplefin_item.id,
+        setup_token: setup_token
       )
 
-      # Ensure new simplefin_accounts are created & have account_id set
-      updated_item.import_latest_simplefin_data
-
-      # Transfer accounts from old item to new item
-      ActiveRecord::Base.transaction do
-        @simplefin_item.simplefin_accounts.each do |old_account|
-          if old_account.account.present?
-            # Find matching account in new item by account_id
-            new_account = updated_item.simplefin_accounts.find_by(account_id: old_account.account_id)
-            if new_account
-              # Transfer the account directly to the new SimpleFin account
-              # This will automatically break the old association
-              old_account.account.update!(simplefin_account_id: new_account.id)
-            end
-          end
-        end
-
-        # Mark old item for deletion
-        @simplefin_item.destroy_later
-      end
-
-      # Clear any requires_update status on new item
-      updated_item.update!(status: :good)
-
       if turbo_frame_request?
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "simplefin-providers-panel",
-          partial: "settings/providers/simplefin_panel",
-          locals: { simplefin_items: @simplefin_items }
-        )
+        flash.now[:notice] = t(".success")
+        render turbo_stream: Array(flash_notification_stream_items)
       else
         redirect_to accounts_path, notice: t(".success"), status: :see_other
       end
@@ -157,12 +135,16 @@ class SimplefinItemsController < ApplicationController
   end
 
   def setup_accounts
-    @simplefin_accounts = @simplefin_item.simplefin_accounts.includes(:account).where(accounts: { id: nil })
+    # Only show unlinked accounts - check both legacy FK and AccountProvider
+    @simplefin_accounts = @simplefin_item.simplefin_accounts
+      .left_joins(:account, :account_provider)
+      .where(accounts: { id: nil }, account_providers: { id: nil })
     @account_type_options = [
       [ "Skip this account", "skip" ],
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
+      [ "Crypto Account", "Crypto" ],
       [ "Loan or Mortgage", "Loan" ],
       [ "Other Asset", "OtherAsset" ]
     ]
@@ -208,6 +190,11 @@ class SimplefinItemsController < ApplicationController
         label: "Loan Type:",
         options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
       },
+      "Crypto" => {
+        label: nil,
+        options: [],
+        message: "Crypto accounts track cryptocurrency holdings."
+      },
       "OtherAsset" => {
         label: nil,
         options: [],
@@ -225,8 +212,8 @@ class SimplefinItemsController < ApplicationController
       @simplefin_item.update!(sync_start_date: params[:sync_start_date])
     end
 
-    # Valid account types for this provider (plus OtherAsset which SimpleFIN UI allows)
-    valid_types = Provider::SimplefinAdapter.supported_account_types + [ "OtherAsset" ]
+    # Valid account types for this provider (plus Crypto and OtherAsset which SimpleFIN UI allows)
+    valid_types = Provider::SimplefinAdapter.supported_account_types + [ "Crypto", "OtherAsset" ]
 
     created_accounts = []
     skipped_count = 0
@@ -269,6 +256,8 @@ class SimplefinItemsController < ApplicationController
         selected_subtype
       )
       simplefin_account.update!(account: account)
+      # Also create AccountProvider for consistency with the new linking system
+      simplefin_account.ensure_account_provider!
       created_accounts << account
     end
 
