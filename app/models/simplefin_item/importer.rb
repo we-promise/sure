@@ -158,6 +158,18 @@ class SimplefinItem::Importer
         return
       end
 
+      # Skip zero balance detection for liability accounts (CreditCard, Loan) where
+      # 0 balance with no holdings is normal (paid off card/loan)
+      account_type = simplefin_account.current_account&.accountable_type
+      if account_type.in?(%w[CreditCard Loan])
+        return
+      end
+
+      # Only count each account once per sync run to avoid false positives during
+      # chunked imports (which process the same account multiple times)
+      zero_balance_seen_keys << key if zeroish_balance && no_holdings
+      return if zero_balance_seen_keys.count(key) > 1
+
       if zeroish_balance && no_holdings
         stats["zero_runs"][key] = stats["zero_runs"][key].to_i + 1
         # Cap to avoid unbounded growth
@@ -171,6 +183,11 @@ class SimplefinItem::Importer
         stats["inactive"][key] = true
         stats["hints"] = Array(stats["hints"]) + [ "One or more accounts show no balance/holdings for multiple syncs — consider relinking or marking inactive." ]
       end
+    end
+
+    # Track accounts that have been flagged for zero balance in this sync run
+    def zero_balance_seen_keys
+      @zero_balance_seen_keys ||= []
     end
 
     # Track seen error fingerprints during a single importer run to avoid double counting
