@@ -6,11 +6,17 @@ plugins {
 
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
+def hasKeystore = false
 if (keystorePropertiesFile.exists()) {
     try {
         keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+        hasKeystore = keystoreProperties['storeFile'] != null &&
+                     keystoreProperties['keyAlias'] != null &&
+                     keystoreProperties['keyPassword'] != null &&
+                     keystoreProperties['storePassword'] != null &&
+                     file(keystoreProperties['storeFile']).exists()
     } catch (Exception e) {
-        throw new GradleException("Failed to load key.properties: ${e.message}")
+        println("Warning: Failed to load key.properties: ${e.message}")
     }
 }
 
@@ -28,12 +34,14 @@ android {
         jvmTarget = '1.8'
     }
 
-    signingConfigs {
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword keystoreProperties['storePassword']
+    if (hasKeystore) {
+        signingConfigs {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
         }
     }
 
@@ -47,7 +55,9 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             shrinkResources false
         }
