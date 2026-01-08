@@ -201,16 +201,31 @@ class SimplefinItemsController < ApplicationController
         message: "No additional options needed for Other Assets."
       }
     }
+
+    # Detect stale accounts: linked in DB but no longer in upstream SimpleFin API
+    @stale_simplefin_accounts = detect_stale_simplefin_accounts
+    if @stale_simplefin_accounts.any?
+      # Build list of target accounts for "move transactions to" dropdown
+      # Only show accounts from this SimpleFin connection (excluding stale ones)
+      stale_account_ids = @stale_simplefin_accounts.map { |sfa| sfa.current_account&.id }.compact
+      @target_accounts = @simplefin_item.accounts
+        .reject { |acct| stale_account_ids.include?(acct.id) }
+        .sort_by(&:name)
+    end
   end
 
   def complete_account_setup
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
+    stale_account_actions = params[:stale_account_actions] || {}
 
     # Update sync start date from form
     if params[:sync_start_date].present?
       @simplefin_item.update!(sync_start_date: params[:sync_start_date])
     end
+
+    # Process stale account actions first
+    stale_results = process_stale_account_actions(stale_account_actions)
 
     # Valid account types for this provider (plus Crypto and OtherAsset which SimpleFIN UI allows)
     valid_types = Provider::SimplefinAdapter.supported_account_types + [ "Crypto", "OtherAsset" ]
@@ -471,5 +486,87 @@ class SimplefinItemsController < ApplicationController
       else
         render context, status: :unprocessable_entity
       end
+    end
+
+    # Detect stale SimpleFin accounts: linked in DB but no longer in upstream API
+    def detect_stale_simplefin_accounts
+      # Get upstream account IDs from the last sync's raw_payload
+      raw_payload = @simplefin_item.raw_payload
+      return [] if raw_payload.blank?
+
+      upstream_ids = raw_payload.with_indifferent_access[:accounts]&.map { |a| a[:id].to_s } || []
+      return [] if upstream_ids.empty?
+
+      # Find SimplefinAccounts that are linked but not in upstream
+      @simplefin_item.simplefin_accounts
+        .includes(:account, account_provider: :account)
+        .select { |sfa| sfa.current_account.present? && !upstream_ids.include?(sfa.account_id) }
+    end
+
+    # Process user-selected actions for stale accounts
+    def process_stale_account_actions(stale_actions)
+      results = { deleted: 0, moved: 0, skipped: 0 }
+      return results if stale_actions.blank?
+
+      stale_actions.each do |simplefin_account_id, action_params|
+        action = action_params[:action]
+        next if action.blank? || action == "skip"
+
+        sfa = @simplefin_item.simplefin_accounts.find_by(id: simplefin_account_id)
+        next unless sfa
+
+        account = sfa.current_account
+        next unless account
+
+        case action
+        when "delete"
+          handle_stale_account_delete(sfa, account)
+          results[:deleted] += 1
+        when "move"
+          target_account_id = action_params[:target_account_id]
+          if target_account_id.present? && handle_stale_account_move(sfa, account, target_account_id)
+            results[:moved] += 1
+          else
+            results[:skipped] += 1
+          end
+        else
+          results[:skipped] += 1
+        end
+      end
+
+      results
+    end
+
+    def handle_stale_account_delete(simplefin_account, account)
+      ActiveRecord::Base.transaction do
+        # Destroy the Account (cascades to entries/holdings)
+        account.destroy!
+        # Destroy the SimplefinAccount
+        simplefin_account.destroy!
+      end
+    rescue => e
+      Rails.logger.error("Failed to delete stale account: #{e.class} - #{e.message}")
+    end
+
+    def handle_stale_account_move(simplefin_account, source_account, target_account_id)
+      target_account = @simplefin_item.accounts.find { |acct| acct.id.to_s == target_account_id.to_s }
+      return false unless target_account
+
+      ActiveRecord::Base.transaction do
+        # Move all entries to target account
+        source_account.entries.update_all(account_id: target_account.id)
+
+        # Destroy the now-empty source account
+        source_account.destroy!
+        # Destroy the SimplefinAccount
+        simplefin_account.destroy!
+
+        # Trigger sync on target account to recalculate balances
+        target_account.sync_later
+      end
+      true
+    rescue => e
+      Rails.logger.error("Failed to move transactions from stale account: #{e.class} - #{e.message}")
+      false
     end
 end

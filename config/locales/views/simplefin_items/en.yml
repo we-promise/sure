@@ -30,6 +30,17 @@ en:
         label: "SimpleFin Setup Token:"
         placeholder: "Paste your SimpleFin setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
+    setup_accounts:
+      stale_accounts:
+        title: "Accounts No Longer in SimpleFin"
+        description: "These accounts exist in your database but are no longer provided by SimpleFin. This can happen when account configurations change upstream."
+        action_prompt: "What would you like to do?"
+        action_delete: "Delete account and all transactions"
+        action_move: "Move transactions to:"
+        action_skip: "Skip for now"
+        transaction_count:
+          one: "%{count} transaction"
+          other: "%{count} transactions"
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       no_accounts: "No accounts to set up."
