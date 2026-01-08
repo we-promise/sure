@@ -1,5 +1,5 @@
 class TraderepublicItem::Importer
-    # Utilitaire pour trouver ou créer une security par ISIN, sinon par ticker/MIC
+    # Utility to find or create a security by ISIN, otherwise by ticker/MIC
     def find_or_create_security_from_tr(position_or_txn)
       isin = position_or_txn["isin"]&.strip&.upcase.presence
       ticker = position_or_txn["ticker"]&.strip.presence || position_or_txn["symbol"]&.strip.presence
@@ -92,7 +92,7 @@ class TraderepublicItem::Importer
 
     # Get the date of the last synced transaction for incremental sync
     since_date = account.last_transaction_date
-    # Forcer un full sync si aucune transaction n'existe réellement
+    # Force a full sync if no transaction actually exists
     if account.linked_account.nil? || !account.linked_account.transactions.exists?
       since_date = nil
       Rails.logger.info "TraderepublicItem #{traderepublic_item.id}: Forcing initial full sync (no transactions exist)"
@@ -111,7 +111,7 @@ class TraderepublicItem::Importer
       Rails.logger.info "TraderepublicItem #{traderepublic_item.id}: parsed class=#{parsed.class} keys=#{parsed.respond_to?(:keys) ? parsed.keys : 'n/a'}"
       Rails.logger.info "TraderepublicItem #{traderepublic_item.id}: parsed preview=#{parsed.inspect[0..300]}"
 
-      # Ajout des instrument details pour chaque transaction (si ISIN présent)
+      # Add instrument details for each transaction (if ISIN present)
       items = if parsed.is_a?(Hash)
         parsed["items"]
       elsif parsed.is_a?(Array)
@@ -131,7 +131,7 @@ class TraderepublicItem::Importer
       if items.is_a?(Array)
         Rails.logger.info "TraderepublicItem #{traderepublic_item.id}: items count before enrichment = #{items.size}"
         items.each do |txn|
-          # Enrichir avec instrument_details (ISIN) si possible
+          # Enrich with instrument_details (ISIN) if possible
           isin = txn["isin"]
           isin ||= txn.dig("instrument", "isin")
           isin ||= extract_isin_from_icon(txn["icon"])
@@ -143,7 +143,7 @@ class TraderepublicItem::Importer
               Rails.logger.warn "TraderepublicItem #{traderepublic_item.id}: Failed to fetch instrument details for ISIN #{isin} - #{e.message}"
             end
           end
-          # Enrichir avec trade_details (timelineDetailV2) pour chaque transaction
+          # Enrich with trade_details (timelineDetailV2) for each transaction
           begin
             trade_details = provider.get_timeline_detail(txn["id"])
             txn["trade_details"] = trade_details if trade_details.present?
@@ -156,7 +156,7 @@ class TraderepublicItem::Importer
 
 
 
-      # Log détaillé avant sauvegarde du snapshot
+      # Detailed log before saving the snapshot
       items_count = items.is_a?(Array) ? items.size : 0
       preview = items.is_a?(Array) && items_count > 0 ? items.first(2).map { |i| i.slice('id', 'title', 'isin') } : items.inspect
       Rails.logger.info "TraderepublicItem #{traderepublic_item.id}: Transactions snapshot contains #{items_count} items (with instrument details). Preview: #{preview}"
