@@ -226,6 +226,7 @@ class SimplefinItemsController < ApplicationController
 
     # Process stale account actions first
     stale_results = process_stale_account_actions(stale_account_actions)
+    stale_action_errors = stale_results[:errors] || []
 
     # Valid account types for this provider (plus Crypto and OtherAsset which SimpleFIN UI allows)
     valid_types = Provider::SimplefinAdapter.supported_account_types + [ "Crypto", "OtherAsset" ]
@@ -289,6 +290,17 @@ class SimplefinItemsController < ApplicationController
       flash[:notice] = t(".all_skipped")
     else
       flash[:notice] = t(".no_accounts")
+    end
+
+    # Add stale account results to flash
+    if stale_results[:deleted] > 0 || stale_results[:moved] > 0
+      stale_message = t(".stale_accounts_processed", deleted: stale_results[:deleted], moved: stale_results[:moved])
+      flash[:notice] = [ flash[:notice], stale_message ].compact.join(" ")
+    end
+
+    # Warn about any stale account action failures
+    if stale_action_errors.any?
+      flash[:alert] = t(".stale_accounts_errors", count: stale_action_errors.size)
     end
     if turbo_frame_request?
       # Recompute data needed by Accounts#index partials
@@ -523,7 +535,7 @@ class SimplefinItemsController < ApplicationController
 
     # Process user-selected actions for stale accounts
     def process_stale_account_actions(stale_actions)
-      results = { deleted: 0, moved: 0, skipped: 0 }
+      results = { deleted: 0, moved: 0, skipped: 0, errors: [] }
       return results if stale_actions.blank?
 
       stale_actions.each do |simplefin_account_id, action_params|
@@ -538,14 +550,17 @@ class SimplefinItemsController < ApplicationController
 
         case action
         when "delete"
-          handle_stale_account_delete(sfa, account)
-          results[:deleted] += 1
+          if handle_stale_account_delete(sfa, account)
+            results[:deleted] += 1
+          else
+            results[:errors] << { account: account.name, action: "delete" }
+          end
         when "move"
           target_account_id = action_params[:target_account_id]
           if target_account_id.present? && handle_stale_account_move(sfa, account, target_account_id)
             results[:moved] += 1
           else
-            results[:skipped] += 1
+            results[:errors] << { account: account.name, action: "move" }
           end
         else
           results[:skipped] += 1
@@ -562,8 +577,10 @@ class SimplefinItemsController < ApplicationController
         # Destroy the SimplefinAccount
         simplefin_account.destroy!
       end
+      true
     rescue => e
       Rails.logger.error("Failed to delete stale account: #{e.class} - #{e.message}")
+      false
     end
 
     def handle_stale_account_move(simplefin_account, source_account, target_account_id)
@@ -571,6 +588,19 @@ class SimplefinItemsController < ApplicationController
       return false unless target_account
 
       ActiveRecord::Base.transaction do
+        # Handle transfers that would become invalid after moving entries.
+        # Transfers linking source entries to target entries would end up with both
+        # entries in the same account, violating transfer_has_different_accounts validation.
+        source_entry_ids = source_account.entries.pluck(:id)
+        target_entry_ids = target_account.entries.pluck(:id)
+
+        if source_entry_ids.any? && target_entry_ids.any?
+          # Find and destroy transfers between source and target accounts
+          conflicting_transfers = Transfer.where(inflow_transaction_id: source_entry_ids, outflow_transaction_id: target_entry_ids)
+            .or(Transfer.where(inflow_transaction_id: target_entry_ids, outflow_transaction_id: source_entry_ids))
+          conflicting_transfers.destroy_all if conflicting_transfers.any?
+        end
+
         # Move all entries to target account
         source_account.entries.update_all(account_id: target_account.id)
 

@@ -45,6 +45,10 @@ en:
       all_skipped: "All accounts were skipped. No accounts were created."
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} SimpleFIN account(s)! Your transactions and holdings are being imported in the background."
+      stale_accounts_processed: "Stale accounts: %{deleted} deleted, %{moved} moved."
+      stale_accounts_errors:
+        one: "%{count} stale account action failed. Check logs for details."
+        other: "%{count} stale account actions failed. Check logs for details."
     simplefin_item:
       add_new: Add new connection
       confirm_accept: Delete connection
