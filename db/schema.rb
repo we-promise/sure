@@ -961,6 +961,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_08_131034) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "security_id"
+    t.boolean "provisional", default: false, null: false
     t.index ["security_id", "date", "currency"], name: "index_security_prices_on_security_id_and_date_and_currency", unique: true
     t.index ["security_id"], name: "index_security_prices_on_security_id"
   end

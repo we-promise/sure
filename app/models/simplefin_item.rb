@@ -57,11 +57,163 @@ class SimplefinItem < ApplicationRecord
 
   def process_accounts
     # Process accounts linked via BOTH legacy FK and AccountProvider
-    simplefin_accounts.includes(:account, account_provider: :account).each do |simplefin_account|
-      # Only process if there's a linked account (via either system)
-      next unless simplefin_account.current_account.present?
+    # Use direct query to ensure fresh data from DB, bypassing any association cache
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, :linked_account, account_provider: :account).to_a
+
+    Rails.logger.info "=" * 60
+    Rails.logger.info "SimplefinItem#process_accounts START - Item #{id} (#{name})"
+    Rails.logger.info "  Total SimplefinAccounts: #{all_accounts.count}"
+
+    # Log all accounts for debugging
+    all_accounts.each do |sfa|
+      acct = sfa.current_account
+      Rails.logger.info "  - SimplefinAccount id=#{sfa.id} sf_account_id=#{sfa.account_id} name='#{sfa.name}'"
+      Rails.logger.info "    linked_account: #{sfa.linked_account&.id || 'nil'}, account: #{sfa.account&.id || 'nil'}, current_account: #{acct&.id || 'nil'}"
+      Rails.logger.info "    raw_transactions_payload count: #{sfa.raw_transactions_payload.to_a.count}"
+    end
+
+    # First, try to repair stale linkages (old SimplefinAccount linked but new one has data)
+    repair_stale_linkages(all_accounts)
+
+    # Re-fetch after repairs - use direct query for fresh data
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, :linked_account, account_provider: :account).to_a
+
+    linked = all_accounts.select { |sfa| sfa.current_account.present? }
+    unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
+
+    Rails.logger.info "SimplefinItem#process_accounts - After repair: #{linked.count} linked, #{unlinked.count} unlinked"
+
+    # Log unlinked accounts with transactions for debugging
+    unlinked_with_txns = unlinked.select { |sfa| sfa.raw_transactions_payload.to_a.any? }
+    if unlinked_with_txns.any?
+      Rails.logger.warn "SimplefinItem#process_accounts - #{unlinked_with_txns.count} UNLINKED account(s) have transactions that won't be processed:"
+      unlinked_with_txns.each do |sfa|
+        Rails.logger.warn "  - SimplefinAccount id=#{sfa.id} name='#{sfa.name}' sf_account_id=#{sfa.account_id} txn_count=#{sfa.raw_transactions_payload.to_a.count}"
+      end
+    end
+
+    linked.each do |simplefin_account|
+      acct = simplefin_account.current_account
+      Rails.logger.info "SimplefinItem#process_accounts - Processing: SimplefinAccount id=#{simplefin_account.id} name='#{simplefin_account.name}' -> Account id=#{acct.id} name='#{acct.name}' type=#{acct.accountable_type}"
       SimplefinAccount::Processor.new(simplefin_account).process
     end
+
+    Rails.logger.info "SimplefinItem#process_accounts END"
+    Rails.logger.info "=" * 60
+  end
+
+  # Repairs stale linkages when user re-adds institution in SimpleFIN.
+  # When a user deletes and re-adds an institution in SimpleFIN, new account IDs are generated.
+  # This causes old SimplefinAccounts to remain "linked" but stale (no new data),
+  # while new SimplefinAccounts have data but are unlinked.
+  # This method detects such cases and transfers the linkage from old to new.
+  def repair_stale_linkages(all_accounts)
+    linked = all_accounts.select { |sfa| sfa.current_account.present? }
+    unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
+
+    Rails.logger.info "SimplefinItem#repair_stale_linkages - #{linked.count} linked, #{unlinked.count} unlinked SimplefinAccounts"
+
+    # Find unlinked accounts that have transactions
+    unlinked_with_data = unlinked.select { |sfa| sfa.raw_transactions_payload.to_a.any? }
+
+    if unlinked_with_data.any?
+      Rails.logger.info "SimplefinItem#repair_stale_linkages - Found #{unlinked_with_data.count} unlinked SimplefinAccount(s) with transactions:"
+      unlinked_with_data.each do |sfa|
+        Rails.logger.info "  - id=#{sfa.id} name='#{sfa.name}' account_id=#{sfa.account_id} txn_count=#{sfa.raw_transactions_payload.to_a.count}"
+      end
+    end
+
+    return if unlinked_with_data.empty?
+
+    # For each unlinked account with data, try to find a matching linked account
+    unlinked_with_data.each do |new_sfa|
+      # Find linked SimplefinAccount with same name (case-insensitive).
+      stale_matches = linked.select do |old_sfa|
+        old_sfa.name.to_s.downcase.strip == new_sfa.name.to_s.downcase.strip
+      end
+
+      if stale_matches.size > 1
+        Rails.logger.warn "SimplefinItem#repair_stale_linkages - Multiple linked accounts match '#{new_sfa.name}': #{stale_matches.map(&:id).join(', ')}. Using first match."
+      end
+
+      stale_match = stale_matches.first
+      next unless stale_match
+
+      account = stale_match.current_account
+      Rails.logger.info "SimplefinItem#repair_stale_linkages - Found matching accounts:"
+      Rails.logger.info "  - OLD: SimplefinAccount id=#{stale_match.id} account_id=#{stale_match.account_id} txn_count=#{stale_match.raw_transactions_payload.to_a.count}"
+      Rails.logger.info "  - NEW: SimplefinAccount id=#{new_sfa.id} account_id=#{new_sfa.account_id} txn_count=#{new_sfa.raw_transactions_payload.to_a.count}"
+      Rails.logger.info "  - Linked to Account: '#{account.name}' (id=#{account.id})"
+
+      # Transfer the linkage from old to new
+      begin
+        # Merge transactions from old to new before transferring
+        old_transactions = stale_match.raw_transactions_payload.to_a
+        new_transactions = new_sfa.raw_transactions_payload.to_a
+        if old_transactions.any?
+          Rails.logger.info "SimplefinItem#repair_stale_linkages - Merging #{old_transactions.count} transactions from old SimplefinAccount"
+          merged = merge_transactions(old_transactions, new_transactions)
+          new_sfa.update!(raw_transactions_payload: merged)
+        end
+
+        # Check if linked via legacy FK (use to_s for UUID comparison safety)
+        if account.simplefin_account_id.to_s == stale_match.id.to_s
+          account.simplefin_account_id = new_sfa.id
+          account.save!
+        end
+
+        # Check if linked via AccountProvider
+        if stale_match.account_provider.present?
+          Rails.logger.info "SimplefinItem#repair_stale_linkages - Transferring AccountProvider linkage from SimplefinAccount #{stale_match.id} to #{new_sfa.id}"
+          stale_match.account_provider.update!(provider: new_sfa)
+        end
+
+        # If the new one doesn't have an AccountProvider yet, create one
+        new_sfa.ensure_account_provider!
+
+        Rails.logger.info "SimplefinItem#repair_stale_linkages - Successfully transferred linkage for Account '#{account.name}' to SimplefinAccount id=#{new_sfa.id}"
+
+        # Clear transactions from stale SimplefinAccount and leave it orphaned
+        # We don't destroy it because has_one :account, dependent: :nullify would nullify the FK we just set
+        # IMPORTANT: Use update_all to bypass AR associations - stale_match.update! would
+        # trigger autosave on the preloaded account association, reverting the FK we just set!
+        SimplefinAccount.where(id: stale_match.id).update_all(raw_transactions_payload: [], raw_holdings_payload: [])
+        Rails.logger.info "SimplefinItem#repair_stale_linkages - Cleared data from stale SimplefinAccount id=#{stale_match.id} (leaving orphaned)"
+      rescue => e
+        Rails.logger.error "SimplefinItem#repair_stale_linkages - Failed to transfer linkage: #{e.class} - #{e.message}"
+        Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
+      end
+    end
+  end
+
+  # Merge two arrays of transactions, deduplicating by ID.
+  # Fallback: uses composite key [posted, amount, description] when ID/fitid missing.
+  #
+  # Known edge cases with composite key fallback:
+  # 1. False positives: Two distinct transactions with identical posted/amount/description
+  #    will be incorrectly merged (rare but possible).
+  # 2. Type inconsistency: If posted varies in type (String vs Integer), keys won't match.
+  # 3. Description variations: Minor differences (whitespace, case) prevent matching.
+  #
+  # SimpleFIN typically provides transaction IDs, so this fallback is rarely needed.
+  def merge_transactions(old_txns, new_txns)
+    by_id = {}
+
+    # Add old transactions first
+    old_txns.each do |tx|
+      t = tx.with_indifferent_access
+      key = t[:id] || t[:fitid] || [ t[:posted], t[:amount], t[:description] ]
+      by_id[key] = tx
+    end
+
+    # Add new transactions (overwrite old with same ID)
+    new_txns.each do |tx|
+      t = tx.with_indifferent_access
+      key = t[:id] || t[:fitid] || [ t[:posted], t[:amount], t[:description] ]
+      by_id[key] = tx
+    end
+
+    by_id.values
   end
 
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)

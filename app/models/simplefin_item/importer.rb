@@ -36,11 +36,11 @@ class SimplefinItem::Importer
 
       if simplefin_item.last_synced_at.nil? || no_txns_yet
         # First sync (or balances-only pre-run) — use chunked approach to get full history
-        Rails.logger.info "SimplefinItem::Importer - Using chunked history import"
+        Rails.logger.info "SimplefinItem::Importer - Using CHUNKED HISTORY import (last_synced_at=#{simplefin_item.last_synced_at.inspect}, no_txns_yet=#{no_txns_yet})"
         import_with_chunked_history
       else
         # Regular sync - use single request with buffer
-        Rails.logger.info "SimplefinItem::Importer - Using regular sync"
+        Rails.logger.info "SimplefinItem::Importer - Using REGULAR SYNC (last_synced_at=#{simplefin_item.last_synced_at&.strftime('%Y-%m-%d %H:%M')})"
         import_regular_sync
       end
     rescue RateLimitedError => e
@@ -158,6 +158,16 @@ class SimplefinItem::Importer
         return
       end
 
+      # Skip zero balance detection for liability accounts (CreditCard, Loan) where
+      # 0 balance with no holdings is normal (paid off card/loan)
+      account_type = simplefin_account.current_account&.accountable_type
+      return if %w[CreditCard Loan].include?(account_type)
+
+      # Only count each account once per sync run to avoid false positives during
+      # chunked imports (which process the same account multiple times)
+      zero_balance_seen_keys << key if zeroish_balance && no_holdings
+      return if zero_balance_seen_keys.count(key) > 1
+
       if zeroish_balance && no_holdings
         stats["zero_runs"][key] = stats["zero_runs"][key].to_i + 1
         # Cap to avoid unbounded growth
@@ -171,6 +181,11 @@ class SimplefinItem::Importer
         stats["inactive"][key] = true
         stats["hints"] = Array(stats["hints"]) + [ "One or more accounts show no balance/holdings for multiple syncs — consider relinking or marking inactive." ]
       end
+    end
+
+    # Track accounts that have been flagged for zero balance in this sync run
+    def zero_balance_seen_keys
+      @zero_balance_seen_keys ||= []
     end
 
     # Track seen error fingerprints during a single importer run to avoid double counting
@@ -331,6 +346,7 @@ class SimplefinItem::Importer
 
       # Step 2: Fetch transactions/holdings using the regular window.
       start_date = determine_sync_start_date
+      Rails.logger.info "SimplefinItem::Importer - import_regular_sync: last_synced_at=#{simplefin_item.last_synced_at&.strftime('%Y-%m-%d %H:%M')} => start_date=#{start_date&.strftime('%Y-%m-%d')}"
       accounts_data = fetch_accounts_data(start_date: start_date, pending: true)
       return if accounts_data.nil? # Error already handled
 
@@ -372,6 +388,7 @@ class SimplefinItem::Importer
     #
     # Returns nothing; side-effects are snapshot + account upserts.
     def perform_account_discovery
+      Rails.logger.info "SimplefinItem::Importer - perform_account_discovery START (no date params - transactions may be empty)"
       discovery_data = fetch_accounts_data(start_date: nil)
       discovered_count = discovery_data&.dig(:accounts)&.size.to_i
       Rails.logger.info "SimpleFin discovery (no params) returned #{discovered_count} accounts"
@@ -547,6 +564,32 @@ class SimplefinItem::Importer
       transactions = account_data[:transactions]
       holdings = account_data[:holdings]
 
+      # Log detailed info for accounts with holdings (investment accounts) to debug missing transactions
+      # Note: SimpleFIN doesn't include a 'type' field, so we detect investment accounts by presence of holdings or name
+      acct_name = account_data[:name].to_s.downcase
+      has_holdings = holdings.is_a?(Array) && holdings.any?
+      is_investment = has_holdings || acct_name.include?("ira") || acct_name.include?("401k") || acct_name.include?("retirement") || acct_name.include?("brokerage")
+
+      # Always log for all accounts to trace the import flow
+      Rails.logger.info "SimplefinItem::Importer#import_account - account_id=#{account_id} name='#{account_data[:name]}' txn_count=#{transactions&.count || 0} holdings_count=#{holdings&.count || 0}"
+
+      if is_investment
+        Rails.logger.info "SimpleFIN Investment Account Debug - account_id=#{account_id} name='#{account_data[:name]}'"
+        Rails.logger.info "  - API response keys: #{account_data.keys.inspect}"
+        Rails.logger.info "  - transactions count: #{transactions&.count || 0}"
+        Rails.logger.info "  - holdings count: #{holdings&.count || 0}"
+        Rails.logger.info "  - existing raw_transactions_payload count: #{simplefin_account.raw_transactions_payload.to_a.count}"
+
+        # Log transaction data
+        if transactions.is_a?(Array) && transactions.any?
+          Rails.logger.info "  - Transaction IDs: #{transactions.map { |t| t[:id] || t["id"] }.inspect}"
+        else
+          Rails.logger.warn "  - NO TRANSACTIONS in API response for investment account!"
+          # Log what the transactions field actually contains
+          Rails.logger.info "  - transactions raw value: #{account_data[:transactions].inspect}"
+        end
+      end
+
       # Update all attributes; only update transactions if present to avoid wiping prior data
       attrs = {
         name: account_data[:name],
@@ -564,6 +607,8 @@ class SimplefinItem::Importer
       # pending placeholders that sometimes come back with posted: 0.
       if transactions.is_a?(Array) && transactions.any?
         existing_transactions = simplefin_account.raw_transactions_payload.to_a
+
+        Rails.logger.info "SimplefinItem::Importer#import_account - Merging transactions for account_id=#{account_id}: #{existing_transactions.count} existing + #{transactions.count} new"
 
         # Build a map of key => best_tx
         best_by_key = {}
@@ -623,6 +668,8 @@ class SimplefinItem::Importer
         merged_transactions = best_by_key.values
         attrs[:raw_transactions_payload] = merged_transactions
 
+        Rails.logger.info "SimplefinItem::Importer#import_account - Merged result for account_id=#{account_id}: #{merged_transactions.count} total transactions"
+
         # NOTE: Reconciliation disabled - it analyzes the SimpleFin API response
         # which only contains ~90 days of history, creating misleading "gap" warnings
         # that don't reflect actual database state. Re-enable if we improve it to
@@ -632,6 +679,8 @@ class SimplefinItem::Importer
         # rescue => e
         #   Rails.logger.warn("SimpleFin: reconciliation failed for sfa=#{simplefin_account.id || account_id}: #{e.class} - #{e.message}")
         # end
+      else
+        Rails.logger.info "SimplefinItem::Importer#import_account - No transactions in API response for account_id=#{account_id} (transactions=#{transactions.inspect.first(100)})"
       end
 
       # Track whether incoming holdings are new/changed so we can materialize and refresh balances
@@ -665,6 +714,11 @@ class SimplefinItem::Importer
 
       begin
         simplefin_account.save!
+
+        # Log final state after save for debugging
+        if is_investment
+          Rails.logger.info "SimplefinItem::Importer#import_account - SAVED account_id=#{account_id}: raw_transactions_payload now has #{simplefin_account.reload.raw_transactions_payload.to_a.count} transactions"
+        end
 
         # Post-save side effects
         acct = simplefin_account.current_account
@@ -835,15 +889,18 @@ class SimplefinItem::Importer
     end
 
     def initial_sync_lookback_period
-      # Default to 7 days for initial sync. Providers that support deeper
-      # history will supply it via chunked fetches, and users can optionally
-      # set a custom `sync_start_date` to go further back.
-      7
+      # Default to 60 days for initial sync to capture recent investment
+      # transactions (dividends, contributions, etc.). Providers that support
+      # deeper history will supply it via chunked fetches, and users can
+      # optionally set a custom `sync_start_date` to go further back.
+      60
     end
 
     def sync_buffer_period
-      # Default to 7 days buffer for subsequent syncs
-      7
+      # Default to 30 days buffer for subsequent syncs
+      # Investment accounts often have infrequent transactions (dividends, etc.)
+      # that would be missed with a shorter window
+      30
     end
 
     # Transaction reconciliation: detect potential data gaps or missing transactions
