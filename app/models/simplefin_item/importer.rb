@@ -161,9 +161,7 @@ class SimplefinItem::Importer
       # Skip zero balance detection for liability accounts (CreditCard, Loan) where
       # 0 balance with no holdings is normal (paid off card/loan)
       account_type = simplefin_account.current_account&.accountable_type
-      if account_type.in?(%w[CreditCard Loan])
-        return
-      end
+      return if %w[CreditCard Loan].include?(account_type)
 
       # Only count each account once per sync run to avoid false positives during
       # chunked imports (which process the same account multiple times)
