@@ -72,15 +72,19 @@ class BudgetCategoryTest < ActiveSupport::TestCase
 
   test "inheriting subcategory shares parent available_to_spend" do
     # Mock the actual spending values
-    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(500)
+    # Parent's actual_spending from income_statement includes all children
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(150)
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(100)
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(50)
     
-    # Parent available: 1000 (parent budget) - 300 (subcategory with limit budget) - 500 (total spending) = 200
-    assert_equal 200, @parent_budget_category.available_to_spend
+    # Parent available calculation:
+    # shared_pool = 1000 (parent budget) - 300 (subcategory with limit budget) = 700
+    # shared_pool_spending = 150 (total) - 100 (subcategory with limit spending) = 50
+    # available = 700 - 50 = 650
+    assert_equal 650, @parent_budget_category.available_to_spend
     
-    # Inheriting subcategory shares parent's available (200)
-    assert_equal 200, @subcategory_inheriting_bc.available_to_spend
+    # Inheriting subcategory shares parent's available (650)
+    assert_equal 650, @subcategory_inheriting_bc.available_to_spend
     
     # Subcategory with limit: 300 (its budget) - 100 (its spending) = 200
     assert_equal 200, @subcategory_with_limit_bc.available_to_spend

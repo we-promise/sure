@@ -88,10 +88,6 @@ class BudgetCategory < ApplicationRecord
     budget.budget_categories.find { |bc| bc.category.id == category.parent_id }
   end
 
-  def actual_spending
-    budget.budget_category_actual_spending(self)
-  end
-
   def available_to_spend
     if inherits_parent_budget?
       # Subcategories using parent budget share the parent's available_to_spend
@@ -104,15 +100,24 @@ class BudgetCategory < ApplicationRecord
     else
       # Parent category
       parent_budget = self[:budgeted_spending] || 0
-      total_spending = actual_spending  # This already includes all subcategory spending
       
-      # Subtract the allocated budgets of subcategories that have individual limits
-      # These are ring-fenced portions of the parent budget
+      # Ring-fenced budgets for subcategories with individual limits
       subcategories_individual_budgets = subcategories.reject(&:inherits_parent_budget?).sum { |sc| sc[:budgeted_spending] || 0 }
       
-      # Available = (parent budget - individual subcategory budgets) - total spending
-      # This gives us the shared pool available for parent + inheriting subcategories
-      parent_budget - subcategories_individual_budgets - total_spending
+      # Shared pool = parent budget - ring-fenced budgets
+      shared_pool = parent_budget - subcategories_individual_budgets
+      
+      # Get actual spending from income statement (includes all subcategories)
+      total_spending = actual_spending
+      
+      # Subtract spending from subcategories with individual budgets (they use their ring-fenced money)
+      subcategories_with_limits_spending = subcategories.reject(&:inherits_parent_budget?).sum(&:actual_spending)
+      
+      # Spending from shared pool = total spending - ring-fenced spending
+      shared_pool_spending = total_spending - subcategories_with_limits_spending
+      
+      # Available in shared pool
+      shared_pool - shared_pool_spending
     end
   end
 
