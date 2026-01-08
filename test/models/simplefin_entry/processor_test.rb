@@ -53,7 +53,9 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Order #1234", sf["description"]
     assert_equal({ "category" => "restaurants", "check_number" => nil }, sf["extra"])
   end
-  test "flags pending transaction when posted is nil and transacted_at present" do
+  test "does not flag pending when posted is nil but provider pending flag not set" do
+    # Previously we inferred pending from missing posted date, but this was too aggressive -
+    # some providers don't supply posted dates even for settled transactions
     tx = {
       id: "tx_pending_1",
       amount: "-20.00",
@@ -70,7 +72,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     entry = @account.entries.find_by!(external_id: "simplefin_tx_pending_1", source: "simplefin")
     sf = entry.transaction.extra.fetch("simplefin")
 
-    assert_equal true, sf["pending"], "expected pending flag to be true"
+    assert_equal false, sf["pending"], "expected pending flag to be false when provider doesn't explicitly set pending"
   end
 
   test "captures FX metadata when tx currency differs from account currency" do

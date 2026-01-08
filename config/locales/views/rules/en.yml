@@ -4,6 +4,19 @@ en:
     no_action: No Action
     actions:
       value_placeholder: Enter a value
+    apply_all:
+      button: Apply All
+      confirm_title: Apply All Rules
+      confirm_message: You are about to apply %{count} rules affecting %{transactions} unique transactions. Please confirm if you wish to proceed.
+      confirm_button: Confirm and Apply All
+      success: All rules have been queued for execution
+      ai_cost_title: AI Cost Estimation
+      ai_cost_message: This will use AI to categorize up to %{transactions} transactions.
+      estimated_cost: "Estimated cost: ~$%{cost}"
+      cost_unavailable_model: Cost estimation unavailable for model "%{model}".
+      cost_unavailable_no_provider: Cost estimation unavailable (no LLM provider configured).
+      cost_warning: You may incur costs, please check with the model provider for the most up-to-date prices.
+      view_usage: View usage history
     recent_runs:
       title: Recent Runs
       description: View the execution history of your rules including success/failure status and transaction counts.
