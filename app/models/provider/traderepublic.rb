@@ -2,6 +2,46 @@ require "websocket-client-simple"
 require "json"
 
 class Provider::Traderepublic
+    # Execute several subscribe_once calls in a single WebSocket session
+    # Usage: batch_websocket_calls { |batch| batch.get_portfolio; batch.get_cash }
+    def batch_websocket_calls
+      connect_websocket
+      batch_proxy = BatchWebSocketProxy.new(self)
+      yield batch_proxy
+      # Optionally, small sleep to allow last messages to arrive
+      sleep 0.5
+    ensure
+      disconnect_websocket
+    end
+
+    # Proxy to expose only subscribe_once helpers on an open connection
+    class BatchWebSocketProxy
+      def initialize(provider)
+        @provider = provider
+      end
+
+      def get_portfolio
+        @provider.subscribe_once("compactPortfolioByType")
+      end
+
+      def get_cash
+        @provider.subscribe_once("cash")
+      end
+
+      def get_available_cash
+        @provider.subscribe_once("availableCash")
+      end
+
+      def get_timeline_detail(id)
+        @provider.subscribe_once("timelineDetailV2", { id: id })
+      end
+
+      def get_instrument_details(isin)
+        @provider.subscribe_once("instrument", { id: isin })
+      end
+
+      # Ajoutez ici d'autres helpers si besoin
+    end
   include HTTParty
 
   headers "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
