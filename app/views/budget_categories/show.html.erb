@@ -95,7 +95,7 @@
               <% @recent_transactions.each_with_index do |transaction, index| %>
                 <li class="flex gap-4 text-sm space-y-1">
                   <div class="flex flex-col items-center gap-1.5 pt-2">
-                    <div class="rounded-full h-1.5 w-1.5 bg-gray-300"></div>
+                    <div class="rounded-full h-1.5 w-1.5 bg-subdued"></div>
                     <% unless index == @recent_transactions.length - 1 %>
                       <div class="h-12 w-px bg-alpha-black-200"></div>
                     <% end %>

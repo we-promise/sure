@@ -50,10 +50,10 @@ nav_sections = [
     <%= render DS::Link.new(
       text: t("settings.settings_nav_link_large.previous"),
       icon: "chevron-left",
-      href: previous_path,
+      href: root_path,
       variant: "ghost",
     ) %>
-    <%= link_to previous_path, class: "hidden md:block uppercase bg-surface-inset-hover rounded-sm px-1 py-0.5 text-xs text-secondary shadow-sm ml-1 pointer-events-none", data: { controller: "hotkey", hotkey: "Escape" } do %>
+    <%= link_to root_path, class: "hidden md:block uppercase bg-surface-inset-hover rounded-sm px-1 py-0.5 text-xs text-secondary shadow-sm ml-1 pointer-events-none", data: { controller: "hotkey", hotkey: "Escape" } do %>
       <kbd>esc</kbd>
     <% end %>
   </div>
@@ -87,7 +87,7 @@ nav_sections = [
         <%= render DS::Link.new(
           text: t("settings.settings_nav_link_large.previous"),
           icon: "chevron-left",
-          href: previous_path,
+          href: root_path,
           variant: "ghost",
         ) %>
       </li>

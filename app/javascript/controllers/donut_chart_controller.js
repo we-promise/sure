@@ -3,7 +3,7 @@ import * as d3 from "d3";
 
 // Connects to data-controller="donut-chart"
 export default class extends Controller {
-  static targets = ["chartContainer", "contentContainer", "defaultContent"];
+  static targets = ["chartContainer", "contentContainer", "defaultContent", "categoryRow", "toggleButton", "categoryAmount", "categoryPercentage"];
   static values = {
     segments: { type: Array, default: [] },
     unusedSegmentId: { type: String, default: "unused" },
@@ -21,6 +21,7 @@ export default class extends Controller {
   #minSegmentAngle = 0.02; // Minimum angle in radians (~1.15 degrees)
   #padAngle = 0.005; // Spacing between segments (~0.29 degrees)
   #visiblePaths = null;
+  #hiddenSegments = new Set();
 
   connect() {
     this.#draw();
@@ -35,14 +36,17 @@ export default class extends Controller {
   }
 
   get #data() {
-    const totalPieValue = this.segmentsValue.reduce(
+    const visibleSegments = this.segmentsValue.filter(
+      (s) => s.amount > 0 && !this.#hiddenSegments.has(s.id)
+    );
+
+    const totalPieValue = visibleSegments.reduce(
       (acc, s) => acc + Number(s.amount),
       0,
     );
 
     // Overage is always first segment, unused is always last segment
-    return this.segmentsValue
-      .filter((s) => s.amount > 0)
+    return visibleSegments
       .map((s) => ({
         ...s,
         amount: Math.max(
@@ -234,18 +238,134 @@ export default class extends Controller {
   highlightSegment(event) {
     const segmentId = event.currentTarget.dataset.categoryId;
 
+    // Don't highlight if segment is hidden
+    if (this.#hiddenSegments.has(segmentId)) return;
+
+    const template = this.element.querySelector(`#segment_${segmentId}`);
+    const unusedSegmentId = this.unusedSegmentIdValue;
+
     // Use cached selection if available for better performance
     const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
-    paths.style("opacity", function() {
-      return this.dataset.segmentId === segmentId ? 1 : 0.3;
+    paths.attr("fill", function () {
+      if (this.dataset.segmentId === segmentId) {
+        if (this.dataset.segmentId === unusedSegmentId) {
+          return "var(--budget-unused-fill)";
+        }
+        return this.dataset.originalColor;
+      }
+      return "var(--budget-unallocated-fill)";
     });
+
+    // Update center content
+    if (template) {
+      this.defaultContentTarget.classList.add("hidden");
+      template.classList.remove("hidden");
+    }
   }
 
   unhighlightSegment() {
     // Use cached selection if available for better performance
     const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
-    paths.style("opacity", null); // Clear inline opacity style
+    // Restore original segment colors
+    paths
+      .attr("fill", function () {
+        return this.dataset.originalColor;
+      })
+      .style("opacity", null);
+
+    // Restore default content
+    this.defaultContentTarget.classList.remove("hidden");
+    for (const child of this.contentContainerTarget.children) {
+      if (child !== this.defaultContentTarget) {
+        child.classList.add("hidden");
+      }
+    }
+  }
+
+  toggleSegment(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const button = event.currentTarget;
+    const segmentId = button.dataset.categoryId;
+    const originalColor = button.dataset.categoryColor;
+    const isHidden = this.#hiddenSegments.has(segmentId);
+
+    if (isHidden) {
+      // Show the segment
+      this.#hiddenSegments.delete(segmentId);
+      this.#updateToggleButtonStyle(button, originalColor, false);
+      this.#updateCategoryRowStyle(segmentId, false);
+    } else {
+      // Hide the segment
+      this.#hiddenSegments.add(segmentId);
+      this.#updateToggleButtonStyle(button, originalColor, true);
+      this.#updateCategoryRowStyle(segmentId, true);
+    }
+
+    // Redraw the chart and update totals
+    this.#redraw();
+    this.#updateDefaultContent();
+  }
+
+  #updateToggleButtonStyle(button, originalColor, isHidden) {
+    const grayColor = "#9ca3af";
+    const color = isHidden ? grayColor : originalColor;
+
+    button.style.backgroundColor = `color-mix(in oklab, ${color} 10%, transparent)`;
+    button.style.borderColor = `color-mix(in oklab, ${color} 10%, transparent)`;
+    button.style.color = color;
+  }
+
+  #updateCategoryRowStyle(segmentId, isHidden) {
+    const row = this.categoryRowTargets.find(r => r.dataset.categoryId === segmentId);
+    if (row) {
+      if (isHidden) {
+        row.classList.add("opacity-50");
+      } else {
+        row.classList.remove("opacity-50");
+      }
+    }
+
+    // Update amount and percentage styles
+    const amount = this.categoryAmountTargets.find(a => a.dataset.categoryId === segmentId);
+    const percentage = this.categoryPercentageTargets.find(p => p.dataset.categoryId === segmentId);
+
+    if (amount) {
+      if (isHidden) {
+        amount.classList.add("line-through", "text-secondary");
+        amount.classList.remove("text-primary");
+      } else {
+        amount.classList.remove("line-through", "text-secondary");
+        amount.classList.add("text-primary");
+      }
+    }
+
+    if (percentage) {
+      if (isHidden) {
+        percentage.classList.add("line-through");
+      } else {
+        percentage.classList.remove("line-through");
+      }
+    }
+  }
+
+  #updateDefaultContent() {
+    // Calculate new total from visible segments
+    const visibleSegments = this.segmentsValue.filter(
+      (s) => s.amount > 0 && !this.#hiddenSegments.has(s.id)
+    );
+
+    const newTotal = visibleSegments.reduce((acc, s) => acc + Number(s.amount), 0);
+
+    // Update the total display in default content
+    const totalElement = this.defaultContentTarget.querySelector(".text-3xl");
+    if (totalElement && this.segmentsValue.length > 0) {
+      const currency = this.segmentsValue[0].currency || "USD";
+      const symbol = this.segmentsValue[0].currency_symbol || "$";
+      totalElement.textContent = `${symbol}${newTotal.toLocaleString()}`;
+    }
   }
 }

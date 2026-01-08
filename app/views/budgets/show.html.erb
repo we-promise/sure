@@ -7,14 +7,16 @@
 
   <div class="space-y-4">
     <%# Top Section: Donut and Summary side by side %>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-stretch">
       <%# Budget Donut %>
-      <div class="h-[300px] bg-container rounded-xl shadow-border-xs p-8">
-        <% if @budget.available_to_allocate.negative? %>
-          <%= render "budgets/over_allocation_warning", budget: @budget %>
-        <% else %>
-          <%= render "budgets/budget_donut", budget: @budget %>
-        <% end %>
+      <div class="min-h-[300px] bg-container rounded-xl shadow-border-xs p-8 flex items-center justify-center">
+        <div class="w-full h-full max-h-[250px]">
+          <% if @budget.available_to_allocate.negative? %>
+            <%= render "budgets/over_allocation_warning", budget: @budget %>
+          <% else %>
+            <%= render "budgets/budget_donut", budget: @budget %>
+          <% end %>
+        </div>
       </div>
 
       <%# Actuals Summary %>
