@@ -10,11 +10,7 @@ def hasKeystore = false
 if (keystorePropertiesFile.exists()) {
     try {
         keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-        hasKeystore = keystoreProperties['storeFile'] != null &&
-                     keystoreProperties['keyAlias'] != null &&
-                     keystoreProperties['keyPassword'] != null &&
-                     keystoreProperties['storePassword'] != null &&
-                     file(keystoreProperties['storeFile']).exists()
+        hasKeystore = keystoreProperties['storeFile'] != null
     } catch (Exception e) {
         println("Warning: Failed to load key.properties: ${e.message}")
     }
@@ -34,8 +30,8 @@ android {
         jvmTarget = '1.8'
     }
 
-    if (hasKeystore) {
-        signingConfigs {
+    signingConfigs {
+        if (hasKeystore) {
             release {
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
