@@ -136,4 +136,44 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     # 100 / 1000 (parent budget) = 10%
     assert_equal 10.0, @subcategory_inheriting_bc.percent_of_budget_spent
   end
+
+  test "parent with no subcategories works as before" do
+    # Create a standalone parent category without subcategories
+    standalone_category = Category.create!(
+      name: "Entertainment",
+      family: @family,
+      color: "#a855f7",
+      lucide_icon: "drama",
+      classification: "expense"
+    )
+    
+    standalone_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: standalone_category,
+      budgeted_spending: 500,
+      currency: "USD"
+    )
+    
+    # Mock spending
+    @budget.stubs(:budget_category_actual_spending).with(standalone_bc).returns(200)
+    
+    # Should work exactly as before: 500 - 200 = 300
+    assert_equal 300, standalone_bc.available_to_spend
+    assert_equal 40.0, standalone_bc.percent_of_budget_spent
+  end
+
+  test "parent with only inheriting subcategories shares entire budget" do
+    # Set subcategory_with_limit to also inherit
+    @subcategory_with_limit_bc.update!(budgeted_spending: 0)
+    
+    # Mock spending
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(200)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(100)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(100)
+    
+    # All should show same available: 1000 - 200 = 800
+    assert_equal 800, @parent_budget_category.available_to_spend
+    assert_equal 800, @subcategory_with_limit_bc.available_to_spend
+    assert_equal 800, @subcategory_inheriting_bc.available_to_spend
+  end
 end
