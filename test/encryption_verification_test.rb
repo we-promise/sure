@@ -178,20 +178,25 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     Current.user_agent = "Mozilla/5.0 Test Browser"
     Current.ip_address = "192.168.1.100"
 
-    session = Session.create!(user: users(:family_admin))
+    begin
+      session = Session.create!(user: users(:family_admin))
 
-    assert_equal "Mozilla/5.0 Test Browser", session.user_agent
-    assert session.ip_address_digest.present?
+      assert_equal "Mozilla/5.0 Test Browser", session.user_agent
+      assert session.ip_address_digest.present?
 
-    # Reload and verify
-    session.reload
-    assert_equal "Mozilla/5.0 Test Browser", session.user_agent
+      # Reload and verify
+      session.reload
+      assert_equal "Mozilla/5.0 Test Browser", session.user_agent
 
-    # Verify IP hash is consistent
-    expected_hash = Digest::SHA256.hexdigest("192.168.1.100")
-    assert_equal expected_hash, session.ip_address_digest
+      # Verify IP hash is consistent
+      expected_hash = Digest::SHA256.hexdigest("192.168.1.100")
+      assert_equal expected_hash, session.ip_address_digest
 
-    session.destroy
+      session.destroy
+    ensure
+      Current.user_agent = nil
+      Current.ip_address = nil
+    end
   end
 
   # ============================================================================
@@ -260,9 +265,10 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     account = LunchflowAccount.first
     original_payload = account.raw_payload
 
-    # Should be able to read
+    # Should be able to read encrypted fields without error
     account.reload
-    assert account.raw_payload.present? || account.raw_transactions_payload.present? || true
+    assert_nothing_raised { account.raw_payload }
+    assert_nothing_raised { account.raw_transactions_payload }
 
     # Update and verify
     account.update!(raw_payload: { account_test: "value" })
@@ -289,7 +295,7 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
 
     # Query raw database value
     raw_email = ActiveRecord::Base.connection.select_value(
-      "SELECT email FROM users WHERE id = '#{user.id}'"
+      User.where(id: user.id).select(:email).to_sql
     )
 
     # Should NOT be plaintext (should be encrypted blob or different)
