@@ -77,19 +77,36 @@ namespace :security do
         # Skip if filter block returns false
         next if block_given? && !filter_block.call(record)
 
-        # Check if any field has data
-        next unless fields.any? { |f| record.send(f).present? }
+        # Check if any field has data (use safe read to handle plaintext)
+        next unless fields.any? { |f| safe_read_field(record, f).present? }
 
         next if dry_run
 
         begin
-          # Touch fields to trigger re-encryption
-          attrs = fields.each_with_object({}) do |field, hash|
-            value = record.send(field)
-            hash[field] = value if value.present?
+          # Read plaintext values safely
+          plaintext_values = {}
+          fields.each do |field|
+            value = safe_read_field(record, field)
+            plaintext_values[field] = value if value.present?
           end
 
-          record.update!(attrs) if attrs.present?
+          next if plaintext_values.empty?
+
+          # Use a temporary instance to encrypt values (avoids triggering
+          # validations/callbacks that might read other encrypted fields)
+          encryptor = model_class.new
+          plaintext_values.each do |field, value|
+            encryptor.send("#{field}=", value)
+          end
+
+          # Extract the encrypted values from the temporary instance
+          encrypted_attrs = {}
+          plaintext_values.keys.each do |field|
+            encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
+          end
+
+          # Write directly to database, bypassing callbacks/validations
+          record.update_columns(encrypted_attrs)
           updated += 1
         rescue => e
           failed << { id: record.id, error: e.class.name, message: e.message }
@@ -105,6 +122,16 @@ namespace :security do
     }
   end
 
+  # Safely read a field value, handling both encrypted and plaintext data.
+  # When encryption is configured but the value is plaintext, the getter
+  # raises ActiveRecord::Encryption::Errors::Decryption. In this case,
+  # we fall back to reading the raw database value.
+  def safe_read_field(record, field)
+    record.send(field)
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    record.read_attribute_before_type_cast(field)
+  end
+
   def backfill_sessions(batch_size, dry_run)
     processed = 0
     updated = 0
@@ -118,8 +145,14 @@ namespace :security do
         begin
           changes = {}
 
-          # Re-save user_agent to trigger encryption
-          changes[:user_agent] = session.user_agent if session.user_agent.present?
+          # Re-save user_agent to trigger encryption (use safe read for plaintext)
+          user_agent_value = safe_read_field(session, :user_agent)
+          if user_agent_value.present?
+            # Use temporary instance to encrypt
+            encryptor = Session.new
+            encryptor.user_agent = user_agent_value
+            changes[:user_agent] = encryptor.read_attribute_before_type_cast(:user_agent)
+          end
 
           # Hash IP address into ip_address_digest if not already done
           if session.ip_address.present? && session.ip_address_digest.blank?
@@ -127,7 +160,7 @@ namespace :security do
           end
 
           if changes.present?
-            session.update!(changes)
+            session.update_columns(changes)
             updated += 1
           end
         rescue => e
