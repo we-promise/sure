@@ -276,4 +276,59 @@ class UserTest < ActiveSupport::TestCase
     assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
       "Should return false when section key is missing from collapsed_sections"
   end
+
+  # SSO-only user security tests
+  test "sso_only? returns true for user with OIDC identity and no password" do
+    sso_user = users(:sso_only)
+    assert_nil sso_user.password_digest
+    assert sso_user.oidc_identities.exists?
+    assert sso_user.sso_only?
+  end
+
+  test "sso_only? returns false for user with password and OIDC identity" do
+    # family_admin has both password and OIDC identity
+    assert @user.password_digest.present?
+    assert @user.oidc_identities.exists?
+    assert_not @user.sso_only?
+  end
+
+  test "sso_only? returns false for user with password but no OIDC identity" do
+    user_without_oidc = users(:empty)
+    assert user_without_oidc.password_digest.present?
+    assert_not user_without_oidc.oidc_identities.exists?
+    assert_not user_without_oidc.sso_only?
+  end
+
+  test "has_local_password? returns true when password_digest is present" do
+    assert @user.has_local_password?
+  end
+
+  test "has_local_password? returns false when password_digest is nil" do
+    sso_user = users(:sso_only)
+    assert_not sso_user.has_local_password?
+  end
+
+  test "user can be created without password when skip_password_validation is true" do
+    user = User.new(
+      email: "newssuser@example.com",
+      first_name: "New",
+      last_name: "SSO User",
+      skip_password_validation: true,
+      family: families(:empty)
+    )
+    assert user.valid?, user.errors.full_messages.to_sentence
+    assert user.save
+    assert_nil user.password_digest
+  end
+
+  test "user requires password on create when skip_password_validation is false" do
+    user = User.new(
+      email: "needspassword@example.com",
+      first_name: "Needs",
+      last_name: "Password",
+      family: families(:empty)
+    )
+    assert_not user.valid?
+    assert_includes user.errors[:password], "can't be blank"
+  end
 end

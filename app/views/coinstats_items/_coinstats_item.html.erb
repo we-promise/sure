@@ -1,0 +1,92 @@
+<%# locals: (coinstats_item:) %>
+
+<%= tag.div id: dom_id(coinstats_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 bg-success/10 rounded-full">
+          <div class="flex items-center justify-center">
+            <%= tag.p coinstats_item.institution_display_name.first.upcase, class: "text-success text-xs font-medium" %>
+          </div>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p coinstats_item.institution_display_name, class: "font-medium text-primary" %>
+            <% if coinstats_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+          <% if coinstats_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif coinstats_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".reconnect") %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if coinstats_item.last_synced_at %>
+                <% if coinstats_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(coinstats_item.last_synced_at), summary: coinstats_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(coinstats_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if coinstats_item.requires_update? %>
+          <%= render DS::Link.new(
+            text: t(".update_api_key"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        <% elsif Rails.env.development? %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_coinstats_item_path(coinstats_item)
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: coinstats_item_path(coinstats_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(coinstats_item.institution_display_name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+
+    <% unless coinstats_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if coinstats_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: coinstats_item.accounts %>
+        <% else %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_wallets_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_wallets_message") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

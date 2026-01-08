@@ -91,14 +91,15 @@ class OidcAccountsController < ApplicationController
       return
     end
 
-    # Create user with a secure random password since they're using SSO
-    secure_password = SecureRandom.base58(32)
+    # Create SSO-only user without local password.
+    # Security: JIT users should NOT have password_digest set to prevent
+    # chained authentication attacks where SSO users gain local login access
+    # via password reset.
     @user = User.new(
       email: email,
       first_name: @pending_auth["first_name"],
       last_name: @pending_auth["last_name"],
-      password: secure_password,
-      password_confirmation: secure_password
+      skip_password_validation: true
     )
 
     # Create new family for this user
