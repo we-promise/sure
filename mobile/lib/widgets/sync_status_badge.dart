@@ -20,27 +20,33 @@ class SyncStatusBadge extends StatelessWidget {
     final Color color;
     final IconData icon;
     final String text;
+    final String semanticsLabel;
 
     switch (syncStatus) {
       case SyncStatus.pending:
         color = Colors.orange;
         icon = Icons.sync;
         text = 'Pending';
+        semanticsLabel = 'Transaction pending sync';
         break;
       case SyncStatus.failed:
         color = Colors.red;
         icon = Icons.error_outline;
         text = 'Failed';
+        semanticsLabel = 'Sync failed';
         break;
       case SyncStatus.synced:
         return const SizedBox.shrink();
     }
 
     if (compact) {
-      return Icon(
-        icon,
-        size: 16,
-        color: color,
+      return Semantics(
+        label: semanticsLabel,
+        child: Icon(
+          icon,
+          size: 16,
+          color: color,
+        ),
       );
     }
 
@@ -54,24 +60,27 @@ class SyncStatusBadge extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: color,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
+      child: Semantics(
+        label: semanticsLabel,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
               color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

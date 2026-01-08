@@ -27,9 +27,15 @@ class LogService with ChangeNotifier {
   LogService._internal();
 
   final List<LogEntry> _logs = [];
-  final int _maxLogs = 1000; // Keep last 1000 logs
+  final int _maxLogs = 500; // Reduced from 1000 to save memory
+  bool _isLogViewerActive = false;
 
   List<LogEntry> get logs => List.unmodifiable(_logs);
+
+  /// Call this when log viewer screen becomes active
+  void setLogViewerActive(bool active) {
+    _isLogViewerActive = active;
+  }
 
   void log(String tag, String message, {String level = 'INFO'}) {
     final entry = LogEntry(
@@ -49,7 +55,10 @@ class LogService with ChangeNotifier {
     // Also print to console for development
     debugPrint('[$level][$tag] $message');
 
-    notifyListeners();
+    // Only notify listeners if log viewer is active to avoid unnecessary rebuilds
+    if (_isLogViewerActive) {
+      notifyListeners();
+    }
   }
 
   void debug(String tag, String message) => log(tag, message, level: 'DEBUG');

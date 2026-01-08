@@ -5,6 +5,7 @@ import '../models/account.dart';
 import '../providers/auth_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
+import '../services/connectivity_service.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Account account;
@@ -130,9 +131,18 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       if (mounted) {
         if (success) {
           _log.info('TransactionForm', 'Transaction created successfully (saved locally)');
+          
+          // Check current connectivity status to show appropriate message
+          final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
+          final isOnline = connectivityService.isOnline;
+          
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Transaction created (will sync when online)'),
+            SnackBar(
+              content: Text(
+                isOnline
+                    ? 'Transaction created successfully'
+                    : 'Transaction saved (will sync when online)'
+              ),
               backgroundColor: Colors.green,
             ),
           );

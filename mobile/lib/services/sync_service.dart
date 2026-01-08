@@ -141,7 +141,7 @@ class SyncService with ChangeNotifier {
     String? accountId,
   }) async {
     try {
-      debugPrint('[SyncService] Fetching transactions from server (accountId: $accountId)');
+      _log.debug('SyncService', 'Fetching transactions from server (accountId: $accountId)');
       final result = await _transactionsService.getTransactions(
         accessToken: accessToken,
         accountId: accountId,
@@ -151,18 +151,18 @@ class SyncService with ChangeNotifier {
         final transactions = (result['transactions'] as List<dynamic>?)
             ?.cast<Transaction>() ?? [];
 
-        debugPrint('[SyncService] Received ${transactions.length} transactions from server');
+        _log.info('SyncService', 'Received ${transactions.length} transactions from server');
 
         // Update local cache with server data
         if (accountId == null) {
-          debugPrint('[SyncService] Full sync - clearing and replacing all transactions');
+          _log.debug('SyncService', 'Full sync - clearing and replacing all transactions');
           // Full sync - replace all transactions
           await _offlineStorage.syncTransactionsFromServer(transactions);
         } else {
-          debugPrint('[SyncService] Partial sync - upserting ${transactions.length} transactions for account $accountId');
+          _log.debug('SyncService', 'Partial sync - upserting ${transactions.length} transactions for account $accountId');
           // Partial sync - upsert transactions
           for (final transaction in transactions) {
-            debugPrint('[SyncService] Upserting transaction ${transaction.id} (accountId from server: "${transaction.accountId}", provided: "$accountId")');
+            _log.debug('SyncService', 'Upserting transaction ${transaction.id} (accountId from server: "${transaction.accountId}", provided: "$accountId")');
             await _offlineStorage.upsertTransactionFromServer(
               transaction,
               accountId: accountId,
@@ -178,14 +178,14 @@ class SyncService with ChangeNotifier {
           syncedCount: transactions.length,
         );
       } else {
-        debugPrint('[SyncService] Server returned error: ${result['error']}');
+        _log.error('SyncService', 'Server returned error: ${result['error']}');
         return SyncResult(
           success: false,
           error: result['error'] as String? ?? 'Failed to sync from server',
         );
       }
     } catch (e) {
-      debugPrint('[SyncService] Exception in syncFromServer: $e');
+      _log.error('SyncService', 'Exception in syncFromServer: $e');
       return SyncResult(
         success: false,
         error: e.toString(),

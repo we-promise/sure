@@ -22,6 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _liabilitiesExpanded = true;
   bool _showSyncSuccess = false;
   int _previousPendingCount = 0;
+  TransactionsProvider? _transactionsProvider;
 
   @override
   void initState() {
@@ -30,21 +31,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Listen for sync completion to show success indicator
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
-      _previousPendingCount = transactionsProvider.pendingCount;
-      transactionsProvider.addListener(_onTransactionsChanged);
+      _transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+      _previousPendingCount = _transactionsProvider!.pendingCount;
+      _transactionsProvider!.addListener(_onTransactionsChanged);
     });
   }
 
   @override
   void dispose() {
-    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
-    transactionsProvider.removeListener(_onTransactionsChanged);
+    _transactionsProvider?.removeListener(_onTransactionsChanged);
     super.dispose();
   }
 
   void _onTransactionsChanged() {
-    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+    final transactionsProvider = _transactionsProvider;
+    if (transactionsProvider == null || !mounted) {
+      return;
+    }
+    
     final currentPendingCount = transactionsProvider.pendingCount;
 
     // If pending count decreased, it means transactions were synced
@@ -324,15 +328,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const LogViewerScreen()),
-              );
-            },
-            tooltip: 'Debug Logs',
+          Semantics(
+            label: 'Open debug logs',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.bug_report),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LogViewerScreen()),
+                );
+              },
+              tooltip: 'Debug Logs',
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),

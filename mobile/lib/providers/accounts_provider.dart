@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/account.dart';
 import '../services/accounts_service.dart';
@@ -129,7 +131,22 @@ class AccountsProvider with ChangeNotifier {
     } catch (e) {
       // If we have cached accounts, show them even if sync fails
       if (_accounts.isEmpty) {
-        _errorMessage = 'Connection error. Please check your internet connection.';
+        // Provide more specific error messages based on exception type
+        if (e is SocketException) {
+          _errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (e is TimeoutException) {
+          _errorMessage = 'Request timed out. Please check your connection and try again.';
+        } else if (e is FormatException) {
+          _errorMessage = 'Server response error. Please try again later.';
+        } else if (e.toString().contains('401') || e.toString().contains('unauthorized')) {
+          _errorMessage = 'unauthorized';
+        } else if (e.toString().contains('HandshakeException') || 
+                   e.toString().contains('certificate') ||
+                   e.toString().contains('SSL')) {
+          _errorMessage = 'Secure connection error. Please check your internet connection and try again.';
+        } else {
+          _errorMessage = 'An error occurred: ${e.toString()}';
+        }
       }
       _isLoading = false;
       _isInitializing = false;
