@@ -2,6 +2,27 @@ require "websocket-client-simple"
 require "json"
 
 class Provider::Traderepublic
+        # Batch fetch instrument details for a list of ISINs
+        # Returns a hash { isin => instrument_details }
+        def batch_fetch_instrument_details(isins)
+          results = {}
+          batch_websocket_calls do |batch|
+            isins.uniq.each do |isin|
+              results[isin] = batch.get_instrument_details(isin)
+            end
+          end
+          results
+        end
+      # Helper: Get portfolio, cash et available_cash en un seul batch WebSocket
+      def get_portfolio_and_cash_batch
+        results = {}
+        batch_websocket_calls do |batch|
+          results[:portfolio] = batch.get_portfolio
+          results[:cash] = batch.get_cash
+          results[:available_cash] = batch.get_available_cash
+        end
+        results
+      end
     # Execute several subscribe_once calls in a single WebSocket session
     # Usage: batch_websocket_calls { |batch| batch.get_portfolio; batch.get_cash }
     def batch_websocket_calls
@@ -409,101 +430,67 @@ class Provider::Traderepublic
     max_pages = 100 # Safety limit to prevent infinite loops
     reached_since_date = false
 
-    # Keep connection open for entire pagination
     begin
       connect_websocket
-
       loop do
         break if page_num > max_pages
         break if reached_since_date
 
-        # Build subscription parameters
         params = cursor_after ? { after: cursor_after } : {}
-        
-        if page_num == 1
-          Rails.logger.info "TradeRepublic: Fetching page #{page_num} (initial)"
-        else
-          Rails.logger.info "TradeRepublic: Fetching page #{page_num} (with cursor)"
-        end
-
-        # Subscribe and wait for response
         response_data = subscribe_once("timelineTransactions", params)
-        
-        unless response_data
-          Rails.logger.warn "TradeRepublic: No response for page #{page_num}"
-          break
-        end
+        break unless response_data
 
-        # Extract items from this page
         items = response_data.dig("items") || []
-        
-        # If we have a 'since' date, filter items and check if we should stop
         if since
           items_to_add = []
           items.each do |item|
-            # Parse timestamp (ISO 8601 format)
             timestamp_str = item.dig("timestamp")
             if timestamp_str
               item_date = DateTime.parse(timestamp_str).to_date
-              
               if item_date > since
                 items_to_add << item
               else
-                # We've reached transactions older than 'since', stop pagination
                 reached_since_date = true
-                Rails.logger.info "TradeRepublic: Reached target date (#{since}), stopping pagination"
                 break
               end
             else
-              # No timestamp, include the item to be safe
               items_to_add << item
             end
           end
-          
           all_items.concat(items_to_add)
-          Rails.logger.info "TradeRepublic: Page #{page_num} - #{items_to_add.length}/#{items.length} new transactions (total: #{all_items.length})"
         else
-          # No 'since' filter, add all items
           all_items.concat(items)
-          Rails.logger.info "TradeRepublic: Page #{page_num} - #{items.length} transactions (total: #{all_items.length})"
         end
 
-        # Stop if we reached the since date
         break if reached_since_date
 
-        # Check if there's a next page
         cursors = response_data.dig("cursors") || {}
         cursor_after = cursors["after"]
-
-        if cursor_after.nil? || cursor_after.empty?
-          Rails.logger.info "TradeRepublic: No more pages available"
-          break
-        end
-
+        break if cursor_after.nil? || cursor_after.empty?
         page_num += 1
-        
-        # Small delay between requests
         sleep 0.3
       end
-
-      if since && !reached_since_date && all_items.any?
-        Rails.logger.info "TradeRepublic: Completed incremental sync - #{all_items.length} new transactions across #{page_num} page(s)"
-      elsif since && !all_items.any?
-        Rails.logger.info "TradeRepublic: No new transactions since #{since}"
-      else
-        Rails.logger.info "TradeRepublic: Completed full sync - #{all_items.length} total transactions across #{page_num} page(s)"
-      end
-
-      # Return in same format as original single-page response
-      # but with all accumulated items
-      {
-        "items" => all_items,
-        "cursors" => {}, # No cursor needed in final response
-        "startingTransactionId" => nil
-      }
     ensure
       disconnect_websocket
     end
+
+    # Batch fetch instrument details for all ISINs in transactions
+    isins = all_items.map { |item| item["isin"] }.compact.uniq
+    instrument_details = batch_fetch_instrument_details(isins) unless isins.empty?
+
+    # Ajoute les détails instrument à chaque transaction
+    if instrument_details
+      all_items.each do |item|
+        isin = item["isin"]
+        item["instrument_details"] = instrument_details[isin] if isin && instrument_details[isin]
+      end
+    end
+
+    {
+      "items" => all_items,
+      "cursors" => {},
+      "startingTransactionId" => nil
+    }
   rescue => e
     Rails.logger.error "TradeRepublic: Failed to fetch timeline transactions - #{e.class}: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
