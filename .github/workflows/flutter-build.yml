@@ -61,19 +61,7 @@ jobs:
         working-directory: mobile
         run: flutter test
 
-      - name: Check if keystore secrets exist
-        id: check_secrets
-        run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "has_keystore=true" >> $GITHUB_OUTPUT
-            echo "✓ Keystore secrets found, will build signed APK"
-          else
-            echo "has_keystore=false" >> $GITHUB_OUTPUT
-            echo "⚠ No keystore secrets, will build unsigned debug APK"
-          fi
-
       - name: Decode and setup keystore
-        if: steps.check_secrets.outputs.has_keystore == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -81,40 +69,27 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > mobile/android/app/upload-keystore.jks
-          echo "storePassword=$KEY_STORE_PASSWORD" > mobile/android/key.properties
+          echo "storePassword=$KEY_STORE_PASSWORD" >> mobile/android/key.properties
           echo "keyPassword=$KEY_PASSWORD" >> mobile/android/key.properties
           echo "keyAlias=$KEY_ALIAS" >> mobile/android/key.properties
           echo "storeFile=upload-keystore.jks" >> mobile/android/key.properties
-          echo "✓ Keystore configured successfully"
 
       - name: Build APK (Release)
         working-directory: mobile
-        run: |
-          if [ "${{ steps.check_secrets.outputs.has_keystore }}" == "true" ]; then
-            echo "Building signed release APK..."
-            flutter build apk --release
-          else
-            echo "Building debug-signed APK..."
-            flutter build apk --debug
-          fi
+        run: flutter build apk --release
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: |
-            mobile/build/app/outputs/flutter-apk/app-release.apk
-            mobile/build/app/outputs/flutter-apk/app-debug.apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
-          if-no-files-found: ignore
 
       - name: Build App Bundle (Release)
-        if: steps.check_secrets.outputs.has_keystore == 'true'
         working-directory: mobile
         run: flutter build appbundle --release
 
       - name: Upload AAB artifact
-        if: steps.check_secrets.outputs.has_keystore == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
