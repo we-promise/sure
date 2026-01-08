@@ -11,6 +11,13 @@
           method: :delete,
           confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
       <% end %>
+      <%= render DS::Link.new(
+        text: t("rules.apply_all.button"),
+        variant: "secondary",
+        href: confirm_all_rules_path,
+        icon: "play",
+        frame: :modal
+      ) %>
     <% end %>
     <%= render DS::Link.new(
       text: "New rule",
