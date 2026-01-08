@@ -596,9 +596,11 @@ class SimplefinItemsController < ApplicationController
 
         if source_entry_ids.any? && target_entry_ids.any?
           # Find and destroy transfers between source and target accounts
-          conflicting_transfers = Transfer.where(inflow_transaction_id: source_entry_ids, outflow_transaction_id: target_entry_ids)
+          # Use find_each + destroy! to invoke Transfer's custom destroy! callbacks
+          # which reset transaction kinds to "standard"
+          Transfer.where(inflow_transaction_id: source_entry_ids, outflow_transaction_id: target_entry_ids)
             .or(Transfer.where(inflow_transaction_id: target_entry_ids, outflow_transaction_id: source_entry_ids))
-          conflicting_transfers.destroy_all if conflicting_transfers.any?
+            .find_each(&:destroy!)
         end
 
         # Move all entries to target account

@@ -44,7 +44,9 @@ en:
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       no_accounts: "No accounts to set up."
-      success: "Successfully created %{count} SimpleFIN account(s)! Your transactions and holdings are being imported in the background."
+      success:
+        one: "Successfully created %{count} SimpleFIN account! Your transactions and holdings are being imported in the background."
+        other: "Successfully created %{count} SimpleFIN accounts! Your transactions and holdings are being imported in the background."
       stale_accounts_processed: "Stale accounts: %{deleted} deleted, %{moved} moved."
       stale_accounts_errors:
         one: "%{count} stale account action failed. Check logs for details."
