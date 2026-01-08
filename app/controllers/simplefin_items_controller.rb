@@ -560,10 +560,10 @@ class SimplefinItemsController < ApplicationController
         source_account.destroy!
         # Destroy the SimplefinAccount
         simplefin_account.destroy!
-
-        # Trigger sync on target account to recalculate balances
-        target_account.sync_later
       end
+
+      # Trigger sync on target account to recalculate balances (after commit)
+      target_account.sync_later
       true
     rescue => e
       Rails.logger.error("Failed to move transactions from stale account: #{e.class} - #{e.message}")

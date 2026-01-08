@@ -9,7 +9,7 @@ export default class extends Controller {
   }
 
   updateTargetVisibility() {
-    if (!this.hasTargetSelectTarget) return
+    if (!this.hasTargetSelectTarget || !this.hasMoveRadioTarget) return
 
     const moveRadio = this.moveRadioTarget
     const targetSelect = this.targetSelectTarget
