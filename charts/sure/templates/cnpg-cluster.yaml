@@ -15,9 +15,53 @@ spec:
   {{- end }}
   storage:
     size: {{ .Values.cnpg.cluster.storage.size | default "10Gi" }}
-    {{- if .Values.cnpg.cluster.storage.storageClassName }}
+    {{ if .Values.cnpg.cluster.storage.storageClassName }}
     storageClass: {{ .Values.cnpg.cluster.storage.storageClassName }}
-    {{- end }}
+    {{ end }}
+  {{ with .Values.cnpg.cluster.backup }}
+  {{- $backup := deepCopy . }}
+  {{- /* CNPG `spec.backup` does not support these historical/example keys */ -}}
+  {{- $_ := unset $backup "ttl" -}}
+  {{- if and (hasKey $backup "volumeSnapshot") (kindIs "map" $backup.volumeSnapshot) -}}
+    {{- $_ := unset $backup.volumeSnapshot "enabled" -}}
+  {{- end -}}
+
+  {{- $method := (get $backup "method") -}}
+  {{- if not $method -}}
+    {{- if hasKey $backup "volumeSnapshot" -}}
+      {{- $_ := set $backup "method" "volumeSnapshot" -}}
+      {{- $method = "volumeSnapshot" -}}
+    {{- else if hasKey $backup "barmanObjectStore" -}}
+      {{- $_ := set $backup "method" "barmanObjectStore" -}}
+      {{- $method = "barmanObjectStore" -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if not $method -}}
+    {{- fail "cnpg.cluster.backup is set but no backup method could be inferred. Set cnpg.cluster.backup.method explicitly (e.g. volumeSnapshot or barmanObjectStore)." -}}
+  {{- end -}}
+
+  {{- if and (eq $method "volumeSnapshot") (not (hasKey $backup "volumeSnapshot")) -}}
+    {{- fail "cnpg.cluster.backup.method=volumeSnapshot requires cnpg.cluster.backup.volumeSnapshot to be set" -}}
+  {{- end -}}
+  {{- if and (eq $method "barmanObjectStore") (not (hasKey $backup "barmanObjectStore")) -}}
+    {{- fail "cnpg.cluster.backup.method=barmanObjectStore requires cnpg.cluster.backup.barmanObjectStore to be set" -}}
+  {{- end -}}
+  {{- if eq $method "volumeSnapshot" -}}
+    {{- if kindIs "map" $backup.volumeSnapshot -}}
+      {{- $_ := required "cnpg.cluster.backup.volumeSnapshot.className is required for volumeSnapshot backups" $backup.volumeSnapshot.className -}}
+    {{- else -}}
+      {{- fail "cnpg.cluster.backup.volumeSnapshot must be a map/object" -}}
+    {{- end -}}
+  {{- end -}}
+
+  backup:
+    {{- toYaml $backup | nindent 4 }}
+  {{- end }}
+  {{ with .Values.cnpg.cluster.plugins }}
+  plugins:
+    {{- toYaml . | nindent 4 }}
+  {{ end }}
   {{- with .Values.cnpg.cluster.nodeSelector }}
   nodeSelector:
     {{- toYaml . | nindent 4 }}

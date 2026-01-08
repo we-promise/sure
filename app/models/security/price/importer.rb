@@ -2,6 +2,8 @@ class Security::Price::Importer
   MissingSecurityPriceError = Class.new(StandardError)
   MissingStartPriceError    = Class.new(StandardError)
 
+  PROVISIONAL_LOOKBACK_DAYS = 3
+
   def initialize(security:, security_provider:, start_date:, end_date:, clear_cache: false)
     @security          = security
     @security_provider = security_provider
@@ -40,28 +42,43 @@ class Security::Price::Importer
     end
 
     gapfilled_prices = effective_start_date.upto(end_date).map do |date|
-      db_price_value       = db_prices[date]&.price
-      provider_price_value = provider_prices[date]&.price
-      provider_currency    = provider_prices[date]&.currency
+      db_price             = db_prices[date]
+      db_price_value       = db_price&.price
+      provider_price       = provider_prices[date]
+      provider_price_value = provider_price&.price
+      provider_currency    = provider_price&.currency
 
-      chosen_price = if clear_cache
-        provider_price_value || db_price_value   # overwrite when possible
+      has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
+      is_provisional = db_price&.provisional
+
+      chosen_price = if clear_cache || is_provisional
+        provider_price_value || db_price_value   # overwrite when possible (or when provisional)
       else
         db_price_value || provider_price_value   # fill gaps
       end
 
       # Gap-fill using LOCF (last observation carried forward)
       # Treat nil or zero prices as invalid and use previous price
+      used_locf = false
       if chosen_price.nil? || chosen_price.to_f <= 0
         chosen_price = prev_price_value
+        used_locf = true
       end
       prev_price_value = chosen_price
+
+      provisional = determine_provisional_status(
+        date: date,
+        has_provider_price: has_provider_price,
+        used_locf: used_locf,
+        existing_provisional: db_price&.provisional
+      )
 
       {
         security_id: security.id,
         date:        date,
         price:       chosen_price,
-        currency:    provider_currency || prev_price_currency || db_price_currency || "USD"
+        currency:    provider_currency || prev_price_currency || db_price_currency || "USD",
+        provisional: provisional
       }
     end
 
@@ -104,7 +121,14 @@ class Security::Price::Importer
     end
 
     def all_prices_exist?
+      return false if has_refetchable_provisional_prices?
       db_prices.count == expected_count
+    end
+
+    def has_refetchable_provisional_prices?
+      Security::Price.where(security_id: security.id, date: start_date..end_date)
+                     .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
+                     .exists?
     end
 
     def expected_count
@@ -112,10 +136,18 @@ class Security::Price::Importer
     end
 
     # Skip over ranges that already exist unless clearing cache
+    # Also includes dates with refetchable provisional prices
     def effective_start_date
       return start_date if clear_cache
 
-      (start_date..end_date).detect { |d| !db_prices.key?(d) } || end_date
+      refetchable_dates = Security::Price.where(security_id: security.id, date: start_date..end_date)
+                                         .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
+                                         .pluck(:date)
+                                         .to_set
+
+      (start_date..end_date).detect do |d|
+        !db_prices.key?(d) || refetchable_dates.include?(d)
+      end || end_date
     end
 
     def start_price_value
@@ -126,11 +158,29 @@ class Security::Price::Importer
       provider_price_value || db_price_value
     end
 
+    def determine_provisional_status(date:, has_provider_price:, used_locf:, existing_provisional:)
+      # Provider returned real price => NOT provisional
+      return false if has_provider_price
+
+      # Gap-filled (LOCF) => provisional only if recent weekday
+      if used_locf
+        is_weekday = !date.saturday? && !date.sunday?
+        is_recent = date >= PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date
+        return is_weekday && is_recent
+      end
+
+      # Otherwise preserve existing status
+      existing_provisional || false
+    end
+
     def upsert_rows(rows)
       batch_size         = 200
       total_upsert_count = 0
+      now = Time.current
 
-      rows.each_slice(batch_size) do |batch|
+      rows_with_timestamps = rows.map { |row| row.merge(updated_at: now) }
+
+      rows_with_timestamps.each_slice(batch_size) do |batch|
         ids = Security::Price.upsert_all(
           batch,
           unique_by: %i[security_id date currency],

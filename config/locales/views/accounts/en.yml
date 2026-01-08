@@ -102,7 +102,7 @@ en:
       title: Unlink account from provider?
       description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."
       warning_title: What this means
-      warning_no_sync: The account will no longer sync automatically with your bank
+      warning_no_sync: The account will no longer sync automatically with your provider
       warning_manual_updates: You will need to add transactions and update balances manually
       warning_transactions_kept: All existing transactions and balances will be preserved
       warning_can_delete: After unlinking, you will be able to delete the account if needed
