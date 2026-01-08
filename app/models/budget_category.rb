@@ -65,15 +65,74 @@ class BudgetCategory < ApplicationRecord
     category.parent_id.present?
   end
 
+  # Returns true if this subcategory has no individual budget limit and should use parent's budget
+  def inherits_parent_budget?
+    subcategory? && (self[:budgeted_spending].nil? || self[:budgeted_spending] == 0)
+  end
+
+  # Returns the budgeted spending to display in UI
+  # For inheriting subcategories, returns the parent's budget for reference
+  def display_budgeted_spending
+    if inherits_parent_budget?
+      parent = parent_budget_category
+      return 0 unless parent
+      parent[:budgeted_spending] || 0
+    else
+      self[:budgeted_spending] || 0
+    end
+  end
+
+  # Returns the parent budget category if this is a subcategory
+  def parent_budget_category
+    return nil unless subcategory?
+    budget.budget_categories.find { |bc| bc.category.id == category.parent_id }
+  end
+
+  def actual_spending
+    budget.budget_category_actual_spending(self)
+  end
+
   def available_to_spend
-    (budgeted_spending || 0) - actual_spending
+    if inherits_parent_budget?
+      # Subcategories using parent budget share the parent's available_to_spend
+      parent = parent_budget_category
+      return 0 unless parent
+      parent.available_to_spend
+    elsif subcategory?
+      # Subcategory with individual limit
+      (self[:budgeted_spending] || 0) - actual_spending
+    else
+      # Parent category
+      parent_budget = self[:budgeted_spending] || 0
+      total_spending = actual_spending  # This already includes all subcategory spending
+      
+      # Subtract the allocated budgets of subcategories that have individual limits
+      # These are ring-fenced portions of the parent budget
+      subcategories_individual_budgets = subcategories.reject(&:inherits_parent_budget?).sum { |sc| sc[:budgeted_spending] || 0 }
+      
+      # Available = (parent budget - individual subcategory budgets) - total spending
+      # This gives us the shared pool available for parent + inheriting subcategories
+      parent_budget - subcategories_individual_budgets - total_spending
+    end
   end
 
   def percent_of_budget_spent
-    return 0 if budgeted_spending == 0 && actual_spending == 0
-    return 0 if budgeted_spending > 0 && actual_spending == 0
-    return 100 if budgeted_spending == 0 && actual_spending > 0
-    (actual_spending.to_f / budgeted_spending) * 100 if budgeted_spending > 0 && actual_spending > 0
+    if inherits_parent_budget?
+      # For subcategories using parent budget, show their spending as percentage of parent's budget
+      parent = parent_budget_category
+      return 0 unless parent
+      
+      parent_budget = parent[:budgeted_spending] || 0
+      return 0 if parent_budget == 0 && actual_spending == 0
+      return 100 if parent_budget == 0 && actual_spending > 0
+      (actual_spending.to_f / parent_budget) * 100
+    else
+      budget_amount = self[:budgeted_spending] || 0
+      return 0 if budget_amount == 0 && actual_spending == 0
+      return 0 if budget_amount > 0 && actual_spending == 0
+      return 100 if budget_amount == 0 && actual_spending > 0
+      (actual_spending.to_f / budget_amount) * 100 if budget_amount > 0 && actual_spending > 0
+    end
   end
 
   def bar_width_percent
@@ -128,9 +187,14 @@ class BudgetCategory < ApplicationRecord
   def max_allocation
     return nil unless subcategory?
 
-    parent_budget = budget.budget_categories.find { |bc| bc.category.id == category.parent_id }&.budgeted_spending
-    siblings_budget = siblings.sum(&:budgeted_spending)
-
+    parent_budget_cat = budget.budget_categories.find { |bc| bc.category.id == category.parent_id }
+    return nil unless parent_budget_cat
+    
+    parent_budget = parent_budget_cat[:budgeted_spending] || 0
+    
+    # Sum budgets of siblings that have individual limits (excluding those that inherit)
+    siblings_budget = siblings.reject(&:inherits_parent_budget?).sum { |s| s[:budgeted_spending] || 0 }
+    
     [ parent_budget - siblings_budget, 0 ].max
   end
 

@@ -1,0 +1,135 @@
+require "test_helper"
+
+class BudgetCategoryTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:dylan_family)
+    @budget = budgets(:one)
+    
+    # Create parent category
+    @parent_category = Category.create!(
+      name: "Food & Groceries",
+      family: @family,
+      color: "#4da568",
+      lucide_icon: "utensils",
+      classification: "expense"
+    )
+    
+    # Create subcategories
+    @subcategory_with_limit = Category.create!(
+      name: "Restaurants",
+      parent: @parent_category,
+      family: @family,
+      classification: "expense"
+    )
+    
+    @subcategory_inheriting = Category.create!(
+      name: "Groceries",
+      parent: @parent_category,
+      family: @family,
+      classification: "expense"
+    )
+    
+    # Create budget categories
+    @parent_budget_category = BudgetCategory.create!(
+      budget: @budget,
+      category: @parent_category,
+      budgeted_spending: 1000,
+      currency: "USD"
+    )
+    
+    @subcategory_with_limit_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: @subcategory_with_limit,
+      budgeted_spending: 300,
+      currency: "USD"
+    )
+    
+    @subcategory_inheriting_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: @subcategory_inheriting,
+      budgeted_spending: 0,  # Inherits from parent
+      currency: "USD"
+    )
+  end
+
+  test "subcategory with zero budget inherits from parent" do
+    assert @subcategory_inheriting_bc.inherits_parent_budget?
+    refute @subcategory_with_limit_bc.inherits_parent_budget?
+    refute @parent_budget_category.inherits_parent_budget?
+  end
+
+  test "parent_budget_category returns parent for subcategories" do
+    assert_equal @parent_budget_category, @subcategory_inheriting_bc.parent_budget_category
+    assert_equal @parent_budget_category, @subcategory_with_limit_bc.parent_budget_category
+    assert_nil @parent_budget_category.parent_budget_category
+  end
+
+  test "display_budgeted_spending shows parent budget for inheriting subcategories" do
+    assert_equal 1000, @subcategory_inheriting_bc.display_budgeted_spending
+    assert_equal 300, @subcategory_with_limit_bc.display_budgeted_spending
+    assert_equal 1000, @parent_budget_category.display_budgeted_spending
+  end
+
+  test "inheriting subcategory shares parent available_to_spend" do
+    # Mock the actual spending values
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(500)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(100)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(50)
+    
+    # Parent available: 1000 (parent budget) - 300 (subcategory with limit budget) - 500 (total spending) = 200
+    assert_equal 200, @parent_budget_category.available_to_spend
+    
+    # Inheriting subcategory shares parent's available (200)
+    assert_equal 200, @subcategory_inheriting_bc.available_to_spend
+    
+    # Subcategory with limit: 300 (its budget) - 100 (its spending) = 200
+    assert_equal 200, @subcategory_with_limit_bc.available_to_spend
+  end
+
+  test "max_allocation excludes budgets of inheriting siblings" do
+    # Create another inheriting subcategory
+    another_inheriting = Category.create!(
+      name: "Coffee",
+      parent: @parent_category,
+      family: @family,
+      classification: "expense"
+    )
+    
+    another_inheriting_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: another_inheriting,
+      budgeted_spending: 0,  # Inherits
+      currency: "USD"
+    )
+    
+    # Max allocation for new subcategory should only account for the one with explicit limit (300)
+    # 1000 (parent) - 300 (subcategory_with_limit) = 700
+    assert_equal 700, another_inheriting_bc.max_allocation
+    
+    # If we add a new subcategory with a limit
+    new_subcategory_cat = Category.create!(
+      name: "Fast Food",
+      parent: @parent_category,
+      family: @family,
+      classification: "expense"
+    )
+    
+    new_subcategory_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: new_subcategory_cat,
+      budgeted_spending: 0,
+      currency: "USD"
+    )
+    
+    # Max should still be 700 because both inheriting subcategories don't count
+    assert_equal 700, new_subcategory_bc.max_allocation
+  end
+
+  test "percent_of_budget_spent for inheriting subcategory uses parent budget" do
+    # Mock spending
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(100)
+    
+    # 100 / 1000 (parent budget) = 10%
+    assert_equal 10.0, @subcategory_inheriting_bc.percent_of_budget_spent
+  end
+end
