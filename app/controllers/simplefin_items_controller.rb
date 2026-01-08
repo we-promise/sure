@@ -217,7 +217,7 @@ class SimplefinItemsController < ApplicationController
   def complete_account_setup
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
-    stale_account_actions = params[:stale_account_actions] || {}
+    stale_account_actions = permitted_stale_account_actions
 
     # Update sync start date from form
     if params[:sync_start_date].present?
@@ -464,6 +464,24 @@ class SimplefinItemsController < ApplicationController
 
     def simplefin_params
       params.require(:simplefin_item).permit(:setup_token, :sync_start_date)
+    end
+
+    def permitted_stale_account_actions
+      return {} unless params[:stale_account_actions].is_a?(ActionController::Parameters)
+
+      # Permit the nested structure: stale_account_actions[simplefin_account_id][action|target_account_id]
+      params[:stale_account_actions].to_unsafe_h.each_with_object({}) do |(simplefin_account_id, action_params), result|
+        next unless simplefin_account_id.present? && action_params.is_a?(Hash)
+
+        # Validate simplefin_account_id is a valid UUID format to prevent injection
+        next unless simplefin_account_id.to_s.match?(/\A[0-9a-f-]+\z/i)
+
+        permitted = {}
+        permitted[:action] = action_params[:action] if %w[delete move skip].include?(action_params[:action])
+        permitted[:target_account_id] = action_params[:target_account_id] if action_params[:target_account_id].present?
+
+        result[simplefin_account_id] = permitted if permitted[:action].present?
+      end
     end
 
     def render_error(message, setup_token = nil, context: :new)
