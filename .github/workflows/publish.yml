@@ -317,3 +317,64 @@ jobs:
             - **iOS Build**: Unsigned iOS build (requires code signing for installation)
 
             > **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+
+  bump-alpha-version:
+    name: Bump Alpha Version
+    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, 'alpha')
+    needs: [merge]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out main branch
+        uses: actions/checkout@v4.2.0
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump alpha version
+        run: |
+          VERSION_FILE="config/initializers/version.rb"
+
+          # Extract current version
+          CURRENT_VERSION=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+-alpha\.[0-9]+' "$VERSION_FILE")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Extract the alpha number and increment it
+          ALPHA_NUM=$(echo "$CURRENT_VERSION" | grep -oP 'alpha\.\K[0-9]+')
+          NEW_ALPHA_NUM=$((ALPHA_NUM + 1))
+
+          # Create new version string
+          BASE_VERSION=$(echo "$CURRENT_VERSION" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+')
+          NEW_VERSION="${BASE_VERSION}-alpha.${NEW_ALPHA_NUM}"
+          echo "New version: $NEW_VERSION"
+
+          # Update the version file
+          sed -i "s/\"$CURRENT_VERSION\"/\"$NEW_VERSION\"/" "$VERSION_FILE"
+
+          # Verify the change
+          grep "semver" "$VERSION_FILE"
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add config/initializers/version.rb
+          git commit -m "Bump version to next alpha after ${{ github.ref_name }} release"
+
+          # Push with retry logic
+          attempts=0
+          until git push origin main; do
+            attempts=$((attempts + 1))
+            if [[ $attempts -ge 4 ]]; then
+              echo "ERROR: Failed to push after 4 attempts." >&2
+              exit 1
+            fi
+            delay=$((2 ** attempts))
+            echo "Push failed (attempt $attempts). Retrying in ${delay} seconds..."
+            sleep ${delay}
+          done
