@@ -4,8 +4,61 @@ import '../services/connectivity_service.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
 
-class ConnectivityBanner extends StatelessWidget {
+class ConnectivityBanner extends StatefulWidget {
   const ConnectivityBanner({super.key});
+
+  @override
+  State<ConnectivityBanner> createState() => _ConnectivityBannerState();
+}
+
+class _ConnectivityBannerState extends State<ConnectivityBanner> {
+  bool _isSyncing = false;
+
+  Future<void> _handleSync(BuildContext context, String? accessToken, TransactionsProvider transactionsProvider) async {
+    if (accessToken == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please sign in to sync transactions'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isSyncing = true;
+    });
+
+    try {
+      await transactionsProvider.syncTransactions(accessToken: accessToken);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transactions synced successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to sync transactions. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,18 +102,26 @@ class ConnectivityBanner extends StatelessWidget {
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, _) {
                       return TextButton(
-                        onPressed: () async {
-                          final accessToken = authProvider.tokens?.accessToken;
-                          if (accessToken != null) {
-                            await transactionsProvider.syncTransactions(
-                              accessToken: accessToken,
-                            );
-                          }
-                        },
+                        onPressed: _isSyncing
+                            ? null
+                            : () => _handleSync(
+                                  context,
+                                  authProvider.tokens?.accessToken,
+                                  transactionsProvider,
+                                ),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.blue.shade900,
                         ),
-                        child: const Text('Sync Now'),
+                        child: _isSyncing
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade900),
+                                ),
+                              )
+                            : const Text('Sync Now'),
                       );
                     },
                   ),

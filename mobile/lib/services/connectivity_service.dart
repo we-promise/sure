@@ -38,7 +38,9 @@ class ConnectivityService with ChangeNotifier {
     // Check if the result indicates connectivity
     _isOnline = result == ConnectivityResult.mobile ||
         result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.ethernet;
+        result == ConnectivityResult.ethernet ||
+        result == ConnectivityResult.vpn ||
+        result == ConnectivityResult.bluetooth;
 
     _log.info('ConnectivityService', 'Connectivity changed: $result -> ${_isOnline ? "ONLINE" : "OFFLINE"}');
 

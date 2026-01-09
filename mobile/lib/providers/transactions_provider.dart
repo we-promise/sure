@@ -130,7 +130,7 @@ class TransactionsProvider with ChangeNotifier {
       }
     } catch (e) {
       _log.error('TransactionsProvider', 'Error in fetchTransactions: $e');
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -205,9 +205,9 @@ class TransactionsProvider with ChangeNotifier {
           }
         }).catchError((e) {
           if (_isDisposed) return;
-          
+
           _log.error('TransactionsProvider', 'Exception during upload: $e');
-          _error = 'Transaction upload failed: ${e.toString()}';
+          _error = 'Something went wrong. Please try again.';
           notifyListeners();
         });
       } else {
@@ -217,7 +217,7 @@ class TransactionsProvider with ChangeNotifier {
       return true; // Always return true because it's saved locally
     } catch (e) {
       _log.error('TransactionsProvider', 'Failed to create transaction: $e');
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
     }
@@ -257,7 +257,8 @@ class TransactionsProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      _error = e.toString();
+      _log.error('TransactionsProvider', 'Failed to delete transaction: $e');
+      _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
     }
@@ -300,7 +301,8 @@ class TransactionsProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      _error = e.toString();
+      _log.error('TransactionsProvider', 'Failed to delete multiple transactions: $e');
+      _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
     }
@@ -331,7 +333,8 @@ class TransactionsProvider with ChangeNotifier {
         _error = result.error;
       }
     } catch (e) {
-      _error = e.toString();
+      _log.error('TransactionsProvider', 'Failed to sync transactions: $e');
+      _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
