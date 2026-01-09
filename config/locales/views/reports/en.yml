@@ -33,6 +33,7 @@ en:
       budgeted: Budgeted
       remaining: Remaining
       over_by: Over by
+      shared: shared
       suggested_daily: "%{amount} suggested per day for %{days} remaining days"
       no_budgets: No budget categories set up for this month
       status:

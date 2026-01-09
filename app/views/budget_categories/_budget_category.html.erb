@@ -66,7 +66,7 @@
           <span class="font-medium text-primary">
             <%= format_money(budget_category.budgeted_spending_money) %>
             <% if budget_category.inherits_parent_budget? %>
-              <span class="text-xs text-subdued">(shared)</span>
+              <span class="text-xs text-subdued">(<%= t("reports.budget_performance.shared") %>)</span>
             <% end %>
           </span>
         </div>
