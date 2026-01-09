@@ -141,11 +141,27 @@ class AccountsController < ApplicationController
 
     begin
       Account.transaction do
+        # Detach holdings from provider links before destroying them
+        provider_link_ids = @account.account_providers.pluck(:id)
+        if provider_link_ids.any?
+          Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
+        end
+
+        # Capture SimplefinAccount before clearing FK (so we can destroy it)
+        simplefin_account_to_destroy = @account.simplefin_account
+
         # Remove new system links (account_providers join table)
         @account.account_providers.destroy_all
 
         # Remove legacy system links (foreign keys)
         @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
+
+        # Destroy the SimplefinAccount record so it doesn't cause stale account issues
+        # This is safe because:
+        # - Account data (transactions, holdings, balances) lives on the Account, not SimplefinAccount
+        # - SimplefinAccount only caches API data which is regenerated on reconnect
+        # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
+        simplefin_account_to_destroy&.destroy!
       end
 
       redirect_to accounts_path, notice: t("accounts.unlink.success")
