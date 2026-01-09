@@ -115,6 +115,88 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes json_response["errors"], "Account must belong to your family"
   end
 
+  test "should reject file upload exceeding max size" do
+    large_file = Rack::Test::UploadedFile.new(
+      StringIO.new("x" * (Import::MAX_CSV_SIZE + 1)),
+      "text/csv",
+      original_filename: "large.csv"
+    )
+
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+           params: { file: large_file },
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_equal "file_too_large", json_response["error"]
+  end
+
+  test "should reject file upload with invalid mime type" do
+    invalid_file = Rack::Test::UploadedFile.new(
+      StringIO.new("not a csv"),
+      "application/pdf",
+      original_filename: "document.pdf"
+    )
+
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+           params: { file: invalid_file },
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_equal "invalid_file_type", json_response["error"]
+  end
+
+  test "should reject raw content exceeding max size" do
+    # Use a small test limit to avoid Rack request size limits
+    test_limit = 1.kilobyte
+    large_content = "x" * (test_limit + 1)
+
+    original_value = Import::MAX_CSV_SIZE
+    Import.send(:remove_const, :MAX_CSV_SIZE)
+    Import.const_set(:MAX_CSV_SIZE, test_limit)
+
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+           params: { raw_file_content: large_content },
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_equal "content_too_large", json_response["error"]
+  ensure
+    Import.send(:remove_const, :MAX_CSV_SIZE)
+    Import.const_set(:MAX_CSV_SIZE, original_value)
+  end
+
+  test "should accept file upload with valid csv mime type" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    valid_file = Rack::Test::UploadedFile.new(
+      StringIO.new(csv_content),
+      "text/csv",
+      original_filename: "transactions.csv"
+    )
+
+    assert_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             file: valid_file,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: @account.id
+           },
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+
+    assert_response :created
+  end
+
   private
 
     def valid_token_for(user)

@@ -56,10 +56,33 @@ class Api::V1::ImportsController < Api::V1::BaseController
     @import.type = type
     @import.account_id = params[:account_id] if params[:account_id].present?
 
-    # 3. Attach the uploaded file if present
+    # 3. Attach the uploaded file if present (with validation)
     if params[:file].present?
-      @import.raw_file_str = params[:file].read
+      file = params[:file]
+
+      if file.size > Import::MAX_CSV_SIZE
+        return render json: {
+          error: "file_too_large",
+          message: "File is too large. Maximum size is #{Import::MAX_CSV_SIZE / 1.megabyte}MB."
+        }, status: :unprocessable_entity
+      end
+
+      unless Import::ALLOWED_MIME_TYPES.include?(file.content_type)
+        return render json: {
+          error: "invalid_file_type",
+          message: "Invalid file type. Please upload a CSV file."
+        }, status: :unprocessable_entity
+      end
+
+      @import.raw_file_str = file.read
     elsif params[:raw_file_content].present?
+      if params[:raw_file_content].bytesize > Import::MAX_CSV_SIZE
+        return render json: {
+          error: "content_too_large",
+          message: "Content is too large. Maximum size is #{Import::MAX_CSV_SIZE / 1.megabyte}MB."
+        }, status: :unprocessable_entity
+      end
+
       @import.raw_file_str = params[:raw_file_content]
     end
 
