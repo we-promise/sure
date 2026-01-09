@@ -30,9 +30,9 @@ class Installment < ApplicationRecord
     if value.is_a?(String)
       # Remove non-numeric characters except dot and minus, then convert to float
       amount = value.gsub(/[^0-9.-]/, "").to_f
-      self.installment_cost_cents = (amount * 100).round
+      self.installment_cost_cents = amount.round
     else
-      self.installment_cost_cents = (value.to_f * 100).round
+      self.installment_cost_cents = value.to_f.round
     end
   end
 
