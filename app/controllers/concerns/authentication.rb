@@ -38,6 +38,7 @@ module Authentication
     end
 
     def create_session_for(user)
+      reset_demo_account_locale(user)
       session = user.sessions.create!
       cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
       session
@@ -63,5 +64,16 @@ module Authentication
           ip_address: Current.ip_address
         )
       end
+    end
+
+    def reset_demo_account_locale(user)
+      demo = respond_to?(:demo_config) ? demo_config : nil
+      return unless respond_to?(:demo_host_match?) && demo_host_match?(demo)
+      return unless user.email.casecmp(demo.fetch("email", "")).zero?
+
+      family = user.family
+      return unless family&.locale.present? && family.locale != "en"
+
+      family.update!(locale: "en")
     end
 end
