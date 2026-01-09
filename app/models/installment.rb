@@ -1,6 +1,11 @@
 class Installment < ApplicationRecord
   include Accountable, Monetizable
 
+  # Installments don't have subtypes, but Account delegates this method
+  def subtype
+    nil
+  end
+
   belongs_to :family
   has_many :transactions, dependent: :nullify
 
@@ -19,6 +24,16 @@ class Installment < ApplicationRecord
 
   def installment_cost
     installment_cost_cents_money
+  end
+
+  def installment_cost=(value)
+    if value.is_a?(String)
+      # Remove non-numeric characters except dot and minus, then convert to float
+      amount = value.gsub(/[^0-9.-]/, "").to_f
+      self.installment_cost_cents = (amount * 100).round
+    else
+      self.installment_cost_cents = (value.to_f * 100).round
+    end
   end
 
   def total_cost
