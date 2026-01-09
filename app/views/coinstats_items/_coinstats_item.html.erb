@@ -80,7 +80,20 @@
       <div class="space-y-4 mt-4">
         <% if coinstats_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: coinstats_item.accounts %>
-        <% else %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@coinstats_sync_stats_map) && @coinstats_sync_stats_map
+             @coinstats_sync_stats_map[coinstats_item.id] || {}
+           else
+             coinstats_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: coinstats_item
+        ) %>
+
+        <% if coinstats_item.accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".no_wallets_title") %></p>
             <p class="text-secondary text-sm"><%= t(".no_wallets_message") %></p>
