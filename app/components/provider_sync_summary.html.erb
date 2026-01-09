@@ -45,7 +45,7 @@
       <div>
         <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.holdings.title") %></h4>
         <div class="flex items-center gap-3">
-          <span><%= t("provider_sync_summary.holdings.count", label: holdings_label, count: holdings_count) %></span>
+          <span><%= t("provider_sync_summary.holdings.#{holdings_label_key}", count: holdings_count) %></span>
         </div>
       </div>
     <% end %>
@@ -93,13 +93,7 @@
               </summary>
               <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
                 <% data_quality_details.each do |detail| %>
-                  <% severity = detail["severity"] || "info" %>
-                  <% color_class = case severity
-                       when "warning" then "text-warning"
-                       when "error" then "text-destructive"
-                       else "text-secondary"
-                     end %>
-                  <p class="text-xs <%= color_class %>"><%= detail["message"] %></p>
+                  <p class="text-xs <%= severity_color_class(detail["severity"]) %>"><%= detail["message"] %></p>
                 <% end %>
               </div>
             </details>

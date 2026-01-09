@@ -17,7 +17,8 @@ en:
       skipped: "Skipped: %{count}"
     holdings:
       title: Holdings
-      count: "%{label}: %{count}"
+      found: "Found: %{count}"
+      processed: "Processed: %{count}"
     health:
       title: Health
       rate_limited: "Rate limited %{time_ago}"

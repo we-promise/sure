@@ -81,12 +81,23 @@ class ProviderSyncSummary < ViewComponent::Base
     stats.key?("holdings_found") || stats.key?("holdings_processed")
   end
 
-  def holdings_label
-    stats.key?("holdings_processed") ? "Processed" : "Found"
+  def holdings_label_key
+    stats.key?("holdings_processed") ? "processed" : "found"
   end
 
   def holdings_count
     stats.key?("holdings_processed") ? holdings_processed : holdings_found
+  end
+
+  # Returns the CSS color class for a data quality detail severity
+  # @param severity [String] The severity level ("warning", "error", or other)
+  # @return [String] The Tailwind CSS class for the color
+  def severity_color_class(severity)
+    case severity
+    when "warning" then "text-warning"
+    when "error" then "text-destructive"
+    else "text-secondary"
+    end
   end
 
   # Health statistics
