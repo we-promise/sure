@@ -59,6 +59,7 @@ class IncomeStatement::Totals
           COUNT(ae.id) as transactions_count
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
+        JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
         LEFT JOIN exchange_rates er ON (
           er.date = ae.date AND
@@ -67,6 +68,8 @@ class IncomeStatement::Totals
         )
         WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
           AND ae.excluded = false
+          AND a.family_id = :family_id
+          AND a.status IN ('draft', 'active')
         GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
     end
@@ -81,6 +84,7 @@ class IncomeStatement::Totals
           COUNT(ae.id) as entry_count
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
+        JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
         LEFT JOIN exchange_rates er ON (
           er.date = ae.date AND
@@ -89,6 +93,8 @@ class IncomeStatement::Totals
         )
         WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
           AND ae.excluded = false
+          AND a.family_id = :family_id
+          AND a.status IN ('draft', 'active')
         GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL
     end

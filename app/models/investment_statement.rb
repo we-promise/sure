@@ -114,6 +114,21 @@ class InvestmentStatement
     end
   end
 
+  # Total contributions (all time) - returns numeric for monetize
+  def total_contributions
+    all_time_totals.contributions&.amount || 0
+  end
+
+  # Total dividends (all time) - returns numeric for monetize
+  def total_dividends
+    all_time_totals.dividends&.amount || 0
+  end
+
+  # Total interest (all time) - returns numeric for monetize
+  def total_interest
+    all_time_totals.interest&.amount || 0
+  end
+
   def unrealized_gains_trend
     holdings = current_holdings.to_a
     return nil if holdings.empty?
@@ -146,6 +161,10 @@ class InvestmentStatement
   end
 
   private
+    def all_time_totals
+      @all_time_totals ||= totals(period: Period.all_time)
+    end
+
     PeriodTotals = Data.define(:contributions, :withdrawals, :dividends, :interest, :trades_count, :currency) do
       def net_flow
         contributions - withdrawals
