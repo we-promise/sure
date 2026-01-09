@@ -84,7 +84,8 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bootstrap" do
-    assert_difference "Category.count", 19 do
+    # 22 default categories minus 2 that already exist in fixtures (Income, Food & Drink)
+    assert_difference "Category.count", 20 do
       post bootstrap_categories_url
     end
 

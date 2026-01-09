@@ -11,10 +11,10 @@ class IncomeStatement
     @family = family
   end
 
-  def totals(transactions_scope: nil)
+  def totals(transactions_scope: nil, date_range:)
     transactions_scope ||= family.transactions.visible
 
-    result = totals_query(transactions_scope: transactions_scope)
+    result = totals_query(transactions_scope: transactions_scope, date_range: date_range)
 
     total_income = result.select { |t| t.classification == "income" }.sum(&:total)
     total_expense = result.select { |t| t.classification == "expense" }.sum(&:total)
@@ -64,7 +64,7 @@ class IncomeStatement
     end
 
     def build_period_total(classification:, period:)
-      totals = totals_query(transactions_scope: family.transactions.visible.in_period(period)).select { |t| t.classification == classification }
+      totals = totals_query(transactions_scope: family.transactions.visible.in_period(period), date_range: period.date_range).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -114,12 +114,12 @@ class IncomeStatement
       ]) { CategoryStats.new(family, interval:).call }
     end
 
-    def totals_query(transactions_scope:)
+    def totals_query(transactions_scope:, date_range:)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
         "income_statement", "totals_query", family.id, sql_hash, family.entries_cache_version
-      ]) { Totals.new(family, transactions_scope: transactions_scope).call }
+      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range).call }
     end
 
     def monetizable_currency

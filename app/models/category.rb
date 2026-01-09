@@ -1,5 +1,6 @@
 class Category < ApplicationRecord
   has_many :transactions, dependent: :nullify, class_name: "Transaction"
+  has_many :trades, dependent: :nullify
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
 
   belongs_to :family
@@ -110,7 +111,8 @@ class Category < ApplicationRecord
           [ "Loan Payments", "#e11d48", "credit-card", "expense" ],
           [ "Services", "#7c3aed", "briefcase", "expense" ],
           [ "Fees", "#6b7280", "receipt", "expense" ],
-          [ "Savings & Investments", "#059669", "piggy-bank", "expense" ]
+          [ "Savings & Investments", "#059669", "piggy-bank", "expense" ],
+          [ "Investment Contributions", "#0d9488", "trending-up", "expense" ]
         ]
       end
   end
