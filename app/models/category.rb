@@ -34,7 +34,6 @@ class Category < ApplicationRecord
   TRANSFER_COLOR = "#444CE7"
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
-  INVESTMENT_COLOR = "#0d9488"
 
   class Group
     attr_reader :category, :subcategories
@@ -141,10 +140,6 @@ class Category < ApplicationRecord
 
   def name_with_parent
     subcategory? ? "#{parent.name} > #{name}" : name
-  end
-
-  def investment_category?
-    INVESTMENT_CATEGORY_NAMES.include?(name)
   end
 
   private
