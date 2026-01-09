@@ -274,11 +274,14 @@ jobs:
         run: |
           mkdir -p ${{ runner.temp }}/release-assets
 
-          # Copy APK (debug or release, whichever exists)
+          # Copy debug APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
             cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-debug.apk"
             echo "✓ Debug APK prepared"
-          elif [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
+          fi
+
+          # Copy release APK if it exists
+          if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
             cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}.apk"
             echo "✓ Release APK prepared"
           fi
