@@ -14,8 +14,9 @@ class ConnectivityService with ChangeNotifier {
 
   ConnectivityService() {
     _log.info('ConnectivityService', 'Initializing connectivity service');
-    _initConnectivity();
-    _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
+    _initConnectivity().then((_) {
+      _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
+    });
   }
 
   Future<void> _initConnectivity() async {
