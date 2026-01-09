@@ -3,6 +3,7 @@ import '../models/user.dart';
 import '../models/auth_tokens.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
+import '../services/log_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -75,7 +76,7 @@ class AuthProvider with ChangeNotifier {
         otpCode: otpCode,
       );
 
-      debugPrint('Login result: $result'); // Debug log
+      LogService.instance.debug('AuthProvider', 'Login result: $result');
 
       if (result['success'] == true) {
         _tokens = result['tokens'] as AuthTokens?;
@@ -89,7 +90,7 @@ class AuthProvider with ChangeNotifier {
         if (result['mfa_required'] == true) {
           _mfaRequired = true;
           _showMfaInput = true; // Show MFA input field
-          debugPrint('MFA required! Setting _showMfaInput to true'); // Debug log
+          LogService.instance.debug('AuthProvider', 'MFA required! Setting _showMfaInput to true');
 
           // If user already submitted an OTP code, this is likely an invalid OTP error
           // Show the error message so user knows the code was wrong

@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../screens/transaction_form_screen.dart';
 import '../widgets/sync_status_badge.dart';
+import '../services/log_service.dart';
 
 class TransactionsListScreen extends StatefulWidget {
   final Account account;
@@ -79,7 +80,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       };
     } catch (e) {
       // Fallback if parsing fails - log and return neutral state
-      debugPrint('Failed to parse amount "$amount": $e');
+      LogService.instance.error('TransactionsListScreen', 'Failed to parse amount "$amount": $e');
       return {
         'isPositive': true,
         'displayAmount': amount,
