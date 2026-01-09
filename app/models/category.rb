@@ -31,6 +31,7 @@ class Category < ApplicationRecord
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
   UNCATEGORIZED_COLOR = "#737373"
+  UNCATEGORIZED_INVESTMENTS_COLOR = "#e99537"
   TRANSFER_COLOR = "#444CE7"
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
@@ -85,6 +86,14 @@ class Category < ApplicationRecord
         name: "Uncategorized",
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
+      )
+    end
+
+    def uncategorized_investments
+      new(
+        name: "Uncategorized Investments",
+        color: UNCATEGORIZED_INVESTMENTS_COLOR,
+        lucide_icon: "trending-up"
       )
     end
 

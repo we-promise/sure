@@ -68,13 +68,22 @@ class IncomeStatement
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
+      uncategorized_investments_category = family.categories.uncategorized_investments
 
-      category_totals = [ *categories, uncategorized_category ].map do |category|
+      category_totals = [ *categories, uncategorized_category, uncategorized_investments_category ].map do |category|
         subcategory = categories.find { |c| c.id == category.parent_id }
 
-        parent_category_total = totals.select { |t| t.category_id == category.id }&.sum(&:total) || 0
+        parent_category_total = if category == uncategorized_category
+          # Regular uncategorized: NULL category_id and NOT uncategorized investment
+          totals.select { |t| t.category_id.nil? && !t.is_uncategorized_investment }&.sum(&:total) || 0
+        elsif category == uncategorized_investments_category
+          # Uncategorized investments: NULL category_id AND is_uncategorized_investment
+          totals.select { |t| t.category_id.nil? && t.is_uncategorized_investment }&.sum(&:total) || 0
+        else
+          totals.select { |t| t.category_id == category.id }&.sum(&:total) || 0
+        end
 
-        children_totals = if category == uncategorized_category
+        children_totals = if category == uncategorized_category || category == uncategorized_investments_category
           0
         else
           totals.select { |t| t.parent_category_id == category.id }&.sum(&:total) || 0

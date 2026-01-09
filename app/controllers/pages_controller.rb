@@ -198,7 +198,8 @@ class PagesController < ApplicationController
             currency: ct.currency,
             percentage: ct.weight.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
-            icon: ct.category.lucide_icon
+            icon: ct.category.lucide_icon,
+            clickable: ct.category.name != "Uncategorized Investments"
           }
         end
 
