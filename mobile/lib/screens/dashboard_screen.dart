@@ -31,9 +31,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Listen for sync completion to show success indicator
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
-      _previousPendingCount = _transactionsProvider!.pendingCount;
-      _transactionsProvider!.addListener(_onTransactionsChanged);
+      _previousPendingCount = _transactionsProvider?.pendingCount ?? 0;
+      _transactionsProvider?.addListener(_onTransactionsChanged);
     });
   }
 
@@ -158,7 +159,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Sync failed: ${e.toString()}')),
+                const Expanded(child: Text('Sync failed. Please try again.')),
               ],
             ),
             backgroundColor: Colors.red,

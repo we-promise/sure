@@ -205,9 +205,9 @@ class TransactionsProvider with ChangeNotifier {
           }
         }).catchError((e) {
           if (_isDisposed) return;
-
+          
           _log.error('TransactionsProvider', 'Exception during upload: $e');
-          _error = 'Something went wrong. Please try again.';
+          _error = 'Failed to upload transaction. It will sync when online.';
           notifyListeners();
         });
       } else {
