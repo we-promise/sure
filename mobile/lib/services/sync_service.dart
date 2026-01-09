@@ -253,14 +253,14 @@ class SyncService with ChangeNotifier {
 
       // Step 3: Sync accounts
       _log.info('SyncService', 'Step 3: Syncing accounts');
-      await syncAccounts(accessToken);
+      final accountsResult = await syncAccounts(accessToken);
       _log.info('SyncService', 'Step 3 complete');
 
       _isSyncing = false;
       _lastSyncTime = DateTime.now();
 
-      final allSuccess = uploadResult.success && downloadResult.success;
-      _syncError = allSuccess ? null : (uploadResult.error ?? downloadResult.error);
+      final allSuccess = uploadResult.success && downloadResult.success && accountsResult.success;
+      _syncError = allSuccess ? null : (uploadResult.error ?? downloadResult.error ?? accountsResult.error);
 
       _log.info('SyncService', '==== Full Sync Complete: ${allSuccess ? "SUCCESS" : "PARTIAL/FAILED"} ====');
 
