@@ -95,7 +95,7 @@ class AccountsProvider with ChangeNotifier {
       }
 
       // If online and (force sync or no cached data), fetch from server
-      final isOnline = _connectivityService?.isOnline ?? true;
+      final isOnline = _connectivityService?.isOnline ?? false;
       if (isOnline && (forceSync || cachedAccounts.isEmpty)) {
         final result = await _accountsService.getAccounts(
           accessToken: accessToken,

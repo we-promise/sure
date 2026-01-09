@@ -33,15 +33,27 @@ class SureApp extends StatelessWidget {
         ChangeNotifierProxyProvider<ConnectivityService, AccountsProvider>(
           create: (_) => AccountsProvider(),
           update: (_, connectivityService, accountsProvider) {
-            accountsProvider?.setConnectivityService(connectivityService);
-            return accountsProvider!;
+            if (accountsProvider == null) {
+              final provider = AccountsProvider();
+              provider.setConnectivityService(connectivityService);
+              return provider;
+            } else {
+              accountsProvider.setConnectivityService(connectivityService);
+              return accountsProvider;
+            }
           },
         ),
         ChangeNotifierProxyProvider<ConnectivityService, TransactionsProvider>(
           create: (_) => TransactionsProvider(),
           update: (_, connectivityService, transactionsProvider) {
-            transactionsProvider?.setConnectivityService(connectivityService);
-            return transactionsProvider!;
+            if (transactionsProvider == null) {
+              final provider = TransactionsProvider();
+              provider.setConnectivityService(connectivityService);
+              return provider;
+            } else {
+              transactionsProvider.setConnectivityService(connectivityService);
+              return transactionsProvider;
+            }
           },
         ),
       ],
