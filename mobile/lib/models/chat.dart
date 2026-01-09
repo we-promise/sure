@@ -23,7 +23,7 @@ class Chat {
 
   factory Chat.fromJson(Map<String, dynamic> json) {
     return Chat(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       title: json['title'] as String,
       error: json['error'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),

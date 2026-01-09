@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class ToolCall {
   final String id;
   final String functionName;
@@ -15,12 +17,28 @@ class ToolCall {
 
   factory ToolCall.fromJson(Map<String, dynamic> json) {
     return ToolCall(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       functionName: json['function_name'] as String,
-      functionArguments: json['function_arguments'] as Map<String, dynamic>,
-      functionResult: json['function_result'] as Map<String, dynamic>?,
+      functionArguments: _parseJsonField(json['function_arguments']),
+      functionResult: json['function_result'] != null
+          ? _parseJsonField(json['function_result'])
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
+  }
+
+  static Map<String, dynamic> _parseJsonField(dynamic field) {
+    if (field == null) return {};
+    if (field is Map<String, dynamic>) return field;
+    if (field is String) {
+      try {
+        final parsed = jsonDecode(field);
+        return parsed is Map<String, dynamic> ? parsed : {};
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
   }
 
   Map<String, dynamic> toJson() {
