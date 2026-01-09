@@ -1,0 +1,36 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with url: perform_merge_family_merchants_path, method: :post, class: "space-y-4" do |f| %>
+      <p class="text-sm text-secondary"><%= t(".description") %></p>
+
+      <div class="space-y-2">
+        <%= f.label :target_id, t(".target_label"), class: "text-sm font-medium text-primary" %>
+        <%= f.select :target_id,
+              options_from_collection_for_select(@merchants, :id, :name),
+              { include_blank: t(".select_target") },
+              { class: "w-full", required: true } %>
+      </div>
+
+      <div class="space-y-2">
+        <p class="text-sm font-medium text-primary"><%= t(".sources_label") %></p>
+        <div class="max-h-64 overflow-y-auto space-y-1 border border-secondary rounded-lg p-2">
+          <% @merchants.each do |merchant| %>
+            <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+              <%= check_box_tag "source_ids[]", merchant.id, false, class: "rounded border-gray-300" %>
+              <span class="text-sm text-primary"><%= merchant.name %></span>
+              <% if merchant.is_a?(ProviderMerchant) %>
+                <span class="text-xs text-subdued">(<%= merchant.source&.titleize %>)</span>
+              <% end %>
+            </label>
+          <% end %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".sources_hint") %></p>
+      </div>
+
+      <section>
+        <%= f.submit t(".submit"), class: "btn btn-primary w-full" %>
+      </section>
+    <% end %>
+  <% end %>
+<% end %>
