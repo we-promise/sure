@@ -7,10 +7,16 @@ import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/api_config.dart';
+import 'services/connectivity_service.dart';
+import 'services/log_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiConfig.initialize();
+
+  // Add initial log entry
+  LogService.instance.info('App', 'Sure Finance app starting...');
+
   runApp(const SureApp());
 }
 
@@ -21,9 +27,23 @@ class SureApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => LogService.instance),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => AccountsProvider()),
-        ChangeNotifierProvider(create: (_) => TransactionsProvider()),
+        ChangeNotifierProxyProvider<ConnectivityService, AccountsProvider>(
+          create: (_) => AccountsProvider(),
+          update: (_, connectivityService, accountsProvider) {
+            accountsProvider?.setConnectivityService(connectivityService);
+            return accountsProvider!;
+          },
+        ),
+        ChangeNotifierProxyProvider<ConnectivityService, TransactionsProvider>(
+          create: (_) => TransactionsProvider(),
+          update: (_, connectivityService, transactionsProvider) {
+            transactionsProvider?.setConnectivityService(connectivityService);
+            return transactionsProvider!;
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'Sure Finance',
