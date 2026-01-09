@@ -69,8 +69,8 @@ en:
       add_transaction: Add Transaction
       add_account: Add Account
     transactions_breakdown:
-      title: Transactions Breakdown
-      no_transactions: No transactions found for the selected period and filters
+      title: Activity Breakdown
+      no_transactions: No activity found for the selected period and filters
       filters:
         title: Filters
         category: Category
@@ -102,10 +102,10 @@ en:
         expense: Expenses
         income: Income
         uncategorized: Uncategorized
-        transactions: transactions
+        transactions: entries
         percentage: "% of Total"
       pagination:
-        showing: Showing %{count} transactions
+        showing: Showing %{count} entries
         previous: Previous
         next: Next
     investment_performance:

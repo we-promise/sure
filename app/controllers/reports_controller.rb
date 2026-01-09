@@ -379,25 +379,55 @@ class ReportsController < ApplicationController
       # Apply filters
       transactions = apply_transaction_filters(transactions)
 
+      # Get trades in the period (matching income_statement logic)
+      trades = Trade
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: [])
+
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
       sort_direction = params[:sort_direction] || "desc"
 
       # Group by category and type
-      all_transactions = transactions.to_a
       grouped_data = {}
+      family_currency = Current.family.currency
 
-      all_transactions.each do |transaction|
+      # Process transactions
+      transactions.each do |transaction|
         entry = transaction.entry
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
-        category_color = transaction.category&.color || "#9CA3AF"
+        category_color = transaction.category&.color || Category::UNCATEGORIZED_COLOR
+
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
 
         key = [ category_name, type, category_color ]
         grouped_data[key] ||= { total: 0, count: 0 }
         grouped_data[key][:count] += 1
-        grouped_data[key][:total] += entry.amount.abs
+        grouped_data[key][:total] += converted_amount
+      end
+
+      # Process trades
+      trades.each do |trade|
+        entry = trade.entry
+        is_expense = entry.amount > 0
+        type = is_expense ? "expense" : "income"
+        # Use "Uncategorized Investments" for trades without category
+        category_name = trade.category&.name || "Uncategorized Investments"
+        category_color = trade.category&.color || Category::UNCATEGORIZED_INVESTMENTS_COLOR
+
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+
+        key = [ category_name, type, category_color ]
+        grouped_data[key] ||= { total: 0, count: 0 }
+        grouped_data[key][:count] += 1
+        grouped_data[key][:total] += converted_amount
       end
 
       # Convert to array
@@ -533,9 +563,19 @@ class ReportsController < ApplicationController
 
       transactions = apply_transaction_filters(transactions)
 
-      # Group transactions by category, type, and month
-      breakdown = {}
+      # Get trades in the period (matching income_statement logic)
+      trades = Trade
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: [])
 
+      # Group by category, type, and month
+      breakdown = {}
+      family_currency = Current.family.currency
+
+      # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
         is_expense = entry.amount > 0
@@ -543,11 +583,33 @@ class ReportsController < ApplicationController
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
         breakdown[key][:months][month_key] ||= 0
-        breakdown[key][:months][month_key] += entry.amount.abs
-        breakdown[key][:total] += entry.amount.abs
+        breakdown[key][:months][month_key] += converted_amount
+        breakdown[key][:total] += converted_amount
+      end
+
+      # Process trades
+      trades.each do |trade|
+        entry = trade.entry
+        is_expense = entry.amount > 0
+        type = is_expense ? "expense" : "income"
+        # Use "Uncategorized Investments" for trades without category
+        category_name = trade.category&.name || "Uncategorized Investments"
+        month_key = entry.date.beginning_of_month
+
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+
+        key = [ category_name, type ]
+        breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
+        breakdown[key][:months][month_key] ||= 0
+        breakdown[key][:months][month_key] += converted_amount
+        breakdown[key][:total] += converted_amount
       end
 
       # Convert to array and sort by type and total (descending)
