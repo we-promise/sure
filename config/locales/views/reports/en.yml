@@ -102,10 +102,14 @@ en:
         expense: Expenses
         income: Income
         uncategorized: Uncategorized
-        transactions: entries
+        entries:
+          one: entry
+          other: entries
         percentage: "% of Total"
       pagination:
-        showing: Showing %{count} entries
+        showing:
+          one: Showing %{count} entry
+          other: Showing %{count} entries
         previous: Previous
         next: Next
     investment_performance:
