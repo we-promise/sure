@@ -73,8 +73,18 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def perform_merge
-    target = Merchant.find(params[:target_id])
-    sources = Merchant.where(id: params[:source_ids])
+    # Scope lookups to merchants valid for this family (FamilyMerchants + assigned ProviderMerchants)
+    valid_merchants = all_family_merchants
+
+    target = valid_merchants.find_by(id: params[:target_id])
+    unless target
+      return redirect_to merge_family_merchants_path, alert: t(".target_not_found")
+    end
+
+    sources = valid_merchants.where(id: params[:source_ids])
+    unless sources.any?
+      return redirect_to merge_family_merchants_path, alert: t(".invalid_merchants")
+    end
 
     merger = Merchant::Merger.new(
       family: Current.family,
@@ -87,6 +97,8 @@ class FamilyMerchantsController < ApplicationController
     else
       redirect_to merge_family_merchants_path, alert: t(".no_merchants_selected")
     end
+  rescue Merchant::Merger::UnauthorizedMerchantError => e
+    redirect_to merge_family_merchants_path, alert: e.message
   end
 
   private
@@ -104,8 +116,12 @@ class FamilyMerchantsController < ApplicationController
     end
 
     def all_family_merchants
-      (Current.family.merchants.to_a + Current.family.assigned_merchants.where(type: "ProviderMerchant").to_a)
-        .uniq(&:id)
-        .sort_by { |m| m.name.downcase }
+      family_merchant_ids = Current.family.merchants.pluck(:id)
+      provider_merchant_ids = Current.family.assigned_merchants.where(type: "ProviderMerchant").pluck(:id)
+      combined_ids = (family_merchant_ids + provider_merchant_ids).uniq
+
+      Merchant.where(id: combined_ids)
+              .distinct
+              .order(Arel.sql("LOWER(COALESCE(name, ''))"))
     end
 end
