@@ -145,7 +145,7 @@ class AccountsProvider with ChangeNotifier {
                    e.toString().contains('SSL')) {
           _errorMessage = 'Secure connection error. Please check your internet connection and try again.';
         } else {
-          _errorMessage = 'An error occurred: ${e.toString()}';
+          _errorMessage = 'Something went wrong. Please try again.';
         }
       }
       _isLoading = false;
