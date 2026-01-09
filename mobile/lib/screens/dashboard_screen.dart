@@ -4,6 +4,7 @@ import '../models/account.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
+import '../services/log_service.dart';
 import '../widgets/account_card.dart';
 import '../widgets/connectivity_banner.dart';
 import 'transaction_form_screen.dart';
@@ -18,6 +19,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final LogService _log = LogService.instance;
   bool _assetsExpanded = true;
   bool _liabilitiesExpanded = true;
   bool _showSyncSuccess = false;
@@ -151,6 +153,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
     } catch (e) {
+      _log.error('DashboardScreen', 'Error in _performManualSync: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(

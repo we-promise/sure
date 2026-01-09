@@ -22,6 +22,82 @@ class SyncService with ChangeNotifier {
   String? get syncError => _syncError;
   DateTime? get lastSyncTime => _lastSyncTime;
 
+  /// Sync pending deletes to server (internal method without sync lock check)
+  Future<SyncResult> _syncPendingDeletesInternal(String accessToken) async {
+    int successCount = 0;
+    int failureCount = 0;
+    String? lastError;
+
+    try {
+      final pendingDeletes = await _offlineStorage.getPendingDeletes();
+      _log.info('SyncService', 'Found ${pendingDeletes.length} pending deletes to process');
+
+      if (pendingDeletes.isEmpty) {
+        return SyncResult(success: true, syncedCount: 0);
+      }
+
+      for (final transaction in pendingDeletes) {
+        try {
+          // Only attempt to delete on server if the transaction has a server ID
+          if (transaction.id != null && transaction.id!.isNotEmpty) {
+            _log.info('SyncService', 'Deleting transaction ${transaction.id} from server');
+            final result = await _transactionsService.deleteTransaction(
+              accessToken: accessToken,
+              transactionId: transaction.id!,
+            );
+
+            if (result['success'] == true) {
+              _log.info('SyncService', 'Delete success! Removing from local storage');
+              // Delete from local storage completely
+              await _offlineStorage.deleteTransaction(transaction.localId);
+              successCount++;
+            } else {
+              // Mark as failed but keep it as pending delete for retry
+              _log.error('SyncService', 'Delete failed: ${result['error']}');
+              await _offlineStorage.updateTransactionSyncStatus(
+                localId: transaction.localId,
+                syncStatus: SyncStatus.failed,
+              );
+              failureCount++;
+              lastError = result['error'] as String?;
+            }
+          } else {
+            // No server ID means it was never synced to server, just delete locally
+            _log.info('SyncService', 'Transaction ${transaction.localId} has no server ID, deleting locally only');
+            await _offlineStorage.deleteTransaction(transaction.localId);
+            successCount++;
+          }
+        } catch (e) {
+          // Mark as failed
+          _log.error('SyncService', 'Delete exception: $e');
+          await _offlineStorage.updateTransactionSyncStatus(
+            localId: transaction.localId,
+            syncStatus: SyncStatus.failed,
+          );
+          failureCount++;
+          lastError = e.toString();
+        }
+      }
+
+      _log.info('SyncService', 'Delete complete: $successCount success, $failureCount failed');
+
+      return SyncResult(
+        success: failureCount == 0,
+        syncedCount: successCount,
+        failedCount: failureCount,
+        error: failureCount > 0 ? lastError : null,
+      );
+    } catch (e) {
+      _log.error('SyncService', 'Sync pending deletes exception: $e');
+      return SyncResult(
+        success: false,
+        syncedCount: successCount,
+        failedCount: failureCount,
+        error: e.toString(),
+      );
+    }
+  }
+
   /// Sync pending transactions to server (internal method without sync lock check)
   Future<SyncResult> _syncPendingTransactionsInternal(String accessToken) async {
     int successCount = 0;
@@ -229,7 +305,7 @@ class SyncService with ChangeNotifier {
     }
   }
 
-  /// Full sync - upload pending transactions and download from server
+  /// Full sync - upload pending transactions, process pending deletes, and download from server
   Future<SyncResult> performFullSync(String accessToken) async {
     if (_isSyncing) {
       return SyncResult(success: false, error: 'Sync already in progress');
@@ -241,26 +317,31 @@ class SyncService with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step 1: Upload pending transactions (use internal method to avoid sync lock check)
-      _log.info('SyncService', 'Step 1: Uploading pending transactions');
+      // Step 1: Process pending deletes (do this first to free up resources)
+      _log.info('SyncService', 'Step 1: Processing pending deletes');
+      final deleteResult = await _syncPendingDeletesInternal(accessToken);
+      _log.info('SyncService', 'Step 1 complete: ${deleteResult.syncedCount ?? 0} deleted, ${deleteResult.failedCount ?? 0} failed');
+
+      // Step 2: Upload pending transactions
+      _log.info('SyncService', 'Step 2: Uploading pending transactions');
       final uploadResult = await _syncPendingTransactionsInternal(accessToken);
-      _log.info('SyncService', 'Step 1 complete: ${uploadResult.syncedCount ?? 0} uploaded, ${uploadResult.failedCount ?? 0} failed');
+      _log.info('SyncService', 'Step 2 complete: ${uploadResult.syncedCount ?? 0} uploaded, ${uploadResult.failedCount ?? 0} failed');
 
-      // Step 2: Download transactions from server
-      _log.info('SyncService', 'Step 2: Downloading transactions from server');
+      // Step 3: Download transactions from server
+      _log.info('SyncService', 'Step 3: Downloading transactions from server');
       final downloadResult = await syncFromServer(accessToken: accessToken);
-      _log.info('SyncService', 'Step 2 complete: ${downloadResult.syncedCount ?? 0} downloaded');
+      _log.info('SyncService', 'Step 3 complete: ${downloadResult.syncedCount ?? 0} downloaded');
 
-      // Step 3: Sync accounts
-      _log.info('SyncService', 'Step 3: Syncing accounts');
+      // Step 4: Sync accounts
+      _log.info('SyncService', 'Step 4: Syncing accounts');
       final accountsResult = await syncAccounts(accessToken);
-      _log.info('SyncService', 'Step 3 complete');
+      _log.info('SyncService', 'Step 4 complete');
 
       _isSyncing = false;
       _lastSyncTime = DateTime.now();
 
-      final allSuccess = uploadResult.success && downloadResult.success && accountsResult.success;
-      _syncError = allSuccess ? null : (uploadResult.error ?? downloadResult.error ?? accountsResult.error);
+      final allSuccess = deleteResult.success && uploadResult.success && downloadResult.success && accountsResult.success;
+      _syncError = allSuccess ? null : (deleteResult.error ?? uploadResult.error ?? downloadResult.error ?? accountsResult.error);
 
       _log.info('SyncService', '==== Full Sync Complete: ${allSuccess ? "SUCCESS" : "PARTIAL/FAILED"} ====');
 
@@ -268,8 +349,8 @@ class SyncService with ChangeNotifier {
 
       return SyncResult(
         success: allSuccess,
-        syncedCount: (uploadResult.syncedCount ?? 0) + (downloadResult.syncedCount ?? 0),
-        failedCount: uploadResult.failedCount,
+        syncedCount: (deleteResult.syncedCount ?? 0) + (uploadResult.syncedCount ?? 0) + (downloadResult.syncedCount ?? 0),
+        failedCount: (deleteResult.failedCount ?? 0) + (uploadResult.failedCount ?? 0),
         error: _syncError,
       );
     } catch (e) {

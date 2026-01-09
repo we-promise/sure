@@ -193,6 +193,16 @@ class DatabaseHelper {
     );
   }
 
+  Future<List<Map<String, dynamic>>> getPendingDeletes() async {
+    final db = await database;
+    return await db.query(
+      'transactions',
+      where: 'sync_status = ?',
+      whereArgs: ['pending_delete'],
+      orderBy: 'updated_at ASC',
+    );
+  }
+
   Future<int> updateTransaction(String localId, Map<String, dynamic> transaction) async {
     final db = await database;
     return await db.update(

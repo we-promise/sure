@@ -85,6 +85,13 @@ class OfflineStorageService {
         .toList();
   }
 
+  Future<List<OfflineTransaction>> getPendingDeletes() async {
+    final transactionMaps = await _dbHelper.getPendingDeletes();
+    return transactionMaps
+        .map((map) => OfflineTransaction.fromDatabaseMap(map))
+        .toList();
+  }
+
   Future<void> updateTransactionSyncStatus({
     required String localId,
     required SyncStatus syncStatus,
@@ -108,6 +115,27 @@ class OfflineStorageService {
 
   Future<void> deleteTransactionByServerId(String serverId) async {
     await _dbHelper.deleteTransactionByServerId(serverId);
+  }
+
+  /// Mark a transaction for pending deletion (offline delete)
+  Future<void> markTransactionForDeletion(String serverId) async {
+    _log.info('OfflineStorage', 'Marking transaction $serverId for pending deletion');
+
+    // Find the transaction by server ID
+    final existing = await getTransactionByServerId(serverId);
+    if (existing == null) {
+      _log.warning('OfflineStorage', 'Transaction $serverId not found, cannot mark for deletion');
+      return;
+    }
+
+    // Update its sync status to pendingDelete
+    final updated = existing.copyWith(
+      syncStatus: SyncStatus.pendingDelete,
+      updatedAt: DateTime.now(),
+    );
+
+    await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
+    _log.info('OfflineStorage', 'Transaction ${existing.localId} marked as pending_delete');
   }
 
   Future<void> syncTransactionsFromServer(List<Transaction> serverTransactions) async {
