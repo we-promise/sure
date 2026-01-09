@@ -16,14 +16,13 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
 
   Future<void> _handleSync(BuildContext context, String? accessToken, TransactionsProvider transactionsProvider) async {
     if (accessToken == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please sign in to sync transactions'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to sync transactions'),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
@@ -34,23 +33,21 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
     try {
       await transactionsProvider.syncTransactions(accessToken: accessToken);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Transactions synced successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Transactions synced successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to sync transactions. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to sync transactions. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {

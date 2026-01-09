@@ -6,7 +6,7 @@ import 'log_service.dart';
 class ConnectivityService with ChangeNotifier {
   final Connectivity _connectivity = Connectivity();
   final LogService _log = LogService.instance;
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   bool _isOnline = true;
   bool get isOnline => _isOnline;
@@ -32,17 +32,18 @@ class ConnectivityService with ChangeNotifier {
     }
   }
 
-  void _updateConnectionStatus(ConnectivityResult result) {
+  void _updateConnectionStatus(List<ConnectivityResult> results) {
     final wasOnline = _isOnline;
 
-    // Check if the result indicates connectivity
-    _isOnline = result == ConnectivityResult.mobile ||
+    // Check if any result indicates connectivity
+    _isOnline = results.any((result) =>
+        result == ConnectivityResult.mobile ||
         result == ConnectivityResult.wifi ||
         result == ConnectivityResult.ethernet ||
         result == ConnectivityResult.vpn ||
-        result == ConnectivityResult.bluetooth;
+        result == ConnectivityResult.bluetooth);
 
-    _log.info('ConnectivityService', 'Connectivity changed: $result -> ${_isOnline ? "ONLINE" : "OFFLINE"}');
+    _log.info('ConnectivityService', 'Connectivity changed: $results -> ${_isOnline ? "ONLINE" : "OFFLINE"}');
 
     // Only notify if the status changed
     if (wasOnline != _isOnline) {
