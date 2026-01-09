@@ -417,9 +417,9 @@ class ReportsController < ApplicationController
         entry = trade.entry
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
-        # Use "Uncategorized Investments" for trades without category
-        category_name = trade.category&.name || "Uncategorized Investments"
-        category_color = trade.category&.color || Category::UNCATEGORIZED_INVESTMENTS_COLOR
+        # Use "Other Investments" for trades without category
+        category_name = trade.category&.name || Category.other_investments_name
+        category_color = trade.category&.color || Category::OTHER_INVESTMENTS_COLOR
 
         # Convert to family currency
         converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
@@ -598,8 +598,8 @@ class ReportsController < ApplicationController
         entry = trade.entry
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
-        # Use "Uncategorized Investments" for trades without category
-        category_name = trade.category&.name || "Uncategorized Investments"
+        # Use "Other Investments" for trades without category
+        category_name = trade.category&.name || Category.other_investments_name
         month_key = entry.date.beginning_of_month
 
         # Convert to family currency
