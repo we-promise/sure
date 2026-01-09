@@ -1,0 +1,61 @@
+<%# locals: (account:) %>
+
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: t(".total_cost") do %>
+    <%= format_money account.installment.total_cost %>
+  <% end %>
+
+  <%= summary_card title: t(".remaining_cost") do %>
+    <%= format_money account.installment.remaining_cost %>
+  <% end %>
+
+  <%= summary_card title: t(".payout_progress") do %>
+    <%= number_to_percentage(account.installment.payout_progress, precision: 1) %>
+  <% end %>
+
+  <%= summary_card title: t(".payment_period") do %>
+    <%= account.installment.payment_period&.titleize || t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".first_payment_date") do %>
+    <% if account.installment.first_payment_date.present? %>
+      <%= l(account.installment.first_payment_date, format: :long) %>
+    <% else %>
+      <%= t(".unknown") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".last_payment_date") do %>
+    <% if account.installment.last_payment_date.present? %>
+      <%= l(account.installment.last_payment_date, format: :long) %>
+    <% else %>
+      <%= t(".unknown") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".total_installments") do %>
+    <%= account.installment.total_installments %>
+  <% end %>
+
+  <%= summary_card title: t(".installment_cost") do %>
+    <%= format_money account.installment.installment_cost %>
+  <% end %>
+
+  <%= summary_card title: t(".time_elapsed") do %>
+    <% elapsed = account.installment.time_elapsed %>
+    <% if elapsed.present? %>
+      <%= pluralize(elapsed, account.installment.payment_period&.singularize || "period") %>
+    <% else %>
+      <%= t(".not_started") %>
+    <% end %>
+  <% end %>
+</div>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: "Edit installment details",
+    variant: "ghost",
+    href: edit_installment_path(account),
+    frame: :modal
+  ) %>
+</div>

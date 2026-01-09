@@ -1,0 +1,25 @@
+---
+en:
+  installments:
+    edit:
+      edit: Edit %{account}
+    form:
+      total_installments: Number of installments
+      payment_period: Payment period
+      first_payment_date: First payment date
+      installment_cost: Installment cost
+      auto_generate: Auto-generate transactions
+    new:
+      title: Enter installment details
+    overview:
+      total_cost: Total Cost
+      remaining_cost: Remaining Cost
+      payout_progress: Payout Progress
+      payment_period: Payment Period
+      first_payment_date: First Payment Date
+      last_payment_date: Last Payment Date
+      total_installments: Total Installments
+      installment_cost: Installment Cost
+      time_elapsed: Time Elapsed
+      unknown: Unknown
+      not_started: Not started
