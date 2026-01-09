@@ -98,7 +98,8 @@ en:
       categories_label: Categories
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Import/Export
+      imports_label: Imports
+      exports_label: Exports
       logout: Logout
       merchants_label: Merchants
       guides_label: Guides

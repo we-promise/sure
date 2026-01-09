@@ -12,11 +12,10 @@ class ImportsController < ApplicationController
   end
 
   def index
-    @imports = Current.family.imports
-    @exports = Current.user.admin? ? Current.family.family_exports.ordered.limit(10) : nil
+    @pagy, @imports = pagy(Current.family.imports.ordered, limit: params[:per_page] || 10)
     @breadcrumbs = [
       [ "Home", root_path ],
-      [ "Import/Export", imports_path ]
+      [ "Imports", imports_path ]
     ]
     render layout: "settings"
   end

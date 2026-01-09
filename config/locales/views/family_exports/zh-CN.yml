@@ -1,6 +1,10 @@
 ---
 zh-CN:
   family_exports:
+    index:
+      title: 导出
+      new: 新建导出
+      no_exports: 暂无导出记录
     list:
       complete: 已完成
       failed: 已失败

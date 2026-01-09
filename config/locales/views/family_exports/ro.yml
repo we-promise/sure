@@ -1,6 +1,10 @@
 ---
 ro:
   family_exports:
+    index:
+      title: Exporturi
+      new: Export nou
+      no_exports: Nu există încă exporturi.
     list:
       in_progress: În curs de desfășurare
       complete: Finalizat

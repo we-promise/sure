@@ -1,6 +1,10 @@
 ---
 ca:
   family_exports:
+    index:
+      title: Exportacions
+      new: Nova exportació
+      no_exports: Encara no hi ha exportacions.
     list:
       in_progress: En curs
       complete: Completat

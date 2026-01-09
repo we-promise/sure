@@ -1,6 +1,10 @@
 ---
 en:
   family_exports:
+    index:
+      title: Exports
+      new: New Export
+      no_exports: No exports yet.
     list:
       in_progress: In progress
       complete: Complete

@@ -58,12 +58,8 @@ ca:
       uploading: Processant files
       view: Veure
     index:
-      imports: Importacions
+      title: Importacions
       new: Nova importació
-      title: Importa/Exporta
-      exports: Exportacions
-      new_export: Nova exportació
-      no_exports: Encara no hi ha exportacions.
     new:
       description: Pots importar manualment diversos tipus de dades via CSV o utilitzar una de les nostres plantilles d'importació com Mint.
       import_accounts: Importa comptes

@@ -1,6 +1,10 @@
 ---
 nb:
   family_exports:
+    index:
+      title: Eksporter
+      new: Ny Eksport
+      no_exports: Ingen eksporter ennå.
     list:
       in_progress: Pågår
       complete: Fullført

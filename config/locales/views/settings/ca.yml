@@ -95,7 +95,8 @@ ca:
       categories_label: Categories
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Importa/Exporta
+      imports_label: Importacions
+      exports_label: Exportacions
       logout: Tanca la sessió
       merchants_label: Comerços
       guides_label: Guies
