@@ -30,7 +30,12 @@
         href: family_merchant_path(provider_merchant),
         icon: "trash-2",
         method: :delete,
-        confirm: { title: t(".remove_confirm_title"), body: t(".remove_confirm_body", name: provider_merchant.name) }) %>
+        confirm: CustomConfirm.new(
+          destructive: true,
+          title: t(".remove_confirm_title"),
+          body: t(".remove_confirm_body", name: provider_merchant.name),
+          btn_text: t(".remove")
+        )) %>
     <% end %>
   </td>
 </tr>
