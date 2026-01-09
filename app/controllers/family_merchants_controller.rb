@@ -48,13 +48,17 @@ class FamilyMerchantsController < ApplicationController
         format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
       end
-    else
-      @merchant.update!(merchant_params)
+    elsif @merchant.update(merchant_params)
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
       end
+    else
+      render :edit, status: :unprocessable_entity
     end
+  rescue ActiveRecord::RecordInvalid => e
+    @family_merchant = e.record
+    render :edit, status: :unprocessable_entity
   end
 
   def destroy
