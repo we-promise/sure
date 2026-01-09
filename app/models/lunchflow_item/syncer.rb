@@ -31,9 +31,9 @@ class LunchflowItem::Syncer
       lunchflow_item.update!(pending_account_setup: false)
     end
 
-    # Phase 3: Process transactions for linked accounts only
+    # Phase 3: Process transactions and holdings for linked accounts only
     if linked_accounts.any?
-      sync.update!(status_text: "Processing transactions...") if sync.respond_to?(:status_text)
+      sync.update!(status_text: "Processing transactions and holdings...") if sync.respond_to?(:status_text)
       Rails.logger.info "LunchflowItem::Syncer - Processing #{linked_accounts.count} linked accounts"
       lunchflow_item.process_accounts
       Rails.logger.info "LunchflowItem::Syncer - Finished processing accounts"
