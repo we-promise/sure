@@ -1,8 +1,11 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, include_trades: true)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true)
     @family = family
     @transactions_scope = transactions_scope
+    @date_range = date_range
     @include_trades = include_trades
+
+    validate_date_range!
   end
 
   def call
@@ -119,37 +122,21 @@ class IncomeStatement::Totals
     end
 
     def sql_params
-      # Extract date range from transactions_scope if possible
-      # Fall back to reasonable defaults
-      date_range = extract_date_range
-
       {
         target_currency: @family.currency,
         family_id: @family.id,
-        start_date: date_range[:start_date],
-        end_date: date_range[:end_date]
+        start_date: @date_range.begin,
+        end_date: @date_range.end
       }
     end
 
-    def extract_date_range
-      # Try to extract date range from the scope's where clauses
-      # This is a heuristic - the transactions_scope should have date filters
-      scope_sql = @transactions_scope.to_sql
-
-      # Default to current month if we can't extract dates
-      start_date = Date.current.beginning_of_month
-      end_date = Date.current.end_of_month
-
-      # Try to find date conditions in the SQL
-      # Look for patterns like "date >= '2024-01-01'" or "date BETWEEN"
-      if scope_sql =~ /entries.*date.*>=.*'(\d{4}-\d{2}-\d{2})'/i
-        start_date = Date.parse($1) rescue start_date
+    def validate_date_range!
+      unless @date_range.is_a?(Range)
+        raise ArgumentError, "date_range must be a Range, got #{@date_range.class}"
       end
 
-      if scope_sql =~ /entries.*date.*<=.*'(\d{4}-\d{2}-\d{2})'/i
-        end_date = Date.parse($1) rescue end_date
+      unless @date_range.begin.respond_to?(:to_date) && @date_range.end.respond_to?(:to_date)
+        raise ArgumentError, "date_range must contain date-like objects"
       end
-
-      { start_date: start_date, end_date: end_date }
     end
 end
