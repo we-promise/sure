@@ -8,6 +8,15 @@ class FamilyMerchantsController < ApplicationController
     @family_merchants = Current.family.merchants.alphabetically
     @provider_merchants = Current.family.assigned_merchants.where(type: "ProviderMerchant").alphabetically
 
+    # Show recently unlinked ProviderMerchants (within last 30 days)
+    # Exclude merchants that are already assigned to transactions (they appear in provider_merchants)
+    recently_unlinked_ids = FamilyMerchantAssociation
+      .where(family: Current.family)
+      .recently_unlinked
+      .pluck(:merchant_id)
+    assigned_ids = @provider_merchants.pluck(:id)
+    @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
+
     render layout: "settings"
   end
 
@@ -89,7 +98,9 @@ class FamilyMerchantsController < ApplicationController
     end
 
     def merchant_params
-      params.require(:family_merchant).permit(:name, :color)
+      # Handle both family_merchant and provider_merchant param keys
+      key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
+      params.require(key).permit(:name, :color)
     end
 
     def all_family_merchants

@@ -25,7 +25,12 @@ class ProviderMerchant < Merchant
 
   # Unlink from family's transactions (set merchant_id to null).
   # Does NOT delete the ProviderMerchant since it may be used by other families.
+  # Tracks the unlink in FamilyMerchantAssociation so it shows as "recently unlinked".
   def unlink_from_family(family)
     family.transactions.where(merchant_id: id).update_all(merchant_id: nil)
+
+    # Track that this merchant was unlinked from this family
+    association = FamilyMerchantAssociation.find_or_initialize_by(family: family, merchant: self)
+    association.update!(unlinked_at: Time.current)
   end
 end

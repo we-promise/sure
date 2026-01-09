@@ -22,6 +22,8 @@ en:
       provider_empty: No provider merchants linked to this family yet
       provider_read_only: Provider merchants are synced from your connected institutions. They cannot be edited here.
       provider_info: These merchants were automatically detected by your bank connections or AI. You can edit them to create your own copy, or remove them to unlink from your transactions.
+      unlinked_title: Recently unlinked
+      unlinked_info: These merchants were recently removed from your transactions. They will disappear from this list after 30 days unless re-assigned to a transaction.
       table:
         merchant: Merchant
         actions: Actions
