@@ -13,6 +13,8 @@ class Installment < ApplicationRecord
   validates :total_installments, numericality: { greater_than: 0, only_integer: true }
   validates :installment_cost_cents, numericality: { greater_than: 0, only_integer: true }
 
+  after_save :update_account_opening_balance
+
   enum :payment_period, {
     weekly: "weekly",
     monthly: "monthly",
@@ -108,5 +110,14 @@ class Installment < ApplicationRecord
 
     def list_attributes_present?
       first_payment_date && total_installments && payment_period
+    end
+
+    def update_account_opening_balance
+      return unless account
+
+      # Update the opening balance to match the total cost of the installment
+      # This ensures that Balance (Remaining Cost) = Total Cost (Opening Balance) - Paid (Entries)
+      Account::OpeningBalanceManager.new(account).set_opening_balance(balance: total_cost.amount)
+      account.sync_later
     end
 end
