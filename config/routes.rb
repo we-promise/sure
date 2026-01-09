@@ -359,6 +359,23 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :sophtron_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :balances
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   namespace :webhooks do
     post "plaid"
     post "plaid_eu"

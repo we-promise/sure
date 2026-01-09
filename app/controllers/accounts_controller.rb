@@ -9,6 +9,7 @@ class AccountsController < ApplicationController
     @plaid_items = family.plaid_items.ordered
     @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
     @lunchflow_items = family.lunchflow_items.ordered
+    @sophtron_items = family.sophtron_items.ordered
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
 

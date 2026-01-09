@@ -1,0 +1,69 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>Visit <a href="https://www.sophtron.com" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> to get your API key</li>
+      <li>Paste your UserID and AccessKey below and click the Save button</li>
+      <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
+    </ol>
+
+    <p class="text-primary font-medium">Field descriptions:</p>
+    <ul>
+      <li><strong>User ID:</strong> Your Sophtron User ID for authentication (required)</li>
+      <li><strong>Access Key:</strong> Your Sophtron Access Key for authentication (required)</li>
+      <li><strong>Base URL:</strong> Base URL for Sophtron API (optional, defaults to https://api.sophtron.com/api/v2)</li>
+    </ul>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <%
+    # Get or initialize a sophtron_item for this family
+    sophtron_item = Current.family.sophtron_items.first_or_initialize(name: "Sophtron Connection")
+    is_new_record = sophtron_item.new_record?
+  %>
+
+  <%= styled_form_with model: sophtron_item,
+                       url: is_new_record ? sophtron_items_path : sophtron_item_path(sophtron_item),
+                       scope: :sophtron_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :user_id,
+                        label: "User ID",
+                        placeholder: is_new_record ? "Paste User ID here" : "Enter new User ID to update",
+                        type: :password %>
+
+    <%= form.text_field :access_key,
+                        label: "Access Key",
+                        placeholder: is_new_record ? "Paste Access Key here" : "Enter new Access Key to update",
+                        type: :password %>
+
+    <%= form.text_field :base_url,
+                        label: "Base URL (Optional)",
+                        placeholder: "https://api.sophtron.com/api/v2 (default)",
+                        value: sophtron_item.base_url %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <% end %>
+
+    <% base_items = Current.family.sophtron_items
+      items = local_assigns[:sophtron_items] || @sophtron_items || base_items.where.not(user_id: nil, access_key: nil) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
+</div>
