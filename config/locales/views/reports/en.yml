@@ -112,6 +112,15 @@ en:
           other: Showing %{count} entries
         previous: Previous
         next: Next
+    net_worth:
+      title: Net Worth
+      current_net_worth: Current Net Worth
+      period_change: Period Change
+      assets_vs_liabilities: Assets vs Liabilities
+      total_assets: Assets
+      total_liabilities: Liabilities
+      no_assets: No assets
+      no_liabilities: No liabilities
     investment_performance:
       title: Investment Performance
       portfolio_value: Portfolio Value

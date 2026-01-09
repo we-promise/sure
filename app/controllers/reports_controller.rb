@@ -31,8 +31,8 @@ class ReportsController < ApplicationController
     # Build trend data (last 6 months)
     @trends_data = build_trends_data
 
-    # Spending patterns (weekday vs weekend)
-    @spending_patterns = build_spending_patterns
+    # Net worth metrics
+    @net_worth_metrics = build_net_worth_metrics
 
     # Transactions breakdown
     @transactions = build_transactions_breakdown
@@ -125,10 +125,18 @@ class ReportsController < ApplicationController
     def build_reports_sections
       all_sections = [
         {
+          key: "net_worth",
+          title: "reports.net_worth.title",
+          partial: "reports/net_worth",
+          locals: { net_worth_metrics: @net_worth_metrics },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
           key: "trends_insights",
           title: "reports.trends.title",
           partial: "reports/trends_insights",
-          locals: { trends_data: @trends_data, spending_patterns: @spending_patterns },
+          locals: { trends_data: @trends_data },
           visible: Current.family.transactions.any?,
           collapsible: true
         },
@@ -310,61 +318,6 @@ class ReportsController < ApplicationController
       trends
     end
 
-    def build_spending_patterns
-      # Analyze weekday vs weekend spending
-      weekday_total = 0
-      weekend_total = 0
-      weekday_count = 0
-      weekend_count = 0
-
-      # Build query matching income_statement logic:
-      # Expenses are transactions with positive amounts, regardless of category
-      expense_transactions = Transaction
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where(kind: [ "standard", "loan_payment" ])
-        .where("entries.amount > 0") # Positive amount = expense (matching income_statement logic)
-
-      # Sum up amounts by weekday vs weekend
-      expense_transactions.each do |transaction|
-        entry = transaction.entry
-        amount = entry.amount.abs
-
-        if entry.date.wday.in?([ 0, 6 ]) # Sunday or Saturday
-          weekend_total += amount
-          weekend_count += 1
-        else
-          weekday_total += amount
-          weekday_count += 1
-        end
-      end
-
-      weekday_avg = weekday_count.positive? ? (weekday_total / weekday_count) : 0
-      weekend_avg = weekend_count.positive? ? (weekend_total / weekend_count) : 0
-
-      {
-        weekday_total: weekday_total,
-        weekend_total: weekend_total,
-        weekday_avg: weekday_avg,
-        weekend_avg: weekend_avg,
-        weekday_count: weekday_count,
-        weekend_count: weekend_count
-      }
-    end
-
-    def default_spending_patterns
-      {
-        weekday_total: 0,
-        weekend_total: 0,
-        weekday_avg: 0,
-        weekend_avg: 0,
-        weekday_count: 0,
-        weekend_count: 0
-      }
-    end
-
     def build_transactions_breakdown
       # Base query: all transactions in the period
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
@@ -465,6 +418,39 @@ class ReportsController < ApplicationController
         period_withdrawals: period_totals.withdrawals,
         top_holdings: investment_statement.top_holdings(limit: 5),
         accounts: investment_accounts.to_a
+      }
+    end
+
+    def build_net_worth_metrics
+      balance_sheet = Current.family.balance_sheet
+      currency = Current.family.currency
+
+      # Current net worth
+      current_net_worth = balance_sheet.net_worth
+      total_assets = balance_sheet.assets.total
+      total_liabilities = balance_sheet.liabilities.total
+
+      # Get net worth series for the period to calculate change
+      # The series.trend gives us the change from first to last value in the period
+      net_worth_series = balance_sheet.net_worth_series(period: @period)
+      trend = net_worth_series&.trend
+
+      # Get asset and liability groups for breakdown
+      asset_groups = balance_sheet.assets.account_groups.map do |group|
+        { name: group.name, total: Money.new(group.total, currency) }
+      end.reject { |g| g[:total].zero? }
+
+      liability_groups = balance_sheet.liabilities.account_groups.map do |group|
+        { name: group.name, total: Money.new(group.total, currency) }
+      end.reject { |g| g[:total].zero? }
+
+      {
+        current_net_worth: Money.new(current_net_worth, currency),
+        total_assets: Money.new(total_assets, currency),
+        total_liabilities: Money.new(total_liabilities, currency),
+        trend: trend,
+        asset_groups: asset_groups,
+        liability_groups: liability_groups
       }
     end
 
