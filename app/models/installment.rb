@@ -92,6 +92,73 @@ class Installment < ApplicationRecord
     end
   end
 
+  def time_elapsed_breakdown
+    return nil unless first_payment_date
+
+    now = Date.current
+    return nil if now < first_payment_date
+
+    months_elapsed = (now.year * 12 + now.month) - (first_payment_date.year * 12 + first_payment_date.month)
+
+    {
+      weeks: ((now - first_payment_date) / 7.0).floor,
+      months: months_elapsed,
+      quarters: (months_elapsed / 3.0).floor,
+      years: (months_elapsed / 12.0).floor
+    }
+  end
+
+  def payments_made_count
+    transactions.joins(:entry).count
+  end
+
+  def remaining_installments
+    return nil unless total_installments
+
+    remaining = total_installments - payments_made_count
+    remaining.positive? ? remaining : 0
+  end
+
+  def next_due_date
+    return nil unless list_attributes_present?
+    return nil if remaining_installments.to_i.zero?
+
+    due_date_for_index(payments_made_count)
+  end
+
+  def overdue?
+    return false unless next_due_date
+
+    next_due_date < Date.current
+  end
+
+  def due_soon?(window_days: 3)
+    return false unless next_due_date
+
+    next_due_date >= Date.current && next_due_date <= Date.current + window_days.days
+  end
+
+  def current_month_payment_total
+    return Money.new(0, currency) unless list_attributes_present?
+
+    month_start = Date.current.beginning_of_month
+    month_end = Date.current.end_of_month
+
+    due_dates = scheduled_due_dates_between(month_start, month_end)
+    return Money.new(0, currency) if due_dates.empty?
+
+    total_cents = due_dates.sum do |due_date|
+      existing = transactions.joins(:entry).where(entries: { date: due_date })
+      if existing.exists?
+        existing.sum("ABS(entries.amount)")
+      else
+        installment_cost.amount
+      end
+    end
+
+    Money.new(total_cents, currency)
+  end
+
   class << self
     def icon
       "calendar-clock"
@@ -110,6 +177,36 @@ class Installment < ApplicationRecord
 
     def list_attributes_present?
       first_payment_date && total_installments && payment_period
+    end
+
+    def due_date_for_index(index)
+      case payment_period
+      when "weekly"
+        first_payment_date + index.weeks
+      when "monthly"
+        first_payment_date + index.months
+      when "quarterly"
+        first_payment_date + index.quarters
+      when "yearly"
+        first_payment_date + index.years
+      else
+        first_payment_date
+      end
+    end
+
+    def scheduled_due_dates_between(start_date, end_date)
+      return [] unless list_attributes_present?
+
+      dates = []
+      total_installments.times do |i|
+        due_date = due_date_for_index(i)
+        next if due_date < start_date
+        break if due_date > end_date
+
+        dates << due_date
+      end
+
+      dates
     end
 
     def update_account_opening_balance
