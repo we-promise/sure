@@ -4,6 +4,47 @@
   <% end %>
 
   <% dialog.with_body do %>
+    <%# Potential duplicate alert %>
+    <% if @entry.transaction.has_potential_duplicate? %>
+      <% potential_match = @entry.transaction.potential_duplicate_entry %>
+      <% if potential_match %>
+        <div class="mx-4 my-3 p-4 rounded-lg border border-warning bg-warning/5">
+          <div class="flex items-start gap-3">
+            <%= icon "alert-triangle", size: "md", color: "warning" %>
+            <div class="flex-1 space-y-2">
+              <h4 class="text-sm font-medium text-primary"><%= t("transactions.show.potential_duplicate_title") %></h4>
+              <p class="text-sm text-secondary"><%= t("transactions.show.potential_duplicate_description") %></p>
+
+              <div class="mt-3 p-3 rounded bg-container border border-primary">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-primary"><%= potential_match.name %></p>
+                    <p class="text-xs text-secondary"><%= potential_match.date.strftime("%b %d, %Y") %> • <%= potential_match.account.name %></p>
+                  </div>
+                  <p class="text-sm font-medium <%= potential_match.amount.negative? ? 'text-green-600' : 'text-primary' %>">
+                    <%= format_money(-potential_match.amount_money) %>
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 mt-3">
+                <%= button_to t("transactions.show.merge_duplicate"),
+                    merge_duplicate_transaction_path(@entry.transaction),
+                    method: :post,
+                    class: "btn btn--primary btn--sm",
+                    data: { turbo_frame: "_top" } %>
+                <%= button_to t("transactions.show.keep_both"),
+                    dismiss_duplicate_transaction_path(@entry.transaction),
+                    method: :post,
+                    class: "btn btn--outline btn--sm",
+                    data: { turbo_frame: "_top" } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4">
         <%= styled_form_with model: @entry,

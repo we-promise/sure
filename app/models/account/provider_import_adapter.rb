@@ -16,9 +16,10 @@ class Account::ProviderImportAdapter
   # @param category_id [Integer, nil] Optional category ID
   # @param merchant [Merchant, nil] Optional merchant object
   # @param notes [String, nil] Optional transaction notes/memo
+  # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, extra: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -42,6 +43,42 @@ class Account::ProviderImportAdapter
           entry.assign_attributes(external_id: external_id, source: source)
         end
       end
+
+      # If still a new entry and this is a POSTED transaction, check for matching pending transactions
+      incoming_pending = extra.is_a?(Hash) && (
+        ActiveModel::Type::Boolean.new.cast(extra.dig("simplefin", "pending")) ||
+        ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending"))
+      )
+
+      if entry.new_record? && !incoming_pending
+        pending_match = nil
+
+        # PRIORITY 1: Use Plaid's pending_transaction_id if provided (most reliable)
+        # Plaid explicitly links pending→posted with this ID - no guessing required
+        if pending_transaction_id.present?
+          pending_match = account.entries.find_by(external_id: pending_transaction_id, source: source)
+          if pending_match
+            Rails.logger.info("Reconciling pending→posted via Plaid pending_transaction_id: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          end
+        end
+
+        # PRIORITY 2: Fallback to EXACT amount match (for SimpleFIN and providers without linking IDs)
+        # Only searches backward in time - pending date must be <= posted date
+        if pending_match.nil?
+          pending_match = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
+          if pending_match
+            Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          end
+        end
+
+        if pending_match
+          entry = pending_match
+          entry.assign_attributes(external_id: external_id)
+        end
+      end
+
+      # Track if this is a new posted transaction (for fuzzy suggestion after save)
+      is_new_posted = entry.new_record? && !incoming_pending
 
       # Validate entryable type matches to prevent external_id collisions
       if entry.persisted? && !entry.entryable.is_a?(Transaction)
@@ -78,6 +115,52 @@ class Account::ProviderImportAdapter
         entry.transaction.save!
       end
       entry.save!
+
+      # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
+      # This handles tip adjustments where auto-matching is too risky
+      if is_new_posted
+        # PRIORITY 1: Try medium-confidence fuzzy match (≤30% amount difference)
+        fuzzy_suggestion = find_pending_transaction_fuzzy(
+          date: date,
+          amount: amount,
+          currency: currency,
+          source: source,
+          merchant_id: merchant&.id,
+          name: name
+        )
+        if fuzzy_suggestion
+          # Store suggestion on the PENDING entry for user to review
+          store_duplicate_suggestion(
+            pending_entry: fuzzy_suggestion,
+            posted_entry: entry,
+            reason: "fuzzy_amount_match",
+            posted_amount: amount,
+            confidence: "medium"
+          )
+          Rails.logger.info("Suggested potential duplicate (medium confidence): pending entry #{fuzzy_suggestion.id} (#{fuzzy_suggestion.name}, #{fuzzy_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+        else
+          # PRIORITY 2: Try low-confidence match (>30% to 100% difference - big tips)
+          low_confidence_suggestion = find_pending_transaction_low_confidence(
+            date: date,
+            amount: amount,
+            currency: currency,
+            source: source,
+            merchant_id: merchant&.id,
+            name: name
+          )
+          if low_confidence_suggestion
+            store_duplicate_suggestion(
+              pending_entry: low_confidence_suggestion,
+              posted_entry: entry,
+              reason: "low_confidence_match",
+              posted_amount: amount,
+              confidence: "low"
+            )
+            Rails.logger.info("Suggested potential duplicate (low confidence): pending entry #{low_confidence_suggestion.id} (#{low_confidence_suggestion.name}, #{low_confidence_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+          end
+        end
+      end
+
       entry
     end
   end
@@ -443,5 +526,191 @@ class Account::ProviderImportAdapter
     query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
 
     query.order(created_at: :asc).first
+  end
+
+  # Finds a pending transaction that likely matches a newly posted transaction
+  # Used to reconcile pending→posted when SimpleFIN gives different IDs for the same transaction
+  #
+  # @param date [Date, String] Posted transaction date
+  # @param amount [BigDecimal, Numeric] Transaction amount (must match exactly)
+  # @param currency [String] Currency code
+  # @param source [String] Provider name (e.g., "simplefin")
+  # @param date_window [Integer] Days to search around the posted date (default: 8)
+  # @return [Entry, nil] The pending entry or nil if not found
+  def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8)
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+
+    # Look for entries that:
+    # 1. Same account (implicit via account.entries)
+    # 2. Same source (simplefin)
+    # 3. Same amount (exact match - this is the strongest signal)
+    # 4. Same currency
+    # 5. Date within window (pending can post days later)
+    # 6. Is a Transaction (not Trade or Valuation)
+    # 7. Has pending=true in transaction.extra["simplefin"]["pending"] or extra["plaid"]["pending"]
+    candidates = account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(source: source)
+      .where(amount: amount)
+      .where(currency: currency)
+      .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
+      .where(<<~SQL.squish)
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+      .order(date: :desc) # Prefer most recent pending transaction
+
+    candidates.first
+  end
+
+  # Finds a pending transaction using fuzzy amount matching for tip adjustments
+  # Used when exact amount matching fails - handles restaurant tips, adjusted authorizations, etc.
+  #
+  # IMPORTANT: Only returns a match if there's exactly ONE candidate to avoid false positives
+  # with recurring merchant transactions (e.g., gas stations, coffee shops).
+  #
+  # @param date [Date, String] Posted transaction date
+  # @param amount [BigDecimal, Numeric] Posted transaction amount (typically higher due to tip)
+  # @param currency [String] Currency code
+  # @param source [String] Provider name (e.g., "simplefin")
+  # @param merchant_id [Integer, nil] Merchant ID for more accurate matching
+  # @param name [String, nil] Transaction name for fuzzy name matching
+  # @param date_window [Integer] Days to search backward from posted date (default: 3 for fuzzy)
+  # @param amount_tolerance [Float] Maximum percentage difference allowed (default: 0.30 = 30%)
+  # @return [Entry, nil] The pending entry or nil if not found/ambiguous
+  def find_pending_transaction_fuzzy(date:, amount:, currency:, source:, merchant_id: nil, name: nil, date_window: 3, amount_tolerance: 0.30)
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+    amount = BigDecimal(amount.to_s)
+
+    # Calculate amount bounds - posted amount should be >= pending (tips add, not subtract)
+    # Allow posted to be up to 30% higher than pending (covers typical tips)
+    min_pending_amount = amount / (1 + amount_tolerance) # If posted is 100, pending could be as low as 80
+    max_pending_amount = amount # Pending should not be higher than posted
+
+    # Build base query for pending transactions
+    # CRITICAL: Pending must be ON or BEFORE the posted date (authorization happens first)
+    # Use tighter date window (3 days) - tips post quickly, not a week later
+    candidates = account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(source: source)
+      .where(currency: currency)
+      .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
+      .where(amount: min_pending_amount..max_pending_amount)
+      .where(<<~SQL.squish)
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+
+    # If merchant_id is provided, prioritize matching by merchant
+    if merchant_id.present?
+      merchant_matches = candidates.where("transactions.merchant_id = ?", merchant_id).to_a
+      # Only match if exactly ONE candidate to avoid false positives
+      return merchant_matches.first if merchant_matches.size == 1
+      if merchant_matches.size > 1
+        Rails.logger.info("Skipping fuzzy pending match: #{merchant_matches.size} ambiguous merchant candidates for amount=#{amount} date=#{date}")
+      end
+    end
+
+    # If name is provided, try fuzzy name matching as fallback
+    if name.present?
+      # Extract first few significant words for comparison
+      name_words = name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+      if name_words.present?
+        name_matches = candidates.select do |c|
+          c_name_words = c.name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+          name_words == c_name_words
+        end
+        # Only match if exactly ONE candidate to avoid false positives
+        return name_matches.first if name_matches.size == 1
+        if name_matches.size > 1
+          Rails.logger.info("Skipping fuzzy pending match: #{name_matches.size} ambiguous name candidates for '#{name_words}' amount=#{amount} date=#{date}")
+        end
+      end
+    end
+
+    # No merchant or name match, return nil (too risky to match on amount alone)
+    # This prevents false positives when multiple pending transactions exist
+    nil
+  end
+
+  # Finds a pending transaction with low confidence (>30% to 100% amount difference)
+  # Used for large tip scenarios where normal fuzzy matching would miss
+  # Creates a "review recommended" suggestion rather than "possible duplicate"
+  #
+  # @param date [Date, String] Posted transaction date
+  # @param amount [BigDecimal, Numeric] Posted transaction amount
+  # @param currency [String] Currency code
+  # @param source [String] Provider name
+  # @param merchant_id [Integer, nil] Merchant ID for matching
+  # @param name [String, nil] Transaction name for matching
+  # @param date_window [Integer] Days to search backward (default: 3)
+  # @return [Entry, nil] The pending entry or nil if not found/ambiguous
+  def find_pending_transaction_low_confidence(date:, amount:, currency:, source:, merchant_id: nil, name: nil, date_window: 3)
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+    amount = BigDecimal(amount.to_s)
+
+    # Allow up to 100% difference (e.g., $50 pending → $100 posted with huge tip)
+    # This is low confidence - requires strong name/merchant match
+    min_pending_amount = amount / 2.0 # Posted could be up to 2x pending
+    max_pending_amount = amount * 0.77 # Pending must be at least 30% less (to not overlap with fuzzy)
+
+    # Build base query for pending transactions
+    candidates = account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(source: source)
+      .where(currency: currency)
+      .where(date: (date - date_window.days)..date)
+      .where(amount: min_pending_amount..max_pending_amount)
+      .where(<<~SQL.squish)
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+
+    # For low confidence, require BOTH merchant AND name match (stronger signal needed)
+    if merchant_id.present? && name.present?
+      name_words = name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+      return nil if name_words.blank?
+
+      merchant_matches = candidates.where("transactions.merchant_id = ?", merchant_id).to_a
+      name_matches = merchant_matches.select do |c|
+        c_name_words = c.name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+        name_words == c_name_words
+      end
+
+      # Only match if exactly ONE candidate
+      return name_matches.first if name_matches.size == 1
+    end
+
+    nil
+  end
+
+  # Stores a duplicate suggestion on a pending entry for user review
+  # The suggestion is stored in the pending transaction's extra field
+  #
+  # @param pending_entry [Entry] The pending entry that may be a duplicate
+  # @param posted_entry [Entry] The posted entry it may match
+  # @param reason [String] Why this was flagged (e.g., "fuzzy_amount_match", "low_confidence_match")
+  # @param posted_amount [BigDecimal] The posted transaction amount
+  # @param confidence [String] Confidence level: "medium" (≤30% diff) or "low" (>30% diff)
+  def store_duplicate_suggestion(pending_entry:, posted_entry:, reason:, posted_amount:, confidence: "medium")
+    return unless pending_entry&.entryable.is_a?(Transaction)
+
+    pending_transaction = pending_entry.entryable
+    existing_extra = pending_transaction.extra || {}
+
+    # Don't overwrite if already has a suggestion (keep first one found)
+    return if existing_extra["potential_posted_match"].present?
+
+    pending_transaction.update!(
+      extra: existing_extra.merge(
+        "potential_posted_match" => {
+          "entry_id" => posted_entry.id,
+          "reason" => reason,
+          "posted_amount" => posted_amount.to_s,
+          "confidence" => confidence,
+          "detected_at" => Date.current.to_s
+        }
+      )
+    )
   end
 end

@@ -4,6 +4,7 @@ module TransactionsHelper
       { key: "account_filter", label: "Account", icon: "layers" },
       { key: "date_filter", label: "Date", icon: "calendar" },
       { key: "type_filter", label: "Type", icon: "tag" },
+      { key: "status_filter", label: "Status", icon: "clock" },
       { key: "amount_filter", label: "Amount", icon: "hash" },
       { key: "category_filter", label: "Category", icon: "shapes" },
       { key: "tag_filter", label: "Tag", icon: "tags" },

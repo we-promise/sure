@@ -51,7 +51,14 @@ class PlaidAccount::Transactions::Processor
       modified = plaid_account.raw_transactions_payload["modified"] || []
       added = plaid_account.raw_transactions_payload["added"] || []
 
-      modified + added
+      transactions = modified + added
+
+      # Filter out pending transactions if PLAID_INCLUDE_PENDING=0
+      unless Rails.configuration.x.plaid.include_pending
+        transactions = transactions.reject { |t| t["pending"] == true }
+      end
+
+      transactions
     end
 
     def removed_transactions

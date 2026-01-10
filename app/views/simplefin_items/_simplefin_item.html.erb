@@ -104,6 +104,25 @@
               <%= icon "alert-circle", size: "sm", color: "warning" %>
               <%= tag.span stale_status[:message], class: "text-sm" %>
             </div>
+          <% elsif (pending_status = simplefin_item.stale_pending_status)[:count] > 0 %>
+            <div class="text-secondary">
+              <div class="flex items-center gap-1">
+                <%= icon "clock", size: "sm", color: "secondary" %>
+                <%= tag.span pending_status[:message], class: "text-sm" %>
+                <span class="text-xs text-tertiary">(excluded from budgets)</span>
+              </div>
+              <% if pending_status[:accounts]&.any? %>
+                <div class="text-xs text-tertiary ml-5">
+                  in: <%= pending_status[:accounts].join(", ") %>
+                </div>
+              <% end %>
+            </div>
+          <% elsif (reconciled_status = simplefin_item.last_sync_reconciled_status)[:count] > 0 %>
+            <div class="text-success flex items-center gap-1">
+              <%= icon "check-circle", size: "sm", color: "success" %>
+              <%= tag.span reconciled_status[:message], class: "text-sm" %>
+              <span class="text-xs text-tertiary">(see sync summary for details)</span>
+            </div>
           <% elsif simplefin_item.rate_limited_message.present? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "clock", size: "sm", color: "warning" %>

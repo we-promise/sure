@@ -191,6 +191,8 @@ Rails.application.routes.draw do
 
     member do
       post :mark_as_recurring
+      post :merge_duplicate
+      post :dismiss_duplicate
     end
   end
 
