@@ -1,17 +1,17 @@
 <div class="space-y-6">
   <div class="text-sm text-secondary space-y-2">
-    <p><strong>Important:</strong> Trade Republic integration uses an unofficial API and requires 2-factor authentication.</p>
+    <p><strong><%= t("settings.providers.traderepublic_panel.important", default: "Important:") %></strong> <%= t("settings.providers.traderepublic_panel.intro", default: "Trade Republic integration uses an unofficial API and requires 2-factor authentication.") %></p>
     
     <ul class="list-disc list-inside space-y-1 ml-2">
-      <li>You'll need your phone number and Trade Republic PIN</li>
-      <li>A verification code will be sent to your Trade Republic app during setup</li>
-      <li>Sessions are stored securely and will need to be refreshed periodically</li>
+      <li><%= t("settings.providers.traderepublic_panel.need_phone_pin", default: "You'll need your phone number and Trade Republic PIN") %></li>
+      <li><%= t("settings.providers.traderepublic_panel.verification_code", default: "A verification code will be sent to your Trade Republic app during setup") %></li>
+      <li><%= t("settings.providers.traderepublic_panel.sessions_stored", default: "Sessions are stored securely and will need to be refreshed periodically") %></li>
     </ul>
 
     <div class="p-3 bg-warning/10 border border-warning rounded-lg mt-3">
       <p class="text-xs text-warning">
         <%= icon "alert-triangle", class: "inline-block w-4 h-4 mr-1" %>
-        <strong>Note:</strong> This integration is based on reverse-engineered API endpoints and may break without notice. Use at your own risk.
+        <strong><%= t("settings.providers.traderepublic_panel.note", default: "Note:") %></strong> <%= t("settings.providers.traderepublic_panel.reverse_engineered", default: "This integration is based on reverse-engineered API endpoints and may break without notice. Use at your own risk.") %>
       </p>
     </div>
   </div>
@@ -20,7 +20,7 @@
   
   <% if items.any? %>
     <div class="space-y-3">
-      <h3 class="text-sm font-medium text-primary">Connected Accounts</h3>
+      <h3 class="text-sm font-medium text-primary"><%= t("settings.providers.traderepublic_panel.connected_accounts", default: "Connected Accounts") %></h3>
       
       <% items.each do |item| %>
         <div id="traderepublic-item-<%= item.id %>" class="p-4 border border-primary rounded-lg <%= item.status == "requires_update" ? "bg-warning/5 border-warning" : "" %>">
@@ -30,15 +30,15 @@
                 <span class="font-medium text-sm text-primary"><%= item.name %></span>
                 <% if item.pending_login? %>
                   <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-warning/10 text-warning border border-warning">
-                    Pending Verification
+                    <%= t("settings.providers.traderepublic_panel.pending_verification", default: "Pending Verification") %>
                   </span>
                 <% elsif item.status == "requires_update" %>
                   <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-error/10 text-error border border-error">
-                    Login Required
+                    <%= t("settings.providers.traderepublic_panel.login_required", default: "Login Required") %>
                   </span>
                 <% elsif item.session_configured? %>
                   <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-success/10 text-success border border-success">
-                    Connected
+                    <%= t("settings.providers.traderepublic_panel.connected", default: "Connected") %>
                   </span>
                 <% end %>
               </div>
@@ -47,9 +47,9 @@
                 <% if item.phone_number %>
                   <%= item.phone_number.gsub(/\d(?=\d{4})/, '*') %> •
                 <% end %>
-                <%= item.traderepublic_accounts.count %> account(s)
+                <%= item.traderepublic_accounts.count %> <%= t("settings.providers.traderepublic_panel.accounts", default: "account(s)") %>
                 <% if item.last_synced_at %>
-                  • Last synced <%= time_ago_in_words(item.last_synced_at) %> ago
+                  • <%= t("settings.providers.traderepublic_panel.last_synced", default: "Last synced") %> <%= time_ago_in_words(item.last_synced_at) %> <%= t("settings.providers.traderepublic_panel.ago", default: "ago") %>
                 <% end %>
               </div>
             </div>
@@ -60,7 +60,7 @@
                     class: "inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover",
                     data: { turbo_frame: "modal" } do %>
                   <%= icon "shield-check", class: "w-3 h-3" %>
-                  <span>Verify PIN</span>
+                  <span><%= t("settings.providers.traderepublic_panel.verify_pin", default: "Verify PIN") %></span>
                 <% end %>
               <% else %>
                 <%= button_to manual_sync_traderepublic_item_path(item),
@@ -68,7 +68,7 @@
                     class: "inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
                     data: { turbo_frame: "modal" } do %>
                   <%= icon "refresh-cw", class: "w-3 h-3" %>
-                  <span>Manual sync</span>
+                  <span><%= t("settings.providers.traderepublic_panel.manual_sync", default: "Manual sync") %></span>
                 <% end %>
               <% end %>
               
@@ -76,7 +76,7 @@
                   method: :delete,
                   form: { 
                     data: { 
-                      turbo_confirm: "Are you sure you want to disconnect this Trade Republic account?",
+                      turbo_confirm: t("settings.providers.traderepublic_panel.disconnect_confirm", default: "Are you sure you want to disconnect this Trade Republic account?") ,
                       turbo_frame: "_top"
                     } 
                   },
@@ -91,12 +91,12 @@
   <% else %>
     <div class="p-4 bg-subtle border border-primary rounded-lg">
       <p class="text-sm text-secondary">
-        No Trade Republic accounts connected yet. Use the "Connect Account" button when adding a new account.
+        <%= t("settings.providers.traderepublic_panel.no_accounts", default: "No Trade Republic accounts connected yet. Use the 'Connect Account' button when adding a new account.") %>
       </p>
     </div>
   <% end %>
 
   <div class="text-xs text-secondary">
-    <p><strong>Need help?</strong> Visit the <a href="<%= settings_guides_path %>" class="link">guides</a> for detailed setup instructions.</p>
+    <p><strong><%= t("settings.providers.traderepublic_panel.need_help", default: "Need help?") %></strong> <%= t("settings.providers.traderepublic_panel.guides_html", default: "Visit the <a href='%{url}' class='link'>guides</a> for detailed setup instructions.", url: settings_guides_path).html_safe %></p>
   </div>
 </div>

@@ -16,8 +16,8 @@ class Provider::TraderepublicAdapter < Provider::Base
 
     [ {
       key: "traderepublic",
-      name: "Trade Republic",
-      description: "Connect to your Trade Republic account",
+      name: I18n.t("traderepublic_items.provider_name", default: "Trade Republic"),
+      description: I18n.t("traderepublic_items.provider_description", default: "Connect to your Trade Republic account"),
       can_connect: true,
       new_account_path: ->(accountable_type, return_to) {
         Rails.application.routes.url_helpers.select_accounts_traderepublic_items_path(
@@ -70,7 +70,7 @@ class Provider::TraderepublicAdapter < Provider::Base
   end
 
   def institution_name
-    "Trade Republic"
+    I18n.t("traderepublic_items.provider_name", default: "Trade Republic")
   end
 
   def institution_url

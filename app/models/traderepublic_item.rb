@@ -23,7 +23,7 @@ class TraderepublicItem < ApplicationRecord
   validates :name, presence: true
   validates :phone_number, presence: true, on: :create
   validates :phone_number, format: { with: /\A\+\d{10,15}\z/, message: "must be in international format (e.g., +491234567890)" }, on: :create, if: :phone_number_changed?
-  validates :pin, presence: true, on: :create
+  validates :pin, presence: { message: I18n.t("traderepublic_items.errors.pin_required", default: "PIN is required") }, on: :create
 
   belongs_to :family
   has_one_attached :logo
@@ -44,7 +44,7 @@ class TraderepublicItem < ApplicationRecord
     provider = traderepublic_provider
     unless provider
       Rails.logger.error "TraderepublicItem #{id} - Cannot import: TradeRepublic provider is not configured (missing credentials)"
-      raise StandardError.new("TradeRepublic provider is not configured")
+      raise StandardError.new(I18n.t("traderepublic_items.errors.provider_not_configured", default: "TradeRepublic provider is not configured"))
     end
 
     # Try import with current tokens
@@ -109,7 +109,7 @@ class TraderepublicItem < ApplicationRecord
 
   # Complete login with device PIN
   def complete_login!(device_pin)
-    raise "No processId found" unless process_id
+    raise I18n.t("traderepublic_items.errors.no_process_id", default: "No processId found") unless process_id
 
     provider = Provider::Traderepublic.new(
       phone_number: phone_number,

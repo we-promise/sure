@@ -1,0 +1,95 @@
+  settings:
+    providers:
+      traderepublic_panel:
+        important: "Important:"
+        intro: "Trade Republic integration uses an unofficial API and requires 2-factor authentication."
+        need_phone_pin: "You'll need your phone number and Trade Republic PIN"
+        verification_code: "A verification code will be sent to your Trade Republic app during setup"
+        sessions_stored: "Sessions are stored securely and will need to be refreshed periodically"
+        note: "Note:"
+        reverse_engineered: "This integration is based on reverse-engineered API endpoints and may break without notice. Use at your own risk."
+        connected_accounts: "Connected Accounts"
+        pending_verification: "Pending Verification"
+        login_required: "Login Required"
+        connected: "Connected"
+        accounts: "account(s)"
+        last_synced: "Last synced"
+        ago: "ago"
+        verify_pin: "Verify PIN"
+        manual_sync: "Manual sync"
+        disconnect_confirm: "Are you sure you want to disconnect this Trade Republic account?"
+        no_accounts: "No Trade Republic accounts connected yet. Use the 'Connect Account' button when adding a new account."
+        need_help: "Need help?"
+        guides_html: "Visit the <a href='%{url}' class='link'>guides</a> for detailed setup instructions."
+en:
+  traderepublic_items:
+    errors:
+      pin_required: "PIN is required"
+      provider_not_configured: "TradeRepublic provider is not configured"
+      no_process_id: "No processId found"
+    provider_name: "Trade Republic"
+    provider_description: "Connect to your Trade Republic account"
+    new:
+      title: "Connect Trade Republic"
+      description: "Enter your Trade Republic phone number and PIN to connect your account."
+      name_label: "Connection Name"
+      name_placeholder: "Trade Republic"
+      phone_label: "Phone Number"
+      phone_placeholder: "+491234567890"
+      phone_help: "International format with country code (e.g., +491234567890 for Germany)"
+    select_accounts:
+      title: "Select Trade Republic Accounts"
+      description: "Select the accounts you want to link from your Trade Republic portfolio."
+      no_accounts: "No accounts available for linking. All accounts may already be linked."
+    select_existing_account:
+      title: "Link Trade Republic Account"
+      description: "Select a Trade Republic account to link with %{account_name}."
+      no_accounts: "No Trade Republic accounts available. Please connect a new Trade Republic account first."
+    _api_error:
+      title: "Connection Error"
+      generic_error: "An error occurred while connecting to Trade Republic."
+      back: "Go Back"
+    _verify_pin:
+      title: "Verify Device PIN"
+      code_sent: "Verification code sent to your Trade Republic app!"
+      instruction: "Please enter the 4-digit code from your Trade Republic app below."
+      pin_label: "Verification Code"
+      pin_placeholder: "Enter 4-digit code"
+      verifying: "Verifying..."
+    verify_pin:
+      title: "Verify Device PIN"
+      instruction: "A verification code has been sent to your Trade Republic app. Please enter the code below."
+      pin_label: "Verification Code"
+      pin_placeholder: "Enter 4-digit code"
+      verifying: "Verifying..."
+      cancel: "Cancel"
+    manual_sync:
+      device_pin_sent: "Please check your phone for the verification PIN"
+      login_failed: "Manual sync failed: %{message}"
+    complete_login:
+      pin_required: "PIN is required"
+      sync_failed: "Connection successful but failed to fetch accounts. Please try syncing manually."
+      verification_failed: "PIN verification failed"
+      unexpected_error: "An unexpected error occurred"
+      no_active_connection: "No active Trade Republic connection found"
+      error_loading_accounts: "Failed to load accounts"
+      no_accounts_available: "No Trade Republic accounts available for linking"
+    link_accounts:
+      no_accounts_selected: "No accounts selected"
+      no_connection: "No Trade Republic connection found"
+      accounts_linked: "Successfully linked %{count} Trade Republic account(s)"
+      accounts_already_linked: "Selected accounts are already linked"
+      no_valid_accounts: "No valid accounts to link"
+    update:
+      updated: "Trade Republic connection updated successfully"
+    destroy:
+      scheduled_for_deletion: "Trade Republic connection scheduled for deletion"
+    sync:
+      sync_started: "Sync started"
+    reauthenticate:
+      device_pin_sent: "Please check your phone for the verification PIN"
+      login_failed: "Re-authentication failed: %{message}"
+    link_existing_account:
+      no_account_selected: "No Trade Republic account selected"
+      already_linked: "This Trade Republic account is already linked"
+      linked_successfully: "Trade Republic account linked successfully"
