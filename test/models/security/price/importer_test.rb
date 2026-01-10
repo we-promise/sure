@@ -374,17 +374,20 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     test_date += 1.day while test_date.saturday? || test_date.sunday?
 
     travel_to test_date do
-      # Simulate: old price exists from first trade date (30 days ago)
+      # Simulate: old price exists from first trade date (30 days ago) with STALE value
       old_date = 30.days.ago.to_date
-      Security::Price.create!(security: @security, date: old_date, price: 50, currency: "USD")
+      stale_price = 50
 
-      # Recent prices exist (mimics Jan 6-9 scenario) - but NOT yesterday
-      (4.days.ago.to_date..2.days.ago.to_date).each do |date|
-        Security::Price.create!(security: @security, date: date, price: 150, currency: "USD")
+      # Fully populate DB from old_date through yesterday so effective_start_date = today
+      # Use stale price for old dates, then recent price for recent dates
+      (old_date..1.day.ago.to_date).each do |date|
+        # Use stale price for dates older than lookback window, recent price for recent dates
+        price = date < 7.days.ago.to_date ? stale_price : 150
+        Security::Price.create!(security: @security, date: date, price: price, currency: "USD")
       end
 
-      # Provider returns prices for recent days including yesterday but NOT for today (market closed)
-      # Provider returns a DIFFERENT price (155) than what's in DB (150) to prove we use provider
+      # Provider returns yesterday's price (155) - DIFFERENT from DB (150) to prove we use provider
+      # Provider does NOT return today (simulating market closed)
       provider_response = provider_success_response([
         OpenStruct.new(security: @security, date: 1.day.ago.to_date, price: 155, currency: "USD")
       ])
@@ -400,8 +403,10 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
 
       today_price = Security::Price.find_by(security: @security, date: Date.current)
 
-      # Should use recent provider price (155) not old DB price (50) for gap-fill
-      assert_equal 155, today_price.price, "Gap-fill should use recent price, not stale old price"
+      # effective_start_date should be today (only missing date)
+      # start_price_value should use provider's yesterday (155), not stale old DB price (50)
+      # Today should gap-fill from that recent price
+      assert_equal 155, today_price.price, "Gap-fill should use recent provider price, not stale old price"
       # Should be provisional since gap-filled for recent weekday
       assert today_price.provisional, "Current weekday gap-filled price should be provisional"
     end
