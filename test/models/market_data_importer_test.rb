@@ -5,7 +5,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
   include ProviderTestHelper
 
   SNAPSHOT_START_DATE = MarketDataImporter::SNAPSHOT_DAYS.days.ago.to_date
-  PROVIDER_BUFFER     = 5.days
+  PROVIDER_BUFFER     = Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
 
   setup do
     Security::Price.delete_all

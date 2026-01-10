@@ -409,6 +409,6 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
 
   private
     def get_provider_fetch_start_date(start_date)
-      start_date - 5.days
+      start_date - Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
     end
 end
