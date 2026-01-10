@@ -82,6 +82,18 @@
           <%= render "accounts/index/account_groups", accounts: sophtron_item.accounts %>
         <% end %>
 
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@sophtron_sync_stats_map) && @sophtron_sync_stats_map
+             @sophtron_sync_stats_map[sophtron_item.id] || {}
+           else
+             sophtron_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: sophtron_item,
+          institutions_count: sophtron_item.connected_institutions.size
+        ) %>
+
         <%# Use model methods for consistent counts %>
         <% unlinked_count = sophtron_item.unlinked_accounts_count %>
         <% linked_count = sophtron_item.linked_accounts_count %>
