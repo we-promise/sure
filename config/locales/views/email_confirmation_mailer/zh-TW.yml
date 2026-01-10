@@ -1,0 +1,9 @@
+---
+zh-TW:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: 您最近要求變更電子信箱地址。請點擊下方按鈕確認此次變更。
+      cta: 確認電子信箱變更
+      expiry_notice: 此連結將在 %{hours} 小時後失效。
+      greeting: 您好！
+      subject: "%{product_name}：確認您的電子信箱變更"

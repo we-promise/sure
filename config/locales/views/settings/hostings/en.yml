@@ -17,6 +17,7 @@ en:
       show:
         general: General Settings
         financial_data_providers: Financial Data Providers
+        sync_settings: Sync Settings
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
@@ -77,3 +78,7 @@ en:
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action
+      sync_settings:
+        include_pending_label: Include pending transactions
+        include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
+        env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

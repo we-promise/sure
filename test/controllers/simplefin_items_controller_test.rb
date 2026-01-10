@@ -168,7 +168,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to accounts_path
-    assert_equal "SimpleFin connection updated.", flash[:notice]
+    assert_equal "SimpleFIN connection updated.", flash[:notice]
   end
 
   test "should handle update with invalid token" do
@@ -179,7 +179,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFin setup token")
+    assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFIN setup token")
   end
 
   test "should transfer accounts when updating simplefin item token" do
@@ -187,7 +187,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     token = Base64.strict_encode64("https://example.com/claim")
 
-    # Create old SimpleFin accounts linked to Maybe accounts
+    # Create old SimpleFIN accounts linked to Maybe accounts
     old_simplefin_account1 = @simplefin_item.simplefin_accounts.create!(
       name: "Test Checking",
       account_id: "sf_account_123",
@@ -203,7 +203,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       account_type: "depository"
     )
 
-    # Create Maybe accounts linked to the SimpleFin accounts
+    # Create Maybe accounts linked to the SimpleFIN accounts
     maybe_account1 = Account.create!(
       family: @family,
       name: "Checking Account",
@@ -223,7 +223,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       simplefin_account_id: old_simplefin_account2.id
     )
 
-    # Update old SimpleFin accounts to reference the Maybe accounts
+    # Update old SimpleFIN accounts to reference the Maybe accounts
     old_simplefin_account1.update!(account: maybe_account1)
     old_simplefin_account2.update!(account: maybe_account2)
 
@@ -261,31 +261,31 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to accounts_path
-    assert_equal "SimpleFin connection updated.", flash[:notice]
+    assert_equal "SimpleFIN connection updated.", flash[:notice]
 
-    # Verify accounts were transferred to new SimpleFin accounts
+    # Verify accounts were transferred to new SimpleFIN accounts
     assert Account.exists?(maybe_account1.id), "maybe_account1 should still exist"
     assert Account.exists?(maybe_account2.id), "maybe_account2 should still exist"
 
     maybe_account1.reload
     maybe_account2.reload
 
-    # Find the new SimpleFin item that was created
+    # Find the new SimpleFIN item that was created
     new_simplefin_item = @family.simplefin_items.where.not(id: @simplefin_item.id).first
-    assert_not_nil new_simplefin_item, "New SimpleFin item should have been created"
+    assert_not_nil new_simplefin_item, "New SimpleFIN item should have been created"
 
     new_sf_account1 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_123")
     new_sf_account2 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_456")
 
-    assert_not_nil new_sf_account1, "New SimpleFin account with ID sf_account_123 should exist"
-    assert_not_nil new_sf_account2, "New SimpleFin account with ID sf_account_456 should exist"
+    assert_not_nil new_sf_account1, "New SimpleFIN account with ID sf_account_123 should exist"
+    assert_not_nil new_sf_account2, "New SimpleFIN account with ID sf_account_456 should exist"
 
     assert_equal new_sf_account1.id, maybe_account1.simplefin_account_id
     assert_equal new_sf_account2.id, maybe_account2.simplefin_account_id
 
     # The old item will be deleted asynchronously; until then, legacy links should be moved.
 
-    # Verify old SimpleFin item is scheduled for deletion
+    # Verify old SimpleFIN item is scheduled for deletion
     @simplefin_item.reload
     assert @simplefin_item.scheduled_for_deletion?
   end
@@ -295,7 +295,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     token = Base64.strict_encode64("https://example.com/claim")
 
-    # Create old SimpleFin account
+    # Create old SimpleFIN account
     old_simplefin_account = @simplefin_item.simplefin_accounts.create!(
       name: "Test Checking",
       account_id: "sf_account_123",
@@ -304,7 +304,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       account_type: "depository"
     )
 
-    # Create Maybe account linked to the SimpleFin account
+    # Create Maybe account linked to the SimpleFIN account
     maybe_account = Account.create!(
       family: @family,
       name: "Checking Account",
@@ -332,7 +332,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
 
-    # Verify Maybe account still linked to old SimpleFin account (no transfer occurred)
+    # Verify Maybe account still linked to old SimpleFIN account (no transfer occurred)
     maybe_account.reload
     old_simplefin_account.reload
     assert_equal old_simplefin_account.id, maybe_account.simplefin_account_id
@@ -499,5 +499,202 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "/accounts", uri.path
     q = Rack::Utils.parse_nested_query(uri.query)
     assert !q.key?("open_relink_for"), "did not expect auto-open when update produced no SFAs/candidates"
+  end
+
+  # Stale account detection and handling tests
+
+  test "setup_accounts detects stale accounts not in upstream API" do
+    # Create a linked SimpleFIN account
+    linked_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Old Bitcoin",
+      account_id: "stale_btc_123",
+      currency: "USD",
+      current_balance: 0,
+      account_type: "crypto"
+    )
+    linked_account = Account.create!(
+      family: @family,
+      name: "Old Bitcoin",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!
+    )
+    linked_sfa.update!(account: linked_account)
+    linked_account.update!(simplefin_account_id: linked_sfa.id)
+
+    # Set raw_payload to simulate upstream API response WITHOUT the stale account
+    @simplefin_item.update!(raw_payload: {
+      accounts: [
+        { id: "active_cash_456", name: "Cash", balance: 1000, currency: "USD" }
+      ]
+    })
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+    assert_response :success
+
+    # Should detect the stale account
+    assert_includes response.body, "Accounts No Longer in SimpleFIN"
+    assert_includes response.body, "Old Bitcoin"
+  end
+
+  test "complete_account_setup deletes stale account when delete action selected" do
+    # Create a linked SimpleFIN account that will be stale
+    stale_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Stale Account",
+      account_id: "stale_123",
+      currency: "USD",
+      current_balance: 0,
+      account_type: "depository"
+    )
+    stale_account = Account.create!(
+      family: @family,
+      name: "Stale Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    stale_sfa.update!(account: stale_account)
+    stale_account.update!(simplefin_account_id: stale_sfa.id)
+
+    # Add a transaction to the account
+    Entry.create!(
+      account: stale_account,
+      name: "Test Transaction",
+      amount: 100,
+      currency: "USD",
+      date: Date.today,
+      entryable: Transaction.create!
+    )
+
+    # Set raw_payload without the stale account
+    @simplefin_item.update!(raw_payload: { accounts: [] })
+
+    assert_difference [ "Account.count", "SimplefinAccount.count", "Entry.count" ], -1 do
+      post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+        stale_account_actions: {
+          stale_sfa.id => { action: "delete" }
+        }
+      }
+    end
+
+    assert_redirected_to accounts_path
+  end
+
+  test "complete_account_setup moves transactions when move action selected" do
+    # Create source (stale) account
+    stale_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Bitcoin",
+      account_id: "stale_btc",
+      currency: "USD",
+      current_balance: 0,
+      account_type: "crypto"
+    )
+    stale_account = Account.create!(
+      family: @family,
+      name: "Bitcoin",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!
+    )
+    stale_sfa.update!(account: stale_account)
+    stale_account.update!(simplefin_account_id: stale_sfa.id)
+
+    # Create target account (active)
+    target_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Cash",
+      account_id: "active_cash",
+      currency: "USD",
+      current_balance: 1000,
+      account_type: "depository"
+    )
+    target_account = Account.create!(
+      family: @family,
+      name: "Cash",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    target_sfa.update!(account: target_account)
+    target_account.update!(simplefin_account_id: target_sfa.id)
+    target_sfa.ensure_account_provider!
+
+    # Add transactions to stale account
+    entry1 = Entry.create!(
+      account: stale_account,
+      name: "P2P Transfer",
+      amount: 300,
+      currency: "USD",
+      date: Date.today,
+      entryable: Transaction.create!
+    )
+    entry2 = Entry.create!(
+      account: stale_account,
+      name: "Another Transfer",
+      amount: 200,
+      currency: "USD",
+      date: Date.today - 1,
+      entryable: Transaction.create!
+    )
+
+    # Set raw_payload with only the target account (stale account missing)
+    @simplefin_item.update!(raw_payload: {
+      accounts: [
+        { id: "active_cash", name: "Cash", balance: 1000, currency: "USD" }
+      ]
+    })
+
+    # Stale account should be deleted, target account should gain entries
+    assert_difference "Account.count", -1 do
+      assert_difference "SimplefinAccount.count", -1 do
+        post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+          stale_account_actions: {
+            stale_sfa.id => { action: "move", target_account_id: target_account.id }
+          }
+        }
+      end
+    end
+
+    assert_redirected_to accounts_path
+
+    # Verify transactions were moved to target account
+    entry1.reload
+    entry2.reload
+    assert_equal target_account.id, entry1.account_id
+    assert_equal target_account.id, entry2.account_id
+  end
+
+  test "complete_account_setup skips stale account when skip action selected" do
+    # Create a linked SimpleFIN account that will be stale
+    stale_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Stale Account",
+      account_id: "stale_skip",
+      currency: "USD",
+      current_balance: 0,
+      account_type: "depository"
+    )
+    stale_account = Account.create!(
+      family: @family,
+      name: "Stale Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    stale_sfa.update!(account: stale_account)
+    stale_account.update!(simplefin_account_id: stale_sfa.id)
+
+    @simplefin_item.update!(raw_payload: { accounts: [] })
+
+    assert_no_difference [ "Account.count", "SimplefinAccount.count" ] do
+      post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+        stale_account_actions: {
+          stale_sfa.id => { action: "skip" }
+        }
+      }
+    end
+
+    assert_redirected_to accounts_path
+    # Account and SimplefinAccount should still exist
+    assert Account.exists?(stale_account.id)
+    assert SimplefinAccount.exists?(stale_sfa.id)
   end
 end

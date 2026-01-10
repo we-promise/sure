@@ -1,0 +1,137 @@
+<%# locals: (investment_metrics:) %>
+
+<% if investment_metrics[:has_investments] %>
+  <div class="space-y-6">
+    <h3 class="text-lg font-medium text-primary"><%= t("reports.investment_performance.title") %></h3>
+
+    <%# Investment Summary Cards %>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <%# Portfolio Value Card %>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <%= icon("briefcase", class: "w-4 h-4 text-secondary") %>
+          <span class="text-sm text-secondary"><%= t("reports.investment_performance.portfolio_value") %></span>
+        </div>
+        <p class="text-xl font-semibold text-primary">
+          <%= format_money(investment_metrics[:portfolio_value]) %>
+        </p>
+      </div>
+
+      <%# Total Return Card %>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <%= icon("trending-up", class: "w-4 h-4 text-secondary") %>
+          <span class="text-sm text-secondary"><%= t("reports.investment_performance.total_return") %></span>
+        </div>
+        <% if investment_metrics[:unrealized_trend] %>
+          <p class="text-xl font-semibold" style="color: <%= investment_metrics[:unrealized_trend].color %>">
+            <%= format_money(Money.new(investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
+            (<%= investment_metrics[:unrealized_trend].percent_formatted %>)
+          </p>
+        <% else %>
+          <p class="text-xl font-semibold text-secondary">-</p>
+        <% end %>
+      </div>
+
+      <%# Period Contributions Card %>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <%= icon("arrow-down-to-line", class: "w-4 h-4 text-secondary") %>
+          <span class="text-sm text-secondary"><%= t("reports.investment_performance.contributions") %></span>
+        </div>
+        <p class="text-xl font-semibold text-primary">
+          <%= format_money(investment_metrics[:period_contributions]) %>
+        </p>
+      </div>
+
+      <%# Period Withdrawals Card %>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <%= icon("arrow-up-from-line", class: "w-4 h-4 text-secondary") %>
+          <span class="text-sm text-secondary"><%= t("reports.investment_performance.withdrawals") %></span>
+        </div>
+        <p class="text-xl font-semibold text-primary">
+          <%= format_money(investment_metrics[:period_withdrawals]) %>
+        </p>
+      </div>
+    </div>
+
+    <%# Top Holdings Table %>
+    <% if investment_metrics[:top_holdings].any? %>
+      <div class="space-y-3">
+        <h4 class="text-sm font-medium text-secondary uppercase"><%= t("reports.investment_performance.top_holdings") %></h4>
+
+        <div class="bg-container-inset rounded-lg overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-container">
+              <tr class="text-left text-secondary uppercase text-xs">
+                <th class="px-4 py-3 font-medium"><%= t("reports.investment_performance.holding") %></th>
+                <th class="px-4 py-3 font-medium text-right"><%= t("reports.investment_performance.weight") %></th>
+                <th class="px-4 py-3 font-medium text-right"><%= t("reports.investment_performance.value") %></th>
+                <th class="px-4 py-3 font-medium text-right"><%= t("reports.investment_performance.return") %></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-primary">
+              <% investment_metrics[:top_holdings].each do |holding| %>
+                <tr>
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-3">
+                      <% if holding.security.logo_url.present? %>
+                        <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                      <% else %>
+                        <div class="w-6 h-6 rounded-full bg-container flex items-center justify-center text-xs font-medium text-secondary">
+                          <%= holding.ticker[0..1] %>
+                        </div>
+                      <% end %>
+                      <div>
+                        <p class="font-medium text-primary"><%= holding.ticker %></p>
+                        <p class="text-xs text-secondary"><%= truncate(holding.name, length: 25) %></p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-right text-secondary">
+                    <%= number_to_percentage(holding.weight || 0, precision: 1) %>
+                  </td>
+                  <td class="px-4 py-3 text-right font-medium text-primary">
+                    <%= format_money(holding.amount_money) %>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <% if holding.trend %>
+                      <span style="color: <%= holding.trend.color %>">
+                        <%= holding.trend.percent_formatted %>
+                      </span>
+                    <% else %>
+                      <span class="text-secondary">-</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Investment Accounts Summary %>
+    <% if investment_metrics[:accounts].any? %>
+      <div class="space-y-3">
+        <h4 class="text-sm font-medium text-secondary uppercase"><%= t("reports.investment_performance.accounts") %></h4>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <% investment_metrics[:accounts].each do |account| %>
+            <div class="bg-container-inset rounded-lg p-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <%= render "accounts/logo", account: account, size: "sm" %>
+                <div>
+                  <p class="font-medium text-primary text-sm"><%= account.name %></p>
+                  <p class="text-xs text-secondary"><%= account.short_subtype_label %></p>
+                </div>
+              </div>
+              <p class="font-medium text-primary"><%= format_money(account.balance_money) %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

@@ -179,4 +179,17 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to rules_url
   end
+
+  test "should get confirm_all" do
+    get confirm_all_rules_url
+    assert_response :success
+  end
+
+  test "apply_all enqueues job and redirects" do
+    assert_enqueued_with(job: ApplyAllRulesJob) do
+      post apply_all_rules_url
+    end
+
+    assert_redirected_to rules_url
+  end
 end

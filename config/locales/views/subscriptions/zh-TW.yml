@@ -1,0 +1,4 @@
+---
+zh-TW:
+  subscriptions:
+    self_hosted_alert: "在自行代管模式下不支援 %{product_name}。"
