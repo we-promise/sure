@@ -93,7 +93,7 @@ class Security::Price::Importer
 
     def provider_prices
       @provider_prices ||= begin
-        provider_fetch_start_date = effective_start_date - 5.days
+        provider_fetch_start_date = effective_start_date - PROVISIONAL_LOOKBACK_DAYS.days
 
         response = security_provider.fetch_security_prices(
           symbol: security.ticker,
@@ -176,11 +176,13 @@ class Security::Price::Importer
       return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
 
       # Fall back to most recent DB price before cutoff
+      currency = prev_price_currency || db_price_currency
       Security::Price
         .where(security_id: security.id)
         .where("date < ?", cutoff_date)
         .where("price > 0")
         .where(provisional: false)
+        .then { |q| currency.present? ? q.where(currency: currency) : q }
         .order(date: :desc)
         .limit(1)
         .pick(:price)
