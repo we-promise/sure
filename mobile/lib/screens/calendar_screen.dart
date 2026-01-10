@@ -68,7 +68,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
         forceSync: false,
       );
 
-      _calculateDailyChanges(transactionsProvider.transactions);
+      final transactions = transactionsProvider.transactions;
+      debugPrint('Calendar: Loaded ${transactions.length} transactions for account ${_selectedAccount!.name}');
+
+      if (transactions.isNotEmpty) {
+        debugPrint('Calendar: Sample transaction - name: ${transactions.first.name}, amount: ${transactions.first.amount}, nature: ${transactions.first.nature}');
+      }
+
+      _calculateDailyChanges(transactions);
+      debugPrint('Calendar: Calculated ${_dailyChanges.length} days with changes');
     }
 
     setState(() {
@@ -79,23 +87,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void _calculateDailyChanges(List<Transaction> transactions) {
     final changes = <String, double>{};
 
+    debugPrint('Calendar: Starting to calculate daily changes for ${transactions.length} transactions');
+
     for (var transaction in transactions) {
       try {
         final date = DateTime.parse(transaction.date);
         final dateKey = DateFormat('yyyy-MM-dd').format(date);
 
-        double amount = double.tryParse(transaction.amount) ?? 0.0;
+        // Parse amount as absolute value first
+        final cleanedAmount = transaction.amount.replaceAll(RegExp(r'[^\d.-]'), '');
+        double amount = double.tryParse(cleanedAmount) ?? 0.0;
 
-        // For expenses, negate the amount
-        if (transaction.isExpense) {
-          amount = -amount;
+        debugPrint('Calendar: Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, cleaned: $cleanedAmount, parsed: $amount, nature: ${transaction.nature}');
+
+        // For expenses, make the amount negative
+        // For income, keep it positive
+        if (transaction.nature == 'expense') {
+          amount = -amount.abs();
+        } else {
+          amount = amount.abs();
         }
 
         changes[dateKey] = (changes[dateKey] ?? 0.0) + amount;
+        debugPrint('Calendar: Date $dateKey now has total: ${changes[dateKey]}');
       } catch (e) {
-        // Skip invalid dates
+        debugPrint('Calendar: Failed to parse transaction date: ${transaction.date}, error: $e');
       }
     }
+
+    debugPrint('Calendar: Final changes map has ${changes.length} entries');
+    changes.forEach((date, amount) {
+      debugPrint('Calendar: $date -> $amount');
+    });
 
     setState(() {
       _dailyChanges = changes;
@@ -264,12 +287,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Column(
           children: [
             // Weekday headers
-            Row(
-              children: ['日', '一', '二', '三', '四', '五', '六'].map((day) {
-                return Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+            SizedBox(
+              height: 40,
+              child: Row(
+                children: ['日', '一', '二', '三', '四', '五', '六'].map((day) {
+                  return Expanded(
+                    child: Center(
                       child: Text(
                         day,
                         style: TextStyle(
@@ -278,35 +301,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
 
             // Calendar grid
             ...List.generate((daysInMonth + startWeekday + 6) ~/ 7, (weekIndex) {
-              return Row(
-                children: List.generate(7, (dayIndex) {
-                  final dayNumber = weekIndex * 7 + dayIndex - startWeekday + 1;
+              return SizedBox(
+                height: 70,
+                child: Row(
+                  children: List.generate(7, (dayIndex) {
+                    final dayNumber = weekIndex * 7 + dayIndex - startWeekday + 1;
 
-                  if (dayNumber < 1 || dayNumber > daysInMonth) {
-                    return const Expanded(child: SizedBox(height: 80));
-                  }
+                    if (dayNumber < 1 || dayNumber > daysInMonth) {
+                      return const Expanded(child: SizedBox.shrink());
+                    }
 
-                  final date = DateTime(_currentMonth.year, _currentMonth.month, dayNumber);
-                  final dateKey = DateFormat('yyyy-MM-dd').format(date);
-                  final change = _dailyChanges[dateKey] ?? 0.0;
-                  final hasChange = _dailyChanges.containsKey(dateKey);
+                    final date = DateTime(_currentMonth.year, _currentMonth.month, dayNumber);
+                    final dateKey = DateFormat('yyyy-MM-dd').format(date);
+                    final change = _dailyChanges[dateKey] ?? 0.0;
+                    final hasChange = _dailyChanges.containsKey(dateKey);
 
-                  return Expanded(
-                    child: _buildDayCell(
-                      dayNumber,
-                      change,
-                      hasChange,
-                      colorScheme,
-                    ),
-                  );
-                }).toList(),
+                    return Expanded(
+                      child: _buildDayCell(
+                        dayNumber,
+                        change,
+                        hasChange,
+                        colorScheme,
+                      ),
+                    );
+                  }).toList(),
+                ),
               );
             }),
           ],
@@ -339,37 +365,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
           width: 1,
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            day.toString(),
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          if (hasChange) ...[
-            const SizedBox(height: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             Text(
-              _formatCurrency(change),
+              day.toString(),
               style: TextStyle(
-                fontSize: 11,
-                color: textColor,
                 fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: colorScheme.onSurface,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
+            if (hasChange) ...[
+              const SizedBox(height: 2),
+              Text(
+                _formatAmount(change),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: textColor,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 
+  String _formatAmount(double amount) {
+    final formatter = NumberFormat('#,##0.##');
+    final sign = amount >= 0 ? '+' : '';
+    return '$sign${formatter.format(amount)}';
+  }
+
   String _formatCurrency(double amount) {
-    final currencySymbol = _selectedAccount?.currency ?? '\$';
+    final currencySymbol = _selectedAccount?.currency ?? '';
     final formatter = NumberFormat('#,##0.00');
     final sign = amount >= 0 ? '+' : '';
     return '$sign$currencySymbol${formatter.format(amount.abs())}';

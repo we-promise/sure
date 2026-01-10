@@ -174,7 +174,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
 
   Widget _buildTransactionItem(Transaction transaction, ColorScheme colorScheme) {
     final isExpense = transaction.isExpense;
-    final amount = double.tryParse(transaction.amount) ?? 0.0;
+    // Parse amount, removing any non-numeric characters except dots and minus signs
+    final amount = double.tryParse(transaction.amount.replaceAll(RegExp(r'[^\d.-]'), '')) ?? 0.0;
     final accountName = _getAccountName(transaction.accountId);
 
     Color amountColor;
