@@ -27,7 +27,25 @@ class Security < ApplicationRecord
     )
   end
 
+  def brandfetch_icon_url(width: 40, height: 40)
+    return nil unless Setting.brand_fetch_client_id.present? && website_url.present?
+
+    domain = extract_domain(website_url)
+    return nil unless domain.present?
+
+    "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{width}/h/#{height}?c=#{Setting.brand_fetch_client_id}"
+  end
+
   private
+
+    def extract_domain(url)
+      uri = URI.parse(url)
+      host = uri.host || url
+      host.sub(/\Awww\./, "")
+    rescue URI::InvalidURIError
+      nil
+    end
+
     def upcase_symbols
       self.ticker = ticker.upcase
       self.exchange_operating_mic = exchange_operating_mic.upcase if exchange_operating_mic.present?

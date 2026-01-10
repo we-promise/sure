@@ -14,6 +14,7 @@ class TransactionImportTest < ActiveSupport::TestCase
 
   test "configured? if uploaded and rows are generated" do
     @import.expects(:uploaded?).returns(true).once
+    @import.expects(:rows_count).returns(1).once
     assert @import.configured?
   end
 

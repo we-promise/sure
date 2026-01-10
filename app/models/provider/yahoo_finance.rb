@@ -260,7 +260,7 @@ class Provider::YahooFinance < Provider
 
         prices << Price.new(
           symbol: symbol,
-          date: Time.at(timestamp).to_date,
+          date: Time.at(timestamp).utc.to_date,
           price: normalized_price,
           currency: normalized_currency,
           exchange_operating_mic: exchange_operating_mic
@@ -390,7 +390,7 @@ class Provider::YahooFinance < Provider
       symbol = "#{from}#{to}=X"
       fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
         Rate.new(
-          date: Time.at(timestamp).to_date,
+          date: Time.at(timestamp).utc.to_date,
           from: from,
           to: to,
           rate: close_rate.to_f
@@ -402,7 +402,7 @@ class Provider::YahooFinance < Provider
       symbol = "#{to}#{from}=X"
       rates = fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
         Rate.new(
-          date: Time.at(timestamp).to_date,
+          date: Time.at(timestamp).utc.to_date,
           from: from,
           to: to,
           rate: (1.0 / close_rate.to_f).round(8)

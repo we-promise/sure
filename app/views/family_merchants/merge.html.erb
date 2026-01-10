@@ -1,0 +1,33 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with url: perform_merge_family_merchants_path, method: :post, class: "space-y-4" do |f| %>
+      <%= f.collection_select :target_id,
+            @merchants,
+            :id, :name,
+            { prompt: t(".select_target"), label: t(".target_label") },
+            { required: true } %>
+
+      <div class="space-y-2">
+        <p class="text-sm font-medium text-primary"><%= t(".sources_label") %></p>
+        <div class="max-h-64 overflow-y-auto space-y-1 border border-secondary rounded-lg p-2">
+          <% @merchants.each do |merchant| %>
+            <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+              <%= check_box_tag "source_ids[]", merchant.id, false, class: "rounded border-gray-300" %>
+              <span class="text-sm text-primary"><%= merchant.name %></span>
+              <% if merchant.is_a?(ProviderMerchant) %>
+                <span class="text-xs text-subdued">(<%= merchant.source&.titleize %>)</span>
+              <% end %>
+            </label>
+          <% end %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".sources_hint") %></p>
+      </div>
+
+      <%= render DS::Button.new(
+        text: t(".submit"),
+        full_width: true
+      ) %>
+    <% end %>
+  <% end %>
+<% end %>
