@@ -85,6 +85,17 @@
           <%= render "accounts/index/account_groups", accounts: enable_banking_item.accounts %>
         <% end %>
 
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@enable_banking_sync_stats_map) && @enable_banking_sync_stats_map
+             @enable_banking_sync_stats_map[enable_banking_item.id] || {}
+           else
+             enable_banking_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: enable_banking_item
+        ) %>
+
         <% if enable_banking_item.unlinked_accounts_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm">Setup needed</p>

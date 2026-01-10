@@ -21,7 +21,7 @@
   </div>
 </header>
 
-<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @enable_banking_items.empty? %>
+<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? %>
   <%= render "empty" %>
 <% else %>
   <div class="space-y-2">
@@ -39,6 +39,10 @@
 
     <% if @enable_banking_items.any? %>
       <%= render @enable_banking_items.sort_by(&:created_at) %>
+    <% end %>
+
+    <% if @coinstats_items.any? %>
+      <%= render @coinstats_items.sort_by(&:created_at) %>
     <% end %>
 
     <% if @manual_accounts.any? %>

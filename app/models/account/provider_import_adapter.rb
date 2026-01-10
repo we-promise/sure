@@ -75,6 +75,7 @@ class Account::ProviderImportAdapter
         existing = entry.transaction.extra || {}
         incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
         entry.transaction.extra = existing.deep_merge(incoming)
+        entry.transaction.save!
       end
       entry.save!
       entry
@@ -92,14 +93,42 @@ class Account::ProviderImportAdapter
   def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
-    ProviderMerchant.find_or_create_by!(
-      provider_merchant_id: provider_merchant_id,
-      source: source
-    ) do |m|
-      m.name = name
-      m.website_url = website_url
-      m.logo_url = logo_url
+    # First try to find by provider_merchant_id (stable identifier derived from normalized name)
+    # This handles case variations in merchant names (e.g., "ACME Corp" vs "Acme Corp")
+    merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source)
+
+    # If not found by provider_merchant_id, try by exact name match (backwards compatibility)
+    merchant ||= ProviderMerchant.find_by(source: source, name: name)
+
+    if merchant
+      # Update logo if provided and merchant doesn't have one (or has a different one)
+      # Best-effort: don't fail transaction import if logo update fails
+      if logo_url.present? && merchant.logo_url != logo_url
+        begin
+          merchant.update!(logo_url: logo_url)
+        rescue StandardError => e
+          Rails.logger.warn("Failed to update merchant logo: merchant_id=#{merchant.id} logo_url=#{logo_url} error=#{e.message}")
+        end
+      end
+      return merchant
     end
+
+    # Create new merchant
+    begin
+      merchant = ProviderMerchant.create!(
+        source: source,
+        name: name,
+        provider_merchant_id: provider_merchant_id,
+        website_url: website_url,
+        logo_url: logo_url
+      )
+    rescue ActiveRecord::RecordNotUnique
+      # Race condition - another process created the record
+      merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
+                 ProviderMerchant.find_by(source: source, name: name)
+    end
+
+    merchant
   end
 
   # Updates account balance from provider data

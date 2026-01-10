@@ -1,5 +1,6 @@
 class Category < ApplicationRecord
   has_many :transactions, dependent: :nullify, class_name: "Transaction"
+  has_many :trades, dependent: :nullify
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
 
   belongs_to :family
@@ -30,9 +31,14 @@ class Category < ApplicationRecord
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
   UNCATEGORIZED_COLOR = "#737373"
+  OTHER_INVESTMENTS_COLOR = "#e99537"
   TRANSFER_COLOR = "#444CE7"
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
+
+  # Synthetic category name keys for i18n
+  UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
+  OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
 
   class Group
     attr_reader :category, :subcategories
@@ -81,10 +87,28 @@ class Category < ApplicationRecord
 
     def uncategorized
       new(
-        name: "Uncategorized",
+        name: I18n.t(UNCATEGORIZED_NAME_KEY),
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
       )
+    end
+
+    def other_investments
+      new(
+        name: I18n.t(OTHER_INVESTMENTS_NAME_KEY),
+        color: OTHER_INVESTMENTS_COLOR,
+        lucide_icon: "trending-up"
+      )
+    end
+
+    # Helper to get the localized name for uncategorized
+    def uncategorized_name
+      I18n.t(UNCATEGORIZED_NAME_KEY)
+    end
+
+    # Helper to get the localized name for other investments
+    def other_investments_name
+      I18n.t(OTHER_INVESTMENTS_NAME_KEY)
     end
 
     private
@@ -110,7 +134,8 @@ class Category < ApplicationRecord
           [ "Loan Payments", "#e11d48", "credit-card", "expense" ],
           [ "Services", "#7c3aed", "briefcase", "expense" ],
           [ "Fees", "#6b7280", "receipt", "expense" ],
-          [ "Savings & Investments", "#059669", "piggy-bank", "expense" ]
+          [ "Savings & Investments", "#059669", "piggy-bank", "expense" ],
+          [ "Investment Contributions", "#0d9488", "trending-up", "expense" ]
         ]
       end
   end
@@ -138,6 +163,21 @@ class Category < ApplicationRecord
 
   def name_with_parent
     subcategory? ? "#{parent.name} > #{name}" : name
+  end
+
+  # Predicate: is this the synthetic "Uncategorized" category?
+  def uncategorized?
+    !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)
+  end
+
+  # Predicate: is this the synthetic "Other Investments" category?
+  def other_investments?
+    !persisted? && name == I18n.t(OTHER_INVESTMENTS_NAME_KEY)
+  end
+
+  # Predicate: is this any synthetic (non-persisted) category?
+  def synthetic?
+    uncategorized? || other_investments?
   end
 
   private

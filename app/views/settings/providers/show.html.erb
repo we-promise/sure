@@ -1,9 +1,9 @@
-<%= content_for :page_title, "Bank Sync Providers" %>
+<%= content_for :page_title, "Sync Providers" %>
 
 <div class="space-y-4">
   <div>
     <p class="text-secondary mb-4">
-      Configure credentials for third-party bank sync providers. Settings configured here will override environment variables.
+      Configure credentials for third-party sync providers. Settings configured here will override environment variables.
     </p>
   </div>
 
@@ -26,10 +26,15 @@
     </turbo-frame>
   <% end %>
 
-
   <%= settings_section title: "Enable Banking (beta)", collapsible: true, open: false do %>
     <turbo-frame id="enable_banking-providers-panel">
       <%= render "settings/providers/enable_banking_panel" %>
+    </turbo-frame>
+  <% end %>
+
+  <%= settings_section title: "CoinStats", collapsible: true, open: false do %>
+    <turbo-frame id="coinstats-providers-panel">
+      <%= render "settings/providers/coinstats_panel" %>
     </turbo-frame>
   <% end %>
 </div>

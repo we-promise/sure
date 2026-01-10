@@ -78,6 +78,31 @@ class Provider::Lunchflow
     raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
+  # Get holdings for a specific account (investment accounts only)
+  # Returns: { holdings: [...], totalValue: N, currency: "USD" }
+  # Returns { holdings_not_supported: true } if API returns 501
+  def get_account_holdings(account_id)
+    path = "/accounts/#{ERB::Util.url_encode(account_id.to_s)}/holdings"
+
+    response = self.class.get(
+      "#{@base_url}#{path}",
+      headers: auth_headers
+    )
+
+    # Handle 501 specially - indicates holdings not supported for this account
+    if response.code == 501
+      return { holdings_not_supported: true }
+    end
+
+    handle_response(response)
+  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+    Rails.logger.error "Lunch Flow API: GET #{path} failed: #{e.class}: #{e.message}"
+    raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
+  rescue => e
+    Rails.logger.error "Lunch Flow API: Unexpected error during GET #{path}: #{e.class}: #{e.message}"
+    raise LunchflowError.new("Exception during GET request: #{e.message}", :request_failed)
+  end
+
   private
 
     def auth_headers

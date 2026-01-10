@@ -22,9 +22,10 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
-    assert_equal Money.new(1000, @family.currency), income_statement.totals.income_money
-    assert_equal Money.new(200 + 300 + 400, @family.currency), income_statement.totals.expense_money
-    assert_equal 4, income_statement.totals.transactions_count
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(200 + 300 + 400, @family.currency), totals.expense_money
+    assert_equal 4, totals.transactions_count
   end
 
   test "calculates expenses for a period" do
@@ -157,7 +158,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     inflow_transaction = create_transaction(account: @credit_card_account, amount: -500, kind: "funds_movement")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
     # NOW WORKING: Excludes transfers correctly after refactoring
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -170,7 +171,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     loan_payment = create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
     # CONTINUES TO WORK: Includes loan payments as expenses (loan_payment not in exclusion list)
     assert_equal 5, totals.transactions_count
@@ -183,7 +184,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     one_time_transaction = create_transaction(account: @checking_account, amount: 250, category: @groceries_category, kind: "one_time")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
     # NOW WORKING: Excludes one-time transactions correctly after refactoring
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -196,7 +197,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     payment_transaction = create_transaction(account: @checking_account, amount: 300, category: nil, kind: "cc_payment")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
     # NOW WORKING: Excludes payment transactions correctly after refactoring
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -210,7 +211,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     excluded_transaction_entry.update!(excluded: true)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
     # Should exclude excluded transactions
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -278,7 +279,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: @checking_account, amount: 150, category: nil)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
     # Should still include uncategorized transaction in totals
     assert_equal 5, totals.transactions_count

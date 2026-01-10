@@ -1,0 +1,48 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("rules.apply_all.confirm_title")) %>
+
+  <% dialog.with_body do %>
+    <p class="text-secondary text-sm mb-4">
+      <%= t("rules.apply_all.confirm_message",
+            count: @rules.count,
+            transactions: @total_affected_count) %>
+    </p>
+
+    <% if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } } %>
+      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-start gap-2">
+          <%= icon "info", class: "w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" %>
+          <div class="text-xs">
+            <p class="font-medium text-blue-900 mb-1"><%= t("rules.apply_all.ai_cost_title") %></p>
+            <% if @estimated_cost.present? %>
+              <p class="text-blue-700">
+                <%= t("rules.apply_all.ai_cost_message", transactions: @total_affected_count) %>
+                <%= t("rules.apply_all.estimated_cost", cost: sprintf("%.4f", @estimated_cost)) %>
+              </p>
+            <% else %>
+              <p class="text-blue-700">
+                <%= t("rules.apply_all.ai_cost_message", transactions: @total_affected_count) %>
+                <% if @selected_model.present? %>
+                  <span class="font-semibold"><%= t("rules.apply_all.cost_unavailable_model", model: @selected_model) %></span>
+                <% else %>
+                  <span class="font-semibold"><%= t("rules.apply_all.cost_unavailable_no_provider") %></span>
+                <% end %>
+                <%= t("rules.apply_all.cost_warning") %>
+              </p>
+            <% end %>
+            <p class="text-blue-600 mt-1">
+              <%= link_to t("rules.apply_all.view_usage"), settings_llm_usage_path, class: "underline hover:text-blue-800" %>
+            </p>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%= render DS::Button.new(
+      text: t("rules.apply_all.confirm_button"),
+      href: apply_all_rules_path,
+      method: :post,
+      full_width: true,
+      data: { turbo_frame: "_top" }) %>
+  <% end %>
+<% end %>

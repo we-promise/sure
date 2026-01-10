@@ -3,8 +3,8 @@
 <%= turbo_frame_tag dom_id(holding) do %>
   <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4">
     <div class="col-span-4 flex items-center gap-4">
-      <% if Setting.brand_fetch_client_id.present? %>
-        <%= image_tag "https://cdn.brandfetch.io/#{holding.ticker}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}", class: "w-9 h-9 rounded-full", loading: "lazy" %>
+      <% if holding.security.brandfetch_icon_url.present? %>
+        <%= image_tag holding.security.brandfetch_icon_url, class: "w-9 h-9 rounded-full", loading: "lazy" %>
       <% elsif holding.security.logo_url.present? %>
         <%= image_tag holding.security.logo_url, class: "w-9 h-9 rounded-full", loading: "lazy" %>
       <% else %>

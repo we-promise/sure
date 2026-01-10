@@ -80,7 +80,7 @@ class SimplefinAccount < ApplicationRecord
     end
 
     def parse_currency(currency_value)
-      return "USD" if currency_value.nil?
+      return "USD" if currency_value.blank?
 
       # SimpleFin currency can be a 3-letter code or a URL for custom currencies
       if currency_value.start_with?("http")

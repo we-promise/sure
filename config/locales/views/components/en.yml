@@ -1,0 +1,29 @@
+---
+en:
+  provider_sync_summary:
+    title: Sync summary
+    last_sync: "Last sync: %{time_ago} ago"
+    accounts:
+      title: Accounts
+      total: "Total: %{count}"
+      linked: "Linked: %{count}"
+      unlinked: "Unlinked: %{count}"
+      institutions: "Institutions: %{count}"
+    transactions:
+      title: Transactions
+      seen: "Seen: %{count}"
+      imported: "Imported: %{count}"
+      updated: "Updated: %{count}"
+      skipped: "Skipped: %{count}"
+    holdings:
+      title: Holdings
+      found: "Found: %{count}"
+      processed: "Processed: %{count}"
+    health:
+      title: Health
+      rate_limited: "Rate limited %{time_ago}"
+      recently: recently
+      errors: "Errors: %{count}"
+      data_warnings: "Data warnings: %{count}"
+      notices: "Notices: %{count}"
+      view_data_quality: View data quality details

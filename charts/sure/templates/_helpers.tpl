@@ -69,7 +69,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- printf "redis://default:$(REDIS_PASSWORD)@%s:6379/0" $host -}}
   {{- else if .Values.redisSimple.enabled -}}
     {{- $host := printf "%s-redis.%s.svc.cluster.local" (include "sure.fullname" .) .Release.Namespace -}}
-    {{- printf "redis://default:$(REDIS_PASSWORD)@%s:%d/0" $host (.Values.redisSimple.service.port | default 6379) -}}
+    {{- printf "redis://default:$(REDIS_PASSWORD)@%s:%d/0" $host (int (.Values.redisSimple.service.port | default 6379)) -}}
   {{- else -}}
     {{- "" -}}
   {{- end -}}

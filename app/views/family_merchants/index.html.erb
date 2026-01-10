@@ -1,12 +1,20 @@
 <header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium">Merchants</h1>
+  <h1 class="text-primary text-xl font-medium"><%= t(".title") %></h1>
 
-  <%= render DS::Link.new(
-    text: "New merchant",
-    variant: "primary",
-    href: new_family_merchant_path,
-    frame: :modal
-  ) %>
+  <div class="flex items-center gap-2">
+    <%= render DS::Link.new(
+      text: t(".merge"),
+      variant: "outline",
+      href: merge_family_merchants_path,
+      frame: :modal
+    ) %>
+    <%= render DS::Link.new(
+      text: t(".new"),
+      variant: "primary",
+      href: new_family_merchant_path,
+      frame: :modal
+    ) %>
+  </div>
 </header>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-6">
@@ -59,7 +67,7 @@
     <div class="p-4 bg-container-inset border border-secondary rounded-lg">
       <div class="flex items-start gap-2">
         <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
-        <p class="text-xs text-secondary leading-relaxed"><%= t(".provider_read_only") %></p>
+        <p class="text-xs text-secondary leading-relaxed"><%= t(".provider_info") %></p>
       </div>
     </div>
 
@@ -71,6 +79,7 @@
               <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
                 <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
                 <th scope="col" class="text-left py-3 px-4"><%= t(".table.source") %></th>
+                <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
               </tr>
             </thead>
             <tbody>
@@ -85,4 +94,38 @@
       </div>
     <% end %>
   </section>
+
+  <% if @unlinked_merchants.any? %>
+    <section class="space-y-3">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t(".unlinked_title") %></p>
+        <span class="text-subdued">&middot;</span>
+        <p><%= @unlinked_merchants.count %></p>
+      </div>
+
+      <div class="p-4 bg-container-inset border border-secondary rounded-lg">
+        <div class="flex items-start gap-2">
+          <%= icon "info", class: "w-5 h-5 text-subdued mt-0.5 flex-shrink-0" %>
+          <p class="text-xs text-secondary leading-relaxed"><%= t(".unlinked_info") %></p>
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
+                <th scope="col" class="text-left py-3 px-4"><%= t(".table.source") %></th>
+                <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= render partial: "family_merchants/provider_merchant", collection: @unlinked_merchants %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  <% end %>
 </div>

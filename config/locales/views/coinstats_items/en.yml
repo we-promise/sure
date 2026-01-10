@@ -1,0 +1,63 @@
+---
+en:
+  coinstats_items:
+    create:
+      success: CoinStats provider connection configured successfully.
+      default_name: CoinStats Connection
+      errors:
+        validation_failed: "Validation failed: %{message}."
+    update:
+      success: CoinStats provider connection updated successfully.
+      errors:
+        validation_failed: "Validation failed: %{message}."
+    destroy:
+      success: CoinStats provider connection scheduled for deletion.
+    link_wallet:
+      success: "%{count} crypto wallet(s) linked successfully."
+      missing_params: "Missing required parameters: address and blockchain."
+      failed: Crypto wallet linking failed.
+      error: "Crypto wallet linking failed: %{message}."
+    new:
+      title: Link a Crypto Wallet with CoinStats
+      blockchain_fetch_error: Failed load Blockchains. Please try again later.
+      address_label: Address
+      address_placeholder: Required
+      blockchain_label: Blockchain
+      blockchain_placeholder: Required
+      blockchain_select_blank: Select a Blockchain
+      link: Link Crypto Wallet
+      not_configured_title: CoinStats provider connection not configured
+      not_configured_message: To link a crypto wallet, you must first configure the CoinStats provider connection.
+      not_configured_step1_html: Go to <strong>Settings → Providers</strong>
+      not_configured_step2_html: Locate the <strong>CoinStats</strong> provider
+      not_configured_step3_html: Follow the provided <strong>setup Instructions</strong> to complete provider configuration
+      go_to_settings: Go to Provider Settings
+      setup_instructions: "Setup Instructions:"
+      step1_html: Visit the <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> to obtain an API key.
+      step2: Enter your API key below and click Configure.
+      step3_html: After a successful connection, visit the <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Accounts</a> tab to set up crypto wallets.
+      api_key_label: API Key
+      api_key_placeholder: Required
+      configure: Configure
+      update_configuration: Reconfigure
+      default_name: CoinStats Connection
+      status_configured_html: Ready to use
+      status_not_configured: Not configured
+    coinstats_item:
+      deletion_in_progress: Crypto wallet data is being deleted…
+      provider_name: CoinStats
+      syncing: Syncing…
+      sync_status:
+        no_accounts: No crypto wallets found
+        all_synced:
+          one: "%{count} crypto wallet synced"
+          other: "%{count} crypto wallets synced"
+        partial_sync: "%{linked_count} crypto wallets synced, %{unlinked_count} need setup"
+      reconnect: Reconnect
+      status: Last synced %{timestamp} ago
+      status_never: Never synced
+      status_with_summary: "Last synced %{timestamp} ago • %{summary}"
+      update_api_key: Update API Key
+      delete: Delete
+      no_wallets_title: No crypto wallets connected
+      no_wallets_message: No crypto wallets are currently connected to CoinStats.

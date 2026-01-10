@@ -1,6 +1,7 @@
 ---
 en:
   transactions:
+    unknown_name: Unknown transaction
     form:
       account: Account
       account_prompt: Select an Account

@@ -11,12 +11,17 @@ class PasswordResetsController < ApplicationController
 
   def create
     if (user = User.find_by(email: params[:email]))
-      PasswordMailer.with(
-        user: user,
-        token: user.generate_token_for(:password_reset)
-      ).password_reset.deliver_later
+      # Security: Block password reset for SSO-only users.
+      # These users have no local password and must authenticate via SSO.
+      unless user.sso_only?
+        PasswordMailer.with(
+          user: user,
+          token: user.generate_token_for(:password_reset)
+        ).password_reset.deliver_later
+      end
     end
 
+    # Always redirect to pending step to prevent email enumeration
     redirect_to new_password_reset_path(step: "pending")
   end
 
@@ -25,6 +30,13 @@ class PasswordResetsController < ApplicationController
   end
 
   def update
+    # Security: Block password setting for SSO-only users.
+    # Defense-in-depth: even if they somehow get a reset token, block the update.
+    if @user.sso_only?
+      redirect_to new_session_path, alert: t("password_resets.sso_only_user")
+      return
+    end
+
     if @user.update(password_params)
       redirect_to new_session_path, notice: t(".success")
     else

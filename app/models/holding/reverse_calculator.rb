@@ -8,6 +8,7 @@ class Holding::ReverseCalculator
 
   def calculate
     Rails.logger.tagged("Holding::ReverseCalculator") do
+      precompute_cost_basis
       holdings = calculate_holdings
       Holding.gapfill(holdings)
     end
@@ -69,8 +70,47 @@ class Holding::ReverseCalculator
           qty: qty,
           price: price.price,
           currency: price.currency,
-          amount: qty * price.price
+          amount: qty * price.price,
+          cost_basis: cost_basis_for(security_id, date)
         )
       end.compact
+    end
+
+    # Pre-compute cost basis for all securities at all dates using forward pass through trades
+    # Stores: { security_id => { date => cost_basis } }
+    def precompute_cost_basis
+      @cost_basis_by_date = Hash.new { |h, k| h[k] = {} }
+      tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+
+      trades = portfolio_cache.get_trades.sort_by(&:date)
+      trade_index = 0
+
+      account.start_date.upto(Date.current).each do |date|
+        # Process all trades up to and including this date
+        while trade_index < trades.size && trades[trade_index].date <= date
+          trade_entry = trades[trade_index]
+          trade = trade_entry.entryable
+
+          if trade.qty > 0 # Only track buys
+            security_id = trade.security_id
+            trade_price = Money.new(trade.price, trade.currency)
+            converted_price = trade_price.exchange_to(account.currency, fallback_rate: 1).amount
+
+            tracker[security_id][:total_cost] += converted_price * trade.qty
+            tracker[security_id][:total_qty] += trade.qty
+          end
+          trade_index += 1
+        end
+
+        # Store current cost basis snapshot for each security at this date
+        tracker.each do |security_id, data|
+          next if data[:total_qty].zero?
+          @cost_basis_by_date[security_id][date] = data[:total_cost] / data[:total_qty]
+        end
+      end
+    end
+
+    def cost_basis_for(security_id, date)
+      @cost_basis_by_date.dig(security_id, date)
     end
 end

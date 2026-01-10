@@ -21,6 +21,7 @@ class TradeImport < Import
           qty: row.qty,
           currency: row.currency.presence || mapped_account.currency,
           price: row.price,
+          category: investment_category_for(row.qty, mapped_account.family),
           entry: Entry.new(
             account: mapped_account,
             date: row.date_iso,
@@ -76,6 +77,14 @@ class TradeImport < Import
   end
 
   private
+    def investment_category_for(qty, family)
+      # Buy trades (positive qty) are categorized as "Savings & Investments"
+      # Sell trades are left uncategorized - users will be prompted to categorize
+      return nil unless qty.to_d.positive?
+
+      family.categories.find_by(name: "Savings & Investments")
+    end
+
     def find_or_create_security(ticker: nil, exchange_operating_mic: nil)
       return nil unless ticker.present?
 

@@ -80,7 +80,7 @@ export default class extends Controller {
     const firstFocusableElement =
       this.contentTarget.querySelectorAll(focusableElements)[0];
     if (firstFocusableElement) {
-      firstFocusableElement.focus();
+      firstFocusableElement.focus({ preventScroll: true });
     }
   }
 

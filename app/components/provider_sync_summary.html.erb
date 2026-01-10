@@ -1,0 +1,105 @@
+<details class="group bg-surface rounded-lg border border-surface-inset/50">
+  <summary class="flex items-center justify-between gap-2 p-3 cursor-pointer">
+    <div class="flex items-center gap-2">
+      <%= helpers.icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+      <span class="text-sm text-primary font-medium"><%= t("provider_sync_summary.title") %></span>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-secondary">
+      <% if last_synced_at %>
+        <span><%= t("provider_sync_summary.last_sync", time_ago: last_synced_ago) %></span>
+      <% end %>
+    </div>
+  </summary>
+
+  <div class="p-3 text-sm text-secondary grid grid-cols-1 md:grid-cols-2 gap-3">
+    <%# Accounts section - always shown if we have account stats %>
+    <% if total_accounts > 0 || stats.key?("total_accounts") %>
+      <div>
+        <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.accounts.title") %></h4>
+        <div class="flex items-center gap-3 flex-wrap">
+          <span><%= t("provider_sync_summary.accounts.total", count: total_accounts) %></span>
+          <span><%= t("provider_sync_summary.accounts.linked", count: linked_accounts) %></span>
+          <span><%= t("provider_sync_summary.accounts.unlinked", count: unlinked_accounts) %></span>
+          <% if institutions_count.present? %>
+            <span><%= t("provider_sync_summary.accounts.institutions", count: institutions_count) %></span>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Transactions section - shown if provider collects transaction stats %>
+    <% if has_transaction_stats? %>
+      <div>
+        <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.transactions.title") %></h4>
+        <div class="flex items-center gap-3 flex-wrap">
+          <span><%= t("provider_sync_summary.transactions.seen", count: tx_seen) %></span>
+          <span><%= t("provider_sync_summary.transactions.imported", count: tx_imported) %></span>
+          <span><%= t("provider_sync_summary.transactions.updated", count: tx_updated) %></span>
+          <span><%= t("provider_sync_summary.transactions.skipped", count: tx_skipped) %></span>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Holdings section - shown if provider collects holdings stats %>
+    <% if has_holdings_stats? %>
+      <div>
+        <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.holdings.title") %></h4>
+        <div class="flex items-center gap-3">
+          <span><%= t("provider_sync_summary.holdings.#{holdings_label_key}", count: holdings_count) %></span>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Health section - always shown %>
+    <div>
+      <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.health.title") %></h4>
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-3 flex-wrap">
+          <% if rate_limited? %>
+            <span class="text-warning">
+              <%= t("provider_sync_summary.health.rate_limited", time_ago: rate_limited_ago || t("provider_sync_summary.health.recently")) %>
+            </span>
+          <% end %>
+          <% if has_errors? %>
+            <span class="text-destructive"><%= t("provider_sync_summary.health.errors", count: total_errors) %></span>
+          <% elsif import_started? %>
+            <span class="text-success"><%= t("provider_sync_summary.health.errors", count: 0) %></span>
+          <% else %>
+            <span><%= t("provider_sync_summary.health.errors", count: 0) %></span>
+          <% end %>
+        </div>
+
+        <%# Data quality warnings %>
+        <% if has_data_quality_issues? %>
+          <div class="flex items-center gap-3 mt-1">
+            <% if data_warnings > 0 %>
+              <div class="flex items-center gap-1">
+                <%= helpers.icon "alert-triangle", size: "sm", color: "warning" %>
+                <span class="text-warning"><%= t("provider_sync_summary.health.data_warnings", count: data_warnings) %></span>
+              </div>
+            <% end %>
+            <% if notices > 0 %>
+              <div class="flex items-center gap-1">
+                <%= helpers.icon "info", size: "sm" %>
+                <span><%= t("provider_sync_summary.health.notices", count: notices) %></span>
+              </div>
+            <% end %>
+          </div>
+
+          <% if data_quality_details.any? %>
+            <details class="mt-2">
+              <summary class="text-xs cursor-pointer text-secondary hover:text-primary">
+                <%= t("provider_sync_summary.health.view_data_quality") %>
+              </summary>
+              <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
+                <% data_quality_details.each do |detail| %>
+                  <p class="text-xs <%= severity_color_class(detail["severity"]) %>"><%= detail["message"] %></p>
+                <% end %>
+              </div>
+            </details>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</details>

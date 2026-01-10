@@ -130,6 +130,7 @@ class Balance::ChartSeriesBuilder
                  b.flows_factor
           FROM balances b
           WHERE b.account_id = accounts.id
+            AND b.currency = accounts.currency
             AND b.date <= d.date
           ORDER BY b.date DESC
           LIMIT 1

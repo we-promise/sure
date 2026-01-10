@@ -9,7 +9,7 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/we-promise/sure
-  tag: "0.6.5"
+  tag: "0.6.6"
   pullPolicy: IfNotPresent
   # Optional: imagePullSecrets to pull from private registries
   imagePullSecrets: []
@@ -65,6 +65,53 @@ cnpg:
     storage:
       size: 10Gi
       storageClassName: ""
+    # Optional CNPG backup configuration (rendered as `.spec.backup` on the Cluster CR)
+    # Example (CNPG volume snapshots):
+    # backup:
+    #   method: volumeSnapshot
+    #   volumeSnapshot:
+    #     className: longhorn
+    #
+    # Example (CNPG barmanObjectStore backups):
+    # backup:
+    #   method: barmanObjectStore
+    #   barmanObjectStore:
+    #     destinationPath: s3://my-bucket/cnpg
+    #     endpointURL: https://s3.us-east-1.amazonaws.com
+    #     s3Credentials:
+    #       accessKeyId:
+    #         name: my-s3-creds
+    #         key: ACCESS_KEY_ID
+    #       secretAccessKey:
+    #         name: my-s3-creds
+    #         key: SECRET_ACCESS_KEY
+    #
+    # NOTE:
+    # - The CNPG Cluster `spec.backup` schema does not support `enabled` or `ttl` keys.
+    #   If you add them, this chart will ignore them to avoid CRD warnings.
+    # - This chart only hard-validates required fields for supported methods; unknown `method` values
+    #   are passed through for CNPG to validate.
+    backup: {}
+
+    # Optional CNPG plugin configuration (rendered as `.spec.plugins` on the Cluster CR)
+    # Example (barman-cloud plugin as WAL archiver):
+    # plugins:
+    #   - name: barman-cloud.cloudnative-pg.io
+    #     isWALArchiver: true
+    #     parameters:
+    #       barmanObjectName: minio-backups
+    #
+    # Example (complete setup: WAL archiving via barman-cloud plugin + snapshot backups):
+    # plugins:
+    #   - name: barman-cloud.cloudnative-pg.io
+    #     isWALArchiver: true
+    #     parameters:
+    #       barmanObjectName: minio-backups  # references an ObjectStore CR
+    # backup:
+    #   method: volumeSnapshot
+    #   volumeSnapshot:
+    #     className: longhorn
+    plugins: []
     # auth config for application user
     appUser: sure
     appDatabase: sure

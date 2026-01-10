@@ -191,3 +191,7 @@ docker volume rm sure_postgres-data # this is the name of the volume the DB is m
 docker compose up
 docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```
+
+### Slow `.csv` import (processing rows taking longer than expected)
+
+Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.

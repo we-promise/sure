@@ -19,3 +19,14 @@ jakob_google:
     first_name: Jakob
     last_name: Dylan
   last_authenticated_at: <%= 2.days.ago %>
+
+sso_only_identity:
+  user: sso_only
+  provider: openid_connect
+  uid: sso-only-uid-12345
+  info:
+    email: sso-user@example.com
+    name: SSO User
+    first_name: SSO
+    last_name: User
+  last_authenticated_at: <%= 1.day.ago %>

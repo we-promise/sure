@@ -40,6 +40,20 @@ class Rule < ApplicationRecord
     matching_resources_scope.count
   end
 
+  # Calculates total unique resources affected across multiple rules
+  # This handles overlapping rules by deduplicating transaction IDs
+  def self.total_affected_resource_count(rules)
+    return 0 if rules.empty?
+
+    # Collect all unique transaction IDs matched by any rule
+    transaction_ids = Set.new
+    rules.each do |rule|
+      transaction_ids.merge(rule.send(:matching_resources_scope).pluck(:id))
+    end
+
+    transaction_ids.size
+  end
+
   def apply(ignore_attribute_locks: false, rule_run: nil)
     total_modified = 0
     total_async_jobs = 0

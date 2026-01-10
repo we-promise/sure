@@ -1,27 +1,27 @@
-<div class="subtype-select" data-type="<%= account_type %>" style="display: none;">
+<%# Use centralized @inferred_map for subtype pre-selection %>
+<% inferred = @inferred_map&.dig(simplefin_account.id) || {} %>
+<% selected_value = "" %>
+<% if inferred[:confidence] == :high && inferred[:type] == account_type && inferred[:subtype].present? %>
+  <% selected_value = inferred[:subtype] %>
+<% end %>
+<% needs_attention = subtype_config[:options].present? && selected_value.blank? %>
+
+<div class="subtype-select" data-type="<%= account_type %>" data-needs-attention="<%= needs_attention %>" style="display: none;">
   <% if subtype_config[:options].present? %>
-    <%= label_tag "account_subtypes[#{simplefin_account.id}]", subtype_config[:label],
-                 class: "block text-sm font-medium text-primary mb-2" %>
-    <% selected_value = "" %>
-    <% if account_type == "Depository" %>
-      <% n = simplefin_account.name.to_s.downcase %>
-      <% selected_value = "" %>
-      <% if n =~ /\bchecking\b|\bchequing\b|\bck\b|demand\s+deposit/ %>
-        <% selected_value = "checking" %>
-      <% elsif n =~ /\bsavings\b|\bsv\b/ %>
-        <% selected_value = "savings" %>
-      <% elsif n =~ /money\s+market|\bmm\b/ %>
-        <% selected_value = "money_market" %>
+    <div class="<%= "ring-2 ring-warning/50 rounded-md p-2 -m-2" if needs_attention %>">
+      <% if needs_attention %>
+        <div class="flex items-center gap-1 text-warning text-xs mb-2">
+          <%= icon "alert-circle", size: "xs" %>
+          <span>Please select a <%= account_type == "Depository" ? "subtype" : "type" %></span>
+        </div>
       <% end %>
-    <% elsif account_type == "Investment" %>
-      <% inferred = @inferred_map&.dig(simplefin_account.id) || {} %>
-      <% if inferred[:confidence] == :high && inferred[:type] == "Investment" && inferred[:subtype].present? %>
-        <% selected_value = inferred[:subtype] %>
-      <% end %>
-    <% end %>
-    <%= select_tag "account_subtypes[#{simplefin_account.id}]",
-                  options_for_select([["Select #{account_type == 'Depository' ? 'subtype' : 'type'}", ""]] + subtype_config[:options], selected_value),
-                  { class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" } %>
+      <%= label_tag "account_subtypes[#{simplefin_account.id}]", subtype_config[:label],
+                   class: "block text-sm font-medium text-primary mb-2" %>
+      <%= select_tag "account_subtypes[#{simplefin_account.id}]",
+                    options_for_select([["Select #{account_type == 'Depository' ? 'subtype' : 'type'}", ""]] + subtype_config[:options], selected_value),
+                    { class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full",
+                      data: { action: "change->account-type-selector#clearWarning" } } %>
+    </div>
   <% else %>
     <p class="text-sm text-secondary"><%= subtype_config[:message] %></p>
   <% end %>

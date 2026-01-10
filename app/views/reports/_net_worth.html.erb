@@ -1,0 +1,73 @@
+<div class="space-y-6">
+  <%# Main Net Worth Stats %>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <%# Current Net Worth %>
+    <div class="p-4 bg-surface-inset rounded-lg">
+      <p class="text-xs text-tertiary mb-1"><%= t("reports.net_worth.current_net_worth") %></p>
+      <p class="text-xl font-semibold <%= net_worth_metrics[:current_net_worth] >= 0 ? "text-success" : "text-destructive" %>">
+        <%= net_worth_metrics[:current_net_worth].format %>
+      </p>
+    </div>
+
+    <%# Period Change %>
+    <div class="p-4 bg-surface-inset rounded-lg">
+      <p class="text-xs text-tertiary mb-1"><%= t("reports.net_worth.period_change") %></p>
+      <% if net_worth_metrics[:trend] %>
+        <% trend = net_worth_metrics[:trend] %>
+        <p class="text-xl font-semibold" style="color: <%= trend.color %>">
+          <%= trend.value.format(signify_positive: true) %>
+        </p>
+        <p class="text-xs" style="color: <%= trend.color %>">
+          <%= trend.value >= 0 ? "+" : "" %><%= trend.percent_formatted %>
+        </p>
+      <% else %>
+        <p class="text-xl font-semibold text-tertiary">--</p>
+      <% end %>
+    </div>
+
+    <%# Assets vs Liabilities %>
+    <div class="p-4 bg-surface-inset rounded-lg">
+      <p class="text-xs text-tertiary mb-1"><%= t("reports.net_worth.assets_vs_liabilities") %></p>
+      <div class="flex items-baseline gap-2">
+        <span class="text-lg font-semibold text-success"><%= net_worth_metrics[:total_assets].format %></span>
+        <span class="text-xs text-tertiary">-</span>
+        <span class="text-lg font-semibold text-destructive"><%= net_worth_metrics[:total_liabilities].format %></span>
+      </div>
+    </div>
+  </div>
+
+  <%# Asset/Liability Breakdown %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <%# Assets Summary %>
+    <div>
+      <h3 class="text-sm font-medium text-secondary mb-3"><%= t("reports.net_worth.total_assets") %></h3>
+      <div class="space-y-2">
+        <% net_worth_metrics[:asset_groups].each do |group| %>
+          <div class="flex items-center justify-between py-2 border-b border-tertiary/50">
+            <span class="text-sm text-primary"><%= group[:name] %></span>
+            <span class="text-sm font-medium text-success"><%= group[:total].format %></span>
+          </div>
+        <% end %>
+        <% if net_worth_metrics[:asset_groups].empty? %>
+          <p class="text-sm text-tertiary py-2"><%= t("reports.net_worth.no_assets") %></p>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Liabilities Summary %>
+    <div>
+      <h3 class="text-sm font-medium text-secondary mb-3"><%= t("reports.net_worth.total_liabilities") %></h3>
+      <div class="space-y-2">
+        <% net_worth_metrics[:liability_groups].each do |group| %>
+          <div class="flex items-center justify-between py-2 border-b border-tertiary/50">
+            <span class="text-sm text-primary"><%= group[:name] %></span>
+            <span class="text-sm font-medium text-destructive"><%= group[:total].format %></span>
+          </div>
+        <% end %>
+        <% if net_worth_metrics[:liability_groups].empty? %>
+          <p class="text-sm text-tertiary py-2"><%= t("reports.net_worth.no_liabilities") %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

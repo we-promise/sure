@@ -4,9 +4,19 @@ class Trade < ApplicationRecord
   monetize :price
 
   belongs_to :security
+  belongs_to :category, optional: true
 
   validates :qty, presence: true
   validates :price, :currency, presence: true
+
+  # Trade types for categorization
+  def buy?
+    qty.positive?
+  end
+
+  def sell?
+    qty.negative?
+  end
 
   class << self
     def build_name(type, qty, ticker)

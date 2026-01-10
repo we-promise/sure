@@ -1,6 +1,6 @@
 <div>
   <%# Export Controls %>
-  <div class="flex items-center justify-end mb-4 flex-wrap gap-3">
+  <div class="reports-print-hide flex items-center justify-end mb-4 flex-wrap gap-3">
     <%
       # Build params hash for links
       base_params = {
@@ -85,7 +85,7 @@
                       <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: <%= group[:category_color] %>"></span>
                         <span class="font-medium text-primary"><%= group[:category_name] %></span>
-                        <span class="text-xs text-tertiary whitespace-nowrap">(<%= group[:count] %> <%= t("reports.transactions_breakdown.table.transactions") %>)</span>
+                        <span class="text-xs text-tertiary whitespace-nowrap">(<%= t("reports.transactions_breakdown.table.entries", count: group[:count]) %>)</span>
                       </div>
                     </td>
                     <td class="py-3 px-4 text-right">
@@ -139,7 +139,7 @@
                       <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: <%= group[:category_color] %>"></span>
                         <span class="font-medium text-primary"><%= group[:category_name] %></span>
-                        <span class="text-xs text-tertiary whitespace-nowrap">(<%= group[:count] %> <%= t("reports.transactions_breakdown.table.transactions") %>)</span>
+                        <span class="text-xs text-tertiary whitespace-nowrap">(<%= t("reports.transactions_breakdown.table.entries", count: group[:count]) %>)</span>
                       </div>
                     </td>
                     <td class="py-3 px-4 text-right">

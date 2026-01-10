@@ -42,4 +42,27 @@ export default class extends Controller {
       }
     }
   }
+
+  clearWarning(event) {
+    // When user selects a subtype value, clear all warning styling
+    const select = event.target
+    if (select.value) {
+      // Clear the subtype dropdown warning
+      const warningContainer = select.closest('.ring-2')
+      if (warningContainer) {
+        warningContainer.classList.remove('ring-2', 'ring-warning/50', 'rounded-md', 'p-2', '-m-2')
+        const warningText = warningContainer.querySelector('.text-warning')
+        if (warningText) {
+          warningText.remove()
+        }
+      }
+
+      // Clear the parent card's warning border
+      const card = this.element.closest('.border-2.border-warning')
+      if (card) {
+        card.classList.remove('border-2', 'border-warning', 'bg-warning/5')
+        card.classList.add('border', 'border-primary')
+      }
+    }
+  }
 }

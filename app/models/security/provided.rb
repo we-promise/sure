@@ -68,7 +68,7 @@ module Security::Provided
       return
     end
 
-    if self.name.present? && self.logo_url.present? && !clear_cache
+    if self.name.present? && (self.logo_url.present? || self.website_url.present?) && !clear_cache
       return
     end
 
@@ -81,6 +81,7 @@ module Security::Provided
       update(
         name: response.data.name,
         logo_url: response.data.logo_url,
+        website_url: response.data.links
       )
     else
       Rails.logger.warn("Failed to fetch security info for #{ticker} from #{provider.class.name}: #{response.error.message}")

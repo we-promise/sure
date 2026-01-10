@@ -69,8 +69,8 @@ en:
       add_transaction: Add Transaction
       add_account: Add Account
     transactions_breakdown:
-      title: Transactions Breakdown
-      no_transactions: No transactions found for the selected period and filters
+      title: Activity Breakdown
+      no_transactions: No activity found for the selected period and filters
       filters:
         title: Filters
         category: Category
@@ -102,12 +102,37 @@ en:
         expense: Expenses
         income: Income
         uncategorized: Uncategorized
-        transactions: transactions
+        entries:
+          one: entry
+          other: entries
         percentage: "% of Total"
       pagination:
-        showing: Showing %{count} transactions
+        showing:
+          one: Showing %{count} entry
+          other: Showing %{count} entries
         previous: Previous
         next: Next
+    net_worth:
+      title: Net Worth
+      current_net_worth: Current Net Worth
+      period_change: Period Change
+      assets_vs_liabilities: Assets vs Liabilities
+      total_assets: Assets
+      total_liabilities: Liabilities
+      no_assets: No assets
+      no_liabilities: No liabilities
+    investment_performance:
+      title: Investment Performance
+      portfolio_value: Portfolio Value
+      total_return: Total Return
+      contributions: Period Contributions
+      withdrawals: Period Withdrawals
+      top_holdings: Top Holdings
+      holding: Holding
+      weight: Weight
+      value: Value
+      return: Return
+      accounts: Investment Accounts
     google_sheets_instructions:
       title_with_key: "✅ Copy URL for Google Sheets"
       title_no_key: "⚠️ API Key Required"
