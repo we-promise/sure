@@ -21,7 +21,7 @@
                     <p class="text-sm font-medium text-primary"><%= potential_match.name %></p>
                     <p class="text-xs text-secondary"><%= potential_match.date.strftime("%b %d, %Y") %> • <%= potential_match.account.name %></p>
                   </div>
-                  <p class="text-sm font-medium <%= potential_match.amount.negative? ? 'text-green-600' : 'text-primary' %>">
+                  <p class="text-sm font-medium <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
                     <%= format_money(-potential_match.amount_money) %>
                   </p>
                 </div>

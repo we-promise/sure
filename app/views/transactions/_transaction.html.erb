@@ -80,7 +80,7 @@
 
                     <%# Pending indicator %>
                     <% if transaction.pending? %>
-                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t('transactions.transaction.pending_tooltip') %>">
+                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
                         <%= icon "clock", size: "sm", color: "current" %>
                         <%= t("transactions.transaction.pending") %>
                       </span>
@@ -89,12 +89,12 @@
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>
-                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t('transactions.transaction.review_recommended_tooltip') %>">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t("transactions.transaction.review_recommended_tooltip") %>">
                           <%= icon "help-circle", size: "sm", color: "current" %>
                           <%= t("transactions.transaction.review_recommended") %>
                         </span>
                       <% else %>
-                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-warning bg-warning/10 text-warning" title="<%= t('transactions.transaction.potential_duplicate_tooltip') %>">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-warning bg-warning/10 text-warning" title="<%= t("transactions.transaction.potential_duplicate_tooltip") %>">
                           <%= icon "alert-triangle", size: "sm", color: "current" %>
                           <%= t("transactions.transaction.possible_duplicate") %>
                         </span>
