@@ -160,7 +160,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert db_prices.all? { |p| p.provisional == false }, "All prices from provider should not be provisional"
   end
 
-  test "marks gap-filled weekend prices as not provisional" do
+  test "marks gap-filled weekend prices as provisional" do
     Security::Price.delete_all
 
     # Find a recent Saturday
@@ -186,7 +186,9 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     ).import_provider_prices
 
     saturday_price = Security::Price.find_by(security: @security, date: saturday)
-    assert_not saturday_price.provisional, "Weekend gap-filled price should not be provisional"
+    # Weekend gap-filled prices are now provisional so they can be fixed
+    # via cascade when the next weekday sync fetches the correct Friday price
+    assert saturday_price.provisional, "Weekend gap-filled price should be provisional"
   end
 
   test "marks gap-filled recent weekday prices as provisional" do

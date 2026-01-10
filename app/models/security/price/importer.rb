@@ -2,7 +2,7 @@ class Security::Price::Importer
   MissingSecurityPriceError = Class.new(StandardError)
   MissingStartPriceError    = Class.new(StandardError)
 
-  PROVISIONAL_LOOKBACK_DAYS = 3
+  PROVISIONAL_LOOKBACK_DAYS = 7
 
   def initialize(security:, security_provider:, start_date:, end_date:, clear_cache: false)
     @security          = security
@@ -187,12 +187,12 @@ class Security::Price::Importer
       # Provider returned real price => NOT provisional
       return false if has_provider_price
 
-      # Gap-filled (LOCF) => provisional if recent weekday
-      # Weekends stay non-provisional since markets are closed anyway
+      # Gap-filled (LOCF) => provisional if recent (including weekends)
+      # Weekend prices inherit uncertainty from Friday and get fixed via cascade
+      # when the next weekday sync fetches correct Friday price
       if used_locf
-        is_weekday = !date.saturday? && !date.sunday?
         is_recent = date >= PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date
-        return is_weekday && is_recent
+        return is_recent
       end
 
       # Otherwise preserve existing status

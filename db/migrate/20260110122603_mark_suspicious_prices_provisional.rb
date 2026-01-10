@@ -8,8 +8,7 @@ class MarkSuspiciousPricesProvisional < ActiveRecord::Migration[7.2]
 
     Security::Price
       .where(provisional: false)
-      .where(date: 3.days.ago.to_date..Date.current)
-      .where("EXTRACT(DOW FROM date) NOT IN (0, 6)") # Weekdays only
+      .where(date: 7.days.ago.to_date..Date.current)
       .find_each do |price|
         # Get surrounding prices for comparison (previous 5 days, up to 3 prices)
         surrounding = Security::Price
