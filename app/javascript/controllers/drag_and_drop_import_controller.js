@@ -29,7 +29,7 @@ export default class extends Controller {
     event.preventDefault()
     this.dragDepth++
     if (this.dragDepth === 1) {
-      this.showOverlay()
+      this.overlayTarget.classList.remove("hidden")
     }
   }
 
@@ -42,14 +42,14 @@ export default class extends Controller {
     this.dragDepth--
     if (this.dragDepth <= 0) {
       this.dragDepth = 0
-      this.hideOverlay()
+      this.overlayTarget.classList.add("hidden")
     }
   }
 
   drop(event) {
     event.preventDefault()
     this.dragDepth = 0
-    this.hideOverlay()
+    this.overlayTarget.classList.add("hidden")
 
     if (event.dataTransfer.files.length > 0) {
       const file = event.dataTransfer.files[0]
@@ -61,15 +61,5 @@ export default class extends Controller {
         alert("Please upload a valid CSV file.")
       }
     }
-  }
-
-  showOverlay() {
-    this.overlayTarget.classList.remove("hidden")
-    this.overlayTarget.classList.add("flex")
-  }
-
-  hideOverlay() {
-    this.overlayTarget.classList.add("hidden")
-    this.overlayTarget.classList.remove("flex")
   }
 }
