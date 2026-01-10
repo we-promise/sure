@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction.dart';
-import '../models/account.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
@@ -30,10 +29,12 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     final authProvider = context.read<AuthProvider>();
     final transactionsProvider = context.read<TransactionsProvider>();
 
-    if (authProvider.accessToken != null) {
+    final accessToken = await authProvider.getValidAccessToken();
+
+    if (accessToken != null) {
       // Load transactions for all accounts
       await transactionsProvider.fetchTransactions(
-        accessToken: authProvider.accessToken!,
+        accessToken: accessToken,
         forceSync: false,
       );
     }
@@ -43,9 +44,11 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     final authProvider = context.read<AuthProvider>();
     final transactionsProvider = context.read<TransactionsProvider>();
 
-    if (authProvider.accessToken != null) {
+    final accessToken = await authProvider.getValidAccessToken();
+
+    if (accessToken != null) {
       await transactionsProvider.fetchTransactions(
-        accessToken: authProvider.accessToken!,
+        accessToken: accessToken,
         forceSync: true,
       );
     }
@@ -199,8 +202,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isExpense
-              ? Colors.red.withOpacity(0.1)
-              : Colors.green.withOpacity(0.1),
+              ? Colors.red.withValues(alpha: 0.1)
+              : Colors.green.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(

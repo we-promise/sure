@@ -32,9 +32,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final accountsProvider = context.read<AccountsProvider>();
     final authProvider = context.read<AuthProvider>();
 
-    if (accountsProvider.accounts.isEmpty && authProvider.accessToken != null) {
+    final accessToken = await authProvider.getValidAccessToken();
+
+    if (accountsProvider.accounts.isEmpty && accessToken != null) {
       await accountsProvider.fetchAccounts(
-        accessToken: authProvider.accessToken!,
+        accessToken: accessToken,
         forceSync: false,
       );
     }
@@ -57,9 +59,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final authProvider = context.read<AuthProvider>();
     final transactionsProvider = context.read<TransactionsProvider>();
 
-    if (authProvider.accessToken != null) {
+    final accessToken = await authProvider.getValidAccessToken();
+
+    if (accessToken != null) {
       await transactionsProvider.fetchTransactions(
-        accessToken: authProvider.accessToken!,
+        accessToken: accessToken,
         accountId: _selectedAccount!.id,
         forceSync: false,
       );
@@ -317,10 +321,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (hasChange) {
       if (change > 0) {
-        backgroundColor = Colors.green.withOpacity(0.2);
+        backgroundColor = Colors.green.withValues(alpha: 0.2);
         textColor = Colors.green.shade700;
       } else if (change < 0) {
-        backgroundColor = Colors.red.withOpacity(0.2);
+        backgroundColor = Colors.red.withValues(alpha: 0.2);
         textColor = Colors.red.shade700;
       }
     }
