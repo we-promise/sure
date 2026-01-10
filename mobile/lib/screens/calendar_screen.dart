@@ -171,7 +171,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('帳戶日曆'),
+        title: const Text('Account Calendar'),
       ),
       body: Column(
         children: [
@@ -190,7 +190,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: DropdownButtonFormField<Account>(
               value: _selectedAccount,
               decoration: InputDecoration(
-                labelText: '選擇帳戶',
+                labelText: 'Select Account',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -262,7 +262,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '本月盈虧',
+                  'Monthly Change',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
@@ -304,7 +304,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             SizedBox(
               height: 40,
               child: Row(
-                children: ['日', '一', '二', '三', '四', '五', '六'].map((day) {
+                children: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) {
                   return Expanded(
                     child: Center(
                       child: Text(
@@ -394,16 +394,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             if (hasChange) ...[
               const SizedBox(height: 2),
-              Text(
-                _formatAmount(change),
-                style: TextStyle(
-                  fontSize: 10,
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _formatAmount(change),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],
@@ -421,7 +424,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   String _formatCurrency(double amount) {
     final currencySymbol = _selectedAccount?.currency ?? '';
-    final formatter = NumberFormat('#,##0.00');
+    // Support up to 8 decimal places for monthly total
+    final formatter = NumberFormat('#,##0.########');
     final sign = amount >= 0 ? '+' : '';
     return '$sign$currencySymbol${formatter.format(amount.abs())}';
   }

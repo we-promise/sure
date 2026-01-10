@@ -11,15 +11,15 @@ class MoreScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('更多功能'),
+        title: const Text('More'),
       ),
       body: ListView(
         children: [
           _buildMenuItem(
             context: context,
             icon: Icons.calendar_month,
-            title: '帳戶日曆',
-            subtitle: '查看指定帳戶每月金額變化',
+            title: 'Account Calendar',
+            subtitle: 'View monthly balance changes by account',
             onTap: () {
               Navigator.push(
                 context,
@@ -33,8 +33,8 @@ class MoreScreen extends StatelessWidget {
           _buildMenuItem(
             context: context,
             icon: Icons.receipt_long,
-            title: '近期交易',
-            subtitle: '查看所有帳戶的近期交易記錄',
+            title: 'Recent Transactions',
+            subtitle: 'View recent transactions across all accounts',
             onTap: () {
               Navigator.push(
                 context,

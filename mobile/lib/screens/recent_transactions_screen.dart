@@ -91,12 +91,12 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('近期交易'),
+        title: const Text('Recent Transactions'),
         actions: [
           PopupMenuButton<int>(
             initialValue: _transactionLimit,
             icon: const Icon(Icons.filter_list),
-            tooltip: '顯示筆數',
+            tooltip: 'Display Limit',
             onSelected: (int value) {
               setState(() {
                 _transactionLimit = value;
@@ -112,7 +112,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
                     else
                       const SizedBox(width: 20),
                     const SizedBox(width: 8),
-                    Text('顯示 $limit 筆'),
+                    Text('Show $limit'),
                   ],
                 ),
               );
@@ -158,12 +158,12 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              '暫無交易記錄',
+              'No Transactions',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              '下拉以重新整理',
+              'Pull to refresh',
               style: TextStyle(color: colorScheme.onSurfaceVariant),
             ),
           ],
@@ -194,8 +194,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       amount = -amount;
     }
 
-    // For asset accounts, flip the sign to match accounting conventions
-    if (account?.isAsset == true) {
+    // For asset accounts and liability accounts, flip the sign to match accounting conventions
+    if (account?.isAsset == true || account?.isLiability == true) {
       amount = -amount;
     }
 
