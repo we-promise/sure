@@ -96,19 +96,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final date = DateTime.parse(transaction.date);
         final dateKey = DateFormat('yyyy-MM-dd').format(date);
 
-        // Parse amount as absolute value first
-        final cleanedAmount = transaction.amount.replaceAll(RegExp(r'[^\d.-]'), '');
-        double amount = double.tryParse(cleanedAmount) ?? 0.0;
+        // Parse amount with proper sign handling
+        String trimmedAmount = transaction.amount.trim();
+        trimmedAmount = trimmedAmount.replaceAll('\u2212', '-'); // Normalize minus sign
 
-        _log.debug('CalendarScreen', 'Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, cleaned: $cleanedAmount, parsed: $amount, nature: ${transaction.nature}');
+        // Detect if the amount has a negative sign
+        bool hasNegativeSign = trimmedAmount.startsWith('-') || trimmedAmount.endsWith('-');
 
-        // For expenses, make the amount negative
-        // For income, keep it positive
-        if (transaction.nature == 'expense') {
-          amount = -amount.abs();
-        } else {
-          amount = amount.abs();
+        // Remove all non-numeric characters except decimal point and minus sign
+        String numericString = trimmedAmount.replaceAll(RegExp(r'[^\d.\-]'), '');
+
+        // Parse the numeric value
+        double amount = double.tryParse(numericString.replaceAll('-', '')) ?? 0.0;
+
+        // Apply the sign from the string
+        if (hasNegativeSign) {
+          amount = -amount;
         }
+
+        // For asset accounts, flip the sign to match accounting conventions
+        if (_selectedAccount?.isAsset == true) {
+          amount = -amount;
+        }
+
+        _log.debug('CalendarScreen', 'Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, parsed: $amount, isAsset: ${_selectedAccount?.isAsset}');
 
         changes[dateKey] = (changes[dateKey] ?? 0.0) + amount;
         _log.debug('CalendarScreen', 'Date $dateKey now has total: ${changes[dateKey]}');
@@ -401,7 +412,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _formatAmount(double amount) {
-    final formatter = NumberFormat('#,##0.##');
+    // Support up to 8 decimal places, but omit unnecessary trailing zeros
+    final formatter = NumberFormat('#,##0.########');
     final sign = amount >= 0 ? '+' : '';
     return '$sign${formatter.format(amount)}';
   }

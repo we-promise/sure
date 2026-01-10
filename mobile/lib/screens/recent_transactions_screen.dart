@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction.dart';
+import '../models/account.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
@@ -63,6 +64,17 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       return account.name;
     } catch (e) {
       return 'Unknown Account';
+    }
+  }
+
+  Account? _getAccount(String accountId) {
+    final accountsProvider = context.read<AccountsProvider>();
+    try {
+      return accountsProvider.accounts.firstWhere(
+        (a) => a.id == accountId,
+      );
+    } catch (e) {
+      return null;
     }
   }
 
@@ -173,20 +185,43 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
   }
 
   Widget _buildTransactionItem(Transaction transaction, ColorScheme colorScheme) {
-    final isExpense = transaction.isExpense;
-    // Parse amount, removing any non-numeric characters except dots and minus signs
-    final amount = double.tryParse(transaction.amount.replaceAll(RegExp(r'[^\d.-]'), '')) ?? 0.0;
-    final accountName = _getAccountName(transaction.accountId);
+    final account = _getAccount(transaction.accountId);
+    final accountName = account?.name ?? 'Unknown Account';
 
+    // Parse amount with proper sign handling (same logic as transactions_list_screen.dart)
+    String trimmedAmount = transaction.amount.trim();
+    trimmedAmount = trimmedAmount.replaceAll('\u2212', '-'); // Normalize minus sign
+
+    // Detect if the amount has a negative sign
+    bool hasNegativeSign = trimmedAmount.startsWith('-') || trimmedAmount.endsWith('-');
+
+    // Remove all non-numeric characters except decimal point and minus sign
+    String numericString = trimmedAmount.replaceAll(RegExp(r'[^\d.\-]'), '');
+
+    // Parse the numeric value
+    double amount = double.tryParse(numericString.replaceAll('-', '')) ?? 0.0;
+
+    // Apply the sign from the string
+    if (hasNegativeSign) {
+      amount = -amount;
+    }
+
+    // For asset accounts, flip the sign to match accounting conventions
+    if (account?.isAsset == true) {
+      amount = -amount;
+    }
+
+    // Determine display properties based on final amount
+    final isPositive = amount >= 0;
     Color amountColor;
     String sign;
 
-    if (isExpense) {
-      amountColor = Colors.red.shade700;
-      sign = '-';
-    } else {
+    if (isPositive) {
       amountColor = Colors.green.shade700;
       sign = '+';
+    } else {
+      amountColor = Colors.red.shade700;
+      sign = '-';
     }
 
     String formattedDate;
@@ -202,13 +237,13 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isExpense
-              ? Colors.red.withValues(alpha: 0.1)
-              : Colors.green.withValues(alpha: 0.1),
+          color: isPositive
+              ? Colors.green.withValues(alpha: 0.1)
+              : Colors.red.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
-          isExpense ? Icons.arrow_downward : Icons.arrow_upward,
+          isPositive ? Icons.arrow_upward : Icons.arrow_downward,
           color: amountColor,
         ),
       ),
@@ -251,7 +286,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
         ],
       ),
       trailing: Text(
-        '$sign${transaction.currency} ${_formatAmount(amount)}',
+        '$sign${transaction.currency} ${_formatAmount(amount.abs())}',
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 16,
@@ -262,7 +297,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
   }
 
   String _formatAmount(double amount) {
-    final formatter = NumberFormat('#,##0.00');
+    // Support up to 8 decimal places, but omit unnecessary trailing zeros
+    final formatter = NumberFormat('#,##0.########');
     return formatter.format(amount);
   }
 }
