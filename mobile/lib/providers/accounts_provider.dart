@@ -5,10 +5,12 @@ import '../models/account.dart';
 import '../services/accounts_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/log_service.dart';
 
 class AccountsProvider with ChangeNotifier {
   final AccountsService _accountsService = AccountsService();
   final OfflineStorageService _offlineStorage = OfflineStorageService();
+  final LogService _log = LogService.instance;
 
   List<Account> _accounts = [];
   bool _isLoading = false;
@@ -129,23 +131,30 @@ class AccountsProvider with ChangeNotifier {
       notifyListeners();
       return _accounts.isNotEmpty;
     } catch (e) {
+      _log.error('AccountsProvider', 'Error in fetchAccounts: $e');
       // If we have cached accounts, show them even if sync fails
       if (_accounts.isEmpty) {
         // Provide more specific error messages based on exception type
         if (e is SocketException) {
           _errorMessage = 'Network error. Please check your internet connection and try again.';
+          _log.error('AccountsProvider', 'SocketException: $e');
         } else if (e is TimeoutException) {
           _errorMessage = 'Request timed out. Please check your connection and try again.';
+          _log.error('AccountsProvider', 'TimeoutException: $e');
         } else if (e is FormatException) {
           _errorMessage = 'Server response error. Please try again later.';
+          _log.error('AccountsProvider', 'FormatException: $e');
         } else if (e.toString().contains('401') || e.toString().contains('unauthorized')) {
           _errorMessage = 'unauthorized';
-        } else if (e.toString().contains('HandshakeException') || 
+          _log.error('AccountsProvider', 'Unauthorized error: $e');
+        } else if (e.toString().contains('HandshakeException') ||
                    e.toString().contains('certificate') ||
                    e.toString().contains('SSL')) {
           _errorMessage = 'Secure connection error. Please check your internet connection and try again.';
+          _log.error('AccountsProvider', 'SSL/Certificate error: $e');
         } else {
           _errorMessage = 'Something went wrong. Please try again.';
+          _log.error('AccountsProvider', 'Unhandled exception: $e');
         }
       }
       _isLoading = false;

@@ -1,9 +1,10 @@
 import 'transaction.dart';
 
 enum SyncStatus {
-  synced,    // Transaction is synced with server
-  pending,   // Transaction is waiting to be synced
-  failed,    // Last sync attempt failed
+  synced,         // Transaction is synced with server
+  pending,        // Transaction is waiting to be synced (create)
+  failed,         // Last sync attempt failed
+  pendingDelete,  // Transaction is waiting to be deleted on server
 }
 
 class OfflineTransaction extends Transaction {
@@ -136,6 +137,8 @@ class OfflineTransaction extends Transaction {
         return SyncStatus.pending;
       case 'failed':
         return SyncStatus.failed;
+      case 'pending_delete':
+        return SyncStatus.pendingDelete;
       default:
         return SyncStatus.pending;
     }
@@ -149,6 +152,8 @@ class OfflineTransaction extends Transaction {
         return 'pending';
       case SyncStatus.failed:
         return 'failed';
+      case SyncStatus.pendingDelete:
+        return 'pending_delete';
     }
   }
 }

@@ -32,9 +32,9 @@ class TransactionsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasPendingTransactions =>
-      _transactions.any((t) => t.syncStatus == SyncStatus.pending);
+      _transactions.any((t) => t.syncStatus == SyncStatus.pending || t.syncStatus == SyncStatus.pendingDelete);
   int get pendingCount =>
-      _transactions.where((t) => t.syncStatus == SyncStatus.pending).length;
+      _transactions.where((t) => t.syncStatus == SyncStatus.pending || t.syncStatus == SyncStatus.pendingDelete).length;
 
   SyncService get syncService => _syncService;
 
@@ -250,9 +250,13 @@ class TransactionsProvider with ChangeNotifier {
           return false;
         }
       } else {
-        // Offline - just delete locally
-        await _offlineStorage.deleteTransactionByServerId(transactionId);
-        _transactions.removeWhere((t) => t.id == transactionId);
+        // Offline - mark for deletion and sync later
+        _log.info('TransactionsProvider', 'Offline: Marking transaction for deletion');
+        await _offlineStorage.markTransactionForDeletion(transactionId);
+
+        // Reload from storage to update UI with pending delete status
+        final updatedTransactions = await _offlineStorage.getTransactions();
+        _transactions = updatedTransactions;
         notifyListeners();
         return true;
       }
@@ -292,16 +296,50 @@ class TransactionsProvider with ChangeNotifier {
           return false;
         }
       } else {
-        // Offline - just delete locally
+        // Offline - mark all for deletion and sync later
+        _log.info('TransactionsProvider', 'Offline: Marking ${transactionIds.length} transactions for deletion');
         for (final id in transactionIds) {
-          await _offlineStorage.deleteTransactionByServerId(id);
+          await _offlineStorage.markTransactionForDeletion(id);
         }
-        _transactions.removeWhere((t) => transactionIds.contains(t.id));
+
+        // Reload from storage to update UI with pending delete status
+        final updatedTransactions = await _offlineStorage.getTransactions();
+        _transactions = updatedTransactions;
         notifyListeners();
         return true;
       }
     } catch (e) {
       _log.error('TransactionsProvider', 'Failed to delete multiple transactions: $e');
+      _error = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Undo a pending transaction (either pending create or pending delete)
+  Future<bool> undoPendingTransaction({
+    required String localId,
+    required SyncStatus syncStatus,
+  }) async {
+    _log.info('TransactionsProvider', 'Undoing transaction $localId with status $syncStatus');
+
+    try {
+      final success = await _offlineStorage.undoPendingTransaction(localId, syncStatus);
+
+      if (success) {
+        // Reload from storage to update UI
+        final updatedTransactions = await _offlineStorage.getTransactions();
+        _transactions = updatedTransactions;
+        _error = null;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to undo transaction';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _log.error('TransactionsProvider', 'Failed to undo transaction: $e');
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
