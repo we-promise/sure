@@ -45,6 +45,15 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
+  def available_merchants
+    assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
+    recently_unlinked_ids = FamilyMerchantAssociation
+      .where(family: self)
+      .recently_unlinked
+      .pluck(:merchant_id)
+    Merchant.where(id: (assigned_ids + recently_unlinked_ids).uniq)
+  end
+
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end

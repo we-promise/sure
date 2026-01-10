@@ -154,7 +154,9 @@ class PagesController < ApplicationController
         percentage = total_income.zero? ? 0 : (val / total_income * 100).round(1)
         color = ct.category.color.presence || Category::COLORS.sample
 
-        idx = add_node.call("income_#{ct.category.id}", ct.category.name, val, percentage, color)
+        # Use name as fallback key for synthetic categories (no id)
+        node_key = "income_#{ct.category.id || ct.category.name}"
+        idx = add_node.call(node_key, ct.category.name, val, percentage, color)
         links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
       end
 
@@ -168,7 +170,9 @@ class PagesController < ApplicationController
         percentage = total_expense.zero? ? 0 : (val / total_expense * 100).round(1)
         color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
 
-        idx = add_node.call("expense_#{ct.category.id}", ct.category.name, val, percentage, color)
+        # Use name as fallback key for synthetic categories (no id)
+        node_key = "expense_#{ct.category.id || ct.category.name}"
+        idx = add_node.call(node_key, ct.category.name, val, percentage, color)
         links << { source: cash_flow_idx, target: idx, value: val, color: color, percentage: percentage }
       end
 
@@ -198,7 +202,8 @@ class PagesController < ApplicationController
             currency: ct.currency,
             percentage: ct.weight.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
-            icon: ct.category.lucide_icon
+            icon: ct.category.lucide_icon,
+            clickable: !ct.category.other_investments?
           }
         end
 

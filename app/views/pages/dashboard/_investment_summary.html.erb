@@ -37,7 +37,7 @@
 
         <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
           <% holdings.each_with_index do |holding, idx| %>
-            <div class="p-4 flex items-center <%= idx < holdings.size - 1 ? 'border-b border-primary' : '' %>">
+            <div class="p-4 flex items-center <%= idx < holdings.size - 1 ? "border-b border-primary" : "" %>">
               <div class="flex-1 flex items-center gap-3">
                 <% if holding.security.logo_url.present? %>
                   <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-8 h-8 rounded-full">

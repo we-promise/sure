@@ -1,0 +1,6 @@
+---
+en:
+  models:
+    category:
+      uncategorized: Uncategorized
+      other_investments: Other Investments

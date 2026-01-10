@@ -15,13 +15,14 @@ class IncomeStatement::Totals
         category_id: row["category_id"],
         classification: row["classification"],
         total: row["total"],
-        transactions_count: row["transactions_count"]
+        transactions_count: row["transactions_count"],
+        is_uncategorized_investment: row["is_uncategorized_investment"]
       )
     end
   end
 
   private
-    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count)
+    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment)
 
     def query_sql
       ActiveRecord::Base.sanitize_sql_array([
@@ -37,6 +38,7 @@ class IncomeStatement::Totals
           category_id,
           parent_category_id,
           classification,
+          is_uncategorized_investment,
           SUM(total) as total,
           SUM(entry_count) as transactions_count
         FROM (
@@ -44,7 +46,7 @@ class IncomeStatement::Totals
           UNION ALL
           #{trades_subquery_sql}
         ) combined
-        GROUP BY category_id, parent_category_id, classification;
+        GROUP BY category_id, parent_category_id, classification, is_uncategorized_investment;
       SQL
     end
 
@@ -56,7 +58,8 @@ class IncomeStatement::Totals
           c.parent_id as parent_category_id,
           CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
           ABS(SUM(ae.amount * COALESCE(er.rate, 1))) as total,
-          COUNT(ae.id) as transactions_count
+          COUNT(ae.id) as transactions_count,
+          false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
@@ -81,7 +84,8 @@ class IncomeStatement::Totals
           c.parent_id as parent_category_id,
           CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
           ABS(SUM(ae.amount * COALESCE(er.rate, 1))) as total,
-          COUNT(ae.id) as entry_count
+          COUNT(ae.id) as entry_count,
+          false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
@@ -101,14 +105,15 @@ class IncomeStatement::Totals
 
     def trades_subquery_sql
       # Get trades for the same family and date range as transactions
-      # Only include trades that have a category assigned
+      # Trades without categories appear as "Uncategorized Investments" (separate from regular uncategorized)
       <<~SQL
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
           CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
           ABS(SUM(ae.amount * COALESCE(er.rate, 1))) as total,
-          COUNT(ae.id) as entry_count
+          COUNT(ae.id) as entry_count,
+          CASE WHEN t.category_id IS NULL THEN true ELSE false END as is_uncategorized_investment
         FROM trades t
         JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Trade'
         JOIN accounts a ON a.id = ae.account_id
@@ -122,8 +127,7 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           AND ae.excluded = false
           AND ae.date BETWEEN :start_date AND :end_date
-          AND t.category_id IS NOT NULL
-        GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+        GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END, CASE WHEN t.category_id IS NULL THEN true ELSE false END
       SQL
     end
 
