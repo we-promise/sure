@@ -240,6 +240,8 @@ Notes:
 - When `redisOperator.mode=sentinel` and `redisOperator.sentinel.enabled=true`, the chart automatically configures Sidekiq to use Redis Sentinel for high availability.
 - The application receives `REDIS_SENTINEL_HOSTS` (comma-separated list of Sentinel endpoints) and `REDIS_SENTINEL_MASTER` (master group name) environment variables instead of `REDIS_URL`.
 - Sidekiq will connect to Sentinel nodes for automatic master discovery and failover support.
+- Both the Redis master and Sentinel nodes use the same password from `REDIS_PASSWORD` (via `redisOperator.auth.existingSecret`).
+- Sentinel authentication uses username "default" by default (configurable via `REDIS_SENTINEL_USERNAME`).
 - The operator master service is `<name>-redis-master.<ns>.svc.cluster.local:6379`.
 - The CR references your existing password secret via `kubernetesConfig.redisSecret { name, key }`.
 - Provider precedence for auto-wiring is: explicit `rails.extraEnv.REDIS_URL` → `redisOperator.managed` (with Sentinel if configured) → `redisSimple`.

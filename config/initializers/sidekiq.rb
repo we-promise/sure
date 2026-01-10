@@ -41,6 +41,8 @@ redis_config = if ENV["REDIS_SENTINEL_HOSTS"].present?
       url: "redis://#{ENV.fetch('REDIS_SENTINEL_MASTER', 'mymaster')}/0",
       sentinels: sentinels,
       password: ENV["REDIS_PASSWORD"],
+      sentinel_username: ENV.fetch("REDIS_SENTINEL_USERNAME", "default"),
+      sentinel_password: ENV["REDIS_PASSWORD"],
       role: :master,
       # Recommended timeouts for Sentinel
       connect_timeout: 0.2,
