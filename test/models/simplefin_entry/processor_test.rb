@@ -141,4 +141,26 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     sf = entry.transaction.extra.fetch("simplefin")
     assert_equal true, sf["pending"], "expected pending flag to be true when posted==0 and/or pending=true"
   end
+
+  test "infers pending when posted is explicitly 0 and transacted_at present (no explicit pending flag)" do
+    # Some SimpleFIN banks indicate pending by sending posted=0 + transacted_at, without pending flag
+    t_epoch = (Date.today - 1).to_time.to_i
+    tx = {
+      id: "tx_inferred_pending_1",
+      amount: "-15.00",
+      currency: "USD",
+      payee: "Gas Station",
+      description: "Fuel",
+      memo: "",
+      posted: 0,
+      transacted_at: t_epoch
+      # Note: NO pending flag set
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_inferred_pending_1", source: "simplefin")
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert_equal true, sf["pending"], "expected pending to be inferred from posted=0 + transacted_at present"
+  end
 end

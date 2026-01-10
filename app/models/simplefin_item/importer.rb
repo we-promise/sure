@@ -557,9 +557,15 @@ class SimplefinItem::Importer
     # Returns a Hash payload with keys like :accounts, or nil when an error is
     # handled internally via `handle_errors`.
     def fetch_accounts_data(start_date:, end_date: nil, pending: nil)
-      # Determine whether to include pending based on explicit arg or global config.
-      # `Rails.configuration.x.simplefin.include_pending` is ENV-backed.
-      effective_pending = pending.nil? ? Rails.configuration.x.simplefin.include_pending : pending
+      # Determine whether to include pending based on explicit arg, env var, or Setting.
+      # Priority: explicit arg > env var > Setting (allows runtime changes via UI)
+      effective_pending = if !pending.nil?
+        pending
+      elsif ENV["SIMPLEFIN_INCLUDE_PENDING"].present?
+        Rails.configuration.x.simplefin.include_pending
+      else
+        Setting.syncs_include_pending
+      end
 
       # Debug logging to track exactly what's being sent to SimpleFin API
       start_str = start_date.respond_to?(:strftime) ? start_date.strftime("%Y-%m-%d") : "none"

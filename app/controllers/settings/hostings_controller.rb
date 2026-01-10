@@ -58,6 +58,10 @@ class Settings::HostingsController < ApplicationController
       Setting.securities_provider = hosting_params[:securities_provider]
     end
 
+    if hosting_params.key?(:syncs_include_pending)
+      Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
+    end
+
     if hosting_params.key?(:openai_access_token)
       token_param = hosting_params[:openai_access_token].to_s.strip
       # Ignore blanks and redaction placeholders to prevent accidental overwrite
@@ -99,7 +103,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending)
     end
 
     def ensure_admin
