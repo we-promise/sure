@@ -1,5 +1,7 @@
 class User < ApplicationRecord
-  has_secure_password
+  # Allow nil password for SSO-only users (JIT provisioning).
+  # Custom validation ensures password is present for non-SSO registration.
+  has_secure_password validations: false
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
@@ -17,6 +19,11 @@ class User < ApplicationRecord
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
   validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
+
+  # Password is required on create unless the user is being created via SSO JIT.
+  # SSO JIT users have password_digest = nil and authenticate via OIDC only.
+  validates :password, presence: true, on: :create, unless: :skip_password_validation?
+  validates :password, length: { minimum: 8 }, allow_nil: true
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
 
@@ -103,6 +110,20 @@ class User < ApplicationRecord
   def ai_enabled?
     ai_enabled && ai_available?
   end
+
+  # SSO-only users have OIDC identities but no local password.
+  # They cannot use password reset or local login.
+  def sso_only?
+    password_digest.nil? && oidc_identities.exists?
+  end
+
+  # Check if user has a local password set (can authenticate locally)
+  def has_local_password?
+    password_digest.present?
+  end
+
+  # Attribute to skip password validation during SSO JIT provisioning
+  attr_accessor :skip_password_validation
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
@@ -234,7 +255,34 @@ class User < ApplicationRecord
     end
   end
 
+  # Transactions preferences management
+  def transactions_section_collapsed?(section_key)
+    preferences&.dig("transactions_collapsed_sections", section_key) == true
+  end
+
+  def update_transactions_preferences(prefs)
+    transaction do
+      lock!
+
+      updated_prefs = (preferences || {}).deep_dup
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          updated_prefs["transactions_#{key}"] ||= {}
+          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
+        else
+          updated_prefs["transactions_#{key}"] = value
+        end
+      end
+
+      update!(preferences: updated_prefs)
+    end
+  end
+
   private
+    def skip_password_validation?
+      skip_password_validation == true
+    end
+
     def default_dashboard_section_order
       %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end

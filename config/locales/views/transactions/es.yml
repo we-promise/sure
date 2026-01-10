@@ -80,3 +80,5 @@ es:
         equal_to: igual a
         greater_than: mayor que
         less_than: menor que
+      form:
+        toggle_selection_checkboxes: Alternar todas las casillas

@@ -427,12 +427,34 @@ namespace :evals do
     task check: :environment do
       begin
         client = Eval::Langfuse::Client.new
+
+        # Obfuscate keys for display
+        public_key = ENV["LANGFUSE_PUBLIC_KEY"]
+        secret_key = ENV["LANGFUSE_SECRET_KEY"]
+
+        obfuscate_key = lambda do |key|
+          return "null" if key.blank?
+          return "#{key[3..8]}***" if key.length <= 8
+          "#{key[0..7]}...#{key[-4..-1]}"
+        end
+
+        # Determine region
+        region = if ENV["LANGFUSE_HOST"].present?
+          "custom (#{ENV['LANGFUSE_HOST']})"
+        elsif ENV["LANGFUSE_REGION"].present?
+          ENV["LANGFUSE_REGION"]
+        else
+          "eu (default)"
+        end
+
         puts "✓ Langfuse credentials configured"
+        puts "  🔑 Public Key: #{obfuscate_key.call(public_key)}"
+        puts "  🔐 Secret Key: #{obfuscate_key.call(secret_key)}"
+        puts "  🌍 Region: #{region}"
 
         # Try to list datasets to verify connection
         response = client.list_datasets(limit: 1)
         puts "✓ Successfully connected to Langfuse"
-        puts "  Region: #{ENV['LANGFUSE_REGION'] || 'us (default)'}"
       rescue Eval::Langfuse::Client::ConfigurationError => e
         puts "✗ #{e.message}"
         exit 1

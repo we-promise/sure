@@ -9,6 +9,8 @@ class Transaction < ApplicationRecord
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
+  after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
+
   enum :kind, {
     standard: "standard", # A regular transaction, included in budget analytics
     funds_movement: "funds_movement", # Movement of funds between accounts, excluded from budget analytics
@@ -31,4 +33,22 @@ class Transaction < ApplicationRecord
 
     update!(category: category)
   end
+
+  def pending?
+    extra_data = extra.is_a?(Hash) ? extra : {}
+    ActiveModel::Type::Boolean.new.cast(extra_data.dig("simplefin", "pending")) ||
+      ActiveModel::Type::Boolean.new.cast(extra_data.dig("plaid", "pending"))
+  rescue
+    false
+  end
+
+  private
+    def clear_merchant_unlinked_association
+      return unless merchant_id.present? && merchant.is_a?(ProviderMerchant)
+
+      family = entry&.account&.family
+      return unless family
+
+      FamilyMerchantAssociation.where(family: family, merchant: merchant).delete_all
+    end
 end

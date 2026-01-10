@@ -9,6 +9,8 @@ class ApplicationController < ActionController::Base
   before_action :set_default_chat
   before_action :set_active_storage_url_options
 
+  helper_method :demo_config, :demo_host_match?, :show_demo_warning?
+
   private
     def detect_os
       user_agent = request.user_agent
@@ -34,5 +36,21 @@ class ApplicationController < ActionController::Base
         host: request.host,
         port: request.optional_port
       }
+    end
+
+    def demo_config
+      Rails.application.config_for(:demo)
+    rescue RuntimeError, Errno::ENOENT, Psych::SyntaxError
+      nil
+    end
+
+    def demo_host_match?(demo = demo_config)
+      return false unless demo.is_a?(Hash) && demo["hosts"].present?
+
+      demo["hosts"].include?(request.host)
+    end
+
+    def show_demo_warning?
+      demo_host_match?
     end
 end

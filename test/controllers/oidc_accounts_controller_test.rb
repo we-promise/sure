@@ -107,6 +107,50 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_select "strong", text: new_user_auth["email"]
   end
 
+  test "does not show create account button when JIT link-only mode" do
+    session[:pending_oidc_auth] = new_user_auth
+
+    AuthConfig.stubs(:jit_link_only?).returns(true)
+    AuthConfig.stubs(:allowed_oidc_domain?).returns(true)
+
+    get :link
+    assert_response :success
+
+    assert_select "h3", text: "Create New Account"
+    # No create account button rendered
+    assert_select "button", text: "Create Account", count: 0
+    assert_select "p", text: /New account creation via single sign-on is disabled/
+  end
+
+  test "create_user redirects when JIT link-only mode" do
+    session[:pending_oidc_auth] = new_user_auth
+
+    AuthConfig.stubs(:jit_link_only?).returns(true)
+    AuthConfig.stubs(:allowed_oidc_domain?).returns(true)
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "SSO account creation is disabled. Please contact an administrator.", flash[:alert]
+  end
+
+  test "create_user redirects when email domain not allowed" do
+    disallowed_auth = new_user_auth.merge("email" => "newuser@notallowed.com")
+    session[:pending_oidc_auth] = disallowed_auth
+
+    AuthConfig.stubs(:jit_link_only?).returns(false)
+    AuthConfig.stubs(:allowed_oidc_domain?).with(disallowed_auth["email"]).returns(false)
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "SSO account creation is disabled. Please contact an administrator.", flash[:alert]
+  end
+
   test "should create new user account via OIDC" do
     session[:pending_oidc_auth] = new_user_auth
 
@@ -146,5 +190,31 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     assert_redirected_to new_session_path
     assert_equal "No pending OIDC authentication found", flash[:alert]
+  end
+
+  # Security: JIT users should NOT have password_digest set
+  test "JIT user is created without password_digest to prevent chained auth attacks" do
+    session[:pending_oidc_auth] = new_user_auth
+
+    post :create_user
+
+    new_user = User.find_by(email: new_user_auth["email"])
+    assert_not_nil new_user, "User should be created"
+    assert_nil new_user.password_digest, "JIT user should have nil password_digest"
+    assert new_user.sso_only?, "JIT user should be SSO-only"
+  end
+
+  test "JIT user cannot authenticate with local password" do
+    session[:pending_oidc_auth] = new_user_auth
+
+    post :create_user
+
+    new_user = User.find_by(email: new_user_auth["email"])
+
+    # Attempting to authenticate should return nil (no password set)
+    assert_nil User.authenticate_by(
+      email: new_user.email,
+      password: "anypassword"
+    ), "SSO-only user should not authenticate with password"
   end
 end

@@ -58,3 +58,7 @@ pt-BR:
       description: Selecione uma conta do SimpleFIN para vincular à sua conta existente
       cancel: Cancelar
       link_account: Vincular conta
+      no_accounts_found: Nenhuma conta SimpleFIN encontrada para esta família.
+      wait_for_sync: Se você acabou de conectar ou sincronizar, tente novamente após a conclusão da sincronização.
+      check_provider_health: Verifique se sua conexão SimpleFIN está ativa em Configurações → Provedores.
+      currently_linked_to: "Atualmente vinculada a: %{account_name}"

@@ -11,13 +11,16 @@
       <%= form.select :action_type, rule.action_executors.map { |executor| [ executor.label, executor.key ] }, {}, data: { action: "rule--actions#handleActionTypeChange" } %>
     </div>
 
-    <%= tag.div class: class_names("min-w-1/2 flex items-center gap-2"),
+    <%= tag.div class: class_names("min-w-1/2 flex items-center gap-2", { "hidden": action.executor.type == "function" }),
                 data: { rule__actions_target: "actionValue" } do %>
-      <%# Initial rendering based on rule.action_executors.first from the rule form. %>
-      <%# This is currently always SetTransactionCategory from transaction_resource.rb, which is a select type. %>
+      <%# Initial rendering based on the action executor type. %>
       <%# Subsequent renders are injected by the Stimulus controller, which uses the templates from below. %>
       <span class="font-medium text-primary uppercase text-xs">to</span>
-      <%= form.select :value, action.options || [], {} %>
+      <% if action.executor.type == "select" %>
+        <%= form.select :value, action.options || [], {} %>
+      <% elsif action.executor.type == "text" %>
+        <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
+      <% end %>
     <% end %>
   </div>
 
@@ -35,7 +38,7 @@
 
   <template data-rule--actions-target="textTemplate">
     <span class="font-medium text-primary uppercase text-xs">to</span>
-    <%= form.text_field :value, placeholder: "Enter a value" %>
+    <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
   </template>
 
   <%# The function type doesn't need an input, so no template is required.%>

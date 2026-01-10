@@ -1,5 +1,103 @@
+<% content_for :head do %>
+  <style media="print">
+    /* Print-specific custom property overrides for values using --alpha() */
+    :root {
+      --print-shadow-color: rgba(11, 11, 11, 0.06);
+    }
+
+    @page {
+      margin: 0.75in;
+    }
+
+    body {
+      background: var(--color-gray-50);
+      color: var(--color-gray-900);
+      font-family: var(--font-sans);
+    }
+
+    #notification-tray,
+    #cta,
+    #chat-container,
+    turbo-frame#modal,
+    turbo-frame#drawer,
+    [data-print="hide"] {
+      display: none !important;
+    }
+
+    [data-controller="app-layout"] {
+      height: auto !important;
+      overflow: visible !important;
+      display: block !important;
+    }
+
+    [data-app-layout-target="content"] {
+      max-width: none !important;
+      max-height: none !important;
+      height: auto !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: visible !important;
+    }
+
+    body,
+    html {
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    main {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+
+    [data-app-layout-target="content"] > .hidden.lg\:flex {
+      display: none !important;
+    }
+
+    .reports-page {
+      background: transparent;
+      padding: 0 !important;
+    }
+
+    .reports-print-sheet {
+      background: var(--color-white);
+      border-radius: 16px;
+      padding: 0.75in 0.65in;
+      box-shadow: 0 10px 25px var(--print-shadow-color);
+    }
+
+    .reports-page section {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .reports-print-hide,
+    [data-reports-section-target="button"],
+    [data-reports-sortable-target="handle"] {
+      display: none !important;
+    }
+
+    [data-reports-section-target="content"] {
+      display: block !important;
+    }
+
+    section[data-section-key="transactions_breakdown"] {
+      break-before: page;
+      page-break-before: always;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
+
+    .reports-page table th,
+    .reports-page table td {
+      padding-inline: 0.5rem !important;
+    }
+  </style>
+<% end %>
+
 <% content_for :page_header do %>
-  <div class="space-y-4 mb-6">
+  <div class="space-y-4 mb-6 reports-print-hide">
     <div class="space-y-1">
       <h1 class="text-xl lg:text-3xl font-medium text-primary">
         <%= t("reports.index.title") %>
@@ -17,7 +115,7 @@
     <% end %>
 
     <%# Period Navigation Tabs %>
-    <div class="flex items-center gap-2 overflow-x-auto pb-2">
+    <div class="reports-print-hide flex items-center gap-2 overflow-x-auto pb-2">
       <%= render DS::Link.new(
         text: t("reports.index.periods.monthly"),
         variant: @period_type == :monthly ? "secondary" : "ghost",
@@ -52,7 +150,7 @@
 
     <%# Custom Date Range Picker (only shown when custom is selected) %>
     <% if @period_type == :custom %>
-      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
+      <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "reports-print-hide flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
         <%= f.hidden_field :period_type, value: :custom %>
 
         <div class="flex items-center gap-2">
@@ -84,7 +182,7 @@
   </div>
 <% end %>
 
-<div class="w-full space-y-6 pb-24">
+<div class="reports-page w-full space-y-6 pb-24 reports-print-sheet">
   <% if Current.family.transactions.any? %>
     <%# Summary Dashboard - Always visible, not collapsible %>
     <section>
@@ -113,6 +211,9 @@
           data-action="
             dragstart->reports-sortable#dragStart
             dragend->reports-sortable#dragEnd
+            touchstart->reports-sortable#touchStart
+            touchmove->reports-sortable#touchMove
+            touchend->reports-sortable#touchEnd
             keydown->reports-sortable#handleKeyDown">
           <div class="px-4 py-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -131,12 +232,7 @@
             </div>
             <button
               type="button"
-              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-1.5 -m-1 touch-none"
-              data-reports-sortable-target="handle"
-              data-action="
-                touchstart->reports-sortable#touchStart
-                touchmove->reports-sortable#touchMove
-                touchend->reports-sortable#touchEnd"
+              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
               aria-label="<%= t("reports.index.drag_to_reorder") %>">
               <%= icon("grip-vertical", size: "sm") %>
             </button>

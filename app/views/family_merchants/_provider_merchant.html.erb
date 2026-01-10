@@ -21,4 +21,21 @@
   <td class="py-3 px-4 text-sm text-secondary align-middle">
     <%= provider_merchant.source&.titleize %>
   </td>
+  <td class="py-3 px-4 text-sm text-right align-middle">
+    <%= render DS::Menu.new do |menu| %>
+      <% menu.with_item(variant: "link", text: t(".edit"), href: edit_family_merchant_path(provider_merchant), icon: "pencil", data: { turbo_frame: "modal" }) %>
+      <% menu.with_item(
+        variant: "button",
+        text: t(".remove"),
+        href: family_merchant_path(provider_merchant),
+        icon: "trash-2",
+        method: :delete,
+        confirm: CustomConfirm.new(
+          destructive: true,
+          title: t(".remove_confirm_title"),
+          body: t(".remove_confirm_body", name: provider_merchant.name),
+          btn_text: t(".remove")
+        )) %>
+    <% end %>
+  </td>
 </tr>

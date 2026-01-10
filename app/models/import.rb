@@ -2,6 +2,9 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  MAX_CSV_SIZE = 10.megabytes
+  ALLOWED_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+
   TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
@@ -36,6 +39,7 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validate :account_belongs_to_family
 
   has_many :rows, dependent: :destroy
   has_many :mappings, dependent: :destroy
@@ -110,7 +114,7 @@ class Import < ApplicationRecord
 
   def dry_run
     mappings = {
-      transactions: rows.count,
+      transactions: rows_count,
       categories: Import::CategoryMapping.for_import(self).creational.count,
       tags: Import::TagMapping.for_import(self).creational.count
     }
@@ -152,6 +156,7 @@ class Import < ApplicationRecord
     end
 
     rows.insert_all!(mapped_rows)
+    update_column(:rows_count, rows.count)
   end
 
   def sync_mappings
@@ -181,7 +186,7 @@ class Import < ApplicationRecord
   end
 
   def configured?
-    uploaded? && rows.any?
+    uploaded? && rows_count > 0
   end
 
   def cleaned?
@@ -232,7 +237,7 @@ class Import < ApplicationRecord
 
   private
     def row_count_exceeded?
-      rows.count > max_row_count
+      rows_count > max_row_count
     end
 
     def import!
@@ -244,7 +249,7 @@ class Import < ApplicationRecord
     end
 
     def default_currency
-      family.currency
+      account&.currency || family.currency
     end
 
     def parsed_csv
@@ -287,5 +292,12 @@ class Import < ApplicationRecord
 
     def set_default_number_format
       self.number_format ||= "1,234.56" # Default to US/UK format
+    end
+
+    def account_belongs_to_family
+      return if account.nil?
+      return if account.family_id == family_id
+
+      errors.add(:account, "must belong to your family")
     end
 end
