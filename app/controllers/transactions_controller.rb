@@ -142,6 +142,10 @@ class TransactionsController < ApplicationController
     end
 
     redirect_back_or_to transactions_path
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error("Failed to dismiss duplicate suggestion for transaction #{params[:id]}: #{e.message}")
+    flash[:alert] = t("transactions.dismiss_duplicate.failure")
+    redirect_back_or_to transactions_path
   end
 
   def mark_as_recurring

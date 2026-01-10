@@ -130,14 +130,18 @@ class Account::ProviderImportAdapter
         )
         if fuzzy_suggestion
           # Store suggestion on the PENDING entry for user to review
-          store_duplicate_suggestion(
-            pending_entry: fuzzy_suggestion,
-            posted_entry: entry,
-            reason: "fuzzy_amount_match",
-            posted_amount: amount,
-            confidence: "medium"
-          )
-          Rails.logger.info("Suggested potential duplicate (medium confidence): pending entry #{fuzzy_suggestion.id} (#{fuzzy_suggestion.name}, #{fuzzy_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+          begin
+            store_duplicate_suggestion(
+              pending_entry: fuzzy_suggestion,
+              posted_entry: entry,
+              reason: "fuzzy_amount_match",
+              posted_amount: amount,
+              confidence: "medium"
+            )
+            Rails.logger.info("Suggested potential duplicate (medium confidence): pending entry #{fuzzy_suggestion.id} (#{fuzzy_suggestion.name}, #{fuzzy_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+          rescue ActiveRecord::RecordInvalid => e
+            Rails.logger.warn("Failed to store duplicate suggestion for entry #{fuzzy_suggestion.id}: #{e.message}")
+          end
         else
           # PRIORITY 2: Try low-confidence match (>30% to 100% difference - big tips)
           low_confidence_suggestion = find_pending_transaction_low_confidence(
@@ -149,14 +153,18 @@ class Account::ProviderImportAdapter
             name: name
           )
           if low_confidence_suggestion
-            store_duplicate_suggestion(
-              pending_entry: low_confidence_suggestion,
-              posted_entry: entry,
-              reason: "low_confidence_match",
-              posted_amount: amount,
-              confidence: "low"
-            )
-            Rails.logger.info("Suggested potential duplicate (low confidence): pending entry #{low_confidence_suggestion.id} (#{low_confidence_suggestion.name}, #{low_confidence_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+            begin
+              store_duplicate_suggestion(
+                pending_entry: low_confidence_suggestion,
+                posted_entry: entry,
+                reason: "low_confidence_match",
+                posted_amount: amount,
+                confidence: "low"
+              )
+              Rails.logger.info("Suggested potential duplicate (low confidence): pending entry #{low_confidence_suggestion.id} (#{low_confidence_suggestion.name}, #{low_confidence_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+            rescue ActiveRecord::RecordInvalid => e
+              Rails.logger.warn("Failed to store duplicate suggestion for entry #{low_confidence_suggestion.id}: #{e.message}")
+            end
           end
         end
       end
