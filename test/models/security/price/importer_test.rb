@@ -313,6 +313,58 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_not old_price.provisional, "Old gap-filled price should not be provisional"
   end
 
+  test "provisional weekend prices get fixed via cascade from Friday" do
+    Security::Price.delete_all
+
+    # Find a recent Monday
+    monday = Date.current
+    monday += 1.day until monday.monday?
+    friday = monday - 3.days
+    saturday = monday - 2.days
+    sunday = monday - 1.day
+
+    travel_to monday do
+      # Create provisional weekend prices with WRONG values (simulating stale data)
+      Security::Price.create!(security: @security, date: saturday, price: 50, currency: "USD", provisional: true)
+      Security::Price.create!(security: @security, date: sunday, price: 50, currency: "USD", provisional: true)
+
+      # Provider returns Friday and Monday prices, but NOT weekend (markets closed)
+      provider_response = provider_success_response([
+        OpenStruct.new(security: @security, date: friday, price: 150, currency: "USD"),
+        OpenStruct.new(security: @security, date: monday, price: 155, currency: "USD")
+      ])
+
+      @provider.expects(:fetch_security_prices).returns(provider_response)
+
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: friday,
+        end_date: monday
+      ).import_provider_prices
+
+      # Friday should have real price from provider
+      friday_price = Security::Price.find_by(security: @security, date: friday)
+      assert_equal 150, friday_price.price
+      assert_not friday_price.provisional, "Friday should not be provisional (real price)"
+
+      # Saturday should be gap-filled from Friday (150), not old wrong value (50)
+      saturday_price = Security::Price.find_by(security: @security, date: saturday)
+      assert_equal 150, saturday_price.price, "Saturday should use Friday's price via cascade"
+      assert saturday_price.provisional, "Saturday should be provisional (gap-filled)"
+
+      # Sunday should be gap-filled from Saturday (150)
+      sunday_price = Security::Price.find_by(security: @security, date: sunday)
+      assert_equal 150, sunday_price.price, "Sunday should use Friday's price via cascade"
+      assert sunday_price.provisional, "Sunday should be provisional (gap-filled)"
+
+      # Monday should have real price from provider
+      monday_price = Security::Price.find_by(security: @security, date: monday)
+      assert_equal 155, monday_price.price
+      assert_not monday_price.provisional, "Monday should not be provisional (real price)"
+    end
+  end
+
   test "uses recent prices for gap-fill when effective_start_date skips old dates" do
     Security::Price.delete_all
 

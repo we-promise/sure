@@ -52,9 +52,12 @@ class Security::Price::Importer
       is_provisional = db_price&.provisional
 
       chosen_price = if clear_cache || is_provisional
-        provider_price_value || db_price_value   # overwrite when possible (or when provisional)
+        # For provisional/cache clear: only use provider price, let gap-fill handle missing
+        # This ensures stale DB values don't persist when provider has no weekend data
+        provider_price_value
       else
-        db_price_value || provider_price_value   # fill gaps
+        # For non-provisional: preserve existing DB value (user edits), fill gaps with provider
+        db_price_value || provider_price_value
       end
 
       # Gap-fill using LOCF (last observation carried forward)
