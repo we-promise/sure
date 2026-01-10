@@ -1,106 +1,108 @@
 class TraderepublicItemsController < ApplicationController
-  before_action :set_traderepublic_item, only: [ :show, :edit, :update, :destroy, :sync, :verify_pin, :complete_login, :reauthenticate ]
+  before_action :set_traderepublic_item, only: [ :edit, :update, :destroy, :sync, :verify_pin, :complete_login, :reauthenticate, :manual_sync ]
 
-  def index
-    @traderepublic_items = Current.family.traderepublic_items.active.ordered
-    render layout: "settings"
-  end
-
-  def show
-  end
-
-  def new
-    @traderepublic_item = Current.family.traderepublic_items.new
-    @accountable_type = params[:accountable_type] || "Investment"
-    @return_to = safe_return_to_path
-    render layout: false
-  end
-
-  def create
-    @traderepublic_item = Current.family.traderepublic_items.new(traderepublic_item_params)
-
-    if @traderepublic_item.save
-      # Initiate login flow
-      begin
-        result = @traderepublic_item.initiate_login!
-
-        # Redirect to PIN verification page
-        redirect_to verify_pin_traderepublic_item_path(@traderepublic_item),
-                   notice: t(".device_pin_sent", default: "Please check your phone for the verification PIN")
-      rescue TraderepublicError => e
-        Rails.logger.error "TradeRepublic login initiation failed: #{e.message}"
-        @traderepublic_item.destroy
-        redirect_to new_traderepublic_item_path, alert: t(".login_failed", default: "Login failed: #{e.message}")
+  # Manual sync: déclenche le flow PIN (initiate_login) puis popup PIN
+  def manual_sync
+    begin
+      result = @traderepublic_item.initiate_login!
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.update(
+            "modal",
+            partial: "traderepublic_items/verify_pin",
+            locals: { traderepublic_item: @traderepublic_item, manual_sync: true }
+          )
+        end
+        format.html do
+          redirect_to verify_pin_traderepublic_item_path(@traderepublic_item, manual_sync: true),
+                      notice: t(".device_pin_sent", default: "Please check your phone for the verification PIN")
+        end
       end
-    else
-      render :new, status: :unprocessable_entity, layout: false
+    rescue TraderepublicError => e
+      respond_to do |format|
+        format.turbo_stream do
+          flash.now[:alert] = t(".login_failed", default: "Manual sync failed: #{e.message}")
+          render turbo_stream: turbo_stream.replace(
+            "traderepublic-providers-panel",
+            partial: "settings/providers/traderepublic_panel"
+          )
+        end
+        format.html do
+          redirect_to traderepublic_items_path, alert: t(".login_failed", default: "Manual sync failed: #{e.message}")
+        end
+      end
     end
-  end
-
-  def verify_pin
-    unless @traderepublic_item.pending_login?
-      redirect_to traderepublic_items_path, alert: t(".no_pending_login", default: "No pending login found")
-      return
-    end
-
-    render layout: false
   end
 
   def complete_login
-    @traderepublic_item = Current.family.traderepublic_items.find(params[:id])
-    device_pin = params[:device_pin]
+      @traderepublic_item = Current.family.traderepublic_items.find(params[:id])
+      device_pin = params[:device_pin]
+      manual_sync = params[:manual_sync].to_s == 'true' || params[:manual_sync] == '1'
 
-    if device_pin.blank?
-      render json: { success: false, error: t(".pin_required", default: "PIN is required") }, status: :unprocessable_entity
-      return
-    end
+      if device_pin.blank?
+        render json: { success: false, error: t(".pin_required", default: "PIN is required") }, status: :unprocessable_entity
+        return
+      end
 
     begin
       success = @traderepublic_item.complete_login!(device_pin)
-
       if success
-        # Trigger initial sync synchronously to get accounts
-        # Skip token refresh since we just obtained fresh tokens
-        Rails.logger.info "TradeRepublic: Starting initial sync for item #{@traderepublic_item.id}"
-        sync_success = @traderepublic_item.import_latest_traderepublic_data(skip_token_refresh: true)
-        
-        if sync_success
-          # Check if this is a re-authentication (has linked accounts) or new connection
-          has_linked_accounts = @traderepublic_item.traderepublic_accounts.joins(:account_provider).exists?
-          
-          if has_linked_accounts
-            # Re-authentication: process existing accounts and redirect to settings
-            Rails.logger.info "TradeRepublic: Re-authentication detected, processing existing accounts"
-            @traderepublic_item.process_accounts
-            
-            render json: {
-              success: true,
-              redirect_url: settings_providers_path
-            }
-          else
-            # New connection: redirect to account selection
-            render json: {
-              success: true,
-              redirect_url: select_accounts_traderepublic_items_path(
-                accountable_type: params[:accountable_type] || "Investment",
-                return_to: safe_return_to_path
-              )
-            }
+        if manual_sync
+          # Manual sync: fetch only new tranwsactions since last transaction for each account
+          @traderepublic_item.traderepublic_accounts.each do |tr_account|
+            last_date = tr_account.last_transaction_date
+            provider = @traderepublic_item.traderepublic_provider
+            # fetch new transactions (depuis la dernière date + 1 jour pour éviter doublons)
+            since = last_date ? last_date + 1.day : nil
+            new_snapshot = provider.get_timeline_transactions(since: since)
+            tr_account.upsert_traderepublic_transactions_snapshot!(new_snapshot)
           end
+          @traderepublic_item.process_accounts
+          render json: {
+            success: true,
+            redirect_url: settings_providers_path
+          }
         else
-          render json: { 
-            success: false, 
-            error: t(".sync_failed", default: "Connection successful but failed to fetch accounts. Please try syncing manually.") 
-          }, status: :unprocessable_entity
+          # Trigger initial sync synchronously to get accounts
+          # Skip token refresh since we just obtained fresh tokens
+          Rails.logger.info "TradeRepublic: Starting initial sync for item \\#{@traderepublic_item.id}"
+          sync_success = @traderepublic_item.import_latest_traderepublic_data(skip_token_refresh: true)
+          if sync_success
+            # Check if this is a re-authentication (has linked accounts) or new connection
+            has_linked_accounts = @traderepublic_item.traderepublic_accounts.joins(:account_provider).exists?
+            if has_linked_accounts
+              # Re-authentication: process existing accounts and redirect to settings
+              Rails.logger.info "TradeRepublic: Re-authentication detected, processing existing accounts"
+              @traderepublic_item.process_accounts
+              render json: {
+                success: true,
+                redirect_url: settings_providers_path
+              }
+            else
+              # New connection: redirect to account selection
+              render json: {
+                success: true,
+                redirect_url: select_accounts_traderepublic_items_path(
+                  accountable_type: params[:accountable_type] || "Investment",
+                  return_to: safe_return_to_path
+                )
+              }
+            end
+          else
+            render json: { 
+              success: false, 
+              error: t(".sync_failed", default: "Connection successful but failed to fetch accounts. Please try syncing manually.") 
+            }, status: :unprocessable_entity
+          end
         end
       else
         render json: { success: false, error: t(".verification_failed", default: "PIN verification failed") }, status: :unprocessable_entity
       end
     rescue TraderepublicError => e
-      Rails.logger.error "TradeRepublic PIN verification failed: #{e.message}"
+      Rails.logger.error "TradeRepublic PIN verification failed: \\#{e.message}"
       render json: { success: false, error: e.message }, status: :unprocessable_entity
     rescue => e
-      Rails.logger.error "Unexpected error during PIN verification: #{e.class}: #{e.message}"
+      Rails.logger.error "Unexpected error during PIN verification: \\#{e.class}: \\#{e.message}"
       render json: { success: false, error: t(".unexpected_error", default: "An unexpected error occurred") }, status: :internal_server_error
     end
   end
@@ -141,14 +143,14 @@ class TraderepublicItemsController < ApplicationController
     end
 
     render layout: turbo_frame_request? ? false : "application"
-  rescue => e
-    Rails.logger.error "Error in select_accounts: #{e.class}: #{e.message}"
-    @error_message = t(".error_loading_accounts", default: "Failed to load accounts")
-    @return_path = safe_return_to_path
-    render partial: "traderepublic_items/api_error",
-           locals: { error_message: @error_message, return_path: @return_path },
-           layout: false
-  end
+    rescue => e
+      Rails.logger.error "Error in select_accounts: #{e.class}: #{e.message}"
+      @error_message = t(".error_loading_accounts", default: "Failed to load accounts")
+      @return_path = safe_return_to_path
+      render partial: "traderepublic_items/api_error",
+            locals: { error_message: @error_message, return_path: @return_path },
+            layout: false
+    end
 
   # Link selected accounts
   def link_accounts
