@@ -311,6 +311,48 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_not old_price.provisional, "Old gap-filled price should not be provisional"
   end
 
+  test "uses recent prices for gap-fill when effective_start_date skips old dates" do
+    Security::Price.delete_all
+
+    # Use travel_to to ensure we're on a weekday for consistent test behavior
+    # Find the next weekday if today is a weekend
+    test_date = Date.current
+    test_date += 1.day while test_date.saturday? || test_date.sunday?
+
+    travel_to test_date do
+      # Simulate: old price exists from first trade date (30 days ago)
+      old_date = 30.days.ago.to_date
+      Security::Price.create!(security: @security, date: old_date, price: 50, currency: "USD")
+
+      # Recent prices exist (mimics Jan 6-9 scenario) - but NOT yesterday
+      (4.days.ago.to_date..2.days.ago.to_date).each do |date|
+        Security::Price.create!(security: @security, date: date, price: 150, currency: "USD")
+      end
+
+      # Provider returns prices for recent days including yesterday but NOT for today (market closed)
+      # Provider returns a DIFFERENT price (155) than what's in DB (150) to prove we use provider
+      provider_response = provider_success_response([
+        OpenStruct.new(security: @security, date: 1.day.ago.to_date, price: 155, currency: "USD")
+      ])
+
+      @provider.expects(:fetch_security_prices).returns(provider_response)
+
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: old_date,
+        end_date: Date.current
+      ).import_provider_prices
+
+      today_price = Security::Price.find_by(security: @security, date: Date.current)
+
+      # Should use recent provider price (155) not old DB price (50) for gap-fill
+      assert_equal 155, today_price.price, "Gap-fill should use recent price, not stale old price"
+      # Should be provisional since gap-filled for recent weekday
+      assert today_price.provisional, "Current weekday gap-filled price should be provisional"
+    end
+  end
+
   private
     def get_provider_fetch_start_date(start_date)
       start_date - 5.days

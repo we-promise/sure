@@ -151,18 +151,44 @@ class Security::Price::Importer
     end
 
     def start_price_value
-      provider_price_value = provider_prices.select { |date, _| date <= start_date }
-                                            .max_by { |date, _| date }
-                                            &.last&.price
-      db_price_value       = db_prices[start_date]&.price
-      provider_price_value || db_price_value
+      # When processing full range (first sync), use original behavior
+      if effective_start_date == start_date
+        provider_price_value = provider_prices.select { |date, _| date <= start_date }
+                                              .max_by { |date, _| date }
+                                              &.last&.price
+        db_price_value = db_prices[start_date]&.price
+        return provider_price_value || db_price_value
+      end
+
+      # For partial range (effective_start_date > start_date), use recent data
+      # This prevents stale prices from old trade dates propagating to current gap-fills
+      cutoff_date = effective_start_date
+
+      # First try provider prices (most recent before cutoff)
+      provider_price_value = provider_prices
+        .select { |date, _| date < cutoff_date }
+        .max_by { |date, _| date }
+        &.last&.price
+
+      return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+
+      # Fall back to most recent DB price before cutoff
+      Security::Price
+        .where(security_id: security.id)
+        .where("date < ?", cutoff_date)
+        .where("price > 0")
+        .where(provisional: false)
+        .order(date: :desc)
+        .limit(1)
+        .pick(:price)
     end
 
     def determine_provisional_status(date:, has_provider_price:, used_locf:, existing_provisional:)
       # Provider returned real price => NOT provisional
       return false if has_provider_price
 
-      # Gap-filled (LOCF) => provisional only if recent weekday
+      # Gap-filled (LOCF) => provisional if recent weekday
+      # Weekends stay non-provisional since markets are closed anyway
       if used_locf
         is_weekday = !date.saturday? && !date.sunday?
         is_recent = date >= PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date
