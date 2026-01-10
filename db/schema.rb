@@ -39,7 +39,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.uuid "accountable_id"
     t.decimal "balance", precision: 19, scale: 4
     t.string "currency"
-    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY ((ARRAY['Loan'::character varying, 'CreditCard'::character varying, 'OtherLiability'::character varying])::text[])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
     t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
@@ -588,6 +588,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
+    t.string "amount_type_identifier_value"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -880,8 +881,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.decimal "expected_amount_min", precision: 19, scale: 4
     t.decimal "expected_amount_max", precision: 19, scale: 4
     t.decimal "expected_amount_avg", precision: 19, scale: 4
-    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_merchant", unique: true, where: "(merchant_id IS NOT NULL)"
-    t.index ["family_id", "name", "amount", "currency"], name: "idx_recurring_txns_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL))"
+    t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_on_family_merchant_amount_currency", unique: true
     t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
     t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
     t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
@@ -1123,8 +1123,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
-    t.uuid "category_id"
-    t.index ["category_id"], name: "index_trades_on_category_id"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1278,7 +1276,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
-  add_foreign_key "trades", "categories"
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
