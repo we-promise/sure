@@ -7,6 +7,7 @@ class TransactionsController < ApplicationController
     super
     @income_categories = Current.family.categories.incomes.alphabetically
     @expense_categories = Current.family.categories.expenses.alphabetically
+    apply_installment_prefill if params[:installment_id].present?
   end
 
   def index
@@ -63,7 +64,15 @@ class TransactionsController < ApplicationController
 
   def create
     account = Current.family.accounts.find(params.dig(:entry, :account_id))
-    @entry = account.entries.new(entry_params)
+    entry_attributes = entry_params
+    installment_id = entry_attributes.dig(:entryable_attributes, :installment_id)
+
+    if installment_id.present?
+      create_installment_payment(account, installment_id, entry_attributes)
+      return
+    end
+
+    @entry = account.entries.new(entry_attributes)
 
     if @entry.save
       @entry.sync_account_later
@@ -186,7 +195,7 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :installment_id, { tag_ids: [] } ]
       )
 
       nature = entry_params.delete(:nature)
@@ -197,6 +206,71 @@ class TransactionsController < ApplicationController
       end
 
       entry_params
+    end
+
+    def apply_installment_prefill
+      installment = Installment.find_by(id: params[:installment_id], family: Current.family)
+      return unless installment
+
+      @entry.entryable.installment = installment
+      @entry.entryable.kind = "installment_payment"
+
+      payment_index = installment.payments_made_count + 1
+      @entry.name ||= params[:name].presence || "Installment: #{installment.name} (#{payment_index} of #{installment.total_installments})"
+      @entry.amount ||= params[:amount].presence&.to_d || installment.installment_cost.amount
+
+      if params[:date].present?
+        @entry.date = Date.parse(params[:date])
+      else
+        @entry.date ||= installment.next_due_date || Date.current
+      end
+
+      return if @entry.account.present?
+
+      last_account = installment.last_payment_account
+      @default_account_id = last_account&.id
+      @entry.currency = last_account.currency if last_account&.currency.present?
+    end
+
+    def create_installment_payment(account, installment_id, entry_attributes)
+      installment = Installment.find_by(id: installment_id, family: Current.family)
+
+      unless installment&.account
+        @entry = account.entries.new(entry_attributes)
+        @entry.errors.add(:base, "Installment account not found")
+        render :new, status: :unprocessable_entity
+        return
+      end
+
+      transfer = Transfer::Creator.new(
+        family: Current.family,
+        source_account_id: account.id,
+        destination_account_id: installment.account.id,
+        date: entry_attributes[:date],
+        amount: entry_attributes[:amount].to_d.abs
+      ).create
+
+      if transfer.persisted?
+        outflow_transaction = transfer.outflow_transaction
+        outflow_transaction.update!(
+          installment: installment,
+          category_id: entry_attributes.dig(:entryable_attributes, :category_id)
+        )
+
+        entry_updates = { notes: entry_attributes[:notes] }.compact
+        entry_updates[:name] = entry_attributes[:name] if entry_attributes[:name].present?
+        outflow_transaction.entry.update!(entry_updates) if entry_updates.present?
+
+        flash[:notice] = "Transaction created"
+
+        respond_to do |format|
+          format.html { redirect_back_or_to account_path(account) }
+          format.turbo_stream { stream_redirect_back_or_to(account_path(account)) }
+        end
+      else
+        @entry = account.entries.new(entry_attributes)
+        render :new, status: :unprocessable_entity
+      end
     end
 
     def search_params

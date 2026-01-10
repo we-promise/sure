@@ -13,13 +13,20 @@ en:
       title: Enter installment details
     overview:
       total_cost: Total Cost
+      total_spent_to_date: Total Spent to Date
       remaining_cost: Remaining Cost
-      payout_progress: Payout Progress
       payment_period: Payment Period
       first_payment_date: First Payment Date
       last_payment_date: Last Payment Date
       total_installments: Total Installments
+      remaining_installments: Remaining Installments
       installment_cost: Installment Cost
+      current_month_payment: Current Month Payment
       time_elapsed: Time Elapsed
+      time_elapsed_breakdown: "%{years}y • %{quarters}q • %{months}m • %{weeks}w"
+      payout_progress_label: "%{percent} paid"
+      payment_due: "Payment due on %{date}."
+      payment_overdue: "Payment overdue since %{date}."
+      pay_now: Pay now
       unknown: Unknown
       not_started: Not started

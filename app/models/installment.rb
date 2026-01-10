@@ -112,6 +112,14 @@ class Installment < ApplicationRecord
     transactions.joins(:entry).count
   end
 
+  def last_payment_account
+    transactions.joins(:entry)
+                .order("entries.date DESC, entries.created_at DESC")
+                .limit(1)
+                .pick("entries.account_id")
+                .then { |account_id| account_id && Account.find_by(id: account_id) }
+  end
+
   def remaining_installments
     return nil unless total_installments
 

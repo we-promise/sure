@@ -74,6 +74,87 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "prefills installment payment details" do
+    travel_to Date.new(2026, 1, 10) do
+      installment = Installment.create!(
+        family: families(:dylan_family),
+        name: "Laptop",
+        total_installments: 3,
+        payment_period: "monthly",
+        first_payment_date: Date.new(2026, 1, 1),
+        installment_cost_cents: 150,
+        currency: "USD"
+      )
+
+      Entry.create!(
+        account: accounts(:credit_card),
+        name: "Installment payment",
+        date: Date.new(2026, 1, 1),
+        amount: 150,
+        currency: "USD",
+        entryable: Transaction.new(installment: installment, kind: "installment_payment")
+      )
+
+      get new_transaction_url(installment_id: installment.id)
+
+      assert_response :success
+      assert_select "select[name='entry[account_id]'] option[selected][value=?]", accounts(:credit_card).id
+      assert_select "input[name='entry[name]'][value=?]", "Installment: Laptop (2 of 3)"
+      assert_select "input[name='entry[date]'][value=?]", "2026-02-01"
+      assert_select "input[name='entry[entryable_attributes][installment_id]'][value=?]", installment.id
+    end
+  end
+
+  test "creates installment payment as transfer" do
+    installment = Installment.create!(
+      family: families(:dylan_family),
+      name: "Camera",
+      total_installments: 2,
+      payment_period: "monthly",
+      first_payment_date: Date.current,
+      installment_cost_cents: 250,
+      currency: "USD"
+    )
+
+    installment_account = Account.create!(
+      family: families(:dylan_family),
+      name: "Installment Account",
+      balance: 500,
+      currency: "USD",
+      accountable: installment
+    )
+
+    assert_difference "Transfer.count", 1 do
+      assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+        post transactions_url, params: {
+          entry: {
+            account_id: accounts(:depository).id,
+            name: "Installment: Camera (1 of 2)",
+            date: Date.current,
+            currency: "USD",
+            amount: 250,
+            nature: "outflow",
+            entryable_type: "Transaction",
+            entryable_attributes: {
+              installment_id: installment.id,
+              category_id: categories(:food_and_drink).id
+            }
+          }
+        }
+      end
+    end
+
+    transfer = Transfer.order(:created_at).last
+    outflow_transaction = transfer.outflow_transaction
+    inflow_transaction = transfer.inflow_transaction
+
+    assert_equal "installment_payment", outflow_transaction.kind
+    assert_equal installment.id, outflow_transaction.installment_id
+    assert_equal categories(:food_and_drink).id, outflow_transaction.category_id
+    assert_equal accounts(:depository), outflow_transaction.entry.account
+    assert_equal installment_account, inflow_transaction.entry.account
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)

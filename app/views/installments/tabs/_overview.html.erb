@@ -1,22 +1,17 @@
 <%# locals: (account:) %>
-
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".total_cost") do %>
     <%= format_money account.installment.total_cost %>
   <% end %>
-
+  <%= summary_card title: t(".total_spent_to_date") do %>
+    <%= format_money account.installment.total_spent_to_date %>
+  <% end %>
   <%= summary_card title: t(".remaining_cost") do %>
     <%= format_money account.installment.remaining_cost %>
   <% end %>
-
-  <%= summary_card title: t(".payout_progress") do %>
-    <%= number_to_percentage(account.installment.payout_progress, precision: 1) %>
-  <% end %>
-
   <%= summary_card title: t(".payment_period") do %>
     <%= account.installment.payment_period&.titleize || t(".unknown") %>
   <% end %>
-
   <%= summary_card title: t(".first_payment_date") do %>
     <% if account.installment.first_payment_date.present? %>
       <%= l(account.installment.first_payment_date, format: :long) %>
@@ -24,7 +19,6 @@
       <%= t(".unknown") %>
     <% end %>
   <% end %>
-
   <%= summary_card title: t(".last_payment_date") do %>
     <% if account.installment.last_payment_date.present? %>
       <%= l(account.installment.last_payment_date, format: :long) %>
@@ -32,25 +26,76 @@
       <%= t(".unknown") %>
     <% end %>
   <% end %>
-
   <%= summary_card title: t(".total_installments") do %>
     <%= account.installment.total_installments %>
   <% end %>
-
+  <%= summary_card title: t(".remaining_installments") do %>
+    <%= account.installment.remaining_installments %>
+  <% end %>
   <%= summary_card title: t(".installment_cost") do %>
     <%= format_money account.installment.installment_cost %>
   <% end %>
-
+  <%= summary_card title: t(".current_month_payment") do %>
+    <%= format_money account.installment.current_month_payment_total %>
+  <% end %>
   <%= summary_card title: t(".time_elapsed") do %>
-    <% elapsed = account.installment.time_elapsed %>
+    <% elapsed = account.installment.time_elapsed_breakdown %>
     <% if elapsed.present? %>
-      <%= pluralize(elapsed, account.installment.payment_period&.singularize || "period") %>
+      <%= t(".time_elapsed_breakdown", years: elapsed[:years], quarters: elapsed[:quarters], months: elapsed[:months], weeks: elapsed[:weeks]) %>
     <% else %>
       <%= t(".not_started") %>
     <% end %>
   <% end %>
 </div>
-
+<% progress_percent = account.installment.payout_progress.clamp(0, 100) %>
+<div class="space-y-2 mt-6">
+  <div class="flex items-center gap-2">
+    <div class="rounded-full w-1.5 h-1.5 bg-gray-900"></div>
+    <p class="text-secondary text-sm">
+      <%= t(".payout_progress_label", percent: number_to_percentage(progress_percent, precision: 1)) %>
+    </p>
+    <p class="ml-auto text-sm space-x-1">
+      <span class="text-primary"><%= format_money(account.installment.total_spent_to_date) %></span>
+      <span class="text-secondary">/</span>
+      <span class="text-secondary"><%= format_money(account.installment.total_cost) %></span>
+    </p>
+  </div>
+  <div class="relative h-1.5 rounded-2xl bg-gray-100">
+    <div class="absolute inset-0 bg-gray-900 rounded-2xl" style="width: <%= progress_percent %>%;"></div>
+  </div>
+</div>
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: "Edit installment details",
+    variant: "ghost",
+    href: edit_installment_path(account),
+    frame: :modal
+  ) %>
+</div>
+<div class="relative h-1.5 rounded-2xl bg-gray-100">
+  <div class="absolute inset-0 bg-gray-900 rounded-2xl" style="width: <%= progress_percent %>%;"></div>
+</div>
+</div>
+<div class="mt-8 bg-container px-3 py-4 lg:p-4 shadow-border-xs rounded-xl">
+  <div class="flex items-center justify-between mb-4">
+    <%= tag.h3 t(".payments_title"), class: "font-medium text-lg" %>
+  </div>
+  <% installment_entries = account.installment.transactions
+                                .joins(:entry)
+                                .includes(:entry)
+                                .order("entries.date DESC, entries.created_at DESC")
+                                .map(&:entry) %>
+  <% if installment_entries.empty? %>
+    <p class="text-secondary text-sm"><%= t(".no_payments") %></p>
+  <% else %>
+    <div class="space-y-4">
+      <%= render partial: "transactions/transaction",
+                 collection: installment_entries,
+                 as: :entry,
+                 locals: { view_ctx: "account" } %>
+    </div>
+  <% end %>
+</div>
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(
     text: "Edit installment details",

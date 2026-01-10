@@ -1,11 +1,38 @@
 <%= turbo_stream_from account %>
-
 <%= turbo_frame_tag id do %>
   <%= tag.div class: "space-y-4 pb-32" do %>
     <%= render "accounts/show/header", account: account, title: title, subtitle: subtitle %>
-
     <%= render UI::Account::Chart.new(account: account, period: chart_period, view: chart_view) %>
-
+    <% if account.installment? %>
+      <% installment = account.installment %>
+      <% if installment.overdue? || installment.due_soon? %>
+        <% due_date = installment.next_due_date %>
+        <% payment_index = installment.payments_made_count + 1 %>
+        <% last_payment_account = installment.last_payment_account %>
+        <% pay_params = {
+          nature: "outflow",
+          installment_id: installment.id,
+          amount: installment.installment_cost.amount,
+          date: due_date,
+          name: "Installment: #{installment.name} (#{payment_index} of #{installment.total_installments})"
+        } %>
+        <% pay_link = render DS::Link.new(
+          text: t("installments.overview.pay_now", default: "Pay now"),
+          variant: "ghost",
+          href: new_transaction_path(pay_params),
+          frame: :modal
+        ) %>
+        <% status_message = if installment.overdue?
+          t("installments.overview.payment_overdue", date: l(due_date, format: :long), default: "Payment overdue since #{l(due_date, format: :long)}")
+        else
+          t("installments.overview.payment_due", date: l(due_date, format: :long), default: "Payment due on #{l(due_date, format: :long)}")
+        end %>
+        <%= render DS::Alert.new(
+          message: safe_join([ status_message, pay_link ], " "),
+          variant: installment.overdue? ? :warning : :info
+        ) %>
+      <% end %>
+    <% end %>
     <div class="min-h-[800px]" data-testid="account-details">
       <% if tabs.count > 1 %>
         <%= render DS::Tabs.new(active_tab: active_tab, url_param_key: "tab") do |tabs_container| %>
@@ -14,7 +41,6 @@
               <% nav.with_btn(id: tab, label: tab.to_s.humanize, classes: "px-6") %>
             <% end %>
           <% end %>
-
           <% tabs.each do |tab| %>
             <% tabs_container.with_panel(tab_id: tab) do %>
               <%= tab_content_for(tab) %>

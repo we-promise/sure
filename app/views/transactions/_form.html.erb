@@ -1,34 +1,36 @@
 <%# locals: (entry:, income_categories:, expense_categories:) %>
-
 <%= styled_form_with model: entry, url: transactions_path, class: "space-y-4" do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
-
   <section>
     <%= render "shared/transaction_type_tabs", active_tab: params[:nature] == "inflow" ? "income" : "expense", account_id: params[:account_id] %>
-
     <%= f.hidden_field :nature, value: params[:nature] || "outflow" %>
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
   </section>
-
   <section class="space-y-2">
     <%= f.text_field :name, label: t(".description"), placeholder: t(".description_placeholder"), required: true %>
-
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id %>
     <% else %>
-      <%= f.collection_select :account_id, Current.family.accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account") }, required: true, class: "form-field__input text-ellipsis" %>
+      <%= f.collection_select :account_id,
+                              Current.family.accounts.manual.active.alphabetically,
+                              :id,
+                              :name,
+                              { prompt: t(".account_prompt"), label: t(".account"), selected: @default_account_id },
+                              required: true,
+                              class: "form-field__input text-ellipsis" %>
     <% end %>
-
     <%= f.money_field :amount, label: t(".amount"), required: true %>
     <%= f.fields_for :entryable do |ef| %>
       <% categories = params[:nature] == "inflow" ? income_categories : expense_categories %>
       <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category") } %>
+      <% if ef.object.respond_to?(:installment_id) && ef.object.installment_id.present? %>
+        <%= ef.hidden_field :installment_id %>
+      <% end %>
     <% end %>
-    <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, max: Date.current, value: Date.current %>
+    <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, max: Date.current, value: entry.date || Date.current %>
   </section>
-
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <%= f.fields_for :entryable do |ef| %>
       <%= ef.select :tag_ids,
@@ -46,7 +48,6 @@
                     rows: 5,
                     "data-auto-submit-form-target": "auto" %>
   <% end %>
-
   <section>
     <%= f.submit t(".submit") %>
   </section>
