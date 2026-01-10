@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/log_service.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -15,6 +16,7 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
+  final LogService _log = LogService.instance;
   Account? _selectedAccount;
   DateTime _currentMonth = DateTime.now();
   Map<String, double> _dailyChanges = {};
@@ -69,14 +71,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
 
       final transactions = transactionsProvider.transactions;
-      debugPrint('Calendar: Loaded ${transactions.length} transactions for account ${_selectedAccount!.name}');
+      _log.info('CalendarScreen', 'Loaded ${transactions.length} transactions for account ${_selectedAccount!.name}');
 
       if (transactions.isNotEmpty) {
-        debugPrint('Calendar: Sample transaction - name: ${transactions.first.name}, amount: ${transactions.first.amount}, nature: ${transactions.first.nature}');
+        _log.debug('CalendarScreen', 'Sample transaction - name: ${transactions.first.name}, amount: ${transactions.first.amount}, nature: ${transactions.first.nature}');
       }
 
       _calculateDailyChanges(transactions);
-      debugPrint('Calendar: Calculated ${_dailyChanges.length} days with changes');
+      _log.info('CalendarScreen', 'Calculated ${_dailyChanges.length} days with changes');
     }
 
     setState(() {
@@ -87,7 +89,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void _calculateDailyChanges(List<Transaction> transactions) {
     final changes = <String, double>{};
 
-    debugPrint('Calendar: Starting to calculate daily changes for ${transactions.length} transactions');
+    _log.debug('CalendarScreen', 'Starting to calculate daily changes for ${transactions.length} transactions');
 
     for (var transaction in transactions) {
       try {
@@ -98,7 +100,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final cleanedAmount = transaction.amount.replaceAll(RegExp(r'[^\d.-]'), '');
         double amount = double.tryParse(cleanedAmount) ?? 0.0;
 
-        debugPrint('Calendar: Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, cleaned: $cleanedAmount, parsed: $amount, nature: ${transaction.nature}');
+        _log.debug('CalendarScreen', 'Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, cleaned: $cleanedAmount, parsed: $amount, nature: ${transaction.nature}');
 
         // For expenses, make the amount negative
         // For income, keep it positive
@@ -109,15 +111,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
 
         changes[dateKey] = (changes[dateKey] ?? 0.0) + amount;
-        debugPrint('Calendar: Date $dateKey now has total: ${changes[dateKey]}');
+        _log.debug('CalendarScreen', 'Date $dateKey now has total: ${changes[dateKey]}');
       } catch (e) {
-        debugPrint('Calendar: Failed to parse transaction date: ${transaction.date}, error: $e');
+        _log.error('CalendarScreen', 'Failed to parse transaction date: ${transaction.date}, error: $e');
       }
     }
 
-    debugPrint('Calendar: Final changes map has ${changes.length} entries');
+    _log.info('CalendarScreen', 'Final changes map has ${changes.length} entries');
     changes.forEach((date, amount) {
-      debugPrint('Calendar: $date -> $amount');
+      _log.debug('CalendarScreen', '$date -> $amount');
     });
 
     setState(() {
