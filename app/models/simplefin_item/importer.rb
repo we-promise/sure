@@ -201,8 +201,8 @@ class SimplefinItem::Importer
         end
 
         adapter.update_balance(
-          balance: normalized,
-          cash_balance: cash,
+          balance: account_data[:balance],
+          cash_balance: account_data[:"available-balance"],
           source: "simplefin"
         )
       end
@@ -815,87 +815,10 @@ class SimplefinItem::Importer
         # Post-save side effects
         acct = simplefin_account.current_account
         if acct
-          # Reconcile pending transactions that have a matching posted version
-          # This handles duplicates where pending and posted both exist (tip adjustments, etc.)
-          begin
-            reconcile_stats = Entry.reconcile_pending_duplicates(account: acct, dry_run: false)
-
-            # Split exact matches (auto-reconciled) from fuzzy suggestions (need review)
-            exact_matches = reconcile_stats[:details].select { |d| d[:match_type] == "exact" }
-            fuzzy_suggestions = reconcile_stats[:details].select { |d| d[:match_type] == "fuzzy_suggestion" }
-
-            if exact_matches.any?
-              stats["pending_reconciled"] = stats.fetch("pending_reconciled", 0) + exact_matches.size
-              stats["pending_reconciled_details"] ||= []
-              exact_matches.each do |detail|
-                stats["pending_reconciled_details"] << {
-                  "account_name" => detail[:account],
-                  "pending_name" => detail[:pending_name],
-                  "posted_name" => detail[:posted_name]
-                }
-              end
-            end
-
-            if fuzzy_suggestions.any?
-              stats["duplicate_suggestions_created"] = stats.fetch("duplicate_suggestions_created", 0) + fuzzy_suggestions.size
-              stats["duplicate_suggestions_details"] ||= []
-              fuzzy_suggestions.each do |detail|
-                stats["duplicate_suggestions_details"] << {
-                  "account_name" => detail[:account],
-                  "pending_name" => detail[:pending_name],
-                  "posted_name" => detail[:posted_name]
-                }
-              end
-            end
-          rescue => e
-            Rails.logger.warn("SimpleFin: pending reconciliation failed for account #{acct.id}: #{e.class} - #{e.message}")
-          end
-
-          # Auto-exclude stale pending transactions (>8 days old with no matching posted version)
-          # This prevents orphaned pending transactions from affecting budgets indefinitely
-          begin
-            excluded_count = Entry.auto_exclude_stale_pending(account: acct)
-            if excluded_count > 0
-              stats["stale_pending_excluded"] = stats.fetch("stale_pending_excluded", 0) + excluded_count
-              stats["stale_pending_details"] ||= []
-              stats["stale_pending_details"] << {
-                "account_name" => acct.name,
-                "account_id" => acct.id,
-                "count" => excluded_count
-              }
-            end
-          rescue => e
-            Rails.logger.warn("SimpleFin: stale pending cleanup failed for account #{acct.id}: #{e.class} - #{e.message}")
-          end
-
-          # Track stale pending transactions that couldn't be matched (for user awareness)
-          # These are >8 days old, still pending, and have no duplicate suggestion
-          begin
-            stale_unmatched = acct.entries
-              .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-              .where(excluded: false)
-              .where("entries.date < ?", 8.days.ago.to_date)
-              .where(<<~SQL.squish)
-                (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-                OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-              SQL
-              .where(<<~SQL.squish)
-                transactions.extra -> 'potential_posted_match' IS NULL
-              SQL
-              .count
-
-            if stale_unmatched > 0
-              stats["stale_unmatched_pending"] = stats.fetch("stale_unmatched_pending", 0) + stale_unmatched
-              stats["stale_unmatched_details"] ||= []
-              stats["stale_unmatched_details"] << {
-                "account_name" => acct.name,
-                "account_id" => acct.id,
-                "count" => stale_unmatched
-              }
-            end
-          rescue => e
-            Rails.logger.warn("SimpleFin: stale unmatched tracking failed for account #{acct.id}: #{e.class} - #{e.message}")
-          end
+          # Handle pending transaction reconciliation (extracted for maintainability)
+          reconcile_and_track_pending_duplicates(acct)
+          exclude_and_track_stale_pending(acct)
+          track_stale_unmatched_pending(acct)
 
           # Refresh credit attributes when available-balance present
           if acct.accountable_type == "CreditCard" && account_data[:"available-balance"].present?
@@ -1237,19 +1160,84 @@ class SimplefinItem::Importer
       ids.group_by(&:itself).select { |_, v| v.size > 1 }.keys
     end
 
-    # --- Simple helpers for numeric handling in normalization ---
-    def to_decimal(value)
-      return BigDecimal("0") if value.nil?
-      case value
-      when BigDecimal then value
-      when String then BigDecimal(value) rescue BigDecimal("0")
-      when Numeric then BigDecimal(value.to_s)
-      else
-        BigDecimal("0")
+    # Reconcile pending transactions that have a matching posted version
+    # Handles duplicates where pending and posted both exist (tip adjustments, etc.)
+    def reconcile_and_track_pending_duplicates(account)
+      reconcile_stats = Entry.reconcile_pending_duplicates(account: account, dry_run: false)
+
+      exact_matches = reconcile_stats[:details].select { |d| d[:match_type] == "exact" }
+      fuzzy_suggestions = reconcile_stats[:details].select { |d| d[:match_type] == "fuzzy_suggestion" }
+
+      if exact_matches.any?
+        stats["pending_reconciled"] = stats.fetch("pending_reconciled", 0) + exact_matches.size
+        stats["pending_reconciled_details"] ||= []
+        exact_matches.each do |detail|
+          stats["pending_reconciled_details"] << {
+            "account_name" => detail[:account],
+            "pending_name" => detail[:pending_name],
+            "posted_name" => detail[:posted_name]
+          }
+        end
       end
+
+      if fuzzy_suggestions.any?
+        stats["duplicate_suggestions_created"] = stats.fetch("duplicate_suggestions_created", 0) + fuzzy_suggestions.size
+        stats["duplicate_suggestions_details"] ||= []
+        fuzzy_suggestions.each do |detail|
+          stats["duplicate_suggestions_details"] << {
+            "account_name" => detail[:account],
+            "pending_name" => detail[:pending_name],
+            "posted_name" => detail[:posted_name]
+          }
+        end
+      end
+    rescue => e
+      Rails.logger.warn("SimpleFin: pending reconciliation failed for account #{account.id}: #{e.class} - #{e.message}")
     end
 
-    def same_sign?(a, b)
-      (a.positive? && b.positive?) || (a.negative? && b.negative?)
+    # Auto-exclude stale pending transactions (>8 days old with no matching posted version)
+    # Prevents orphaned pending transactions from affecting budgets indefinitely
+    def exclude_and_track_stale_pending(account)
+      excluded_count = Entry.auto_exclude_stale_pending(account: account)
+      return unless excluded_count > 0
+
+      stats["stale_pending_excluded"] = stats.fetch("stale_pending_excluded", 0) + excluded_count
+      stats["stale_pending_details"] ||= []
+      stats["stale_pending_details"] << {
+        "account_name" => account.name,
+        "account_id" => account.id,
+        "count" => excluded_count
+      }
+    rescue => e
+      Rails.logger.warn("SimpleFin: stale pending cleanup failed for account #{account.id}: #{e.class} - #{e.message}")
+    end
+
+    # Track stale pending transactions that couldn't be matched (for user awareness)
+    # These are >8 days old, still pending, and have no duplicate suggestion
+    def track_stale_unmatched_pending(account)
+      stale_unmatched = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(excluded: false)
+        .where("entries.date < ?", 8.days.ago.to_date)
+        .where(<<~SQL.squish)
+          (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+          OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        SQL
+        .where(<<~SQL.squish)
+          transactions.extra -> 'potential_posted_match' IS NULL
+        SQL
+        .count
+
+      return unless stale_unmatched > 0
+
+      stats["stale_unmatched_pending"] = stats.fetch("stale_unmatched_pending", 0) + stale_unmatched
+      stats["stale_unmatched_details"] ||= []
+      stats["stale_unmatched_details"] << {
+        "account_name" => account.name,
+        "account_id" => account.id,
+        "count" => stale_unmatched
+      }
+    rescue => e
+      Rails.logger.warn("SimpleFin: stale unmatched tracking failed for account #{account.id}: #{e.class} - #{e.message}")
     end
 end
