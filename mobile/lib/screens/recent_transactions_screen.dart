@@ -55,18 +55,6 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     }
   }
 
-  String _getAccountName(String accountId) {
-    final accountsProvider = context.read<AccountsProvider>();
-    try {
-      final account = accountsProvider.accounts.firstWhere(
-        (a) => a.id == accountId,
-      );
-      return account.name;
-    } catch (e) {
-      return 'Unknown Account';
-    }
-  }
-
   Account? _getAccount(String accountId) {
     final accountsProvider = context.read<AccountsProvider>();
     try {
