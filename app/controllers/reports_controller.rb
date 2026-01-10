@@ -31,11 +31,14 @@ class ReportsController < ApplicationController
     # Build trend data (last 6 months)
     @trends_data = build_trends_data
 
-    # Spending patterns (weekday vs weekend)
-    @spending_patterns = build_spending_patterns
+    # Net worth metrics
+    @net_worth_metrics = build_net_worth_metrics
 
     # Transactions breakdown
     @transactions = build_transactions_breakdown
+
+    # Investment metrics (must be before build_reports_sections)
+    @investment_metrics = build_investment_metrics
 
     # Build reports sections for collapsible/reorderable UI
     @reports_sections = build_reports_sections
@@ -122,11 +125,27 @@ class ReportsController < ApplicationController
     def build_reports_sections
       all_sections = [
         {
+          key: "net_worth",
+          title: "reports.net_worth.title",
+          partial: "reports/net_worth",
+          locals: { net_worth_metrics: @net_worth_metrics },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
           key: "trends_insights",
           title: "reports.trends.title",
           partial: "reports/trends_insights",
-          locals: { trends_data: @trends_data, spending_patterns: @spending_patterns },
+          locals: { trends_data: @trends_data },
           visible: Current.family.transactions.any?,
+          collapsible: true
+        },
+        {
+          key: "investment_performance",
+          title: "reports.investment_performance.title",
+          partial: "reports/investment_performance",
+          locals: { investment_metrics: @investment_metrics },
+          visible: @investment_metrics[:has_investments],
           collapsible: true
         },
         {
@@ -299,61 +318,6 @@ class ReportsController < ApplicationController
       trends
     end
 
-    def build_spending_patterns
-      # Analyze weekday vs weekend spending
-      weekday_total = 0
-      weekend_total = 0
-      weekday_count = 0
-      weekend_count = 0
-
-      # Build query matching income_statement logic:
-      # Expenses are transactions with positive amounts, regardless of category
-      expense_transactions = Transaction
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where(kind: [ "standard", "loan_payment" ])
-        .where("entries.amount > 0") # Positive amount = expense (matching income_statement logic)
-
-      # Sum up amounts by weekday vs weekend
-      expense_transactions.each do |transaction|
-        entry = transaction.entry
-        amount = entry.amount.abs
-
-        if entry.date.wday.in?([ 0, 6 ]) # Sunday or Saturday
-          weekend_total += amount
-          weekend_count += 1
-        else
-          weekday_total += amount
-          weekday_count += 1
-        end
-      end
-
-      weekday_avg = weekday_count.positive? ? (weekday_total / weekday_count) : 0
-      weekend_avg = weekend_count.positive? ? (weekend_total / weekend_count) : 0
-
-      {
-        weekday_total: weekday_total,
-        weekend_total: weekend_total,
-        weekday_avg: weekday_avg,
-        weekend_avg: weekend_avg,
-        weekday_count: weekday_count,
-        weekend_count: weekend_count
-      }
-    end
-
-    def default_spending_patterns
-      {
-        weekday_total: 0,
-        weekend_total: 0,
-        weekday_avg: 0,
-        weekend_avg: 0,
-        weekday_count: 0,
-        weekend_count: 0
-      }
-    end
-
     def build_transactions_breakdown
       # Base query: all transactions in the period
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
@@ -368,25 +332,55 @@ class ReportsController < ApplicationController
       # Apply filters
       transactions = apply_transaction_filters(transactions)
 
+      # Get trades in the period (matching income_statement logic)
+      trades = Trade
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: [])
+
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
       sort_direction = params[:sort_direction] || "desc"
 
       # Group by category and type
-      all_transactions = transactions.to_a
       grouped_data = {}
+      family_currency = Current.family.currency
 
-      all_transactions.each do |transaction|
+      # Process transactions
+      transactions.each do |transaction|
         entry = transaction.entry
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
-        category_color = transaction.category&.color || "#9CA3AF"
+        category_color = transaction.category&.color || Category::UNCATEGORIZED_COLOR
+
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
 
         key = [ category_name, type, category_color ]
         grouped_data[key] ||= { total: 0, count: 0 }
         grouped_data[key][:count] += 1
-        grouped_data[key][:total] += entry.amount.abs
+        grouped_data[key][:total] += converted_amount
+      end
+
+      # Process trades
+      trades.each do |trade|
+        entry = trade.entry
+        is_expense = entry.amount > 0
+        type = is_expense ? "expense" : "income"
+        # Use "Other Investments" for trades without category
+        category_name = trade.category&.name || Category.other_investments_name
+        category_color = trade.category&.color || Category::OTHER_INVESTMENTS_COLOR
+
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+
+        key = [ category_name, type, category_color ]
+        grouped_data[key] ||= { total: 0, count: 0 }
+        grouped_data[key][:count] += 1
+        grouped_data[key][:total] += converted_amount
       end
 
       # Convert to array
@@ -406,6 +400,58 @@ class ReportsController < ApplicationController
       else
         result.sort_by { |g| -g[:total] }
       end
+    end
+
+    def build_investment_metrics
+      investment_statement = Current.family.investment_statement
+      investment_accounts = investment_statement.investment_accounts
+
+      return { has_investments: false } unless investment_accounts.any?
+
+      period_totals = investment_statement.totals(period: @period)
+
+      {
+        has_investments: true,
+        portfolio_value: investment_statement.portfolio_value_money,
+        unrealized_trend: investment_statement.unrealized_gains_trend,
+        period_contributions: period_totals.contributions,
+        period_withdrawals: period_totals.withdrawals,
+        top_holdings: investment_statement.top_holdings(limit: 5),
+        accounts: investment_accounts.to_a
+      }
+    end
+
+    def build_net_worth_metrics
+      balance_sheet = Current.family.balance_sheet
+      currency = Current.family.currency
+
+      # Current net worth
+      current_net_worth = balance_sheet.net_worth
+      total_assets = balance_sheet.assets.total
+      total_liabilities = balance_sheet.liabilities.total
+
+      # Get net worth series for the period to calculate change
+      # The series.trend gives us the change from first to last value in the period
+      net_worth_series = balance_sheet.net_worth_series(period: @period)
+      trend = net_worth_series&.trend
+
+      # Get asset and liability groups for breakdown
+      asset_groups = balance_sheet.assets.account_groups.map do |group|
+        { name: group.name, total: Money.new(group.total, currency) }
+      end.reject { |g| g[:total].zero? }
+
+      liability_groups = balance_sheet.liabilities.account_groups.map do |group|
+        { name: group.name, total: Money.new(group.total, currency) }
+      end.reject { |g| g[:total].zero? }
+
+      {
+        current_net_worth: Money.new(current_net_worth, currency),
+        total_assets: Money.new(total_assets, currency),
+        total_liabilities: Money.new(total_liabilities, currency),
+        trend: trend,
+        asset_groups: asset_groups,
+        liability_groups: liability_groups
+      }
     end
 
     def apply_transaction_filters(transactions)
@@ -503,9 +549,19 @@ class ReportsController < ApplicationController
 
       transactions = apply_transaction_filters(transactions)
 
-      # Group transactions by category, type, and month
-      breakdown = {}
+      # Get trades in the period (matching income_statement logic)
+      trades = Trade
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: [])
 
+      # Group by category, type, and month
+      breakdown = {}
+      family_currency = Current.family.currency
+
+      # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
         is_expense = entry.amount > 0
@@ -513,11 +569,33 @@ class ReportsController < ApplicationController
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
         breakdown[key][:months][month_key] ||= 0
-        breakdown[key][:months][month_key] += entry.amount.abs
-        breakdown[key][:total] += entry.amount.abs
+        breakdown[key][:months][month_key] += converted_amount
+        breakdown[key][:total] += converted_amount
+      end
+
+      # Process trades
+      trades.each do |trade|
+        entry = trade.entry
+        is_expense = entry.amount > 0
+        type = is_expense ? "expense" : "income"
+        # Use "Other Investments" for trades without category
+        category_name = trade.category&.name || Category.other_investments_name
+        month_key = entry.date.beginning_of_month
+
+        # Convert to family currency
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+
+        key = [ category_name, type ]
+        breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
+        breakdown[key][:months][month_key] ||= 0
+        breakdown[key][:months][month_key] += converted_amount
+        breakdown[key][:total] += converted_amount
       end
 
       # Convert to array and sort by type and total (descending)

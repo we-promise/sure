@@ -30,3 +30,9 @@ sync_hourly:
   class: "SyncHourlyJob"
   queue: "scheduled"
   description: "Syncs provider items that opt-in to hourly syncing"
+
+clean_data:
+  cron: "0 3 * * *" # daily at 3:00 AM
+  class: "DataCleanerJob"
+  queue: "scheduled"
+  description: "Cleans up old data (e.g., expired merchant associations)"
