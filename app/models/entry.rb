@@ -115,6 +115,7 @@ class Entry < ApplicationRecord
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
         SQL
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
+        .to_a # Load limited records to avoid COUNT(*) on .size
 
       # Handle exact match - auto-exclude only if exactly ONE candidate (high confidence)
       # Multiple candidates = ambiguous = skip to avoid excluding wrong entry

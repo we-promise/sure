@@ -582,20 +582,23 @@ class Account::ProviderImportAdapter
     date = Date.parse(date.to_s) unless date.is_a?(Date)
     amount = BigDecimal(amount.to_s)
 
-    # Calculate amount bounds - posted amount should be >= pending (tips add, not subtract)
+    # Calculate amount bounds using ABS to handle both positive and negative amounts
+    # Posted amount should be >= pending (tips add, not subtract)
     # Allow posted to be up to 30% higher than pending (covers typical tips)
-    min_pending_amount = amount / (1 + amount_tolerance) # If posted is 100, pending could be as low as 80
-    max_pending_amount = amount # Pending should not be higher than posted
+    abs_amount = amount.abs
+    min_pending_abs = abs_amount / (1 + amount_tolerance) # If posted is 100, pending could be as low as ~77
+    max_pending_abs = abs_amount # Pending should not be higher than posted
 
     # Build base query for pending transactions
     # CRITICAL: Pending must be ON or BEFORE the posted date (authorization happens first)
     # Use tighter date window (3 days) - tips post quickly, not a week later
+    # Use ABS() for amount comparison to handle negative amounts correctly
     candidates = account.entries
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(source: source)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
-      .where(amount: min_pending_amount..max_pending_amount)
+      .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
@@ -651,16 +654,19 @@ class Account::ProviderImportAdapter
 
     # Allow up to 100% difference (e.g., $50 pending → $100 posted with huge tip)
     # This is low confidence - requires strong name/merchant match
-    min_pending_amount = amount / 2.0 # Posted could be up to 2x pending
-    max_pending_amount = amount * 0.77 # Pending must be at least 30% less (to not overlap with fuzzy)
+    # Use ABS to handle both positive and negative amounts correctly
+    abs_amount = amount.abs
+    min_pending_abs = abs_amount / 2.0 # Posted could be up to 2x pending
+    max_pending_abs = abs_amount * 0.77 # Pending must be at least 30% less (to not overlap with fuzzy)
 
     # Build base query for pending transactions
+    # Use ABS() for amount comparison to handle negative amounts correctly
     candidates = account.entries
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(source: source)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
-      .where(amount: min_pending_amount..max_pending_amount)
+      .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
