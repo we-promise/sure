@@ -1,6 +1,6 @@
 class MarkSuspiciousPricesProvisional < ActiveRecord::Migration[7.2]
   def up
-    # Mark recent weekday prices as provisional if they deviate significantly
+    # Mark recent prices as provisional if they deviate significantly
     # from surrounding prices (potential gap-fill errors from stale data)
     #
     # This fixes an issue where prices from old trade dates could propagate
@@ -27,8 +27,9 @@ class MarkSuspiciousPricesProvisional < ActiveRecord::Migration[7.2]
         deviation = (price.price - avg_surrounding).abs / avg_surrounding
 
         # If price deviates more than 20% from recent average, mark provisional
-        if deviation > 0.20
-          price.update_column(:provisional, true)
+        threshold = BigDecimal("0.20")
+        if deviation > threshold
+          price.update_columns(provisional: true, updated_at: Time.current)
           Rails.logger.info("Marked price #{price.id} as provisional (#{(deviation * 100).round(1)}% deviation from surrounding prices)")
         end
       end
