@@ -26,6 +26,7 @@ class Security::Price::Importer
     end
 
     prev_price_value = start_price_value
+    prev_currency = prev_price_currency || db_price_currency || "USD"
 
     unless prev_price_value.present?
       Rails.logger.error("Could not find a start price for #{security.ticker} on or before #{start_date}")
@@ -49,25 +50,32 @@ class Security::Price::Importer
       provider_currency    = provider_price&.currency
 
       has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
+      has_db_price = db_price_value.present? && db_price_value.to_f > 0
       is_provisional = db_price&.provisional
 
-      chosen_price = if clear_cache || is_provisional
+      # Choose price and currency from the same source to avoid mismatches
+      chosen_price, chosen_currency = if clear_cache || is_provisional
         # For provisional/cache clear: only use provider price, let gap-fill handle missing
         # This ensures stale DB values don't persist when provider has no weekend data
-        provider_price_value
+        [ provider_price_value, provider_currency ]
+      elsif has_db_price
+        # For non-provisional with valid DB price: preserve existing value (user edits)
+        [ db_price_value, db_price&.currency ]
       else
-        # For non-provisional: preserve existing DB value (user edits), fill gaps with provider
-        db_price_value || provider_price_value
+        # Fill gaps with provider data
+        [ provider_price_value, provider_currency ]
       end
 
       # Gap-fill using LOCF (last observation carried forward)
-      # Treat nil or zero prices as invalid and use previous price
+      # Treat nil or zero prices as invalid and use previous price/currency
       used_locf = false
       if chosen_price.nil? || chosen_price.to_f <= 0
         chosen_price = prev_price_value
+        chosen_currency = prev_currency
         used_locf = true
       end
       prev_price_value = chosen_price
+      prev_currency = chosen_currency || prev_currency
 
       provisional = determine_provisional_status(
         date: date,
@@ -80,7 +88,7 @@ class Security::Price::Importer
         security_id: security.id,
         date:        date,
         price:       chosen_price,
-        currency:    provider_currency || prev_price_currency || db_price_currency || "USD",
+        currency:    chosen_currency || "USD",
         provisional: provisional
       }
     end
@@ -160,7 +168,10 @@ class Security::Price::Importer
                                               .max_by { |date, _| date }
                                               &.last&.price
         db_price_value = db_prices[start_date]&.price
-        return provider_price_value || db_price_value
+
+        return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+        return db_price_value if db_price_value.present? && db_price_value.to_f > 0
+        return nil
       end
 
       # For partial range (effective_start_date > start_date), use recent data
