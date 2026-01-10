@@ -16,6 +16,15 @@ class Setting < RailsSettings::Base
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
 
+  # Sync settings - check both provider env vars for default
+  # Only defaults to true if neither provider explicitly disables pending
+  SYNCS_INCLUDE_PENDING_DEFAULT = begin
+    simplefin = ENV.fetch("SIMPLEFIN_INCLUDE_PENDING", "1") == "1"
+    plaid = ENV.fetch("PLAID_INCLUDE_PENDING", "1") == "1"
+    simplefin && plaid
+  end
+  field :syncs_include_pending, type: :boolean, default: SYNCS_INCLUDE_PENDING_DEFAULT
+
   # Dynamic fields are now stored as individual entries with "dynamic:" prefix
   # This prevents race conditions and ensures each field is independently managed
 

@@ -1,0 +1,49 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.metadata
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/build/
+android/gradlew
+android/gradlew.bat
+android/key.properties
+android/app/*.keystore
+android/app/*.jks
+keystore-base64.txt
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Runner.xcworkspace/
+ios/Podfile.lock
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# macOS
+.DS_Store
+*/.DS_Store
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# Miscellaneous
+_codeql_detected_source_root

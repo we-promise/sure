@@ -2,6 +2,16 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  # CoinStats routes
+  resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
+    collection do
+      post :link_wallet
+    end
+    member do
+      post :sync
+    end
+  end
+
   resources :enable_banking_items, only: [ :new, :create, :update, :destroy ] do
     collection do
       get :callback
@@ -133,7 +143,12 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
-  resources :family_merchants, only: %i[index new create edit update destroy]
+  resources :family_merchants, only: %i[index new create edit update destroy] do
+    collection do
+      get :merge
+      post :perform_merge
+    end
+  end
 
   resources :transfers, only: %i[new create destroy show update]
 
@@ -176,6 +191,8 @@ Rails.application.routes.draw do
 
     member do
       post :mark_as_recurring
+      post :merge_duplicate
+      post :dismiss_duplicate
     end
   end
 
@@ -209,6 +226,8 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      get :confirm_all
+      post :apply_all
     end
   end
 
@@ -268,11 +287,12 @@ Rails.application.routes.draw do
       post "auth/refresh", to: "auth#refresh"
 
       # Production API endpoints
-      resources :accounts, only: [ :index ]
+      resources :accounts, only: [ :index, :show ]
       resources :categories, only: [ :index, :show ]
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
-      resource :usage, only: [ :show ], controller: "usage"
-      resource :sync, only: [ :create ], controller: "sync"
+      resources :imports, only: [ :index, :show, :create ]
+      resource :usage, only: [ :show ], controller: :usage
+      post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do

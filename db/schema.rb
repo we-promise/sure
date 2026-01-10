@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -195,6 +195,45 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id"], name: "index_chats_on_user_id"
+  end
+
+  create_table "coinstats_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "coinstats_item_id", null: false
+    t.string "name"
+    t.string "account_id"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_coinstats_accounts_on_account_id"
+    t.index ["coinstats_item_id"], name: "index_coinstats_accounts_on_coinstats_item_id"
+  end
+
+  create_table "coinstats_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.string "api_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_coinstats_items_on_family_id"
+    t.index ["status"], name: "index_coinstats_items_on_status"
   end
 
   create_table "credit_cards", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -422,6 +461,17 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.index ["family_id"], name: "index_family_exports_on_family_id"
   end
 
+  create_table "family_merchant_associations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "merchant_id", null: false
+    t.datetime "unlinked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "merchant_id"], name: "idx_on_family_id_merchant_id_23e883e08f", unique: true
+    t.index ["family_id"], name: "index_family_merchant_associations_on_family_id"
+    t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
+  end
+
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "security_id", null: false
@@ -538,6 +588,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
+    t.integer "rows_count", default: 0, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -614,6 +665,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "holdings_supported", default: true, null: false
+    t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_lunchflow_accounts_on_account_id"
     t.index ["lunchflow_item_id"], name: "index_lunchflow_accounts_on_lunchflow_item_id"
   end
@@ -910,6 +963,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.datetime "failed_fetch_at"
     t.integer "failed_fetch_count", default: 0, null: false
     t.datetime "last_health_check_at"
+    t.string "website_url"
     t.index "upper((ticker)::text), COALESCE(upper((exchange_operating_mic)::text), ''::text)", name: "index_securities_on_ticker_and_exchange_operating_mic_unique", unique: true
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
@@ -922,6 +976,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "security_id"
+    t.boolean "provisional", default: false, null: false
     t.index ["security_id", "date", "currency"], name: "index_security_prices_on_security_id_and_date_and_currency", unique: true
     t.index ["security_id"], name: "index_security_prices_on_security_id"
   end
@@ -1171,6 +1226,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
+  add_foreign_key "coinstats_accounts", "coinstats_items"
+  add_foreign_key "coinstats_items", "families"
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "accounts", on_delete: :cascade
@@ -1180,6 +1237,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_15_100443) do
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
   add_foreign_key "family_exports", "families"
+  add_foreign_key "family_merchant_associations", "families"
+  add_foreign_key "family_merchant_associations", "merchants"
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"

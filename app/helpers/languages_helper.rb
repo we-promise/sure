@@ -58,7 +58,7 @@ module LanguagesHelper
     uk: "Ukrainian",
     vi: "Vietnamese",
     'zh-CN': "简体中文",
-    'zh-TW': "Chinese (Traditional)",
+    'zh-TW': "繁體中文",
     af: "Afrikaans",
     az: "Azerbaijani",
     be: "Belarusian",
@@ -163,7 +163,8 @@ module LanguagesHelper
     "ca",   # Catalan - 57 translation files
     "ro",   # Romanian - 62 translation files
     "pt-BR", # Brazilian Portuguese - 60 translation files
-    "zh-CN"  # Chinese (Simplified) - 59 translation files
+    "zh-CN", # Chinese (Simplified) - 59 translation files
+    "zh-TW"  # Chinese (Traditional) - 63 translation files
   ].freeze
 
   COUNTRY_MAPPING = {

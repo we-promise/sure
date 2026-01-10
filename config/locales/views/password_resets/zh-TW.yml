@@ -1,0 +1,14 @@
+---
+zh-TW:
+  password_resets:
+    disabled: 透過 Sure 重設密碼的功能已停用。請透過您的身份驗證提供商（Identity Provider）來重設密碼。
+    edit:
+      title: 重設密碼
+    new:
+      requested: 請檢查您的電子郵件，以取得重設密碼的連結。
+      submit: 重設密碼
+      title: 重設密碼
+      back: 返回
+    update:
+      invalid_token: 權杖（Token）無效。
+      success: 您的密碼已成功重設。

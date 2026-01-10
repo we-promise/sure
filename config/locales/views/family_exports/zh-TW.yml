@@ -1,0 +1,7 @@
+---
+zh-TW:
+  family_exports:
+    list:
+      complete: 已完成
+      failed: 已失敗
+      in_progress: 進行中

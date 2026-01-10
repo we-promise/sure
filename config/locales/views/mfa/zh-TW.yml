@@ -1,0 +1,34 @@
+---
+zh-TW:
+  mfa:
+    backup_codes:
+      backup_codes_description: 每個代碼只能使用一次。請妥善保存並確保這些代碼的安全。
+      backup_codes_title: 您的備援代碼
+      continue: 繼續前往安全性設定
+      description: 請將這些備援代碼儲存在安全的地方 —— 若您無法使用驗證應用程式，將會需要這些代碼。
+      page_title: 備援代碼
+      title: 儲存您的備援代碼
+    create:
+      invalid_code: 驗證碼無效。請再試一次。
+    disable:
+      success: 雙重驗證已停用
+    new:
+      code_label: 驗證碼
+      code_placeholder: 輸入 6 位數驗證碼
+      description: 透過設定雙重驗證來提升您的帳號安全性。
+      page_title: 設定雙重驗證
+      scan_description: 請使用 Google Authenticator 或 1Password 等驗證應用程式掃描此 QR Code
+      scan_title: 1. 掃描 QR Code
+      secret_description: 若您無法掃描 QR Code，請在驗證應用程式中手動輸入此金鑰
+      secret_title: 手動輸入代碼
+      title: 設定雙重驗證
+      verify_button: 驗證並啟用雙重驗證 (2FA)
+      verify_description: 請輸入驗證應用程式中的 6 位數驗證碼
+      verify_title: 2. 輸入驗證碼
+    verify:
+      description: 請輸入驗證應用程式中的驗證碼以繼續
+      page_title: 雙重驗證
+      title: 雙重驗證
+      verify_button: 驗證
+    verify_code:
+      invalid_code: 驗證碼無效。請再試一次。

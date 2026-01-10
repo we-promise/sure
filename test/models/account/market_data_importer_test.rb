@@ -4,7 +4,8 @@ require "ostruct"
 class Account::MarketDataImporterTest < ActiveSupport::TestCase
   include ProviderTestHelper
 
-  PROVIDER_BUFFER = 5.days
+  SECURITY_PRICE_BUFFER = Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
+  EXCHANGE_RATE_BUFFER  = 5.days
 
   setup do
     # Ensure a clean slate for deterministic assertions
@@ -37,7 +38,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: existing_date, rate: 2.0)
     ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: existing_date, rate: 0.5)
 
-    expected_start_date = (existing_date + 1.day) - PROVIDER_BUFFER
+    expected_start_date = (existing_date + 1.day) - EXCHANGE_RATE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     @provider.expects(:fetch_exchange_rates)
@@ -88,7 +89,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
       entryable: trade
     )
 
-    expected_start_date = trade_date - PROVIDER_BUFFER
+    expected_start_date = trade_date - SECURITY_PRICE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     @provider.expects(:fetch_security_prices)
@@ -138,7 +139,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
       entryable: trade
     )
 
-    expected_start_date = trade_date - PROVIDER_BUFFER
+    expected_start_date = trade_date - SECURITY_PRICE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     # Simulate provider returning an error response
@@ -181,7 +182,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: existing_date, rate: 2.0)
     ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: existing_date, rate: 0.5)
 
-    expected_start_date = (existing_date + 1.day) - PROVIDER_BUFFER
+    expected_start_date = (existing_date + 1.day) - EXCHANGE_RATE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     # Simulate provider returning an error response

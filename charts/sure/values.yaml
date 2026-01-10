@@ -9,7 +9,7 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/we-promise/sure
-  tag: "0.6.5"
+  tag: "0.6.6"
   pullPolicy: IfNotPresent
   # Optional: imagePullSecrets to pull from private registries
   imagePullSecrets: []

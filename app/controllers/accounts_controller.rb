@@ -6,50 +6,14 @@ class AccountsController < ApplicationController
     @manual_accounts = family.accounts
           .listable_manual
           .order(:name)
-    @plaid_items = family.plaid_items.ordered
+    @plaid_items = family.plaid_items.ordered.includes(:syncs, :plaid_accounts)
     @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
-    @lunchflow_items = family.lunchflow_items.ordered
+    @lunchflow_items = family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts)
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
+    @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
 
-    # Precompute per-item maps to avoid queries in the view
-    @simplefin_sync_stats_map = {}
-    @simplefin_has_unlinked_map = {}
-
-    @simplefin_items.each do |item|
-      latest_sync = item.syncs.ordered.first
-      @simplefin_sync_stats_map[item.id] = (latest_sync&.sync_stats || {})
-      @simplefin_has_unlinked_map[item.id] = item.family.accounts
-        .listable_manual
-        .exists?
-    end
-
-    # Count of SimpleFin accounts that are not linked (no legacy account and no AccountProvider)
-    @simplefin_unlinked_count_map = {}
-    @simplefin_items.each do |item|
-      count = item.simplefin_accounts
-        .left_joins(:account, :account_provider)
-        .where(accounts: { id: nil }, account_providers: { id: nil })
-        .count
-      @simplefin_unlinked_count_map[item.id] = count
-    end
-
-    # Compute CTA visibility map used by the simplefin_item partial
-    @simplefin_show_relink_map = {}
-    @simplefin_items.each do |item|
-      begin
-        unlinked_count = @simplefin_unlinked_count_map[item.id] || 0
-        manuals_exist = @simplefin_has_unlinked_map[item.id]
-        sfa_any = if item.simplefin_accounts.loaded?
-          item.simplefin_accounts.any?
-        else
-          item.simplefin_accounts.exists?
-        end
-        @simplefin_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
-      rescue => e
-        Rails.logger.warn("SimpleFin card: CTA computation failed for item #{item.id}: #{e.class} - #{e.message}")
-        @simplefin_show_relink_map[item.id] = false
-      end
-    end
+    # Build sync stats maps for all providers
+    build_sync_stats_maps
 
     # Prevent Turbo Drive from caching this page to ensure fresh account lists
     expires_now
@@ -71,8 +35,8 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
-    @q = params.fetch(:q, {}).permit(:search)
-    entries = @account.entries.search(@q).reverse_chronological
+    @q = params.fetch(:q, {}).permit(:search, status: [])
+    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological
 
     @pagy, @entries = pagy(entries, limit: params[:per_page] || "10")
 
@@ -140,11 +104,27 @@ class AccountsController < ApplicationController
 
     begin
       Account.transaction do
+        # Detach holdings from provider links before destroying them
+        provider_link_ids = @account.account_providers.pluck(:id)
+        if provider_link_ids.any?
+          Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
+        end
+
+        # Capture SimplefinAccount before clearing FK (so we can destroy it)
+        simplefin_account_to_destroy = @account.simplefin_account
+
         # Remove new system links (account_providers join table)
         @account.account_providers.destroy_all
 
         # Remove legacy system links (foreign keys)
         @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
+
+        # Destroy the SimplefinAccount record so it doesn't cause stale account issues
+        # This is safe because:
+        # - Account data (transactions, holdings, balances) lives on the Account, not SimplefinAccount
+        # - SimplefinAccount only caches API data which is regenerated on reconnect
+        # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
+        simplefin_account_to_destroy&.destroy!
       end
 
       redirect_to accounts_path, notice: t("accounts.unlink.success")
@@ -192,5 +172,71 @@ class AccountsController < ApplicationController
 
     def set_account
       @account = family.accounts.find(params[:id])
+    end
+
+    # Builds sync stats maps for all provider types to avoid N+1 queries in views
+    def build_sync_stats_maps
+      # SimpleFIN sync stats
+      @simplefin_sync_stats_map = {}
+      @simplefin_has_unlinked_map = {}
+      @simplefin_unlinked_count_map = {}
+      @simplefin_show_relink_map = {}
+      @simplefin_duplicate_only_map = {}
+
+      @simplefin_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        stats = latest_sync&.sync_stats || {}
+        @simplefin_sync_stats_map[item.id] = stats
+        @simplefin_has_unlinked_map[item.id] = item.family.accounts.listable_manual.exists?
+
+        # Count unlinked accounts
+        count = item.simplefin_accounts
+          .left_joins(:account, :account_provider)
+          .where(accounts: { id: nil }, account_providers: { id: nil })
+          .count
+        @simplefin_unlinked_count_map[item.id] = count
+
+        # CTA visibility
+        manuals_exist = @simplefin_has_unlinked_map[item.id]
+        sfa_any = item.simplefin_accounts.loaded? ? item.simplefin_accounts.any? : item.simplefin_accounts.exists?
+        @simplefin_show_relink_map[item.id] = (count.to_i == 0 && manuals_exist && sfa_any)
+
+        # Check if all errors are duplicate-skips
+        errors = Array(stats["errors"]).map { |e| e.is_a?(Hash) ? e["message"] || e[:message] : e.to_s }
+        @simplefin_duplicate_only_map[item.id] = errors.present? && errors.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
+      rescue => e
+        Rails.logger.warn("SimpleFin stats map build failed for item #{item.id}: #{e.class} - #{e.message}")
+        @simplefin_sync_stats_map[item.id] = {}
+        @simplefin_show_relink_map[item.id] = false
+        @simplefin_duplicate_only_map[item.id] = false
+      end
+
+      # Plaid sync stats
+      @plaid_sync_stats_map = {}
+      @plaid_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @plaid_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Lunchflow sync stats
+      @lunchflow_sync_stats_map = {}
+      @lunchflow_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @lunchflow_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Enable Banking sync stats
+      @enable_banking_sync_stats_map = {}
+      @enable_banking_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @enable_banking_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # CoinStats sync stats
+      @coinstats_sync_stats_map = {}
+      @coinstats_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
     end
 end

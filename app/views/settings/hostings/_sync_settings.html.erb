@@ -1,0 +1,30 @@
+<% env_configured = ENV["SIMPLEFIN_INCLUDE_PENDING"].present? || ENV["PLAID_INCLUDE_PENDING"].present? %>
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".include_pending_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".include_pending_description") %></p>
+    </div>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.toggle :syncs_include_pending,
+                      checked: Setting.syncs_include_pending,
+                      disabled: env_configured,
+                      data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
+  <% if env_configured %>
+    <div class="bg-warning-50 border border-warning-200 rounded-lg p-3">
+      <div class="flex items-start gap-2">
+        <%= icon("alert-circle", class: "w-5 h-5 text-warning-600 mt-0.5 shrink-0") %>
+        <p class="text-sm text-warning-800">
+          <%= t(".env_configured_message") %>
+        </p>
+      </div>
+    </div>
+  <% end %>
+</div>

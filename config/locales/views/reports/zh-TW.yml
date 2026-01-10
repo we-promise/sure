@@ -1,0 +1,126 @@
+---
+zh-TW:
+  reports:
+    index:
+      title: 報表
+      subtitle: 深入洞察您的財務健康狀況
+      export: 匯出 CSV
+      drag_to_reorder: "拖曳以重新排列區塊"
+      toggle_section: "切換區塊顯示狀態"
+      periods:
+        monthly: 按月
+        quarterly: 按季
+        ytd: 年初至今 (YTD)
+        last_6_months: 過去 6 個月
+        custom: 自訂範圍
+      date_range:
+        from: 開始
+        to: 結束
+      showing_period: "顯示 %{start} 至 %{end} 的資料"
+    invalid_date_range: "結束日期不能早於開始日期。日期已自動對調。"
+    summary:
+      total_income: 總收入
+      total_expenses: 總支出
+      net_savings: 淨儲蓄
+      budget_performance: 預算執行狀況
+      vs_previous: 與上一期相比
+      income_minus_expenses: 收入減去支出
+      of_budget_used: 已使用預算
+      no_budget_data: 此時段內無預算資料
+    budget_performance:
+      title: 預算執行狀況
+      spent: 已支出
+      budgeted: 預算額度
+      remaining: 剩餘
+      over_by: 超支
+      suggested_daily: "剩餘 %{days} 天，建議每日支出為 %{amount}"
+      no_budgets: 本月尚未設定預算類別
+      status:
+        good: 符合進度
+        warning: 接近上限
+        over: 預算超支
+    trends:
+      title: 趨勢與洞察
+      monthly_breakdown: 每月明細
+      month: 月份
+      income: 收入
+      expenses: 支出
+      net: 淨值
+      savings_rate: 儲蓄率
+      current: 目前
+      avg_monthly_income: 平均月收入
+      avg_monthly_expenses: 平均月支出
+      avg_monthly_savings: 平均月儲蓄
+      no_data: 暫無趨勢資料
+      spending_patterns: 消費模式
+      weekday_spending: 平日支出
+      weekend_spending: 週末支出
+      total: 總計
+      avg_per_transaction: 每筆平均金額
+      transactions: 交易筆數
+      insight_title: 洞察
+      insight_higher_weekend: "您週末每筆交易的平均支出比平日高出 %{percent}%"
+      insight_higher_weekday: "您平日每筆交易的平均支出比週末高出 %{percent}%"
+      insight_similar: "您平日與週末的每筆交易平均支出相近"
+      no_spending_data: 此時段內無消費資料
+    empty_state:
+      title: 尚無可用資料
+      description: 開始新增交易紀錄或連結您的帳戶，以查看詳細的財務報表。
+      add_transaction: 新增交易
+      add_account: 新增帳戶
+    transactions_breakdown:
+      title: 交易明細拆解
+      no_transactions: 在選定的時段與過濾條件下找不到交易紀錄
+      filters:
+        title: 過濾條件
+        category: 類別
+        account: 帳戶
+        tag: 標籤
+        amount_min: 最低金額
+        amount_max: 最高金額
+        date_range: 日期範圍
+        all_categories: 所有類別
+        all_accounts: 所有帳戶
+        all_tags: 所有標籤
+        apply: 應用過濾
+        clear: 清除過濾
+      sort:
+        label: 排序方式
+        date_desc: 日期（從新到舊）
+        amount_desc: 金額（從高到低）
+        amount_asc: 金額（從低到高）
+      export:
+        label: 匯出
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: 在 Google 試算表中開啟
+      table:
+        category: 類別
+        amount: 金額
+        type: 類型
+        expense: 支出
+        income: 收入
+        uncategorized: 未分類
+        transactions: 筆交易
+        percentage: "占總計 %"
+      pagination:
+        showing: 顯示 %{count} 筆交易
+        previous: 上一頁
+        next: 下一頁
+    google_sheets_instructions:
+      title_with_key: "✅ 已複製 Google 試算表連結"
+      title_no_key: "⚠️ 需要 API 金鑰"
+      ready: 您的 CSV URL（含 API 金鑰）已就緒。
+      steps: "若要匯入 Google 試算表：\n1. 建立一個新的 Google 試算表\n2. 在 A1 儲存格中輸入下方公式\n3. 按下 Enter 鍵"
+      security_warning: "此 URL 包含您的 API 金鑰。請妥善保管！"
+      need_key: 若要將資料匯入 Google 試算表，您需要一個 API 金鑰。
+      step1: "前往「設定」→「API 金鑰」"
+      step2: "建立一個具備「讀取」權限的新 API 金鑰"
+      step3: 複製該 API 金鑰
+      step4: "將其加入此 URL 結尾：?api_key=您的金鑰"
+      example: 範例
+      then_use: 接著在 Google 試算表中使用帶有 =IMPORTDATA() 的完整連結。
+      open_sheets: 開啟 Google 試算表
+      go_to_api_keys: 前往 API 金鑰設定
+      close: 我知道了
