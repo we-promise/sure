@@ -316,6 +316,36 @@ class TransactionsProvider with ChangeNotifier {
     }
   }
 
+  /// Undo a pending transaction (either pending create or pending delete)
+  Future<bool> undoPendingTransaction({
+    required String localId,
+    required SyncStatus syncStatus,
+  }) async {
+    _log.info('TransactionsProvider', 'Undoing transaction $localId with status $syncStatus');
+
+    try {
+      final success = await _offlineStorage.undoPendingTransaction(localId, syncStatus);
+
+      if (success) {
+        // Reload from storage to update UI
+        final updatedTransactions = await _offlineStorage.getTransactions();
+        _transactions = updatedTransactions;
+        _error = null;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to undo transaction';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _log.error('TransactionsProvider', 'Failed to undo transaction: $e');
+      _error = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Manually trigger sync
   Future<void> syncTransactions({
     required String accessToken,
