@@ -9,6 +9,7 @@ class SimplefinItem::Importer
     @simplefin_provider = simplefin_provider
     @sync = sync
     @enqueued_holdings_job_ids = Set.new
+    @reconciled_account_ids = Set.new  # Debounce pending reconciliation per run
   end
 
   def import
@@ -815,10 +816,14 @@ class SimplefinItem::Importer
         # Post-save side effects
         acct = simplefin_account.current_account
         if acct
-          # Handle pending transaction reconciliation (extracted for maintainability)
-          reconcile_and_track_pending_duplicates(acct)
-          exclude_and_track_stale_pending(acct)
-          track_stale_unmatched_pending(acct)
+          # Handle pending transaction reconciliation (debounced per run to avoid
+          # repeated scans during chunked history imports)
+          unless @reconciled_account_ids.include?(acct.id)
+            @reconciled_account_ids << acct.id
+            reconcile_and_track_pending_duplicates(acct)
+            exclude_and_track_stale_pending(acct)
+            track_stale_unmatched_pending(acct)
+          end
 
           # Refresh credit attributes when available-balance present
           if acct.accountable_type == "CreditCard" && account_data[:"available-balance"].present?
@@ -1178,6 +1183,7 @@ class SimplefinItem::Importer
             "posted_name" => detail[:posted_name]
           }
         end
+        stats["pending_reconciled_details"] = stats["pending_reconciled_details"].last(50)
       end
 
       if fuzzy_suggestions.any?
@@ -1190,9 +1196,11 @@ class SimplefinItem::Importer
             "posted_name" => detail[:posted_name]
           }
         end
+        stats["duplicate_suggestions_details"] = stats["duplicate_suggestions_details"].last(50)
       end
     rescue => e
       Rails.logger.warn("SimpleFin: pending reconciliation failed for account #{account.id}: #{e.class} - #{e.message}")
+      record_reconciliation_error("pending_reconciliation", account, e)
     end
 
     # Auto-exclude stale pending transactions (>8 days old with no matching posted version)
@@ -1208,8 +1216,10 @@ class SimplefinItem::Importer
         "account_id" => account.id,
         "count" => excluded_count
       }
+      stats["stale_pending_details"] = stats["stale_pending_details"].last(50)
     rescue => e
       Rails.logger.warn("SimpleFin: stale pending cleanup failed for account #{account.id}: #{e.class} - #{e.message}")
+      record_reconciliation_error("stale_pending_cleanup", account, e)
     end
 
     # Track stale pending transactions that couldn't be matched (for user awareness)
@@ -1237,7 +1247,21 @@ class SimplefinItem::Importer
         "account_id" => account.id,
         "count" => stale_unmatched
       }
+      stats["stale_unmatched_details"] = stats["stale_unmatched_details"].last(50)
     rescue => e
       Rails.logger.warn("SimpleFin: stale unmatched tracking failed for account #{account.id}: #{e.class} - #{e.message}")
+      record_reconciliation_error("stale_unmatched_tracking", account, e)
+    end
+
+    # Record reconciliation errors to sync_stats for UI visibility
+    def record_reconciliation_error(context, account, error)
+      stats["reconciliation_errors"] ||= []
+      stats["reconciliation_errors"] << {
+        "context" => context,
+        "account_id" => account.id,
+        "account_name" => account.name,
+        "error" => "#{error.class}: #{error.message}"
+      }
+      stats["reconciliation_errors"] = stats["reconciliation_errors"].last(20)
     end
 end
