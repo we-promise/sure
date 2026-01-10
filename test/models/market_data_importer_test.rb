@@ -4,8 +4,9 @@ require "ostruct"
 class MarketDataImporterTest < ActiveSupport::TestCase
   include ProviderTestHelper
 
-  SNAPSHOT_START_DATE = MarketDataImporter::SNAPSHOT_DAYS.days.ago.to_date
-  PROVIDER_BUFFER     = 5.days
+  SNAPSHOT_START_DATE       = MarketDataImporter::SNAPSHOT_DAYS.days.ago.to_date
+  SECURITY_PRICE_BUFFER     = Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
+  EXCHANGE_RATE_BUFFER      = 5.days
 
   setup do
     Security::Price.delete_all
@@ -39,7 +40,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
                          date: SNAPSHOT_START_DATE,
                          rate: 0.5)
 
-    expected_start_date = (SNAPSHOT_START_DATE + 1.day) - PROVIDER_BUFFER
+    expected_start_date = (SNAPSHOT_START_DATE + 1.day) - EXCHANGE_RATE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     @provider.expects(:fetch_exchange_rates)
@@ -70,7 +71,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
   test "syncs security prices" do
     security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
 
-    expected_start_date = SNAPSHOT_START_DATE - PROVIDER_BUFFER
+    expected_start_date = SNAPSHOT_START_DATE - SECURITY_PRICE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     @provider.expects(:fetch_security_prices)

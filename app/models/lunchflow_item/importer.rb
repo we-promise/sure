@@ -242,6 +242,14 @@ class LunchflowItem::Importer
           Rails.logger.warn "LunchflowItem::Importer - Failed to update balance for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
+        # Fetch holdings for investment/crypto accounts
+        begin
+          fetch_and_store_holdings(lunchflow_account)
+        rescue => e
+          # Log but don't fail sync if holdings fetch fails
+          Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
+        end
+
         { success: true, transactions_count: transactions_count }
       rescue Provider::Lunchflow::LunchflowError => e
         Rails.logger.error "LunchflowItem::Importer - Lunchflow API error for account #{lunchflow_account.id}: #{e.message}"
@@ -296,6 +304,53 @@ class LunchflowItem::Importer
       rescue => e
         Rails.logger.error "LunchflowItem::Importer - Unexpected error updating balance for account #{lunchflow_account.id}: #{e.class} - #{e.message}"
         # Don't fail if balance update fails
+      end
+    end
+
+    def fetch_and_store_holdings(lunchflow_account)
+      # Only fetch holdings for investment/crypto accounts
+      account = lunchflow_account.current_account
+      return unless account.present?
+      return unless [ "Investment", "Crypto" ].include?(account.accountable_type)
+
+      # Skip if holdings are not supported for this account
+      unless lunchflow_account.holdings_supported?
+        Rails.logger.debug "LunchflowItem::Importer - Skipping holdings fetch for account #{lunchflow_account.account_id} (holdings not supported)"
+        return
+      end
+
+      Rails.logger.info "LunchflowItem::Importer - Fetching holdings for account #{lunchflow_account.account_id}"
+
+      begin
+        holdings_data = lunchflow_provider.get_account_holdings(lunchflow_account.account_id)
+
+        # Validate response structure
+        unless holdings_data.is_a?(Hash)
+          Rails.logger.error "LunchflowItem::Importer - Invalid holdings_data format for account #{lunchflow_account.account_id}"
+          return
+        end
+
+        # Check if holdings are not supported (501 response)
+        if holdings_data[:holdings_not_supported]
+          Rails.logger.info "LunchflowItem::Importer - Holdings not supported for account #{lunchflow_account.account_id}, disabling future requests"
+          lunchflow_account.update!(holdings_supported: false)
+          return
+        end
+
+        # Store holdings payload for processing
+        holdings_array = holdings_data[:holdings] || []
+        Rails.logger.info "LunchflowItem::Importer - Fetched #{holdings_array.count} holdings for account #{lunchflow_account.account_id}"
+
+        lunchflow_account.update!(raw_holdings_payload: holdings_array)
+      rescue Provider::Lunchflow::LunchflowError => e
+        Rails.logger.error "LunchflowItem::Importer - Lunchflow API error fetching holdings for account #{lunchflow_account.id}: #{e.message}"
+        # Don't fail if holdings fetch fails
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.error "LunchflowItem::Importer - Failed to save holdings for account #{lunchflow_account.id}: #{e.message}"
+        # Don't fail if holdings save fails
+      rescue => e
+        Rails.logger.error "LunchflowItem::Importer - Unexpected error fetching holdings for account #{lunchflow_account.id}: #{e.class} - #{e.message}"
+        # Don't fail if holdings fetch fails
       end
     end
 
