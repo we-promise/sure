@@ -261,13 +261,13 @@ jobs:
       - name: Download Android APK artifact
         uses: actions/download-artifact@v4.3.0
         with:
-          name: android-apk-unsigned
+          name: app-release-apk
           path: ${{ runner.temp }}/mobile-artifacts
 
       - name: Download iOS build artifact
         uses: actions/download-artifact@v4.3.0
         with:
-          name: ios-ipa-unsigned
+          name: ios-build-unsigned
           path: ${{ runner.temp }}/ios-build
 
       - name: Prepare release assets
