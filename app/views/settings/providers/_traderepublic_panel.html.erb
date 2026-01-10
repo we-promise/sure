@@ -63,23 +63,13 @@
                   <span>Verify PIN</span>
                 <% end %>
               <% else %>
-                <div data-controller="traderepublic_reauth">
-                  <%= button_to reauthenticate_traderepublic_item_path(item),
-                      method: :post,
-                      id: "reauth-btn-#{item.id}",
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                      data: { 
-                        turbo_frame: "modal",
-                        action: "click->traderepublic_reauth#submit",
-                        turbo: "false"
-                      } do %>
-                    <%= icon "key", class: "w-3 h-3" %>
-                    <span data-traderepublic_reauth-target="buttonText">Re-authenticate</span>
-                    <span data-traderepublic_reauth-target="spinner" class="hidden">
-                      <%= icon "loader-2", class: "w-3 h-3 animate-spin" %>
-                    </span>
-                  <% end %>
-                </div>
+                <%= button_to manual_sync_traderepublic_item_path(item),
+                    method: :post,
+                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                    data: { turbo_frame: "modal" } do %>
+                  <%= icon "refresh-cw", class: "w-3 h-3" %>
+                  <span>Manual sync</span>
+                <% end %>
               <% end %>
               
               <%= button_to traderepublic_item_path(item),

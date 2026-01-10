@@ -90,7 +90,7 @@
         errorMessage.classList.add('hidden');
 
         try {
-          const response = await fetch('<%= complete_login_traderepublic_item_path(@traderepublic_item) %>', {
+          const response = await fetch('<%= complete_login_traderepublic_item_path(@traderepublic_item) %><%= "?manual_sync=1" if local_assigns[:manual_sync] || params[:manual_sync] %>', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -99,7 +99,8 @@
             body: JSON.stringify({
               device_pin: devicePin,
               accountable_type: '<%= params[:accountable_type] || "Investment" %>',
-              return_to: '<%= @return_to %>'
+              return_to: '<%= @return_to %>',
+              manual_sync: <%= (local_assigns[:manual_sync] || params[:manual_sync]) ? 'true' : 'false' %>
             })
           });
 

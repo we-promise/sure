@@ -370,6 +370,7 @@ Rails.application.routes.draw do
     member do
       post :sync
       post :reauthenticate
+      post :manual_sync
       get :verify_pin
       post :complete_login
     end
