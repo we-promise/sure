@@ -1,11 +1,8 @@
 <%# locals: (entry:, balance_trend: nil, view_ctx: "global") %>
-
 <% transaction = entry.entryable %>
-
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
     <div class="flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
-
       <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
@@ -16,7 +13,6 @@
               action: "bulk-select#toggleRowSelection",
               checkbox_toggle_target: "selectionEntry"
             } %>
-
         <div class="max-w-full">
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
@@ -43,7 +39,6 @@
                     loading: "lazy" %>
               <% end %>
             </div>
-
             <div class="truncate">
               <div class="space-y-0.5">
                 <div class="flex items-center gap-1 min-w-0">
@@ -70,14 +65,12 @@
                           ) %>
                     <% end %>
                   </div>
-
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <% if transaction.one_time? %>
                       <span class="text-orange-500" title="One-time <%= entry.amount.negative? ? "income" : "expense" %> (excluded from averages)">
                         <%= icon "asterisk", size: "sm", color: "current" %>
                       </span>
                     <% end %>
-
                     <%# Pending indicator %>
                     <% if transaction.pending? %>
                       <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="Pending — may change when posted">
@@ -85,17 +78,22 @@
                         Pending
                       </span>
                     <% end %>
-
                     <% if transaction.transfer.present? %>
                       <%= render "transactions/transfer_match", transaction: transaction %>
                     <% end %>
                   </div>
                 </div>
-
                 <div class="text-secondary text-xs font-normal">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
-                      <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> • <%= entry.account.name %>
+                      <% transfer_label = if transaction.installment_payment?
+                        t("transactions.show.installment_payment", default: "Installment payment")
+                      elsif transaction.loan_payment?
+                        t("transactions.show.loan_payment", default: "Loan payment")
+                      else
+                        t("transactions.show.transfer", default: "Transfer")
+                      end %>
+                      <%= transfer_label %> • <%= entry.account.name %>
                     </span>
                   <% else %>
                     <% if transaction.merchant&.present? %>
@@ -120,11 +118,9 @@
           <% end %>
         </div>
       </div>
-
       <div class="hidden md:flex items-center gap-1 col-span-2">
         <%= render "transactions/transaction_category", transaction: transaction %>
       </div>
-
       <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
         <%= content_tag :p,
             transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),

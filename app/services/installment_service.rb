@@ -64,7 +64,7 @@ class InstallmentService
         name: name,
         entryable: Transaction.new(
           installment: installment,
-          kind: "loan_payment"
+          kind: "installment_payment"
         )
       )
     end

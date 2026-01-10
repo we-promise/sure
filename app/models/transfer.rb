@@ -16,6 +16,8 @@ class Transfer < ApplicationRecord
     def kind_for_account(account)
       if account.loan?
         "loan_payment"
+      elsif account.installment?
+        "installment_payment"
       elsif account.liability?
         "cc_payment"
       else
@@ -82,6 +84,10 @@ class Transfer < ApplicationRecord
     outflow_transaction&.kind == "loan_payment"
   end
 
+  def installment_payment?
+    outflow_transaction&.kind == "installment_payment"
+  end
+
   def liability_payment?
     outflow_transaction&.kind == "cc_payment"
   end
@@ -92,6 +98,7 @@ class Transfer < ApplicationRecord
 
   def transfer_type
     return "loan_payment" if loan_payment?
+    return "installment_payment" if installment_payment?
     return "liability_payment" if liability_payment?
     "transfer"
   end

@@ -122,7 +122,7 @@ class Transaction::Search
       return query unless types.present?
       return query if types.sort == [ "expense", "income", "transfer" ]
 
-      transfer_condition = "transactions.kind IN ('funds_movement', 'cc_payment', 'loan_payment')"
+      transfer_condition = "transactions.kind IN ('funds_movement', 'cc_payment', 'loan_payment', 'installment_payment')"
       expense_condition = "entries.amount >= 0"
       income_condition = "entries.amount <= 0"
 

@@ -313,7 +313,7 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where(kind: [ "standard", "loan_payment" ])
+        .where(kind: [ "standard", "loan_payment", "installment_payment" ])
         .where("entries.amount > 0") # Positive amount = expense (matching income_statement logic)
 
       # Sum up amounts by weekday vs weekend

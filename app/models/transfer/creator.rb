@@ -68,6 +68,8 @@ class Transfer::Creator
     def outflow_transaction_kind
       if destination_account.loan?
         "loan_payment"
+      elsif destination_account.installment?
+        "installment_payment"
       elsif destination_account.liability?
         "cc_payment"
       else
