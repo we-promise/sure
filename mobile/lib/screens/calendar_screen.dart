@@ -115,11 +115,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
 
         // For asset accounts, flip the sign to match accounting conventions
-        if (_selectedAccount?.isAsset == true) {
+        // For liability accounts, also flip the sign
+        if (_selectedAccount?.isAsset == true || _selectedAccount?.isLiability == true) {
           amount = -amount;
         }
 
-        _log.debug('CalendarScreen', 'Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, parsed: $amount, isAsset: ${_selectedAccount?.isAsset}');
+        _log.debug('CalendarScreen', 'Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, parsed: $amount, isAsset: ${_selectedAccount?.isAsset}, isLiability: ${_selectedAccount?.isLiability}');
 
         changes[dateKey] = (changes[dateKey] ?? 0.0) + amount;
         _log.debug('CalendarScreen', 'Date $dateKey now has total: ${changes[dateKey]}');
