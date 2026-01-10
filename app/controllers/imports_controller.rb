@@ -12,7 +12,7 @@ class ImportsController < ApplicationController
   end
 
   def index
-    @pagy, @imports = pagy(Current.family.imports.ordered, limit: params[:per_page] || 10)
+    @pagy, @imports = pagy(Current.family.imports.ordered, limit: safe_per_page)
     @breadcrumbs = [
       [ "Home", root_path ],
       [ "Imports", imports_path ]
