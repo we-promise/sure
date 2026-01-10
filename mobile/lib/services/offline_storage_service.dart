@@ -85,6 +85,13 @@ class OfflineStorageService {
         .toList();
   }
 
+  Future<List<OfflineTransaction>> getPendingDeletes() async {
+    final transactionMaps = await _dbHelper.getPendingDeletes();
+    return transactionMaps
+        .map((map) => OfflineTransaction.fromDatabaseMap(map))
+        .toList();
+  }
+
   Future<void> updateTransactionSyncStatus({
     required String localId,
     required SyncStatus syncStatus,
@@ -108,6 +115,57 @@ class OfflineStorageService {
 
   Future<void> deleteTransactionByServerId(String serverId) async {
     await _dbHelper.deleteTransactionByServerId(serverId);
+  }
+
+  /// Mark a transaction for pending deletion (offline delete)
+  Future<void> markTransactionForDeletion(String serverId) async {
+    _log.info('OfflineStorage', 'Marking transaction $serverId for pending deletion');
+
+    // Find the transaction by server ID
+    final existing = await getTransactionByServerId(serverId);
+    if (existing == null) {
+      _log.warning('OfflineStorage', 'Transaction $serverId not found, cannot mark for deletion');
+      return;
+    }
+
+    // Update its sync status to pendingDelete
+    final updated = existing.copyWith(
+      syncStatus: SyncStatus.pendingDelete,
+      updatedAt: DateTime.now(),
+    );
+
+    await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
+    _log.info('OfflineStorage', 'Transaction ${existing.localId} marked as pending_delete');
+  }
+
+  /// Undo a pending transaction operation (either pending create or pending delete)
+  Future<bool> undoPendingTransaction(String localId, SyncStatus currentStatus) async {
+    _log.info('OfflineStorage', 'Undoing pending transaction $localId with status $currentStatus');
+
+    final existing = await getTransactionByLocalId(localId);
+    if (existing == null) {
+      _log.warning('OfflineStorage', 'Transaction $localId not found, cannot undo');
+      return false;
+    }
+
+    if (currentStatus == SyncStatus.pending) {
+      // For pending creates: delete the transaction completely
+      _log.info('OfflineStorage', 'Deleting pending create transaction $localId');
+      await deleteTransaction(localId);
+      return true;
+    } else if (currentStatus == SyncStatus.pendingDelete) {
+      // For pending deletes: restore to synced status
+      _log.info('OfflineStorage', 'Restoring pending delete transaction $localId to synced');
+      final updated = existing.copyWith(
+        syncStatus: SyncStatus.synced,
+        updatedAt: DateTime.now(),
+      );
+      await _dbHelper.updateTransaction(localId, updated.toDatabaseMap());
+      return true;
+    }
+
+    _log.warning('OfflineStorage', 'Cannot undo transaction with status $currentStatus');
+    return false;
   }
 
   Future<void> syncTransactionsFromServer(List<Transaction> serverTransactions) async {

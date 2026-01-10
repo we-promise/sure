@@ -29,6 +29,12 @@ class SyncStatusBadge extends StatelessWidget {
         text = 'Pending';
         semanticsLabel = 'Transaction pending sync';
         break;
+      case SyncStatus.pendingDelete:
+        color = Colors.red.shade300;
+        icon = Icons.delete_outline;
+        text = 'Deleting';
+        semanticsLabel = 'Transaction pending deletion';
+        break;
       case SyncStatus.failed:
         color = Colors.red;
         icon = Icons.error_outline;

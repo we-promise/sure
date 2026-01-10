@@ -191,6 +191,55 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   }
 
+  Future<void> _undoTransaction(OfflineTransaction transaction) async {
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Undo Transaction'),
+        content: Text(
+          transaction.syncStatus == SyncStatus.pending
+              ? 'Remove this pending transaction?'
+              : 'Restore this transaction?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Undo'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final success = await transactionsProvider.undoPendingTransaction(
+      localId: transaction.localId,
+      syncStatus: transaction.syncStatus,
+    );
+
+    if (mounted) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? (transaction.syncStatus == SyncStatus.pending
+                    ? 'Pending transaction removed'
+                    : 'Transaction restored')
+                : 'Failed to undo transaction',
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<bool> _confirmAndDeleteTransaction(Transaction transaction) async {
     if (transaction.id == null) return false;
 
@@ -371,7 +420,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 final isSelected = transaction.id != null &&
                     _selectedTransactions.contains(transaction.id);
                 final isPending = transaction.syncStatus == SyncStatus.pending;
+                final isPendingDelete = transaction.syncStatus == SyncStatus.pendingDelete;
                 final isFailed = transaction.syncStatus == SyncStatus.failed;
+                final hasPendingStatus = isPending || isPendingDelete;
 
                 // Compute display info once to avoid duplicate parsing
                 final displayInfo = _getAmountDisplayInfo(
@@ -395,7 +446,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   ),
                   confirmDismiss: (direction) => _confirmAndDeleteTransaction(transaction),
                   child: Opacity(
-                    opacity: isPending ? 0.5 : 1.0,
+                    opacity: hasPendingStatus ? 0.5 : 1.0,
                     child: Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: InkWell(
@@ -456,7 +507,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (isPending || isFailed)
+                                    if (hasPendingStatus || isFailed)
                                       Padding(
                                         padding: const EdgeInsets.only(right: 8),
                                         child: SyncStatusBadge(
@@ -473,6 +524,31 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                     ),
                                   ],
                                 ),
+                                if (hasPendingStatus) ...[
+                                  const SizedBox(height: 4),
+                                  InkWell(
+                                    onTap: () => _undoTransaction(transaction),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.blue.withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Undo',
+                                        style: TextStyle(
+                                          color: Colors.blue,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 4),
                                 Text(
                                   transaction.currency,
