@@ -410,7 +410,7 @@ class SimplefinItem < ApplicationRecord
     if count > 0
       {
         count: count,
-        message: "#{count} duplicate pending #{'transaction'.pluralize(count)} reconciled"
+        message: I18n.t("simplefin_items.reconciled_status.message", count: count)
       }
     else
       { count: 0 }
@@ -421,20 +421,28 @@ class SimplefinItem < ApplicationRecord
   # Returns { count: N, accounts: [names] } or { count: 0 } if none
   def stale_pending_status(days: 8)
     # Get all accounts linked to this SimpleFIN item
-    linked_accounts = simplefin_accounts.filter_map(&:current_account)
+    # Eager-load both association paths to avoid N+1 on current_account method
+    linked_accounts = simplefin_accounts.includes(:account, :linked_account).filter_map(&:current_account)
     return { count: 0 } if linked_accounts.empty?
 
-    account_counts = linked_accounts.map do |account|
-      count = account.entries.stale_pending(days: days).where(excluded: false).count
-      { account: account, count: count }
-    end.select { |ac| ac[:count] > 0 }
+    # Batch query to avoid N+1
+    account_ids = linked_accounts.map(&:id)
+    counts_by_account = Entry.stale_pending(days: days)
+      .where(excluded: false)
+      .where(account_id: account_ids)
+      .group(:account_id)
+      .count
+
+    account_counts = linked_accounts
+      .map { |account| { account: account, count: counts_by_account[account.id].to_i } }
+      .select { |ac| ac[:count] > 0 }
 
     total = account_counts.sum { |ac| ac[:count] }
     if total > 0
       {
         count: total,
         accounts: account_counts.map { |ac| ac[:account].name },
-        message: "#{total} pending #{'transaction'.pluralize(total)} older than #{days} days"
+        message: I18n.t("simplefin_items.stale_pending_status.message", count: total, days: days)
       }
     else
       { count: 0 }

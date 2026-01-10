@@ -145,8 +145,8 @@
         <% if has_stale_unmatched_pending? %>
           <div class="mt-1">
             <div class="flex items-center gap-1">
-              <%= helpers.icon "help-circle", size: "sm", class: "text-blue-500" %>
-              <span class="text-blue-500"><%= t("provider_sync_summary.health.stale_unmatched", count: stale_unmatched_pending) %></span>
+              <%= helpers.icon "help-circle", size: "sm" %>
+              <span class="text-secondary"><%= t("provider_sync_summary.health.stale_unmatched", count: stale_unmatched_pending) %></span>
             </div>
             <% if stale_unmatched_details.any? %>
               <details class="mt-1">
@@ -155,7 +155,7 @@
                 </summary>
                 <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
                   <% stale_unmatched_details.each do |detail| %>
-                    <p class="text-xs text-blue-500">
+                    <p class="text-xs text-secondary">
                       <%= detail["account_name"] %>: <%= t("provider_sync_summary.health.stale_unmatched_count", count: detail["count"]) %>
                     </p>
                   <% end %>

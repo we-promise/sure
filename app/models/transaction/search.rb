@@ -158,7 +158,7 @@ class Transaction::Search
 
     def apply_status_filter(query, statuses)
       return query unless statuses.present?
-      return query if statuses.sort == [ "confirmed", "pending" ] # Both selected = no filter
+      return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
 
       pending_condition = <<~SQL.squish
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true

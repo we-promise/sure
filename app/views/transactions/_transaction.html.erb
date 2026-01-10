@@ -89,7 +89,7 @@
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>
-                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-blue-400 bg-blue-400/10 text-blue-500" title="<%= t('transactions.transaction.review_recommended_tooltip') %>">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t('transactions.transaction.review_recommended_tooltip') %>">
                           <%= icon "help-circle", size: "sm", color: "current" %>
                           <%= t("transactions.transaction.review_recommended") %>
                         </span>

@@ -60,7 +60,7 @@ class EntrySearch
 
     def apply_status_filter(scope, statuses)
       return scope unless statuses.present?
-      return scope if statuses.sort == %w[confirmed pending] # Both selected = no filter
+      return scope if statuses.uniq.sort == %w[confirmed pending] # Both selected = no filter
 
       pending_condition = <<~SQL.squish
         entries.entryable_type = 'Transaction'

@@ -63,6 +63,7 @@
                   <%= check_box_tag "q[status][]",
                                     "confirmed",
                                     params.dig(:q, :status)&.include?("confirmed"),
+                                    id: "q_status_confirmed",
                                     class: "checkbox checkbox--light",
                                     form: "entries-search",
                                     onchange: "document.getElementById('entries-search').requestSubmit()" %>
@@ -72,6 +73,7 @@
                   <%= check_box_tag "q[status][]",
                                     "pending",
                                     params.dig(:q, :status)&.include?("pending"),
+                                    id: "q_status_pending",
                                     class: "checkbox checkbox--light",
                                     form: "entries-search",
                                     onchange: "document.getElementById('entries-search').requestSubmit()" %>

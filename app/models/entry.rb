@@ -76,7 +76,7 @@ class Entry < ApplicationRecord
     count = stale_entries.count
 
     if count > 0
-      stale_entries.update_all(excluded: true)
+      stale_entries.update_all(excluded: true, updated_at: Time.current)
       Rails.logger.info("Auto-excluded #{count} stale pending transaction(s) for account #{account.id} (#{account.name})")
     end
 
@@ -104,7 +104,7 @@ class Entry < ApplicationRecord
 
       # PRIORITY 1: Look for posted transaction with EXACT amount match
       # CRITICAL: Only search forward in time - posted date must be >= pending date
-      posted_match = acct.entries
+      exact_candidates = acct.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where.not(id: pending_entry.id)
         .where(currency: pending_entry.currency)
@@ -114,10 +114,12 @@ class Entry < ApplicationRecord
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
         SQL
-        .first
+        .limit(2) # Only need to know if 0, 1, or 2+ candidates
 
-      # Handle exact match - auto-exclude (high confidence)
-      if posted_match
+      # Handle exact match - auto-exclude only if exactly ONE candidate (high confidence)
+      # Multiple candidates = ambiguous = skip to avoid excluding wrong entry
+      if exact_candidates.size == 1
+        posted_match = exact_candidates.first
         detail = {
           pending_id: pending_entry.id,
           pending_name: pending_entry.name,

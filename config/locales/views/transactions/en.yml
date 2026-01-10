@@ -72,6 +72,16 @@ en:
       transactions: transactions
       import: Import
     toggle_recurring_section: Toggle upcoming recurring transactions
+    search:
+      filters:
+        account: Account
+        date: Date
+        type: Type
+        status: Status
+        amount: Amount
+        category: Category
+        tag: Tag
+        merchant: Merchant
     searches:
       filters:
         amount_filter:

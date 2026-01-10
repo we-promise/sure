@@ -17,6 +17,7 @@ namespace :simplefin do
       "INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'"
     ).where(source: "simplefin")
      .where("transactions.extra -> 'simplefin' ->> 'pending' = ?", "true")
+     .includes(:account)
 
     puts "Found #{pending_entries.count} pending SimpleFIN transactions"
     puts ""
