@@ -1,6 +1,7 @@
 ---
 en:
   transactions:
+    unknown_name: Unknown transaction
     form:
       account: Account
       account_prompt: Select an Account
@@ -86,3 +87,5 @@ en:
         equal_to: equal to
         greater_than: greater than
         less_than: less than
+      form:
+        toggle_selection_checkboxes: Toggle all checkboxes

@@ -269,13 +269,17 @@ class EnableBankingItemsController < ApplicationController
           end
 
           # Create the internal Account (uses save! internally, will raise on failure)
+          # Skip initial sync - provider sync will handle balance creation with correct currency
           account = Account.create_and_sync(
-            family: Current.family,
-            name: enable_banking_account.name,
-            balance: enable_banking_account.current_balance || 0,
-            currency: enable_banking_account.currency || "EUR",
-            accountable_type: accountable_type,
-            accountable_attributes: {}
+            {
+              family: Current.family,
+              name: enable_banking_account.name,
+              balance: enable_banking_account.current_balance || 0,
+              currency: enable_banking_account.currency || "EUR",
+              accountable_type: accountable_type,
+              accountable_attributes: {}
+            },
+            skip_initial_sync: true
           )
 
           # Link account to enable_banking_account via account_providers
@@ -430,7 +434,7 @@ class EnableBankingItemsController < ApplicationController
 
     # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
     if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
-      flash[:alert] = "Only manual accounts can be linked"
+      flash[:alert] = t("enable_banking_items.link_existing_account.errors.only_manual")
       if turbo_frame_request?
         return render turbo_stream: Array(flash_notification_stream_items)
       else
@@ -441,7 +445,7 @@ class EnableBankingItemsController < ApplicationController
     # Verify the Enable Banking account belongs to this family's Enable Banking items
     unless enable_banking_account.enable_banking_item.present? &&
            Current.family.enable_banking_items.include?(enable_banking_account.enable_banking_item)
-      flash[:alert] = "Invalid Enable Banking account selected"
+      flash[:alert] = t("enable_banking_items.link_existing_account.errors.invalid_enable_banking_account")
       if turbo_frame_request?
         render turbo_stream: Array(flash_notification_stream_items)
       else
@@ -466,9 +470,12 @@ class EnableBankingItemsController < ApplicationController
       # follows the chosen account.
       if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
         begin
-          previous_account.disable!
+          # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
+          # Use the app's standard deletion path (async) so the duplicate disappears and the
+          # "pending_deletion" state remains truthful in the UI.
+          previous_account.destroy_later if previous_account.may_mark_for_deletion?
         rescue => e
-          Rails.logger.warn("Failed to disable orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
+          Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
         end
       end
     end
@@ -489,7 +496,7 @@ class EnableBankingItemsController < ApplicationController
       @enable_banking_items = Current.family.enable_banking_items.ordered.includes(:syncs)
       build_enable_banking_maps_for(@enable_banking_items)
 
-      flash[:notice] = "Account successfully linked to Enable Banking"
+      flash[:notice] = t("enable_banking_items.link_existing_account.success")
       @account.reload
       manual_accounts_stream = if @manual_accounts.any?
         turbo_stream.update(
@@ -513,7 +520,7 @@ class EnableBankingItemsController < ApplicationController
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: "Account successfully linked to Enable Banking", status: :see_other
+      redirect_to accounts_path(cache_bust: SecureRandom.hex(6)), notice: t("enable_banking_items.link_existing_account.success"), status: :see_other
     end
   end
 

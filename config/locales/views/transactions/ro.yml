@@ -80,3 +80,5 @@ ro:
         equal_to: egal cu
         greater_than: mai mare decât
         less_than: mai mic decât
+      form:
+        toggle_selection_checkboxes: Comută toate casetele de selectare

@@ -84,3 +84,5 @@ pt-BR:
         equal_to: igual a
         greater_than: maior que
         less_than: menor que
+      form:
+        toggle_selection_checkboxes: Alternar todas as caixas de seleção

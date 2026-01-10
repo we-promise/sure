@@ -13,6 +13,10 @@ class OidcAccountsController < ApplicationController
 
     @email = @pending_auth["email"]
     @user_exists = User.exists?(email: @email) if @email.present?
+
+    # Determine whether we should offer JIT account creation for this
+    # pending auth, based on JIT mode and allowed domains.
+    @allow_account_creation = !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(@email)
   end
 
   def create_link
@@ -77,14 +81,25 @@ class OidcAccountsController < ApplicationController
       return
     end
 
-    # Create user with a secure random password since they're using OIDC
-    secure_password = SecureRandom.base58(32)
+    email = @pending_auth["email"]
+
+    # Respect global JIT configuration: in link_only mode or when the email
+    # domain is not allowed, block JIT account creation and send the user
+    # back to the login page with a clear message.
+    unless !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)
+      redirect_to new_session_path, alert: "SSO account creation is disabled. Please contact an administrator."
+      return
+    end
+
+    # Create SSO-only user without local password.
+    # Security: JIT users should NOT have password_digest set to prevent
+    # chained authentication attacks where SSO users gain local login access
+    # via password reset.
     @user = User.new(
-      email: @pending_auth["email"],
+      email: email,
       first_name: @pending_auth["first_name"],
       last_name: @pending_auth["last_name"],
-      password: secure_password,
-      password_confirmation: secure_password
+      skip_password_validation: true
     )
 
     # Create new family for this user
@@ -92,7 +107,7 @@ class OidcAccountsController < ApplicationController
     @user.role = :admin
 
     if @user.save
-      # Create the OIDC identity
+      # Create the OIDC (or other SSO) identity
       OidcIdentity.create_from_omniauth(
         build_auth_hash(@pending_auth),
         @user

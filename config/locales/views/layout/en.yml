@@ -1,6 +1,13 @@
 ---
 en:
   layouts:
+    application:
+      nav:
+        assistant: Assistant
+        budgets: Budgets
+        home: Home
+        reports: Reports
+        transactions: Transactions
     auth:
       existing_account: Already have an account?
       no_account: New to %{product_name}?

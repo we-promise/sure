@@ -1,6 +1,13 @@
 ---
 tr:
   layouts:
+    application:
+      nav:
+        assistant: Asistan
+        budgets: Bütçeler
+        home: Ana Sayfa
+        reports: Raporlar
+        transactions: İşlemler
     auth:
       existing_account: Zaten bir hesabınız var mı?
       no_account: "%{product_name}'ye yeni misiniz?"

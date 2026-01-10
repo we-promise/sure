@@ -17,7 +17,7 @@ gem "bootsnap", require: false
 gem "importmap-rails"
 gem "propshaft"
 gem "tailwindcss-rails"
-gem "lucide-rails", github: "maybe-finance/lucide-rails"
+gem "lucide-rails"
 
 # Hotwire + UI
 gem "stimulus-rails"
@@ -77,10 +77,12 @@ gem "rqrcode", "~> 3.0"
 gem "activerecord-import"
 gem "rubyzip", "~> 2.3"
 
-# OpenID Connect authentication
+# OpenID Connect & OAuth authentication
 gem "omniauth", "~> 2.1"
 gem "omniauth-rails_csrf_protection"
 gem "omniauth_openid_connect"
+gem "omniauth-google-oauth2"
+gem "omniauth-github"
 
 # State machines
 gem "aasm"

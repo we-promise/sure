@@ -136,6 +136,181 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal 1, Security::Price.count
   end
 
+  test "marks prices as not provisional when from provider" do
+    Security::Price.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: 1.day.ago.to_date, price: 150, currency: "USD"),
+      OpenStruct.new(security: @security, date: Date.current, price: 155, currency: "USD")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(1.day.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current
+    ).import_provider_prices
+
+    db_prices = Security::Price.where(security: @security).order(:date)
+    assert db_prices.all? { |p| p.provisional == false }, "All prices from provider should not be provisional"
+  end
+
+  test "marks gap-filled weekend prices as not provisional" do
+    Security::Price.delete_all
+
+    # Find a recent Saturday
+    saturday = Date.current
+    saturday -= 1.day until saturday.saturday?
+    friday = saturday - 1.day
+
+    # Provider only returns Friday's price, not Saturday
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: friday, price: 150, currency: "USD")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(friday), end_date: saturday)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: friday,
+      end_date: saturday
+    ).import_provider_prices
+
+    saturday_price = Security::Price.find_by(security: @security, date: saturday)
+    assert_not saturday_price.provisional, "Weekend gap-filled price should not be provisional"
+  end
+
+  test "marks gap-filled recent weekday prices as provisional" do
+    Security::Price.delete_all
+
+    # Find a recent weekday that's not today
+    weekday = 1.day.ago.to_date
+    weekday -= 1.day while weekday.saturday? || weekday.sunday?
+
+    # Start from 2 days before the weekday
+    start_date = weekday - 1.day
+    start_date -= 1.day while start_date.saturday? || start_date.sunday?
+
+    # Provider only returns start_date price, not the weekday
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: start_date, price: 150, currency: "USD")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(start_date), end_date: weekday)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: weekday
+    ).import_provider_prices
+
+    weekday_price = Security::Price.find_by(security: @security, date: weekday)
+    # Only recent weekdays should be provisional
+    if weekday >= 3.days.ago.to_date
+      assert weekday_price.provisional, "Gap-filled recent weekday price should be provisional"
+    else
+      assert_not weekday_price.provisional, "Gap-filled old weekday price should not be provisional"
+    end
+  end
+
+  test "retries fetch when refetchable provisional prices exist" do
+    Security::Price.delete_all
+
+    # Skip if today is a weekend
+    return if Date.current.saturday? || Date.current.sunday?
+
+    # Pre-populate with provisional price for today
+    Security::Price.create!(
+      security: @security,
+      date: Date.current,
+      price: 100,
+      currency: "USD",
+      provisional: true
+    )
+
+    # Provider now returns today's actual price
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: Date.current, price: 165, currency: "USD")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_prices
+
+    db_price = Security::Price.find_by(security: @security, date: Date.current)
+    assert_equal 165, db_price.price, "Price should be updated from provider"
+    assert_not db_price.provisional, "Price should no longer be provisional after provider returns real price"
+  end
+
+  test "skips fetch when all prices are non-provisional" do
+    Security::Price.delete_all
+
+    # Create non-provisional prices for the range
+    (3.days.ago.to_date..Date.current).each_with_index do |date, idx|
+      Security::Price.create!(security: @security, date: date, price: 100 + idx, currency: "USD", provisional: false)
+    end
+
+    @provider.expects(:fetch_security_prices).never
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: 3.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_prices
+  end
+
+  test "does not mark old gap-filled prices as provisional" do
+    Security::Price.delete_all
+
+    # Use dates older than the lookback window
+    old_date = 10.days.ago.to_date
+    old_date -= 1.day while old_date.saturday? || old_date.sunday?
+    start_date = old_date - 1.day
+    start_date -= 1.day while start_date.saturday? || start_date.sunday?
+
+    # Provider only returns start_date price
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: start_date, price: 150, currency: "USD")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(start_date), end_date: old_date)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: old_date
+    ).import_provider_prices
+
+    old_price = Security::Price.find_by(security: @security, date: old_date)
+    assert_not old_price.provisional, "Old gap-filled price should not be provisional"
+  end
+
   private
     def get_provider_fetch_start_date(start_date)
       start_date - 5.days
