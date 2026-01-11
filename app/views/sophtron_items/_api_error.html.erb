@@ -1,33 +1,33 @@
 <%# locals: (error_message:, return_path:) %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Sophtron Connection Error") %>
+    <% dialog.with_header(title: t(".title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
         <div class="flex items-start gap-3">
           <%= icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
           <div class="text-sm">
-            <p class="font-medium text-primary mb-2">Unable to connect to Sophtron</p>
+            <p class="font-medium text-primary mb-2"><%= t(".unable_to_connect") %></p>
             <p class="text-secondary"><%= error_message %></p>
           </div>
         </div>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-          <p class="font-medium text-primary">Common Issues:</p>
+          <p class="font-medium text-primary"><%= t(".common_issues_title") %></p>
           <ul class="list-disc list-inside space-y-1 text-secondary">
-            <li><strong>Incorrect User ID:</strong> Verify your User ID in Provider Settings</li>
-            <li><strong>Invalid Access Key:</strong> Check your Access Key in Provider Settings</li>
-            <li><strong>Expired Credentials:</strong> Generate a new User ID and Access Key from Sophtron</li>
-            <li><strong>Network Issue:</strong> Check your internet connection</li>
-            <li><strong>Service Down:</strong> Sophtron API may be temporarily unavailable</li>
+            <li><%= t(".incorrect_user_id") %></li>
+            <li><%= t(".invalid_access_key") %></li>
+            <li><%= t(".expired_credentials") %></li>
+            <li><%= t(".network_issue") %></li>
+            <li><%= t(".service_down") %></li>
           </ul>
         </div>
 
         <div class="mt-4">
           <%= link_to settings_providers_path,
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors",
-                      data: { turbo: false } do %>
-            Check Provider Settings
+                class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors",
+                data: { turbo: false } do %>
+            <%= t(".check_provider_settings") %>
           <% end %>
         </div>
       </div>

@@ -170,3 +170,28 @@ en:
       success: "Successfully created %{count} account(s)."
     sync:
       success: Sync started
+    Sophtron Setup Required:
+      title: Sophtron Setup Required
+      message: >
+        To complete the setup of your Sophtron connection, please go to the Provider Settings page and follow the instructions to authorize and configure your Sophtron connection.
+      go_to_provider_settings: Go to Provider Settings
+      heading: "User ID and Access Key Not Configured"  
+      description: "Before you can link Sophtron accounts, you need to configure your Sophtron User ID and Access key."  
+      setup_steps_title: "Setup Steps:"  
+      step_1_html: "Go to <strong>Settings → Bank Sync Providers</strong>"  
+      step_2_html: "Find the <strong>Sophtron</strong> section"  
+      step_3_html: "Enter your Sophtron User ID and Access key"  
+      step_4: "Return here to link your accounts"  
+    api_error:  
+      title: "Sophtron Connection Error"  
+      unable_to_connect: "Unable to connect to Sophtron"  
+      common_issues_title: "Common Issues:"  
+      incorrect_user_id: "Incorrect User ID: Verify your User ID in Provider Settings"  
+      invalid_access_key: "Invalid Access Key: Check your Access Key in Provider Settings"  
+      expired_credentials: "Expired Credentials: Generate a new User ID and Access Key from Sophtron"  
+      network_issue: "Network Issue: Check your internet connection"  
+      service_down: "Service Down: Sophtron API may be temporarily unavailable"  
+      check_provider_settings: "Check Provider Settings"  
+    select_option: "Select %{type}"  
+    subtype: "subtype"  
+    type: "type"

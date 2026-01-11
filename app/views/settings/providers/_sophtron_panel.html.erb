@@ -23,15 +23,16 @@
   <% end %>
 
   <%
-    # Get or initialize a sophtron_item for this family
-    sophtron_item = Current.family.sophtron_items.first_or_initialize(name: "Sophtron Connection")
-    is_new_record = sophtron_item.new_record?
+    # Variables passed from controller
+    sophtron_item = @sophtron_item || Current.family.sophtron_items.build
+    is_new_record = @is_new_record || sophtron_item.new_record?
+    sophtron_items = @sophtron_items
   %>
 
   <%= styled_form_with model: sophtron_item,
-                       url: is_new_record ? sophtron_items_path : sophtron_item_path(sophtron_item),
+                       url: sophtron_item.new_record? ? sophtron_items_path : sophtron_item_path(sophtron_item),
                        scope: :sophtron_item,
-                       method: is_new_record ? :post : :patch,
+                       method: sophtron_item.new_record? ? :post : :patch,
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :user_id,
@@ -55,10 +56,8 @@
     </div>
   <% end %>
 
-    <% base_items = Current.family.sophtron_items
-      items = local_assigns[:sophtron_items] || @sophtron_items || base_items.where.not(user_id: nil, access_key: nil) %>
   <div class="flex items-center gap-2">
-    <% if items&.any? %>
+    <% if Current.family.sophtron_items.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
       <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
     <% else %>

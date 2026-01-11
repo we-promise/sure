@@ -61,8 +61,11 @@ class SophtronAccount::Processor
 
     def process_transactions
       SophtronAccount::Transactions::Processor.new(sophtron_account).process
-    rescue => e
+    rescue StandardError => e
+      Rails.logger.error "SophtronAccount::Processor - Failed to process transactions for sophtron_account #{sophtron_account.id}: #{e.message}"
+      Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
       report_exception(e, "transactions")
+      raise
     end
 
     def report_exception(error, context)

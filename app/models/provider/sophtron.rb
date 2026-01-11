@@ -1,4 +1,4 @@
-class Provider::Sophtron
+class Provider::Sophtron < Provider
   include HTTParty
 
   headers "User-Agent" => "Sure Finance So Client"
@@ -10,142 +10,140 @@ class Provider::Sophtron
     @user_id = user_id
     @access_key = access_key
     @base_url = base_url
+    super()
   end
 
   # Get all accounts
   # Returns: { accounts: [...], total: N }
   def get_accounts
-    # fetching accounts for sophtron
-    # Obtain customer IDs using a dedicated helper
-    customer_ids = get_customer_ids
-    all_accounts = []
-    customer_ids.each do |cust_id|
-      begin
-        accounts_resp = get_customer_accounts(cust_id)
-        # `handle_response` returns parsed JSON (hash/array) so normalize
-        raw_accounts = if accounts_resp.is_a?(Hash) && accounts_resp[:accounts].is_a?(Array)
-          accounts_resp[:accounts]
-        elsif accounts_resp.is_a?(Array)
-          accounts_resp
-        else
-          []
-        end
-        normalized = raw_accounts.map { |a| a.transform_keys { |k| k.to_s.underscore }.with_indifferent_access }
+    with_provider_response do
+      # fetching accounts for sophtron
+      # Obtain customer IDs using a dedicated helper
+      customer_ids = get_customer_ids
 
-        # Ensure each account payload includes the originating customer id
-        normalized.each do |acc|
-          begin
-            # check common variants that may already exist
-            existing = acc[:customer_id]
-            acc[:customer_id] = cust_id.to_s if existing.blank?
-          rescue => _e
+      all_accounts = []
+      customer_ids.each do |cust_id|
+        begin
+          accounts_resp = get_customer_accounts(cust_id)
+
+          # `handle_response` returns parsed JSON (hash/array) so normalize
+          raw_accounts = if accounts_resp.is_a?(Hash) && accounts_resp[:accounts].is_a?(Array)
+            accounts_resp[:accounts]
+          elsif accounts_resp.is_a?(Array)
+            accounts_resp
+          else
+            []
           end
+
+          normalized = raw_accounts.map { |a| a.transform_keys { |k| k.to_s.underscore }.with_indifferent_access }
+
+          # Ensure each account has a customer_id set
+          normalized.each do |acc|
+            begin
+              # check common variants that may already exist
+              existing = acc[:customer_id]
+              acc[:customer_id] = cust_id.to_s if existing.blank?
+            rescue => _e
+            end
+          end
+
+          all_accounts.concat(normalized)
+        rescue Provider::Error => e
+          Rails.logger.warn("Failed to fetch accounts for customer #{cust_id}: #{e.message}")
+        rescue => e
+          Rails.logger.warn("Unexpected error fetching accounts for customer #{cust_id}: #{e.class} #{e.message}")
         end
-
-        # per-account logging removed
-        all_accounts.concat(normalized)
-      rescue SophtronError => e
-        Rails.logger.warn("Failed to fetch accounts for customer #{cust_id}: #{e.message}")
-      rescue => e
-        Rails.logger.warn("Unexpected error fetching accounts for customer #{cust_id}: #{e.class} #{e.message}")
       end
-    end
 
-    # Deduplicate by id where present
-    unique_accounts = all_accounts.uniq { |a| a[:id].to_s }
-    { accounts: unique_accounts, total: unique_accounts.length, customer_ids: customer_ids }
-  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    Rails.logger.error "Sophtron API: GET /accounts failed: #{e.class}: #{e.message}"
-    raise SophtronError.new("Exception during GET request: #{e.message}", :request_failed)
-  rescue => e
-    Rails.logger.error "Sophtron API: Unexpected error during GET /accounts: #{e.class}: #{e.message}"
-    raise SophtronError.new("Exception during GET request: #{e.message}", :request_failed)
+      # Deduplicate by id where present
+      unique_accounts = all_accounts.uniq { |a| a[:id].to_s }
+
+      { accounts: unique_accounts, total: unique_accounts.length }
+    end
   end
 
   # Get transactions for a specific account
   # Returns: { transactions: [...], total: N }
   # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
   def get_account_transactions(customer_id, account_id, start_date: nil, end_date: nil)
-    query_params = {}
+    with_provider_response do
+      query_params = {}
 
-    if start_date
-      query_params[:startDate] = start_date.to_date
-    end
-    if end_date
-      query_params[:endDate] = end_date.to_date
-    else
-      query_params[:endDate] = Date.tomorrow
-    end
-
-    path = "/customers/#{ERB::Util.url_encode(customer_id.to_s)}/accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions"
-    path += "?#{URI.encode_www_form(query_params)}" unless query_params.empty?
-    url = "#{@base_url}#{path}"
-
-    response = self.class.get(
-      url,
-      headers: auth_headers(url: url, http_method: "GET")
-    )
-    parsed = handle_response(response)
-
-    # Normalize transactions response into { transactions: [...], total: N }
-    if parsed.is_a?(Array)
-      txs = parsed.map { |tx| tx.transform_keys { |k| k.to_s.underscore }.with_indifferent_access }
-      mapped = txs.map { |tx| map_transaction(tx, account_id) }
-      { transactions: mapped, total: mapped.length }
-    elsif parsed.is_a?(Hash)
-      if parsed[:transactions].is_a?(Array)
-        txs = parsed[:transactions].map { |tx| tx.transform_keys { |k| k.to_s.underscore }.with_indifferent_access }
-        mapped = txs.map { |tx| map_transaction(tx, account_id) }
-        parsed[:transactions] = mapped
-        parsed[:total] = parsed[:total] || mapped.length
-        parsed
-      else
-        # Single transaction object -> wrap and map
-        single = parsed.transform_keys { |k| k.to_s.underscore }.with_indifferent_access
-        mapped = map_transaction(single, account_id)
-        { transactions: [ mapped ], total: 1 }
+      if start_date
+        query_params[:startDate] = start_date.to_date
       end
-    else
-      { transactions: [], total: 0 }
+      if end_date
+        query_params[:endDate] = end_date.to_date
+      else
+        query_params[:endDate] = Date.tomorrow
+      end
+
+      path = "/customers/#{ERB::Util.url_encode(customer_id.to_s)}/accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions"
+      path += "?#{URI.encode_www_form(query_params)}" unless query_params.empty?
+      url = "#{@base_url}#{path}"
+
+      response = self.class.get(
+        url,
+        headers: auth_headers(url: url, http_method: "GET")
+      )
+
+      parsed = handle_response(response)
+      # Normalize transactions response into { transactions: [...], total: N }
+      if parsed.is_a?(Array)
+        txs = parsed.map { |tx| tx.transform_keys { |k| k.to_s.underscore }.with_indifferent_access }
+        mapped = txs.map { |tx| map_transaction(tx, account_id) }
+        { transactions: mapped, total: mapped.length }
+      elsif parsed.is_a?(Hash)
+        if parsed[:transactions].is_a?(Array)
+          txs = parsed[:transactions].map { |tx| tx.transform_keys { |k| k.to_s.underscore }.with_indifferent_access }
+          mapped = txs.map { |tx| map_transaction(tx, account_id) }
+          parsed[:transactions] = mapped
+          parsed[:total] = parsed[:total] || mapped.length
+          parsed
+        else
+          # Single transaction object -> wrap and map
+          single = parsed.transform_keys { |k| k.to_s.underscore }.with_indifferent_access
+          mapped = map_transaction(single, account_id)
+          { transactions: [ mapped ], total: 1 }
+        end
+      else
+        { transactions: [], total: 0 }
+      end
     end
-  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    Rails.logger.error "Sophtron API: GET #{path} failed: #{e.class}: #{e.message}"
-    raise SophtronError.new("Exception during GET request: #{e.message}", :request_failed)
-  rescue => e
-    Rails.logger.error "Sophtron API: Unexpected error during GET #{path}: #{e.class}: #{e.message}"
-    raise SophtronError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
   # Get balance for a specific account
   # Returns: { balance: { amount: N, currency: "USD" } }
   def get_account_balance(customer_id, account_id)
-    path = "/customers/#{ERB::Util.url_encode(customer_id.to_s)}/accounts/#{ERB::Util.url_encode(account_id.to_s)}"
-    url = "#{@base_url}#{path}"
+    with_provider_response do
+      path = "/customers/#{ERB::Util.url_encode(customer_id.to_s)}/accounts/#{ERB::Util.url_encode(account_id.to_s)}"
+      url = "#{@base_url}#{path}"
 
-    response = self.class.get(
-      url,
-      headers: auth_headers(url: url, http_method: "GET")
-    )
+      response = self.class.get(
+        url,
+        headers: auth_headers(url: url, http_method: "GET")
+      )
 
-    parsed = handle_response(response)
+      parsed = handle_response(response)
 
-    # Normalize balance information into { balance: { amount: N, currency: "XXX" } }
-    if parsed.is_a?(Hash)
-      # Prefer explicit :balance object
-      if parsed[:balance].is_a?(Hash)
-        bal = parsed[:balance].transform_keys { |k| k.to_s.underscore }.with_indifferent_access
-        return { balance: { amount: bal[:amount], currency: bal[:currency] } }
+      # Normalize balance information into { balance: { amount: N, currency: "XXX" } }
+      # Sophtron returns balance as flat fields: Balance and BalanceCurrency (capitalized)
+      # After JSON symbolization these become: :Balance and :BalanceCurrency
+      balance_amount = parsed[:Balance] || parsed[:balance]
+      balance_currency = parsed[:BalanceCurrency] || parsed[:balance_currency]
+
+      if parsed.is_a?(Hash) && balance_amount.present?
+        result = {
+          balance: {
+            amount: balance_amount,
+            currency: balance_currency.presence || "USD"
+          }
+        }
+      else
+        result = { balance: { amount: 0, currency: "USD" } }
       end
+      result
     end
-
-    # Fallback: return whatever the parsed payload was (keeps original behavior)
-    parsed
-  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    Rails.logger.error "Sophtron API: GET #{path} failed: #{e.class}: #{e.message}"
-    raise SophtronError.new("Exception during GET request: #{e.message}", :request_failed)
-  rescue => e
-    Rails.logger.error "Sophtron API: Unexpected error during GET #{path}: #{e.class}: #{e.message}"
-    raise SophtronError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
   private
@@ -295,28 +293,18 @@ class Provider::Sophtron
         JSON.parse(response.body, symbolize_names: true)
       when 400
         Rails.logger.error "Sophtron API: Bad request - #{response.body}"
-        raise SophtronError.new("Bad request to Sophtron API: #{response.body}", :bad_request)
+        raise Provider::Error.new("Bad request to Sophtron API: #{response.body}", :bad_request)
       when 401
-        raise SophtronError.new("Invalid User ID or Access key", :unauthorized)
+        raise Provider::Error.new("Invalid User ID or Access key", :unauthorized)
       when 403
-        raise
-        SophtronError.new("Access forbidden - check your User ID and Access key permissions", :access_forbidden)
+        raise Provider::Error.new("Access forbidden - check your User ID and Access key permissions", :access_forbidden)
       when 404
-        raise SophtronError.new("Resource not found", :not_found)
+        raise Provider::Error.new("Resource not found", :not_found)
       when 429
-        raise SophtronError.new("Rate limit exceeded. Please try again later.", :rate_limited)
+        raise Provider::Error.new("Rate limit exceeded. Please try again later.", :rate_limited)
       else
         Rails.logger.error "Sophtron API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-        raise SophtronError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
-      end
-    end
-
-    class SophtronError < StandardError
-      attr_reader :error_type
-
-      def initialize(message, error_type = :unknown)
-        super(message)
-        @error_type = error_type
+        raise Provider::Error.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
       end
     end
 end

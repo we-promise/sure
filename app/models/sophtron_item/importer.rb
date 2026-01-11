@@ -41,9 +41,7 @@ class SophtronItem::Importer
       accounts_data[:accounts].each do |account_data|
         account_id = account_data[:account_id]&.to_s
         next unless account_id.present?
-        if account_data[:account_name].blank?
-          next
-        end
+        next if account_data[:account_name].blank?
 
         if linked_account_ids.include?(account_id)
           # Update existing linked accounts
@@ -80,7 +78,8 @@ class SophtronItem::Importer
     transactions_imported = 0
     transactions_failed = 0
 
-    sophtron_item.sophtron_accounts.joins(:account).merge(Account.visible).each do |sophtron_account|
+    linked_accounts = sophtron_item.sophtron_accounts.joins(:account).merge(Account.visible)
+    linked_accounts.each do |sophtron_account|
       begin
         result = fetch_and_store_transactions(sophtron_account)
         if result[:success]
@@ -112,7 +111,11 @@ class SophtronItem::Importer
     def fetch_accounts_data
       begin
         accounts_data = sophtron_provider.get_accounts
-      rescue Provider::Sophtron::SophtronError => e
+        # Extract data from Provider::Response object if needed
+        if accounts_data.respond_to?(:data)
+          accounts_data = accounts_data.data
+        end
+      rescue Provider::Error => e
         # Handle authentication errors by marking item as requiring update
         if e.error_type == :unauthorized || e.error_type == :access_forbidden
           begin
@@ -193,7 +196,9 @@ class SophtronItem::Importer
           start_date: start_date
         )
 
-        if transactions_data.is_a?(Hash)
+        # Extract data from Provider::Response object if needed
+        if transactions_data.respond_to?(:data)
+          transactions_data = transactions_data.data
         end
 
         # Validate response structure
@@ -247,7 +252,7 @@ class SophtronItem::Importer
         end
 
         { success: true, transactions_count: transactions_count }
-      rescue Provider::Sophtron::SophtronError => e
+      rescue Provider::Error => e
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
         { success: false, transactions_count: 0, error: e.message }
       rescue JSON::ParserError => e
@@ -263,6 +268,10 @@ class SophtronItem::Importer
     def fetch_and_update_balance(sophtron_account)
       begin
         balance_data = sophtron_provider.get_account_balance(sophtron_account.customer_id, sophtron_account.account_id)
+        # Extract data from Provider::Response object if needed
+        if balance_data.respond_to?(:data)
+          balance_data = balance_data.data
+        end
 
         # Validate response structure
         unless balance_data.is_a?(Hash)
@@ -291,7 +300,7 @@ class SophtronItem::Importer
         else
           Rails.logger.warn "SophtronItem::Importer - No balance data returned for account #{sophtron_account.account_id}"
         end
-      rescue Provider::Sophtron::SophtronError => e
+      rescue Provider::Error => e
         Rails.logger.error "SophtronItem::Importer - Sophtron API error fetching balance for account #{sophtron_account.id}: #{e.message}"
         # Don't fail if balance fetch fails
       rescue ActiveRecord::RecordInvalid => e
@@ -346,7 +355,7 @@ class SophtronItem::Importer
       end
 
       Rails.logger.error "SophtronItem::Importer - API error: #{error_message}"
-      raise Provider::Sophtron::SophtronError.new(
+      raise Provider::Error.new(
         "Sophtron API error: #{error_message}",
         :api_error
       )

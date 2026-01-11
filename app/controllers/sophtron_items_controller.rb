@@ -36,14 +36,14 @@ class SophtronItemsController < ApplicationController
         return
       end
 
-      accounts_data = sophtron_provider.get_accounts
-      available_accounts = accounts_data[:accounts] || []
+      response = sophtron_provider.get_accounts
+      available_accounts = response.data[:accounts] || []
 
       # Cache the accounts for 5 minutes
       Rails.cache.write(cache_key, available_accounts, expires_in: 5.minutes)
 
       render json: { success: true, has_accounts: available_accounts.any?, cached: false }
-    rescue Provider::Sophtron::SophtronError => e
+    rescue Provider::Error => e
       Rails.logger.error("Sophtron preload error: #{e.message}")
       # API error (bad key, network issue, etc) - keep button visible, show error when clicked
       render json: { success: false, error: "api_error", error_message: e.message, has_accounts: nil }
@@ -86,8 +86,8 @@ class SophtronItemsController < ApplicationController
           return
         end
 
-        accounts_data = sophtron_provider.get_accounts
-        @available_accounts = accounts_data[:accounts] || []
+        response = sophtron_provider.get_accounts
+        @available_accounts = response.data[:accounts] || []
 
         # Cache the accounts for 5 minutes
         Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
@@ -109,7 +109,7 @@ class SophtronItemsController < ApplicationController
       end
 
       render layout: false
-    rescue Provider::Sophtron::SophtronError => e
+    rescue Provider::Error => e
       Rails.logger.error("Sophtron API error in select_accounts: #{e.message}")
       @error_message = e.message
       @return_path = safe_return_to_path
@@ -149,7 +149,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    accounts_data = sophtron_provider.get_accounts
+    response = sophtron_provider.get_accounts
 
     created_accounts = []
     already_linked_accounts = []
@@ -157,7 +157,7 @@ class SophtronItemsController < ApplicationController
 
     selected_account_ids.each do |account_id|
       # Find the account data from API response
-      account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == account_id.to_s }
+      account_data = response.data[:accounts].find { |acc| acc[:id].to_s == account_id.to_s }
       next unless account_data
 
       # Validate account name is not blank (required by Account model)
@@ -231,7 +231,7 @@ class SophtronItemsController < ApplicationController
     else
       redirect_to new_account_path, alert: t(".link_failed")
     end
-  rescue Provider::Sophtron::SophtronError => e
+  rescue Provider::Error => e
     redirect_to new_account_path, alert: t(".api_error", message: e.message)
   end
 
@@ -282,8 +282,8 @@ class SophtronItemsController < ApplicationController
           return
         end
 
-        accounts_data = sophtron_provider.get_accounts
-        @available_accounts = accounts_data[:accounts] || []
+        response = sophtron_provider.get_accounts
+        @available_accounts = response.data[:accounts] || []
 
         # Cache the accounts for 5 minutes
         Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
@@ -309,7 +309,7 @@ class SophtronItemsController < ApplicationController
       @return_to = safe_return_to_path
 
       render layout: false
-    rescue Provider::Sophtron::SophtronError => e
+    rescue Provider::Error => e
       Rails.logger.error("Sophtron API error in select_existing_account: #{e.message}")
       @error_message = e.message
       render partial: "sophtron_items/api_error",
@@ -355,10 +355,10 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    accounts_data = sophtron_provider.get_accounts
+    response = sophtron_provider.get_accounts
 
     # Find the selected Sophtron account data
-    account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == sophtron_account_id.to_s }
+    account_data = response.data[:accounts].find { |acc| acc[:id].to_s == sophtron_account_id.to_s }
     unless account_data
       redirect_to accounts_path, alert: t(".sophtron_account_not_found")
       return
@@ -393,7 +393,7 @@ class SophtronItemsController < ApplicationController
     sophtron_item.sync_later
     redirect_to return_to || accounts_path,
                 notice: t(".success", account_name: @account.name)
-  rescue Provider::Sophtron::SophtronError => e
+  rescue Provider::Error => e
     redirect_to accounts_path, alert: t(".api_error", message: e.message)
   end
 
@@ -698,8 +698,8 @@ class SophtronItemsController < ApplicationController
       end
 
       begin
-        accounts_data = sophtron_provider.get_accounts
-        available_accounts = accounts_data[:accounts] || []
+        response = sophtron_provider.get_accounts
+        available_accounts = response.data[:accounts] || []
 
         if available_accounts.empty?
           return nil
@@ -716,7 +716,7 @@ class SophtronItemsController < ApplicationController
         end
 
         nil # Success
-      rescue Provider::Sophtron::SophtronError => e
+      rescue Provider::Error => e
         Rails.logger.error("Sophtron API error: #{e.message}")
         t("sophtron_items.setup_accounts.api_error", message: e.message)
       rescue StandardError => e

@@ -9,7 +9,7 @@ class SophtronItem::Syncer
 
   def perform_sync(sync)
     # Phase 1: Import data from Sophtron API
-    sync.update!(status_text: "Importing accounts from Sophtron...") if sync.respond_to?(:status_text)
+    sync.update!(status_text: t("sophtron_item.syncer.importing_accounts")) if sync.respond_to?(:status_text) if sync.respond_to?(:status_text) if sync.respond_to?(:status_text)
     sophtron_item.import_latest_sophtron_data
 
     # Phase 2: Check account setup status and collect sync statistics

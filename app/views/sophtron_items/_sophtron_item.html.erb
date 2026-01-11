@@ -11,7 +11,7 @@
             <%= image_tag sophtron_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
           <% else %>
             <div class="flex items-center justify-center">
-              <%= tag.p sophtron_item.name.first.upcase, class: "text-orange-600 text-xs font-medium" %>
+              <%= tag.p sophtron_item.name&.first&.upcase || "?", class: "text-orange-600 text-xs font-medium" %>
             </div>
           <% end %>
         </div>
