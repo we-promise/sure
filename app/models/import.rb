@@ -300,8 +300,10 @@ class Import < ApplicationRecord
     COMMON_ENCODINGS = [ "Windows-1250", "Windows-1252", "ISO-8859-1", "ISO-8859-2" ].freeze
 
     def ensure_utf8_encoding
-      return if raw_file_str.blank?
       return if raw_file_str_changed? == false
+
+      # Handle nil or empty string
+      return if raw_file_str.nil? || raw_file_str.bytesize == 0
 
       # If already valid UTF-8, nothing to do
       if raw_file_str.encoding == Encoding::UTF_8 && raw_file_str.valid_encoding?
@@ -318,13 +320,16 @@ class Import < ApplicationRecord
         # Only convert if we have reasonable confidence in the detection
         if detected_encoding && confidence > 0.75
           # Force encoding and convert to UTF-8
-          self.raw_file_str = raw_file_str.force_encoding(detected_encoding).encode("UTF-8")
+          self.raw_file_str = raw_file_str.force_encoding(detected_encoding).encode("UTF-8", invalid: :replace, undef: :replace)
         else
           # Fallback: try common encodings
           try_common_encodings
         end
       rescue LoadError
         # rchardet not available, fallback to trying common encodings
+        try_common_encodings
+      rescue ArgumentError, Encoding::CompatibilityError => e
+        # Handle encoding errors by falling back to common encodings
         try_common_encodings
       end
     end
@@ -334,7 +339,7 @@ class Import < ApplicationRecord
         begin
           test = raw_file_str.dup.force_encoding(encoding)
           if test.valid_encoding?
-            self.raw_file_str = test.encode("UTF-8")
+            self.raw_file_str = test.encode("UTF-8", invalid: :replace, undef: :replace)
             return
           end
         rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
