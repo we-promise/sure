@@ -143,7 +143,12 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
-  resources :family_merchants, only: %i[index new create edit update destroy]
+  resources :family_merchants, only: %i[index new create edit update destroy] do
+    collection do
+      get :merge
+      post :perform_merge
+    end
+  end
 
   resources :transfers, only: %i[new create destroy show update]
 
@@ -186,6 +191,8 @@ Rails.application.routes.draw do
 
     member do
       post :mark_as_recurring
+      post :merge_duplicate
+      post :dismiss_duplicate
     end
   end
 
@@ -280,11 +287,12 @@ Rails.application.routes.draw do
       post "auth/refresh", to: "auth#refresh"
 
       # Production API endpoints
-      resources :accounts, only: [ :index ]
+      resources :accounts, only: [ :index, :show ]
       resources :categories, only: [ :index, :show ]
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
-      resource :usage, only: [ :show ], controller: "usage"
-      resource :sync, only: [ :create ], controller: "sync"
+      resources :imports, only: [ :index, :show, :create ]
+      resource :usage, only: [ :show ], controller: :usage
+      post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do
