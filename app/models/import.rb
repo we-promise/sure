@@ -297,7 +297,7 @@ class Import < ApplicationRecord
 
     # Common encodings to try when UTF-8 detection fails
     # Windows-1250 is prioritized for Central/Eastern European languages
-    COMMON_ENCODINGS = ["Windows-1250", "Windows-1252", "ISO-8859-1", "ISO-8859-2"].freeze
+    COMMON_ENCODINGS = [ "Windows-1250", "Windows-1252", "ISO-8859-1", "ISO-8859-2" ].freeze
 
     def ensure_utf8_encoding
       return if raw_file_str.blank?
