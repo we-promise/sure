@@ -121,7 +121,8 @@ class PlaidAccount::Processor
 
       # Transform to common format
       current_holdings = raw_holdings.map do |h|
-        security = security_resolver.resolve(h["security_id"])
+        response = security_resolver.resolve(plaid_security_id: h["security_id"])
+        security = response.security
         {
           "symbol" => security&.ticker,
           "description" => security&.name,
