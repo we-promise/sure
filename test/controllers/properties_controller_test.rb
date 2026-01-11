@@ -13,12 +13,12 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       post properties_path, params: {
         account: {
           name: "New Property",
-          subtype: "house",
           institution_name: "Property Lender",
           institution_domain: "propertylender.example",
           notes: "Property notes",
           accountable_type: "Property",
           accountable_attributes: {
+            subtype: "house",
             year_built: 1990,
             area_value: 1200,
             area_unit: "sqft"
@@ -31,6 +31,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert created_account.accountable.is_a?(Property)
     assert_equal "draft", created_account.status
     assert_equal 0, created_account.balance
+    assert_equal "house", created_account.subtype
     assert_equal "Property Lender", created_account[:institution_name]
     assert_equal "propertylender.example", created_account[:institution_domain]
     assert_equal "Property notes", created_account[:notes]
