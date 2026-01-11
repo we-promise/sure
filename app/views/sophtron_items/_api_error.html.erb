@@ -1,4 +1,4 @@
-<%# locals: (error_message:) %>
+<%# locals: (error_message:, return_path: nil) %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
     <% dialog.with_header(title: t("sophtron_items.api_error.title")) %>

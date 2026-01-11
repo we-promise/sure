@@ -28,21 +28,6 @@ class SophtronAccount::Processor
   # @return [Hash, nil] Transaction processing result hash or nil if no linked account
   # @raise [StandardError] if processing fails (errors are logged and reported to Sentry)
   def process
-    Rails.logger.info "SophtronAccount::Processor - Processing sophtron_account #{sophtron_account.id} (account #{sophtron_account.account_id})"
-    begin
-      process_account!
-    rescue StandardError => e
-      Rails.logger.error "SophtronAccount::Processor - Failed to process account #{sophtron_account.id}: #{e.message}"
-      Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
-      report_exception(e, "account")
-      raise
-    end
-
-    process_transactions
-  end
-  # @return [void]
-  # @raise [StandardError] if processing fails (errors are logged and reported to Sentry)
-  def process
     unless sophtron_account.current_account.present?
       Rails.logger.info "SophtronAccount::Processor - No linked account for sophtron_account #{sophtron_account.id}, skipping processing"
       return

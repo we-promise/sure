@@ -232,3 +232,6 @@ en:
       accounts_need_setup: "%{count} account(s) need setup"
       processing_transactions: "Processing transactions for linked accounts..."
       calculating_balances: "Calculating balances for linked accounts..."
+    sophtron_entry:
+      processor:
+        unknown_transaction: "Unknown transaction"

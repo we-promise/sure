@@ -76,12 +76,9 @@ class Provider::Sophtron < Provider
 
           # Ensure each account has a customer_id set
           normalized.each do |acc|
-            begin
-              # check common variants that may already exist
-              existing = acc[:customer_id]
-              acc[:customer_id] = cust_id.to_s if existing.blank?
-            rescue => _e
-            end
+            # check common variants that may already exist
+            existing = acc[:customer_id]
+            acc[:customer_id] = cust_id.to_s if existing.blank?
           end
 
           all_accounts.concat(normalized)

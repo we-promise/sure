@@ -27,7 +27,7 @@ class SophtronAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
-
+  validate :has_balance
   # Returns the linked Maybe Account for this Sophtron account.
   #
   # @return [Account, nil] The linked Maybe Account, or nil if not linked
@@ -51,7 +51,7 @@ class SophtronAccount < ApplicationRecord
     assign_attributes(
       name: snapshot[:account_name],
       account_id: snapshot[:account_id],
-      currency: parse_currency(snapshot[:balance_currency])|| "USD",
+      currency: parse_currency(snapshot[:balance_currency]) || "USD",
       balance: parse_balance(snapshot[:balance]),
       available_balance: parse_balance(snapshot[:"available-balance"]),
       account_type: snapshot["account_type"] || "unknown",

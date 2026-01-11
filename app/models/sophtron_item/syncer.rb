@@ -35,11 +35,11 @@ class SophtronItem::Syncer
   # @raise [StandardError] if any phase of the sync fails
   def perform_sync(sync)
     # Phase 1: Import data from Sophtron API
-    sync.update!(status_text: t("sophtron_item.syncer.importing_accounts")) if sync.respond_to?(:status_text)
+    sync.update!(status_text: t("sophtron_items.syncer.importing_accounts")) if sync.respond_to?(:status_text)
     sophtron_item.import_latest_sophtron_data
 
     # Phase 2: Check account setup status and collect sync statistics
-    sync.update!(status_text: t("sophtron_item.syncer.checking_account_configuration")) if sync.respond_to?(:status_text)
+    sync.update!(status_text: t("sophtron_items.syncer.checking_account_configuration")) if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: sophtron_item.sophtron_accounts)
 
     # Check for unlinked accounts
@@ -50,21 +50,21 @@ class SophtronItem::Syncer
     unlinked_count = unlinked_accounts.count
     if unlinked_count.positive?
       sophtron_item.update!(pending_account_setup: true)
-      sync.update!(status_text: t("sophtron_item.syncer.accounts_need_setup", count: unlinked_count)) if sync.respond_to?(:status_text)
+      sync.update!(status_text: t("sophtron_items.syncer.accounts_need_setup", count: unlinked_count)) if sync.respond_to?(:status_text)
     else
       sophtron_item.update!(pending_account_setup: false)
     end
 
     # Phase 3: Process transactions for linked accounts only
     if linked_accounts.any?
-      sync.update!(status_text: t("sophtron_item.syncer.processing_transactions")) if sync.respond_to?(:status_text)
+      sync.update!(status_text: t("sophtron_items.syncer.processing_transactions")) if sync.respond_to?(:status_text)
       mark_import_started(sync)
       Rails.logger.info "SophtronItem::Syncer - Processing #{linked_accounts.count} linked accounts"
       sophtron_item.process_accounts
       Rails.logger.info "SophtronItem::Syncer - Finished processing accounts"
 
       # Phase 4: Schedule balance calculations for linked accounts
-      sync.update!(status_text: t("sophtron_item.syncer.calculating_balances")) if sync.respond_to?(:status_text)
+      sync.update!(status_text: t("sophtron_items.syncer.calculating_balances")) if sync.respond_to?(:status_text)
       sophtron_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,

@@ -115,7 +115,7 @@ class SophtronEntry::Processor
     #
     # @return [String] The transaction name
     def name
-      data[:merchant].presence || "Unknown transaction"
+      data[:merchant].presence || t("sophtron_items.sophtron_entry.processor.unknown_transaction")
     end
 
     # Extracts optional notes/description from the transaction.
