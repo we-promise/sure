@@ -300,14 +300,20 @@ class Import < ApplicationRecord
     COMMON_ENCODINGS = [ "Windows-1250", "Windows-1252", "ISO-8859-1", "ISO-8859-2" ].freeze
 
     def ensure_utf8_encoding
-      return if raw_file_str_changed? == false
-
-      # Handle nil or empty string
+      # Handle nil or empty string first (before checking if changed)
       return if raw_file_str.nil? || raw_file_str.bytesize == 0
 
+      # Only process if the attribute was changed
+      # Use will_save_change_to_attribute? which is safer for binary data
+      return unless will_save_change_to_raw_file_str?
+
       # If already valid UTF-8, nothing to do
-      if raw_file_str.encoding == Encoding::UTF_8 && raw_file_str.valid_encoding?
-        return
+      begin
+        if raw_file_str.encoding == Encoding::UTF_8 && raw_file_str.valid_encoding?
+          return
+        end
+      rescue ArgumentError
+        # raw_file_str might have invalid encoding, continue to detection
       end
 
       # Detect encoding using rchardet
