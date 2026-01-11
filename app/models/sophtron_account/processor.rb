@@ -64,7 +64,7 @@ class SophtronAccount::Processor
 
       # Update account balance from latest Sophtron data
       account = sophtron_account.current_account
-      balance = sophtron_account.balance || 0
+      balance = sophtron_account.balance || sophtron_account.available_balance || 0
 
       # Sophtron balance convention matches our app convention:
       # - Positive balance = debt (you owe money)

@@ -79,7 +79,7 @@ en:
       link_accounts: Link selected accounts
       no_accounts_found: No accounts found. Please check your API key configuration.
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
-      no_api_key: Sophtron Access key is not configured. Please configure it in Settings.
+      no_api_key: Sophtron API key is not configured. Please configure it in Settings.
       no_name_placeholder: "(No name)"
       title: Select Sophtron Accounts
     select_existing_account:
@@ -92,7 +92,7 @@ en:
       link_account: Link account
       no_account_specified: No account specified
       no_accounts_found: No Sophtron accounts found. Please check your API key configuration.
-      no_access_key: Sophtron API key is not configured. Please configure it in Settings.
+      no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_api_key: Sophtron API key is not configured. Please configure it in Settings.
       no_name_placeholder: "(No name)"
       title: "Link %{account_name} with Sophtron"
@@ -113,7 +113,7 @@ en:
       fetch_failed: "Failed to Fetch Accounts"
       no_accounts_to_setup: "No Accounts to Set Up"
       no_access_key: "Sophtron Access key is not configured. Please check your connection settings."
-      no_api_key: "Sophtron Access key is not configured. Please check your connection settings."
+      no_api_key: "Sophtron API key is not configured. Please check your connection settings."
       account_types:
         skip: Skip this account
         depository: Checking or Savings Account
@@ -173,7 +173,7 @@ en:
       success: "Successfully created %{count} account(s)."
     sync:
       success: Sync started
-    Sophtron_Setup_Required:
+    sophtron_Setup_Required:
       title: Sophtron Setup Required
       message: >
         To complete the setup of your Sophtron connection, please go to the Provider Settings page and follow the instructions to authorize and configure your Sophtron connection.

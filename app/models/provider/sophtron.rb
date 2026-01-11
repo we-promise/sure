@@ -306,6 +306,7 @@ class Provider::Sophtron < Provider
     end
 
     def extract_merchant(line)
+      return nil if line.nil?
       line = line.strip
       return nil if line.empty?
 
@@ -347,7 +348,12 @@ class Provider::Sophtron < Provider
     def handle_response(response)
       case response.code
       when 200
-        JSON.parse(response.body, symbolize_names: true)
+        begin
+          JSON.parse(response.body, symbolize_names: true)
+        rescue JSON::ParserError => e
+          Rails.logger.error "Sophtron API: Invalid JSON response - #{e.message}"
+          raise Provider::Error.new("Invalid JSON response from Sophtron API", :invalid_response)
+        end
       when 400
         Rails.logger.error "Sophtron API: Bad request - #{response.body}"
         raise Provider::Error.new("Bad request to Sophtron API: #{response.body}", :bad_request)

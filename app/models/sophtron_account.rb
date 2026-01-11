@@ -111,7 +111,9 @@ class SophtronAccount < ApplicationRecord
       when String
         Time.parse(balance_date_value)
       when Numeric
-        Time.at(balance_date_value)
+        t = balance_date_value
+        t = (t / 1000.0) if t > 1_000_000_000_000 # likely ms epoch
+        Time.at(t)
       when Time, DateTime
         balance_date_value
       else
