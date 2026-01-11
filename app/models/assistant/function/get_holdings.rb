@@ -105,8 +105,8 @@ class Assistant::Function::GetHoldings < Assistant::Function
         amount: holding.amount.to_f,
         formatted_amount: holding.amount_money.format,
         weight: holding.weight&.round(2),
-        average_cost: holding.avg_cost.to_f,
-        formatted_average_cost: holding.avg_cost.format,
+        average_cost: holding.avg_cost&.to_f,
+        formatted_average_cost: holding.avg_cost&.format,
         account: holding.account.name,
         date: holding.date
       }

@@ -133,8 +133,12 @@ class InvestmentStatement
     holdings = current_holdings.to_a
     return nil if holdings.empty?
 
-    current = holdings.sum(&:amount)
-    previous = holdings.sum { |h| h.qty * h.avg_cost.amount }
+    # Only include holdings with known cost basis in the calculation
+    holdings_with_cost_basis = holdings.select(&:avg_cost)
+    return nil if holdings_with_cost_basis.empty?
+
+    current = holdings_with_cost_basis.sum(&:amount)
+    previous = holdings_with_cost_basis.sum { |h| h.qty * h.avg_cost.amount }
 
     Trend.new(current: current, previous: previous)
   end

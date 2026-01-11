@@ -27,14 +27,38 @@ class Holding::Materializer
     end
 
     def persist_holdings
+      return if @holdings.empty?
+
       current_time = Time.now
 
-      account.holdings.upsert_all(
-        @holdings.map { |h| h.attributes
-               .slice("date", "currency", "qty", "price", "amount", "security_id", "cost_basis")
-               .merge("account_id" => account.id, "updated_at" => current_time) },
-        unique_by: %i[account_id security_id date currency]
-      )
+      # Separate holdings into those with and without computed cost_basis
+      holdings_with_cost_basis, holdings_without_cost_basis = @holdings.partition { |h| h.cost_basis.present? }
+
+      # Upsert holdings that have computed cost_basis (from trades)
+      # These will overwrite any existing provider cost_basis with the trade-derived value
+      if holdings_with_cost_basis.any?
+        account.holdings.upsert_all(
+          holdings_with_cost_basis.map { |h|
+            h.attributes
+              .slice("date", "currency", "qty", "price", "amount", "security_id", "cost_basis")
+              .merge("account_id" => account.id, "updated_at" => current_time)
+          },
+          unique_by: %i[account_id security_id date currency]
+        )
+      end
+
+      # Upsert holdings WITHOUT cost_basis column - preserves existing provider cost_basis
+      # This handles securities that have no trades (e.g., SimpleFIN-only holdings)
+      if holdings_without_cost_basis.any?
+        account.holdings.upsert_all(
+          holdings_without_cost_basis.map { |h|
+            h.attributes
+              .slice("date", "currency", "qty", "price", "amount", "security_id")
+              .merge("account_id" => account.id, "updated_at" => current_time)
+          },
+          unique_by: %i[account_id security_id date currency]
+        )
+      end
     end
 
     def purge_stale_holdings
