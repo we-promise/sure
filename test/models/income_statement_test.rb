@@ -285,4 +285,70 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 5, totals.transactions_count
     assert_equal Money.new(1050, @family.currency), totals.expense_money # 900 + 150
   end
+
+  # NEW TESTS: exclude_from_cashflow Feature
+  test "excludes transactions with exclude_from_cashflow flag from totals" do
+    # Create an expense transaction and mark it as excluded from cashflow
+    excluded_entry = create_transaction(account: @checking_account, amount: 250, category: @groceries_category)
+    excluded_entry.update!(exclude_from_cashflow: true)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # Should NOT include the excluded transaction
+    assert_equal 4, totals.transactions_count # Only original 4 transactions
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "excludes income transactions with exclude_from_cashflow flag" do
+    # Create income and mark as excluded from cashflow
+    excluded_income = create_transaction(account: @checking_account, amount: -500, category: @income_category)
+    excluded_income.update!(exclude_from_cashflow: true)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # Should NOT include the excluded income
+    assert_equal 4, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money # Original income only
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "excludes investment_contribution transactions from income statement" do
+    # Create a transfer to investment account (marked as investment_contribution)
+    investment_contribution = create_transaction(
+      account: @checking_account,
+      amount: 1000,
+      category: nil,
+      kind: "investment_contribution"
+    )
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # investment_contribution should be excluded (it's in the exclusion list)
+    assert_equal 4, totals.transactions_count # Only original 4 transactions
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "exclude_from_cashflow works with median calculations" do
+    # Clear existing transactions
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    # Create expenses: 100, 200, 300
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category)
+    excluded_entry = create_transaction(account: @checking_account, amount: 300, category: @groceries_category)
+
+    # Exclude the 300 transaction from cashflow
+    excluded_entry.update!(exclude_from_cashflow: true)
+
+    income_statement = IncomeStatement.new(@family)
+
+    # Median should only consider non-excluded transactions (100, 200)
+    # Monthly total = 300, so median = 300.0
+    assert_equal 300.0, income_statement.median_expense(interval: "month")
+  end
 end
