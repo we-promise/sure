@@ -1,0 +1,57 @@
+services:
+  # Rails Web Service
+  - type: web
+    name: sure-web
+    env: docker
+    region: oregon
+    plan: starter
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: SELF_HOSTED
+        value: "true"
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sure-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+        value: "redis://default:wEEMRqyNSyzgCJ39277MKni75wJxizXZ@redis-13179.c335.europe-west2-1.gce.cloud.redislabs.com:13179"
+
+  # Sidekiq Worker (shares SECRET_KEY_BASE with web)
+  - type: worker
+    name: sure-worker
+    env: docker
+    region: oregon
+    plan: starter
+    dockerCommand: bundle exec sidekiq
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: SELF_HOSTED
+        value: "true"
+      - key: SECRET_KEY_BASE
+        fromService:
+          type: web
+          name: sure-web
+          property: env.SECRET_KEY_BASE
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sure-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+        value: "redis://default:wEEMRqyNSyzgCJ39277MKni75wJxizXZ@redis-13179.c335.europe-west2-1.gce.cloud.redislabs.com:13179"
+
+databases:
+  - name: sure-db
+    databaseName: sure_production
+    plan: starter
+    postgresMajorVersion: "16"
+
+previews:
+  generation: automatic
+  expireAfterDays: 7
