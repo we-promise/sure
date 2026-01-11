@@ -20,6 +20,12 @@
     </turbo-frame>
   <% end %>
 
+  <%= settings_section title: "Trade Republic", collapsible: true, open: false do %>
+    <turbo-frame id="traderepublic-providers-panel">
+      <%= render "settings/providers/traderepublic_panel" %>
+    </turbo-frame>
+  <% end %>
+
   <%= settings_section title: "SimpleFIN", collapsible: true, open: false do %>
     <turbo-frame id="simplefin-providers-panel">
       <%= render "settings/providers/simplefin_panel" %>
