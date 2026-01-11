@@ -197,14 +197,14 @@ class TraderepublicItemsController < ApplicationController
     end
 
     render layout: turbo_frame_request? ? false : "application"
-    rescue => e
-      Rails.logger.error "Error in select_accounts: #{e.class}: #{e.message}"
-      @error_message = t(".error_loading_accounts", default: "Failed to load accounts")
-      @return_path = safe_return_to_path
-      render partial: "traderepublic_items/api_error",
-            locals: { error_message: @error_message, return_path: @return_path },
-            layout: false
-    end
+  rescue => e
+    Rails.logger.error "Error in select_accounts: #{e.class}: #{e.message}"
+    @error_message = t(".error_loading_accounts", default: "Failed to load accounts")
+    @return_path = safe_return_to_path
+    render partial: "traderepublic_items/api_error",
+           locals: { error_message: @error_message, return_path: @return_path },
+           layout: false
+  end
 
   # Link selected accounts
   def link_accounts
@@ -466,10 +466,26 @@ class TraderepublicItemsController < ApplicationController
   end
 
   def safe_return_to_path
-    return_to = params[:return_to]
-    if return_to.present? && return_to.start_with?("/")
-      return return_to
+    return_to_raw = params[:return_to].to_s
+    return new_account_path if return_to_raw.blank?
+
+    decoded = CGI.unescape(return_to_raw)
+    begin
+      uri = URI.parse(decoded)
+    rescue URI::InvalidURIError
+      return new_account_path
     end
+
+    # Only allow local paths: no scheme, no host, starts with a single leading slash (not protocol-relative //)
+    path = uri.path || decoded
+    if uri.scheme.nil? && uri.host.nil? && path.start_with?("/") && !path.start_with?("//")
+      # Rebuild path with query and fragment if present
+      built = path
+      built += "?#{uri.query}" if uri.query.present?
+      built += "##{uri.fragment}" if uri.fragment.present?
+      return built
+    end
+
     new_account_path
   end
 end
