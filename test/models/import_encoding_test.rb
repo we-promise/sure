@@ -22,7 +22,12 @@ class ImportEncodingTest < ActiveSupport::TestCase
       date_col_label: "Date",
       amount_col_label: "Amount",
       name_col_label: "Name",
-      signage_convention: "inflows_negative"
+      category_col_label: "Category",
+      tags_col_label: "Tags",
+      account_col_label: "Account",
+      notes_col_label: "Notes",
+      signage_convention: "inflows_negative",
+      amount_type_strategy: "signed_amount"
     )
 
     # With encoding detection, the import should succeed
@@ -44,7 +49,9 @@ class ImportEncodingTest < ActiveSupport::TestCase
     assert_equal 3, import.rows_count, "Expected 3 data rows"
 
     # Verify Polish characters were preserved correctly
+    import.reload
     first_row = import.rows.first
+    assert_not_nil first_row, "Expected first row to exist"
     assert_includes first_row.name, "spożywczy", "Polish characters should be preserved"
   end
 
