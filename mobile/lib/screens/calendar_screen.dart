@@ -21,6 +21,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _currentMonth = DateTime.now();
   Map<String, double> _dailyChanges = {};
   bool _isLoading = false;
+  String _accountType = 'asset'; // 'asset' or 'liability'
 
   @override
   void initState() {
@@ -44,10 +45,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
 
     if (accountsProvider.accounts.isNotEmpty) {
+      // Select first account of the selected type
+      final filteredAccounts = _getFilteredAccounts(accountsProvider.accounts);
       setState(() {
-        _selectedAccount = accountsProvider.accounts.first;
+        _selectedAccount = filteredAccounts.isNotEmpty ? filteredAccounts.first : null;
       });
-      await _loadTransactionsForAccount();
+      if (_selectedAccount != null) {
+        await _loadTransactionsForAccount();
+      }
+    }
+  }
+
+  List<Account> _getFilteredAccounts(List<Account> accounts) {
+    if (_accountType == 'asset') {
+      return accounts.where((a) => a.isAsset).toList();
+    } else {
+      return accounts.where((a) => a.isLiability).toList();
     }
   }
 
@@ -175,6 +188,59 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       body: Column(
         children: [
+          // Account type selector
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Account Type',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment<String>(
+                      value: 'asset',
+                      label: Text('Assets'),
+                      icon: Icon(Icons.account_balance_wallet),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'liability',
+                      label: Text('Liabilities'),
+                      icon: Icon(Icons.credit_card),
+                    ),
+                  ],
+                  selected: {_accountType},
+                  onSelectionChanged: (Set<String> newSelection) {
+                    setState(() {
+                      _accountType = newSelection.first;
+                      // Switch to first account of new type
+                      final filteredAccounts = _getFilteredAccounts(accountsProvider.accounts);
+                      _selectedAccount = filteredAccounts.isNotEmpty ? filteredAccounts.first : null;
+                      _dailyChanges = {};
+                    });
+                    if (_selectedAccount != null) {
+                      _loadTransactionsForAccount();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+
           // Account selector
           Container(
             padding: const EdgeInsets.all(16),
@@ -199,7 +265,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   vertical: 12,
                 ),
               ),
-              items: accountsProvider.accounts.map((account) {
+              items: _getFilteredAccounts(accountsProvider.accounts).map((account) {
                 return DropdownMenuItem(
                   value: account,
                   child: Text('${account.name} (${account.currency})'),
