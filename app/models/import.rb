@@ -312,12 +312,13 @@ class Import < ApplicationRecord
         confidence = detection["confidence"]
 
         # Only convert if we have reasonable confidence in the detection
-        if detected_encoding && confidence > 0.7
+        if detected_encoding && confidence > 0.75
           # Force encoding and convert to UTF-8
           self.raw_file_str = raw_file_str.force_encoding(detected_encoding).encode("UTF-8")
         else
-          # Fallback: try common encodings
-          common_encodings = ["Windows-1252", "ISO-8859-1", "Windows-1250"]
+          # Fallback: try common encodings in order of likelihood
+          # Windows-1250 is prioritized for Central/Eastern European languages
+          common_encodings = ["Windows-1250", "Windows-1252", "ISO-8859-1", "ISO-8859-2"]
           converted = false
 
           common_encodings.each do |encoding|
@@ -340,7 +341,7 @@ class Import < ApplicationRecord
         end
       rescue LoadError
         # rchardet not available, fallback to trying common encodings
-        common_encodings = ["Windows-1252", "ISO-8859-1", "Windows-1250"]
+        common_encodings = ["Windows-1250", "Windows-1252", "ISO-8859-1", "ISO-8859-2"]
         converted = false
 
         common_encodings.each do |encoding|
