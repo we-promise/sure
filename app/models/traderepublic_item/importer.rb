@@ -123,14 +123,6 @@ class TraderepublicItem::Importer
         pair ? pair[1] : nil
       end
 
-    end # fin de import_transactions
-
-  def extract_isin_from_icon(icon)
-    return nil unless icon.is_a?(String)
-    match = icon.match(%r{logos/([A-Z]{2}[A-Z0-9]{9}\d)/})
-    match ? match[1] : nil
-  end
-
 
       if items.is_a?(Array)
         Rails.logger.info "TraderepublicItem #{traderepublic_item.id}: items count before enrichment = #{items.size}"
@@ -266,6 +258,12 @@ class TraderepublicItem::Importer
     end
 
     positions
+  end
+
+  def extract_isin_from_icon(icon)
+    return nil unless icon.is_a?(String)
+    match = icon.match(%r{logos/([A-Z]{2}[A-Z0-9]{9}\d)/})
+    match ? match[1] : nil
   end
 
   def process_transactions(account, transactions_data)

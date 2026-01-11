@@ -103,8 +103,13 @@ class Provider::Traderepublic
       pin: @pin
     }
     
-    Rails.logger.info "TradeRepublic: Initiating login for phone: #{@phone_number.gsub(/\d(?=\d{4})/, '*')}"
-    Rails.logger.debug "TradeRepublic: Request payload: #{payload.to_json}"
+    Rails.logger.info "TradeRepublic: Initiating login for phone: #{@phone_number.to_s.gsub(/\d(?=\d{4})/, '*')}"
+    sanitized_payload = payload.dup
+    if sanitized_payload[:phoneNumber]
+      sanitized_payload[:phoneNumber] = sanitized_payload[:phoneNumber].to_s.gsub(/\d(?=\d{4})/, '*')
+    end
+    sanitized_payload[:pin] = '[FILTERED]' if sanitized_payload.key?(:pin)
+    Rails.logger.debug "TradeRepublic: Request payload: #{sanitized_payload.to_json}"
     
     response = self.class.post(
       "#{HOST}/api/v1/auth/web/login",

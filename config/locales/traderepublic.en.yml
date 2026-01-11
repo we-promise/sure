@@ -1,3 +1,5 @@
+
+en:
   settings:
     providers:
       traderepublic_panel:
@@ -21,7 +23,6 @@
         no_accounts: "No Trade Republic accounts connected yet. Use the 'Connect Account' button when adding a new account."
         need_help: "Need help?"
         guides_html: "Visit the <a href='%{url}' class='link'>guides</a> for detailed setup instructions."
-en:
   traderepublic:
     items:
       errors:

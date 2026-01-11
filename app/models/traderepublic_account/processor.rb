@@ -6,22 +6,19 @@ class TraderepublicAccount::Processor
   end
 
   def process
-    # Suppression des trades liés uniquement à ce compte
-    account = traderepublic_account.linked_account
-    if account && account.respond_to?(:trades)
-      deleted_count = account.trades.delete_all
-      Rails.logger.info "TraderepublicAccount::Processor - #{deleted_count} trades du compte ##{account.id} supprimés avant reprocessing."
-    end
-        # Suppression de toutes les transactions et trades du compte avant reprocessing
-        if defined?(Entry)
-          account_id = traderepublic_account.linked_account&.id
-          if account_id
-            Entry.where(account_id: account_id, source: "traderepublic").delete_all
-            Rails.logger.info "TraderepublicAccount::Processor - Toutes les Entry du compte ##{account_id} supprimées avant reprocessing."
-          end
-        end
     account = traderepublic_account.linked_account
     return unless account
+
+    # Wrap deletions in a transaction so trades and Entry deletions succeed or roll back together
+    Account.transaction do
+      if account.respond_to?(:trades)
+        deleted_count = account.trades.delete_all
+        Rails.logger.info "TraderepublicAccount::Processor - #{deleted_count} trades for account ##{account.id} deleted before reprocessing."
+      end
+
+      Entry.where(account_id: account.id, source: "traderepublic").delete_all
+      Rails.logger.info "TraderepublicAccount::Processor - All Entry records for account ##{account.id} deleted before reprocessing."
+    end
 
     Rails.logger.info "TraderepublicAccount::Processor - Processing account #{account.id}"
 
@@ -113,7 +110,12 @@ class TraderepublicAccount::Processor
     amount = -amount.to_f
 
     # Parse date
-    date = Time.parse(timestamp).to_date rescue Date.today
+    begin
+      date = Time.parse(timestamp).to_date
+    rescue StandardError => e
+      Rails.logger.warn "TraderepublicAccount::Processor - Failed to parse timestamp #{timestamp.inspect} for txn #{traderepublic_id}: #{e.class}: #{e.message}. Falling back to Date.today"
+      date = Date.today
+    end
 
     # Check if this is a trade (Buy/Sell Order)
     # Note: subtitle contains the trade type info that becomes 'notes' after import
@@ -338,14 +340,31 @@ class TraderepublicAccount::Processor
   def parse_quantity(quantity_str)
     # quantity_str format: "3 Shares" or "0.01 BTC"
     return nil unless quantity_str
-    quantity_str.split.first.tr(",", ".").to_f.abs
+
+    token = quantity_str.to_s.split.first
+    cleaned = token.to_s.gsub(/[^0-9.,\-+]/, "")
+    return nil if cleaned.blank?
+
+    begin
+      Float(cleaned.tr(",", ".")).abs
+    rescue ArgumentError, TypeError
+      nil
+    end
   end
 
   def parse_price(price_str)
-    # price_str format: "€166.70" or "$500.00"
+    # price_str format: "€166.70" or "$500.00" - extract numeric substring and parse strictly
     return nil unless price_str
-    
-    price_str.gsub(/[^0-9.,]/, "").tr(",", ".").to_f
+
+    match = price_str.to_s.match(/[+\-]?\d+(?:[.,]\d+)*/)
+    return nil unless match
+
+    cleaned = match[0].tr(",", ".")
+    begin
+      Float(cleaned)
+    rescue ArgumentError, TypeError
+      nil
+    end
   end
 
   def extract_isin(isin_or_icon)
@@ -539,11 +558,14 @@ class TraderepublicAccount::Processor
     
     price = quantity.zero? ? 0 : (amount / quantity)
 
+    # Prefer position currency if present, else fall back to linked account currency or account default, then final fallback to EUR
+    currency = pos["currency"] || traderepublic_account.linked_account&.currency || traderepublic_account.linked_account&.default_currency || "EUR"
+
     import_adapter.import_holding(
       security: security,
       quantity: quantity,
       amount: amount,
-      currency: "EUR", # Default to EUR
+      currency: currency,
       date: Date.today,
       price: price,
       cost_basis: cost_basis,
