@@ -1,3 +1,22 @@
+# Sophtron API client for account aggregation.
+#
+# This provider implements the Sophtron API v2 for fetching bank account data,
+# transactions, and balances. It uses HMAC-SHA256 authentication for secure
+# API requests.
+#
+# The Sophtron API organizes data hierarchically:
+# - Customers (identified by customer_id)
+# - Accounts (identified by account_id within a customer)
+# - Transactions (identified by transaction_id within an account)
+#
+# @example Initialize a Sophtron provider
+#   provider = Provider::Sophtron.new(
+#     "user123",
+#     "base64_encoded_access_key",
+#     base_url: "https://api.sophtron.com/api/v2"
+#   )
+#
+# @see https://www.sophtron.com Documentation for Sophtron API
 class Provider::Sophtron < Provider
   include HTTParty
 
@@ -6,6 +25,11 @@ class Provider::Sophtron < Provider
 
   attr_reader :user_id, :access_key, :base_url
 
+  # Initializes a new Sophtron API client.
+  #
+  # @param user_id [String] Sophtron User ID for authentication
+  # @param access_key [String] Base64-encoded Sophtron Access Key
+  # @param base_url [String] Base URL for the Sophtron API (defaults to production)
   def initialize(user_id, access_key, base_url: "https://api.sophtron.com/api/v2")
     @user_id = user_id
     @access_key = access_key
@@ -13,8 +37,21 @@ class Provider::Sophtron < Provider
     super()
   end
 
-  # Get all accounts
-  # Returns: { accounts: [...], total: N }
+  # Fetches all accounts across all customers for this Sophtron user.
+  #
+  # This method:
+  # 1. Fetches the list of customer IDs
+  # 2. For each customer, fetches their accounts
+  # 3. Normalizes and deduplicates the account data
+  # 4. Returns a combined list of all accounts
+  #
+  # @return [Hash] Account data with keys:
+  #   - :accounts [Array<Hash>] Array of account objects
+  #   - :total [Integer] Total number of accounts
+  # @raise [Provider::Error] if the API request fails
+  # @example
+  #   result = provider.get_accounts
+  #   # => { accounts: [{id: "123", account_name: "Checking", ...}], total: 1 }
   def get_accounts
     with_provider_response do
       # fetching accounts for sophtron
@@ -62,9 +99,22 @@ class Provider::Sophtron < Provider
     end
   end
 
-  # Get transactions for a specific account
-  # Returns: { transactions: [...], total: N }
-  # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
+  # Fetches transactions for a specific account.
+  #
+  # Retrieves transaction history for a given account within a date range.
+  # If no end date is provided, defaults to tomorrow to include today's transactions.
+  #
+  # @param customer_id [String] Sophtron customer ID
+  # @param account_id [String] Sophtron account ID
+  # @param start_date [Date, nil] Start date for transaction history (optional)
+  # @param end_date [Date, nil] End date for transaction history (defaults to tomorrow)
+  # @return [Hash] Transaction data with keys:
+  #   - :transactions [Array<Hash>] Array of transaction objects
+  #   - :total [Integer] Total number of transactions
+  # @raise [Provider::Error] if the API request fails
+  # @example
+  #   result = provider.get_account_transactions("cust123", "acct456", start_date: 30.days.ago)
+  #   # => { transactions: [{id: "tx1", amount: -50.00, ...}], total: 25 }
   def get_account_transactions(customer_id, account_id, start_date: nil, end_date: nil)
     with_provider_response do
       query_params = {}
@@ -112,8 +162,18 @@ class Provider::Sophtron < Provider
     end
   end
 
-  # Get balance for a specific account
-  # Returns: { balance: { amount: N, currency: "USD" } }
+  # Fetches the current balance for a specific account.
+  #
+  # @param customer_id [String] Sophtron customer ID
+  # @param account_id [String] Sophtron account ID
+  # @return [Hash] Balance data with keys:
+  #   - :balance [Hash] Balance information
+  #     - :amount [Numeric] Current balance amount
+  #     - :currency [String] Currency code (defaults to "USD")
+  # @raise [Provider::Error] if the API request fails
+  # @example
+  #   result = provider.get_account_balance("cust123", "acct456")
+  #   # => { balance: { amount: 1000.00, currency: "USD" } }
   def get_account_balance(customer_id, account_id)
     with_provider_response do
       path = "/customers/#{ERB::Util.url_encode(customer_id.to_s)}/accounts/#{ERB::Util.url_encode(account_id.to_s)}"

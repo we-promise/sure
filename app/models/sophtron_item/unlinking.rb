@@ -5,10 +5,24 @@ module SophtronItem::Unlinking
   # Mirrors the SimplefinItem::Unlinking behavior.
   extend ActiveSupport::Concern
 
-  # Idempotently remove all connections between this Sophtron item and local accounts.
-  # - Detaches any AccountProvider links for each SophtronAccount
-  # - Detaches Holdings that point at the AccountProvider links
-  # Returns a per-account result payload for observability
+  # Idempotently removes all connections between this Sophtron item and local accounts.
+  #
+  # This method:
+  # - Finds all AccountProvider links for each SophtronAccount
+  # - Detaches any Holdings associated with those links
+  # - Destroys the AccountProvider links
+  # - Returns detailed results for observability
+  #
+  # This mirrors the SimplefinItem::Unlinking behavior.
+  #
+  # @param dry_run [Boolean] If true, only report what would be unlinked without making changes
+  # @return [Array<Hash>] Results for each account with keys:
+  #   - :sfa_id [Integer] The SophtronAccount ID
+  #   - :name [String] The account name
+  #   - :provider_link_ids [Array<Integer>] IDs of AccountProvider links found
+  # @example
+  #   item.unlink_all!(dry_run: true)  # Preview what would be unlinked
+  #   item.unlink_all!                 # Actually unlink all accounts
   def unlink_all!(dry_run: false)
     results = []
 

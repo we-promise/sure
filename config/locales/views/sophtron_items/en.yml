@@ -72,6 +72,7 @@ en:
     select_accounts:
       accounts_selected: accounts selected
       api_error: "API error: %{message}"
+      unexpected_error: "An unexpected error occurred: %{message}"
       cancel: Cancel
       configure_name_in_sophtron: Cannot import - please configure account name in Sophtron
       description: Select the accounts you want to link to your %{product_name} account.
@@ -98,6 +99,7 @@ en:
     link_existing_account:
       account_already_linked: This account is already linked to a provider
       api_error: "API error: %{message}"
+      unexpected_error: "An unexpected error occurred: %{message}"
       invalid_account_name: Cannot link account with blank name
       sophtron_account_already_linked: This Sophtron account is already linked to another account
       sophtron_account_not_found: Sophtron account not found
@@ -107,6 +109,7 @@ en:
       account_type_label: "Account Type:"
       all_accounts_linked: "All your Sophtron accounts have already been set up."
       api_error: "API error: %{message}"
+      unexpected_error: "An unexpected error occurred: %{message}"
       fetch_failed: "Failed to Fetch Accounts"
       no_accounts_to_setup: "No Accounts to Set Up"
       no_access_key: "Sophtron Access key is not configured. Please check your connection settings."
@@ -170,7 +173,7 @@ en:
       success: "Successfully created %{count} account(s)."
     sync:
       success: Sync started
-    Sophtron Setup Required:
+    Sophtron_Setup_Required:
       title: Sophtron Setup Required
       message: >
         To complete the setup of your Sophtron connection, please go to the Provider Settings page and follow the instructions to authorize and configure your Sophtron connection.
@@ -195,3 +198,37 @@ en:
     select_option: "Select %{type}"  
     subtype: "subtype"  
     type: "type"
+    sophtron_panel:
+      setup_instructions_title: "Setup instructions:"
+      setup_instructions:
+        step_1_html: 'Visit <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> to obtain your API credentials'
+        step_2: "Copy your User ID and Access Key from your Sophtron account settings"
+        step_3: "Paste the credentials below and click Save to enable Sophtron bank data sync"
+      field_descriptions_title: "Field descriptions:"
+      field_descriptions:
+        user_id_html: "<strong>User ID:</strong> Your Sophtron User ID credential"
+        access_key_html: "<strong>Access Key:</strong> Your Sophtron Access Key credential"
+        base_url_html: "<strong>Base URL:</strong> The Sophtron API endpoint URL (usually provided by Sophtron)"
+      fields:
+        user_id:
+          label: "User ID"
+          placeholder_new: "Paste your Sophtron User ID"
+          placeholder_edit: "••••••••"
+        access_key:
+          label: "Access Key"
+          placeholder_new: "Paste your Sophtron Access Key"
+          placeholder_edit: "••••••••"
+        base_url:
+          label: "Base URL"
+          placeholder: "https://api.sophtron.com"
+      save: "Save Configuration"
+      update: "Update Configuration"
+      status:
+        configured_html: 'Configured and ready to use. Visit the <a href="%{accounts_path}" class="link">Accounts</a> tab to manage and set up accounts.'
+        not_configured: "Not configured"
+    syncer:
+      importing_accounts: "Importing accounts from Sophtron..."
+      checking_account_configuration: "Checking account configuration..."
+      accounts_need_setup: "%{count} account(s) need setup"
+      processing_transactions: "Processing transactions for linked accounts..."
+      calculating_balances: "Calculating balances for linked accounts..."

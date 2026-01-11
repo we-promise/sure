@@ -111,14 +111,14 @@ class SophtronItemsController < ApplicationController
       render layout: false
     rescue Provider::Error => e
       Rails.logger.error("Sophtron API error in select_accounts: #{e.message}")
-      @error_message = e.message
+      @error_message = t(".api_error", message: e.message)
       @return_path = safe_return_to_path
       render partial: "sophtron_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
              layout: false
     rescue StandardError => e
       Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      @error_message = t(".unexpected_error", message: e.message)
       @return_path = safe_return_to_path
       render partial: "sophtron_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
@@ -311,13 +311,13 @@ class SophtronItemsController < ApplicationController
       render layout: false
     rescue Provider::Error => e
       Rails.logger.error("Sophtron API error in select_existing_account: #{e.message}")
-      @error_message = e.message
+      @error_message = t(".api_error", message: e.message)
       render partial: "sophtron_items/api_error",
              locals: { error_message: @error_message, return_path: accounts_path },
              layout: false
     rescue StandardError => e
       Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      @error_message = t(".unexpected_error")
       render partial: "sophtron_items/api_error",
              locals: { error_message: @error_message, return_path: accounts_path },
              layout: false

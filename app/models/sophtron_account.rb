@@ -1,20 +1,48 @@
+# Represents a single bank account from Sophtron.
+#
+# A SophtronAccount stores account-level data fetched from the Sophtron API,
+# including balances, account type, and raw transaction data. It can be linked
+# to a Maybe Account through the account_provider association.
+#
+# @attr [String] name Account name from Sophtron
+# @attr [String] account_id Sophtron's unique identifier for this account
+# @attr [String] customer_id Sophtron customer ID this account belongs to
+# @attr [String] member_id Sophtron member ID
+# @attr [String] currency Three-letter currency code (e.g., 'USD')
+# @attr [Decimal] balance Current account balance
+# @attr [Decimal] available_balance Available balance (for credit accounts)
+# @attr [String] account_type Type of account (e.g., 'checking', 'savings')
+# @attr [String] account_sub_type Detailed account subtype
+# @attr [JSONB] raw_payload Raw account data from Sophtron API
+# @attr [JSONB] raw_transactions_payload Raw transaction data from Sophtron API
+# @attr [DateTime] last_updated When Sophtron last updated this account
 class SophtronAccount < ApplicationRecord
   include CurrencyNormalizable
 
   belongs_to :sophtron_item
 
-  # New association through account_providers
+  # Association to link this Sophtron account to a Maybe Account
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :account, through: :account_provider, source: :account
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
 
-  # Helper to get account using account_providers system
+  # Returns the linked Maybe Account for this Sophtron account.
+  #
+  # @return [Account, nil] The linked Maybe Account, or nil if not linked
   def current_account
     account
   end
 
+  # Updates this SophtronAccount with fresh data from the Sophtron API.
+  #
+  # Maps Sophtron field names to our database schema and saves the changes.
+  # Stores the complete raw payload for reference.
+  #
+  # @param account_snapshot [Hash] Raw account data from Sophtron API
+  # @return [Boolean] true if save was successful
+  # @raise [ActiveRecord::RecordInvalid] if validation fails
   def upsert_sophtron_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
     snapshot = account_snapshot.with_indifferent_access
@@ -37,6 +65,15 @@ class SophtronAccount < ApplicationRecord
     save!
   end
 
+  # Stores raw transaction data from the Sophtron API.
+  #
+  # This method saves the raw transaction payload which will later be
+  # processed by SophtronAccount::Transactions::Processor to create
+  # actual Transaction records.
+  #
+  # @param transactions_snapshot [Array<Hash>] Array of raw transaction data
+  # @return [Boolean] true if save was successful
+  # @raise [ActiveRecord::RecordInvalid] if validation fails
   def upsert_sophtron_transactions_snapshot!(transactions_snapshot)
     assign_attributes(
       raw_transactions_payload: transactions_snapshot

@@ -1,17 +1,17 @@
 <div class="space-y-4">
   <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
+    <p class="text-primary font-medium"><%= t("sophtron_items.sophtron_panel.setup_instructions_title") %></p>
     <ol>
-      <li>Visit <a href="https://www.sophtron.com" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> to get your API key</li>
-      <li>Paste your UserID and AccessKey below and click the Save button</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
+      <li><%= t("sophtron_items.sophtron_panel.setup_instructions.step_1_html", url: "https://www.sophtron.com") %></li>
+      <li><%= t("sophtron_items.sophtron_panel.setup_instructions.step_2") %></li>
+      <li><%= t("sophtron_items.sophtron_panel.setup_instructions.step_3") %></li>
     </ol>
 
-    <p class="text-primary font-medium">Field descriptions:</p>
+    <p class="text-primary font-medium"><%= t("sophtron_items.sophtron_panel.field_descriptions_title") %></p>
     <ul>
-      <li><strong>User ID:</strong> Your Sophtron User ID for authentication (required)</li>
-      <li><strong>Access Key:</strong> Your Sophtron Access Key for authentication (required)</li>
-      <li><strong>Base URL:</strong> Base URL for Sophtron API (optional, defaults to https://api.sophtron.com/api/v2)</li>
+      <li><%= t("sophtron_items.sophtron_panel.field_descriptions.user_id_html") %></li>
+      <li><%= t("sophtron_items.sophtron_panel.field_descriptions.access_key_html") %></li>
+      <li><%= t("sophtron_items.sophtron_panel.field_descriptions.base_url_html") %></li>
     </ul>
   </div>
 
@@ -36,33 +36,33 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :user_id,
-                        label: "User ID",
-                        placeholder: is_new_record ? "Paste User ID here" : "Enter new User ID to update",
+                        label: t("sophtron_items.sophtron_panel.fields.user_id.label"),
+                        placeholder: is_new_record ? t("sophtron_items.sophtron_panel.fields.user_id.placeholder_new") : t("sophtron_items.sophtron_panel.fields.user_id.placeholder_edit"),
                         type: :password %>
 
     <%= form.text_field :access_key,
-                        label: "Access Key",
-                        placeholder: is_new_record ? "Paste Access Key here" : "Enter new Access Key to update",
+                        label: t("sophtron_items.sophtron_panel.fields.access_key.label"),
+                        placeholder: is_new_record ? t("sophtron_items.sophtron_panel.fields.access_key.placeholder_new") : t("sophtron_items.sophtron_panel.fields.access_key.placeholder_edit"),
                         type: :password %>
 
     <%= form.text_field :base_url,
-                        label: "Base URL (Optional)",
-                        placeholder: "https://api.sophtron.com/api/v2 (default)",
+                        label: t("sophtron_items.sophtron_panel.fields.base_url.label"),
+                        placeholder: t("sophtron_items.sophtron_panel.fields.base_url.placeholder"),
                         value: sophtron_item.base_url %>
 
     <div class="flex justify-end">
-      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+      <%= form.submit is_new_record ? t("sophtron_items.sophtron_panel.save") : t("sophtron_items.sophtron_panel.update"),
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
     </div>
   <% end %>
 
   <div class="flex items-center gap-2">
     <% if Current.family.sophtron_items.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+      <p class="text-sm text-secondary"><%= t("sophtron_items.sophtron_panel.status.configured_html", accounts_path: accounts_path) %></p>
     <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary">Not configured</p>
+      <div class="w-2 h-2 bg-muted rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("sophtron_items.sophtron_panel.status.not_configured") %></p>
     <% end %>
   </div>
 </div>

@@ -1,9 +1,26 @@
+# Represents a Sophtron integration item for a family.
+#
+# A SophtronItem stores Sophtron API credentials and manages the connection
+# to a family's Sophtron account. It can have multiple associated SophtronAccounts,
+# which represent individual bank accounts linked through Sophtron.
+#
+# @attr [String] name The display name for this Sophtron connection
+# @attr [String] user_id Sophtron User ID (encrypted if encryption is configured)
+# @attr [String] access_key Sophtron Access Key (encrypted if encryption is configured)
+# @attr [String] base_url Base URL for Sophtron API (optional, defaults to production)
+# @attr [String] status Current status: 'good' or 'requires_update'
+# @attr [Boolean] scheduled_for_deletion Whether the item is scheduled for deletion
+# @attr [DateTime] last_synced_at When the last successful sync occurred
 class SophtronItem < ApplicationRecord
   include Syncable, Provided, Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
-  # Helper to detect if ActiveRecord Encryption is configured for this app
+  # Helper to detect if ActiveRecord Encryption is configured for this app.
+  #
+  # Checks both Rails credentials and environment variables for encryption keys.
+  #
+  # @return [Boolean] true if encryption is properly configured
   def self.encryption_ready?
     creds_ready = Rails.application.credentials.active_record_encryption.present?
     env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
@@ -37,6 +54,18 @@ class SophtronItem < ApplicationRecord
     DestroyJob.perform_later(self)
   end
 
+  # Imports the latest account and transaction data from Sophtron.
+  #
+  # This method fetches all accounts and transactions from the Sophtron API
+  # and updates the local database accordingly. It will:
+  # - Fetch all accounts associated with the Sophtron connection
+  # - Create new SophtronAccount records for newly discovered accounts
+  # - Update existing linked accounts with latest data
+  # - Fetch and store transactions for all linked accounts
+  #
+  # @return [Hash] Import results with counts of accounts and transactions imported
+  # @raise [StandardError] if the Sophtron provider is not configured
+  # @raise [Provider::Error] if the Sophtron API returns an error
   def import_latest_sophtron_data
     provider = sophtron_provider
     unless provider

@@ -1,11 +1,51 @@
+require "set"
+
+# Imports account and transaction data from Sophtron API.
+#
+# This class orchestrates the complete import process for a SophtronItem:
+# 1. Fetches all accounts from Sophtron
+# 2. Updates existing linked accounts with latest data
+# 3. Creates SophtronAccount records for newly discovered accounts
+# 4. Fetches and stores transactions for all linked accounts
+# 5. Updates account balances
+#
+# The importer maintains a separation between "discovered" accounts (any account
+# returned by the Sophtron API) and "linked" accounts (accounts the user has
+# explicitly connected to Maybe Accounts). This allows users to selectively
+# import accounts of their choosing.
 class SophtronItem::Importer
   attr_reader :sophtron_item, :sophtron_provider
 
+  # Initializes a new importer.
+  #
+  # @param sophtron_item [SophtronItem] The Sophtron item to import data for
+  # @param sophtron_provider [Provider::Sophtron] Configured Sophtron API client
   def initialize(sophtron_item, sophtron_provider:)
     @sophtron_item = sophtron_item
     @sophtron_provider = sophtron_provider
   end
 
+  # Performs the complete import process for this Sophtron item.
+  #
+  # This method:
+  # - Fetches all accounts from Sophtron API
+  # - Stores raw account data snapshot
+  # - Updates existing linked accounts
+  # - Creates records for newly discovered accounts
+  # - Fetches transactions for all linked accounts
+  # - Updates account balances
+  #
+  # @return [Hash] Import results with the following keys:
+  #   - :success [Boolean] Overall success status
+  #   - :accounts_updated [Integer] Number of existing accounts updated
+  #   - :accounts_created [Integer] Number of new account records created
+  #   - :accounts_failed [Integer] Number of accounts that failed to import
+  #   - :transactions_imported [Integer] Total number of transactions imported
+  #   - :transactions_failed [Integer] Number of accounts with transaction import failures
+  # @example
+  #   result = importer.import
+  #   # => { success: true, accounts_updated: 2, accounts_created: 1,
+  #   #      accounts_failed: 0, transactions_imported: 150, transactions_failed: 0 }
   def import
     Rails.logger.info "SophtronItem::Importer - Starting import for item #{sophtron_item.id}"
     # Step 1: Fetch all accounts from Sophtron
@@ -34,15 +74,13 @@ class SophtronItem::Importer
                                          .joins(:account_provider)
                                          .pluck(:account_id)
                                          .map(&:to_s)
-
       # Get all existing sophtron account IDs (linked or not)
       all_existing_ids = sophtron_item.sophtron_accounts.pluck(:account_id).map(&:to_s)
-
       accounts_data[:accounts].each do |account_data|
-        account_id = account_data[:account_id]&.to_s
+        account_id = (account_data[:account_id] || account_data[:id])&.to_s
         next unless account_id.present?
-        next if account_data[:account_name].blank?
-
+        account_name = account_data[:account_name] || account_data[:name]
+        next if account_name.blank?
         if linked_account_ids.include?(account_id)
           # Update existing linked accounts
           begin
@@ -58,7 +96,7 @@ class SophtronItem::Importer
           begin
             sophtron_account = sophtron_item.sophtron_accounts.build(
               account_id: account_id,
-              name: account_data[:name],
+              name: account_name,
               currency: account_data[:currency] || "USD"
             )
             sophtron_account.upsert_sophtron_snapshot!(account_data)
@@ -150,6 +188,15 @@ class SophtronItem::Importer
       accounts_data
     end
 
+    # Imports and updates a single account from Sophtron data.
+    #
+    # This method only updates existing SophtronAccount records that were
+    # previously created. It does not create new accounts during sync.
+    #
+    # @param account_data [Hash] Raw account data from Sophtron API
+    # @return [void]
+    # @raise [ArgumentError] if account_data is invalid or account_id is missing
+    # @raise [StandardError] if the account cannot be saved
     def import_account(account_data)
       # Validate account data structure
       unless account_data.is_a?(Hash)
@@ -157,7 +204,7 @@ class SophtronItem::Importer
         raise ArgumentError, "Invalid account data format"
       end
 
-      account_id = account_data[:id]
+      account_id = (account_data[:account_id] || account_data[:id])&.to_s
 
       # Validate required account_id
       if account_id.blank?
@@ -167,7 +214,7 @@ class SophtronItem::Importer
 
       # Only find existing accounts, don't create new ones during sync
       sophtron_account = sophtron_item.sophtron_accounts.find_by(
-        account_id: account_id.to_s
+        account_id: account_id
       )
 
       # Skip if account wasn't previously selected
@@ -184,6 +231,20 @@ class SophtronItem::Importer
       end
     end
 
+    # Fetches and stores transactions for a Sophtron account.
+    #
+    # This method:
+    # 1. Determines the appropriate sync start date
+    # 2. Fetches transactions from the Sophtron API
+    # 3. Deduplicates against existing transactions
+    # 4. Stores new transactions in raw_transactions_payload
+    # 5. Updates the account balance
+    #
+    # @param sophtron_account [SophtronAccount] The account to fetch transactions for
+    # @return [Hash] Result with keys:
+    #   - :success [Boolean] Whether the fetch was successful
+    #   - :transactions_count [Integer] Number of transactions fetched
+    #   - :error [String, nil] Error message if failed
     def fetch_and_store_transactions(sophtron_account)
       start_date = determine_sync_start_date(sophtron_account)
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
@@ -312,7 +373,21 @@ class SophtronItem::Importer
       end
     end
 
+    # Determines the appropriate start date for fetching transactions.
+    #
+    # Logic:
+    # - For accounts with stored transactions: uses last sync date minus 60-day buffer
+    # - For new accounts: uses account creation date minus 60 days, capped at 120 days ago
+    #
+    # This ensures we capture any late-arriving transactions while limiting
+    # the historical window for new accounts.
+    #
+    # @param sophtron_account [SophtronAccount] The account to determine start date for
+    # @return [Date] The start date for transaction sync
     def determine_sync_start_date(sophtron_account)
+      configured_start = sophtron_item.sync_start_date&.to_time
+      max_history_start = 3.years.ago
+      floor_start = [ configured_start, max_history_start ].compact.max
       # Check if this account has any stored transactions
       # If not, treat it as a first sync for this account even if the item has been synced before
       has_stored_transactions = sophtron_account.raw_transactions_payload.to_a.any?
@@ -321,16 +396,16 @@ class SophtronItem::Importer
         # Account has been synced before, use item-level logic with buffer
         # For subsequent syncs, fetch from last sync date with a buffer
         if sophtron_item.last_synced_at
-          sophtron_item.last_synced_at - 60.days
+          [ sophtron_item.last_synced_at - 60.days, floor_start ].compact.max
         else
           # Fallback if item hasn't been synced but account has transactions
-          120.days.ago
+          floor_start || 120.days.ago
         end
       else
         # Account has no stored transactions - this is a first sync for this account
         # Use account creation date or a generous historical window
         account_baseline = sophtron_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 60.days, 120.days.ago ].max
+        first_sync_window = [ account_baseline - 60.days, floor_start || 120.days.ago ].max
 
         # Use the more recent of: (account created - 60 days) or (120 days ago)
         # This caps old accounts at 120 days while respecting recent account creation dates
@@ -338,6 +413,14 @@ class SophtronItem::Importer
       end
     end
 
+    # Handles API errors and marks the item for re-authentication if needed.
+    #
+    # Authentication-related errors cause the item status to be set to
+    # :requires_update, prompting the user to re-enter credentials.
+    #
+    # @param error_message [String] The error message from the API
+    # @return [void]
+    # @raise [Provider::Error] Always raises an error with the message
     def handle_error(error_message)
       # Mark item as requiring update for authentication-related errors
       error_msg_lower = error_message.to_s.downcase

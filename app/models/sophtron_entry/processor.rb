@@ -1,14 +1,42 @@
 require "digest/md5"
 
+# Processes a single Sophtron transaction and creates/updates a Maybe Transaction.
+#
+# This processor takes raw transaction data from the Sophtron API and converts it
+# into a Maybe Transaction record using the Account::ProviderImportAdapter.
+# It handles currency normalization, merchant matching, and data validation.
+#
+# Expected transaction structure from Sophtron:
+# {
+#   id: String,
+#   accountId: String,
+#   amount: Numeric,
+#   currency: String,
+#   date: String/Date,
+#   merchant: String,
+#   description: String
+# }
 class SophtronEntry::Processor
   include CurrencyNormalizable
-  # sophtron_transaction is the raw hash fetched from Sophtron API and converted to JSONB
-  # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
+
+  # Initializes a new processor for a Sophtron transaction.
+  #
+  # @param sophtron_transaction [Hash] Raw transaction data from Sophtron API
+  # @param sophtron_account [SophtronAccount] The account this transaction belongs to
   def initialize(sophtron_transaction, sophtron_account:)
     @sophtron_transaction = sophtron_transaction
     @sophtron_account = sophtron_account
   end
 
+  # Processes the transaction and creates/updates a Maybe Transaction record.
+  #
+  # This method validates the transaction data, creates or finds a merchant,
+  # and uses the ProviderImportAdapter to import the transaction into Maybe.
+  # It respects user overrides through the enrichment pattern.
+  #
+  # @return [Entry, nil] The created/updated Entry, or nil if account not linked
+  # @raise [ArgumentError] if required transaction fields are missing
+  # @raise [StandardError] if the transaction cannot be saved
   def process
     # Validate that we have a linked account before processing
     unless account.present?
@@ -47,32 +75,62 @@ class SophtronEntry::Processor
   private
     attr_reader :sophtron_transaction, :sophtron_account
 
+    # Returns the import adapter for this transaction's account.
+    #
+    # @return [Account::ProviderImportAdapter] Adapter for importing transactions
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    # Returns the linked Maybe Account for this transaction.
+    #
+    # @return [Account, nil] The linked account
     def account
       @account ||= sophtron_account.current_account
     end
 
+    # Returns the transaction data with indifferent access.
+    #
+    # @return [ActiveSupport::HashWithIndifferentAccess] Normalized transaction data
     def data
       @data ||= sophtron_transaction.with_indifferent_access
     end
 
+    # Generates a unique external ID for this transaction.
+    #
+    # Prefixes the Sophtron transaction ID with 'sophtron_' to avoid conflicts
+    # with other providers.
+    #
+    # @return [String] The external ID (e.g., 'sophtron_12345')
+    # @raise [ArgumentError] if the transaction ID is missing
     def external_id
       id = data[:id].presence
       raise ArgumentError, "Sophtron transaction missing required field 'id'" unless id
       "sophtron_#{id}"
     end
 
+    # Extracts the transaction name from the data.
+    #
+    # Falls back to "Unknown transaction" if merchant is not present.
+    #
+    # @return [String] The transaction name
     def name
       data[:merchant].presence || "Unknown transaction"
     end
 
+    # Extracts optional notes/description from the transaction.
+    #
+    # @return [String, nil] Transaction description
     def notes
       data[:description].presence
     end
 
+    # Finds or creates a merchant for this transaction.
+    #
+    # Creates a deterministic merchant ID using MD5 hash of the merchant name.
+    # This ensures the same merchant name always maps to the same merchant record.
+    #
+    # @return [Merchant, nil] The merchant object, or nil if merchant data is missing
     def merchant
       return nil unless data[:merchant].present?
 
@@ -95,6 +153,14 @@ class SophtronEntry::Processor
       end
     end
 
+    # Parses and converts the transaction amount.
+    #
+    # Sophtron uses standard banking convention (negative = expense, positive = income)
+    # while Maybe uses inverted signs (positive = expense, negative = income).
+    # This method negates the amount to convert between conventions.
+    #
+    # @return [BigDecimal] The converted amount
+    # @raise [ArgumentError] if the amount cannot be parsed
     def amount
       parsed_amount = case data[:amount]
       when String
@@ -114,14 +180,33 @@ class SophtronEntry::Processor
       raise
     end
 
+    # Extracts and normalizes the currency code.
+    #
+    # Falls back to the account currency, then USD if not specified.
+    #
+    # @return [String] Three-letter currency code (e.g., 'USD')
     def currency
       parse_currency(data[:currency]) || account&.currency || "USD"
     end
 
+    # Logs invalid currency codes.
+    #
+    # @param currency_value [String] The invalid currency code
+    # @return [void]
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' in Sophtron transaction #{external_id}, falling back to account currency")
     end
 
+    # Parses the transaction date from various formats.
+    #
+    # Handles:
+    # - String dates (ISO format)
+    # - Unix timestamps (Integer/Float)
+    # - Time/DateTime objects
+    # - Date objects
+    #
+    # @return [Date] The parsed transaction date
+    # @raise [ArgumentError] if the date cannot be parsed
     def date
       case data[:date]
       when String

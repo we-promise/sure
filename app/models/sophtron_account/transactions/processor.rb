@@ -1,10 +1,37 @@
+# Processes raw transaction data to create Maybe Transaction records.
+#
+# This processor takes the raw transaction payload stored in a SophtronAccount
+# and converts each transaction into a Maybe Transaction record using
+# SophtronEntry::Processor. It processes transactions individually to avoid
+# database lock issues when handling large transaction volumes.
+#
+# The processor is resilient to errors - if one transaction fails, it logs
+# the error and continues processing the remaining transactions.
 class SophtronAccount::Transactions::Processor
   attr_reader :sophtron_account
 
+  # Initializes a new transaction processor.
+  #
+  # @param sophtron_account [SophtronAccount] The account whose transactions to process
   def initialize(sophtron_account)
     @sophtron_account = sophtron_account
   end
 
+  # Processes all transactions in the raw_transactions_payload.
+  #
+  # Each transaction is processed individually to avoid database lock contention.
+  # Errors are caught and logged, allowing the process to continue with remaining
+  # transactions.
+  #
+  # @return [Hash] Processing results with the following keys:
+  #   - :success [Boolean] true if all transactions processed successfully
+  #   - :total [Integer] Total number of transactions found
+  #   - :imported [Integer] Number of transactions successfully imported
+  #   - :failed [Integer] Number of transactions that failed
+  #   - :errors [Array<Hash>] Details of any errors encountered
+  # @example
+  #   result = processor.process
+  #   # => { success: true, total: 100, imported: 98, failed: 2, errors: [...] }
   def process
     unless sophtron_account.raw_transactions_payload.present?
       Rails.logger.info "SophtronAccount::Transactions::Processor - No transactions in raw_transactions_payload for sophtron_account #{sophtron_account.id}"

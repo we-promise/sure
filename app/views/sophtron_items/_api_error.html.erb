@@ -1,33 +1,33 @@
-<%# locals: (error_message:, return_path:) %>
+<%# locals: (error_message:) %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_header(title: t("sophtron_items.api_error.title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
         <div class="flex items-start gap-3">
           <%= icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
           <div class="text-sm">
-            <p class="font-medium text-primary mb-2"><%= t(".unable_to_connect") %></p>
-            <p class="text-secondary"><%= error_message %></p>
+            <p class="font-medium text-primary mb-2"><%= t("sophtron_items.api_error.unable_to_connect") %></p>
+            <p class="text-secondary"><%= h(error_message) %></p>
           </div>
         </div>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-          <p class="font-medium text-primary"><%= t(".common_issues_title") %></p>
+          <p class="font-medium text-primary"><%= t("sophtron_items.api_error.common_issues_title") %></p>
           <ul class="list-disc list-inside space-y-1 text-secondary">
-            <li><%= t(".incorrect_user_id") %></li>
-            <li><%= t(".invalid_access_key") %></li>
-            <li><%= t(".expired_credentials") %></li>
-            <li><%= t(".network_issue") %></li>
-            <li><%= t(".service_down") %></li>
+            <li><%= t("sophtron_items.api_error.incorrect_user_id") %></li>
+            <li><%= t("sophtron_items.api_error.invalid_access_key") %></li>
+            <li><%= t("sophtron_items.api_error.expired_credentials") %></li>
+            <li><%= t("sophtron_items.api_error.network_issue") %></li>
+            <li><%= t("sophtron_items.api_error.service_down") %></li>
           </ul>
         </div>
 
         <div class="mt-4">
-          <%= link_to settings_providers_path,
+          <%= link_to (return_path.presence || settings_providers_path),  
                 class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors",
                 data: { turbo: false } do %>
-            <%= t(".check_provider_settings") %>
+            <%= t("sophtron_items.api_error.check_provider_settings") %>
           <% end %>
         </div>
       </div>
