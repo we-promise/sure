@@ -159,7 +159,10 @@ class Budget < ApplicationRecord
   end
 
   def budget_category_actual_spending(budget_category)
-    expense_totals.category_totals.find { |ct| ct.category.id == budget_category.category.id }&.total || 0
+    total_expenses = expense_totals.category_totals.find { |ct| ct.category.id == budget_category.category.id }&.total || 0
+    total_incomes = income_totals.category_totals.find { |ct| ct.category.id == budget_category.category.id }&.total || 0
+    total = total_incomes - total_expenses
+    total.negative? ? total.abs : 0
   end
 
   def category_median_monthly_expense(category)
