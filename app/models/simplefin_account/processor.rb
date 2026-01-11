@@ -151,8 +151,35 @@ class SimplefinAccount::Processor
       return unless simplefin_account.current_account&.accountable_type == "Investment"
       SimplefinAccount::Investments::TransactionsProcessor.new(simplefin_account).process
       SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account).process
+
+      # Detect and mark internal investment activity (fund swaps, reinvestments)
+      detect_internal_investment_activity
     rescue => e
       report_exception(e, "investments")
+    end
+
+    def detect_internal_investment_activity
+      account = simplefin_account.current_account
+      return unless account&.investment? || account&.crypto?
+
+      # Get current holdings from raw payload
+      current_holdings = simplefin_account.raw_holdings_payload || []
+      return if current_holdings.blank?
+
+      # Get recent transactions (last 30 days to catch any we might have missed)
+      recent_transactions = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(date: 30.days.ago.to_date..Date.current)
+        .where(exclude_from_cashflow: false)
+        .map(&:entryable)
+        .compact
+
+      InvestmentActivityDetector.new(account).detect_and_mark_internal_activity(
+        current_holdings,
+        recent_transactions
+      )
+    rescue => e
+      Rails.logger.warn("InvestmentActivityDetector failed for account #{simplefin_account.current_account&.id}: #{e.message}")
     end
 
     def process_liabilities

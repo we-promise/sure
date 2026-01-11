@@ -103,8 +103,48 @@ class PlaidAccount::Processor
     def process_investments
       PlaidAccount::Investments::TransactionsProcessor.new(plaid_account, security_resolver: security_resolver).process
       PlaidAccount::Investments::HoldingsProcessor.new(plaid_account, security_resolver: security_resolver).process
+
+      # Detect and mark internal investment activity (fund swaps, reinvestments)
+      # Note: Plaid already creates Trade entries for buy/sell, but this catches cash transactions
+      detect_internal_investment_activity
     rescue => e
       report_exception(e)
+    end
+
+    def detect_internal_investment_activity
+      account = AccountProvider.find_by(provider: plaid_account)&.account
+      return unless account&.investment? || account&.crypto?
+
+      # Get current holdings from raw payload
+      raw_holdings = plaid_account.raw_investments_payload&.dig("holdings") || []
+      return if raw_holdings.blank?
+
+      # Transform to common format
+      current_holdings = raw_holdings.map do |h|
+        security = security_resolver.resolve(h["security_id"])
+        {
+          "symbol" => security&.ticker,
+          "description" => security&.name,
+          "shares" => h["quantity"],
+          "cost_basis" => h["cost_basis"],
+          "market_value" => h["institution_value"]
+        }
+      end
+
+      # Get recent transactions (last 30 days to catch any we might have missed)
+      recent_transactions = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(date: 30.days.ago.to_date..Date.current)
+        .where(exclude_from_cashflow: false)
+        .map(&:entryable)
+        .compact
+
+      InvestmentActivityDetector.new(account).detect_and_mark_internal_activity(
+        current_holdings,
+        recent_transactions
+      )
+    rescue => e
+      Rails.logger.warn("InvestmentActivityDetector failed for Plaid account #{plaid_account.id}: #{e.message}")
     end
 
     def process_liabilities

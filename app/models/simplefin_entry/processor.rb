@@ -18,7 +18,8 @@ class SimplefinEntry::Processor
       source: "simplefin",
       merchant: merchant,
       notes: notes,
-      extra: extra_metadata
+      extra: extra_metadata,
+      investment_activity_label: inferred_activity_label
     )
   end
 
@@ -203,5 +204,12 @@ class SimplefinEntry::Processor
         parts << "Payee: #{payee}"
       end
       parts.presence&.join(" | ")
+    end
+
+    # Infer investment activity label from transaction description
+    # Only returns a label for investment/crypto accounts
+    def inferred_activity_label
+      return nil unless account&.investment? || account&.crypto?
+      InvestmentActivityDetector.infer_label_from_description(name, amount, account)
     end
 end

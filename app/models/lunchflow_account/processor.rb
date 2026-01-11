@@ -74,8 +74,35 @@ class LunchflowAccount::Processor
       return unless [ "Investment", "Crypto" ].include?(lunchflow_account.current_account&.accountable_type)
 
       LunchflowAccount::Investments::HoldingsProcessor.new(lunchflow_account).process
+
+      # Detect and mark internal investment activity (fund swaps, reinvestments)
+      detect_internal_investment_activity
     rescue => e
       report_exception(e, "holdings")
+    end
+
+    def detect_internal_investment_activity
+      account = lunchflow_account.current_account
+      return unless account&.investment? || account&.crypto?
+
+      # Get current holdings from raw payload
+      current_holdings = lunchflow_account.raw_holdings_payload || []
+      return if current_holdings.blank?
+
+      # Get recent transactions (last 30 days to catch any we might have missed)
+      recent_transactions = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(date: 30.days.ago.to_date..Date.current)
+        .where(exclude_from_cashflow: false)
+        .map(&:entryable)
+        .compact
+
+      InvestmentActivityDetector.new(account).detect_and_mark_internal_activity(
+        current_holdings,
+        recent_transactions
+      )
+    rescue => e
+      Rails.logger.warn("InvestmentActivityDetector failed for Lunchflow account #{lunchflow_account.id}: #{e.message}")
     end
 
     def report_exception(error, context)
