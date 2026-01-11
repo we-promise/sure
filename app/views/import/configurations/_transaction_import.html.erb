@@ -88,6 +88,9 @@
   <% end %>
 
   <%# Optional Fields %>
+  <%= form.number_field :rows_to_skip,
+                        { label: "Skip first n rows", min: 0, step: 1 } %>
+
   <% unless import.account.present? %>
     <%= form.select :account_col_label,
                     import.csv_headers,

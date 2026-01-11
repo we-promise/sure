@@ -42,6 +42,7 @@ class Import::ConfigurationsController < ApplicationController
         :signage_convention,
         :amount_type_strategy,
         :amount_type_inflow_value,
+        :rows_to_skip
       )
     end
 end
