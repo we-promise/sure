@@ -37,4 +37,10 @@
       <%= render "settings/providers/coinstats_panel" %>
     </turbo-frame>
   <% end %>
+
+  <%= settings_section title: "Sophtron", collapsible: true, open: false do %>
+    <turbo-frame id="sophtron-providers-panel">
+      <%= render "settings/providers/sophtron_panel" %>
+    </turbo-frame>
+  <% end %>
 </div>

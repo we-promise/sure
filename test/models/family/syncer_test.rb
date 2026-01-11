@@ -60,6 +60,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
     SimplefinItem.any_instance.stubs(:sync_later)
     LunchflowItem.any_instance.stubs(:sync_later)
     EnableBankingItem.any_instance.stubs(:sync_later)
+    SophtronItem.any_instance.stubs(:sync_later)
 
     syncer.perform_sync(family_sync)
   end

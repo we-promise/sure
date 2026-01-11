@@ -11,7 +11,7 @@ class AccountsController < ApplicationController
     @lunchflow_items = family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts)
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
-
+    @sophtron_items = family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts)
     # Build sync stats maps for all providers
     build_sync_stats_maps
 
