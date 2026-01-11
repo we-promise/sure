@@ -22,6 +22,7 @@ class Import < ApplicationRecord
   belongs_to :account, optional: true
 
   before_validation :set_default_number_format
+  before_validation :ensure_utf8_encoding
 
   scope :ordered, -> { order(created_at: :desc) }
 
@@ -292,6 +293,74 @@ class Import < ApplicationRecord
 
     def set_default_number_format
       self.number_format ||= "1,234.56" # Default to US/UK format
+    end
+
+    def ensure_utf8_encoding
+      return if raw_file_str.blank?
+      return if raw_file_str_changed? == false
+
+      # If already valid UTF-8, nothing to do
+      if raw_file_str.encoding == Encoding::UTF_8 && raw_file_str.valid_encoding?
+        return
+      end
+
+      # Detect encoding using rchardet
+      begin
+        require "rchardet"
+        detection = CharDet.detect(raw_file_str)
+        detected_encoding = detection["encoding"]
+        confidence = detection["confidence"]
+
+        # Only convert if we have reasonable confidence in the detection
+        if detected_encoding && confidence > 0.7
+          # Force encoding and convert to UTF-8
+          self.raw_file_str = raw_file_str.force_encoding(detected_encoding).encode("UTF-8")
+        else
+          # Fallback: try common encodings
+          common_encodings = ["Windows-1252", "ISO-8859-1", "Windows-1250"]
+          converted = false
+
+          common_encodings.each do |encoding|
+            begin
+              test = raw_file_str.dup.force_encoding(encoding)
+              if test.valid_encoding?
+                self.raw_file_str = test.encode("UTF-8")
+                converted = true
+                break
+              end
+            rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
+              next
+            end
+          end
+
+          # If nothing worked, force UTF-8 and replace invalid bytes
+          unless converted
+            self.raw_file_str = raw_file_str.force_encoding("UTF-8").scrub("?")
+          end
+        end
+      rescue LoadError
+        # rchardet not available, fallback to trying common encodings
+        common_encodings = ["Windows-1252", "ISO-8859-1", "Windows-1250"]
+        converted = false
+
+        common_encodings.each do |encoding|
+          begin
+            test = raw_file_str.dup.force_encoding(encoding)
+            if test.valid_encoding?
+              self.raw_file_str = test.encode("UTF-8")
+              converted = true
+              break
+            end
+          rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
+            next
+          end
+        end
+
+        # If nothing worked, force UTF-8 and replace invalid bytes
+        unless converted
+          self.raw_file_str = raw_file_str.force_encoding("UTF-8").scrub("?")
+        end
+      end
     end
 
     def account_belongs_to_family
