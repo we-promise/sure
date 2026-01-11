@@ -69,6 +69,102 @@
           <% end %>
         </div>
 
+        <%# Pending→posted reconciliation %>
+        <% if has_pending_reconciled? %>
+          <div class="mt-1">
+            <div class="flex items-center gap-1">
+              <%= helpers.icon "check-circle", size: "sm", color: "success" %>
+              <span class="text-success"><%= t("provider_sync_summary.health.pending_reconciled", count: pending_reconciled) %></span>
+            </div>
+            <% if pending_reconciled_details.any? %>
+              <details class="mt-1">
+                <summary class="text-xs cursor-pointer text-secondary hover:text-primary">
+                  <%= t("provider_sync_summary.health.view_reconciled") %>
+                </summary>
+                <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
+                  <% pending_reconciled_details.each do |detail| %>
+                    <p class="text-xs text-success">
+                      <%= detail["account_name"] %>: <%= detail["pending_name"] %>
+                    </p>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%# Duplicate suggestions needing review %>
+        <% if has_duplicate_suggestions_created? %>
+          <div class="mt-1">
+            <div class="flex items-center gap-1">
+              <%= helpers.icon "alert-triangle", size: "sm", color: "warning" %>
+              <span class="text-warning"><%= t("provider_sync_summary.health.duplicate_suggestions", count: duplicate_suggestions_created) %></span>
+            </div>
+            <% if duplicate_suggestions_details.any? %>
+              <details class="mt-1">
+                <summary class="text-xs cursor-pointer text-secondary hover:text-primary">
+                  <%= t("provider_sync_summary.health.view_duplicate_suggestions") %>
+                </summary>
+                <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
+                  <% duplicate_suggestions_details.each do |detail| %>
+                    <p class="text-xs text-warning">
+                      <%= detail["account_name"] %>: <%= detail["pending_name"] %> → <%= detail["posted_name"] %>
+                    </p>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%# Stale pending transactions (auto-excluded) %>
+        <% if has_stale_pending? %>
+          <div class="mt-1">
+            <div class="flex items-center gap-1">
+              <%= helpers.icon "clock", size: "sm", color: "warning" %>
+              <span class="text-warning"><%= t("provider_sync_summary.health.stale_pending", count: stale_pending_excluded) %></span>
+            </div>
+            <% if stale_pending_details.any? %>
+              <details class="mt-1">
+                <summary class="text-xs cursor-pointer text-secondary hover:text-primary">
+                  <%= t("provider_sync_summary.health.view_stale_pending") %>
+                </summary>
+                <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
+                  <% stale_pending_details.each do |detail| %>
+                    <p class="text-xs text-warning">
+                      <%= detail["account_name"] %>: <%= t("provider_sync_summary.health.stale_pending_count", count: detail["count"]) %>
+                    </p>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%# Stale unmatched pending (need manual review) %>
+        <% if has_stale_unmatched_pending? %>
+          <div class="mt-1">
+            <div class="flex items-center gap-1">
+              <%= helpers.icon "help-circle", size: "sm" %>
+              <span class="text-secondary"><%= t("provider_sync_summary.health.stale_unmatched", count: stale_unmatched_pending) %></span>
+            </div>
+            <% if stale_unmatched_details.any? %>
+              <details class="mt-1">
+                <summary class="text-xs cursor-pointer text-secondary hover:text-primary">
+                  <%= t("provider_sync_summary.health.view_stale_unmatched") %>
+                </summary>
+                <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
+                  <% stale_unmatched_details.each do |detail| %>
+                    <p class="text-xs text-secondary">
+                      <%= detail["account_name"] %>: <%= t("provider_sync_summary.health.stale_unmatched_count", count: detail["count"]) %>
+                    </p>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
+
         <%# Data quality warnings %>
         <% if has_data_quality_issues? %>
           <div class="flex items-center gap-3 mt-1">

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
+import '../models/offline_transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../screens/transaction_form_screen.dart';
+import '../widgets/sync_status_badge.dart';
+import '../services/log_service.dart';
 
 class TransactionsListScreen extends StatefulWidget {
   final Account account;
@@ -77,7 +80,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       };
     } catch (e) {
       // Fallback if parsing fails - log and return neutral state
-      debugPrint('Failed to parse amount "$amount": $e');
+      LogService.instance.error('TransactionsListScreen', 'Failed to parse amount "$amount": $e');
       return {
         'isPositive': true,
         'displayAmount': amount,
@@ -188,10 +191,64 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   }
 
+  Future<void> _undoTransaction(OfflineTransaction transaction) async {
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Undo Transaction'),
+        content: Text(
+          transaction.syncStatus == SyncStatus.pending
+              ? 'Remove this pending transaction?'
+              : 'Restore this transaction?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Undo'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final success = await transactionsProvider.undoPendingTransaction(
+      localId: transaction.localId,
+      syncStatus: transaction.syncStatus,
+    );
+
+    if (mounted) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? (transaction.syncStatus == SyncStatus.pending
+                    ? 'Pending transaction removed'
+                    : 'Transaction restored')
+                : 'Failed to undo transaction',
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<bool> _confirmAndDeleteTransaction(Transaction transaction) async {
     if (transaction.id == null) return false;
 
     // Show confirmation dialog
+    // Capture providers before async gap
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -214,9 +271,6 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     if (confirmed != true) return false;
 
     // Perform the deletion
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
     final accessToken = await authProvider.getValidAccessToken();
 
     if (accessToken == null) {
@@ -314,7 +368,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
             );
           }
 
-          final transactions = transactionsProvider.transactions;
+          final transactions = transactionsProvider.offlineTransactions;
 
           if (transactions.isEmpty) {
             return RefreshIndicator(
@@ -365,6 +419,11 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 final transaction = transactions[index];
                 final isSelected = transaction.id != null &&
                     _selectedTransactions.contains(transaction.id);
+                final isPending = transaction.syncStatus == SyncStatus.pending;
+                final isPendingDelete = transaction.syncStatus == SyncStatus.pendingDelete;
+                final isFailed = transaction.syncStatus == SyncStatus.failed;
+                final hasPendingStatus = isPending || isPendingDelete;
+
                 // Compute display info once to avoid duplicate parsing
                 final displayInfo = _getAmountDisplayInfo(
                   transaction.amount,
@@ -386,17 +445,19 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
                   confirmDismiss: (direction) => _confirmAndDeleteTransaction(transaction),
-                  child: Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: InkWell(
-                      onTap: _isSelectionMode && transaction.id != null
-                          ? () => _toggleTransactionSelection(transaction.id!)
-                          : null,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
+                  child: Opacity(
+                    opacity: hasPendingStatus ? 0.5 : 1.0,
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: _isSelectionMode && transaction.id != null
+                            ? () => _toggleTransactionSelection(transaction.id!)
+                            : null,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
                             if (_isSelectionMode)
                               Padding(
                                 padding: const EdgeInsets.only(right: 12),
@@ -443,13 +504,51 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  '${displayInfo['prefix']}${displayInfo['displayAmount']}',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: displayInfo['color'] as Color,
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (hasPendingStatus || isFailed)
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 8),
+                                        child: SyncStatusBadge(
+                                          syncStatus: transaction.syncStatus,
+                                          compact: true,
+                                        ),
                                       ),
+                                    Text(
+                                      '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: displayInfo['color'] as Color,
+                                          ),
+                                    ),
+                                  ],
                                 ),
+                                if (hasPendingStatus) ...[
+                                  const SizedBox(height: 4),
+                                  InkWell(
+                                    onTap: () => _undoTransaction(transaction),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.blue.withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Undo',
+                                        style: TextStyle(
+                                          color: Colors.blue,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 4),
                                 Text(
                                   transaction.currency,
@@ -460,6 +559,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                               ],
                             ),
                           ],
+                        ),
                         ),
                       ),
                     ),

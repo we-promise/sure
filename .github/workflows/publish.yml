@@ -274,6 +274,13 @@ jobs:
         run: |
           mkdir -p ${{ runner.temp }}/release-assets
 
+          echo "=== Debugging: List downloaded artifacts ==="
+          echo "Mobile artifacts:"
+          ls -laR "${{ runner.temp }}/mobile-artifacts" || echo "No mobile-artifacts directory"
+          echo "iOS build:"
+          ls -laR "${{ runner.temp }}/ios-build" || echo "No ios-build directory"
+          echo "==========================================="
+
           # Copy debug APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
             cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-debug.apk"
@@ -287,8 +294,9 @@ jobs:
           fi
 
           # Create iOS app archive (zip the .app bundle)
-          if [ -d "${{ runner.temp }}/ios-build/Runner.app" ]; then
-            cd "${{ runner.temp }}/ios-build"
+          # Path preserves directory structure from artifact upload
+          if [ -d "${{ runner.temp }}/ios-build/ios/iphoneos/Runner.app" ]; then
+            cd "${{ runner.temp }}/ios-build/ios/iphoneos"
             zip -r "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-ios-unsigned.zip" Runner.app
             echo "✓ iOS build archive prepared"
           fi
@@ -373,12 +381,26 @@ jobs:
            NEW_VERSION="${BASE_VERSION}-alpha.${NEW_ALPHA_NUM}"
            echo "New version: $NEW_VERSION"
 
+           # Update the version file
+           sed -i "s/\"$CURRENT_VERSION\"/\"$NEW_VERSION\"/" "$VERSION_FILE"
+
+           # Verify the change
+           echo "Updated version.rb:"
+           grep "semver" "$VERSION_FILE"
+
       - name: Commit and push version bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add config/initializers/version.rb
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit - version may have already been bumped"
+            exit 0
+          fi
+
           git commit -m "Bump version to next alpha after ${{ github.ref_name }} release"
 
           # Push with retry logic

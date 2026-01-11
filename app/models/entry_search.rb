@@ -6,6 +6,7 @@ class EntrySearch
   attribute :amount, :string
   attribute :amount_operator, :string
   attribute :types, :string
+  attribute :status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -56,6 +57,44 @@ class EntrySearch
       query = query.where(accounts: { id: account_ids }) if account_ids.present?
       query
     end
+
+    def apply_status_filter(scope, statuses)
+      return scope unless statuses.present?
+      return scope if statuses.uniq.sort == %w[confirmed pending] # Both selected = no filter
+
+      pending_condition = <<~SQL.squish
+        entries.entryable_type = 'Transaction'
+        AND EXISTS (
+          SELECT 1 FROM transactions t
+          WHERE t.id = entries.entryable_id
+          AND (
+            (t.extra -> 'simplefin' ->> 'pending')::boolean = true
+            OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
+          )
+        )
+      SQL
+
+      confirmed_condition = <<~SQL.squish
+        entries.entryable_type != 'Transaction'
+        OR NOT EXISTS (
+          SELECT 1 FROM transactions t
+          WHERE t.id = entries.entryable_id
+          AND (
+            (t.extra -> 'simplefin' ->> 'pending')::boolean = true
+            OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
+          )
+        )
+      SQL
+
+      case statuses.sort
+      when [ "pending" ]
+        scope.where(pending_condition)
+      when [ "confirmed" ]
+        scope.where(confirmed_condition)
+      else
+        scope
+      end
+    end
   end
 
   def build_query(scope)
@@ -64,6 +103,7 @@ class EntrySearch
     query = self.class.apply_date_filters(query, start_date, end_date)
     query = self.class.apply_amount_filter(query, amount, amount_operator)
     query = self.class.apply_accounts_filter(query, accounts, account_ids)
+    query = self.class.apply_status_filter(query, status)
     query
   end
 end

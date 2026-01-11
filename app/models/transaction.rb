@@ -19,6 +19,22 @@ class Transaction < ApplicationRecord
     one_time: "one_time" # A one-time expense/income, excluded from budget analytics
   }
 
+  # Pending transaction scopes - filter based on provider pending flags in extra JSONB
+  # Works with any provider that stores pending status in extra["provider_name"]["pending"]
+  scope :pending, -> {
+    where(<<~SQL.squish)
+      (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+      OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+    SQL
+  }
+
+  scope :excluding_pending, -> {
+    where(<<~SQL.squish)
+      (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
+      AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
+    SQL
+  }
+
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     funds_movement? || cc_payment? || loan_payment?
@@ -42,7 +58,85 @@ class Transaction < ApplicationRecord
     false
   end
 
+  # Potential duplicate matching methods
+  # These help users review and resolve fuzzy-matched pending/posted pairs
+
+  def has_potential_duplicate?
+    potential_posted_match_data.present? && !potential_duplicate_dismissed?
+  end
+
+  def potential_duplicate_entry
+    return nil unless has_potential_duplicate?
+    Entry.find_by(id: potential_posted_match_data["entry_id"])
+  end
+
+  def potential_duplicate_reason
+    potential_posted_match_data&.dig("reason")
+  end
+
+  def potential_duplicate_confidence
+    potential_posted_match_data&.dig("confidence") || "medium"
+  end
+
+  def low_confidence_duplicate?
+    potential_duplicate_confidence == "low"
+  end
+
+  def potential_duplicate_posted_amount
+    potential_posted_match_data&.dig("posted_amount")&.to_d
+  end
+
+  def potential_duplicate_dismissed?
+    potential_posted_match_data&.dig("dismissed") == true
+  end
+
+  # Merge this pending transaction with its suggested posted match
+  # This DELETES the pending entry since the posted version is canonical
+  def merge_with_duplicate!
+    return false unless has_potential_duplicate?
+
+    posted_entry = potential_duplicate_entry
+    return false unless posted_entry
+
+    pending_entry_id = entry.id
+    pending_entry_name = entry.name
+
+    # Delete this pending entry completely (no need to keep it around)
+    entry.destroy!
+
+    Rails.logger.info("User merged pending entry #{pending_entry_id} (#{pending_entry_name}) with posted entry #{posted_entry.id}")
+    true
+  end
+
+  # Dismiss the duplicate suggestion - user says these are NOT the same transaction
+  def dismiss_duplicate_suggestion!
+    return false unless potential_posted_match_data.present?
+
+    updated_extra = (extra || {}).deep_dup
+    updated_extra["potential_posted_match"]["dismissed"] = true
+    update!(extra: updated_extra)
+
+    Rails.logger.info("User dismissed duplicate suggestion for entry #{entry.id}")
+    true
+  end
+
+  # Clear the duplicate suggestion entirely
+  def clear_duplicate_suggestion!
+    return false unless potential_posted_match_data.present?
+
+    updated_extra = (extra || {}).deep_dup
+    updated_extra.delete("potential_posted_match")
+    update!(extra: updated_extra)
+    true
+  end
+
   private
+
+    def potential_posted_match_data
+      return nil unless extra.is_a?(Hash)
+      extra["potential_posted_match"]
+    end
+
     def clear_merchant_unlinked_association
       return unless merchant_id.present? && merchant.is_a?(ProviderMerchant)
 

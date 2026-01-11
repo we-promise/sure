@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/auth_tokens.dart';
 import '../models/user.dart';
 import 'api_config.dart';
+import 'log_service.dart';
 
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -41,8 +41,8 @@ class AuthService {
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
 
-      debugPrint('Login response status: ${response.statusCode}');
-      debugPrint('Login response body: ${response.body}');
+      LogService.instance.debug('AuthService', 'Login response status: ${response.statusCode}');
+      LogService.instance.debug('AuthService', 'Login response body: ${response.body}');
 
       final responseData = jsonDecode(response.body);
 
@@ -76,37 +76,37 @@ class AuthService {
         };
       }
     } on SocketException catch (e, stackTrace) {
-      debugPrint('Login SocketException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Login SocketException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Network unavailable',
       };
     } on TimeoutException catch (e, stackTrace) {
-      debugPrint('Login TimeoutException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Login TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Request timed out',
       };
     } on HttpException catch (e, stackTrace) {
-      debugPrint('Login HttpException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Login HttpException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } on FormatException catch (e, stackTrace) {
-      debugPrint('Login FormatException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Login FormatException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } on TypeError catch (e, stackTrace) {
-      debugPrint('Login TypeError: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Login TypeError: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } catch (e, stackTrace) {
-      debugPrint('Login unexpected error: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Login unexpected error: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -174,37 +174,37 @@ class AuthService {
         };
       }
     } on SocketException catch (e, stackTrace) {
-      debugPrint('Signup SocketException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Signup SocketException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Network unavailable',
       };
     } on TimeoutException catch (e, stackTrace) {
-      debugPrint('Signup TimeoutException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Signup TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Request timed out',
       };
     } on HttpException catch (e, stackTrace) {
-      debugPrint('Signup HttpException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Signup HttpException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } on FormatException catch (e, stackTrace) {
-      debugPrint('Signup FormatException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Signup FormatException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } on TypeError catch (e, stackTrace) {
-      debugPrint('Signup TypeError: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Signup TypeError: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } catch (e, stackTrace) {
-      debugPrint('Signup unexpected error: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'Signup unexpected error: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -248,37 +248,37 @@ class AuthService {
         };
       }
     } on SocketException catch (e, stackTrace) {
-      debugPrint('RefreshToken SocketException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'RefreshToken SocketException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Network unavailable',
       };
     } on TimeoutException catch (e, stackTrace) {
-      debugPrint('RefreshToken TimeoutException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'RefreshToken TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Request timed out',
       };
     } on HttpException catch (e, stackTrace) {
-      debugPrint('RefreshToken HttpException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'RefreshToken HttpException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } on FormatException catch (e, stackTrace) {
-      debugPrint('RefreshToken FormatException: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'RefreshToken FormatException: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } on TypeError catch (e, stackTrace) {
-      debugPrint('RefreshToken TypeError: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'RefreshToken TypeError: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
     } catch (e, stackTrace) {
-      debugPrint('RefreshToken unexpected error: $e\n$stackTrace');
+      LogService.instance.error('AuthService', 'RefreshToken unexpected error: $e\n$stackTrace');
       return {
         'success': false,
         'error': 'An unexpected error occurred',

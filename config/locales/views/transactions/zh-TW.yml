@@ -1,0 +1,89 @@
+---
+zh-TW:
+  transactions:
+    form:
+      account: 帳戶
+      account_prompt: 選擇帳戶
+      amount: 金額
+      category: 類別
+      category_prompt: 選擇類別
+      date: 日期
+      description: 描述
+      description_placeholder: 描述此筆交易
+      expense: 支出
+      income: 收入
+      none: (無)
+      note_label: 備註
+      note_placeholder: 輸入備註
+      submit: 新增交易
+      tags_label: 標籤
+      transfer: 轉帳
+    new:
+      new_transaction: 新增交易
+    show:
+      account_label: 帳戶
+      amount: 金額
+      category_label: 類別
+      date_label: 日期
+      delete: 刪除
+      delete_subtitle: 這將永久刪除此筆交易，並影響您的歷史餘額，此操作無法復原。
+      delete_title: 刪除交易
+      details: 詳情
+      mark_recurring: 標記為定期交易
+      mark_recurring_subtitle: 將此筆交易追蹤為定期交易。系統會根據過去 6 個月的類似交易自動計算金額變動範圍。
+      mark_recurring_title: 定期交易
+      merchant_label: 商家
+      name_label: 名稱
+      nature: 類型
+      none: "(無)"
+      note_label: 備註
+      note_placeholder: 輸入備註
+      overview: 概覽
+      settings: 設定
+      tags_label: 標籤
+      uncategorized: "(未分類)"
+    header:
+      edit_categories: 編輯類別
+      edit_imports: 編輯匯入
+      edit_merchants: 編輯商家
+      edit_tags: 編輯標籤
+      import: 匯入
+    index:
+      transaction: 筆交易
+      transactions: 筆交易
+      import: 匯入
+    toggle_recurring_section: 切換即將到來的定期交易顯示狀態
+    searches:
+      filters:
+        amount_filter:
+          equal_to: 等於
+          greater_than: 大於
+          less_than: 小於
+          placeholder: '0'
+        badge:
+          expense: 支出
+          income: 收入
+          on_or_after: "%{date} 當日或之後"
+          on_or_before: "%{date} 當日或之前"
+          transfer: 轉帳
+        type_filter:
+          expense: 支出
+          income: 收入
+          transfer: 轉帳
+      menu:
+        account_filter: 帳戶
+        amount_filter: 金額
+        apply: 應用
+        cancel: 取消
+        category_filter: 類別
+        clear_filters: 清除過濾
+        date_filter: 日期
+        merchant_filter: 商家
+        tag_filter: 標籤
+        type_filter: 類型
+      search:
+        equal_to: 等於
+        greater_than: 大於
+        less_than: 小於
+      form:
+        toggle_selection_checkboxes: 切換全選狀態
