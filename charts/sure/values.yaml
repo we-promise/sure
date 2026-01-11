@@ -266,6 +266,18 @@ web:
   # Optional command/args override
   command: []
   args: []
+  # Kubernetes rolling update strategy for the web Deployment.
+  # Controls how pods are replaced during updates.
+  # Default: maxUnavailable=1, maxSurge=0
+  # This prevents deployment deadlocks when using topology spread constraints with DoNotSchedule.
+  # If you are not using strict topology constraints, you can increase maxSurge for faster rollouts.
+  # Example for faster rollouts (when not using DoNotSchedule):
+  #   strategy:
+  #     maxUnavailable: 0
+  #     maxSurge: 1
+  strategy:
+    maxUnavailable: 1
+    maxSurge: 0
   resources:
     requests:
       cpu: 100m
@@ -312,6 +324,18 @@ worker:
   # Optional command/args override for Sidekiq
   command: []
   args: []
+  # Kubernetes rolling update strategy for the worker Deployment.
+  # Controls how pods are replaced during updates.
+  # Default: maxUnavailable=1, maxSurge=0
+  # This prevents deployment deadlocks when using topology spread constraints with DoNotSchedule.
+  # If you are not using strict topology constraints, you can increase maxSurge for faster rollouts.
+  # Example for faster rollouts (when not using DoNotSchedule):
+  #   strategy:
+  #     maxUnavailable: 0
+  #     maxSurge: 1
+  strategy:
+    maxUnavailable: 1
+    maxSurge: 0
   resources:
     requests:
       cpu: 100m
