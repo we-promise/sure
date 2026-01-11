@@ -13,29 +13,33 @@ class FamilyExportsController < ApplicationController
     FamilyDataExportJob.perform_later(@export)
 
     respond_to do |format|
-      format.html { redirect_to imports_path, notice: "Export started. You'll be able to download it shortly." }
+      format.html { redirect_to family_exports_path, notice: "Export started. You'll be able to download it shortly." }
       format.turbo_stream {
-        stream_redirect_to imports_path, notice: "Export started. You'll be able to download it shortly."
+        stream_redirect_to family_exports_path, notice: "Export started. You'll be able to download it shortly."
       }
     end
   end
 
   def index
-    @exports = Current.family.family_exports.ordered.limit(10)
-    render layout: false # For turbo frame
+    @pagy, @exports = pagy(Current.family.family_exports.ordered, limit: params[:per_page] || 10)
+    @breadcrumbs = [
+      [ "Home", root_path ],
+      [ "Exports", family_exports_path ]
+    ]
+    render layout: "settings"
   end
 
   def download
     if @export.downloadable?
       redirect_to @export.export_file, allow_other_host: true
     else
-      redirect_to imports_path, alert: "Export not ready for download"
+      redirect_to family_exports_path, alert: "Export not ready for download"
     end
   end
 
   def destroy
     @export.destroy
-    redirect_to imports_path, notice: "Export deleted successfully"
+    redirect_to family_exports_path, notice: "Export deleted successfully"
   end
 
   private

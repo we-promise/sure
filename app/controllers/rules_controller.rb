@@ -20,7 +20,7 @@ class RulesController < ApplicationController
                           .recent
                           .includes(:rule)
 
-    @pagy, @recent_runs = pagy(recent_runs_scope, limit: params[:per_page] || 20, page_param: :runs_page)
+    @pagy, @recent_runs = pagy(recent_runs_scope, limit: safe_per_page, page_param: :runs_page)
 
     render layout: "settings"
   end

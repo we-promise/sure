@@ -95,7 +95,8 @@ es:
       categories_label: Categorías
       feedback_label: Comentarios
       general_section_title: General
-      imports_label: Importar/Exportar
+      imports_label: Importaciones
+      exports_label: Exportaciones
       logout: Cerrar sesión
       merchants_label: Comerciantes
       guides_label: Guías

@@ -58,12 +58,8 @@ ro:
       uploading: Se procesează rândurile
       view: Vezi
     index:
-      imports: Importuri
+      title: Importuri
       new: Import nou
-      title: Import/Export
-      exports: Exporturi
-      new_export: Export nou
-      no_exports: Nu există încă exporturi.
     new:
       description: Poți importa manual diverse tipuri de date prin CSV sau poți folosi unul dintre șabloanele noastre de import, cum ar fi Mint.
       import_accounts: Importă conturi

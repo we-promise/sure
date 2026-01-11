@@ -1,6 +1,10 @@
 ---
 tr:
   family_exports:
+    index:
+      title: Dışa aktarmalar
+      new: Yeni Dışa Aktarma
+      no_exports: Henüz hiç dışa aktarma yok.
     list:
       in_progress: Devam ediyor
       complete: Tamamlandı

@@ -94,7 +94,8 @@ de:
       categories_label: Kategorien
       feedback_label: Feedback
       general_section_title: Allgemein
-      imports_label: Import/Export
+      imports_label: Importe
+      exports_label: Exporte
       logout: Abmelden
       merchants_label: Händler
       guides_label: Anleitungen
