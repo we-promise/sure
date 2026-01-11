@@ -365,9 +365,13 @@ class Provider::Traderepublic
       sleep 0.1
       
       # Check if an error was stored in the subscription
-      subscription = @subscriptions[sub_id]
+      subscription = nil
+      @mutex.synchronize do
+        subscription = @subscriptions[sub_id]
+      end
       if subscription && subscription[:error]
         error = subscription[:error]
+        # Call unsubscribe outside the mutex (unsubscribe already synchronizes)
         unsubscribe(sub_id)
         break
       end
