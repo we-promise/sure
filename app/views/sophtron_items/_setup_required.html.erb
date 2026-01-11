@@ -1,23 +1,23 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: t("sophtron_items.Sophtron_Setup_Required.title")) %>
+    <% dialog.with_header(title: t("sophtron_items.sophtron_setup_required.title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
         <div class="flex items-start gap-3">
           <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
           <div class="text-sm text-secondary">
-            <p class="font-medium text-primary mb-2"><%= t("sophtron_items.sophtron_Setup_Required.heading") %></p>
-            <p><%= t("sophtron_items.sophtron_Setup_Required.description") %></p>
+            <p class="font-medium text-primary mb-2"><%= t("sophtron_items.sophtron_setup_required.heading") %></p>
+            <p><%= t("sophtron_items.sophtron_setup_required.description") %></p>
           </div>
         </div>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-          <p class="font-medium text-primary"><%= t("sophtron_items.sophtron_Setup_Required.setup_steps_title") %></p>
+          <p class="font-medium text-primary"><%= t("sophtron_items.sophtron_setup_required.setup_steps_title") %></p>
           <ol class="list-decimal list-inside space-y-1 text-secondary">
-            <li><%= t("sophtron_items.sophtron_Setup_Required.step_1_html") %></li>
-            <li><%= t("sophtron_items.sophtron_Setup_Required.step_2_html") %></li>
-            <li><%= t("sophtron_items.sophtron_Setup_Required.step_3_html") %></li>
-            <li><%= t("sophtron_items.sophtron_Setup_Required.step_4") %></li>
+            <li><%= t("sophtron_items.sophtron_setup_required.step_1_html") %></li>
+            <li><%= t("sophtron_items.sophtron_setup_required.step_2_html") %></li>
+            <li><%= t("sophtron_items.sophtron_setup_required.step_3_html") %></li>
+            <li><%= t("sophtron_items.sophtron_setup_required.step_4") %></li>
           </ol>
         </div>
 
@@ -25,7 +25,7 @@
           <%= link_to settings_providers_path,
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors",
                       data: { turbo: false } do %>
-            <%= t("sophtron_items.sophtron_Setup_Required.go_to_provider_settings") %>
+            <%= t("sophtron_items.sophtron_setup_required.go_to_provider_settings") %>
           <% end %>
         </div>
       </div>
