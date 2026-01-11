@@ -528,6 +528,7 @@ GEM
       ffi (~> 1.0)
     rbs (3.9.4)
       logger
+    rchardet (1.10.0)
     rdoc (6.14.2)
       erb
       psych (>= 4.0.0)
@@ -802,6 +803,7 @@ DEPENDENCIES
   rack-mini-profiler
   rails (~> 7.2.2)
   rails-settings-cached
+  rchardet
   redcarpet
   redis (~> 5.4)
   rotp (~> 6.3)

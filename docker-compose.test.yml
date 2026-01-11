@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - .:/rails
+    environment:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://test:test@db:5432/sure_test
+      REDIS_URL: redis://redis:6379/1
+    depends_on:
+      - db
+      - redis
+    command: bundle exec rails test test/models/import_encoding_test.rb
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: sure_test
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    tmpfs:
+      - /data
