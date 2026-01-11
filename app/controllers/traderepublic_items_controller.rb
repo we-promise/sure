@@ -1,6 +1,60 @@
 class TraderepublicItemsController < ApplicationController
   before_action :set_traderepublic_item, only: [ :edit, :update, :destroy, :sync, :verify_pin, :complete_login, :reauthenticate, :manual_sync ]
 
+  def new
+    @traderepublic_item = TraderepublicItem.new(family: Current.family)
+    @accountable_type = params[:accountable_type]
+    @return_to = params[:return_to]
+  end
+
+  def index
+    @traderepublic_items = Current.family.traderepublic_items.includes(traderepublic_accounts: :account)
+  end
+
+  def create
+    @traderepublic_item = TraderepublicItem.new(traderepublic_item_params.merge(family: Current.family))
+    @accountable_type = params[:accountable_type]
+    @return_to = params[:return_to]
+
+    if @traderepublic_item.save
+      begin
+        @traderepublic_item.initiate_login!
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.update(
+              "modal",
+              partial: "traderepublic_items/verify_pin",
+              locals: { traderepublic_item: @traderepublic_item }
+            )
+          end
+          format.html do
+            redirect_to verify_pin_traderepublic_item_path(@traderepublic_item),
+                        notice: t(".device_pin_sent", default: "Please check your phone for the verification PIN")
+          end
+        end
+      rescue TraderepublicError => e
+        @traderepublic_item.destroy if @traderepublic_item.persisted?
+        respond_to do |format|
+          format.turbo_stream do
+            flash.now[:alert] = t(".login_failed", default: "Login failed: #{e.message}")
+            render turbo_stream: turbo_stream.replace(
+              "traderepublic-providers-panel",
+              partial: "settings/providers/traderepublic_panel"
+            )
+          end
+          format.html do
+            redirect_to new_traderepublic_item_path, alert: t(".login_failed", default: "Login failed: #{e.message}")
+          end
+        end
+      end
+    else
+      respond_to do |format|
+        format.turbo_stream { render :new, status: :unprocessable_entity, layout: false }
+        format.html { render :new, status: :unprocessable_entity }
+      end
+    end
+  end
+
   # Manual sync: déclenche le flow PIN (initiate_login) puis popup PIN
   def manual_sync
     begin
@@ -65,7 +119,7 @@ class TraderepublicItemsController < ApplicationController
         else
           # Trigger initial sync synchronously to get accounts
           # Skip token refresh since we just obtained fresh tokens
-          Rails.logger.info "TradeRepublic: Starting initial sync for item \\#{@traderepublic_item.id}"
+          Rails.logger.info "TradeRepublic: Starting initial sync for item #{@traderepublic_item.id}"
           sync_success = @traderepublic_item.import_latest_traderepublic_data(skip_token_refresh: true)
           if sync_success
             # Check if this is a re-authentication (has linked accounts) or new connection
@@ -334,7 +388,12 @@ class TraderepublicItemsController < ApplicationController
 
   # For existing account linking (when adding provider to existing account)
   def select_existing_account
-    @account = Account.find(params[:account_id])
+    begin
+      @account = Current.family.accounts.find(params[:account_id])
+    rescue ActiveRecord::RecordNotFound
+      redirect_to new_account_path, alert: t(".account_not_found", default: "Account not found")
+      return
+    end
     @accountable_type = @account.accountable_type
 
     # Get the most recent traderepublic_item with valid session
@@ -358,7 +417,12 @@ class TraderepublicItemsController < ApplicationController
 
   # Link existing account
   def link_existing_account
-    account = Account.find(params[:account_id])
+    begin
+      account = Current.family.accounts.find(params[:account_id])
+    rescue ActiveRecord::RecordNotFound
+      redirect_to new_account_path, alert: t(".account_not_found", default: "Account not found")
+      return
+    end
     traderepublic_account_id = params[:traderepublic_account_id]
 
     if traderepublic_account_id.blank?
@@ -366,7 +430,12 @@ class TraderepublicItemsController < ApplicationController
       return
     end
 
-    traderepublic_account = TraderepublicAccount.find(traderepublic_account_id)
+    begin
+      traderepublic_account = Current.family.traderepublic_accounts.find(traderepublic_account_id)
+    rescue ActiveRecord::RecordNotFound
+      redirect_to new_account_path, alert: t(".traderepublic_account_not_found", default: "Trade Republic account not found")
+      return
+    end
 
     # Check if already linked
     if traderepublic_account.account_provider.present?
@@ -393,12 +462,14 @@ class TraderepublicItemsController < ApplicationController
   end
 
   def traderepublic_item_params
-    params.require(:traderepublic_item).permit(:name, :phone_number, :pin)
+    params.fetch(:traderepublic_item, {}).permit(:name, :phone_number, :pin)
   end
 
   def safe_return_to_path
     return_to = params[:return_to]
-    return_to if return_to.present? && return_to.start_with?("/")
+    if return_to.present? && return_to.start_with?("/")
+      return return_to
+    end
     new_account_path
   end
 end

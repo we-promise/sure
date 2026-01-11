@@ -108,8 +108,8 @@ class TraderepublicAccount::Processor
       return
     end
 
-    # Trade Republic sends negative values for expenses (Buy) and positive for income (Sell)
-    # Invert the sign to match Sure's convention (positive = income, negative = expense)
+    # Trade Republic sends negative values for expenses (Buys) and positive values for income (Sells).
+    # Sure expects negative = income and positive = expense, so we invert the sign here.
     amount = -amount.to_f
 
     # Parse date

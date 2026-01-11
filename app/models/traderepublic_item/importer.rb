@@ -1,14 +1,17 @@
-class TraderepublicItem::Importer
-    # Utility to find or create a security by ISIN, otherwise by ticker/MIC
-    def find_or_create_security_from_tr(position_or_txn)
-      isin = position_or_txn["isin"]&.strip&.upcase.presence
-      ticker = position_or_txn["ticker"]&.strip.presence || position_or_txn["symbol"]&.strip.presence
-      mic = position_or_txn["exchange_operating_mic"]&.strip.presence || position_or_txn["mic"]&.strip.presence
-      name = position_or_txn["name"]&.strip.presence
 
-      TradeRepublic::SecurityResolver.new(isin, name: name, ticker: ticker, mic: mic).resolve
-    end
+class TraderepublicItem::Importer
+  include TraderepublicSessionConfigurable
   attr_reader :traderepublic_item, :provider
+
+  # Utility to find or create a security by ISIN, otherwise by ticker/MIC
+  def find_or_create_security_from_tr(position_or_txn)
+    isin = position_or_txn["isin"]&.strip&.upcase.presence
+    ticker = position_or_txn["ticker"]&.strip.presence || position_or_txn["symbol"]&.strip.presence
+    mic = position_or_txn["exchange_operating_mic"]&.strip.presence || position_or_txn["mic"]&.strip.presence
+    name = position_or_txn["name"]&.strip.presence
+
+    TradeRepublic::SecurityResolver.new(isin, name: name, ticker: ticker, mic: mic).resolve
+  end
 
   def initialize(traderepublic_item, traderepublic_provider: nil)
     @traderepublic_item = traderepublic_item
@@ -16,8 +19,9 @@ class TraderepublicItem::Importer
   end
 
   def import
+
     raise "Provider not configured" unless provider
-    raise "Session not configured" unless traderepublic_item.session_configured?
+    ensure_session_configured!
 
     Rails.logger.info "TraderepublicItem #{traderepublic_item.id}: Starting import"
 
@@ -232,14 +236,17 @@ class TraderepublicItem::Importer
 
     positions.each do |position|
       security = find_or_create_security_from_tr(position)
-      Holding.create!(
+      holding_date = position["date"] || Date.current # fallback to today if nil
+      next unless holding_date.present?
+      holding = Holding.find_or_initialize_by(
         account: linked_account,
         security: security,
-        qty: position["quantity"],
-        price: position["price"],
-        date: position["date"],
+        date: holding_date,
         currency: position["currency"]
       )
+      holding.qty = position["quantity"]
+      holding.price = position["price"]
+      holding.save!
     end
   end
 
@@ -269,9 +276,10 @@ class TraderepublicItem::Importer
     linked_account = account.linked_account
     return unless linked_account
 
+    trades = []
     transactions_data.each do |txn|
       security = find_or_create_security_from_tr(txn)
-      Trade.create!(
+      trade = Trade.create!(
         account: linked_account,
         security: security,
         qty: txn["quantity"],
@@ -279,6 +287,12 @@ class TraderepublicItem::Importer
         date: txn["date"],
         currency: txn["currency"]
       )
+      if block_given?
+        yield trade
+      else
+        trades << trade
+      end
     end
+    trades unless block_given?
   end
 end

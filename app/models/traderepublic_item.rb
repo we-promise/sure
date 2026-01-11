@@ -1,3 +1,42 @@
+    # Enqueue a sync for this item
+    def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+      sync = Sync.create!(
+        syncable: self,
+        parent: parent_sync,
+        window_start_date: window_start_date,
+        window_end_date: window_end_date
+      )
+      TraderepublicItem::SyncJob.perform_later(sync)
+      sync
+    end
+  # Perform sync using the Sync pattern
+  def perform_sync(sync)
+    sync.start! if sync.may_start?
+    begin
+      provider = traderepublic_provider
+      unless provider
+        sync.fail!
+        sync.update(error: I18n.t("traderepublic_items.errors.provider_not_configured", default: "TradeRepublic provider is not configured"))
+        return false
+      end
+      importer = TraderepublicItem::Importer.new(self, traderepublic_provider: provider)
+      success = importer.import
+      if success
+        sync.complete!
+        return true
+      else
+        sync.fail!
+        sync.update(error: "Import failed")
+        return false
+      end
+    rescue => e
+      sync.fail!
+      sync.update(error: e.message)
+      Rails.logger.error "TraderepublicItem #{id} - perform_sync failed: #{e.class}: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      return false
+    end
+  end
 class TraderepublicItem < ApplicationRecord
   include Syncable, Provided
 
@@ -16,8 +55,8 @@ class TraderepublicItem < ApplicationRecord
   if encryption_ready?
     encrypts :phone_number, deterministic: true
     encrypts :pin, deterministic: true
-    encrypts :session_token, deterministic: true
-    encrypts :refresh_token, deterministic: true
+    encrypts :session_token # non-deterministic (default)
+    encrypts :refresh_token # non-deterministic (default)
   end
 
   validates :name, presence: true
