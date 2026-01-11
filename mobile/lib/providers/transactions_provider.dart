@@ -19,6 +19,7 @@ class TransactionsProvider with ChangeNotifier {
   String? _error;
   ConnectivityService? _connectivityService;
   String? _lastAccessToken;
+  String? _currentAccountId; // Track current account for filtering
   bool _isAutoSyncing = false;
   bool _isListenerAttached = false;
   bool _isDisposed = false;
@@ -88,6 +89,7 @@ class TransactionsProvider with ChangeNotifier {
     bool forceSync = false,
   }) async {
     _lastAccessToken = accessToken; // Store for auto-sync
+    _currentAccountId = accountId; // Track current account
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -255,7 +257,9 @@ class TransactionsProvider with ChangeNotifier {
         await _offlineStorage.markTransactionForDeletion(transactionId);
 
         // Reload from storage to update UI with pending delete status
-        final updatedTransactions = await _offlineStorage.getTransactions();
+        final updatedTransactions = await _offlineStorage.getTransactions(
+          accountId: _currentAccountId,
+        );
         _transactions = updatedTransactions;
         notifyListeners();
         return true;
@@ -303,7 +307,9 @@ class TransactionsProvider with ChangeNotifier {
         }
 
         // Reload from storage to update UI with pending delete status
-        final updatedTransactions = await _offlineStorage.getTransactions();
+        final updatedTransactions = await _offlineStorage.getTransactions(
+          accountId: _currentAccountId,
+        );
         _transactions = updatedTransactions;
         notifyListeners();
         return true;
@@ -328,7 +334,9 @@ class TransactionsProvider with ChangeNotifier {
 
       if (success) {
         // Reload from storage to update UI
-        final updatedTransactions = await _offlineStorage.getTransactions();
+        final updatedTransactions = await _offlineStorage.getTransactions(
+          accountId: _currentAccountId,
+        );
         _transactions = updatedTransactions;
         _error = null;
         notifyListeners();
