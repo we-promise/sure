@@ -6,5 +6,6 @@ class Settings::SecuritiesController < ApplicationController
       [ "Home", root_path ],
       [ "Security", nil ]
     ]
+    @oidc_identities = Current.user.oidc_identities.order(:provider)
   end
 end

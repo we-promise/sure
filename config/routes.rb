@@ -64,9 +64,10 @@ Rails.application.routes.draw do
   resource :current_session, only: %i[update]
 
   resource :registration, only: %i[new create]
-  resources :sessions, only: %i[new create destroy]
+  resources :sessions, only: %i[index new create destroy]
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]
+  get "/auth/logout/callback", to: "sessions#post_logout"
   resource :oidc_account, only: [] do
     get :link, on: :collection
     post :create_link, on: :collection
@@ -100,6 +101,7 @@ Rails.application.routes.draw do
     end
     resource :billing, only: :show
     resource :security, only: :show
+    resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
@@ -387,6 +389,17 @@ Rails.application.routes.draw do
 
   get "privacy", to: redirect("about:blank")
   get "terms", to: redirect("about:blank")
+
+  # Admin namespace for super admin functionality
+  namespace :admin do
+    resources :sso_providers do
+      member do
+        patch :toggle
+        post :test_connection
+      end
+    end
+    resources :users, only: [ :index, :update ]
+  end
 
   # Defines the root path route ("/")
   root "pages#dashboard"

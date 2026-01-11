@@ -70,6 +70,29 @@
       "note": ""
     },
     {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "01a88a0a17848e70999c17f6438a636b00e01da39a2c0aa0c46f20f0685c7202",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/admin/users_controller.rb",
+      "line": 35,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params.require(:user).permit(:role)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Admin::UsersController",
+        "method": "user_params"
+      },
+      "user_input": ":role",
+      "confidence": "Medium",
+      "cwe_id": [
+        915
+      ],
+      "note": "Protected by Pundit authorization - UserPolicy requires super_admin and prevents users from changing their own role"
+    },
+    {
       "warning_type": "Dangerous Eval",
       "warning_code": 13,
       "fingerprint": "c154514a0f86341473e4abf35e77721495b326c7855e4967d284b4942371819c",

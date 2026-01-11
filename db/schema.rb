@@ -472,6 +472,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
   end
 
+  create_table "flipper_features", force: :cascade do |t|
+    t.string "key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_flipper_features_on_key", unique: true
+  end
+
+  create_table "flipper_gates", force: :cascade do |t|
+    t.string "feature_key", null: false
+    t.string "key", null: false
+    t.text "value"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feature_key", "key", "value"], name: "index_flipper_gates_on_feature_key_and_key_and_value", unique: true
+  end
+
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "security_id", null: false
@@ -794,6 +810,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.datetime "last_authenticated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "issuer"
+    t.index ["issuer"], name: "index_oidc_identities_on_issuer"
     t.index ["provider", "uid"], name: "index_oidc_identities_on_provider_and_uid", unique: true
     t.index ["user_id"], name: "index_oidc_identities_on_user_id"
   end
@@ -1049,6 +1067,38 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.index ["status"], name: "index_simplefin_items_on_status"
   end
 
+  create_table "sso_audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id"
+    t.string "event_type", null: false
+    t.string "provider"
+    t.string "ip_address"
+    t.string "user_agent"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_sso_audit_logs_on_created_at"
+    t.index ["event_type"], name: "index_sso_audit_logs_on_event_type"
+    t.index ["user_id", "created_at"], name: "index_sso_audit_logs_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_sso_audit_logs_on_user_id"
+  end
+
+  create_table "sso_providers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "strategy", null: false
+    t.string "name", null: false
+    t.string "label", null: false
+    t.string "icon"
+    t.boolean "enabled", default: true, null: false
+    t.string "issuer"
+    t.string "client_id"
+    t.string "client_secret"
+    t.string "redirect_uri"
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enabled"], name: "index_sso_providers_on_enabled"
+    t.index ["name"], name: "index_sso_providers_on_name", unique: true
+  end
+
   create_table "subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "status", null: false
@@ -1274,6 +1324,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
   add_foreign_key "sessions", "users"
   add_foreign_key "simplefin_accounts", "simplefin_items"
   add_foreign_key "simplefin_items", "families"
+  add_foreign_key "sso_audit_logs", "users"
   add_foreign_key "subscriptions", "families"
   add_foreign_key "syncs", "syncs", column: "parent_id"
   add_foreign_key "taggings", "tags"

@@ -37,6 +37,13 @@ class OidcAccountsController < ApplicationController
         user
       )
 
+      # Log account linking
+      SsoAuditLog.log_link!(
+        user: user,
+        provider: @pending_auth["provider"],
+        request: request
+      )
+
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)
 
@@ -104,14 +111,27 @@ class OidcAccountsController < ApplicationController
 
     # Create new family for this user
     @user.family = Family.new
-    @user.role = :admin
+
+    # Use provider-configured default role, or fall back to member (not admin)
+    provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }
+    default_role = provider_config&.dig(:settings, :default_role) || "member"
+    @user.role = default_role
 
     if @user.save
       # Create the OIDC (or other SSO) identity
-      OidcIdentity.create_from_omniauth(
+      identity = OidcIdentity.create_from_omniauth(
         build_auth_hash(@pending_auth),
         @user
       )
+
+      # Only log JIT account creation if identity was successfully created
+      if identity.persisted?
+        SsoAuditLog.log_jit_account_created!(
+          user: @user,
+          provider: @pending_auth["provider"],
+          request: request
+        )
+      end
 
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)
