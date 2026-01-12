@@ -218,48 +218,77 @@ class SyncService with ChangeNotifier {
   }) async {
     try {
       _log.debug('SyncService', 'Fetching transactions from server (accountId: $accountId)');
-      final result = await _transactionsService.getTransactions(
-        accessToken: accessToken,
-        accountId: accountId,
-      );
 
-      if (result['success'] == true) {
-        final transactions = (result['transactions'] as List<dynamic>?)
-            ?.cast<Transaction>() ?? [];
+      List<Transaction> allTransactions = [];
+      int currentPage = 1;
+      int totalPages = 1;
+      const int perPage = 100; // Use maximum allowed by backend
 
-        _log.info('SyncService', 'Received ${transactions.length} transactions from server');
+      // Fetch all pages
+      while (currentPage <= totalPages) {
+        _log.debug('SyncService', 'Fetching page $currentPage of $totalPages (perPage: $perPage)');
 
-        // Update local cache with server data
-        if (accountId == null) {
-          _log.debug('SyncService', 'Full sync - clearing and replacing all transactions');
-          // Full sync - replace all transactions
-          await _offlineStorage.syncTransactionsFromServer(transactions);
-        } else {
-          _log.debug('SyncService', 'Partial sync - upserting ${transactions.length} transactions for account $accountId');
-          // Partial sync - upsert transactions
-          for (final transaction in transactions) {
-            _log.debug('SyncService', 'Upserting transaction ${transaction.id} (accountId from server: "${transaction.accountId}", provided: "$accountId")');
-            await _offlineStorage.upsertTransactionFromServer(
-              transaction,
-              accountId: accountId,
-            );
+        final result = await _transactionsService.getTransactions(
+          accessToken: accessToken,
+          accountId: accountId,
+          page: currentPage,
+          perPage: perPage,
+        );
+
+        if (result['success'] == true) {
+          final pageTransactions = (result['transactions'] as List<dynamic>?)
+              ?.cast<Transaction>() ?? [];
+
+          allTransactions.addAll(pageTransactions);
+
+          // Extract pagination info if available
+          final pagination = result['pagination'] as Map<String, dynamic>?;
+          if (pagination != null) {
+            totalPages = pagination['total_pages'] as int? ?? 1;
+            final totalCount = pagination['total_count'] as int? ?? 0;
+            _log.debug('SyncService', 'Page $currentPage: received ${pageTransactions.length} transactions (total: $totalCount, pages: $totalPages)');
+          } else {
+            // No pagination info means this is the only page
+            _log.debug('SyncService', 'No pagination info - assuming single page with ${pageTransactions.length} transactions');
+            totalPages = currentPage;
           }
+
+          currentPage++;
+        } else {
+          _log.error('SyncService', 'Server returned error on page $currentPage: ${result['error']}');
+          return SyncResult(
+            success: false,
+            error: result['error'] as String? ?? 'Failed to sync from server',
+          );
         }
-
-        _lastSyncTime = DateTime.now();
-        notifyListeners();
-
-        return SyncResult(
-          success: true,
-          syncedCount: transactions.length,
-        );
-      } else {
-        _log.error('SyncService', 'Server returned error: ${result['error']}');
-        return SyncResult(
-          success: false,
-          error: result['error'] as String? ?? 'Failed to sync from server',
-        );
       }
+
+      _log.info('SyncService', 'Received total of ${allTransactions.length} transactions from server across ${currentPage - 1} pages');
+
+      // Update local cache with server data
+      if (accountId == null) {
+        _log.debug('SyncService', 'Full sync - clearing and replacing all transactions');
+        // Full sync - replace all transactions
+        await _offlineStorage.syncTransactionsFromServer(allTransactions);
+      } else {
+        _log.debug('SyncService', 'Partial sync - upserting ${allTransactions.length} transactions for account $accountId');
+        // Partial sync - upsert transactions
+        for (final transaction in allTransactions) {
+          _log.debug('SyncService', 'Upserting transaction ${transaction.id} (accountId from server: "${transaction.accountId}", provided: "$accountId")');
+          await _offlineStorage.upsertTransactionFromServer(
+            transaction,
+            accountId: accountId,
+          );
+        }
+      }
+
+      _lastSyncTime = DateTime.now();
+      notifyListeners();
+
+      return SyncResult(
+        success: true,
+        syncedCount: allTransactions.length,
+      );
     } catch (e) {
       _log.error('SyncService', 'Exception in syncFromServer: $e');
       return SyncResult(
