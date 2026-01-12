@@ -122,6 +122,9 @@ class ReportsController < ApplicationController
 
       # Investment metrics
       @investment_metrics = build_investment_metrics
+
+      # Flags for view rendering
+      @has_accounts = Current.family.accounts.any?
     end
 
     def preferences_params

@@ -101,7 +101,7 @@
   </section>
 
   <%# Net Worth %>
-  <% if Current.family.accounts.any? %>
+  <% if @has_accounts %>
     <section class="tufte-section">
       <h2 class="tufte-section-title"><%= t("reports.print.net_worth.title") %></h2>
       <div class="tufte-metric-row">
