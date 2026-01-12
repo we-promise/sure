@@ -1,0 +1,296 @@
+/*
+  Print Report Styles
+  Tufte-inspired styling for the printable financial report.
+  Uses design system tokens where applicable.
+*/
+
+/* Print Body & Container */
+.print-body {
+  background: var(--color-white);
+  color: var(--color-gray-900);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+.print-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.tufte-report {
+  font-size: 11px;
+  color: var(--color-gray-900);
+}
+
+/* Header */
+.tufte-header {
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--color-gray-900);
+}
+
+.tufte-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--color-gray-900);
+  letter-spacing: -0.3px;
+}
+
+.tufte-period {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-gray-600);
+  margin-top: 2px;
+}
+
+.tufte-meta {
+  font-size: 10px;
+  color: var(--color-gray-500);
+  margin: 8px 0 0 0;
+}
+
+/* Sections */
+.tufte-section {
+  margin-bottom: 24px;
+}
+
+.tufte-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-gray-900);
+  margin: 0 0 12px 0;
+  border-bottom: 1px solid var(--color-gray-200);
+  padding-bottom: 6px;
+}
+
+.tufte-subsection {
+  font-size: 11px;
+  font-weight: 600;
+  margin: 16px 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+/* Metric Cards */
+.tufte-metric-card {
+  display: inline-block;
+  min-width: 100px;
+}
+
+.tufte-metric-card-main {
+  display: block;
+}
+
+.tufte-metric-card-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-gray-500);
+  margin-bottom: 4px;
+}
+
+.tufte-metric-card-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.tufte-metric-card-change {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  margin-top: 4px;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.tufte-metric-card-sm .tufte-metric-card-value {
+  font-size: 16px;
+}
+
+.tufte-metric-card-sm .tufte-metric-card-label {
+  font-size: 9px;
+}
+
+/* Metric Row (horizontal layout) */
+.tufte-metric-row {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* Semantic Colors */
+.tufte-income { color: var(--color-green-700); }
+.tufte-expense { color: var(--color-red-700); }
+.tufte-muted { color: var(--color-gray-500); font-size: 10px; }
+.tufte-up { color: var(--color-green-700); }
+.tufte-down { color: var(--color-red-700); }
+
+/* Two Column Layout */
+.tufte-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 12px;
+}
+
+/* Tables - Clean, readable style */
+.tufte-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tufte-table thead th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-gray-600);
+  padding: 8px 12px 8px 0;
+  border-bottom: 2px solid var(--color-gray-900);
+}
+
+.tufte-table tbody td {
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--color-gray-200);
+  vertical-align: middle;
+}
+
+.tufte-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tufte-table tfoot td {
+  padding: 8px 12px 6px 0;
+  border-top: 2px solid var(--color-gray-900);
+  font-weight: 600;
+}
+
+.tufte-table.tufte-compact thead th {
+  padding: 6px 8px 6px 0;
+}
+
+.tufte-table.tufte-compact tbody td {
+  padding: 5px 8px 5px 0;
+}
+
+.tufte-right {
+  text-align: right;
+  padding-right: 0 !important;
+}
+
+.tufte-highlight {
+  background: var(--color-yellow-100);
+}
+
+.tufte-highlight td:first-child {
+  font-weight: 600;
+}
+
+/* Category Dots */
+.tufte-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Footnotes */
+.tufte-footnote {
+  font-size: 10px;
+  color: var(--color-gray-500);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* Footer */
+.tufte-footer {
+  margin-top: 32px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-gray-200);
+  font-size: 10px;
+  color: var(--color-gray-500);
+  text-align: center;
+}
+
+/* Print-specific overrides */
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm 18mm;
+  }
+
+  /* Scoped to .print-body to avoid affecting other pages when printing */
+  .print-body {
+    font-size: 10px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-container {
+    max-width: none;
+    padding: 0;
+  }
+
+  .tufte-section {
+    page-break-inside: auto;
+  }
+
+  .tufte-section-title {
+    page-break-after: avoid;
+  }
+
+  .tufte-table {
+    page-break-inside: auto;
+  }
+
+  .tufte-table thead {
+    display: table-header-group;
+  }
+
+  .tufte-table tr {
+    page-break-inside: avoid;
+  }
+
+  .tufte-two-col {
+    page-break-inside: avoid;
+  }
+
+  .tufte-keep-together {
+    page-break-inside: avoid;
+  }
+
+  .tufte-header {
+    page-break-after: avoid;
+  }
+
+  /* Force colors in print */
+  .tufte-income { color: var(--color-green-700) !important; }
+  .tufte-expense { color: var(--color-red-700) !important; }
+  .tufte-up { color: var(--color-green-700) !important; }
+  .tufte-down { color: var(--color-red-700) !important; }
+
+  .tufte-footer {
+    page-break-before: avoid;
+  }
+
+  .tufte-highlight {
+    background: var(--color-yellow-100) !important;
+  }
+}

@@ -313,17 +313,32 @@ class Account::ProviderImportAdapter
         end
       end
 
-      holding.assign_attributes(
+      # Reconcile cost_basis to respect priority hierarchy
+      reconciled = Holding::CostBasisReconciler.reconcile(
+        existing_holding: holding.persisted? ? holding : nil,
+        incoming_cost_basis: cost_basis,
+        incoming_source: "provider"
+      )
+
+      # Build base attributes
+      attributes = {
         security: security,
         date: date,
         currency: currency,
         qty: quantity,
         price: price,
         amount: amount,
-        cost_basis: cost_basis,
         account_provider_id: account_provider_id,
         external_id: external_id
-      )
+      }
+
+      # Only update cost_basis if reconciliation says to
+      if reconciled[:should_update]
+        attributes[:cost_basis] = reconciled[:cost_basis]
+        attributes[:cost_basis_source] = reconciled[:cost_basis_source]
+      end
+
+      holding.assign_attributes(attributes)
 
       begin
         Holding.transaction(requires_new: true) do
@@ -353,11 +368,22 @@ class Account::ProviderImportAdapter
             updates = {
               qty: quantity,
               price: price,
-              amount: amount,
-              cost_basis: cost_basis
+              amount: amount
             }
 
-            # Adopt the row to this provider if it’s currently unowned
+            # Reconcile cost_basis to respect priority hierarchy
+            collision_reconciled = Holding::CostBasisReconciler.reconcile(
+              existing_holding: existing,
+              incoming_cost_basis: cost_basis,
+              incoming_source: "provider"
+            )
+
+            if collision_reconciled[:should_update]
+              updates[:cost_basis] = collision_reconciled[:cost_basis]
+              updates[:cost_basis_source] = collision_reconciled[:cost_basis_source]
+            end
+
+            # Adopt the row to this provider if it's currently unowned
             if account_provider_id.present? && existing.account_provider_id.nil?
               updates[:account_provider_id] = account_provider_id
             end

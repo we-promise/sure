@@ -24,6 +24,21 @@ class Setting < RailsSettings::Base
     simplefin && plaid
   end
   field :syncs_include_pending, type: :boolean, default: SYNCS_INCLUDE_PENDING_DEFAULT
+  field :auto_sync_enabled, type: :boolean, default: ENV.fetch("AUTO_SYNC_ENABLED", "1") == "1"
+  field :auto_sync_time, type: :string, default: ENV.fetch("AUTO_SYNC_TIME", "02:22")
+  field :auto_sync_timezone, type: :string, default: ENV.fetch("AUTO_SYNC_TIMEZONE", "UTC")
+
+  AUTO_SYNC_TIME_FORMAT = /\A([01]?\d|2[0-3]):([0-5]\d)\z/
+
+  def self.valid_auto_sync_time?(time_str)
+    return false if time_str.blank?
+    AUTO_SYNC_TIME_FORMAT.match?(time_str.to_s.strip)
+  end
+
+  def self.valid_auto_sync_timezone?(timezone_str)
+    return false if timezone_str.blank?
+    ActiveSupport::TimeZone[timezone_str].present?
+  end
 
   # Dynamic fields are now stored as individual entries with "dynamic:" prefix
   # This prevents race conditions and ensures each field is independently managed

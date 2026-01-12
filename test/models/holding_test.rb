@@ -112,6 +112,132 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(30), @amzn.trend.value
   end
 
+  # Cost basis source tracking tests
+
+  test "cost_basis_replaceable_by? returns false when locked" do
+    @amzn.update!(cost_basis: 200, cost_basis_source: "manual", cost_basis_locked: true)
+
+    assert_not @amzn.cost_basis_replaceable_by?("calculated")
+    assert_not @amzn.cost_basis_replaceable_by?("provider")
+    assert_not @amzn.cost_basis_replaceable_by?("manual")
+  end
+
+  test "cost_basis_replaceable_by? respects priority hierarchy" do
+    # Provider data can be replaced by calculated or manual
+    @amzn.update!(cost_basis: 200, cost_basis_source: "provider", cost_basis_locked: false)
+    assert @amzn.cost_basis_replaceable_by?("calculated")
+    assert @amzn.cost_basis_replaceable_by?("manual")
+    assert_not @amzn.cost_basis_replaceable_by?("provider")
+
+    # Calculated data can be replaced by manual only
+    @amzn.update!(cost_basis: 200, cost_basis_source: "calculated", cost_basis_locked: false)
+    assert @amzn.cost_basis_replaceable_by?("manual")
+    assert_not @amzn.cost_basis_replaceable_by?("calculated")
+    assert_not @amzn.cost_basis_replaceable_by?("provider")
+
+    # Manual data when LOCKED cannot be replaced by anything
+    @amzn.update!(cost_basis: 200, cost_basis_source: "manual", cost_basis_locked: true)
+    assert_not @amzn.cost_basis_replaceable_by?("manual")
+    assert_not @amzn.cost_basis_replaceable_by?("calculated")
+    assert_not @amzn.cost_basis_replaceable_by?("provider")
+
+    # Manual data when UNLOCKED can be replaced by calculated (enables recalculation)
+    @amzn.update!(cost_basis: 200, cost_basis_source: "manual", cost_basis_locked: false)
+    assert_not @amzn.cost_basis_replaceable_by?("manual")
+    assert @amzn.cost_basis_replaceable_by?("calculated")
+    assert_not @amzn.cost_basis_replaceable_by?("provider")
+  end
+
+  test "set_manual_cost_basis! sets value and locks" do
+    @amzn.set_manual_cost_basis!(BigDecimal("175.50"))
+
+    assert_equal BigDecimal("175.50"), @amzn.cost_basis
+    assert_equal "manual", @amzn.cost_basis_source
+    assert @amzn.cost_basis_locked?
+  end
+
+  test "unlock_cost_basis! allows future updates" do
+    @amzn.set_manual_cost_basis!(BigDecimal("175.50"))
+    @amzn.unlock_cost_basis!
+
+    assert_not @amzn.cost_basis_locked?
+    # Source remains manual but since unlocked, calculated could now overwrite
+    assert @amzn.cost_basis_replaceable_by?("calculated")
+  end
+
+  test "cost_basis_source_label returns correct translation" do
+    @amzn.update!(cost_basis_source: "manual")
+    assert_equal I18n.t("holdings.cost_basis_sources.manual"), @amzn.cost_basis_source_label
+
+    @amzn.update!(cost_basis_source: "calculated")
+    assert_equal I18n.t("holdings.cost_basis_sources.calculated"), @amzn.cost_basis_source_label
+
+    @amzn.update!(cost_basis_source: "provider")
+    assert_equal I18n.t("holdings.cost_basis_sources.provider"), @amzn.cost_basis_source_label
+
+    @amzn.update!(cost_basis_source: nil)
+    assert_nil @amzn.cost_basis_source_label
+  end
+
+  test "cost_basis_known? returns true only when source and positive value exist" do
+    @amzn.update!(cost_basis: nil, cost_basis_source: nil)
+    assert_not @amzn.cost_basis_known?
+
+    @amzn.update!(cost_basis: 200, cost_basis_source: nil)
+    assert_not @amzn.cost_basis_known?
+
+    @amzn.update!(cost_basis: nil, cost_basis_source: "provider")
+    assert_not @amzn.cost_basis_known?
+
+    @amzn.update!(cost_basis: 0, cost_basis_source: "provider")
+    assert_not @amzn.cost_basis_known?
+
+    @amzn.update!(cost_basis: 200, cost_basis_source: "provider")
+    assert @amzn.cost_basis_known?
+  end
+
+  # Precision and edge case tests
+
+  test "cost_basis precision is maintained with fractional shares" do
+    @amzn.update!(qty: BigDecimal("0.123456"))
+    @amzn.set_manual_cost_basis!(BigDecimal("100.123456"))
+    @amzn.reload
+
+    assert_in_delta 100.123456, @amzn.cost_basis.to_f, 0.0001
+  end
+
+  test "set_manual_cost_basis! with zero qty does not raise but saves the value" do
+    @amzn.update!(qty: 0)
+    @amzn.set_manual_cost_basis!(BigDecimal("100"))
+
+    # Value is stored but effectively meaningless with zero qty
+    assert_equal BigDecimal("100"), @amzn.cost_basis
+    assert @amzn.cost_basis_locked?
+  end
+
+  test "cost_basis_locked prevents all sources from overwriting" do
+    @amzn.set_manual_cost_basis!(BigDecimal("100"))
+    assert @amzn.cost_basis_locked?
+
+    # Verify all sources are blocked when locked
+    assert_not @amzn.cost_basis_replaceable_by?("provider")
+    assert_not @amzn.cost_basis_replaceable_by?("calculated")
+    assert_not @amzn.cost_basis_replaceable_by?("manual")
+
+    # Value should remain unchanged
+    assert_equal BigDecimal("100"), @amzn.cost_basis
+  end
+
+  test "unlocked manual allows only calculated to replace" do
+    @amzn.set_manual_cost_basis!(BigDecimal("100"))
+    @amzn.unlock_cost_basis!
+
+    assert_not @amzn.cost_basis_locked?
+    assert @amzn.cost_basis_replaceable_by?("calculated")
+    assert_not @amzn.cost_basis_replaceable_by?("provider")
+    assert_not @amzn.cost_basis_replaceable_by?("manual")
+  end
+
   private
 
     def load_holdings
