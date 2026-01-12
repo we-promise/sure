@@ -310,13 +310,15 @@ The chart now makes the rolling update strategy configurable for web and worker 
 ```yaml
 web:
   strategy:
-    maxUnavailable: 1
-    maxSurge: 0
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
 
 worker:
   strategy:
-    maxUnavailable: 1
-    maxSurge: 0
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
 ```
 
 **Why these defaults?**
@@ -332,13 +334,15 @@ For faster rollouts when not using strict topology constraints:
 ```yaml
 web:
   strategy:
-    maxUnavailable: 0
-    maxSurge: 1
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
 
 worker:
   strategy:
-    maxUnavailable: 0
-    maxSurge: 1
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
 ```
 
 For HA setups with topology spreading:
@@ -347,8 +351,9 @@ For HA setups with topology spreading:
 web:
   replicas: 3
   strategy:
-    maxUnavailable: 1
-    maxSurge: 0
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname
