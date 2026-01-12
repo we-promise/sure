@@ -531,6 +531,10 @@
     page-break-inside: avoid;
   }
 
+  .print-keep-together {
+    page-break-inside: avoid;
+  }
+
   .print-header {
     flex-direction: column;
     gap: 12px;
