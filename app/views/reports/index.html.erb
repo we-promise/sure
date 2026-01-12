@@ -54,6 +54,8 @@
       <%# Print Report Button %>
       <%= link_to print_reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date),
                   target: "_blank",
+                  rel: "noopener",
+                  aria: { label: t("reports.index.print_report") },
                   class: "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-secondary bg-surface-inset hover:bg-surface-hover rounded-lg transition-colors flex-shrink-0" do %>
         <%= icon("printer", size: "sm") %>
         <span class="hidden sm:inline"><%= t("reports.index.print_report") %></span>
