@@ -198,299 +198,227 @@
   position: absolute;
 }
 
-/* Print Report Styles */
+/* Tufte-inspired Print Report Styles */
 .print-body {
   background: white;
-  color: #1a1a1a;
+  color: #111;
   font-family: 'Geist', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .print-container {
-  max-width: 800px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 24px 20px;
 }
 
-.print-report {
-  font-size: 12px;
-}
-
-.print-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding-bottom: 24px;
-  margin-bottom: 32px;
-  border-bottom: 2px solid #e5e5e5;
-}
-
-.print-title {
-  font-size: 28px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0;
-}
-
-.print-subtitle {
-  font-size: 14px;
-  color: #666;
-  margin: 4px 0 0 0;
-}
-
-.print-header-meta {
-  text-align: right;
-}
-
-.print-period {
-  font-size: 13px;
-  font-weight: 500;
-  color: #1a1a1a;
-  margin: 0;
-}
-
-.print-generated {
+.tufte-report {
   font-size: 11px;
-  color: #888;
-  margin: 4px 0 0 0;
+  color: #111;
 }
 
-.print-section {
-  margin-bottom: 32px;
-}
-
-.print-section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 16px 0;
+/* Compact Header */
+.tufte-header {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #111;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e5e5e5;
 }
 
-.print-subsection-title {
-  font-size: 14px;
+.tufte-title {
+  font-size: 16px;
   font-weight: 600;
-  color: #333;
-  margin: 24px 0 12px 0;
+  margin: 0;
+  color: #111;
 }
 
-.print-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.print-summary-card {
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 8px;
-  border: 1px solid #e5e5e5;
-}
-
-.print-summary-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-.print-summary-value {
-  display: block;
-  font-size: 20px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.print-summary-change {
-  display: block;
-  font-size: 11px;
-  margin-top: 4px;
-}
-
-.print-income {
-  color: #10a861;
-}
-
-.print-expense {
-  color: #ec2222;
-}
-
-.print-positive {
-  color: #10a861;
-}
-
-.print-negative {
-  color: #ec2222;
-}
-
-.print-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.print-table th {
-  text-align: left;
-  padding: 10px 12px;
-  background: #f5f5f5;
-  border-bottom: 2px solid #ddd;
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+.tufte-period {
+  font-weight: 400;
   color: #555;
 }
 
-.print-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #eee;
-}
-
-.print-table tbody tr:hover {
-  background: #fafafa;
-}
-
-.print-table .print-amount {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.print-table th.print-amount {
-  text-align: right;
-}
-
-.print-table tfoot td {
-  border-top: 2px solid #ddd;
-  border-bottom: none;
-  background: #f9f9f9;
-  font-weight: 600;
-}
-
-.print-totals-row {
-  background: #f5f5f5;
-}
-
-.print-totals-row td {
-  font-weight: 600;
-}
-
-.print-current-month {
-  background: #fffbeb;
-}
-
-.print-current-badge {
+.tufte-meta {
   font-size: 10px;
-  color: #888;
-  font-weight: 400;
-}
-
-.print-net-worth-summary {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.print-net-worth-main,
-.print-net-worth-change {
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 8px;
-  border: 1px solid #e5e5e5;
-}
-
-.print-net-worth-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
   color: #666;
+  margin: 2px 0 0 0;
+}
+
+/* Sections */
+.tufte-section {
+  margin-bottom: 16px;
+}
+
+.tufte-section-title {
+  font-size: 12px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: #111;
+  margin: 0 0 8px 0;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+}
+
+.tufte-subsection {
+  font-size: 11px;
+  font-weight: 600;
+  margin: 12px 0 6px 0;
+}
+
+/* Summary Metrics with Sparklines */
+.tufte-summary {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
   margin-bottom: 8px;
 }
 
-.print-net-worth-value {
-  font-size: 24px;
-  font-weight: 600;
+.tufte-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.print-breakdown-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-}
-
-.print-breakdown-column {
-  min-width: 0;
-}
-
-.print-breakdown-title {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0 0 12px 0;
-}
-
-.print-investment-summary {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.print-holding-name {
-  display: block;
+.tufte-metric-label {
   font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tufte-metric-value {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tufte-metric-change {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.tufte-metric-note {
+  font-size: 9px;
   color: #888;
 }
 
-.print-category-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
+.tufte-up { color: #059669; }
+.tufte-down { color: #dc2626; }
+
+/* Sparklines */
+.tufte-sparkline {
+  width: 50px;
+  height: 14px;
   vertical-align: middle;
 }
 
-.print-entry-count {
+/* Colors */
+.tufte-income { color: #059669; }
+.tufte-expense { color: #dc2626; }
+.tufte-muted { color: #888; font-size: 10px; }
+
+/* Net Worth */
+.tufte-networth {
+  margin-bottom: 10px;
+}
+
+.tufte-networth-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.tufte-networth-change {
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+/* Two Column Layout */
+.tufte-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Tables - Tufte style (minimal lines) */
+.tufte-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 10px;
-  color: #888;
-  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
-.print-total-badge {
-  font-weight: 400;
-  font-size: 13px;
+.tufte-table thead th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #555;
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid #111;
 }
 
-.print-no-data {
+.tufte-table tbody td {
+  padding: 3px 8px 3px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.tufte-table tfoot td {
+  padding: 4px 8px 4px 0;
+  border-top: 1px solid #111;
+  font-weight: 600;
+}
+
+.tufte-table.tufte-compact tbody td {
+  padding: 2px 6px 2px 0;
+}
+
+.tufte-right {
+  text-align: right;
+  padding-right: 0 !important;
+}
+
+.tufte-highlight {
+  background: #fffbeb;
+}
+
+/* Category Dots */
+.tufte-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* Footnotes */
+.tufte-footnote {
+  font-size: 9px;
   color: #888;
+  margin-top: 4px;
   font-style: italic;
-  padding: 12px 0;
 }
 
-.print-footer {
-  margin-top: 48px;
-  padding-top: 16px;
-  border-top: 1px solid #e5e5e5;
-  text-align: center;
-  font-size: 10px;
+/* Footer */
+.tufte-footer {
+  margin-top: 20px;
+  padding-top: 8px;
+  border-top: 1px solid #ccc;
+  font-size: 9px;
   color: #888;
+  text-align: center;
 }
 
-/* Print-specific media query */
+/* Print-specific */
 @media print {
   @page {
     size: A4;
-    margin: 12mm 10mm;
+    margin: 12mm 15mm;
   }
 
   html, body {
-    font-size: 11px;
+    font-size: 10px;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -500,67 +428,42 @@
     padding: 0;
   }
 
-  .print-section {
+  .tufte-section {
     page-break-inside: auto;
-    margin-bottom: 20px;
   }
 
-  .print-section-title {
+  .tufte-section-title {
     page-break-after: avoid;
   }
 
-  .print-table {
+  .tufte-table {
     page-break-inside: auto;
   }
 
-  .print-table thead {
+  .tufte-table thead {
     display: table-header-group;
   }
 
-  .print-table tr {
+  .tufte-table tr {
     page-break-inside: avoid;
   }
 
-  .print-summary-grid,
-  .print-investment-summary {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .print-net-worth-summary,
-  .print-breakdown-grid {
+  .tufte-two-col {
     page-break-inside: avoid;
   }
 
-  .print-keep-together {
+  .tufte-keep-together {
     page-break-inside: avoid;
   }
 
-  .print-header {
-    flex-direction: column;
-    gap: 12px;
+  .tufte-header {
     page-break-after: avoid;
   }
 
-  .print-header-meta {
-    text-align: left;
-  }
+  .tufte-income { color: #059669 !important; }
+  .tufte-expense { color: #dc2626 !important; }
 
-  .print-income {
-    color: #059669 !important;
-  }
-
-  .print-expense {
-    color: #dc2626 !important;
-  }
-
-  .print-summary-card,
-  .print-net-worth-main,
-  .print-net-worth-change {
-    border: 1px solid #ccc;
-    background: #f9f9f9 !important;
-  }
-
-  .print-footer {
+  .tufte-footer {
     page-break-before: avoid;
   }
 }
