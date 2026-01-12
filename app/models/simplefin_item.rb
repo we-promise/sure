@@ -271,8 +271,8 @@ class SimplefinItem < ApplicationRecord
     return nil unless latest
 
     # If sync has statistics, use them
-    if latest.sync_stats.present?
-      stats = latest.sync_stats
+    stats = parse_sync_stats(latest.sync_stats)
+    if stats.present?
       total = stats["total_accounts"] || 0
       linked = stats["linked_accounts"] || 0
       unlinked = stats["unlinked_accounts"] || 0
@@ -399,7 +399,68 @@ class SimplefinItem < ApplicationRecord
     issues
   end
 
+  # Get reconciled duplicates count from the last sync
+  # Returns { count: N, message: "..." } or { count: 0 } if none
+  def last_sync_reconciled_status
+    latest_sync = syncs.ordered.first
+    return { count: 0 } unless latest_sync
+
+    stats = parse_sync_stats(latest_sync.sync_stats)
+    count = stats&.dig("pending_reconciled").to_i
+    if count > 0
+      {
+        count: count,
+        message: I18n.t("simplefin_items.reconciled_status.message", count: count)
+      }
+    else
+      { count: 0 }
+    end
+  end
+
+  # Count stale pending transactions (>8 days old) across all linked accounts
+  # Returns { count: N, accounts: [names] } or { count: 0 } if none
+  def stale_pending_status(days: 8)
+    # Get all accounts linked to this SimpleFIN item
+    # Eager-load both association paths to avoid N+1 on current_account method
+    linked_accounts = simplefin_accounts.includes(:account, :linked_account).filter_map(&:current_account)
+    return { count: 0 } if linked_accounts.empty?
+
+    # Batch query to avoid N+1
+    account_ids = linked_accounts.map(&:id)
+    counts_by_account = Entry.stale_pending(days: days)
+      .where(excluded: false)
+      .where(account_id: account_ids)
+      .group(:account_id)
+      .count
+
+    account_counts = linked_accounts
+      .map { |account| { account: account, count: counts_by_account[account.id].to_i } }
+      .select { |ac| ac[:count] > 0 }
+
+    total = account_counts.sum { |ac| ac[:count] }
+    if total > 0
+      {
+        count: total,
+        accounts: account_counts.map { |ac| ac[:account].name },
+        message: I18n.t("simplefin_items.stale_pending_status.message", count: total, days: days)
+      }
+    else
+      { count: 0 }
+    end
+  end
+
   private
+    # Parse sync_stats, handling cases where it might be a raw JSON string
+    # (e.g., from console testing or bypassed serialization)
+    def parse_sync_stats(sync_stats)
+      return nil if sync_stats.blank?
+      return sync_stats if sync_stats.is_a?(Hash)
+
+      if sync_stats.is_a?(String)
+        JSON.parse(sync_stats) rescue nil
+      end
+    end
+
     def remove_simplefin_item
       # SimpleFin doesn't require server-side cleanup like Plaid
       # The access URL just becomes inactive

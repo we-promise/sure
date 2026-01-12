@@ -23,11 +23,25 @@ default: &default
     # Generic OpenID Connect provider (e.g., Keycloak, Authentik, other OIDC issuers).
     # This maps to the existing :openid_connect OmniAuth strategy and keeps
     # backwards-compatible behavior for self-hosted setups using OIDC_* env vars.
+    # 
+    # For the default OIDC provider, use these ENV vars:
+    #   OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI
+    #
+    # To add additional OIDC providers, add more entries with unique names and use
+    # provider-specific ENV vars with the pattern: OIDC_<UPPERCASE_NAME>_*
+    # Example for a provider named "keycloak":
+    #   OIDC_KEYCLOAK_ISSUER, OIDC_KEYCLOAK_CLIENT_ID, 
+    #   OIDC_KEYCLOAK_CLIENT_SECRET, OIDC_KEYCLOAK_REDIRECT_URI
     - id: "oidc"
       strategy: "openid_connect"
       name: "openid_connect"
       label: <%= ENV.fetch("OIDC_BUTTON_LABEL", "Sign in with OpenID Connect") %>
       icon:  <%= ENV.fetch("OIDC_BUTTON_ICON", "key") %>
+      # Per-provider credentials (optional, falls back to global OIDC_* vars)
+      issuer: <%= ENV["OIDC_ISSUER"] %>
+      client_id: <%= ENV["OIDC_CLIENT_ID"] %>
+      client_secret: <%= ENV["OIDC_CLIENT_SECRET"] %>
+      redirect_uri: <%= ENV["OIDC_REDIRECT_URI"] %>
 
     # Optional Google OAuth provider. Requires the omniauth-google-oauth2 gem
     # and GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET env vars.

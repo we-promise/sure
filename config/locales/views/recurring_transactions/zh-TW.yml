@@ -1,0 +1,49 @@
+---
+zh-TW:
+  recurring_transactions:
+    title: 定期交易
+    upcoming: 即將到來的定期交易
+    projected: 預估
+    recurring: 定期
+    expected_on: 預計於 %{date}
+    day_of_month: 每月第 %{day} 天
+    identify_patterns: 辨識規律
+    cleanup_stale: 清理失效交易
+    settings:
+      enable_label: 啟用定期交易
+      enable_description: 自動偵測定期交易規律，並顯示即將發生的預估交易。
+    settings_updated: 定期交易設定已更新
+    info:
+      title: 自動規律辨識
+      manual_description: 您可以使用上方的按鈕手動辨識規律，或清理失效的定期交易。
+      automatic_description: "自動辨識也會在下列情況後執行："
+      triggers:
+        - CSV 匯入完成（包含交易、投資交易、帳戶等）
+        - 任何提供商同步完成（如 Plaid, SimpleFIN 等）
+    identified: 已辨識出 %{count} 個定期交易規律
+    cleaned_up: 已清理 %{count} 個失效的定期交易
+    marked_inactive: 定期交易已標記為停用
+    marked_active: 定期交易已標記為啟用
+    deleted: 定期交易已刪除
+    confirm_delete: 您確定要刪除此定期交易嗎？
+    marked_as_recurring: 交易已標記為定期交易
+    already_exists: 此規律已存在手動建立的定期交易
+    creation_failed: 建立定期交易失敗。請檢查交易詳情並再試一次。
+    unexpected_error: 建立定期交易時發生預期之外的錯誤
+    amount_range: "範圍：%{min} 至 %{max}"
+    empty:
+      title: 找不到定期交易
+      description: 點擊「辨識規律」以從您的交易紀錄中自動偵測定期交易。
+    table:
+      merchant: 商家
+      amount: 金額
+      expected_day: 預計日期
+      next_date: 下次交易日
+      last_occurrence: 最近一次發生
+      status: 狀態
+      actions: 操作
+    status:
+      active: 啟用中
+      inactive: 已停用
+    badges:
+      manual: 手動

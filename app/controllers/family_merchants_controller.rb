@@ -125,7 +125,6 @@ class FamilyMerchantsController < ApplicationController
       combined_ids = (family_merchant_ids + provider_merchant_ids).uniq
 
       Merchant.where(id: combined_ids)
-              .distinct
               .order(Arel.sql("LOWER(COALESCE(name, ''))"))
     end
 end

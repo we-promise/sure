@@ -68,6 +68,13 @@ The helper always injects:
       key: {{ include "sure.redisPasswordKey" $ctx }}
 - name: REDIS_URL
   value: {{ $redis | quote }}
+{{- $sentinelHosts := include "sure.redisSentinelHosts" $ctx -}}
+{{- if $sentinelHosts }}
+- name: REDIS_SENTINEL_HOSTS
+  value: {{ $sentinelHosts | quote }}
+- name: REDIS_SENTINEL_MASTER
+  value: {{ include "sure.redisSentinelMaster" $ctx | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- range $k, $v := $ctx.Values.rails.settings }}
