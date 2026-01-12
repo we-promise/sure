@@ -2,6 +2,33 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  # CoinStats routes
+  resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
+    collection do
+      post :link_wallet
+    end
+    member do
+      post :sync
+    end
+  end
+
+  resources :enable_banking_items, only: [ :new, :create, :update, :destroy ] do
+    collection do
+      get :callback
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+    member do
+      post :sync
+      get :select_bank
+      post :authorize
+      post :reauthorize
+      get :setup_accounts
+      post :complete_account_setup
+      post :new_connection
+    end
+  end
   use_doorkeeper
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -32,13 +59,15 @@ Rails.application.routes.draw do
 
   get "changelog", to: "pages#changelog"
   get "feedback", to: "pages#feedback"
+  patch "dashboard/preferences", to: "pages#update_preferences"
 
   resource :current_session, only: %i[update]
 
   resource :registration, only: %i[new create]
-  resources :sessions, only: %i[new create destroy]
+  resources :sessions, only: %i[index new create destroy]
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]
+  get "/auth/logout/callback", to: "sessions#post_logout"
   resource :oidc_account, only: [] do
     get :link, on: :collection
     post :create_link, on: :collection
@@ -53,6 +82,7 @@ Rails.application.routes.draw do
     delete :reset, on: :member
     delete :reset_with_sample_data, on: :member
     patch :rule_prompt_settings, on: :member
+    get :resend_confirmation_email, on: :member
   end
 
   resource :onboarding, only: :show do
@@ -71,6 +101,7 @@ Rails.application.routes.draw do
     end
     resource :billing, only: :show
     resource :security, only: :show
+    resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
@@ -102,13 +133,25 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  resources :reports, only: %i[index] do
+    patch :update_preferences, on: :collection
+    get :export_transactions, on: :collection
+    get :google_sheets_instructions, on: :collection
+    get :print, on: :collection
+  end
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     get :picker, on: :collection
 
     resources :budget_categories, only: %i[index show update]
   end
 
-  resources :family_merchants, only: %i[index new create edit update destroy]
+  resources :family_merchants, only: %i[index new create edit update destroy] do
+    collection do
+      get :merge
+      post :perform_merge
+    end
+  end
 
   resources :transfers, only: %i[new create destroy show update]
 
@@ -128,7 +171,11 @@ Rails.application.routes.draw do
     resources :mappings, only: :update, module: :import
   end
 
-  resources :holdings, only: %i[index new show destroy]
+  resources :holdings, only: %i[index new show update destroy] do
+    member do
+      post :unlock_cost_basis
+    end
+  end
   resources :trades, only: %i[show new create update destroy]
   resources :valuations, only: %i[show new create update destroy] do
     post :confirm_create, on: :collection
@@ -146,6 +193,25 @@ Rails.application.routes.draw do
 
     collection do
       delete :clear_filter
+      patch :update_preferences
+    end
+
+    member do
+      post :mark_as_recurring
+      post :merge_duplicate
+      post :dismiss_duplicate
+    end
+  end
+
+  resources :recurring_transactions, only: %i[index destroy] do
+    collection do
+      match :identify, via: [ :get, :post ]
+      match :cleanup, via: [ :get, :post ]
+      patch :update_settings
+    end
+
+    member do
+      match :toggle_status, via: [ :get, :post ]
     end
   end
 
@@ -167,6 +233,8 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      get :confirm_all
+      post :apply_all
     end
   end
 
@@ -175,6 +243,9 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      get :select_provider
+      get :confirm_unlink
+      delete :unlink
     end
 
     collection do
@@ -223,9 +294,12 @@ Rails.application.routes.draw do
       post "auth/refresh", to: "auth#refresh"
 
       # Production API endpoints
-      resources :accounts, only: [ :index ]
+      resources :accounts, only: [ :index, :show ]
+      resources :categories, only: [ :index, :show ]
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
-      resource :usage, only: [ :show ], controller: "usage"
+      resources :imports, only: [ :index, :show, :create ]
+      resource :usage, only: [ :show ], controller: :usage
+      post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do
@@ -260,14 +334,25 @@ Rails.application.routes.draw do
   end
 
   resources :plaid_items, only: %i[new edit create destroy] do
+    collection do
+      get :select_existing_account
+      post :link_existing_account
+    end
+
     member do
       post :sync
     end
   end
 
   resources :simplefin_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :select_existing_account
+      post :link_existing_account
+    end
+
     member do
       post :sync
+      post :balances
       get :setup_accounts
       post :complete_account_setup
     end
@@ -275,12 +360,17 @@ Rails.application.routes.draw do
 
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
     collection do
+      get :preload_accounts
       get :select_accounts
       post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
     end
 
     member do
       post :sync
+      get :setup_accounts
+      post :complete_account_setup
     end
   end
 
@@ -305,6 +395,17 @@ Rails.application.routes.draw do
   get "privacy", to: redirect("about:blank")
   get "terms", to: redirect("about:blank")
   get "intro", to: "pages#intro"
+
+  # Admin namespace for super admin functionality
+  namespace :admin do
+    resources :sso_providers do
+      member do
+        patch :toggle
+        post :test_connection
+      end
+    end
+    resources :users, only: [ :index, :update ]
+  end
 
   # Defines the root path route ("/")
   root "pages#dashboard"

@@ -1,0 +1,35 @@
+---
+zh-TW:
+  family_merchants:
+    create:
+      error: '建立商家時發生錯誤：%{error}'
+      success: 成功建立新商家
+    destroy:
+      success: 成功刪除商家
+    edit:
+      title: 編輯商家
+    form:
+      name_placeholder: 商家名稱
+    index:
+      empty: 尚無商家
+      new: 新增商家
+      title: 商家管理
+      family_title: 家庭商家
+      family_empty: 尚無家庭商家
+      provider_title: 提供商商家
+      provider_empty: 目前尚無連結至此家庭的提供商商家
+      provider_read_only: 提供商商家是從您連結的金融機構同步而來的，無法在此進行編輯。
+      table:
+        merchant: 商家
+        actions: 操作
+        source: 來源
+    merchant:
+      confirm_accept: 刪除商家
+      confirm_body: 您確定要刪除此商家嗎？刪除此商家將會解除所有相關交易的連結，並可能影響您的報表產出。
+      confirm_title: 確定要刪除商家嗎？
+      delete: 刪除商家
+      edit: 編輯商家
+    new:
+      title: 新增商家
+    update:
+      success: 商家資訊已成功更新

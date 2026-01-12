@@ -22,6 +22,14 @@ class TransactionsController < ApplicationController
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: per_page)
+
+    # Load projected recurring transactions for next month
+    @projected_recurring = Current.family.recurring_transactions
+                                  .active
+                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
+                                         1.month.from_now.to_date,
+                                         Date.current)
+                                  .includes(:merchant)
   end
 
   def clear_filter
@@ -108,6 +116,88 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def merge_duplicate
+    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+
+    if transaction.merge_with_duplicate!
+      flash[:notice] = t("transactions.merge_duplicate.success")
+    else
+      flash[:alert] = t("transactions.merge_duplicate.failure")
+    end
+
+    redirect_to transactions_path
+  rescue ActiveRecord::RecordNotDestroyed, ActiveRecord::RecordInvalid => e
+    Rails.logger.error("Failed to merge duplicate transaction #{params[:id]}: #{e.message}")
+    flash[:alert] = t("transactions.merge_duplicate.failure")
+    redirect_to transactions_path
+  end
+
+  def dismiss_duplicate
+    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+
+    if transaction.dismiss_duplicate_suggestion!
+      flash[:notice] = t("transactions.dismiss_duplicate.success")
+    else
+      flash[:alert] = t("transactions.dismiss_duplicate.failure")
+    end
+
+    redirect_back_or_to transactions_path
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error("Failed to dismiss duplicate suggestion for transaction #{params[:id]}: #{e.message}")
+    flash[:alert] = t("transactions.dismiss_duplicate.failure")
+    redirect_back_or_to transactions_path
+  end
+
+  def mark_as_recurring
+    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+
+    # Check if a recurring transaction already exists for this pattern
+    existing = Current.family.recurring_transactions.find_by(
+      merchant_id: transaction.merchant_id,
+      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
+      currency: transaction.entry.currency,
+      manual: true
+    )
+
+    if existing
+      flash[:alert] = t("recurring_transactions.already_exists")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    begin
+      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+
+      respond_to do |format|
+        format.html do
+          flash[:notice] = t("recurring_transactions.marked_as_recurring")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue ActiveRecord::RecordInvalid => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.creation_failed")
+          redirect_back_or_to transactions_path
+        end
+      end
+    rescue StandardError => e
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.unexpected_error")
+          redirect_back_or_to transactions_path
+        end
+      end
+    end
+  end
+
+  def update_preferences
+    Current.user.update_transactions_preferences(preferences_params)
+    head :ok
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
+    head :unprocessable_entity
+  end
+
   private
     def per_page
       params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
@@ -147,7 +237,7 @@ class TransactionsController < ApplicationController
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: []
+                categories: [], merchants: [], types: [], tags: [], status: []
               )
               .to_h
               .compact_blank
@@ -184,5 +274,9 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
+    end
+
+    def preferences_params
+      params.require(:preferences).permit(collapsed_sections: {})
     end
 end

@@ -1,0 +1,118 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "Set Up Your Enable Banking Accounts") do %>
+    <div class="flex items-center gap-2">
+      <%= icon "building-2", class: "text-primary" %>
+      <span class="text-primary">Choose the correct account types for your imported accounts</span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_account_setup_enable_banking_item_path(@enable_banking_item),
+                  method: :post,
+                  local: true,
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: "Creating Accounts...",
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+            <div>
+              <p class="text-sm text-primary mb-2">
+                <strong>Choose the correct account type for each Enable Banking account:</strong>
+              </p>
+              <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+                <% @account_type_options.reject { |_, type| type == "skip" }.each do |label, _| %>
+                  <li><strong><%= label %></strong></li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sync Date Range Selection -->
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%= icon "calendar", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+            <div class="flex-1">
+              <p class="text-sm text-primary mb-3">
+                <strong>Historical Data Range:</strong>
+              </p>
+              <%= form.date_field :sync_start_date,
+                    label: "Start syncing transactions from:",
+                    value: @enable_banking_item.sync_start_date || 3.months.ago.to_date,
+                    min: 1.year.ago.to_date,
+                    max: Date.current,
+                    class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
+                    help_text: "Select how far back you want to sync transaction history. Maximum 1 year of history available." %>
+            </div>
+          </div>
+        </div>
+
+        <% @enable_banking_accounts.each do |enable_banking_account| %>
+          <div class="border border-primary rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-medium text-primary">
+                  <%= enable_banking_account.name %>
+                  <% if enable_banking_account.iban.present? %>
+                    <span class="text-secondary">• <%= enable_banking_account.iban.last(4) %></span>
+                  <% end %>
+                </h3>
+                <div class="text-sm text-secondary space-y-0.5">
+                  <% if enable_banking_account.account_type_display.present? %>
+                    <p><%= enable_banking_account.account_type_display %></p>
+                  <% end %>
+                  <% if enable_banking_account.current_balance.present? %>
+                    <p>Balance: <%= number_to_currency(enable_banking_account.current_balance, unit: enable_banking_account.currency) %></p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="<%= enable_banking_account.id %>">
+              <div>
+                <%= label_tag "account_types[#{enable_banking_account.id}]", "Account Type:",
+                             class: "block text-sm font-medium text-primary mb-2" %>
+                <%= select_tag "account_types[#{enable_banking_account.id}]",
+                              options_for_select(@account_type_options, "skip"),
+                              { class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full",
+                                data: {
+                                  action: "change->account-type-selector#updateSubtype"
+                                } } %>
+              </div>
+
+              <!-- Subtype dropdowns (shown/hidden based on account type) -->
+              <div data-account-type-selector-target="subtypeContainer">
+                <% @subtype_options.each do |account_type, subtype_config| %>
+                  <%= render "enable_banking_items/subtype_select", account_type: account_type, subtype_config: subtype_config, enable_banking_account: enable_banking_account %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: "Create Accounts",
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          data: { loading_button_target: "button" }
+        ) %>
+        <%= render DS::Link.new(
+          text: "Cancel",
+          variant: "secondary",
+          href: accounts_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

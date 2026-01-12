@@ -10,7 +10,7 @@ class Family::Syncer
     family.sync_trial_status!
 
     Rails.logger.info("Applying rules for family #{family.id}")
-    family.rules.each do |rule|
+    family.rules.where(active: true).each do |rule|
       rule.apply_later
     end
 
@@ -26,6 +26,6 @@ class Family::Syncer
 
   private
     def child_syncables
-      family.plaid_items + family.simplefin_items.active + family.accounts.manual
+      family.plaid_items + family.simplefin_items.active + family.lunchflow_items.active + family.enable_banking_items.active + family.accounts.manual
     end
 end

@@ -2,7 +2,7 @@
 
 <%= tag.div id: dom_id(lunchflow_item) do %>
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
-    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+    <summary class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
 
@@ -23,6 +23,11 @@
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
+          <% if lunchflow_item.accounts.any? %>
+            <p class="text-xs text-secondary">
+              <%= lunchflow_item.institution_summary %>
+            </p>
+          <% end %>
           <% if lunchflow_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>
@@ -35,7 +40,15 @@
             </div>
           <% else %>
             <p class="text-secondary">
-              <%= lunchflow_item.last_synced_at ? t(".status", timestamp: time_ago_in_words(lunchflow_item.last_synced_at)) : t(".status_never") %>
+              <% if lunchflow_item.last_synced_at %>
+                <% if lunchflow_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(lunchflow_item.last_synced_at), summary: lunchflow_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(lunchflow_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
             </p>
           <% end %>
         </div>
@@ -67,10 +80,48 @@
       <div class="space-y-4 mt-4">
         <% if lunchflow_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: lunchflow_item.accounts %>
-        <% else %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@lunchflow_sync_stats_map) && @lunchflow_sync_stats_map
+             @lunchflow_sync_stats_map[lunchflow_item.id] || {}
+           else
+             lunchflow_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: lunchflow_item,
+          institutions_count: lunchflow_item.connected_institutions.size
+        ) %>
+
+        <%# Use model methods for consistent counts %>
+        <% unlinked_count = lunchflow_item.unlinked_accounts_count %>
+        <% linked_count = lunchflow_item.linked_accounts_count %>
+        <% total_count = lunchflow_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked_count, total: total_count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_lunchflow_item_path(lunchflow_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif lunchflow_item.accounts.empty? && total_count == 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
             <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_lunchflow_item_path(lunchflow_item),
+              frame: :modal
+            ) %>
           </div>
         <% end %>
       </div>

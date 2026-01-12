@@ -1,6 +1,8 @@
 ---
 en:
   password_resets:
+    disabled: Password reset via Sure is disabled. Please reset your password through your identity provider.
+    sso_only_user: Your account uses SSO for authentication. Please contact your administrator to manage your credentials.
     edit:
       title: Reset password
     new:

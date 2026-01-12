@@ -3,9 +3,11 @@ one:
   date: <%= Date.current %>
   price: 215
   currency: USD
+  provisional: false
 
 two:
   security: aapl
   date: <%= 1.day.ago.to_date %>
   price: 214
   currency: USD
+  provisional: false

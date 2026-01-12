@@ -5,8 +5,10 @@
             next_budget: @next_budget,
             latest_budget: @latest_budget %>
 
-  <div class="flex flex-col items-start gap-4 md:flex-row">
-    <div class="w-full md:max-w-[300px] space-y-4">
+  <div class="space-y-4">
+    <%# Top Section: Donut and Summary side by side %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <%# Budget Donut %>
       <div class="h-[300px] bg-container rounded-xl shadow-border-xs p-8">
         <% if @budget.available_to_allocate.negative? %>
           <%= render "budgets/over_allocation_warning", budget: @budget %>
@@ -15,36 +17,35 @@
         <% end %>
       </div>
 
-      <div>
-
-        <% if @budget.initialized? && @budget.available_to_allocate.positive? %>
-          <%= render DS::Tabs.new(active_tab: params[:tab].presence || "budgeted") do |tabs| %>
-            <% tabs.with_nav do |nav| %>
-              <% nav.with_btn(id: "budgeted", label: "Budgeted") %>
-              <% nav.with_btn(id: "actuals", label: "Actual") %>
-            <% end %>
-
-            <% tabs.with_panel(tab_id: "budgeted") do %>
-              <div class="bg-container rounded-xl shadow-border-xs">
-                <%= render "budgets/budgeted_summary", budget: @budget %>
-              </div>
-            <% end %>
-
-            <% tabs.with_panel(tab_id: "actuals") do %>
-              <div class="bg-container rounded-xl shadow-border-xs">
-                <%= render "budgets/actuals_summary", budget: @budget %>
-              </div>
-            <% end %>
+      <%# Actuals Summary %>
+      <% if @budget.initialized? && @budget.available_to_allocate.positive? %>
+        <%= render DS::Tabs.new(active_tab: params[:tab].presence || "budgeted") do |tabs| %>
+          <% tabs.with_nav do |nav| %>
+            <% nav.with_btn(id: "budgeted", label: t("budgets.show.tabs.budgeted")) %>
+            <% nav.with_btn(id: "actuals", label: t("budgets.show.tabs.actual")) %>
           <% end %>
-        <% else %>
-          <div class="bg-container rounded-xl shadow-border-xs">
-            <%= render "budgets/actuals_summary", budget: @budget %>
-          </div>
+
+          <% tabs.with_panel(tab_id: "budgeted") do %>
+            <div class="bg-container rounded-xl shadow-border-xs">
+              <%= render "budgets/budgeted_summary", budget: @budget %>
+            </div>
+          <% end %>
+
+          <% tabs.with_panel(tab_id: "actuals") do %>
+            <div class="bg-container rounded-xl shadow-border-xs">
+              <%= render "budgets/actuals_summary", budget: @budget %>
+            </div>
+          <% end %>
         <% end %>
-      </div>
+      <% else %>
+        <div class="bg-container rounded-xl shadow-border-xs">
+          <%= render "budgets/actuals_summary", budget: @budget %>
+        </div>
+      <% end %>
     </div>
 
-    <div class="w-full grow bg-container rounded-xl shadow-border-xs p-4">
+    <%# Bottom Section: Categories full width %>
+    <div class="w-full bg-container rounded-xl shadow-border-xs p-4">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-medium">Categories</h2>
 

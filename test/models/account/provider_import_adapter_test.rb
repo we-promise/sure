@@ -310,7 +310,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.today - 10.days,
       price: 150,
       source: "plaid",
       account_provider_id: account_provider.id
@@ -330,7 +330,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 30.days,
       price: 150
     )
 
@@ -381,7 +381,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 120.days,
       price: 150,
       account_provider_id: provider.id
     )
@@ -405,7 +405,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.today - 10.days,
       price: 150,
       source: "plaid",
       account_provider_id: provider.id,
@@ -428,7 +428,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 1.day,
+      date: Date.today + 121.days,
       price: 150
     )
 
@@ -565,5 +565,702 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
 
     assert_match(/Entry with external_id.*already exists with different entryable type/i, exception.message)
+  end
+
+  test "claims manual transaction when provider syncs matching transaction" do
+    # Create a manual transaction (no external_id or source)
+    manual_entry = @account.entries.create!(
+      date: Date.today,
+      amount: 42.50,
+      currency: "USD",
+      name: "Coffee Shop",
+      entryable: Transaction.new
+    )
+
+    assert_nil manual_entry.external_id
+    assert_nil manual_entry.source
+
+    # Provider syncs a matching transaction - should claim the manual entry, not create new
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "lunchflow_12345",
+        amount: 42.50,
+        currency: "USD",
+        date: Date.today,
+        name: "Coffee Shop - Lunchflow",
+        source: "lunchflow"
+      )
+
+      # Should be the same entry, now claimed by the provider
+      assert_equal manual_entry.id, entry.id
+      assert_equal "lunchflow_12345", entry.external_id
+      assert_equal "lunchflow", entry.source
+      assert_equal "Coffee Shop - Lunchflow", entry.name
+    end
+  end
+
+  test "claims CSV imported transaction when provider syncs matching transaction" do
+    # Create a CSV imported transaction (has import_id but no external_id)
+    import = Import.create!(
+      family: @family,
+      type: "TransactionImport",
+      status: :complete
+    )
+
+    csv_entry = @account.entries.create!(
+      date: Date.today - 1.day,
+      amount: 125.00,
+      currency: "USD",
+      name: "Grocery Store",
+      import: import,
+      entryable: Transaction.new
+    )
+
+    assert_nil csv_entry.external_id
+    assert_nil csv_entry.source
+    assert_equal import.id, csv_entry.import_id
+
+    # Provider syncs a matching transaction - should claim the CSV entry
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "plaid_csv_match",
+        amount: 125.00,
+        currency: "USD",
+        date: Date.today - 1.day,
+        name: "Grocery Store - Plaid",
+        source: "plaid"
+      )
+
+      # Should be the same entry, now claimed by the provider
+      assert_equal csv_entry.id, entry.id
+      assert_equal "plaid_csv_match", entry.external_id
+      assert_equal "plaid", entry.source
+      assert_equal import.id, entry.import_id # Should preserve the import_id
+    end
+  end
+
+  test "does not claim transaction when date does not match" do
+    # Create a manual transaction
+    manual_entry = @account.entries.create!(
+      date: Date.today - 5.days,
+      amount: 50.00,
+      currency: "USD",
+      name: "Restaurant",
+      entryable: Transaction.new
+    )
+
+    # Provider syncs similar transaction but different date - should create new entry
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "lunchflow_different_date",
+        amount: 50.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Restaurant",
+        source: "lunchflow"
+      )
+
+      # Should be a different entry
+      assert_not_equal manual_entry.id, entry.id
+    end
+  end
+
+  test "does not claim transaction when amount does not match" do
+    # Create a manual transaction
+    manual_entry = @account.entries.create!(
+      date: Date.today,
+      amount: 50.00,
+      currency: "USD",
+      name: "Restaurant",
+      entryable: Transaction.new
+    )
+
+    # Provider syncs similar transaction but different amount - should create new entry
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "lunchflow_different_amount",
+        amount: 51.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Restaurant",
+        source: "lunchflow"
+      )
+
+      # Should be a different entry
+      assert_not_equal manual_entry.id, entry.id
+    end
+  end
+
+  test "does not claim transaction when currency does not match" do
+    # Create a manual transaction
+    manual_entry = @account.entries.create!(
+      date: Date.today,
+      amount: 50.00,
+      currency: "EUR",
+      name: "Restaurant",
+      entryable: Transaction.new
+    )
+
+    # Provider syncs similar transaction but different currency - should create new entry
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "lunchflow_different_currency",
+        amount: 50.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Restaurant",
+        source: "lunchflow"
+      )
+
+      # Should be a different entry
+      assert_not_equal manual_entry.id, entry.id
+    end
+  end
+
+  test "does not claim transaction that already has external_id from different provider" do
+    # Create a transaction already synced from SimpleFin
+    simplefin_entry = @adapter.import_transaction(
+      external_id: "simplefin_123",
+      amount: 30.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Gas Station",
+      source: "simplefin"
+    )
+
+    # Provider (Lunchflow) syncs matching transaction - should create new entry, not claim SimpleFin's
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "lunchflow_gas",
+        amount: 30.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Gas Station",
+        source: "lunchflow"
+      )
+
+      # Should be a different entry because SimpleFin already claimed it
+      assert_not_equal simplefin_entry.id, entry.id
+      assert_equal "lunchflow", entry.source
+      assert_equal "simplefin", simplefin_entry.reload.source
+    end
+  end
+
+  test "claims oldest matching manual transaction when multiple exist" do
+    # Create multiple manual transactions with same date, amount, currency
+    older_entry = @account.entries.create!(
+      date: Date.today,
+      amount: 20.00,
+      currency: "USD",
+      name: "Parking - Old",
+      entryable: Transaction.new,
+      created_at: 2.hours.ago
+    )
+
+    newer_entry = @account.entries.create!(
+      date: Date.today,
+      amount: 20.00,
+      currency: "USD",
+      name: "Parking - New",
+      entryable: Transaction.new,
+      created_at: 1.hour.ago
+    )
+
+    # Provider syncs matching transaction - should claim the oldest one
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "lunchflow_parking",
+        amount: 20.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Parking - Provider",
+        source: "lunchflow"
+      )
+
+      # Should claim the older entry
+      assert_equal older_entry.id, entry.id
+      assert_equal "lunchflow_parking", entry.external_id
+
+      # Newer entry should remain unclaimed
+      assert_nil newer_entry.reload.external_id
+    end
+  end
+
+  # ============================================================================
+  # Pending→Posted Transaction Reconciliation Tests
+  # ============================================================================
+
+  test "reconciles pending transaction when posted version arrives with different external_id" do
+    # Simulate SimpleFIN giving different IDs for pending vs posted transactions
+    # First, import a pending transaction
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_pending_abc",
+      amount: 99.99,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "Coffee Shop",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    assert pending_entry.transaction.pending?, "Entry should be marked pending"
+    original_id = pending_entry.id
+
+    # Now import the posted version with a DIFFERENT external_id
+    # This should claim the pending entry, not create a duplicate
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_xyz",
+        amount: 99.99,
+        currency: "USD",
+        date: Date.today,
+        name: "Coffee Shop - Posted",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      # Should be the same entry, now with updated external_id
+      assert_equal original_id, posted_entry.id
+      assert_equal "simplefin_posted_xyz", posted_entry.external_id
+      assert_not posted_entry.transaction.pending?, "Entry should no longer be pending"
+    end
+  end
+
+  test "does not reconcile when posted transaction has same external_id as pending" do
+    # When external_id matches, normal dedup should handle it
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_same_id",
+      amount: 50.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Gas Station",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import posted version with SAME external_id
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_same_id",
+        amount: 50.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Gas Station - Posted",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_equal pending_entry.id, posted_entry.id
+      assert_not posted_entry.transaction.pending?
+    end
+  end
+
+  test "fuzzy amount match creates suggestion instead of auto-claiming" do
+    # Import pending transaction (pre-tip authorization)
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_pending_amount_test",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Restaurant",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import posted with tip added - should NOT auto-claim, but should store suggestion
+    # Fuzzy matches now create suggestions for user review instead of auto-reconciling
+    assert_difference "@account.entries.count", 1 do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_amount_test",
+        amount: 105.00, # 5% tip added - within 25% tolerance
+        currency: "USD",
+        date: Date.today,
+        name: "Restaurant",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      # Should be a NEW entry (not claimed)
+      assert_not_equal pending_entry.id, posted_entry.id
+      assert_equal "simplefin_posted_amount_test", posted_entry.external_id
+
+      # The PENDING entry should now have a potential_posted_match suggestion
+      pending_entry.reload
+      assert pending_entry.transaction.has_potential_duplicate?
+      assert_equal posted_entry.id, pending_entry.transaction.potential_duplicate_entry.id
+    end
+  end
+
+  test "does not reconcile pending when amount difference exceeds tolerance" do
+    # Import pending transaction
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_pending_big_diff",
+      amount: 50.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Store",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import posted with amount >25% different - should NOT match
+    # $100 posted / 1.25 = $80 minimum pending, but pending is only $50
+    assert_difference "@account.entries.count", 1 do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_big_diff",
+        amount: 100.00, # 100% increase - way outside 25% tolerance
+        currency: "USD",
+        date: Date.today,
+        name: "Store",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_not_equal pending_entry.id, posted_entry.id
+    end
+  end
+
+  test "does not reconcile pending when date is outside window" do
+    # Import pending transaction
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_pending_date_test",
+      amount: 25.00,
+      currency: "USD",
+      date: Date.today - 15.days, # 15 days ago
+      name: "Subscription",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import posted with date outside 7-day window - should NOT match
+    assert_difference "@account.entries.count", 1 do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_date_test",
+        amount: 25.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Subscription",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_not_equal pending_entry.id, posted_entry.id
+    end
+  end
+
+  test "reconciles pending within 7 day window" do
+    # Import pending transaction
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_pending_window_test",
+      amount: 75.00,
+      currency: "USD",
+      date: Date.today - 5.days,
+      name: "Online Order",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import posted within 7-day window - should match
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_window_test",
+        amount: 75.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Online Order - Posted",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_equal pending_entry.id, posted_entry.id
+    end
+  end
+
+  test "does not reconcile pending from different source" do
+    # Import pending from SimpleFIN
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_pending_source_test",
+      amount: 30.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Pharmacy",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import from different source (plaid) - should NOT match SimpleFIN pending
+    assert_difference "@account.entries.count", 1 do
+      plaid_entry = @adapter.import_transaction(
+        external_id: "plaid_posted_source_test",
+        amount: 30.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Pharmacy",
+        source: "plaid",
+        extra: { "plaid" => { "pending" => false } }
+      )
+
+      assert_not_equal pending_entry.id, plaid_entry.id
+    end
+  end
+
+  test "does not reconcile when incoming transaction is also pending" do
+    # Import first pending transaction
+    pending_entry1 = @adapter.import_transaction(
+      external_id: "simplefin_pending_1",
+      amount: 45.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Store",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import another pending transaction with different ID - should NOT match
+    assert_difference "@account.entries.count", 1 do
+      pending_entry2 = @adapter.import_transaction(
+        external_id: "simplefin_pending_2",
+        amount: 45.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Store",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => true } }
+      )
+
+      assert_not_equal pending_entry1.id, pending_entry2.id
+    end
+  end
+
+  test "reconciles most recent pending when multiple exist" do
+    # Create two pending transactions with same amount
+    older_pending = @adapter.import_transaction(
+      external_id: "simplefin_older_pending",
+      amount: 60.00,
+      currency: "USD",
+      date: Date.today - 5.days,
+      name: "Recurring Payment - Old",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    newer_pending = @adapter.import_transaction(
+      external_id: "simplefin_newer_pending",
+      amount: 60.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Recurring Payment - New",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Import posted - should match the most recent pending (by date)
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_recurring",
+        amount: 60.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Recurring Payment - Posted",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      # Should match the newer pending entry
+      assert_equal newer_pending.id, posted_entry.id
+      # Older pending should remain untouched
+      assert_equal "simplefin_older_pending", older_pending.reload.external_id
+    end
+  end
+
+  test "find_pending_transaction returns nil when no pending transactions exist" do
+    # Create a non-pending transaction
+    @adapter.import_transaction(
+      external_id: "simplefin_not_pending",
+      amount: 40.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Regular Transaction",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => false } }
+    )
+
+    result = @adapter.find_pending_transaction(
+      date: Date.today,
+      amount: 40.00,
+      currency: "USD",
+      source: "simplefin"
+    )
+
+    assert_nil result
+  end
+
+  # ============================================================================
+  # Critical Direction Fix Tests (CITGO Bug Prevention)
+  # ============================================================================
+
+  test "does not match pending transaction that is AFTER the posted date (direction fix)" do
+    # This is the CITGO bug scenario:
+    # - Posted transaction on Dec 31
+    # - Pending transaction on Jan 8 (AFTER the posted)
+    # - These should NOT match because pending MUST come BEFORE posted
+
+    # First, import a POSTED transaction on an earlier date
+    posted_entry = @adapter.import_transaction(
+      external_id: "simplefin_posted_dec31",
+      amount: 6.67,
+      currency: "USD",
+      date: Date.today - 8.days, # Dec 31 (earlier)
+      name: "CITGO Gas Station",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => false } }
+    )
+
+    # Now import a PENDING transaction on a LATER date
+    # This should NOT be matched because the date direction is wrong
+    assert_difference "@account.entries.count", 1 do
+      pending_entry = @adapter.import_transaction(
+        external_id: "simplefin_pending_jan8",
+        amount: 6.65, # Similar but different amount
+        currency: "USD",
+        date: Date.today, # Jan 8 (later)
+        name: "CITGO Gas Station",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => true } }
+      )
+
+      # Should be a DIFFERENT entry - not matched to the earlier posted one
+      assert_not_equal posted_entry.id, pending_entry.id
+      assert pending_entry.transaction.pending?
+    end
+  end
+
+  test "find_pending_transaction only searches backward in time" do
+    # Create a pending transaction in the FUTURE (after the posted date we'll search from)
+    # This should NOT be found because pending must be ON or BEFORE posted
+    future_pending = @adapter.import_transaction(
+      external_id: "simplefin_future_pending",
+      amount: 50.00,
+      currency: "USD",
+      date: Date.today + 3.days, # Future date
+      name: "Future Transaction",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Search from today - should NOT find the future pending
+    result = @adapter.find_pending_transaction(
+      date: Date.today,
+      amount: 50.00,
+      currency: "USD",
+      source: "simplefin"
+    )
+
+    assert_nil result, "Should not find pending transactions that are in the future relative to the posted date"
+  end
+
+  test "find_pending_transaction finds pending transaction that is before posted date" do
+    # Create a pending transaction in the PAST (before the posted date)
+    # This SHOULD be found
+    past_pending = @adapter.import_transaction(
+      external_id: "simplefin_past_pending",
+      amount: 75.00,
+      currency: "USD",
+      date: Date.today - 3.days, # 3 days ago
+      name: "Past Transaction",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # Search from today - should find the past pending
+    result = @adapter.find_pending_transaction(
+      date: Date.today,
+      amount: 75.00,
+      currency: "USD",
+      source: "simplefin"
+    )
+
+    assert_equal past_pending.id, result.id
+  end
+
+  # ============================================================================
+  # Plaid pending_transaction_id Tests
+  # ============================================================================
+
+  test "reconciles pending via Plaid pending_transaction_id" do
+    # Import a pending transaction
+    pending_entry = @adapter.import_transaction(
+      external_id: "plaid_pending_abc",
+      amount: 42.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "Coffee Shop",
+      source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+
+    # Import posted with pending_transaction_id linking to the pending
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "plaid_posted_xyz",
+        amount: 42.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Coffee Shop",
+        source: "plaid",
+        pending_transaction_id: "plaid_pending_abc", # Links to pending
+        extra: { "plaid" => { "pending" => false, "pending_transaction_id" => "plaid_pending_abc" } }
+      )
+
+      # Should claim the pending entry
+      assert_equal pending_entry.id, posted_entry.id
+      assert_equal "plaid_posted_xyz", posted_entry.external_id
+      assert_not posted_entry.transaction.pending?
+    end
+  end
+
+  test "Plaid pending_transaction_id takes priority over amount matching" do
+    # Create TWO pending transactions with same amount
+    pending1 = @adapter.import_transaction(
+      external_id: "plaid_pending_1",
+      amount: 25.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Store A",
+      source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+
+    pending2 = @adapter.import_transaction(
+      external_id: "plaid_pending_2",
+      amount: 25.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Store B",
+      source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+
+    # Import posted that explicitly links to pending2 via pending_transaction_id
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "plaid_posted_linked",
+        amount: 25.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Store B",
+        source: "plaid",
+        pending_transaction_id: "plaid_pending_2", # Explicitly links to pending2
+        extra: { "plaid" => { "pending" => false } }
+      )
+
+      # Should claim pending2 specifically (not pending1)
+      assert_equal pending2.id, posted_entry.id
+      assert_equal "plaid_posted_linked", posted_entry.external_id
+    end
+
+    # pending1 should still exist as pending
+    pending1.reload
+    assert_equal "plaid_pending_1", pending1.external_id
   end
 end

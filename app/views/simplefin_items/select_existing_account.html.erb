@@ -1,0 +1,43 @@
+<%# Modal: Link an existing manual account to a SimpleFIN account %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "Link SimpleFIN account") %>
+
+    <% dialog.with_body do %>
+      <% if @available_simplefin_accounts.blank? %>
+        <div class="p-4 text-sm text-secondary">
+          <p class="mb-2"><%= t("simplefin_items.select_existing_account.no_accounts_found") %></p>
+          <ul class="list-disc list-inside space-y-1">
+            <li><%= t("simplefin_items.select_existing_account.wait_for_sync") %></li>
+            <li><%= t("simplefin_items.select_existing_account.check_provider_health") %></li>
+          </ul>
+        </div>
+      <% else %>
+        <%= form_with url: link_existing_account_simplefin_items_path, method: :post, class: "space-y-4" do %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <div class="space-y-2 max-h-64 overflow-auto">
+            <% @available_simplefin_accounts.each do |sfa| %>
+              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+                <%= radio_button_tag :simplefin_account_id, sfa.id, false %>
+                <div class="flex flex-col">
+                  <span class="text-sm text-primary font-medium"><%= sfa.name.presence || sfa.account_id %></span>
+                  <span class="text-xs text-secondary">
+                    <%= sfa.currency %> • Balance: <%= number_to_currency((sfa.current_balance || sfa.available_balance || 0), unit: sfa.currency) %>
+                  </span>
+                  <% if sfa.current_account.present? %>
+                    <span class="text-xs text-secondary"><%= t("simplefin_items.select_existing_account.currently_linked_to", account_name: sfa.current_account.name) %></span>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -4,32 +4,45 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
+    <div class="flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
 
-      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
+      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
-            class: "checkbox checkbox--light",
+            class: "checkbox checkbox--light hidden lg:block",
             data: {
               id: entry.id,
               "bulk-select-target": "row",
-              action: "bulk-select#toggleRowSelection"
+              action: "bulk-select#toggleRowSelection",
+              checkbox_toggle_target: "selectionEntry"
             } %>
 
         <div class="max-w-full">
-          <%= content_tag :div, class: ["flex items-center gap-2"] do %>
-            <% if transaction.merchant&.logo_url.present? %>
-              <%= image_tag transaction.merchant.logo_url,
-                  class: "w-6 h-6 rounded-full",
-                  loading: "lazy" %>
-            <% else %>
-              <%= render DS::FilledIcon.new(
-                variant: :text,
-                text: entry.name,
-                size: "sm",
-                rounded: true
-              ) %>
-            <% end %>
+          <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
+            <div class="hidden lg:flex">
+              <% if transaction.merchant&.logo_url.present? %>
+                <%= image_tag transaction.merchant.logo_url,
+                    class: "w-9 h-9 rounded-full",
+                    loading: "lazy" %>
+              <% else %>
+                <div class="hidden lg:flex">
+                  <%= render DS::FilledIcon.new(
+                    variant: :text,
+                    text: entry.name,
+                    size: "lg",
+                    rounded: true
+                  ) %>
+                </div>
+              <% end %>
+            </div>
+            <div class="flex md:hidden items-center gap-1 col-span-2 relative">
+              <%= render "transactions/transaction_category", transaction: transaction %>
+              <% if transaction.merchant&.logo_url.present? %>
+                <%= image_tag transaction.merchant.logo_url,
+                    class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
+                    loading: "lazy" %>
+              <% end %>
+            </div>
 
             <div class="truncate">
               <div class="space-y-0.5">
@@ -65,22 +78,56 @@
                       </span>
                     <% end %>
 
+                    <%# Pending indicator %>
+                    <% if transaction.pending? %>
+                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
+                        <%= icon "clock", size: "sm", color: "current" %>
+                        <%= t("transactions.transaction.pending") %>
+                      </span>
+                    <% end %>
+
+                    <%# Potential duplicate indicator - different styling for low vs medium confidence %>
+                    <% if transaction.has_potential_duplicate? %>
+                      <% if transaction.low_confidence_duplicate? %>
+                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t("transactions.transaction.review_recommended_tooltip") %>">
+                          <%= icon "help-circle", size: "sm", color: "current" %>
+                          <%= t("transactions.transaction.review_recommended") %>
+                        </span>
+                      <% else %>
+                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-warning bg-warning/10 text-warning" title="<%= t("transactions.transaction.potential_duplicate_tooltip") %>">
+                          <%= icon "alert-triangle", size: "sm", color: "current" %>
+                          <%= t("transactions.transaction.possible_duplicate") %>
+                        </span>
+                      <% end %>
+                    <% end %>
+
                     <% if transaction.transfer.present? %>
                       <%= render "transactions/transfer_match", transaction: transaction %>
                     <% end %>
                   </div>
                 </div>
 
-                <div class="text-secondary text-xs font-normal hidden lg:block">
+                <div class="text-secondary text-xs font-normal">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
-                      <%= transaction.loan_payment? ? "Loan Payment" : "Transfer" %> • <%= entry.account.name %>
+                      <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> • <%= entry.account.name %>
                     </span>
                   <% else %>
-                    <%= link_to entry.account.name,
-                        account_path(entry.account, tab: "transactions"),
-                        data: { turbo_frame: "_top" },
-                        class: "hover:underline" %>
+                    <% if transaction.merchant&.present? %>
+                      <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
+                    <% end %>
+                    <span class="text-secondary hidden lg:inline">
+                      <%= link_to entry.account.name,
+                          account_path(entry.account, tab: "transactions"),
+                          data: { turbo_frame: "_top" },
+                          class: "hover:underline" %>
+                    </span>
+                    <div class="flex items-center gap-1 truncate">
+                      <%= render "categories/category_name_mobile", transaction: transaction %>
+                      <% if transaction.merchant&.present? %>
+                        <span class="lg:hidden truncate">• <%= transaction.merchant.name %></span>
+                      <% end %>
+                    </div>
                   <% end %>
                 </div>
               </div>
@@ -89,11 +136,11 @@
         </div>
       </div>
 
-      <div class="hidden lg:flex items-center gap-1 col-span-2">
+      <div class="hidden md:flex items-center gap-1 col-span-2">
         <%= render "transactions/transaction_category", transaction: transaction %>
       </div>
 
-      <div class="col-span-2 ml-auto text-right">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
         <%= content_tag :p,
             transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
             class: ["text-green-600": entry.amount.negative?] %>

@@ -11,6 +11,8 @@
 @import "./simonweb_pickr.css";
 
 @import "./google-sign-in.css";
+@import "./date-picker-dark-mode.css";
+@import "./print-report.css";
 
 @layer components {
   .pcr-app{
@@ -174,6 +176,15 @@
   &::-webkit-scrollbar-thumb:hover {
     background: #a6a6a6;
   }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display:none
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width:none
 }
 
 .invite_code [data-clipboard-target="iconDefault"],

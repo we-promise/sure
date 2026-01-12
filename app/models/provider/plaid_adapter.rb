@@ -17,6 +17,67 @@ class Provider::PlaidAdapter < Provider::Base
   # Register this adapter with the factory for ALL PlaidAccount instances
   Provider::Factory.register("PlaidAccount", self)
 
+  # Define which account types this provider supports (US region)
+  def self.supported_account_types
+    %w[Depository CreditCard Loan Investment]
+  end
+
+  # Returns connection configurations for this provider
+  # Plaid can return multiple configs (US and EU) depending on family setup
+  def self.connection_configs(family:)
+    configs = []
+
+    # US configuration
+    if family.can_connect_plaid_us?
+      configs << {
+        key: "plaid_us",
+        name: "Plaid",
+        description: "Connect to your US bank via Plaid",
+        can_connect: true,
+        new_account_path: ->(accountable_type, return_to) {
+          Rails.application.routes.url_helpers.new_plaid_item_path(
+            region: "us",
+            accountable_type: accountable_type
+          )
+        },
+        existing_account_path: ->(account_id) {
+          Rails.application.routes.url_helpers.select_existing_account_plaid_items_path(
+            account_id: account_id,
+            region: "us"
+          )
+        }
+      }
+    end
+
+    # EU configuration
+    if family.can_connect_plaid_eu?
+      configs << {
+        key: "plaid_eu",
+        name: "Plaid (EU)",
+        description: "Connect to your EU bank via Plaid",
+        can_connect: true,
+        new_account_path: ->(accountable_type, return_to) {
+          Rails.application.routes.url_helpers.new_plaid_item_path(
+            region: "eu",
+            accountable_type: accountable_type
+          )
+        },
+        existing_account_path: ->(account_id) {
+          Rails.application.routes.url_helpers.select_existing_account_plaid_items_path(
+            account_id: account_id,
+            region: "eu"
+          )
+        }
+      }
+    end
+
+    configs
+  end
+
+  # Mutex for thread-safe configuration loading
+  # Initialized at class load time to avoid race conditions on mutex creation
+  @config_mutex = Mutex.new
+
   # Configuration for Plaid US
   configure do
     description <<~DESC
@@ -45,10 +106,28 @@ class Provider::PlaidAdapter < Provider::Base
           env_key: "PLAID_ENV",
           default: "sandbox",
           description: "Plaid environment: sandbox, development, or production"
+
+    # Plaid requires both client_id and secret to be configured
+    configured_check { get_value(:client_id).present? && get_value(:secret).present? }
   end
 
   def provider_name
     "plaid"
+  end
+
+  # Thread-safe lazy loading of Plaid US configuration
+  # Ensures configuration is loaded exactly once even under concurrent access
+  def self.ensure_configuration_loaded
+    # Fast path: return immediately if already loaded (no lock needed)
+    return if Rails.application.config.plaid.present?
+
+    # Slow path: acquire lock and reload if still needed
+    @config_mutex.synchronize do
+      # Double-check after acquiring lock (another thread may have loaded it)
+      return if Rails.application.config.plaid.present?
+
+      reload_configuration
+    end
   end
 
   # Reload Plaid US configuration when settings are updated

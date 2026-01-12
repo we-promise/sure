@@ -9,11 +9,29 @@ class SimplefinAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :account_type, :currency, presence: true
+  validates :account_id, uniqueness: { scope: :simplefin_item_id, allow_nil: true }
   validate :has_balance
 
   # Helper to get account using new system first, falling back to legacy
   def current_account
     linked_account || account
+  end
+
+  # Ensure there is an AccountProvider link for this SimpleFin account and its current Account.
+  # Safe and idempotent; returns the AccountProvider or nil if no account is associated yet.
+  def ensure_account_provider!
+    acct = current_account
+    return nil unless acct
+
+    AccountProvider
+      .find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: id)
+      .tap do |provider|
+        provider.account = acct
+        provider.save!
+      end
+  rescue => e
+    Rails.logger.warn("SimplefinAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
+    nil
   end
 
   def upsert_simplefin_snapshot!(account_snapshot)
@@ -62,7 +80,7 @@ class SimplefinAccount < ApplicationRecord
     end
 
     def parse_currency(currency_value)
-      return "USD" if currency_value.nil?
+      return "USD" if currency_value.blank?
 
       # SimpleFin currency can be a 3-letter code or a URL for custom currencies
       if currency_value.start_with?("http")

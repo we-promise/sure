@@ -12,6 +12,9 @@ class Import::ConfigurationsController < ApplicationController
     @import.reload.sync_mappings
 
     redirect_to import_clean_path(@import), notice: "Import configured successfully."
+  rescue ActiveRecord::RecordInvalid => e
+    message = e.record.errors.full_messages.to_sentence.presence || e.message
+    redirect_back_or_to import_configuration_path(@import), alert: message
   end
 
   private
@@ -20,7 +23,7 @@ class Import::ConfigurationsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(
+      params.fetch(:import, {}).permit(
         :date_col_label,
         :amount_col_label,
         :name_col_label,

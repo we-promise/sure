@@ -42,7 +42,7 @@
 
             <div class="flex flex-wrap gap-2 justify-center flex-col w-auto md:w-87">
               <h4 class="text-secondary text-sm">Icon</h4>
-              <div class="flex flex-wrap gap-0.5">
+              <div class="flex flex-wrap gap-0.5 max-h-52 overflow-auto">
                 <% Category.icon_codes.each do |icon| %>
                   <label class="relative">
                     <%= f.radio_button :lucide_icon, icon, class: "sr-only peer", data: { action: "change->category#handleIconChange change->category#handleIconColorChange", category_target:"icon" } %>

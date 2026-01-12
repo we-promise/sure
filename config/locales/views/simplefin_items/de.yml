@@ -1,0 +1,53 @@
+---
+de:
+  simplefin_items:
+    new:
+      title: SimpleFin verbinden
+      setup_token: Setup-Token
+      setup_token_placeholder: Füge dein SimpleFin-Setup-Token ein
+      connect: Verbinden
+      cancel: Abbrechen
+    create:
+      success: SimpleFin-Verbindung erfolgreich hinzugefügt! Deine Konten werden in Kürze angezeigt, sobald sie im Hintergrund synchronisiert wurden.
+      errors:
+        blank_token: Bitte gib ein SimpleFin-Setup-Token ein.
+        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFin Bridge kopiert hast.
+        token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
+        create_failed: "Verbindung konnte nicht hergestellt werden: %{message}"
+        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere den Support.
+    destroy:
+      success: SimpleFin-Verbindung wird entfernt.
+    update:
+      success: SimpleFin-Verbindung erfolgreich aktualisiert! Deine Konten werden neu verbunden.
+      errors:
+        blank_token: Bitte gib ein SimpleFin-Setup-Token ein.
+        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFin Bridge kopiert hast.
+        token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
+        update_failed: "Verbindung konnte nicht aktualisiert werden: %{message}"
+        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere den Support.
+    edit:
+      setup_token:
+        label: "SimpleFin-Setup-Token:"
+        placeholder: "Füge hier dein SimpleFin-Setup-Token ein..."
+        help_text: "Das Token sollte eine lange Zeichenfolge aus Buchstaben und Zahlen sein."
+    complete_account_setup:
+      success: SimpleFin-Konten wurden erfolgreich eingerichtet! Deine Transaktionen und Positionen werden im Hintergrund importiert.
+    simplefin_item:
+      add_new: Neue Verbindung hinzufügen
+      confirm_accept: Verbindung löschen
+      confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen Daten dauerhaft gelöscht.
+      confirm_title: SimpleFin-Verbindung löschen?
+      delete: Löschen
+      deletion_in_progress: "(Löschung läuft...)"
+      error: Beim Synchronisieren der Daten ist ein Fehler aufgetreten.
+      no_accounts_description: Diese Verbindung enthält noch keine synchronisierten Konten.
+      no_accounts_title: Keine Konten gefunden
+      requires_update: Erneute Authentifizierung erforderlich
+      setup_needed: Neue Konten bereit zur Einrichtung
+      setup_description: Wähle die Kontotypen für deine neu importierten SimpleFin-Konten aus.
+      setup_action: Neue Konten einrichten
+      status: Zuletzt vor %{timestamp} synchronisiert
+      status_never: Noch nie synchronisiert
+      status_with_summary: "Zuletzt vor %{timestamp} synchronisiert • %{summary}"
+      syncing: Wird synchronisiert...
+      update: Verbindung aktualisieren

@@ -74,3 +74,14 @@ intro_user:
   show_sidebar: false
   show_ai_sidebar: false
   ui_layout: intro
+
+# SSO-only user: created via JIT provisioning, no local password
+sso_only:
+  family: empty
+  first_name: SSO
+  last_name: User
+  email: sso-user@example.com
+  password_digest: ~
+  role: admin
+  onboarded_at: <%= 1.day.ago %>
+  ai_enabled: true

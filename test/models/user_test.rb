@@ -167,5 +167,182 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.show_sidebar?
     assert_not user.show_ai_sidebar?
     assert user.ai_enabled?
+  test "update_dashboard_preferences handles concurrent updates atomically" do
+    @user.update!(preferences: {})
+
+    # Simulate concurrent updates from multiple requests
+    # Each thread collapses a different section simultaneously
+    threads = []
+    sections = %w[net_worth_chart outflows_donut cashflow_sankey balance_sheet]
+
+    sections.each_with_index do |section, index|
+      threads << Thread.new do
+        # Small staggered delays to increase chance of race conditions
+        sleep(index * 0.01)
+
+        # Each thread loads its own instance and updates
+        user = User.find(@user.id)
+        user.update_dashboard_preferences({
+          "collapsed_sections" => { section => true }
+        })
+      end
+    end
+
+    # Wait for all threads to complete
+    threads.each(&:join)
+
+    # Verify all updates persisted (no data loss from race conditions)
+    @user.reload
+    sections.each do |section|
+      assert @user.dashboard_section_collapsed?(section),
+        "Expected #{section} to be collapsed, but it was not. " \
+        "Preferences: #{@user.preferences.inspect}"
+    end
+
+    # Verify all sections are in the preferences hash
+    assert_equal sections.sort,
+      @user.preferences.dig("collapsed_sections")&.keys&.sort,
+      "Expected all sections to be in preferences"
+  end
+
+  test "update_dashboard_preferences merges nested hashes correctly" do
+    @user.update!(preferences: {})
+
+    # First update: collapse net_worth
+    @user.update_dashboard_preferences({
+      "collapsed_sections" => { "net_worth_chart" => true }
+    })
+    @user.reload
+
+    assert @user.dashboard_section_collapsed?("net_worth_chart")
+    assert_not @user.dashboard_section_collapsed?("outflows_donut")
+
+    # Second update: collapse outflows (should preserve net_worth)
+    @user.update_dashboard_preferences({
+      "collapsed_sections" => { "outflows_donut" => true }
+    })
+    @user.reload
+
+    assert @user.dashboard_section_collapsed?("net_worth_chart"),
+      "First collapsed section should still be collapsed"
+    assert @user.dashboard_section_collapsed?("outflows_donut"),
+      "Second collapsed section should be collapsed"
+  end
+
+  test "update_dashboard_preferences handles section_order updates" do
+    @user.update!(preferences: {})
+
+    # Set initial order
+    new_order = %w[outflows_donut net_worth_chart cashflow_sankey balance_sheet]
+    @user.update_dashboard_preferences({ "section_order" => new_order })
+    @user.reload
+
+    assert_equal new_order, @user.dashboard_section_order
+  end
+
+  test "handles empty preferences gracefully for dashboard methods" do
+    @user.update!(preferences: {})
+
+    # dashboard_section_collapsed? should return false when key is missing
+    assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
+      "Should return false when collapsed_sections key is missing"
+
+    # dashboard_section_order should return default order when key is missing
+    assert_equal %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet],
+      @user.dashboard_section_order,
+      "Should return default order when section_order key is missing"
+
+    # update_dashboard_preferences should work with empty preferences
+    @user.update_dashboard_preferences({ "section_order" => %w[balance_sheet] })
+    @user.reload
+
+    assert_equal %w[balance_sheet], @user.preferences["section_order"]
+  end
+
+  test "handles empty preferences gracefully for reports methods" do
+    @user.update!(preferences: {})
+
+    # reports_section_collapsed? should return false when key is missing
+    assert_not @user.reports_section_collapsed?("trends_insights"),
+      "Should return false when reports_collapsed_sections key is missing"
+
+    # reports_section_order should return default order when key is missing
+    assert_equal %w[trends_insights transactions_breakdown],
+      @user.reports_section_order,
+      "Should return default order when reports_section_order key is missing"
+
+    # update_reports_preferences should work with empty preferences
+    @user.update_reports_preferences({ "reports_section_order" => %w[transactions_breakdown] })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown], @user.preferences["reports_section_order"]
+  end
+
+  test "handles missing nested keys in preferences for collapsed sections" do
+    @user.update!(preferences: { "section_order" => %w[cashflow] })
+
+    # Should return false when collapsed_sections key is missing entirely
+    assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
+      "Should return false when collapsed_sections key is missing"
+
+    # Should return false when section_key is missing from collapsed_sections
+    @user.update!(preferences: { "collapsed_sections" => {} })
+    assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
+      "Should return false when section key is missing from collapsed_sections"
+  end
+
+  # SSO-only user security tests
+  test "sso_only? returns true for user with OIDC identity and no password" do
+    sso_user = users(:sso_only)
+    assert_nil sso_user.password_digest
+    assert sso_user.oidc_identities.exists?
+    assert sso_user.sso_only?
+  end
+
+  test "sso_only? returns false for user with password and OIDC identity" do
+    # family_admin has both password and OIDC identity
+    assert @user.password_digest.present?
+    assert @user.oidc_identities.exists?
+    assert_not @user.sso_only?
+  end
+
+  test "sso_only? returns false for user with password but no OIDC identity" do
+    user_without_oidc = users(:empty)
+    assert user_without_oidc.password_digest.present?
+    assert_not user_without_oidc.oidc_identities.exists?
+    assert_not user_without_oidc.sso_only?
+  end
+
+  test "has_local_password? returns true when password_digest is present" do
+    assert @user.has_local_password?
+  end
+
+  test "has_local_password? returns false when password_digest is nil" do
+    sso_user = users(:sso_only)
+    assert_not sso_user.has_local_password?
+  end
+
+  test "user can be created without password when skip_password_validation is true" do
+    user = User.new(
+      email: "newssuser@example.com",
+      first_name: "New",
+      last_name: "SSO User",
+      skip_password_validation: true,
+      family: families(:empty)
+    )
+    assert user.valid?, user.errors.full_messages.to_sentence
+    assert user.save
+    assert_nil user.password_digest
+  end
+
+  test "user requires password on create when skip_password_validation is false" do
+    user = User.new(
+      email: "needspassword@example.com",
+      first_name: "Needs",
+      last_name: "Password",
+      family: families(:empty)
+    )
+    assert_not user.valid?
+    assert_includes user.errors[:password], "can't be blank"
   end
 end

@@ -55,6 +55,45 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry2.transaction.category
   end
 
+  test "exclude transaction rule" do
+    transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
+
+    assert_not transaction_entry.excluded, "Transaction should not be excluded initially"
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: @whole_foods_merchant.id) ],
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+
+    assert transaction_entry.excluded, "Transaction should be excluded after rule applies"
+  end
+
+  test "exclude transaction rule respects attribute locks" do
+    transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
+    transaction_entry.lock_attr!(:excluded)
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: @whole_foods_merchant.id) ],
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+
+    assert_not transaction_entry.excluded, "Transaction should not be excluded when attribute is locked"
+  end
+
   # Artificial limitation put in place to prevent users from creating overly complex rules
   # Rules should be shallow and wide
   test "no nested compound conditions" do
@@ -73,5 +112,128 @@ class RuleTest < ActiveSupport::TestCase
 
     assert_not rule.valid?
     assert_equal [ "Compound conditions cannot be nested" ], rule.errors.full_messages
+  end
+
+  test "rule matching on transaction details" do
+    # Create PayPal transaction with underlying merchant in details
+    paypal_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "PayPal",
+      amount: 50
+    )
+    paypal_entry.transaction.update!(
+      extra: {
+        "simplefin" => {
+          "payee" => "Whole Foods via PayPal",
+          "description" => "Grocery shopping"
+        }
+      }
+    )
+
+    # Create another PayPal transaction with different underlying merchant
+    paypal_entry2 = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "PayPal",
+      amount: 100
+    )
+    paypal_entry2.transaction.update!(
+      extra: {
+        "simplefin" => {
+          "payee" => "Amazon via PayPal"
+        }
+      }
+    )
+
+    # Rule to categorize PayPal transactions containing "Whole Foods" in details
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_details", operator: "like", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    rule.apply
+
+    paypal_entry.reload
+    paypal_entry2.reload
+
+    assert_equal @groceries_category, paypal_entry.transaction.category, "PayPal transaction with 'Whole Foods' in details should be categorized"
+    assert_nil paypal_entry2.transaction.category, "PayPal transaction without 'Whole Foods' in details should not be categorized"
+  end
+
+  test "rule matching on transaction notes" do
+    # Create transaction with notes
+    transaction_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "Expense",
+      amount: 50
+    )
+    transaction_entry.update!(notes: "Business lunch with client")
+
+    # Create another transaction without relevant notes
+    transaction_entry2 = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "Expense",
+      amount: 100
+    )
+    transaction_entry2.update!(notes: "Personal expense")
+
+    # Rule to categorize transactions with "business" in notes
+    business_category = @family.categories.create!(name: "Business")
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_notes", operator: "like", value: "business") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: business_category.id) ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+    transaction_entry2.reload
+
+    assert_equal business_category, transaction_entry.transaction.category, "Transaction with 'business' in notes should be categorized"
+    assert_nil transaction_entry2.transaction.category, "Transaction without 'business' in notes should not be categorized"
+  end
+
+  test "total_affected_resource_count deduplicates overlapping rules" do
+    # Create transactions
+    transaction_entry1 = create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 50)
+    transaction_entry2 = create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 100)
+    transaction_entry3 = create_transaction(date: Date.current, account: @account, name: "Target", amount: 75)
+
+    # Rule 1: Match transactions with name "Whole Foods" (matches txn 1 and 2)
+    rule1 = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    # Rule 2: Match transactions with amount > 60 (matches txn 2 and 3)
+    rule2 = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: 60) ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    # Rule 1 affects 2 transactions, Rule 2 affects 2 transactions
+    # But transaction_entry2 is matched by both, so total unique should be 3
+    assert_equal 2, rule1.affected_resource_count
+    assert_equal 2, rule2.affected_resource_count
+    assert_equal 3, Rule.total_affected_resource_count([ rule1, rule2 ])
+  end
+
+  test "total_affected_resource_count returns zero for empty rules" do
+    assert_equal 0, Rule.total_affected_resource_count([])
   end
 end

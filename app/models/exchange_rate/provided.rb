@@ -3,7 +3,7 @@ module ExchangeRate::Provided
 
   class_methods do
     def provider
-      provider = ENV["EXCHANGE_RATE_PROVIDER"] || "twelve_data"
+      provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
       registry = Provider::Registry.for_concept(:exchange_rates)
       registry.get_provider(provider.to_sym)
     end
@@ -19,12 +19,23 @@ module ExchangeRate::Provided
       return nil unless response.success? # Provider error
 
       rate = response.data
-      ExchangeRate.find_or_create_by!(
-        from_currency: rate.from,
-        to_currency: rate.to,
-        date: rate.date,
-        rate: rate.rate
-      ) if cache
+      begin
+        ExchangeRate.find_or_create_by!(
+          from_currency: rate.from,
+          to_currency: rate.to,
+          date: rate.date
+        ) do |exchange_rate|
+          exchange_rate.rate = rate.rate
+        end if cache
+      rescue ActiveRecord::RecordNotUnique
+        # Race condition: another process inserted between our SELECT and INSERT
+        # Retry by finding the existing record
+        ExchangeRate.find_by!(
+          from_currency: rate.from,
+          to_currency: rate.to,
+          date: rate.date
+        ) if cache
+      end
       rate
     end
 

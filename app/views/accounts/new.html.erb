@@ -1,5 +1,8 @@
 <%= render layout: "accounts/new/container", locals: { title: t(".title") } do %>
-  <div class="text-sm">
+  <div class="text-sm"
+       <% if @provider_configs.any? { |c| c[:key] == "lunchflow" } %>
+         data-controller="lunchflow-preload"
+       <% end %>>
     <% unless params[:classification] == "liability" %>
       <%= render "account_type", accountable: Depository.new %>
       <%= render "account_type", accountable: Investment.new %>

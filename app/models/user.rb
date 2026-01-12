@@ -1,5 +1,7 @@
 class User < ApplicationRecord
-  has_secure_password
+  # Allow nil password for SSO-only users (JIT provisioning).
+  # Custom validation ensures password is present for non-SSO registration.
+  has_secure_password validations: false
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
@@ -17,6 +19,11 @@ class User < ApplicationRecord
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
   validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
+
+  # Password is required on create unless the user is being created via SSO JIT.
+  # SSO JIT users have password_digest = nil and authenticate via OIDC only.
+  validates :password, presence: true, on: :create, unless: :skip_password_validation?
+  validates :password, length: { minimum: 8 }, allow_nil: true
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
 
@@ -48,7 +55,6 @@ class User < ApplicationRecord
 
   def initiate_email_change(new_email)
     return false if new_email == email
-    return false if new_email == unconfirmed_email
 
     if Rails.application.config.app_mode.self_hosted? && !Setting.require_email_confirmation
       update(email: new_email)
@@ -59,6 +65,15 @@ class User < ApplicationRecord
       else
         false
       end
+    end
+  end
+
+  def resend_confirmation_email
+    if pending_email_change?
+      EmailConfirmationMailer.with(user: self).confirmation_email.deliver_later
+      true
+    else
+      false
     end
   end
 
@@ -103,6 +118,20 @@ class User < ApplicationRecord
     layout = Rails.application.config.x.ui&.default_layout || "dashboard"
     layout.in?(%w[intro dashboard]) ? layout : "dashboard"
   end
+
+  # SSO-only users have OIDC identities but no local password.
+  # They cannot use password reset or local login.
+  def sso_only?
+    password_digest.nil? && oidc_identities.exists?
+  end
+
+  # Check if user has a local password set (can authenticate locally)
+  def has_local_password?
+    password_digest.present?
+  end
+
+  # Attribute to skip password validation during SSO JIT provisioning
+  attr_accessor :skip_password_validation
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
@@ -177,6 +206,86 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  # Dashboard preferences management
+  def dashboard_section_collapsed?(section_key)
+    preferences&.dig("collapsed_sections", section_key) == true
+  end
+
+  def dashboard_section_order
+    preferences&.[]("section_order") || default_dashboard_section_order
+  end
+
+  def update_dashboard_preferences(prefs)
+    # Use pessimistic locking to ensure atomic read-modify-write
+    # This prevents race conditions when multiple sections are collapsed quickly
+    transaction do
+      lock! # Acquire row-level lock (SELECT FOR UPDATE)
+
+      updated_prefs = (preferences || {}).deep_dup
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          updated_prefs[key] ||= {}
+          updated_prefs[key] = updated_prefs[key].merge(value)
+        else
+          updated_prefs[key] = value
+        end
+      end
+
+      update!(preferences: updated_prefs)
+    end
+  end
+
+  # Reports preferences management
+  def reports_section_collapsed?(section_key)
+    preferences&.dig("reports_collapsed_sections", section_key) == true
+  end
+
+  def reports_section_order
+    preferences&.[]("reports_section_order") || default_reports_section_order
+  end
+
+  def update_reports_preferences(prefs)
+    # Use pessimistic locking to ensure atomic read-modify-write
+    transaction do
+      lock!
+
+      updated_prefs = (preferences || {}).deep_dup
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          updated_prefs[key] ||= {}
+          updated_prefs[key] = updated_prefs[key].merge(value)
+        else
+          updated_prefs[key] = value
+        end
+      end
+
+      update!(preferences: updated_prefs)
+    end
+  end
+
+  # Transactions preferences management
+  def transactions_section_collapsed?(section_key)
+    preferences&.dig("transactions_collapsed_sections", section_key) == true
+  end
+
+  def update_transactions_preferences(prefs)
+    transaction do
+      lock!
+
+      updated_prefs = (preferences || {}).deep_dup
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          updated_prefs["transactions_#{key}"] ||= {}
+          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
+        else
+          updated_prefs["transactions_#{key}"] = value
+        end
+      end
+
+      update!(preferences: updated_prefs)
+    end
+  end
+
   private
     def apply_ui_layout_defaults
       self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
@@ -188,6 +297,17 @@ class User < ApplicationRecord
       end
     end
 
+    def skip_password_validation?
+      skip_password_validation == true
+    end
+
+    def default_dashboard_section_order
+      %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
+    end
+
+    def default_reports_section_order
+      %w[trends_insights transactions_breakdown]
+    end
     def ensure_valid_profile_image
       return unless profile_image.attached?
 

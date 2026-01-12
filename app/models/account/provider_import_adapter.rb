@@ -15,8 +15,11 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param category_id [Integer, nil] Optional category ID
   # @param merchant [Merchant, nil] Optional merchant object
+  # @param notes [String, nil] Optional transaction notes/memo
+  # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
+  # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -26,6 +29,56 @@ class Account::ProviderImportAdapter
       entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
         e.entryable = Transaction.new
       end
+
+      # If this is a new entry, check for potential duplicates from manual/CSV imports
+      # This handles the case where a user manually created or CSV imported a transaction
+      # before linking their account to a provider
+      # Note: We don't pass name here to allow matching even when provider formats names differently
+      if entry.new_record?
+        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
+        if duplicate
+          # "Claim" the duplicate by updating its external_id and source
+          # This prevents future duplicate checks from matching it again
+          entry = duplicate
+          entry.assign_attributes(external_id: external_id, source: source)
+        end
+      end
+
+      # If still a new entry and this is a POSTED transaction, check for matching pending transactions
+      incoming_pending = extra.is_a?(Hash) && (
+        ActiveModel::Type::Boolean.new.cast(extra.dig("simplefin", "pending")) ||
+        ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending"))
+      )
+
+      if entry.new_record? && !incoming_pending
+        pending_match = nil
+
+        # PRIORITY 1: Use Plaid's pending_transaction_id if provided (most reliable)
+        # Plaid explicitly links pending→posted with this ID - no guessing required
+        if pending_transaction_id.present?
+          pending_match = account.entries.find_by(external_id: pending_transaction_id, source: source)
+          if pending_match
+            Rails.logger.info("Reconciling pending→posted via Plaid pending_transaction_id: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          end
+        end
+
+        # PRIORITY 2: Fallback to EXACT amount match (for SimpleFIN and providers without linking IDs)
+        # Only searches backward in time - pending date must be <= posted date
+        if pending_match.nil?
+          pending_match = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
+          if pending_match
+            Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          end
+        end
+
+        if pending_match
+          entry = pending_match
+          entry.assign_attributes(external_id: external_id)
+        end
+      end
+
+      # Track if this is a new posted transaction (for fuzzy suggestion after save)
+      is_new_posted = entry.new_record? && !incoming_pending
 
       # Validate entryable type matches to prevent external_id collisions
       if entry.persisted? && !entry.entryable.is_a?(Transaction)
@@ -50,7 +103,72 @@ class Account::ProviderImportAdapter
         entry.transaction.enrich_attribute(:merchant_id, merchant.id, source: source)
       end
 
+      if notes.present? && entry.respond_to?(:enrich_attribute)
+        entry.enrich_attribute(:notes, notes, source: source)
+      end
+
+      # Persist extra provider metadata on the transaction (non-enriched; always merged)
+      if extra.present? && entry.entryable.is_a?(Transaction)
+        existing = entry.transaction.extra || {}
+        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+        entry.transaction.extra = existing.deep_merge(incoming)
+        entry.transaction.save!
+      end
       entry.save!
+
+      # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
+      # This handles tip adjustments where auto-matching is too risky
+      if is_new_posted
+        # PRIORITY 1: Try medium-confidence fuzzy match (≤30% amount difference)
+        fuzzy_suggestion = find_pending_transaction_fuzzy(
+          date: date,
+          amount: amount,
+          currency: currency,
+          source: source,
+          merchant_id: merchant&.id,
+          name: name
+        )
+        if fuzzy_suggestion
+          # Store suggestion on the PENDING entry for user to review
+          begin
+            store_duplicate_suggestion(
+              pending_entry: fuzzy_suggestion,
+              posted_entry: entry,
+              reason: "fuzzy_amount_match",
+              posted_amount: amount,
+              confidence: "medium"
+            )
+            Rails.logger.info("Suggested potential duplicate (medium confidence): pending entry #{fuzzy_suggestion.id} (#{fuzzy_suggestion.name}, #{fuzzy_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+          rescue ActiveRecord::RecordInvalid => e
+            Rails.logger.warn("Failed to store duplicate suggestion for entry #{fuzzy_suggestion.id}: #{e.message}")
+          end
+        else
+          # PRIORITY 2: Try low-confidence match (>30% to 100% difference - big tips)
+          low_confidence_suggestion = find_pending_transaction_low_confidence(
+            date: date,
+            amount: amount,
+            currency: currency,
+            source: source,
+            merchant_id: merchant&.id,
+            name: name
+          )
+          if low_confidence_suggestion
+            begin
+              store_duplicate_suggestion(
+                pending_entry: low_confidence_suggestion,
+                posted_entry: entry,
+                reason: "low_confidence_match",
+                posted_amount: amount,
+                confidence: "low"
+              )
+              Rails.logger.info("Suggested potential duplicate (low confidence): pending entry #{low_confidence_suggestion.id} (#{low_confidence_suggestion.name}, #{low_confidence_suggestion.amount}) may match posted #{entry.name} (#{amount})")
+            rescue ActiveRecord::RecordInvalid => e
+              Rails.logger.warn("Failed to store duplicate suggestion for entry #{low_confidence_suggestion.id}: #{e.message}")
+            end
+          end
+        end
+      end
+
       entry
     end
   end
@@ -66,14 +184,42 @@ class Account::ProviderImportAdapter
   def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
-    ProviderMerchant.find_or_create_by!(
-      provider_merchant_id: provider_merchant_id,
-      source: source
-    ) do |m|
-      m.name = name
-      m.website_url = website_url
-      m.logo_url = logo_url
+    # First try to find by provider_merchant_id (stable identifier derived from normalized name)
+    # This handles case variations in merchant names (e.g., "ACME Corp" vs "Acme Corp")
+    merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source)
+
+    # If not found by provider_merchant_id, try by exact name match (backwards compatibility)
+    merchant ||= ProviderMerchant.find_by(source: source, name: name)
+
+    if merchant
+      # Update logo if provided and merchant doesn't have one (or has a different one)
+      # Best-effort: don't fail transaction import if logo update fails
+      if logo_url.present? && merchant.logo_url != logo_url
+        begin
+          merchant.update!(logo_url: logo_url)
+        rescue StandardError => e
+          Rails.logger.warn("Failed to update merchant logo: merchant_id=#{merchant.id} logo_url=#{logo_url} error=#{e.message}")
+        end
+      end
+      return merchant
     end
+
+    # Create new merchant
+    begin
+      merchant = ProviderMerchant.create!(
+        source: source,
+        name: name,
+        provider_merchant_id: provider_merchant_id,
+        website_url: website_url,
+        logo_url: logo_url
+      )
+    rescue ActiveRecord::RecordNotUnique
+      # Race condition - another process created the record
+      merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
+                 ProviderMerchant.find_by(source: source, name: name)
+    end
+
+    merchant
   end
 
   # Updates account balance from provider data
@@ -110,32 +256,157 @@ class Account::ProviderImportAdapter
       # Two strategies for finding/creating holdings:
       # 1. By external_id (SimpleFin approach) - tracks each holding uniquely
       # 2. By security+date+currency (Plaid approach) - overwrites holdings for same security/date
-      holding = if external_id.present?
-        account.holdings.find_or_initialize_by(external_id: external_id) do |h|
-          h.security = security
-          h.date = date
-          h.currency = currency
+      holding = nil
+
+      if external_id.present?
+        # Preferred path: match by provider's external_id
+        holding = account.holdings.find_by(external_id: external_id)
+
+        unless holding
+          # Fallback path: match by (security, date, currency) — and when provided,
+          # also scope by account_provider_id to avoid cross‑provider claiming.
+          # This keeps behavior symmetric with deletion logic below which filters
+          # by account_provider_id when present.
+          find_by_attrs = {
+            security: security,
+            date: date,
+            currency: currency
+          }
+          if account_provider_id.present?
+            find_by_attrs[:account_provider_id] = account_provider_id
+          end
+
+          holding = account.holdings.find_by(find_by_attrs)
         end
+
+        holding ||= account.holdings.new(
+          security: security,
+          date: date,
+          currency: currency,
+          account_provider_id: account_provider_id
+        )
       else
-        account.holdings.find_or_initialize_by(
+        holding = account.holdings.find_or_initialize_by(
           security: security,
           date: date,
           currency: currency
         )
       end
 
-      holding.assign_attributes(
+      # Early cross-provider composite-key conflict guard: avoid attempting a write
+      # that would violate a unique index on (account_id, security_id, date, currency).
+      if external_id.present?
+        existing_composite = account.holdings.find_by(
+          security: security,
+          date: date,
+          currency: currency
+        )
+
+        if existing_composite &&
+           account_provider_id.present? &&
+           existing_composite.account_provider_id.present? &&
+           existing_composite.account_provider_id != account_provider_id
+          Rails.logger.warn(
+            "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing_composite.id}"
+          )
+          return existing_composite
+        end
+      end
+
+      # Reconcile cost_basis to respect priority hierarchy
+      reconciled = Holding::CostBasisReconciler.reconcile(
+        existing_holding: holding.persisted? ? holding : nil,
+        incoming_cost_basis: cost_basis,
+        incoming_source: "provider"
+      )
+
+      # Build base attributes
+      attributes = {
         security: security,
         date: date,
         currency: currency,
         qty: quantity,
         price: price,
         amount: amount,
-        cost_basis: cost_basis,
-        account_provider_id: account_provider_id
-      )
+        account_provider_id: account_provider_id,
+        external_id: external_id
+      }
 
-      holding.save!
+      # Only update cost_basis if reconciliation says to
+      if reconciled[:should_update]
+        attributes[:cost_basis] = reconciled[:cost_basis]
+        attributes[:cost_basis_source] = reconciled[:cost_basis_source]
+      end
+
+      holding.assign_attributes(attributes)
+
+      begin
+        Holding.transaction(requires_new: true) do
+          holding.save!
+        end
+      rescue ActiveRecord::RecordNotUnique => e
+        # Handle unique index collisions on (account_id, security_id, date, currency)
+        # that can occur when another provider (or concurrent import) already
+        # created a row for this composite key. Use the existing row and keep
+        # the outer transaction valid by isolating the error in a savepoint.
+        existing = account.holdings.find_by(
+          security: security,
+          date: date,
+          currency: currency
+        )
+
+        if existing
+          # If an existing row belongs to a different provider, do NOT claim it.
+          # Keep cross-provider isolation symmetrical with deletion logic.
+          if account_provider_id.present? && existing.account_provider_id.present? && existing.account_provider_id != account_provider_id
+            Rails.logger.warn(
+              "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing.id}"
+            )
+            holding = existing
+          else
+            # Same provider (or unowned). Apply latest snapshot and attach external_id for idempotency.
+            updates = {
+              qty: quantity,
+              price: price,
+              amount: amount
+            }
+
+            # Reconcile cost_basis to respect priority hierarchy
+            collision_reconciled = Holding::CostBasisReconciler.reconcile(
+              existing_holding: existing,
+              incoming_cost_basis: cost_basis,
+              incoming_source: "provider"
+            )
+
+            if collision_reconciled[:should_update]
+              updates[:cost_basis] = collision_reconciled[:cost_basis]
+              updates[:cost_basis_source] = collision_reconciled[:cost_basis_source]
+            end
+
+            # Adopt the row to this provider if it's currently unowned
+            if account_provider_id.present? && existing.account_provider_id.nil?
+              updates[:account_provider_id] = account_provider_id
+            end
+
+            # Attach external_id if provided and missing
+            if external_id.present? && existing.external_id.blank?
+              updates[:external_id] = external_id
+            end
+
+            begin
+              # Use update_columns to avoid validations and keep this collision handler best-effort.
+              existing.update_columns(updates.compact)
+            rescue => _
+              # Best-effort only; avoid raising in collision handler
+            end
+
+            holding = existing
+          end
+        else
+          # Could not find an existing row; re-raise original error
+          raise e
+        end
+      end
 
       # Optionally delete future holdings for this security (Plaid behavior)
       # Only delete if ALL providers allow deletion (cross-provider check)
@@ -251,5 +522,235 @@ class Account::ProviderImportAdapter
   rescue => e
     Rails.logger.error("Failed to update #{account.accountable_type} attributes from #{source}: #{e.message}")
     false
+  end
+
+  # Finds a potential duplicate transaction from manual entry or CSV import
+  # Matches on date, amount, currency, and optionally name
+  # Only matches transactions without external_id (manual/CSV imported)
+  #
+  # @param date [Date, String] Transaction date
+  # @param amount [BigDecimal, Numeric] Transaction amount
+  # @param currency [String] Currency code
+  # @param name [String, nil] Optional transaction name for more accurate matching
+  # @param exclude_entry_ids [Set, Array, nil] Entry IDs to exclude from the search (e.g., already claimed entries)
+  # @return [Entry, nil] The duplicate entry or nil if not found
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil)
+    # Convert date to Date object if it's a string
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+
+    # Look for entries on the same account with:
+    # 1. Same date
+    # 2. Same amount (exact match)
+    # 3. Same currency
+    # 4. No external_id (manual/CSV imported transactions)
+    # 5. Entry type is Transaction (not Trade or Valuation)
+    # 6. Optionally same name (if name parameter is provided)
+    # 7. Not in the excluded IDs list (if provided)
+    query = account.entries
+                   .where(entryable_type: "Transaction")
+                   .where(date: date)
+                   .where(amount: amount)
+                   .where(currency: currency)
+                   .where(external_id: nil)
+
+    # Add name filter if provided
+    query = query.where(name: name) if name.present?
+
+    # Exclude already claimed entries if provided
+    query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
+
+    query.order(created_at: :asc).first
+  end
+
+  # Finds a pending transaction that likely matches a newly posted transaction
+  # Used to reconcile pending→posted when SimpleFIN gives different IDs for the same transaction
+  #
+  # @param date [Date, String] Posted transaction date
+  # @param amount [BigDecimal, Numeric] Transaction amount (must match exactly)
+  # @param currency [String] Currency code
+  # @param source [String] Provider name (e.g., "simplefin")
+  # @param date_window [Integer] Days to search around the posted date (default: 8)
+  # @return [Entry, nil] The pending entry or nil if not found
+  def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8)
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+
+    # Look for entries that:
+    # 1. Same account (implicit via account.entries)
+    # 2. Same source (simplefin)
+    # 3. Same amount (exact match - this is the strongest signal)
+    # 4. Same currency
+    # 5. Date within window (pending can post days later)
+    # 6. Is a Transaction (not Trade or Valuation)
+    # 7. Has pending=true in transaction.extra["simplefin"]["pending"] or extra["plaid"]["pending"]
+    candidates = account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(source: source)
+      .where(amount: amount)
+      .where(currency: currency)
+      .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
+      .where(<<~SQL.squish)
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+      .order(date: :desc) # Prefer most recent pending transaction
+
+    candidates.first
+  end
+
+  # Finds a pending transaction using fuzzy amount matching for tip adjustments
+  # Used when exact amount matching fails - handles restaurant tips, adjusted authorizations, etc.
+  #
+  # IMPORTANT: Only returns a match if there's exactly ONE candidate to avoid false positives
+  # with recurring merchant transactions (e.g., gas stations, coffee shops).
+  #
+  # @param date [Date, String] Posted transaction date
+  # @param amount [BigDecimal, Numeric] Posted transaction amount (typically higher due to tip)
+  # @param currency [String] Currency code
+  # @param source [String] Provider name (e.g., "simplefin")
+  # @param merchant_id [Integer, nil] Merchant ID for more accurate matching
+  # @param name [String, nil] Transaction name for fuzzy name matching
+  # @param date_window [Integer] Days to search backward from posted date (default: 3 for fuzzy)
+  # @param amount_tolerance [Float] Maximum percentage difference allowed (default: 0.30 = 30%)
+  # @return [Entry, nil] The pending entry or nil if not found/ambiguous
+  def find_pending_transaction_fuzzy(date:, amount:, currency:, source:, merchant_id: nil, name: nil, date_window: 3, amount_tolerance: 0.30)
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+    amount = BigDecimal(amount.to_s)
+
+    # Calculate amount bounds using ABS to handle both positive and negative amounts
+    # Posted amount should be >= pending (tips add, not subtract)
+    # Allow posted to be up to 30% higher than pending (covers typical tips)
+    abs_amount = amount.abs
+    min_pending_abs = abs_amount / (1 + amount_tolerance) # If posted is 100, pending could be as low as ~77
+    max_pending_abs = abs_amount # Pending should not be higher than posted
+
+    # Build base query for pending transactions
+    # CRITICAL: Pending must be ON or BEFORE the posted date (authorization happens first)
+    # Use tighter date window (3 days) - tips post quickly, not a week later
+    # Use ABS() for amount comparison to handle negative amounts correctly
+    candidates = account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(source: source)
+      .where(currency: currency)
+      .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
+      .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
+      .where(<<~SQL.squish)
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+
+    # If merchant_id is provided, prioritize matching by merchant
+    if merchant_id.present?
+      merchant_matches = candidates.where("transactions.merchant_id = ?", merchant_id).to_a
+      # Only match if exactly ONE candidate to avoid false positives
+      return merchant_matches.first if merchant_matches.size == 1
+      if merchant_matches.size > 1
+        Rails.logger.info("Skipping fuzzy pending match: #{merchant_matches.size} ambiguous merchant candidates for amount=#{amount} date=#{date}")
+      end
+    end
+
+    # If name is provided, try fuzzy name matching as fallback
+    if name.present?
+      # Extract first few significant words for comparison
+      name_words = name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+      if name_words.present?
+        name_matches = candidates.select do |c|
+          c_name_words = c.name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+          name_words == c_name_words
+        end
+        # Only match if exactly ONE candidate to avoid false positives
+        return name_matches.first if name_matches.size == 1
+        if name_matches.size > 1
+          Rails.logger.info("Skipping fuzzy pending match: #{name_matches.size} ambiguous name candidates for '#{name_words}' amount=#{amount} date=#{date}")
+        end
+      end
+    end
+
+    # No merchant or name match, return nil (too risky to match on amount alone)
+    # This prevents false positives when multiple pending transactions exist
+    nil
+  end
+
+  # Finds a pending transaction with low confidence (>30% to 100% amount difference)
+  # Used for large tip scenarios where normal fuzzy matching would miss
+  # Creates a "review recommended" suggestion rather than "possible duplicate"
+  #
+  # @param date [Date, String] Posted transaction date
+  # @param amount [BigDecimal, Numeric] Posted transaction amount
+  # @param currency [String] Currency code
+  # @param source [String] Provider name
+  # @param merchant_id [Integer, nil] Merchant ID for matching
+  # @param name [String, nil] Transaction name for matching
+  # @param date_window [Integer] Days to search backward (default: 3)
+  # @return [Entry, nil] The pending entry or nil if not found/ambiguous
+  def find_pending_transaction_low_confidence(date:, amount:, currency:, source:, merchant_id: nil, name: nil, date_window: 3)
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+    amount = BigDecimal(amount.to_s)
+
+    # Allow up to 100% difference (e.g., $50 pending → $100 posted with huge tip)
+    # This is low confidence - requires strong name/merchant match
+    # Use ABS to handle both positive and negative amounts correctly
+    abs_amount = amount.abs
+    min_pending_abs = abs_amount / 2.0 # Posted could be up to 2x pending
+    max_pending_abs = abs_amount * 0.77 # Pending must be at least 30% less (to not overlap with fuzzy)
+
+    # Build base query for pending transactions
+    # Use ABS() for amount comparison to handle negative amounts correctly
+    candidates = account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(source: source)
+      .where(currency: currency)
+      .where(date: (date - date_window.days)..date)
+      .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
+      .where(<<~SQL.squish)
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+
+    # For low confidence, require BOTH merchant AND name match (stronger signal needed)
+    if merchant_id.present? && name.present?
+      name_words = name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+      return nil if name_words.blank?
+
+      merchant_matches = candidates.where("transactions.merchant_id = ?", merchant_id).to_a
+      name_matches = merchant_matches.select do |c|
+        c_name_words = c.name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
+        name_words == c_name_words
+      end
+
+      # Only match if exactly ONE candidate
+      return name_matches.first if name_matches.size == 1
+    end
+
+    nil
+  end
+
+  # Stores a duplicate suggestion on a pending entry for user review
+  # The suggestion is stored in the pending transaction's extra field
+  #
+  # @param pending_entry [Entry] The pending entry that may be a duplicate
+  # @param posted_entry [Entry] The posted entry it may match
+  # @param reason [String] Why this was flagged (e.g., "fuzzy_amount_match", "low_confidence_match")
+  # @param posted_amount [BigDecimal] The posted transaction amount
+  # @param confidence [String] Confidence level: "medium" (≤30% diff) or "low" (>30% diff)
+  def store_duplicate_suggestion(pending_entry:, posted_entry:, reason:, posted_amount:, confidence: "medium")
+    return unless pending_entry&.entryable.is_a?(Transaction)
+
+    pending_transaction = pending_entry.entryable
+    existing_extra = pending_transaction.extra || {}
+
+    # Don't overwrite if already has a suggestion (keep first one found)
+    return if existing_extra["potential_posted_match"].present?
+
+    pending_transaction.update!(
+      extra: existing_extra.merge(
+        "potential_posted_match" => {
+          "entry_id" => posted_entry.id,
+          "reason" => reason,
+          "posted_amount" => posted_amount.to_s,
+          "confidence" => confidence,
+          "detected_at" => Date.current.to_s
+        }
+      )
+    )
   end
 end

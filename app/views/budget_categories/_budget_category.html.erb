@@ -1,54 +1,127 @@
 <%# locals: (budget_category:) %>
 
-<%= turbo_frame_tag dom_id(budget_category), class: "w-full" do %>
-  <%= link_to budget_budget_category_path(budget_category.budget, budget_category), class: "group w-full p-4 flex items-center gap-3 bg-container", data: { turbo_frame: "drawer" } do %>
+<%= turbo_frame_tag dom_id(budget_category), class: "flex-1 min-w-0 block" do %>
+  <%= link_to budget_budget_category_path(budget_category.budget, budget_category), class: "group block w-full px-4 py-2 bg-container", data: { turbo_frame: "drawer" } do %>
 
     <% if budget_category.initialized? %>
-      <div class="w-10 h-10 group-hover:scale-105 transition-all duration-300">
-        <%= render "budget_categories/budget_category_donut", budget_category: budget_category %>
+      <%# Category Header with Status Badge %>
+      <div class="flex items-center lg:justify-between gap-2 mb-3">
+        <div class="h-9 w-9 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center"
+              style="
+                background-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent);
+                border-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent);
+                color: <%= budget_category.category.color %>;">
+          <% if budget_category.category.lucide_icon %>
+            <%= icon(budget_category.category.lucide_icon, color: "current") %>
+          <% else %>
+            <%= render DS::FilledIcon.new(
+              variant: :text,
+              hex_color: budget_category.category.color,
+              text: budget_category.category.name,
+              size: "md",
+              rounded: true
+            ) %>
+          <% end %>
+        </div>
+        <h3 class="flex-1 min-w-0 font-medium text-primary truncate"><%= budget_category.category.name %></h3>
+        <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
+          <% if budget_category.over_budget? %>
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-500/10 text-red-500 text-xs font-medium rounded-full whitespace-nowrap">
+              <%= icon("alert-circle", size: "sm", color: "red") %>
+              <%= t("reports.budget_performance.status.over") %>
+            </span>
+          <% elsif budget_category.near_limit? %>
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-500/10 text-warning text-xs font-medium rounded-full whitespace-nowrap">
+              <%= icon("alert-triangle", size: "sm", color: "yellow") %>
+              <%= t("reports.budget_performance.status.warning") %>
+            </span>
+          <% else %>
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-success text-xs font-medium rounded-full whitespace-nowrap">
+              <%= icon("check-circle", size: "sm", color: "green") %>
+              <%= t("reports.budget_performance.status.good") %>
+            </span>
+          <% end %>
+        </div>
       </div>
+
+      <%# Progress Bar %>
+      <div class="mb-3">
+        <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+          <% bar_color = budget_category.over_budget? ? "bg-red-500" : (budget_category.near_limit? ? "bg-yellow-500" : "bg-green-500") %>
+          <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
+               style="width: <%= budget_category.bar_width_percent %>%"></div>
+        </div>
+      </div>
+
+      <%# Budget Details %>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <div class="whitespace-nowrap w-full sm:w-auto">
+          <span class="text-sm text-secondary"><%= t("reports.budget_performance.spent") %>:</span>
+          <span class="font-medium text-primary">
+            <%= format_money(budget_category.actual_spending_money) %>
+          </span>
+        </div>
+        <div class="whitespace-nowrap w-full sm:w-auto">
+          <span class="text-sm text-secondary"><%= t("reports.budget_performance.budgeted") %>:</span>
+          <span class="font-medium text-primary">
+            <%= format_money(budget_category.budgeted_spending_money) %>
+          </span>
+        </div>
+        <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
+          <% if budget_category.available_to_spend >= 0 %>
+            <span class="text-sm text-secondary"><%= t("reports.budget_performance.remaining") %>:</span>
+            <span class="font-medium <%= (budget_category.near_limit? ? "text-yellow-500" : "text-green-500") %>">
+              <%= format_money(budget_category.available_to_spend_money) %>
+            </span>
+          <% else %>
+            <span class="text-sm text-secondary"><%= t("reports.budget_performance.over_by") %>:</span>
+            <span class="font-medium text-red-500">
+              <%= format_money(budget_category.available_to_spend_money.abs) %>
+            </span>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Suggested Daily Limit (if remaining days in month) %>
+      <% if budget_category.suggested_daily_spending.present? %>
+        <% daily_info = budget_category.suggested_daily_spending %>
+        <div class="py-2">
+          <p class="text-xs text-subdued break-words">
+            <%= t("reports.budget_performance.suggested_daily",
+                  amount: daily_info[:amount].format,
+                  days: daily_info[:days_remaining]) %>
+          </p>
+        </div>
+      <% end %>
+
     <% else %>
-      <div class="w-8 h-8 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center" style="color: <%= budget_category.category.color %>">
-        <% if budget_category.category.lucide_icon %>
-          <%= icon(budget_category.category.lucide_icon, color: "current") %>
-        <% else %>
-          <%= render DS::FilledIcon.new(
-            variant: :text,
-            hex_color: budget_category.category.color,
-            text: budget_category.category.name,
-            size: "sm",
-            rounded: true
-          ) %>
-        <% end %>
+      <%# Uninitialized budget - show simple view %>
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center" style="color: <%= budget_category.category.color %>">
+          <% if budget_category.category.lucide_icon %>
+            <%= icon(budget_category.category.lucide_icon, color: "current") %>
+          <% else %>
+            <%= render DS::FilledIcon.new(
+              variant: :text,
+              hex_color: budget_category.category.color,
+              text: budget_category.category.name,
+              size: "sm",
+              rounded: true
+            ) %>
+          <% end %>
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-primary truncate"><%= budget_category.category.name %></p>
+          <p class="text-sm text-secondary font-medium">
+            <%= budget_category.median_monthly_expense_money.format %> avg
+          </p>
+        </div>
+
+        <div class="ml-auto text-right flex-shrink-0">
+          <p class="text-sm font-medium text-primary whitespace-nowrap"><%= format_money(budget_category.actual_spending_money) %></p>
+        </div>
       </div>
     <% end %>
-
-    <div>
-      <p class="text-sm font-medium text-primary"><%= budget_category.category.name %></p>
-
-      <% if budget_category.initialized? %>
-        <% if budget_category.available_to_spend.negative? %>
-          <p class="text-sm font-medium text-red-500"><%= format_money(budget_category.available_to_spend_money.abs) %> over</p>
-        <% elsif budget_category.available_to_spend.zero? %>
-          <p class="text-sm font-medium <%= budget_category.budgeted_spending.positive? ? "text-orange-500" : "text-secondary" %>">
-            <%= format_money(budget_category.available_to_spend_money) %> left
-          </p>
-        <% else %>
-          <p class="text-sm text-secondary font-medium"><%= format_money(budget_category.available_to_spend_money) %> left</p>
-        <% end %>
-      <% else %>
-        <p class="text-sm text-secondary font-medium">
-          <%= budget_category.median_monthly_expense_money.format %> avg
-        </p>
-      <% end %>
-    </div>
-
-    <div class="ml-auto text-right">
-      <p class="text-sm font-medium text-primary"><%= format_money(budget_category.actual_spending_money) %></p>
-
-      <% if budget_category.initialized? %>
-        <p class="text-sm text-secondary">from <%= format_money(budget_category.budgeted_spending_money) %></p>
-      <% end %>
-    </div>
   <% end %>
 <% end %>

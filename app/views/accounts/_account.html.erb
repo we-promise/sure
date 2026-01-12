@@ -18,8 +18,8 @@
         <% else %>
           <div>
             <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
-            <% if account.simplefin_account&.org_data&.dig('name') %>
-              <span class="text-secondary">• <%= account.simplefin_account.org_data["name"] %></span>
+            <% if account.institution_name %>
+              <span class="text-secondary">• <%= account.institution_name %></span>
             <% end %>
           </div>
           <% if account.long_subtype_label %>
@@ -31,6 +31,22 @@
       <% unless account.pending_deletion? %>
         <%= link_to edit_account_path(account, return_to: return_to), data: { turbo_frame: :modal }, class: "group-hover/account:flex hidden hover:opacity-80 items-center justify-center" do %>
           <%= icon("pencil-line", size: "sm") %>
+        <% end %>
+
+        <% if !account.linked? && ["Depository", "CreditCard", "Investment"].include?(account.accountable_type) %>
+          <%= link_to select_provider_account_path(account),
+                      data: { turbo_frame: :modal },
+                      class: "group-hover/account:flex hidden hover:opacity-80 items-center justify-center gap-1",
+                      title: t("accounts.account.link_provider") do %>
+            <%= icon("link", size: "sm") %>
+          <% end %>
+        <% elsif account.linked? %>
+          <%= link_to confirm_unlink_account_path(account),
+                      data: { turbo_frame: :modal },
+                      class: "group-hover/account:flex hidden hover:opacity-80 items-center justify-center gap-1",
+                      title: t("accounts.account.unlink_provider") do %>
+            <%= icon("unlink", size: "sm") %>
+          <% end %>
         <% end %>
       <% end %>
     </div>

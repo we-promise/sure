@@ -1,0 +1,105 @@
+class Provider::<%= class_name %>Adapter < Provider::Base
+  include Provider::Syncable
+  include Provider::InstitutionMetadata
+  include Provider::Configurable
+
+  # Register this adapter with the factory
+  Provider::Factory.register("<%= class_name %>Account", self)
+<%= configure_block_content %>
+  def provider_name
+    "<%= file_name %>"
+  end
+
+  # Thread-safe lazy loading of <%= class_name %> configuration
+  def self.ensure_configuration_loaded
+    # Fast path: return immediately if already loaded (no lock needed)
+    return if Rails.application.config.<%= file_name %>.present?
+
+    # Slow path: acquire lock and reload if still needed
+    @config_mutex ||= Mutex.new
+    @config_mutex.synchronize do
+      return if Rails.application.config.<%= file_name %>.present?
+      reload_configuration
+    end
+  end
+
+  # Reload <%= class_name %> configuration when settings are updated
+  def self.reload_configuration
+<% parsed_fields.each do |field| -%>
+    <%= field[:name] %> = config_value(:<%= field[:name] %>).presence || ENV["<%= field[:env_key] %>"]<% if field[:default] %> || "<%= field[:default] %>"<% end %>
+<% end -%>
+
+<% first_required_field = parsed_fields.find { |f| f[:secret] } -%>
+<% if first_required_field -%>
+    if <%= first_required_field[:name] %>.present?
+<% end -%>
+      Rails.application.config.<%= file_name %> = OpenStruct.new(
+<% parsed_fields.each_with_index do |field, index| -%>
+        <%= field[:name] %>: <%= field[:name] %><%= index < parsed_fields.length - 1 ? ',' : '' %>
+<% end -%>
+      )
+<% if first_required_field -%>
+    else
+      Rails.application.config.<%= file_name %> = nil
+    end
+<% end -%>
+  end
+
+  # Build a <%= class_name %> provider instance using GLOBAL credentials
+  # @return [Provider::<%= class_name %>, nil] Returns nil if credentials are not configured
+  def self.build_provider
+<% first_secret_field = parsed_fields.find { |f| f[:secret] } -%>
+<% if first_secret_field -%>
+    <%= first_secret_field[:name] %> = config_value(:<%= first_secret_field[:name] %>)
+    return nil unless <%= first_secret_field[:name] %>.present?
+<% end -%>
+
+    # TODO: Implement provider initialization
+    # Provider::<%= class_name %>.new(
+<% parsed_fields.each_with_index do |field, index| -%>
+    #   <%= field[:name] %>: config_value(:<%= field[:name] %>)<%= index < parsed_fields.length - 1 ? ',' : '' %>
+<% end -%>
+    # )
+    raise NotImplementedError, "Implement build_provider in #{__FILE__}"
+  end
+
+  def sync_path
+    Rails.application.routes.url_helpers.sync_<%= file_name %>_item_path(item)
+  end
+
+  def item
+    provider_account.<%= file_name %>_item
+  end
+
+  def can_delete_holdings?
+    false
+  end
+
+  def institution_domain
+    # TODO: Implement institution domain extraction
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    metadata["domain"]
+  end
+
+  def institution_name
+    # TODO: Implement institution name extraction
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    metadata["name"] || item&.institution_name
+  end
+
+  def institution_url
+    # TODO: Implement institution URL extraction
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    metadata["url"] || item&.institution_url
+  end
+
+  def institution_color
+    item&.institution_color
+  end
+end

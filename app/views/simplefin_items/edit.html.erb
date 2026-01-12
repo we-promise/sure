@@ -1,6 +1,7 @@
 <% content_for :title, "Update SimpleFin Connection" %>
 
-<%= render DS::Dialog.new do |dialog| %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: "Update SimpleFin Connection") do %>
     <div class="flex items-center gap-2">
       <%= icon "building-2", class: "text-primary" %>
@@ -15,12 +16,12 @@
           <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
           <div>
             <p class="text-sm text-primary mb-2">
-              <strong>Your SimpleFin connection needs to be updated:</strong>
+              <strong>Your SimpleFIN connection needs to be updated:</strong>
             </p>
             <ol class="text-xs text-secondary space-y-1 list-decimal list-inside">
-              <li>Visit <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFin Bridge</a> to create a new setup token</li>
+              <li>Visit <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> to create a new setup token</li>
               <li>Copy the token and paste it below</li>
-              <li>Click "Update Connection" to restore access</li>
+              <li>Click "Update" to restore access</li>
             </ol>
           </div>
         </div>
@@ -45,7 +46,7 @@
 
       <div class="flex gap-3">
         <%= render DS::Button.new(
-          text: "Update Connection",
+          text: "Update",
           variant: "primary",
           icon: "refresh-cw",
           type: "submit",
@@ -58,5 +59,6 @@
         ) %>
       </div>
     <% end %>
+  <% end %>
   <% end %>
 <% end %>

@@ -24,31 +24,62 @@ class LunchflowItem::Importer
       # Continue with import even if snapshot storage fails
     end
 
-    # Step 2: Import accounts
-    accounts_imported = 0
+    # Step 2: Update linked accounts and create records for new accounts from API
+    accounts_updated = 0
+    accounts_created = 0
     accounts_failed = 0
 
     if accounts_data[:accounts].present?
+      # Get linked lunchflow account IDs (ones actually imported/used by the user)
+      linked_account_ids = lunchflow_item.lunchflow_accounts
+                                         .joins(:account_provider)
+                                         .pluck(:account_id)
+                                         .map(&:to_s)
+
+      # Get all existing lunchflow account IDs (linked or not)
+      all_existing_ids = lunchflow_item.lunchflow_accounts.pluck(:account_id).map(&:to_s)
+
       accounts_data[:accounts].each do |account_data|
-        begin
-          import_account(account_data)
-          accounts_imported += 1
-        rescue => e
-          accounts_failed += 1
-          account_id = account_data[:id] || "unknown"
-          Rails.logger.error "LunchflowItem::Importer - Failed to import account #{account_id}: #{e.message}"
-          # Continue importing other accounts even if one fails
+        account_id = account_data[:id]&.to_s
+        next unless account_id.present?
+        next if account_data[:name].blank?
+
+        if linked_account_ids.include?(account_id)
+          # Update existing linked accounts
+          begin
+            import_account(account_data)
+            accounts_updated += 1
+          rescue => e
+            accounts_failed += 1
+            Rails.logger.error "LunchflowItem::Importer - Failed to update account #{account_id}: #{e.message}"
+          end
+        elsif !all_existing_ids.include?(account_id)
+          # Create new unlinked lunchflow_account records for accounts we haven't seen before
+          # This allows users to link them later via "Setup new accounts"
+          begin
+            lunchflow_account = lunchflow_item.lunchflow_accounts.build(
+              account_id: account_id,
+              name: account_data[:name],
+              currency: account_data[:currency] || "USD"
+            )
+            lunchflow_account.upsert_lunchflow_snapshot!(account_data)
+            accounts_created += 1
+            Rails.logger.info "LunchflowItem::Importer - Created new unlinked account record for #{account_id}"
+          rescue => e
+            accounts_failed += 1
+            Rails.logger.error "LunchflowItem::Importer - Failed to create account #{account_id}: #{e.message}"
+          end
         end
       end
     end
 
-    Rails.logger.info "LunchflowItem::Importer - Imported #{accounts_imported} accounts (#{accounts_failed} failed)"
+    Rails.logger.info "LunchflowItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
 
-    # Step 3: Fetch transactions for each account
+    # Step 3: Fetch transactions only for linked accounts with active status
     transactions_imported = 0
     transactions_failed = 0
 
-    lunchflow_item.lunchflow_accounts.each do |lunchflow_account|
+    lunchflow_item.lunchflow_accounts.joins(:account).merge(Account.visible).each do |lunchflow_account|
       begin
         result = fetch_and_store_transactions(lunchflow_account)
         if result[:success]
@@ -63,11 +94,12 @@ class LunchflowItem::Importer
       end
     end
 
-    Rails.logger.info "LunchflowItem::Importer - Completed import for item #{lunchflow_item.id}: #{accounts_imported} accounts, #{transactions_imported} transactions"
+    Rails.logger.info "LunchflowItem::Importer - Completed import for item #{lunchflow_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions"
 
     {
       success: accounts_failed == 0 && transactions_failed == 0,
-      accounts_imported: accounts_imported,
+      accounts_updated: accounts_updated,
+      accounts_created: accounts_created,
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
@@ -88,10 +120,10 @@ class LunchflowItem::Importer
             Rails.logger.error "LunchflowItem::Importer - Failed to update item status: #{update_error.message}"
           end
         end
-        Rails.logger.error "LunchflowItem::Importer - Lunchflow API error: #{e.message}"
+        Rails.logger.error "LunchflowItem::Importer - Lunch flow API error: #{e.message}"
         return nil
       rescue JSON::ParserError => e
-        Rails.logger.error "LunchflowItem::Importer - Failed to parse Lunchflow API response: #{e.message}"
+        Rails.logger.error "LunchflowItem::Importer - Failed to parse Lunch flow API response: #{e.message}"
         return nil
       rescue => e
         Rails.logger.error "LunchflowItem::Importer - Unexpected error fetching accounts: #{e.class} - #{e.message}"
@@ -123,15 +155,22 @@ class LunchflowItem::Importer
 
       account_id = account_data[:id]
 
-      # Validate required account_id to prevent duplicate creation
+      # Validate required account_id
       if account_id.blank?
         Rails.logger.warn "LunchflowItem::Importer - Skipping account with missing ID"
         raise ArgumentError, "Account ID is required"
       end
 
-      lunchflow_account = lunchflow_item.lunchflow_accounts.find_or_initialize_by(
+      # Only find existing accounts, don't create new ones during sync
+      lunchflow_account = lunchflow_item.lunchflow_accounts.find_by(
         account_id: account_id.to_s
       )
+
+      # Skip if account wasn't previously selected
+      unless lunchflow_account
+        Rails.logger.debug "LunchflowItem::Importer - Skipping unselected account #{account_id}"
+        return
+      end
 
       begin
         lunchflow_account.upsert_lunchflow_snapshot!(account_data)
@@ -203,6 +242,14 @@ class LunchflowItem::Importer
           Rails.logger.warn "LunchflowItem::Importer - Failed to update balance for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
+        # Fetch holdings for investment/crypto accounts
+        begin
+          fetch_and_store_holdings(lunchflow_account)
+        rescue => e
+          # Log but don't fail sync if holdings fetch fails
+          Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
+        end
+
         { success: true, transactions_count: transactions_count }
       rescue Provider::Lunchflow::LunchflowError => e
         Rails.logger.error "LunchflowItem::Importer - Lunchflow API error for account #{lunchflow_account.id}: #{e.message}"
@@ -257,6 +304,53 @@ class LunchflowItem::Importer
       rescue => e
         Rails.logger.error "LunchflowItem::Importer - Unexpected error updating balance for account #{lunchflow_account.id}: #{e.class} - #{e.message}"
         # Don't fail if balance update fails
+      end
+    end
+
+    def fetch_and_store_holdings(lunchflow_account)
+      # Only fetch holdings for investment/crypto accounts
+      account = lunchflow_account.current_account
+      return unless account.present?
+      return unless [ "Investment", "Crypto" ].include?(account.accountable_type)
+
+      # Skip if holdings are not supported for this account
+      unless lunchflow_account.holdings_supported?
+        Rails.logger.debug "LunchflowItem::Importer - Skipping holdings fetch for account #{lunchflow_account.account_id} (holdings not supported)"
+        return
+      end
+
+      Rails.logger.info "LunchflowItem::Importer - Fetching holdings for account #{lunchflow_account.account_id}"
+
+      begin
+        holdings_data = lunchflow_provider.get_account_holdings(lunchflow_account.account_id)
+
+        # Validate response structure
+        unless holdings_data.is_a?(Hash)
+          Rails.logger.error "LunchflowItem::Importer - Invalid holdings_data format for account #{lunchflow_account.account_id}"
+          return
+        end
+
+        # Check if holdings are not supported (501 response)
+        if holdings_data[:holdings_not_supported]
+          Rails.logger.info "LunchflowItem::Importer - Holdings not supported for account #{lunchflow_account.account_id}, disabling future requests"
+          lunchflow_account.update!(holdings_supported: false)
+          return
+        end
+
+        # Store holdings payload for processing
+        holdings_array = holdings_data[:holdings] || []
+        Rails.logger.info "LunchflowItem::Importer - Fetched #{holdings_array.count} holdings for account #{lunchflow_account.account_id}"
+
+        lunchflow_account.update!(raw_holdings_payload: holdings_array)
+      rescue Provider::Lunchflow::LunchflowError => e
+        Rails.logger.error "LunchflowItem::Importer - Lunchflow API error fetching holdings for account #{lunchflow_account.id}: #{e.message}"
+        # Don't fail if holdings fetch fails
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.error "LunchflowItem::Importer - Failed to save holdings for account #{lunchflow_account.id}: #{e.message}"
+        # Don't fail if holdings save fails
+      rescue => e
+        Rails.logger.error "LunchflowItem::Importer - Unexpected error fetching holdings for account #{lunchflow_account.id}: #{e.class} - #{e.message}"
+        # Don't fail if holdings fetch fails
       end
     end
 

@@ -2,6 +2,14 @@ class UsersController < ApplicationController
   before_action :set_user
   before_action :ensure_admin, only: %i[reset reset_with_sample_data]
 
+  def resend_confirmation_email
+    if @user.resend_confirmation_email
+      redirect_to settings_profile_path, notice: t(".success")
+    else
+      redirect_to settings_profile_path, alert: t("no_pending_change")
+    end
+  end
+
   def update
     @user = Current.user
 

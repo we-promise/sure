@@ -1,0 +1,25 @@
+---
+ro:
+  helpers:
+    label:
+      user:
+        invite_code: Cod de invitație
+    submit:
+      user:
+        create: Continuă
+  registrations:
+    closed: Înregistrările sunt momentan închise.
+    create:
+      failure: A apărut o problemă la înregistrare.
+      invalid_invite_code: Cod de invitație invalid, te rugăm să încerci din nou.
+      success: Te-ai înregistrat cu succes.
+    new:
+      invitation_message: "%{inviter} te-a invitat să te alături ca %{role}"
+      join_family_title: Alătură-te %{family}
+      role_admin: administrator
+      role_member: member
+      submit: Creează cont
+      title: Creează-ți contul
+      welcome_body: Pentru a începe, trebuie să îți creezi un cont nou. Apoi vei putea configura setări suplimentare în aplicație.
+      welcome_title: Bine ai venit la Self Hosted Maybe!
+      password_placeholder: Introdu parola

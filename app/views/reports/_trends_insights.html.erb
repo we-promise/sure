@@ -1,0 +1,81 @@
+<div>
+    <%# Month-over-Month Trends %>
+    <div>
+      <h3 class="text-sm font-medium text-secondary mb-4">
+        <%= t("reports.trends.monthly_breakdown") %>
+      </h3>
+
+      <% if trends_data.any? %>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-tertiary">
+                <th class="text-left py-2 pr-4 font-medium text-secondary"><%= t("reports.trends.month") %></th>
+                <th class="text-right py-2 px-4 font-medium text-secondary"><%= t("reports.trends.income") %></th>
+                <th class="text-right py-2 px-4 font-medium text-secondary"><%= t("reports.trends.expenses") %></th>
+                <th class="text-right py-2 px-2 font-medium text-secondary"><%= t("reports.trends.net") %></th>
+                <th class="text-right py-2 pl-4 font-medium text-secondary"><%= t("reports.trends.savings_rate") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% trends_data.each do |trend| %>
+                <tr class="border-b border-tertiary/50 <%= trend[:is_current_month] ? "font-medium" : "" %>">
+                  <td class="py-3 pr-4 text-primary">
+                    <%= trend[:month] %>
+                    <% if trend[:is_current_month] %>
+                      <span class="ml-2 text-xs text-tertiary">(<%= t("reports.trends.current") %>)</span>
+                    <% end %>
+                  </td>
+                  <td class="text-right py-3 px-4 text-success">
+                    <%= Money.new(trend[:income], Current.family.currency).format %>
+                  </td>
+                  <td class="text-right py-3 px-4 text-destructive">
+                    <%= Money.new(trend[:expenses], Current.family.currency).format %>
+                  </td>
+                  <td class="text-right py-3 px-2 <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
+                    <%= Money.new(trend[:net], Current.family.currency).format %>
+                  </td>
+                  <td class="text-right py-3 pl-4 <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
+                    <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
+                    <%= savings_rate %>%
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <%# Trend Insights %>
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <% avg_income = trends_data.sum { |t| t[:income] } / trends_data.length %>
+          <% avg_expenses = trends_data.sum { |t| t[:expenses] } / trends_data.length %>
+          <% avg_net = trends_data.sum { |t| t[:net] } / trends_data.length %>
+
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_income") %></p>
+            <p class="text-lg font-semibold text-success">
+              <%= Money.new(avg_income, Current.family.currency).format %>
+            </p>
+          </div>
+
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
+            <p class="text-lg font-semibold text-destructive">
+              <%= Money.new(avg_expenses, Current.family.currency).format %>
+            </p>
+          </div>
+
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <p class="text-xs text-tertiary mb-1"><%= t("reports.trends.avg_monthly_savings") %></p>
+            <p class="text-lg font-semibold <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
+              <%= Money.new(avg_net, Current.family.currency).format %>
+            </p>
+          </div>
+        </div>
+      <% else %>
+        <div class="text-center py-8 text-tertiary">
+          <%= t("reports.trends.no_data") %>
+        </div>
+      <% end %>
+    </div>
+  </div>

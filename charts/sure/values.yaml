@@ -1,0 +1,464 @@
+# Default values for the Sure Helm chart.
+# These defaults target a small multi-node self-hosted cluster (for example, k3s with 3 nodes)
+# with in-cluster Postgres and Redis managed by operators. For true single-node setups or
+# external DB/Redis, see the README "Installation profiles" section and provide an override
+# values file.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/we-promise/sure
+  tag: "0.6.6"
+  pullPolicy: IfNotPresent
+  # Optional: imagePullSecrets to pull from private registries
+  imagePullSecrets: []
+
+# Global app configuration
+rails:
+  env: production
+  # Extra environment variables (non-sensitive). Key/values become env vars.
+  extraEnv: {}
+  # Extra environment variables with full EnvVar objects (supports valueFrom/secretKeyRef)
+  extraEnvVars: []
+  # Extra envFrom sources applied to all workloads
+  extraEnvFrom: []
+  # Control whether encryption env vars are injected into workloads
+  encryptionEnv:
+    enabled: true
+  # Use an existing Secret for sensitive values (recommended). If set, the chart will not create a Secret.
+  existingSecret: ""
+  # If not using existingSecret, define sensitive values here (for testing only; do not commit secrets!).
+  # Prefer managing secrets via external tools like Sealed Secrets or External Secrets.
+  secret:
+    enabled: false
+    values:
+      SECRET_KEY_BASE: ""
+      # Active Record encryption keys — required if simplefin.encryption.enabled=true
+      ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ""
+      ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ""
+      ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ""
+      # Third party optional keys
+      OPENAI_ACCESS_TOKEN: ""
+      OPENAI_URI_BASE: ""
+      OPENAI_MODEL: ""
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      OIDC_ISSUER: ""
+      LANGFUSE_PUBLIC_KEY: ""
+      LANGFUSE_SECRET_KEY: ""
+      LANGFUSE_HOST: "https://cloud.langfuse.com"
+
+  # Non-secret env defaults mirrored from .env.local.example
+  settings:
+    SELF_HOSTED: "true"
+    ONBOARDING_STATE: "open"
+    AI_DEBUG_MODE: ""
+
+# Database: CloudNativePG (operator chart dependency) and a Cluster CR (optional)
+cnpg:
+  enabled: true  # enable installing the CloudNativePG operator via subchart
+  cluster:
+    enabled: true  # create a CNPG Cluster custom resource for an in-cluster Postgres
+    name: "sure-db"
+    instances: 1   # set to 3+ for HA
+    storage:
+      size: 10Gi
+      storageClassName: ""
+    # Optional CNPG backup configuration (rendered as `.spec.backup` on the Cluster CR)
+    # Example (CNPG volume snapshots):
+    # backup:
+    #   method: volumeSnapshot
+    #   volumeSnapshot:
+    #     className: longhorn
+    #
+    # Example (CNPG barmanObjectStore backups):
+    # backup:
+    #   method: barmanObjectStore
+    #   barmanObjectStore:
+    #     destinationPath: s3://my-bucket/cnpg
+    #     endpointURL: https://s3.us-east-1.amazonaws.com
+    #     s3Credentials:
+    #       accessKeyId:
+    #         name: my-s3-creds
+    #         key: ACCESS_KEY_ID
+    #       secretAccessKey:
+    #         name: my-s3-creds
+    #         key: SECRET_ACCESS_KEY
+    #
+    # NOTE:
+    # - The CNPG Cluster `spec.backup` schema does not support `enabled` or `ttl` keys.
+    #   If you add them, this chart will ignore them to avoid CRD warnings.
+    # - This chart only hard-validates required fields for supported methods; unknown `method` values
+    #   are passed through for CNPG to validate.
+    backup: {}
+
+    # Optional CNPG plugin configuration (rendered as `.spec.plugins` on the Cluster CR)
+    # Example (barman-cloud plugin as WAL archiver):
+    # plugins:
+    #   - name: barman-cloud.cloudnative-pg.io
+    #     isWALArchiver: true
+    #     parameters:
+    #       barmanObjectName: minio-backups
+    #
+    # Example (complete setup: WAL archiving via barman-cloud plugin + snapshot backups):
+    # plugins:
+    #   - name: barman-cloud.cloudnative-pg.io
+    #     isWALArchiver: true
+    #     parameters:
+    #       barmanObjectName: minio-backups  # references an ObjectStore CR
+    # backup:
+    #   method: volumeSnapshot
+    #   volumeSnapshot:
+    #     className: longhorn
+    plugins: []
+    # auth config for application user
+    appUser: sure
+    appDatabase: sure
+    # Secret name for DB credentials (auto-created if empty and secret.enabled=true)
+    existingSecret: ""
+    secret:
+      enabled: true
+      name: ""
+      usernameKey: username
+      passwordKey: password
+    # Optional HA knobs
+    minSyncReplicas: 0  # set >0 for synchronous replication
+    maxSyncReplicas: 0
+    # Optional scheduling for cluster Pods (examples for multi-node k3s; leave empty for single-node)
+    nodeSelector: {}
+    affinity: {}
+    tolerations: []
+    topologySpreadConstraints: []
+    # Optional additional cluster configuration values
+    parameters: {}
+
+# Redis Operator (OT-CONTAINER-KIT) optional dependency and managed Redis CR
+redisOperator:
+  enabled: true             # install the operator subchart (standalone-ready defaults)
+  # Pass-through to the operator subchart (controller) resources if supported by the chart
+  # Many users run small k3s nodes; keep defaults empty and document examples in README
+  operator:
+    resources: {}
+  name: ""                 # defaults to <fullname>-redis
+  # Mode controls how this chart templates Redis CRs for the OT redis-operator.
+  # - replication: only a RedisReplication CR (recommended/production)
+  # - sentinel: RedisReplication remains, and an optional RedisSentinel CR can be enabled via sentinel.enabled (advanced)
+  # - standalone: reserved for future use
+  mode: replication
+  sentinel:
+    # When true AND mode=sentinel, chart will also render a RedisSentinel CR (advanced).
+    # For most self-hosted production clusters, RedisReplication alone is sufficient; enable Sentinel
+    # when you specifically want Redis Sentinel-based failover on top of replication.
+    enabled: false
+    masterGroupName: "mymaster"
+    # Dedicated image for RedisSentinel pods. By default this is the OT-CONTAINER-KIT image
+    # that understands SERVER_MODE/SETUP_MODE=SENTINEL and runs redis-sentinel on port 26379.
+    image:
+      repository: quay.io/opstree/redis-sentinel
+      tag: v8.4.0
+  replicas: 3
+  # Image used by the RedisReplication CR (required by operator CRD)
+  image:
+    # Use OT-CONTAINER-KIT tuned image by default for best compatibility with the operator.
+    repository: quay.io/opstree/redis
+    tag: v8.4.0
+  # Probes for RedisSentinel (sentinel TCP port)
+  probes:
+    sentinel:
+      port: 26379
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    replication:
+      port: 6379
+      initialDelaySeconds: 30
+      periodSeconds: 10
+  auth:
+    existingSecret: ""     # default to rails.existingSecret when empty
+    passwordKey: "redis-password"
+  persistence:
+    enabled: false
+    className: ""          # e.g. longhorn
+    size: 8Gi
+  # Optional scheduling for RedisReplication Pods (top-level fallback if managed.* not set). Prefer setting under managed.*
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  workloadResources: {}      # resources for Redis pods created by the CR (data-plane, not operator controller)
+  # Sure-managed Redis via Operator CR (works with or without installing the subchart if operator is cluster-wide)
+  managed:
+    enabled: true           # default to in-cluster HA Redis via operator
+    # Optional scheduling knobs for managed RedisReplication (preferred location)
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    topologySpreadConstraints: []
+    workloadResources: {}
+    persistence:
+      enabled: false
+      className: ""
+      size: 8Gi
+
+# Redis when using external service (redis-ha.enabled=false) — used only for secret key mapping
+redis:
+  # Name of the key inside rails.existingSecret (or rails.secret.values) that contains the Redis password
+  passwordKey: "redis-password"
+
+# Optional simple Redis (non-HA) that this chart can deploy as a fallback
+redisSimple:
+  enabled: false
+  image:
+    repository: docker.io/redis
+    tag: "7.2"
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+  auth:
+    enabled: true
+    # Use an existing Secret for the Redis password
+    existingSecret: ""
+    # Key within the Secret that contains the password (used by helpers/REDIS_PASSWORD)
+    passwordKey: "redis-password"
+  persistence:
+    enabled: false
+    storageClass: ""
+    size: 1Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+
+# URLs constructed automatically when using in-cluster DB and Redis.
+# You can override DATABASE_URL and REDIS_URL explicitly via rails.extraEnv if using external services.
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: sure.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ServiceMonitor for Prometheus Operator (optional). Set scrape path and port.
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  path: /metrics
+  portName: http
+  additionalLabels: {}
+
+# Web (Rails server) Deployment configuration
+web:
+  enabled: true
+  replicas: 1
+  revisionHistoryLimit: 3
+  # Optional command/args override
+  command: []
+  args: []
+  # Kubernetes rolling update strategy for the web Deployment.
+  # Controls how pods are replaced during updates.
+  # Default: maxUnavailable=1, maxSurge=0
+  # This prevents deployment deadlocks when using topology spread constraints with DoNotSchedule.
+  # If you are not using strict topology constraints, you can increase maxSurge for faster rollouts.
+  # Example for faster rollouts (when not using DoNotSchedule):
+  #   strategy:
+  #     rollingUpdate:
+  #       maxUnavailable: 0
+  #       maxSurge: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  extraEnv: {}
+  extraEnvFrom: []
+  extraVolumeMounts: []
+  extraVolumes: []
+  # Probes
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 6
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 6
+  startupProbe:
+    httpGet:
+      path: /
+      port: http
+    failureThreshold: 30
+    periodSeconds: 5
+
+# Worker (Sidekiq) Deployment configuration
+worker:
+  enabled: true
+  replicas: 1
+  queues: "default"
+  # Optional command/args override for Sidekiq
+  command: []
+  args: []
+  # Kubernetes rolling update strategy for the worker Deployment.
+  # Controls how pods are replaced during updates.
+  # Default: maxUnavailable=1, maxSurge=0
+  # This prevents deployment deadlocks when using topology spread constraints with DoNotSchedule.
+  # If you are not using strict topology constraints, you can increase maxSurge for faster rollouts.
+  # Example for faster rollouts (when not using DoNotSchedule):
+  #   strategy:
+  #     rollingUpdate:
+  #       maxUnavailable: 0
+  #       maxSurge: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  extraEnv: {}
+  extraEnvFrom: []
+  extraVolumeMounts: []
+  extraVolumes: []
+
+# Migrations: how to run database migrations
+migrations:
+  # strategy: job (default) runs a Helm hook pre-install/pre-upgrade Job
+  # strategy: initContainer runs migrations on web pod start via initContainer instead
+  strategy: job
+  job:
+    backoffLimit: 3
+    ttlSecondsAfterFinished: 600
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    resources: {}
+    # Optional overrides for the migrate job
+    command: ["bash", "-lc"]
+    args: |
+      DB_HOST=$(echo "$DATABASE_URL" | sed 's/.*@//; s/:.*//')
+      until pg_isready -h "$DB_HOST" -p 5432; do echo "Waiting for DB..."; sleep 5; done
+      echo "Preparing database (db:prepare)" && \
+      DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bundle exec rake db:prepare
+  initContainer:
+    # Optional additional safety net: when enabled, adds a db-migrate initContainer
+    # to the web Deployment that only runs migrations if there are pending ones.
+    # This can be used together with strategy: job for extra protection on pod restarts.
+    enabled: false
+    command: ["bash", "-lc"]
+    args: |
+      DB_HOST=$(echo "$DATABASE_URL" | sed 's/.*@//; s/:.*//')
+      until pg_isready -h "$DB_HOST" -p 5432; do echo "Waiting for DB..."; sleep 5; done
+
+      if bundle exec rake db:pending_migrations | grep -q "pending"; then
+        echo "Running db:migrate" && \
+        DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bundle exec rake db:migrate
+      else
+        echo "No pending migrations"
+      fi
+    resources: {}
+
+# SimpleFin encryption backfill job (post-install/upgrade)
+simplefin:
+  encryption:
+    enabled: false
+    # If enabled, Active Record Encryption keys must be provided via rails.existingSecret or rails.secret.values
+    backfill:
+      enabled: true
+      dryRun: true  # default to dry-run for safety; set false to perform writes
+      ttlSecondsAfterFinished: 600
+      nodeSelector: {}
+      tolerations: []
+      affinity: {}
+      # Optional overrides for the backfill job
+      command: ["bash", "-lc"]
+      args: |
+        # Inline DB_PASSWORD into DATABASE_URL for this job only (DATABASE_URL comes from the chart)
+        if [ -n "$DB_PASSWORD" ]; then
+          export DATABASE_URL="${DATABASE_URL//\$(DB_PASSWORD)/$DB_PASSWORD}"
+        fi
+
+        DB_HOST=$(echo "$DATABASE_URL" | sed 's/.*@//; s/:.*//')
+        until pg_isready -h "$DB_HOST" -p 5432; do echo "Waiting for DB..."; sleep 5; done
+
+        echo "Running SimpleFin encrypt_access_urls backfill (dry_run=$DRY_RUN)" && \
+        bundle exec rake "sure:simplefin:encrypt_access_urls[dry_run=$DRY_RUN]"
+      resources: {}
+
+# Optional CronJobs
+cronjobs:
+  enabled: false
+  items: []
+  # - name: nightly-backfill
+  #   schedule: "15 2 * * *"
+  #   command: ["bash", "-lc", "bundle exec rake some:task"]
+  #   concurrencyPolicy: Forbid
+  #   successfulJobsHistoryLimit: 1
+  #   failedJobsHistoryLimit: 3
+  #   resources: {}
+
+# Security context defaults
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Optional writable /tmp for Rails/Sidekiq when enforcing read-only root FS
+writableTmp:
+  enabled: false
+
+# HorizontalPodAutoscaler templates (disabled by default)
+hpa:
+  web:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  worker:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70

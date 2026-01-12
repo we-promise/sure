@@ -1,0 +1,19 @@
+---
+pt-BR:
+  layouts:
+    application:
+      nav:
+        assistant: Assistente
+        budgets: Orçamentos
+        home: Início
+        reports: Relatórios
+        transactions: Transações
+    auth.sign_up:
+      existing_account: Já tem uma conta?
+      no_account: Novo no %{product_name}?
+      sign_in: Entrar
+      sign_up: Criar conta
+    shared:
+      footer:
+        privacy_policy: Política de Privacidade
+        terms_of_service: Termos de Serviço

@@ -145,7 +145,7 @@ image: ghcr.io/we-promise/sure:latest
 
 We recommend using one of the following images, but you can pin your app to whatever version you'd like (see [packages](https://github.com/we-promise/sure/pkgs/container/sure)):
 
-- `ghcr.io/we-promise/sure:latest` (latest commit)
+- `ghcr.io/we-promise/sure:latest` (latest `alpha`)
 - `ghcr.io/we-promise/sure:stable` (latest release)
 
 By default, your app _will NOT_ automatically update. To update your self-hosted app, run the following commands in your terminal:
@@ -191,3 +191,7 @@ docker volume rm sure_postgres-data # this is the name of the volume the DB is m
 docker compose up
 docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```
+
+### Slow `.csv` import (processing rows taking longer than expected)
+
+Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.

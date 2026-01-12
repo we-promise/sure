@@ -17,6 +17,7 @@ en:
       show:
         general: General Settings
         financial_data_providers: Financial Data Providers
+        sync_settings: Sync Settings
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
@@ -25,6 +26,15 @@ en:
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+      provider_selection:
+        title: Provider Selection
+        description: Choose which service to use for fetching exchange rates and security prices. Yahoo Finance is free and doesn't require an API key. Twelve Data requires a free API key but may offer more data coverage.
+        exchange_rate_provider_label: Exchange Rate Provider
+        securities_provider_label: Securities (Stock Prices) Provider
+        env_configured_message: Provider selection is disabled because environment variables (EXCHANGE_RATE_PROVIDER or SECURITIES_PROVIDER) are set. To enable selection here, remove these environment variables from your configuration.
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
       brand_fetch_settings:
         description: Enter the Client ID provided by Brand Fetch
         label: Client ID
@@ -39,6 +49,12 @@ en:
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
+        json_mode_label: JSON Mode
+        json_mode_auto: Auto (recommended)
+        json_mode_strict: Strict (best for thinking models)
+        json_mode_none: None (best for standard models)
+        json_mode_json_object: JSON Object
+        json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
@@ -59,6 +75,16 @@ en:
         failure: Invalid setting value
         success: Settings updated
         invalid_onboarding_state: Invalid onboarding state
+        invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
+        scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action
+      sync_settings:
+        auto_sync_label: Enable automatic sync
+        auto_sync_description: When enabled, all accounts will be automatically synced daily at the specified time.
+        auto_sync_time_label: Sync time (HH:MM)
+        auto_sync_time_description: Specify the time of day when automatic sync should occur.
+        include_pending_label: Include pending transactions
+        include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
+        env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

@@ -1,0 +1,14 @@
+---
+ro:
+  shared:
+    confirm_modal:
+      accept: Confirmă
+      body_html: "<p>Nu vei putea anula această decizie</p>"
+      cancel: Anulează
+      title: Ești sigur?
+    money_field:
+      label: Sumă
+    syncing_notice:
+      syncing: Se sincronizează datele conturilor...
+    trend_change:
+      no_change: "fără schimbare"

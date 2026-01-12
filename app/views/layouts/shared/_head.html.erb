@@ -6,9 +6,9 @@
 
   <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
 
-  <%= javascript_include_tag "https://cdn.plaid.com/link/v2/stable/link-initialize.js" %>
   <%= combobox_style_tag %>
 
+  <%= yield :plaid_link %>
   <%= javascript_importmap_tags %>
   <%= render "layouts/dark_mode_check" %>
   <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
@@ -26,6 +26,10 @@
   <link rel="manifest" href="<%= pwa_manifest_path %>">
   <link rel="apple-touch-icon" href="/logo-pwa.png">
   <link rel="apple-touch-icon" sizes="512x512" href="/logo-pwa.png">
+
+  <% if Rails.env.production? && (posthog_config = Rails.configuration.x.posthog).try(:api_key).present? %>
+    <%= render "shared/posthog", posthog_api_key: posthog_config.api_key, posthog_host: posthog_config.host %>
+  <% end %>
 
   <%= yield :head %>
 </head>

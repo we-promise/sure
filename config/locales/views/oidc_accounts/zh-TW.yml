@@ -1,0 +1,5 @@
+---
+zh-TW:
+  oidc_accounts:
+    link:
+      account_creation_disabled: 透過單一登入建立新帳戶的功能已被禁用。請聯絡管理員為您建立帳戶。

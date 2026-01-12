@@ -1,0 +1,23 @@
+---
+zh-CN:
+  sessions:
+    create:
+      invalid_credentials: 邮箱或密码无效。
+    destroy:
+      logout_successful: 您已成功退出登录。
+    failure:
+      failed: 认证失败。
+    new:
+      demo_banner_message: 这是一个演示环境。为方便使用，登录凭据已预先填充。请勿输入真实或敏感信息。
+      demo_banner_title: 演示模式已激活
+      email: 邮箱地址
+      email_placeholder: you@example.com
+      forgot_password: 忘记密码？
+      google_auth_connect: 使用 Google 登录
+      openid_connect: 使用 OpenID Connect 登录
+      password: 密码
+      password_placeholder: 请输入密码
+      submit: 登录
+      title: 登录您的账户
+    openid_connect:
+      failed: 无法通过 OpenID Connect 认证。

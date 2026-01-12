@@ -57,8 +57,8 @@ module LanguagesHelper
     tr: "Turkish",
     uk: "Ukrainian",
     vi: "Vietnamese",
-    'zh-CN': "Chinese (Simplified)",
-    'zh-TW': "Chinese (Traditional)",
+    'zh-CN': "简体中文",
+    'zh-TW': "繁體中文",
     af: "Afrikaans",
     az: "Azerbaijani",
     be: "Belarusian",
@@ -151,6 +151,20 @@ module LanguagesHelper
     "en-US",
     "fi-FI",
     "en-IND"
+  ].freeze
+
+  # Locales with complete/extensive translations
+  SUPPORTED_LOCALES = [
+    "en",   # English - 62 translation files
+    "de",   # German - 62 translation files
+    "es",   # Spanish - 61 translation files
+    "tr",   # Turkish - 58 translation files
+    "nb",   # Norwegian Bokmål - 57 translation files
+    "ca",   # Catalan - 57 translation files
+    "ro",   # Romanian - 62 translation files
+    "pt-BR", # Brazilian Portuguese - 60 translation files
+    "zh-CN", # Chinese (Simplified) - 59 translation files
+    "zh-TW"  # Chinese (Traditional) - 63 translation files
   ].freeze
 
   COUNTRY_MAPPING = {
@@ -356,7 +370,7 @@ module LanguagesHelper
 
   def language_options
     I18n.available_locales
-      .reject { |locale| EXCLUDED_LOCALES.include?(locale.to_s) }
+      .select { |locale| SUPPORTED_LOCALES.include?(locale.to_s) }
       .map do |locale|
         label = LANGUAGE_MAPPING[locale.to_sym] || locale.to_s.humanize
         [ "#{label} (#{locale})", locale ]

@@ -1,0 +1,26 @@
+---
+es:
+  helpers:
+    label:
+      user:
+        invite_code: Código de invitación
+    submit:
+      user:
+        create: Continuar
+  registrations:
+    closed: Las inscripciones están actualmente cerradas.
+    create:
+      failure: Hubo un problema al registrarse.
+      invalid_invite_code: Código de invitación inválido, por favor inténtalo de nuevo.
+      success: Te has registrado con éxito.
+    new:
+      invitation_message: "%{inviter} te ha invitado a unirte como %{role}"
+      join_family_title: Únete a %{family}
+      role_admin: administrador
+      role_member: miembro
+      submit: Crear cuenta
+      title: Crea tu cuenta
+      welcome_body: Para comenzar, debes registrarte para obtener una nueva cuenta. Luego podrás
+        configurar ajustes adicionales dentro de la aplicación.
+      welcome_title: ¡Bienvenido a Self Hosted %{product_name}!
+      password_placeholder: Introduce tu contraseña

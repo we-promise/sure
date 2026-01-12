@@ -14,7 +14,7 @@ module Sure
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets tasks generators])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -45,5 +45,8 @@ module Sure
     config.x.ui = ActiveSupport::OrderedOptions.new
     default_layout = ENV.fetch("DEFAULT_UI_LAYOUT", "dashboard")
     config.x.ui.default_layout = default_layout.in?(%w[dashboard intro]) ? default_layout : "dashboard"
+    # Handle OmniAuth/OIDC errors gracefully (must be before OmniAuth middleware)
+    require_relative "../app/middleware/omniauth_error_handler"
+    config.middleware.use OmniauthErrorHandler
   end
 end
