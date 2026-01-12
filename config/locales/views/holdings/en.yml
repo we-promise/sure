@@ -8,6 +8,7 @@ en:
     holding:
       per_share: per share
       shares: "%{qty} shares"
+      unknown: "--"
     index:
       average_cost: Average cost
       holdings: Holdings

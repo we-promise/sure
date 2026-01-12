@@ -27,12 +27,16 @@ class Holding < ApplicationRecord
     account.balance.zero? ? 1 : amount / account.balance * 100
   end
 
-  # Basic approximation of cost-basis
+  # Returns average cost per share, or nil if unknown.
+  #
   # Uses pre-computed cost_basis if available (set during materialization),
-  # otherwise falls back to calculating from trades
+  # otherwise falls back to calculating from trades. Returns nil when cost
+  # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
-    # Use stored cost_basis if available (eliminates N+1 queries)
-    return Money.new(cost_basis, currency) if cost_basis.present?
+    # Use stored cost_basis if available and positive (eliminates N+1 queries)
+    # Note: cost_basis of 0 is treated as "unknown" since providers sometimes
+    # return 0 when they don't have the data
+    return Money.new(cost_basis, currency) if cost_basis.present? && cost_basis.positive?
 
     # Fallback to calculation for holdings without pre-computed cost_basis
     calculate_avg_cost
@@ -75,6 +79,7 @@ class Holding < ApplicationRecord
   private
     def calculate_trend
       return nil unless amount_money
+      return nil unless avg_cost # Can't calculate trend without cost basis
 
       start_amount = qty * avg_cost
 
@@ -83,6 +88,8 @@ class Holding < ApplicationRecord
         previous: start_amount
     end
 
+    # Calculates weighted average cost from buy trades.
+    # Returns nil if no trades exist (cost basis is unknown).
     def calculate_avg_cost
       trades = account.trades
         .with_entry
@@ -101,13 +108,10 @@ class Holding < ApplicationRecord
         Arel.sql("SUM(trades.qty)")
       )
 
-      weighted_avg =
-        if total_qty && total_qty > 0
-          total_cost / total_qty
-        else
-          price
-        end
+      # Return nil when no trades exist - cost basis is genuinely unknown
+      # Previously this fell back to current market price, which was misleading
+      return nil unless total_qty && total_qty > 0
 
-      Money.new(weighted_avg || price, currency)
+      Money.new(total_cost / total_qty, currency)
     end
 end

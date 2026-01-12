@@ -31,7 +31,7 @@
     </div>
 
     <div class="col-span-2 text-right">
-      <%= tag.p format_money holding.avg_cost %>
+      <%= tag.p holding.avg_cost ? format_money(holding.avg_cost) : t(".unknown"), class: holding.avg_cost ? nil : "text-secondary" %>
       <%= tag.p t(".per_share"), class: "font-normal text-secondary" %>
     </div>
 

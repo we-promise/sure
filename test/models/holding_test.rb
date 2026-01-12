@@ -75,6 +75,43 @@ class HoldingTest < ActiveSupport::TestCase
     assert_in_delta -1.6, @nvda.trend.percent, 0.001
   end
 
+  test "avg_cost returns nil when no trades exist and no stored cost_basis" do
+    # Holdings created without trades should return nil for avg_cost
+    # This prevents displaying fake $0 gain/loss based on current market price
+    assert_nil @amzn.avg_cost
+    assert_nil @nvda.avg_cost
+  end
+
+  test "avg_cost uses stored cost_basis when available" do
+    # Simulate provider-supplied cost_basis (e.g., from SimpleFIN)
+    @amzn.update!(cost_basis: 200.00)
+
+    assert_equal Money.new(200.00, "USD"), @amzn.avg_cost
+  end
+
+  test "avg_cost treats zero cost_basis as unknown" do
+    # Some providers return 0 when they don't have cost basis data
+    # This should be treated as "unknown" (return nil), not as $0 cost
+    @amzn.update!(cost_basis: 0)
+
+    assert_nil @amzn.avg_cost
+  end
+
+  test "trend returns nil when cost basis is unknown" do
+    # Without cost basis, we can't calculate unrealized gain/loss
+    assert_nil @amzn.trend
+    assert_nil @nvda.trend
+  end
+
+  test "trend works when avg_cost is available" do
+    @amzn.update!(cost_basis: 214.00)
+
+    # Current price is 216, cost basis is 214
+    # Qty is 15, so gain = 15 * (216 - 214) = $30
+    assert_not_nil @amzn.trend
+    assert_equal Money.new(30), @amzn.trend.value
+  end
+
   private
 
     def load_holdings

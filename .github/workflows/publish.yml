@@ -344,7 +344,7 @@ jobs:
         uses: actions/checkout@v4.2.0
         with:
           ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Bump alpha version
         run: |
