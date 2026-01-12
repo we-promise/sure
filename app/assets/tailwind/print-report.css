@@ -236,7 +236,8 @@
     margin: 15mm 18mm;
   }
 
-  html, body {
+  /* Scoped to .print-body to avoid affecting other pages when printing */
+  .print-body {
     font-size: 10px;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
