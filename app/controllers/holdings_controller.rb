@@ -9,11 +9,11 @@ class HoldingsController < ApplicationController
   end
 
   def update
-    total_cost_basis = holding_params[:cost_basis]
+    total_cost_basis = holding_params[:cost_basis].to_d
 
-    if total_cost_basis.present? && @holding.qty.positive?
+    if total_cost_basis.positive? && @holding.qty.positive?
       # Convert total cost basis to per-share cost (the cost_basis field stores per-share)
-      per_share_cost = total_cost_basis.to_d / @holding.qty
+      per_share_cost = total_cost_basis / @holding.qty
       @holding.set_manual_cost_basis!(per_share_cost)
       flash[:notice] = t(".success")
     end
