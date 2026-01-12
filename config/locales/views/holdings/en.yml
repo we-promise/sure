@@ -7,6 +7,7 @@ en:
       success: Holding deleted
     update:
       success: Cost basis saved.
+      error: Invalid cost basis value.
     unlock_cost_basis:
       success: Cost basis unlocked. It may be updated on next sync.
     cost_basis_sources:

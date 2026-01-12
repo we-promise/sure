@@ -11,11 +11,14 @@ class HoldingsController < ApplicationController
   def update
     total_cost_basis = holding_params[:cost_basis].to_d
 
-    if total_cost_basis.positive? && @holding.qty.positive?
+    if total_cost_basis >= 0 && @holding.qty.positive?
       # Convert total cost basis to per-share cost (the cost_basis field stores per-share)
+      # Zero is valid for gifted/inherited shares
       per_share_cost = total_cost_basis / @holding.qty
       @holding.set_manual_cost_basis!(per_share_cost)
       flash[:notice] = t(".success")
+    else
+      flash[:alert] = t(".error")
     end
 
     # Redirect to account page holdings tab to refresh list and close drawer
