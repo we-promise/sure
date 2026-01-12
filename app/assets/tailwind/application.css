@@ -201,149 +201,149 @@
 /* Tufte-inspired Print Report Styles */
 .print-body {
   background: white;
-  color: #111;
+  color: #1a1a1a;
   font-family: 'Geist', system-ui, -apple-system, sans-serif;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .print-container {
-  max-width: 720px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 24px 20px;
+  padding: 32px 24px;
 }
 
 .tufte-report {
   font-size: 11px;
-  color: #111;
+  color: #1a1a1a;
 }
 
-/* Compact Header */
+/* Header */
 .tufte-header {
-  margin-bottom: 16px;
-  border-bottom: 1px solid #111;
-  padding-bottom: 8px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #1a1a1a;
 }
 
 .tufte-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-  color: #111;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #1a1a1a;
+  letter-spacing: -0.3px;
 }
 
 .tufte-period {
-  font-weight: 400;
-  color: #555;
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #444;
+  margin-top: 2px;
 }
 
 .tufte-meta {
   font-size: 10px;
-  color: #666;
-  margin: 2px 0 0 0;
+  color: #777;
+  margin: 8px 0 0 0;
 }
 
 /* Sections */
 .tufte-section {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .tufte-section-title {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #111;
-  margin: 0 0 8px 0;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 4px;
+  letter-spacing: 1px;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 6px;
 }
 
 .tufte-subsection {
   font-size: 11px;
   font-weight: 600;
-  margin: 12px 0 6px 0;
+  margin: 16px 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #eee;
 }
 
-/* Summary Metrics with Sparklines */
-.tufte-summary {
+/* Metric Cards */
+.tufte-metric-card {
+  display: inline-block;
+  min-width: 100px;
+}
+
+.tufte-metric-card-main {
+  display: block;
+}
+
+.tufte-metric-card-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.tufte-metric-card-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.tufte-metric-card-change {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  margin-top: 4px;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.tufte-metric-card-sm .tufte-metric-card-value {
+  font-size: 16px;
+}
+
+.tufte-metric-card-sm .tufte-metric-card-label {
+  font-size: 9px;
+}
+
+/* Metric Row (horizontal layout) */
+.tufte-metric-row {
   display: flex;
-  gap: 24px;
+  gap: 32px;
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
 
-.tufte-metric {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.tufte-metric-label {
-  font-size: 10px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.tufte-metric-value {
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.tufte-metric-change {
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.tufte-metric-note {
-  font-size: 9px;
-  color: #888;
-}
-
-.tufte-up { color: #059669; }
-.tufte-down { color: #dc2626; }
-
-/* Sparklines */
-.tufte-sparkline {
-  width: 50px;
-  height: 14px;
-  vertical-align: middle;
-}
-
 /* Colors */
-.tufte-income { color: #059669; }
-.tufte-expense { color: #dc2626; }
-.tufte-muted { color: #888; font-size: 10px; }
-
-/* Net Worth */
-.tufte-networth {
-  margin-bottom: 10px;
-}
-
-.tufte-networth-value {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.tufte-networth-change {
-  font-size: 11px;
-  margin-left: 8px;
-}
+.tufte-income { color: #047857; }
+.tufte-expense { color: #b91c1c; }
+.tufte-muted { color: #6b7280; font-size: 10px; }
+.tufte-up { color: #047857; }
+.tufte-down { color: #b91c1c; }
 
 /* Two Column Layout */
 .tufte-two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 32px;
+  margin-top: 12px;
 }
 
-/* Tables - Tufte style (minimal lines) */
+/* Tables - Clean, readable style */
 .tufte-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -352,25 +352,34 @@
   font-weight: 600;
   font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: #555;
-  padding: 4px 8px 4px 0;
-  border-bottom: 1px solid #111;
+  letter-spacing: 0.5px;
+  color: #444;
+  padding: 8px 12px 8px 0;
+  border-bottom: 2px solid #1a1a1a;
 }
 
 .tufte-table tbody td {
-  padding: 3px 8px 3px 0;
-  border-bottom: 1px solid #eee;
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid #e5e5e5;
+  vertical-align: middle;
+}
+
+.tufte-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .tufte-table tfoot td {
-  padding: 4px 8px 4px 0;
-  border-top: 1px solid #111;
+  padding: 8px 12px 6px 0;
+  border-top: 2px solid #1a1a1a;
   font-weight: 600;
 }
 
+.tufte-table.tufte-compact thead th {
+  padding: 6px 8px 6px 0;
+}
+
 .tufte-table.tufte-compact tbody td {
-  padding: 2px 6px 2px 0;
+  padding: 5px 8px 5px 0;
 }
 
 .tufte-right {
@@ -379,34 +388,38 @@
 }
 
 .tufte-highlight {
-  background: #fffbeb;
+  background: #fef9c3;
+}
+
+.tufte-highlight td:first-child {
+  font-weight: 600;
 }
 
 /* Category Dots */
 .tufte-dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  margin-right: 4px;
+  margin-right: 6px;
   vertical-align: middle;
 }
 
 /* Footnotes */
 .tufte-footnote {
-  font-size: 9px;
-  color: #888;
-  margin-top: 4px;
+  font-size: 10px;
+  color: #777;
+  margin-top: 8px;
   font-style: italic;
 }
 
 /* Footer */
 .tufte-footer {
-  margin-top: 20px;
-  padding-top: 8px;
-  border-top: 1px solid #ccc;
-  font-size: 9px;
-  color: #888;
+  margin-top: 32px;
+  padding-top: 12px;
+  border-top: 1px solid #ddd;
+  font-size: 10px;
+  color: #777;
   text-align: center;
 }
 
@@ -414,7 +427,7 @@
 @media print {
   @page {
     size: A4;
-    margin: 12mm 15mm;
+    margin: 15mm 18mm;
   }
 
   html, body {
@@ -460,10 +473,16 @@
     page-break-after: avoid;
   }
 
-  .tufte-income { color: #059669 !important; }
-  .tufte-expense { color: #dc2626 !important; }
+  .tufte-income { color: #047857 !important; }
+  .tufte-expense { color: #b91c1c !important; }
+  .tufte-up { color: #047857 !important; }
+  .tufte-down { color: #b91c1c !important; }
 
   .tufte-footer {
     page-break-before: avoid;
+  }
+
+  .tufte-highlight {
+    background: #fef9c3 !important;
   }
 }
