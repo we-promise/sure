@@ -199,13 +199,10 @@ class OfflineStorageService {
         ? accountId
         : transaction.accountId;
 
-    _log.debug('OfflineStorage', 'Upserting transaction ${transaction.id}: accountId="${transaction.accountId}" -> effective="$effectiveAccountId"');
-
     // Check if we already have this transaction
     final existing = await getTransactionByServerId(transaction.id!);
 
     if (existing != null) {
-      _log.debug('OfflineStorage', 'Updating existing transaction (localId: ${existing.localId}, was ${existing.syncStatus})');
       // Update existing transaction, preserving its accountId if effectiveAccountId is empty
       final finalAccountId = effectiveAccountId.isEmpty ? existing.accountId : effectiveAccountId;
       final updated = OfflineTransaction(
@@ -221,9 +218,7 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
-      _log.debug('OfflineStorage', 'Transaction updated successfully with accountId="$finalAccountId"');
     } else {
-      _log.debug('OfflineStorage', 'Inserting new transaction with accountId="$effectiveAccountId"');
       // Insert new transaction
       final offlineTransaction = OfflineTransaction(
         id: transaction.id,
@@ -238,7 +233,6 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
-      _log.debug('OfflineStorage', 'Transaction inserted successfully');
     }
   }
 
