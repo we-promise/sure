@@ -292,7 +292,6 @@ Rails.application.routes.draw do
       resources :merchants, only: %i[index show]
       resources :tags, only: %i[index show create update destroy]
 
-
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
