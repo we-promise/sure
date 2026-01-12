@@ -13,6 +13,7 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
+  has_one :installment, dependent: :destroy
 
   monetize :balance, :cash_balance
 
@@ -203,6 +204,16 @@ class Account < ApplicationRecord
 
   def logo_url
     provider&.logo_url
+  end
+
+  # Returns the calculated balance for installment accounts, or the regular balance for others
+  def calculated_balance
+    installment ? installment.calculate_current_balance : balance
+  end
+
+  # Returns the synced balance from bank providers (Plaid/SimpleFIN)
+  def bank_balance
+    balance
   end
 
   def destroy_later

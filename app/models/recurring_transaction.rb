@@ -3,6 +3,7 @@ class RecurringTransaction < ApplicationRecord
 
   belongs_to :family
   belongs_to :merchant, optional: true
+  belongs_to :installment, optional: true
 
   monetize :amount
   monetize :expected_amount_min, allow_nil: true
@@ -208,6 +209,11 @@ class RecurringTransaction < ApplicationRecord
   # Check if this recurring transaction has amount variance configured
   def has_amount_variance?
     expected_amount_min.present? && expected_amount_max.present?
+  end
+
+  # Check if this recurring transaction is linked to an installment plan
+  def installment_managed?
+    installment_id.present?
   end
 
   # Check if this recurring transaction should be marked inactive

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_09_144012) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_12_103304) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -592,17 +592,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_09_144012) do
   end
 
   create_table "installments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.string "name"
-    t.integer "total_installments"
-    t.string "payment_period"
-    t.date "first_payment_date"
-    t.integer "installment_cost_cents"
-    t.string "currency"
-    t.boolean "auto_generate", default: false
+    t.uuid "account_id", null: false
+    t.decimal "installment_cost", precision: 19, scale: 4, null: false
+    t.integer "total_term", null: false
+    t.integer "current_term", default: 0, null: false
+    t.string "payment_period", null: false
+    t.date "first_payment_date", null: false
+    t.date "most_recent_payment_date", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["family_id"], name: "index_installments_on_family_id"
+    t.index ["account_id"], name: "index_installments_on_account_id"
+    t.check_constraint "current_term <= total_term", name: "current_term_lte_total_term"
+    t.check_constraint "current_term >= 0", name: "current_term_gte_zero"
+    t.check_constraint "installment_cost > 0::numeric", name: "installment_cost_positive"
+    t.check_constraint "total_term > 0", name: "total_term_positive"
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -894,10 +897,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_09_144012) do
     t.decimal "expected_amount_min", precision: 19, scale: 4
     t.decimal "expected_amount_max", precision: 19, scale: 4
     t.decimal "expected_amount_avg", precision: 19, scale: 4
+    t.uuid "installment_id"
     t.index ["family_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_merchant", unique: true, where: "(merchant_id IS NOT NULL)"
     t.index ["family_id", "name", "amount", "currency"], name: "idx_recurring_txns_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL))"
     t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
     t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
+    t.index ["installment_id"], name: "index_recurring_transactions_on_installment_id"
     t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
     t.index ["next_expected_date"], name: "index_recurring_transactions_on_next_expected_date"
   end
@@ -1151,11 +1156,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_09_144012) do
     t.string "kind", default: "standard", null: false
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
-    t.uuid "installment_id"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
     t.index ["extra"], name: "index_transactions_on_extra", using: :gin
-    t.index ["installment_id"], name: "index_transactions_on_installment_id"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
   end
@@ -1262,7 +1265,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_09_144012) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
   add_foreign_key "imports", "families"
-  add_foreign_key "installments", "families"
+  add_foreign_key "installments", "accounts"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "llm_usages", "families"
@@ -1277,6 +1280,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_09_144012) do
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "recurring_transactions", "families"
+  add_foreign_key "recurring_transactions", "installments"
   add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id"
@@ -1298,7 +1302,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_09_144012) do
   add_foreign_key "trades", "categories"
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
-  add_foreign_key "transactions", "installments"
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
