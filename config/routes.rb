@@ -168,7 +168,11 @@ Rails.application.routes.draw do
     resources :mappings, only: :update, module: :import
   end
 
-  resources :holdings, only: %i[index new show destroy]
+  resources :holdings, only: %i[index new show update destroy] do
+    member do
+      post :unlock_cost_basis
+    end
+  end
   resources :trades, only: %i[show new create update destroy]
   resources :valuations, only: %i[show new create update destroy] do
     post :confirm_create, on: :collection

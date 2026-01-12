@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_12_065106) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -49,6 +49,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.jsonb "holdings_snapshot_data"
+    t.datetime "holdings_snapshot_at"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -340,12 +342,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.jsonb "locked_attributes", default: {}
     t.string "external_id"
     t.string "source"
+    t.boolean "exclude_from_cashflow", default: false, null: false
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["date"], name: "index_entries_on_date"
     t.index ["entryable_type"], name: "index_entries_on_entryable_type"
+    t.index ["exclude_from_cashflow"], name: "index_entries_on_exclude_from_cashflow"
     t.index ["import_id"], name: "index_entries_on_import_id"
   end
 
@@ -485,6 +489,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.string "external_id"
     t.decimal "cost_basis", precision: 19, scale: 4
     t.uuid "account_provider_id"
+    t.string "cost_basis_source"
+    t.boolean "cost_basis_locked", default: false, null: false
     t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
@@ -1125,7 +1131,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
     t.uuid "category_id"
+    t.decimal "realized_gain", precision: 19, scale: 4
+    t.decimal "cost_basis_amount", precision: 19, scale: 4
+    t.string "cost_basis_currency"
+    t.integer "holding_period_days"
+    t.string "realized_gain_confidence"
+    t.string "realized_gain_currency"
     t.index ["category_id"], name: "index_trades_on_category_id"
+    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1138,9 +1151,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_10_122603) do
     t.string "kind", default: "standard", null: false
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
+    t.string "investment_activity_label"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
     t.index ["extra"], name: "index_transactions_on_extra", using: :gin
+    t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
   end
