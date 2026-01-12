@@ -11,7 +11,7 @@ module ReportsHelper
     range = 1.0 if range.zero?
 
     points = nums.each_with_index.map do |val, i|
-      x = (i.to_f / [nums.length - 1, 1].max) * width
+      x = (i.to_f / [ nums.length - 1, 1 ].max) * width
       y = height - ((val - min_val) / range * (height - 2)) - 1
       "#{x.round(1)},#{y.round(1)}"
     end
