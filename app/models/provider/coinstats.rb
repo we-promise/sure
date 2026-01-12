@@ -171,23 +171,36 @@ class Provider::Coinstats < Provider
       when 200
         JSON.parse(response.body, symbolize_names: true)
       when 400
-        raise Error, "CoinStats: #{response.code} Bad Request - Invalid parameters or request format #{response.body}"
+        log_api_error(response, "Bad Request")
+        raise Error, "CoinStats: Invalid request parameters"
       when 401
-        raise Error, "CoinStats: #{response.code} Unauthorized - Invalid or missing API key #{response.body}"
+        log_api_error(response, "Unauthorized")
+        raise Error, "CoinStats: Invalid or missing API key"
       when 403
-        raise Error, "CoinStats: #{response.code} Forbidden - #{response.body}"
+        log_api_error(response, "Forbidden")
+        raise Error, "CoinStats: Access denied"
       when 404
-        raise Error, "CoinStats: #{response.code} Not Found - Resource not found #{response.body}"
+        log_api_error(response, "Not Found")
+        raise Error, "CoinStats: Resource not found"
       when 409
-        raise Error, "CoinStats: #{response.code} Conflict - Resource conflict #{response.body}"
+        log_api_error(response, "Conflict")
+        raise Error, "CoinStats: Resource conflict"
       when 429
-        raise Error, "CoinStats: #{response.code} Too Many Requests - Rate limit exceeded #{response.body}"
+        log_api_error(response, "Too Many Requests")
+        raise Error, "CoinStats: Rate limit exceeded, try again later"
       when 500
-        raise Error, "CoinStats: #{response.code} Internal Server Error - Server error #{response.body}"
+        log_api_error(response, "Internal Server Error")
+        raise Error, "CoinStats: Server error, try again later"
       when 503
-        raise Error, "CoinStats: #{response.code} Service Unavailable - #{response.body}"
+        log_api_error(response, "Service Unavailable")
+        raise Error, "CoinStats: Service temporarily unavailable"
       else
-        raise Error, "CoinStats: #{response.code} Unexpected Error - #{response.body}"
+        log_api_error(response, "Unexpected Error")
+        raise Error, "CoinStats: An unexpected error occurred"
       end
+    end
+
+    def log_api_error(response, error_type)
+      Rails.logger.error "CoinStats API: #{response.code} #{error_type} - #{response.body}"
     end
 end
