@@ -25,6 +25,9 @@ class Provider::Coinstats < Provider
       res = self.class.get("#{BASE_URL}/wallet/blockchains", headers: auth_headers)
       handle_response(res)
     end
+  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+    Rails.logger.error "CoinStats API: GET /wallet/blockchains failed: #{e.class}: #{e.message}"
+    raise Error, "CoinStats API request failed: #{e.message}"
   end
 
   # Returns blockchain options formatted for select dropdowns
@@ -75,6 +78,9 @@ class Provider::Coinstats < Provider
       )
       handle_response(res)
     end
+  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+    Rails.logger.error "CoinStats API: GET /wallet/balances failed: #{e.class}: #{e.message}"
+    raise Error, "CoinStats API request failed: #{e.message}"
   end
 
   # Extract balance data for a specific wallet from bulk response
@@ -114,6 +120,9 @@ class Provider::Coinstats < Provider
       )
       handle_response(res)
     end
+  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+    Rails.logger.error "CoinStats API: GET /wallet/transactions failed: #{e.class}: #{e.message}"
+    raise Error, "CoinStats API request failed: #{e.message}"
   end
 
   # Extract transaction data for a specific wallet from bulk response
