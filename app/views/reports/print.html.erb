@@ -190,13 +190,14 @@
         </tbody>
         <tfoot>
           <%
-            total_income = @trends_data.sum { |t| t[:income] }
-            total_expenses = @trends_data.sum { |t| t[:expenses] }
-            total_net = @trends_data.sum { |t| t[:net] }
-            avg_income = total_income / @trends_data.length
-            avg_expenses = total_expenses / @trends_data.length
-            avg_net = total_net / @trends_data.length
-            overall_savings_rate = total_income > 0 ? ((total_net.to_f / total_income.to_f) * 100).round(0) : 0
+            total_income = @trends_data.sum { |t| t[:income].to_d }
+            total_expenses = @trends_data.sum { |t| t[:expenses].to_d }
+            total_net = @trends_data.sum { |t| t[:net].to_d }
+            trends_count = @trends_data.length
+            avg_income = trends_count > 0 ? (total_income / trends_count) : 0
+            avg_expenses = trends_count > 0 ? (total_expenses / trends_count) : 0
+            avg_net = trends_count > 0 ? (total_net / trends_count) : 0
+            overall_savings_rate = total_income > 0 ? ((total_net / total_income) * 100).round(0) : 0
           %>
           <tr>
             <td><%= t("reports.print.trends.average") %></td>
