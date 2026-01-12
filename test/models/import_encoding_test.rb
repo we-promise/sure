@@ -45,11 +45,11 @@ class ImportEncodingTest < ActiveSupport::TestCase
     end
 
     # Verify that rows were created
+    import.reload
     assert import.rows_count > 0, "Expected rows to be created from Windows-1250 CSV"
     assert_equal 3, import.rows_count, "Expected 3 data rows"
 
     # Verify Polish characters were preserved correctly
-    import.reload
     first_row = import.rows.first
     assert_not_nil first_row, "Expected first row to exist"
     assert_includes first_row.name, "spożywczy", "Polish characters should be preserved"
