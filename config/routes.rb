@@ -135,6 +135,7 @@ Rails.application.routes.draw do
     patch :update_preferences, on: :collection
     get :export_transactions, on: :collection
     get :google_sheets_instructions, on: :collection
+    get :print, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do

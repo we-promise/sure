@@ -1,0 +1,371 @@
+<% content_for :title do %>
+  <%= t("reports.print.document_title") %> - <%= @start_date.strftime("%b %d, %Y") %> to <%= @end_date.strftime("%b %d, %Y") %>
+<% end %>
+
+<div class="print-report">
+  <%# Report Header %>
+  <header class="print-header">
+    <div class="print-header-content">
+      <h1 class="print-title"><%= t("reports.print.title") %></h1>
+      <p class="print-subtitle"><%= Current.family.name %></p>
+    </div>
+    <div class="print-header-meta">
+      <p class="print-period">
+        <%= t("reports.print.period_label") %>: <%= @start_date.strftime("%B %d, %Y") %> - <%= @end_date.strftime("%B %d, %Y") %>
+      </p>
+      <p class="print-generated">
+        <%= t("reports.print.generated_on") %>: <%= Time.current.strftime("%B %d, %Y at %I:%M %p") %>
+      </p>
+    </div>
+  </header>
+
+  <%# Summary Section %>
+  <section class="print-section">
+    <h2 class="print-section-title"><%= t("reports.print.summary_title") %></h2>
+    <div class="print-summary-grid">
+      <div class="print-summary-card">
+        <span class="print-summary-label"><%= t("reports.summary.total_income") %></span>
+        <span class="print-summary-value print-income"><%= @summary_metrics[:current_income].format %></span>
+        <% if @summary_metrics[:income_change] && @summary_metrics[:income_change] != 0 %>
+          <span class="print-summary-change <%= @summary_metrics[:income_change] >= 0 ? "print-positive" : "print-negative" %>">
+            <%= @summary_metrics[:income_change] >= 0 ? "+" : "" %><%= @summary_metrics[:income_change] %>% <%= t("reports.summary.vs_previous") %>
+          </span>
+        <% end %>
+      </div>
+
+      <div class="print-summary-card">
+        <span class="print-summary-label"><%= t("reports.summary.total_expenses") %></span>
+        <span class="print-summary-value print-expense"><%= @summary_metrics[:current_expenses].format %></span>
+        <% if @summary_metrics[:expense_change] && @summary_metrics[:expense_change] != 0 %>
+          <span class="print-summary-change <%= @summary_metrics[:expense_change] >= 0 ? "print-negative" : "print-positive" %>">
+            <%= @summary_metrics[:expense_change] >= 0 ? "+" : "" %><%= @summary_metrics[:expense_change] %>% <%= t("reports.summary.vs_previous") %>
+          </span>
+        <% end %>
+      </div>
+
+      <div class="print-summary-card">
+        <span class="print-summary-label"><%= t("reports.summary.net_savings") %></span>
+        <span class="print-summary-value <%= @summary_metrics[:net_savings] >= 0 ? "print-income" : "print-expense" %>">
+          <%= @summary_metrics[:net_savings].format %>
+        </span>
+      </div>
+
+      <% if @summary_metrics[:budget_percent] %>
+        <div class="print-summary-card">
+          <span class="print-summary-label"><%= t("reports.summary.budget_performance") %></span>
+          <span class="print-summary-value"><%= @summary_metrics[:budget_percent] %>%</span>
+          <span class="print-summary-change"><%= t("reports.summary.of_budget_used") %></span>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <%# Net Worth Section %>
+  <% if Current.family.accounts.any? %>
+    <section class="print-section">
+      <h2 class="print-section-title"><%= t("reports.net_worth.title") %></h2>
+
+      <div class="print-net-worth-summary">
+        <div class="print-net-worth-main">
+          <span class="print-net-worth-label"><%= t("reports.net_worth.current_net_worth") %></span>
+          <span class="print-net-worth-value <%= @net_worth_metrics[:current_net_worth] >= 0 ? "print-income" : "print-expense" %>">
+            <%= @net_worth_metrics[:current_net_worth].format %>
+          </span>
+        </div>
+
+        <% if @net_worth_metrics[:trend] %>
+          <div class="print-net-worth-change">
+            <span class="print-net-worth-label"><%= t("reports.net_worth.period_change") %></span>
+            <span class="print-net-worth-value" style="color: <%= @net_worth_metrics[:trend].color %>">
+              <%= @net_worth_metrics[:trend].value.format(signify_positive: true) %>
+              (<%= @net_worth_metrics[:trend].percent_formatted %>)
+            </span>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="print-breakdown-grid">
+        <%# Assets %>
+        <div class="print-breakdown-column">
+          <h3 class="print-breakdown-title print-income"><%= t("reports.net_worth.total_assets") %>: <%= @net_worth_metrics[:total_assets].format %></h3>
+          <% if @net_worth_metrics[:asset_groups].any? %>
+            <table class="print-table">
+              <tbody>
+                <% @net_worth_metrics[:asset_groups].each do |group| %>
+                  <tr>
+                    <td><%= group[:name] %></td>
+                    <td class="print-amount print-income"><%= group[:total].format %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          <% else %>
+            <p class="print-no-data"><%= t("reports.net_worth.no_assets") %></p>
+          <% end %>
+        </div>
+
+        <%# Liabilities %>
+        <div class="print-breakdown-column">
+          <h3 class="print-breakdown-title print-expense"><%= t("reports.net_worth.total_liabilities") %>: <%= @net_worth_metrics[:total_liabilities].format %></h3>
+          <% if @net_worth_metrics[:liability_groups].any? %>
+            <table class="print-table">
+              <tbody>
+                <% @net_worth_metrics[:liability_groups].each do |group| %>
+                  <tr>
+                    <td><%= group[:name] %></td>
+                    <td class="print-amount print-expense"><%= group[:total].format %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          <% else %>
+            <p class="print-no-data"><%= t("reports.net_worth.no_liabilities") %></p>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  <% end %>
+
+  <%# Trends Section %>
+  <% if @trends_data.any? %>
+    <section class="print-section">
+      <h2 class="print-section-title"><%= t("reports.trends.title") %></h2>
+
+      <table class="print-table print-trends-table">
+        <thead>
+          <tr>
+            <th><%= t("reports.trends.month") %></th>
+            <th class="print-amount"><%= t("reports.trends.income") %></th>
+            <th class="print-amount"><%= t("reports.trends.expenses") %></th>
+            <th class="print-amount"><%= t("reports.trends.net") %></th>
+            <th class="print-amount"><%= t("reports.trends.savings_rate") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @trends_data.each do |trend| %>
+            <tr class="<%= trend[:is_current_month] ? "print-current-month" : "" %>">
+              <td>
+                <%= trend[:month] %>
+                <% if trend[:is_current_month] %>
+                  <span class="print-current-badge">(<%= t("reports.trends.current") %>)</span>
+                <% end %>
+              </td>
+              <td class="print-amount print-income"><%= Money.new(trend[:income], Current.family.currency).format %></td>
+              <td class="print-amount print-expense"><%= Money.new(trend[:expenses], Current.family.currency).format %></td>
+              <td class="print-amount <%= trend[:net] >= 0 ? "print-income" : "print-expense" %>">
+                <%= Money.new(trend[:net], Current.family.currency).format %>
+              </td>
+              <td class="print-amount <%= trend[:net] >= 0 ? "print-income" : "print-expense" %>">
+                <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
+                <%= savings_rate %>%
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <% avg_income = @trends_data.sum { |t| t[:income] } / @trends_data.length %>
+          <% avg_expenses = @trends_data.sum { |t| t[:expenses] } / @trends_data.length %>
+          <% avg_net = @trends_data.sum { |t| t[:net] } / @trends_data.length %>
+          <tr class="print-totals-row">
+            <td><strong><%= t("reports.print.average") %></strong></td>
+            <td class="print-amount print-income"><%= Money.new(avg_income, Current.family.currency).format %></td>
+            <td class="print-amount print-expense"><%= Money.new(avg_expenses, Current.family.currency).format %></td>
+            <td class="print-amount <%= avg_net >= 0 ? "print-income" : "print-expense" %>">
+              <%= Money.new(avg_net, Current.family.currency).format %>
+            </td>
+            <td class="print-amount">
+              <% avg_savings_rate = avg_income > 0 ? ((avg_net.to_f / avg_income.to_f) * 100).round(1) : 0 %>
+              <%= avg_savings_rate %>%
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+  <% end %>
+
+  <%# Investment Performance Section %>
+  <% if @investment_metrics[:has_investments] %>
+    <section class="print-section">
+      <h2 class="print-section-title"><%= t("reports.investment_performance.title") %></h2>
+
+      <div class="print-investment-summary">
+        <div class="print-summary-card">
+          <span class="print-summary-label"><%= t("reports.investment_performance.portfolio_value") %></span>
+          <span class="print-summary-value"><%= format_money(@investment_metrics[:portfolio_value]) %></span>
+        </div>
+
+        <% if @investment_metrics[:unrealized_trend] %>
+          <div class="print-summary-card">
+            <span class="print-summary-label"><%= t("reports.investment_performance.total_return") %></span>
+            <span class="print-summary-value" style="color: <%= @investment_metrics[:unrealized_trend].color %>">
+              <%= format_money(Money.new(@investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
+              (<%= @investment_metrics[:unrealized_trend].percent_formatted %>)
+            </span>
+          </div>
+        <% end %>
+
+        <div class="print-summary-card">
+          <span class="print-summary-label"><%= t("reports.investment_performance.contributions") %></span>
+          <span class="print-summary-value"><%= format_money(@investment_metrics[:period_contributions]) %></span>
+        </div>
+
+        <div class="print-summary-card">
+          <span class="print-summary-label"><%= t("reports.investment_performance.withdrawals") %></span>
+          <span class="print-summary-value"><%= format_money(@investment_metrics[:period_withdrawals]) %></span>
+        </div>
+      </div>
+
+      <%# Top Holdings %>
+      <% if @investment_metrics[:top_holdings].any? %>
+        <h3 class="print-subsection-title"><%= t("reports.investment_performance.top_holdings") %></h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th><%= t("reports.investment_performance.holding") %></th>
+              <th class="print-amount"><%= t("reports.investment_performance.weight") %></th>
+              <th class="print-amount"><%= t("reports.investment_performance.value") %></th>
+              <th class="print-amount"><%= t("reports.investment_performance.return") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @investment_metrics[:top_holdings].each do |holding| %>
+              <tr>
+                <td>
+                  <strong><%= holding.ticker %></strong>
+                  <span class="print-holding-name"><%= truncate(holding.name, length: 30) %></span>
+                </td>
+                <td class="print-amount"><%= number_to_percentage(holding.weight || 0, precision: 1) %></td>
+                <td class="print-amount"><%= format_money(holding.amount_money) %></td>
+                <td class="print-amount">
+                  <% if holding.trend %>
+                    <span style="color: <%= holding.trend.color %>"><%= holding.trend.percent_formatted %></span>
+                  <% else %>
+                    -
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+
+      <%# Investment Accounts %>
+      <% if @investment_metrics[:accounts].any? %>
+        <h3 class="print-subsection-title"><%= t("reports.investment_performance.accounts") %></h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th><%= t("reports.print.account_name") %></th>
+              <th><%= t("reports.print.account_type") %></th>
+              <th class="print-amount"><%= t("reports.print.balance") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @investment_metrics[:accounts].each do |account| %>
+              <tr>
+                <td><%= account.name %></td>
+                <td><%= account.short_subtype_label %></td>
+                <td class="print-amount"><%= format_money(account.balance_money) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </section>
+  <% end %>
+
+  <%# Transactions Breakdown Section %>
+  <% if @transactions.any? %>
+    <section class="print-section">
+      <h2 class="print-section-title"><%= t("reports.transactions_breakdown.title") %></h2>
+
+      <%
+        income_groups = @transactions.select { |g| g[:type] == "income" }
+        expense_groups = @transactions.select { |g| g[:type] == "expense" }
+        income_total = income_groups.sum { |g| g[:total] }
+        expense_total = expense_groups.sum { |g| g[:total] }
+      %>
+
+      <%# Income Table %>
+      <% if income_groups.any? %>
+        <h3 class="print-subsection-title print-income">
+          <%= t("reports.transactions_breakdown.table.income") %>
+          <span class="print-total-badge">(<%= Money.new(income_total, Current.family.currency).format %>)</span>
+        </h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th><%= t("reports.transactions_breakdown.table.category") %></th>
+              <th class="print-amount"><%= t("reports.transactions_breakdown.table.amount") %></th>
+              <th class="print-amount"><%= t("reports.transactions_breakdown.table.percentage") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% income_groups.each do |group| %>
+              <% percentage = income_total.zero? ? 0 : (group[:total].to_f / income_total * 100).round(1) %>
+              <tr>
+                <td>
+                  <span class="print-category-dot" style="background-color: <%= group[:category_color] %>"></span>
+                  <%= group[:category_name] %>
+                  <span class="print-entry-count">(<%= t("reports.transactions_breakdown.table.entries", count: group[:count]) %>)</span>
+                </td>
+                <td class="print-amount print-income"><%= Money.new(group[:total], Current.family.currency).format %></td>
+                <td class="print-amount"><%= percentage %>%</td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot>
+            <tr class="print-totals-row">
+              <td><strong><%= t("reports.print.total") %></strong></td>
+              <td class="print-amount print-income"><strong><%= Money.new(income_total, Current.family.currency).format %></strong></td>
+              <td class="print-amount"><strong>100%</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      <% end %>
+
+      <%# Expenses Table %>
+      <% if expense_groups.any? %>
+        <h3 class="print-subsection-title print-expense">
+          <%= t("reports.transactions_breakdown.table.expense") %>
+          <span class="print-total-badge">(<%= Money.new(expense_total, Current.family.currency).format %>)</span>
+        </h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th><%= t("reports.transactions_breakdown.table.category") %></th>
+              <th class="print-amount"><%= t("reports.transactions_breakdown.table.amount") %></th>
+              <th class="print-amount"><%= t("reports.transactions_breakdown.table.percentage") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% expense_groups.each do |group| %>
+              <% percentage = expense_total.zero? ? 0 : (group[:total].to_f / expense_total * 100).round(1) %>
+              <tr>
+                <td>
+                  <span class="print-category-dot" style="background-color: <%= group[:category_color] %>"></span>
+                  <%= group[:category_name] %>
+                  <span class="print-entry-count">(<%= t("reports.transactions_breakdown.table.entries", count: group[:count]) %>)</span>
+                </td>
+                <td class="print-amount print-expense"><%= Money.new(group[:total], Current.family.currency).format %></td>
+                <td class="print-amount"><%= percentage %>%</td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot>
+            <tr class="print-totals-row">
+              <td><strong><%= t("reports.print.total") %></strong></td>
+              <td class="print-amount print-expense"><strong><%= Money.new(expense_total, Current.family.currency).format %></strong></td>
+              <td class="print-amount"><strong>100%</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      <% end %>
+    </section>
+  <% end %>
+
+  <%# Footer %>
+  <footer class="print-footer">
+    <p><%= t("reports.print.footer_text", app_name: product_name) %></p>
+  </footer>
+</div>
