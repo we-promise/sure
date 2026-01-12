@@ -49,15 +49,15 @@ module Api
 
       private
 
-      def merchant_json(merchant)
-        {
-          id: merchant.id,
-          name: merchant.name,
-          type: merchant.type,
-          created_at: merchant.created_at,
-          updated_at: merchant.updated_at
-        }
-      end
+        def merchant_json(merchant)
+          {
+            id: merchant.id,
+            name: merchant.name,
+            type: merchant.type,
+            created_at: merchant.created_at,
+            updated_at: merchant.updated_at
+          }
+        end
     end
   end
 end

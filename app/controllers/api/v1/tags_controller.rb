@@ -7,9 +7,9 @@
 module Api
   module V1
     class TagsController < BaseController
-      before_action :ensure_read_scope, only: [:index, :show]
-      before_action :ensure_write_scope, only: [:create, :update, :destroy]
-      before_action :set_tag, only: [:show, :update, :destroy]
+      before_action :ensure_read_scope, only: %i[ index show ]
+      before_action :ensure_write_scope, only: %i[ create update destroy ]
+      before_action :set_tag, only: %i[ show update destroy ]
 
       # GET /api/v1/tags
       # Returns all tags belonging to the family
@@ -70,26 +70,26 @@ module Api
 
       private
 
-      def set_tag
-        family = current_resource_owner.family
-        @tag = family.tags.find(params[:id])
-      rescue ActiveRecord::RecordNotFound
-        render json: { error: "Tag not found" }, status: :not_found
-      end
+        def set_tag
+          family = current_resource_owner.family
+          @tag = family.tags.find(params[:id])
+        rescue ActiveRecord::RecordNotFound
+          render json: { error: "Tag not found" }, status: :not_found
+        end
 
-      def tag_params
-        params.require(:tag).permit(:name, :color)
-      end
+        def tag_params
+          params.require(:tag).permit(:name, :color)
+        end
 
-      def tag_json(tag)
-        {
-          id: tag.id,
-          name: tag.name,
-          color: tag.color,
-          created_at: tag.created_at,
-          updated_at: tag.updated_at
-        }
-      end
+        def tag_json(tag)
+          {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+            created_at: tag.created_at,
+            updated_at: tag.updated_at
+          }
+        end
     end
   end
 end
