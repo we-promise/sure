@@ -273,11 +273,13 @@ web:
   # If you are not using strict topology constraints, you can increase maxSurge for faster rollouts.
   # Example for faster rollouts (when not using DoNotSchedule):
   #   strategy:
-  #     maxUnavailable: 0
-  #     maxSurge: 1
+  #     rollingUpdate:
+  #       maxUnavailable: 0
+  #       maxSurge: 1
   strategy:
-    maxUnavailable: 1
-    maxSurge: 0
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   resources:
     requests:
       cpu: 100m
@@ -331,11 +333,13 @@ worker:
   # If you are not using strict topology constraints, you can increase maxSurge for faster rollouts.
   # Example for faster rollouts (when not using DoNotSchedule):
   #   strategy:
-  #     maxUnavailable: 0
-  #     maxSurge: 1
+  #     rollingUpdate:
+  #       maxUnavailable: 0
+  #       maxSurge: 1
   strategy:
-    maxUnavailable: 1
-    maxSurge: 0
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   resources:
     requests:
       cpu: 100m
