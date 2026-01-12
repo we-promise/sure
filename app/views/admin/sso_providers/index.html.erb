@@ -62,6 +62,44 @@
     </div>
   <% end %>
 
+  <% if @legacy_providers.any? %>
+    <%= settings_section title: t("admin.sso_providers.index.legacy_providers_title"), collapsible: true, open: true do %>
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+        <div class="flex gap-2">
+          <%= icon "alert-triangle", class: "w-5 h-5 text-amber-600 shrink-0" %>
+          <p class="text-sm text-amber-800">
+            <%= t("admin.sso_providers.index.legacy_providers_notice") %>
+          </p>
+        </div>
+      </div>
+
+      <div class="divide-y divide-primary">
+        <% @legacy_providers.each do |provider| %>
+          <div class="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+            <div class="flex items-center gap-3">
+              <% provider_icon = provider[:icon].presence || "key" %>
+              <%= icon provider_icon, class: "w-5 h-5 text-secondary" %>
+              <div>
+                <p class="font-medium text-primary"><%= provider[:label].presence || provider[:name] %></p>
+                <p class="text-sm text-secondary">
+                  <%= provider[:strategy].to_s.titleize %> · <%= provider[:name] %>
+                  <% if provider[:issuer].present? %>
+                    · <span class="text-xs"><%= provider[:issuer] %></span>
+                  <% end %>
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                <%= t("admin.sso_providers.index.env_configured") %>
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
   <%= settings_section title: "Configuration Mode", collapsible: true, open: false do %>
     <div class="space-y-3">
       <div class="flex items-center justify-between">
