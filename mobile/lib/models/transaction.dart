@@ -20,14 +20,33 @@ class Transaction {
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
+    // Handle both API formats:
+    // 1. New format: {"account": {"id": "xxx", "name": "..."}}
+    // 2. Old format: {"account_id": "xxx"}
+    String accountId = '';
+    if (json['account'] != null && json['account'] is Map) {
+      accountId = json['account']['id']?.toString() ?? '';
+    } else if (json['account_id'] != null) {
+      accountId = json['account_id']?.toString() ?? '';
+    }
+
+    // Handle classification (from backend) or nature (from mobile)
+    String nature = 'expense';
+    if (json['classification'] != null) {
+      final classification = json['classification']?.toString().toLowerCase() ?? '';
+      nature = classification == 'income' ? 'income' : 'expense';
+    } else if (json['nature'] != null) {
+      nature = json['nature']?.toString() ?? 'expense';
+    }
+
     return Transaction(
       id: json['id']?.toString(),
-      accountId: json['account_id']?.toString() ?? '',
+      accountId: accountId,
       name: json['name']?.toString() ?? '',
       date: json['date']?.toString() ?? '',
       amount: json['amount']?.toString() ?? '0',
       currency: json['currency']?.toString() ?? '',
-      nature: json['nature']?.toString() ?? 'expense',
+      nature: nature,
       notes: json['notes']?.toString(),
     );
   }
