@@ -1,0 +1,104 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Syncs the Flutter mobile app version with the monorepo VERSION file.
+#
+# Usage:
+#   bin/sync-mobile-version           # Sync version from VERSION file
+#   bin/sync-mobile-version --check   # Check if versions are in sync (for CI)
+#
+# The VERSION file contains a semver string like "0.6.7-alpha.8".
+# This script converts it to Flutter's format: "0.6.7-alpha.8+BUILD"
+# where BUILD is derived from the pre-release number or defaults to 1.
+
+require "fileutils"
+
+ROOT_DIR = File.expand_path("..", __dir__)
+VERSION_FILE = File.join(ROOT_DIR, "VERSION")
+PUBSPEC_FILE = File.join(ROOT_DIR, "mobile", "pubspec.yaml")
+
+def read_version
+  unless File.exist?(VERSION_FILE)
+    abort "Error: VERSION file not found at #{VERSION_FILE}"
+  end
+
+  File.read(VERSION_FILE).strip
+end
+
+def parse_version(version)
+  # Parse semver: MAJOR.MINOR.PATCH[-PRERELEASE]
+  # Examples: "0.6.7", "0.6.7-alpha.8", "1.0.0-beta.1"
+  match = version.match(/^(\d+\.\d+\.\d+)(?:-(.+))?$/)
+
+  unless match
+    abort "Error: Invalid version format '#{version}'. Expected semver (e.g., 0.6.7 or 0.6.7-alpha.8)"
+  end
+
+  base_version = match[1]
+  prerelease = match[2]
+
+  # Extract build number from prerelease (e.g., "alpha.8" -> 8)
+  build_number = 1
+  if prerelease
+    num_match = prerelease.match(/\.(\d+)$/)
+    build_number = num_match[1].to_i if num_match
+  end
+
+  {
+    base: base_version,
+    prerelease: prerelease,
+    build_number: build_number,
+    flutter_version: prerelease ? "#{base_version}-#{prerelease}+#{build_number}" : "#{base_version}+#{build_number}"
+  }
+end
+
+def read_pubspec_version
+  unless File.exist?(PUBSPEC_FILE)
+    abort "Error: pubspec.yaml not found at #{PUBSPEC_FILE}"
+  end
+
+  content = File.read(PUBSPEC_FILE)
+  match = content.match(/^version:\s*([^\s]+)/)
+
+  unless match
+    abort "Error: Could not find version in pubspec.yaml"
+  end
+
+  match[1].strip
+end
+
+def update_pubspec_version(new_version)
+  content = File.read(PUBSPEC_FILE)
+  updated = content.gsub(/^version:\s*.+$/m, "version: #{new_version}")
+
+  File.write(PUBSPEC_FILE, updated)
+end
+
+def main
+  check_only = ARGV.include?("--check")
+
+  version = read_version
+  parsed = parse_version(version)
+  current_pubspec = read_pubspec_version
+
+  puts "Monorepo version: #{version}"
+  puts "Flutter version:  #{parsed[:flutter_version]}"
+  puts "Current pubspec:  #{current_pubspec}"
+
+  if current_pubspec == parsed[:flutter_version]
+    puts "\n✓ Versions are in sync"
+    exit 0
+  end
+
+  if check_only
+    puts "\n✗ Versions are out of sync!"
+    puts "  Run 'bin/sync-mobile-version' to update"
+    exit 1
+  end
+
+  puts "\nUpdating pubspec.yaml..."
+  update_pubspec_version(parsed[:flutter_version])
+  puts "✓ Updated to #{parsed[:flutter_version]}"
+end
+
+main
