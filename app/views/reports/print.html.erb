@@ -2,35 +2,6 @@
   <%= t("reports.print.document_title") %> - <%= @start_date.strftime("%B %d, %Y") %> to <%= @end_date.strftime("%B %d, %Y") %>
 <% end %>
 
-<%
-  # Helper lambda to generate sparkline SVG path
-  # Returns empty string if fewer than 2 data points (can't draw a line with 1 point)
-  sparkline_path = ->(values, width = 60, height = 16) {
-    next "" if values.nil? || values.length < 2 || values.all? { |v| v.nil? || v.zero? }
-    nums = values.map(&:to_f)
-    max_val = nums.max
-    min_val = nums.min
-    range = max_val - min_val
-    range = 1.0 if range.zero?
-
-    points = nums.each_with_index.map do |val, i|
-      x = (i.to_f / [nums.length - 1, 1].max) * width
-      y = height - ((val - min_val) / range * (height - 2)) - 1
-      "#{x.round(1)},#{y.round(1)}"
-    end
-    points.join(" ")
-  }
-
-  # Check if we have enough data for sparklines (need at least 2 points)
-  has_sparkline_data = @trends_data&.length.to_i >= 2
-
-  # Calculate cumulative values from trends
-  cumulative_net = ->(trends) {
-    running = 0
-    trends.map { |t| running += t[:net].to_i; running }
-  }
-%>
-
 <div class="tufte-report">
   <%# Header %>
   <header class="tufte-header">
@@ -51,9 +22,9 @@
             <%= t("reports.print.summary.vs_prior", percent: (@summary_metrics[:income_change] >= 0 ? "+#{@summary_metrics[:income_change]}" : @summary_metrics[:income_change].to_s)) %>
           </span>
         <% end %>
-        <% if has_sparkline_data %>
+        <% if has_sparkline_data?(@trends_data) %>
           <svg width="60" height="20" viewBox="0 0 60 20" style="display:block;margin-top:6px;">
-            <polyline points="<%= sparkline_path.call(@trends_data.map { |t| t[:income] }, 60, 20) %>" fill="none" stroke="#047857" stroke-width="1.5" />
+            <polyline points="<%= sparkline_points(@trends_data.map { |t| t[:income] }, width: 60, height: 20) %>" fill="none" stroke="#047857" stroke-width="1.5" />
           </svg>
         <% end %>
       </div>
@@ -66,9 +37,9 @@
             <%= t("reports.print.summary.vs_prior", percent: (@summary_metrics[:expense_change] >= 0 ? "+#{@summary_metrics[:expense_change]}" : @summary_metrics[:expense_change].to_s)) %>
           </span>
         <% end %>
-        <% if has_sparkline_data %>
+        <% if has_sparkline_data?(@trends_data) %>
           <svg width="60" height="20" viewBox="0 0 60 20" style="display:block;margin-top:6px;">
-            <polyline points="<%= sparkline_path.call(@trends_data.map { |t| t[:expenses] }, 60, 20) %>" fill="none" stroke="#b91c1c" stroke-width="1.5" />
+            <polyline points="<%= sparkline_points(@trends_data.map { |t| t[:expenses] }, width: 60, height: 20) %>" fill="none" stroke="#b91c1c" stroke-width="1.5" />
           </svg>
         <% end %>
       </div>
@@ -83,9 +54,9 @@
         <% if savings_rate != 0 %>
           <span class="tufte-metric-card-change" style="color: #666;"><%= t("reports.print.summary.of_income", percent: savings_rate) %></span>
         <% end %>
-        <% if has_sparkline_data %>
+        <% if has_sparkline_data?(@trends_data) %>
           <svg width="60" height="20" viewBox="0 0 60 20" style="display:block;margin-top:6px;">
-            <polyline points="<%= sparkline_path.call(@trends_data.map { |t| t[:net] }, 60, 20) %>" fill="none" stroke="<%= @summary_metrics[:net_savings] >= 0 ? "#047857" : "#b91c1c" %>" stroke-width="1.5" />
+            <polyline points="<%= sparkline_points(@trends_data.map { |t| t[:net] }, width: 60, height: 20) %>" fill="none" stroke="<%= @summary_metrics[:net_savings] >= 0 ? "#047857" : "#b91c1c" %>" stroke-width="1.5" />
           </svg>
         <% end %>
       </div>
@@ -115,9 +86,9 @@
               <%= @net_worth_metrics[:trend].value >= 0 ? "+" : "" %><%= @net_worth_metrics[:trend].value.format %> (<%= @net_worth_metrics[:trend].percent_formatted %>) <%= t("reports.print.net_worth.this_period") %>
             </span>
           <% end %>
-          <% if has_sparkline_data %>
+          <% if has_sparkline_data?(@trends_data) %>
             <svg width="80" height="24" viewBox="0 0 80 24" style="display:block;margin-top:8px;">
-              <polyline points="<%= sparkline_path.call(cumulative_net.call(@trends_data), 80, 24) %>" fill="none" stroke="<%= @net_worth_metrics[:current_net_worth] >= 0 ? "#047857" : "#b91c1c" %>" stroke-width="1.5" />
+              <polyline points="<%= sparkline_points(cumulative_net_values(@trends_data), width: 80, height: 24) %>" fill="none" stroke="<%= @net_worth_metrics[:current_net_worth] >= 0 ? "#047857" : "#b91c1c" %>" stroke-width="1.5" />
             </svg>
           <% end %>
         </div>
@@ -161,7 +132,7 @@
   <% end %>
 
   <%# Monthly Trends %>
-  <% if has_sparkline_data %>
+  <% if has_sparkline_data?(@trends_data) %>
     <section class="tufte-section">
       <h2 class="tufte-section-title"><%= t("reports.print.trends.title") %></h2>
       <table class="tufte-table">
@@ -222,9 +193,9 @@
         <div class="tufte-metric-card tufte-metric-card-sm">
           <span class="tufte-metric-card-label"><%= t("reports.print.investments.portfolio_value") %></span>
           <span class="tufte-metric-card-value"><%= format_money(@investment_metrics[:portfolio_value]) %></span>
-          <% if has_sparkline_data %>
+          <% if has_sparkline_data?(@trends_data) %>
             <svg width="60" height="20" viewBox="0 0 60 20" style="display:block;margin-top:6px;">
-              <polyline points="<%= sparkline_path.call(cumulative_net.call(@trends_data), 60, 20) %>" fill="none" stroke="#6366f1" stroke-width="1.5" />
+              <polyline points="<%= sparkline_points(cumulative_net_values(@trends_data), width: 60, height: 20) %>" fill="none" stroke="#6366f1" stroke-width="1.5" />
             </svg>
           <% end %>
         </div>
