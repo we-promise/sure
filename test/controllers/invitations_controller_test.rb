@@ -12,23 +12,25 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create invitation for member" do
-    assert_difference("Invitation.count") do
-      assert_enqueued_with(job: ActionMailer::MailDeliveryJob) do
-        post invitations_url, params: {
-          invitation: {
-            email: "new@example.com",
-            role: "member"
+    with_managed_hosting do
+      assert_difference("Invitation.count") do
+        assert_enqueued_with(job: ActionMailer::MailDeliveryJob) do
+          post invitations_url, params: {
+            invitation: {
+              email: "new@example.com",
+              role: "member"
+            }
           }
-        }
+        end
       end
-    end
 
-    invitation = Invitation.order(created_at: :desc).first
-    assert_equal "member", invitation.role
-    assert_equal @admin, invitation.inviter
-    assert_equal "new@example.com", invitation.email
-    assert_redirected_to settings_profile_path
-    assert_equal I18n.t("invitations.create.success"), flash[:notice]
+      invitation = Invitation.order(created_at: :desc).first
+      assert_equal "member", invitation.role
+      assert_equal @admin, invitation.inviter
+      assert_equal "new@example.com", invitation.email
+      assert_redirected_to settings_profile_path
+      assert_equal I18n.t("invitations.create.success"), flash[:notice]
+    end
   end
 
   test "non-admin cannot create invitations" do

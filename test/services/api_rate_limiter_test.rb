@@ -88,14 +88,16 @@ class ApiRateLimiterTest < ActiveSupport::TestCase
   end
 
   test "class method usage_for should work without incrementing" do
-    5.times { @rate_limiter.increment_request_count! }
+    with_managed_hosting do
+      5.times { @rate_limiter.increment_request_count! }
 
-    usage_info = ApiRateLimiter.usage_for(@api_key)
-    assert_equal 5, usage_info[:current_count]
+      usage_info = ApiRateLimiter.usage_for(@api_key)
+      assert_equal 5, usage_info[:current_count]
 
-    # Should not increment when just checking usage
-    usage_info_again = ApiRateLimiter.usage_for(@api_key)
-    assert_equal 5, usage_info_again[:current_count]
+      # Should not increment when just checking usage
+      usage_info_again = ApiRateLimiter.usage_for(@api_key)
+      assert_equal 5, usage_info_again[:current_count]
+    end
   end
 
   test "should handle multiple API keys separately" do

@@ -83,13 +83,17 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "cannot update openai uri base without model when self hosting is enabled" do
     with_self_hosting do
-      Setting.openai_model = ""
+      with_env_overrides OPENAI_URI_BASE: nil, OPENAI_MODEL: nil do
+        Setting.openai_model = ""
+        original_value = Setting.openai_uri_base
 
-      patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
+        patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
 
-      assert_response :unprocessable_entity
-      assert_match(/OpenAI model is required/, flash[:alert])
-      assert_nil Setting.openai_uri_base
+        assert_response :unprocessable_entity
+        assert_match(/OpenAI model is required/, flash[:alert])
+        # Value should not have changed to the new value
+        assert_not_equal "https://api.example.com/v1", Setting.openai_uri_base
+      end
     end
   end
 

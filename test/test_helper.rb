@@ -74,6 +74,11 @@ module ActiveSupport
       yield
     end
 
+    def with_managed_hosting
+      Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+      yield
+    end
+
     def user_password_test
       "maybetestpassword817983172"
     end
