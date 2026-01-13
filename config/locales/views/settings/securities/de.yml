@@ -8,3 +8,24 @@ de:
         enable_mfa: 2FA aktivieren
         mfa_description: Füge deinem Konto eine zusätzliche Sicherheitsebene hinzu indem du beim Anmelden einen Code aus deiner Authenticator-App eingibst
         mfa_title: Zwei-Faktor-Authentifizierung
+        passkeys_title: Passkeys
+        passkeys_description: Melde dich mit Fingerabdruck, Gesichtserkennung oder Sicherheitsschlüssel an
+        add_passkey: Passkey hinzufügen
+        remove_passkey: Entfernen
+        remove_passkey_confirm_title: Passkey entfernen?
+        remove_passkey_confirm_body: Bist du sicher, dass du diesen Passkey entfernen möchtest? Du kannst dich damit nicht mehr anmelden.
+        no_passkeys: Noch keine Passkeys registriert.
+        passkey_added: "Hinzugefügt am %{date}"
+        passkey_last_used: "Zuletzt verwendet vor %{date}"
+      update:
+        success: Passwort erfolgreich aktualisiert.
+        invalid_current_password: Das aktuelle Passwort ist falsch.
+  passkeys:
+    destroy:
+      success: Passkey erfolgreich entfernt.
+  passkey_sessions:
+    options:
+      no_passkeys: Keine Passkeys für dieses Konto registriert.
+    create:
+      invalid_session: Ungültige Sitzung. Bitte versuche es erneut.
+      passkey_not_found: Passkey nicht gefunden.

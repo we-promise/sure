@@ -10,3 +10,24 @@ pt-BR:
         mfa_description: Adicione uma camada extra de segurança à sua conta exigindo
           um código do seu aplicativo autenticador ao fazer login
         mfa_title: Autenticação de Dois Fatores
+        passkeys_title: Passkeys
+        passkeys_description: Faça login com impressão digital, rosto ou chave de segurança
+        add_passkey: Adicionar Passkey
+        remove_passkey: Remover
+        remove_passkey_confirm_title: Remover Passkey?
+        remove_passkey_confirm_body: Tem certeza de que deseja remover esta passkey? Você não poderá mais fazer login com ela.
+        no_passkeys: Nenhuma passkey registrada ainda.
+        passkey_added: "Adicionada em %{date}"
+        passkey_last_used: "Última vez usada há %{date}"
+      update:
+        success: Senha atualizada com sucesso.
+        invalid_current_password: A senha atual está incorreta.
+  passkeys:
+    destroy:
+      success: Passkey removida com sucesso.
+  passkey_sessions:
+    options:
+      no_passkeys: Nenhuma passkey registrada para esta conta.
+    create:
+      invalid_session: Sessão inválida. Por favor, tente novamente.
+      passkey_not_found: Passkey não encontrada.

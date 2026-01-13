@@ -8,3 +8,24 @@ ro:
         enable_mfa: Activează 2FA
         mfa_description: Adaugă un strat suplimentar de securitate contului tău solicitând un cod din aplicația ta de autentificare la conectare
         mfa_title: Autentificare cu Doi Factori
+        passkeys_title: Passkeys
+        passkeys_description: Conectează-te cu amprenta, fața sau cheia de securitate
+        add_passkey: Adaugă Passkey
+        remove_passkey: Elimină
+        remove_passkey_confirm_title: Elimini Passkey?
+        remove_passkey_confirm_body: Ești sigur că vrei să elimini această passkey? Nu vei mai putea să te conectezi cu ea.
+        no_passkeys: Nicio passkey înregistrată încă.
+        passkey_added: "Adăugată pe %{date}"
+        passkey_last_used: "Ultima utilizare acum %{date}"
+      update:
+        success: Parola a fost actualizată cu succes.
+        invalid_current_password: Parola curentă este incorectă.
+  passkeys:
+    destroy:
+      success: Passkey eliminată cu succes.
+  passkey_sessions:
+    options:
+      no_passkeys: Nicio passkey înregistrată pentru acest cont.
+    create:
+      invalid_session: Sesiune invalidă. Te rugăm să încerci din nou.
+      passkey_not_found: Passkey negăsită.

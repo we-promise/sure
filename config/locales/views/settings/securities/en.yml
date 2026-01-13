@@ -10,3 +10,24 @@ en:
         mfa_description: Add an extra layer of security to your account by requiring
           a code from your authenticator app when signing in
         mfa_title: Two-Factor Authentication
+        passkeys_title: Passkeys
+        passkeys_description: Sign in with your fingerprint, face, or security key
+        add_passkey: Add Passkey
+        remove_passkey: Remove
+        remove_passkey_confirm_title: Remove Passkey?
+        remove_passkey_confirm_body: Are you sure you want to remove this passkey? You will no longer be able to sign in with it.
+        no_passkeys: No passkeys registered yet.
+        passkey_added: "Added %{date}"
+        passkey_last_used: "Last used %{date} ago"
+      update:
+        success: Password updated successfully.
+        invalid_current_password: Current password is incorrect.
+  passkeys:
+    destroy:
+      success: Passkey removed successfully.
+  passkey_sessions:
+    options:
+      no_passkeys: No passkeys registered for this account.
+    create:
+      invalid_session: Invalid session. Please try again.
+      passkey_not_found: Passkey not found.

@@ -9,3 +9,24 @@ tr:
         enable_mfa: 2FA'yı Etkinleştir
         mfa_description: Giriş yaparken kimlik doğrulama uygulamanızdan bir kod gerektirerek hesabınıza ekstra bir güvenlik katmanı ekleyin
         mfa_title: İki Faktörlü Kimlik Doğrulama
+        passkeys_title: Passkeys
+        passkeys_description: Parmak izi, yüz veya güvenlik anahtarı ile giriş yapın
+        add_passkey: Passkey Ekle
+        remove_passkey: Kaldır
+        remove_passkey_confirm_title: Passkey Kaldırılsın mı?
+        remove_passkey_confirm_body: Bu passkey'i kaldırmak istediğinizden emin misiniz? Artık onunla giriş yapamayacaksınız.
+        no_passkeys: Henüz kayıtlı passkey yok.
+        passkey_added: "%{date} tarihinde eklendi"
+        passkey_last_used: "Son kullanım %{date} önce"
+      update:
+        success: Şifre başarıyla güncellendi.
+        invalid_current_password: Mevcut şifre yanlış.
+  passkeys:
+    destroy:
+      success: Passkey başarıyla kaldırıldı.
+  passkey_sessions:
+    options:
+      no_passkeys: Bu hesap için kayıtlı passkey yok.
+    create:
+      invalid_session: Geçersiz oturum. Lütfen tekrar deneyin.
+      passkey_not_found: Passkey bulunamadı.
