@@ -9,6 +9,7 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     tag = family.tags.find_by_id(value)
+    return 0 unless tag
 
     scope = transaction_scope
 
