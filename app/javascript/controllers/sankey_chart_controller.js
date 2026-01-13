@@ -19,7 +19,12 @@ export default class extends Controller {
   static MAX_PADDING_RATIO = 0.4;
   static CORNER_RADIUS = 8;
   static DEFAULT_COLOR = "var(--color-gray-400)";
-  static CSS_VAR_MAP = { "var(--color-success)": "#10A861" };
+  static CSS_VAR_MAP = {
+    "var(--color-success)": "#10A861",
+    "var(--color-destructive)": "#EC2222",
+    "var(--color-gray-400)": "#9E9E9E",
+    "var(--color-gray-500)": "#737373"
+  };
   static MIN_LABEL_SPACING = 28; // Minimum vertical space needed for labels (2 lines)
 
   connect() {
