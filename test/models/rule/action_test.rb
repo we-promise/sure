@@ -59,6 +59,51 @@ class Rule::ActionTest < ActiveSupport::TestCase
     end
   end
 
+  test "set_transaction_tags preserves existing tags" do
+    existing_tag = @family.tags.create!(name: "Existing tag")
+    new_tag = @family.tags.create!(name: "New tag from rule")
+
+    # Add existing tag to transaction
+    @txn2.tags << existing_tag
+    @txn2.save!
+    assert_equal [ existing_tag ], @txn2.reload.tags
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_tags",
+      value: new_tag.id
+    )
+
+    action.apply(@rule_scope)
+
+    # Transaction should have BOTH the existing tag and the new tag
+    @txn2.reload
+    assert_includes @txn2.tags, existing_tag
+    assert_includes @txn2.tags, new_tag
+    assert_equal 2, @txn2.tags.count
+  end
+
+  test "set_transaction_tags does not duplicate existing tags" do
+    tag = @family.tags.create!(name: "Single tag")
+
+    # Add tag to transaction
+    @txn2.tags << tag
+    @txn2.save!
+    assert_equal [ tag ], @txn2.reload.tags
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_tags",
+      value: tag.id
+    )
+
+    action.apply(@rule_scope)
+
+    # Transaction should still have just one tag (not duplicated)
+    @txn2.reload
+    assert_equal [ tag ], @txn2.tags
+  end
+
   test "set_transaction_merchant" do
     merchant = @family.merchants.create!(name: "Rule test merchant")
 

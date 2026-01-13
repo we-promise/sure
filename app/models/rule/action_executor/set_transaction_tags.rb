@@ -17,9 +17,14 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
     end
 
     count_modified_resources(scope) do |txn|
+      # Merge the new tag with existing tags instead of replacing them
+      # This preserves tags set by users or other rules
+      existing_tag_ids = txn.tag_ids || []
+      merged_tag_ids = (existing_tag_ids + [ tag.id ]).uniq
+
       txn.enrich_attribute(
         :tag_ids,
-        [ tag.id ],
+        merged_tag_ids,
         source: "rule"
       )
     end
