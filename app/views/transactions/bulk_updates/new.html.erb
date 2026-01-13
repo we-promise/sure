@@ -12,7 +12,12 @@
 
         <%= render DS::Disclosure.new(title: t(".transactions"), open: true) do %>
           <div class="space-y-2">
-            <%= form.collection_select :category_id, Current.family.categories.alphabetically_by_hierarchy, :id, :name_with_indent, { prompt: t(".category_prompt"), label: t(".category"), class: "text-subdued" } %>
+            <div class="form-field combobox">
+              <%= form.combobox :category_id,
+                    Current.family.categories.alphabetically_by_hierarchy.map { |c| [c.name_with_indent, c.id] },
+                    label: t(".category"),
+                    placeholder: t(".category_prompt") %>
+            </div>
             <%= form.collection_select :merchant_id, Current.family.available_merchants.alphabetically, :id, :name, { prompt: t(".merchant_prompt"), label: t(".merchant"), class: "text-subdued" } %>
             <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: t(".none"), multiple: true, label: t(".tags"), include_hidden: false } %>
             <%= form.text_area :notes, label: t(".notes"), placeholder: t(".notes_placeholder"), rows: 5 %>
