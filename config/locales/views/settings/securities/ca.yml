@@ -3,6 +3,12 @@ ca:
   settings:
     securities:
       show:
+        password_title: Contrasenya
+        password_subtitle: Canvia la contrasenya del teu compte
+        current_password: Contrasenya actual
+        new_password: Nova contrasenya
+        confirm_password: Confirma la nova contrasenya
+        update_password: Actualitza la contrasenya
         disable_mfa: Desactiva 2FA
         disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos? Això farà que el teu compte sigui menys segur.
         enable_mfa: Activa 2FA

@@ -3,6 +3,12 @@ en:
   settings:
     securities:
       show:
+        password_title: Password
+        password_subtitle: Change your account password
+        current_password: Current Password
+        new_password: New Password
+        confirm_password: Confirm New Password
+        update_password: Update Password
         disable_mfa: Disable 2FA
         disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
           This will make your account less secure.

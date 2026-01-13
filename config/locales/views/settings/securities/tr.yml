@@ -3,6 +3,12 @@ tr:
   settings:
     securities:
       show:
+        password_title: Şifre
+        password_subtitle: Hesap şifrenizi değiştirin
+        current_password: Mevcut şifre
+        new_password: Yeni şifre
+        confirm_password: Yeni şifreyi onayla
+        update_password: Şifreyi güncelle
         disable_mfa: 2FA'yı Devre Dışı Bırak
         disable_mfa_confirm: İki faktörlü kimlik doğrulamayı devre dışı bırakmak istediğinizden emin misiniz?
           Bu, hesabınızı daha az güvenli hale getirecektir.

@@ -3,6 +3,12 @@ pt-BR:
   settings:
     securities:
       show:
+        password_title: Senha
+        password_subtitle: Altere a senha da sua conta
+        current_password: Senha atual
+        new_password: Nova senha
+        confirm_password: Confirmar nova senha
+        update_password: Atualizar senha
         disable_mfa: Desabilitar 2FA
         disable_mfa_confirm: Tem certeza de que deseja desabilitar a autenticação de dois fatores?
           Isso tornará sua conta menos segura.
