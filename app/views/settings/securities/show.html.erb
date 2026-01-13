@@ -1,5 +1,27 @@
 <%= content_for :page_title, t(".page_title") %>
 
+<% if Current.user.has_local_password? %>
+  <%= settings_section title: t(".password_title"), subtitle: t(".password_subtitle") do %>
+    <%= styled_form_with model: Current.user, url: settings_security_path, method: :patch, class: "space-y-4" do |form| %>
+      <div>
+        <%= form.password_field :password_challenge, label: t(".current_password"), required: true %>
+      </div>
+
+      <div>
+        <%= form.password_field :password, label: t(".new_password"), required: true %>
+      </div>
+
+      <div>
+        <%= form.password_field :password_confirmation, label: t(".confirm_password"), required: true %>
+      </div>
+
+      <div>
+        <%= form.submit t(".update_password"), class: "btn btn--primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
+
 <%= settings_section title: t(".mfa_title"), subtitle: t(".mfa_description") do %>
   <div class="space-y-4">
     <div class="p-3 shadow-border-xs bg-container rounded-lg md:flex md:justify-between md:items-center">

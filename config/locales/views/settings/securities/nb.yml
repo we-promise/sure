@@ -3,6 +3,12 @@ nb:
   settings:
     securities:
       show:
+        password_title: Passord
+        password_subtitle: Endre kontopassordet ditt
+        current_password: Nåværende passord
+        new_password: Nytt passord
+        confirm_password: Bekreft nytt passord
+        update_password: Oppdater passord
         disable_mfa: Deaktiver 2FA
         disable_mfa_confirm: Er du sikker på at du vil deaktivere to-faktor autentisering?
           Dette vil gjøre kontoen din mindre sikker.

@@ -3,6 +3,12 @@ de:
   settings:
     securities:
       show:
+        password_title: Passwort
+        password_subtitle: Ändere dein Kontopasswort
+        current_password: Aktuelles Passwort
+        new_password: Neues Passwort
+        confirm_password: Neues Passwort bestätigen
+        update_password: Passwort aktualisieren
         disable_mfa: 2FA deaktivieren
         disable_mfa_confirm: Bist du sicher dass du die Zwei-Faktor-Authentifizierung deaktivieren möchtest Dadurch wird dein Konto weniger sicher
         enable_mfa: 2FA aktivieren

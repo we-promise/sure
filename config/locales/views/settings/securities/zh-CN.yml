@@ -3,6 +3,12 @@ zh-CN:
   settings:
     securities:
       show:
+        password_title: 密码
+        password_subtitle: 更改您的账户密码
+        current_password: 当前密码
+        new_password: 新密码
+        confirm_password: 确认新密码
+        update_password: 更新密码
         disable_mfa: 停用双重认证
         disable_mfa_confirm: 确定要停用双重认证吗？这可能会降低您的账户安全性。
         enable_mfa: 启用双重认证

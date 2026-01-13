@@ -105,7 +105,7 @@ Rails.application.routes.draw do
       delete :clear_cache, on: :collection
     end
     resource :billing, only: :show
-    resource :security, only: :show
+    resource :security, only: %i[show update]
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show

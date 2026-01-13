@@ -3,6 +3,12 @@ ro:
   settings:
     securities:
       show:
+        password_title: Parolă
+        password_subtitle: Schimbă parola contului tău
+        current_password: Parola curentă
+        new_password: Parola nouă
+        confirm_password: Confirmă parola nouă
+        update_password: Actualizează parola
         disable_mfa: Dezactivează 2FA
         disable_mfa_confirm: Ești sigur că vrei să dezactivezi autentificarea cu doi factori? Acest lucru va face contul tău mai puțin sigur.
         enable_mfa: Activează 2FA
