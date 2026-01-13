@@ -45,6 +45,11 @@ class SimplefinItem::Importer
         Rails.logger.info "SimplefinItem::Importer - Using REGULAR SYNC (last_synced_at=#{simplefin_item.last_synced_at&.strftime('%Y-%m-%d %H:%M')})"
         import_regular_sync
       end
+
+      # Reset status to good if no auth errors occurred in this sync.
+      # This allows the item to recover automatically when a bank's auth issue is resolved
+      # in SimpleFIN Bridge, without requiring the user to manually reconnect.
+      maybe_clear_requires_update_status
     rescue RateLimitedError => e
       stats["rate_limited"] = true
       stats["rate_limited_at"] = Time.current.iso8601
@@ -319,6 +324,21 @@ class SimplefinItem::Importer
       return unless sync && sync.respond_to?(:sync_stats)
       merged = (sync.sync_stats || {}).merge(stats)
       sync.update_columns(sync_stats: merged) # avoid callbacks/validations during tight loops
+    end
+
+    # Reset status to good if no auth errors occurred in this sync.
+    # This allows automatic recovery when a bank's auth issue is resolved in SimpleFIN Bridge.
+    def maybe_clear_requires_update_status
+      return unless simplefin_item.requires_update?
+
+      auth_errors = stats.dig("error_buckets", "auth").to_i
+      if auth_errors.zero?
+        simplefin_item.update!(status: :good)
+        Rails.logger.info(
+          "SimpleFIN: cleared requires_update status for item ##{simplefin_item.id} " \
+          "(no auth errors in this sync)"
+        )
+      end
     end
 
     def import_with_chunked_history

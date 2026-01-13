@@ -55,6 +55,20 @@ class SimplefinItem < ApplicationRecord
     SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider, sync: sync).import
   end
 
+  # Update the access_url by claiming a new setup token.
+  # This is used when reconnecting an existing SimpleFIN connection.
+  # Unlike create_simplefin_item!, this updates in-place, preserving all account linkages.
+  def update_access_url!(setup_token:)
+    new_access_url = simplefin_provider.claim_access_url(setup_token)
+
+    update!(
+      access_url: new_access_url,
+      status: :good
+    )
+
+    self
+  end
+
   def process_accounts
     # Process accounts linked via BOTH legacy FK and AccountProvider
     # Use direct query to ensure fresh data from DB, bypassing any association cache
