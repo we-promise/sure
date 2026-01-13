@@ -21,6 +21,7 @@ ro:
         remove_passkey_confirm_title: Elimini Passkey?
         remove_passkey_confirm_body: Ești sigur că vrei să elimini această passkey? Nu vei mai putea să te conectezi cu ea.
         no_passkeys: Nicio passkey înregistrată încă.
+        passkey_name_placeholder: "ex., MacBook Pro, iPhone"
         passkey_added: "Adăugată pe %{date}"
         passkey_last_used: "Ultima utilizare acum %{date}"
       update:

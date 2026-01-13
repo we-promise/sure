@@ -22,6 +22,7 @@ tr:
         remove_passkey_confirm_title: Passkey Kaldırılsın mı?
         remove_passkey_confirm_body: Bu passkey'i kaldırmak istediğinizden emin misiniz? Artık onunla giriş yapamayacaksınız.
         no_passkeys: Henüz kayıtlı passkey yok.
+        passkey_name_placeholder: "örn., MacBook Pro, iPhone"
         passkey_added: "%{date} tarihinde eklendi"
         passkey_last_used: "Son kullanım %{date} önce"
       update:

@@ -21,6 +21,7 @@ de:
         remove_passkey_confirm_title: Passkey entfernen?
         remove_passkey_confirm_body: Bist du sicher, dass du diesen Passkey entfernen möchtest? Du kannst dich damit nicht mehr anmelden.
         no_passkeys: Noch keine Passkeys registriert.
+        passkey_name_placeholder: "z.B. MacBook Pro, iPhone"
         passkey_added: "Hinzugefügt am %{date}"
         passkey_last_used: "Zuletzt verwendet vor %{date}"
       update:

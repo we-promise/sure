@@ -23,6 +23,7 @@ nb:
         remove_passkey_confirm_title: Fjerne Passkey?
         remove_passkey_confirm_body: Er du sikker på at du vil fjerne denne passkeyen? Du vil ikke lenger kunne logge inn med den.
         no_passkeys: Ingen passkeys registrert ennå.
+        passkey_name_placeholder: "f.eks. MacBook Pro, iPhone"
         passkey_added: "Lagt til %{date}"
         passkey_last_used: "Sist brukt for %{date} siden"
       update:

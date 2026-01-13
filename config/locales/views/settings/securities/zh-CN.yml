@@ -21,6 +21,7 @@ zh-CN:
         remove_passkey_confirm_title: 移除通行密钥？
         remove_passkey_confirm_body: 确定要移除此通行密钥吗？您将无法再使用它登录。
         no_passkeys: 尚未注册通行密钥。
+        passkey_name_placeholder: "例如：MacBook Pro、iPhone"
         passkey_added: "添加于 %{date}"
         passkey_last_used: "上次使用于 %{date} 前"
       update:

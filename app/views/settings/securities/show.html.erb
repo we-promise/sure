@@ -112,12 +112,18 @@
          data-passkey-registration-create-options-url-value="<%= new_passkey_path %>"
          data-passkey-registration-create-url-value="<%= passkeys_path %>">
       <div data-passkey-registration-target="error" class="hidden text-red-600 text-sm mb-2"></div>
-      <button type="button"
-              data-action="click->passkey-registration#register"
-              class="btn btn--secondary">
-        <%= icon "plus", class: "w-4 h-4 mr-2" %>
-        <%= t(".add_passkey") %>
-      </button>
+      <div class="flex items-center gap-3">
+        <input type="text"
+               data-passkey-registration-target="label"
+               placeholder="<%= t(".passkey_name_placeholder") %>"
+               class="form-field__input w-64">
+        <button type="button"
+                data-action="click->passkey-registration#register"
+                class="btn btn--secondary">
+          <%= icon "plus", class: "w-4 h-4 mr-2" %>
+          <%= t(".add_passkey") %>
+        </button>
+      </div>
     </div>
   </div>
 <% end %>

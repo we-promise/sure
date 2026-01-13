@@ -23,6 +23,7 @@ pt-BR:
         remove_passkey_confirm_title: Remover Passkey?
         remove_passkey_confirm_body: Tem certeza de que deseja remover esta passkey? Você não poderá mais fazer login com ela.
         no_passkeys: Nenhuma passkey registrada ainda.
+        passkey_name_placeholder: "ex., MacBook Pro, iPhone"
         passkey_added: "Adicionada em %{date}"
         passkey_last_used: "Última vez usada há %{date}"
       update:
