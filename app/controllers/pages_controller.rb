@@ -149,7 +149,7 @@ class PagesController < ApplicationController
         category_totals: income_totals.category_totals,
         total: total_income,
         prefix: "income",
-        default_color: Category::COLORS.sample,
+        default_color: Category::UNCATEGORIZED_COLOR,
         add_node: add_node,
         links: links,
         cash_flow_idx: cash_flow_idx,
