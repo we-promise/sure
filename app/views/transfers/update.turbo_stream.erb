@@ -2,13 +2,21 @@
   <%= turbo_stream.replace @transfer.inflow_transaction.entry %>
   <%= turbo_stream.replace @transfer.outflow_transaction.entry %>
 
-  <%= turbo_stream.replace dom_id(@transfer.inflow_transaction, "category_menu"),
+  <%= turbo_stream.replace dom_id(@transfer.inflow_transaction, "category_menu_mobile"),
                           partial: "transactions/transaction_category",
-                          locals: { transaction: @transfer.inflow_transaction } %>
+                          locals: { transaction: @transfer.inflow_transaction, variant: "mobile" } %>
 
-  <%= turbo_stream.replace dom_id(@transfer.outflow_transaction, "category_menu"),
+  <%= turbo_stream.replace dom_id(@transfer.inflow_transaction, "category_menu_desktop"),
                           partial: "transactions/transaction_category",
-                          locals: { transaction: @transfer.outflow_transaction } %>
+                          locals: { transaction: @transfer.inflow_transaction, variant: "desktop" } %>
+
+  <%= turbo_stream.replace dom_id(@transfer.outflow_transaction, "category_menu_mobile"),
+                          partial: "transactions/transaction_category",
+                          locals: { transaction: @transfer.outflow_transaction, variant: "mobile" } %>
+
+  <%= turbo_stream.replace dom_id(@transfer.outflow_transaction, "category_menu_desktop"),
+                          partial: "transactions/transaction_category",
+                          locals: { transaction: @transfer.outflow_transaction, variant: "desktop" } %>
 
   <%= turbo_stream.replace dom_id(@transfer.inflow_transaction, "transfer_match"),
                           partial: "transactions/transfer_match",

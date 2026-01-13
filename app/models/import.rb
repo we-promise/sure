@@ -40,7 +40,9 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family
+  validate :rows_to_skip_within_file_bounds
 
   has_many :rows, dependent: :destroy
   has_many :mappings, dependent: :destroy
@@ -227,7 +229,8 @@ class Import < ApplicationRecord
         "qty_col_label", "ticker_col_label", "price_col_label",
         "entity_type_col_label", "notes_col_label", "currency_col_label",
         "date_format", "signage_convention", "number_format",
-        "exchange_operating_mic_col_label"
+        "exchange_operating_mic_col_label",
+        "rows_to_skip"
       )
     )
   end
@@ -254,7 +257,14 @@ class Import < ApplicationRecord
     end
 
     def parsed_csv
-      @parsed_csv ||= self.class.parse_csv_str(raw_file_str, col_sep: col_sep)
+      return @parsed_csv if defined?(@parsed_csv)
+
+      csv_content = raw_file_str || ""
+      if rows_to_skip.to_i > 0
+        csv_content = csv_content.lines.drop(rows_to_skip).join
+      end
+
+      @parsed_csv = self.class.parse_csv_str(csv_content, col_sep: col_sep)
     end
 
     def sanitize_number(value)
@@ -362,5 +372,16 @@ class Import < ApplicationRecord
       return if account.family_id == family_id
 
       errors.add(:account, "must belong to your family")
+    end
+
+    def rows_to_skip_within_file_bounds
+      return if raw_file_str.blank?
+      return if rows_to_skip.to_i == 0
+
+      line_count = raw_file_str.lines.count
+
+      if rows_to_skip.to_i >= line_count
+        errors.add(:rows_to_skip, "must be less than the number of lines in the file (#{line_count})")
+      end
     end
 end

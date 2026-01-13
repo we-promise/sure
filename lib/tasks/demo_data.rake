@@ -63,3 +63,9 @@ namespace :demo_data do
     end
   end
 end
+
+# Alias namespace to avoid forgetfulness
+namespace :sample_data do
+  desc "Load full realistic demo dataset (alias for demo_data:default)"
+  task default: "demo_data:default"
+end

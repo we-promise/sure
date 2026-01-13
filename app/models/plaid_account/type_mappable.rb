@@ -62,11 +62,18 @@ module PlaidAccount::TypeMappable
         "retirement" => "retirement",
         "401k" => "401k",
         "roth 401k" => "roth_401k",
+        "403b" => "403b",
+        "457b" => "457b",
         "529" => "529_plan",
         "hsa" => "hsa",
         "mutual fund" => "mutual_fund",
         "roth" => "roth_ira",
-        "ira" => "ira"
+        "ira" => "ira",
+        "sep ira" => "sep_ira",
+        "simple ira" => "simple_ira",
+        "trust" => "trust",
+        "ugma" => "ugma",
+        "utma" => "utma"
       }
     },
     other: {

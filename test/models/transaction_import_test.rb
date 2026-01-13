@@ -358,4 +358,39 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal 1, checking.entries.where(import: @import).count
     assert_equal 1, credit_card.entries.where(import: @import).count
   end
+
+  test "skips specified number of rows" do
+    account = accounts(:depository)
+    import_csv = <<~CSV
+      Some Metadata provided by bank
+      Generated on 2024-01-01
+      date,name,amount
+      01/01/2024,Transaction 1,100
+      01/02/2024,Transaction 2,200
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative",
+      rows_to_skip: 2
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # helper to check rows - assuming 2 valid rows
+    assert_equal 2, @import.rows.count
+
+    # Sort to ensure order
+    rows = @import.rows.order(date: :asc)
+
+    assert_equal "Transaction 1", rows.first.name
+    assert_equal "100", rows.first.amount
+  end
 end

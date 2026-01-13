@@ -285,4 +285,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 5, totals.transactions_count
     assert_equal Money.new(1050, @family.currency), totals.expense_money # 900 + 150
   end
+
+  test "excludes investment_contribution transactions from income statement" do
+    # Create a transfer to investment account (marked as investment_contribution)
+    investment_contribution = create_transaction(
+      account: @checking_account,
+      amount: 1000,
+      category: nil,
+      kind: "investment_contribution"
+    )
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # investment_contribution should be excluded (it's in the exclusion list)
+    assert_equal 4, totals.transactions_count # Only original 4 transactions
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
 end

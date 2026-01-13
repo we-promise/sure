@@ -342,14 +342,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_12_065106) do
     t.jsonb "locked_attributes", default: {}
     t.string "external_id"
     t.string "source"
-    t.boolean "exclude_from_cashflow", default: false, null: false
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["date"], name: "index_entries_on_date"
     t.index ["entryable_type"], name: "index_entries_on_entryable_type"
-    t.index ["exclude_from_cashflow"], name: "index_entries_on_exclude_from_cashflow"
     t.index ["import_id"], name: "index_entries_on_import_id"
   end
 
@@ -610,6 +608,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_12_065106) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
+    t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end

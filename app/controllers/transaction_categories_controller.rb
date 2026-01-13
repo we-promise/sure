@@ -24,9 +24,14 @@ class TransactionCategoriesController < ApplicationController
       format.turbo_stream do
         render turbo_stream: [
           turbo_stream.replace(
-            dom_id(transaction, :category_menu),
-            partial: "categories/menu",
-            locals: { transaction: transaction }
+            dom_id(transaction, "category_menu_mobile"),
+            partial: "transactions/transaction_category",
+            locals: { transaction: transaction, variant: "mobile" }
+          ),
+          turbo_stream.replace(
+            dom_id(transaction, "category_menu_desktop"),
+            partial: "transactions/transaction_category",
+            locals: { transaction: transaction, variant: "desktop" }
           ),
           turbo_stream.replace(
             "category_name_mobile_#{transaction.id}",

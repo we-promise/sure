@@ -7,6 +7,12 @@ module Admin
     def index
       authorize SsoProvider
       @sso_providers = policy_scope(SsoProvider).order(:name)
+
+      # Load runtime providers (from YAML/env) that might not be in the database
+      # This helps show users that legacy providers are active but not manageable via UI
+      @runtime_providers = Rails.configuration.x.auth.sso_providers || []
+      db_provider_names = @sso_providers.pluck(:name)
+      @legacy_providers = @runtime_providers.reject { |p| db_provider_names.include?(p[:name].to_s) }
     end
 
     def show

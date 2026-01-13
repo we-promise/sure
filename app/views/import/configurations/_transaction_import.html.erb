@@ -11,6 +11,10 @@
                        import_amount_type_column_key_value: @import.entity_type_col_label
                      } do |form| %>
 
+  <%# Row Skip Configuration - must be first to configure before column mapping %>
+  <%= form.number_field :rows_to_skip,
+                        { label: t(".rows_to_skip_label", default: "Skip first n rows"), min: 0, step: 1, data: { action: "change->import#refreshForm" } } %>
+
   <%# Date Configuration %>
   <div class="flex items-center gap-4">
     <%= form.select :date_col_label,

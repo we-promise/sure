@@ -1,6 +1,6 @@
-# Configuring OpenID Connect and SSO providers
+# Configuring OpenID Connect, SAML, and SSO Providers
 
-This guide shows how to enable OpenID Connect (OIDC) and other single sign-on (SSO) providers for Sure using Google, GitHub, or another OIDC‑compatible identity provider (e.g. Keycloak, Authentik).
+This guide shows how to enable OpenID Connect (OIDC), SAML 2.0, and other single sign-on (SSO) providers for Sure using Google, GitHub, or another identity provider (e.g. Keycloak, Authentik, Okta, Azure AD).
 
 It also documents the new `config/auth.yml` and environment variables that control:
 
@@ -173,6 +173,26 @@ To enable Google:
    If you customize the provider `name` in `config/auth.yml`, the callback path changes accordingly:
 
    - `http://localhost:3000/auth/<provider_name>/callback`
+
+### 3.5 Bootstrapping the first super‑admin
+
+The first `super_admin` must be set via Rails console. Access the console in your container/pod or directly on the server:
+
+```bash
+bin/rails console
+```
+
+Then promote a user:
+
+```ruby
+# Set super_admin role
+User.find_by(email: "admin@example.com").update!(role: :super_admin)
+
+# Verify
+User.find_by(email: "admin@example.com").role  # => "super_admin"
+```
+
+Once set, super‑admins can promote other users via the web UI at `/admin/users`.
 
 ---
 
@@ -419,6 +439,20 @@ To switch back to YAML-based configuration:
 2. Restart the application
 3. Providers will be loaded from `config/auth.yml`
 
+### 6.6 JIT provisioning settings
+
+Each provider has a **Default Role** field (defaults to `member`) that sets the role for JIT-created users.
+
+**Role mapping from IdP groups:**
+
+Expand **"Role Mapping"** in the admin UI to map IdP group names to Sure roles. Enter comma-separated group names for each role:
+
+- **Super Admin Groups**: `Platform-Admins, IdP-Superusers`
+- **Admin Groups**: `Team-Leads, Managers`
+- **Member Groups**: `Everyone` or leave blank
+
+Mapping is case-sensitive and matches exact group claim values from the IdP. When a user belongs to multiple mapped groups, the highest role wins (`super_admin` > `admin` > `member`). If no groups match, the Default Role is used.
+
 ---
 
 ## 7. Troubleshooting
@@ -481,6 +515,52 @@ Each provider requires a callback URL configured in your identity provider:
 - Admin endpoints: 10 requests/minute per IP
 - OAuth token endpoint: 10 requests/minute per IP
 - Failed login attempts should be monitored separately
+
+---
+
+## 9. SAML 2.0 Support
+
+Sure supports SAML 2.0 via database-backed providers. Select **"SAML 2.0"** as the strategy when adding a provider at `/admin/sso_providers`.
+
+Configure with either:
+- **IdP Metadata URL** (recommended) - auto-fetches configuration
+- **Manual config** - IdP SSO URL + certificate
+
+In your IdP, set:
+- **ACS URL**: `https://yourdomain.com/auth/<provider_name>/callback`
+- **Entity ID**: `https://yourdomain.com` (your `APP_URL`)
+- **Name ID**: Email Address
+
+---
+
+## 10. User Administration
+
+Super‑admins can manage user roles at `/admin/users`.
+
+Roles: `member` (standard), `admin` (family admin), `super_admin` (platform admin).
+
+Note: Super‑admins cannot change their own role.
+
+---
+
+## 11. Audit Logging
+
+SSO events are logged to `sso_audit_logs`: `login`, `login_failed`, `logout`, `logout_idp` (federated logout), `link`, `unlink`, `jit_account_created`.
+
+Query via console:
+
+```ruby
+SsoAuditLog.by_event("login").recent.limit(50)
+SsoAuditLog.by_event("login_failed").where("created_at > ?", 24.hours.ago)
+```
+
+---
+
+## 12. User SSO Identity Management
+
+Users manage linked SSO identities at **Settings > Security**.
+
+SSO-only users (no password) cannot unlink their last identity.
 
 ---
 

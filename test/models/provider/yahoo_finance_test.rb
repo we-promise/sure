@@ -164,6 +164,110 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     end
   end
 
+  test "handles 401 unauthorized as authentication error" do
+    unauthorized_error = Faraday::UnauthorizedError.new("Unauthorized", { body: "Invalid Crumb" })
+
+    @provider.stub :client, ->(*) { raise unauthorized_error } do
+      result = @provider.send(:with_provider_response) { raise unauthorized_error }
+
+      assert_not result.success?
+      assert_instance_of Provider::YahooFinance::AuthenticationError, result.error
+      assert_match(/authentication failed/, result.error.message)
+    end
+  end
+
+  # ================================
+  #     User-Agent Rotation Tests
+  # ================================
+
+  test "random_user_agent returns value from USER_AGENTS pool" do
+    user_agent = @provider.send(:random_user_agent)
+    assert_includes Provider::YahooFinance::USER_AGENTS, user_agent
+  end
+
+  test "USER_AGENTS contains multiple modern browser user-agents" do
+    assert Provider::YahooFinance::USER_AGENTS.length >= 5
+    assert Provider::YahooFinance::USER_AGENTS.all? { |ua| ua.include?("Mozilla") }
+  end
+
+  # ================================
+  #       Throttling Tests
+  # ================================
+
+  test "throttle_request enforces minimum interval between requests" do
+    # First request should not wait
+    start_time = Time.current
+    @provider.send(:throttle_request)
+    first_elapsed = Time.current - start_time
+    assert first_elapsed < 0.1, "First request should not wait"
+
+    # Second request should wait approximately min_request_interval
+    start_time = Time.current
+    @provider.send(:throttle_request)
+    second_elapsed = Time.current - start_time
+    min_interval = @provider.send(:min_request_interval)
+    assert second_elapsed >= (min_interval - 0.05), "Second request should wait at least #{min_interval - 0.05}s"
+  end
+
+  # ================================
+  #    Configuration Tests
+  # ================================
+
+  test "max_retries returns default value" do
+    assert_equal 5, @provider.send(:max_retries)
+  end
+
+  test "retry_interval returns default value" do
+    assert_equal 1.0, @provider.send(:retry_interval)
+  end
+
+  test "min_request_interval returns default value" do
+    assert_equal 0.5, @provider.send(:min_request_interval)
+  end
+
+  # ================================
+  #  Cookie/Crumb Authentication Tests
+  # ================================
+
+  test "extract_cookie extracts cookie from set-cookie header" do
+    mock_response = OpenStruct.new(
+      headers: { "set-cookie" => "B=abc123&b=3&s=qf; expires=Fri, 18-May-2028 00:00:00 GMT; path=/; domain=.yahoo.com" }
+    )
+
+    cookie = @provider.send(:extract_cookie, mock_response)
+    assert_equal "B=abc123&b=3&s=qf", cookie
+  end
+
+  test "extract_cookie returns nil when no cookie header" do
+    mock_response = OpenStruct.new(headers: {})
+    cookie = @provider.send(:extract_cookie, mock_response)
+    assert_nil cookie
+  end
+
+  test "extract_cookie_max_age parses Max-Age from cookie header" do
+    mock_response = OpenStruct.new(
+      headers: { "set-cookie" => "A3=d=xxx; Max-Age=31557600; Domain=.yahoo.com" }
+    )
+
+    max_age = @provider.send(:extract_cookie_max_age, mock_response)
+    assert_equal 31557600.seconds, max_age
+  end
+
+  test "extract_cookie_max_age returns nil when no Max-Age" do
+    mock_response = OpenStruct.new(
+      headers: { "set-cookie" => "A3=d=xxx; Domain=.yahoo.com" }
+    )
+
+    max_age = @provider.send(:extract_cookie_max_age, mock_response)
+    assert_nil max_age
+  end
+
+  test "clear_crumb_cache removes cached crumb" do
+    Rails.cache.write("yahoo_finance_auth_crumb", [ "cookie", "crumb" ])
+    @provider.send(:clear_crumb_cache)
+    assert_nil Rails.cache.read("yahoo_finance_auth_crumb")
+  end
+
   # ================================
   #       Helper Method Tests
   # ================================

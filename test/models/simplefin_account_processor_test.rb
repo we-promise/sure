@@ -178,4 +178,24 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     # Mapper should infer liability from name; final should be negative
     assert_equal BigDecimal("-100.00"), acct.reload.balance
   end
+
+  test "dormant credit card with zero balance and negative available-balance shows zero debt" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Discover Card",
+      account_id: "cc_dormant",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("0"),
+      available_balance: BigDecimal("-3800") # credit limit reported as negative
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    # Should use explicit zero balance, not negative available_balance
+    assert_equal BigDecimal("0"), acct.reload.balance
+  end
 end
