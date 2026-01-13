@@ -50,9 +50,10 @@ class ImportEncodingTest < ActiveSupport::TestCase
     assert_equal 3, import.rows_count, "Expected 3 data rows"
 
     # Verify Polish characters were preserved correctly
-    first_row = import.rows.first
-    assert_not_nil first_row, "Expected first row to exist"
-    assert_includes first_row.name, "spożywczy", "Polish characters should be preserved"
+    # Check that any row contains the Polish characters (test is about encoding, not ordering)
+    assert import.rows.any? { |row| row.name&.include?("spożywczy") }, "Polish characters should be preserved"
+    # Also verify other Polish characters from different rows
+    assert import.rows.any? { |row| row.name&.include?("Café") }, "Extended Latin characters should be preserved"
   end
 
   test "handles UTF-8 files without modification" do

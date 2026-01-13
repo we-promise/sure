@@ -36,7 +36,7 @@
               <% end %>
             </div>
             <div class="flex md:hidden items-center gap-1 col-span-2 relative">
-              <%= render "transactions/transaction_category", transaction: transaction %>
+              <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
               <% if transaction.merchant&.logo_url.present? %>
                 <%= image_tag transaction.merchant.logo_url,
                     class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
@@ -75,6 +75,13 @@
                     <% if transaction.one_time? %>
                       <span class="text-orange-500" title="One-time <%= entry.amount.negative? ? "income" : "expense" %> (excluded from averages)">
                         <%= icon "asterisk", size: "sm", color: "current" %>
+                      </span>
+                    <% end %>
+
+                    <%# Investment activity label badge %>
+                    <% if transaction.investment_activity_label.present? %>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-alpha-black-50 text-secondary" title="<%= t("transactions.transaction.activity_type_tooltip") %>">
+                        <%= t("transactions.activity_labels.#{transaction.investment_activity_label.parameterize(separator: '_')}") %>
                       </span>
                     <% end %>
 
@@ -137,7 +144,7 @@
       </div>
 
       <div class="hidden md:flex items-center gap-1 col-span-2">
-        <%= render "transactions/transaction_category", transaction: transaction %>
+        <%= render "transactions/transaction_category", transaction: transaction, variant: "desktop" %>
       </div>
 
       <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">

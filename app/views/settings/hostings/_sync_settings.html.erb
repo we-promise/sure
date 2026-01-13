@@ -17,6 +17,40 @@
     <% end %>
   </div>
 
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".auto_sync_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".auto_sync_description") %></p>
+    </div>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.toggle :auto_sync_enabled,
+                      checked: Setting.auto_sync_enabled,
+                      data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".auto_sync_time_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".auto_sync_time_description") %></p>
+    </div>
+
+    <%= form_with model: Setting.new,
+                        url: settings_hosting_path,
+                        method: :patch,
+                        data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.time_field :auto_sync_time,
+                          value: Setting.auto_sync_time,
+                          disabled: !Setting.auto_sync_enabled,
+                          class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container text-primary w-full",
+                          data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
   <% if env_configured %>
     <div class="bg-warning-50 border border-warning-200 rounded-lg p-3">
       <div class="flex items-start gap-2">

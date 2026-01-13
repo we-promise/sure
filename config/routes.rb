@@ -64,9 +64,10 @@ Rails.application.routes.draw do
   resource :current_session, only: %i[update]
 
   resource :registration, only: %i[new create]
-  resources :sessions, only: %i[new create destroy]
+  resources :sessions, only: %i[index new create destroy]
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]
+  get "/auth/logout/callback", to: "sessions#post_logout"
   resource :oidc_account, only: [] do
     get :link, on: :collection
     post :create_link, on: :collection
@@ -100,6 +101,7 @@ Rails.application.routes.draw do
     end
     resource :billing, only: :show
     resource :security, only: :show
+    resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
@@ -135,6 +137,7 @@ Rails.application.routes.draw do
     patch :update_preferences, on: :collection
     get :export_transactions, on: :collection
     get :google_sheets_instructions, on: :collection
+    get :print, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
@@ -168,7 +171,11 @@ Rails.application.routes.draw do
     resources :mappings, only: :update, module: :import
   end
 
-  resources :holdings, only: %i[index new show destroy]
+  resources :holdings, only: %i[index new show update destroy] do
+    member do
+      post :unlock_cost_basis
+    end
+  end
   resources :trades, only: %i[show new create update destroy]
   resources :valuations, only: %i[show new create update destroy] do
     post :confirm_create, on: :collection
@@ -289,6 +296,9 @@ Rails.application.routes.draw do
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
       resources :categories, only: [ :index, :show ]
+      resources :merchants, only: %i[index show]
+      resources :tags, only: %i[index show create update destroy]
+
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
@@ -404,6 +414,17 @@ Rails.application.routes.draw do
 
   get "privacy", to: redirect("about:blank")
   get "terms", to: redirect("about:blank")
+
+  # Admin namespace for super admin functionality
+  namespace :admin do
+    resources :sso_providers do
+      member do
+        patch :toggle
+        post :test_connection
+      end
+    end
+    resources :users, only: [ :index, :update ]
+  end
 
   # Defines the root path route ("/")
   root "pages#dashboard"

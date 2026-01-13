@@ -31,26 +31,47 @@ en:
         balances, and cannot be undone.
       delete_title: Delete transaction
       details: Details
-      mark_recurring: Mark as Recurring
-      mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
-      mark_recurring_title: Recurring Transaction
-      merchant_label: Merchant
-      name_label: Name
-      nature: Type
-      none: "(none)"
-      note_label: Notes
-      note_placeholder: Enter a note
-      overview: Overview
-      settings: Settings
-      tags_label: Tags
-      uncategorized: "(uncategorized)"
-      potential_duplicate_title: Possible duplicate detected
-      potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
-      merge_duplicate: Yes, merge them
-      keep_both: No, keep both
+      exclude: Exclude
+      exclude_description: Excluded transactions will be removed from budgeting calculations and reports.
+      activity_type: Activity Type
+      activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
+      one_time_title: One-time %{type}
+      one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
+    activity_labels:
+      buy: Buy
+      sell: Sell
+      sweep_in: Sweep In
+      sweep_out: Sweep Out
+      dividend: Dividend
+      reinvestment: Reinvestment
+      interest: Interest
+      fee: Fee
+      transfer: Transfer
+      contribution: Contribution
+      withdrawal: Withdrawal
+      exchange: Exchange
+      other: Other
+    mark_recurring: Mark as Recurring
+    mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
+    mark_recurring_title: Recurring Transaction
+    merchant_label: Merchant
+    name_label: Name
+    nature: Type
+    none: "(none)"
+    note_label: Notes
+    note_placeholder: Enter a note
+    overview: Overview
+    settings: Settings
+    tags_label: Tags
+    uncategorized: "(uncategorized)"
+    potential_duplicate_title: Possible duplicate detected
+    potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
+    merge_duplicate: Yes, merge them
+    keep_both: No, keep both
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
+      activity_type_tooltip: Investment activity type
       possible_duplicate: Duplicate?
       potential_duplicate_tooltip: This may be a duplicate of another transaction
       review_recommended: Review

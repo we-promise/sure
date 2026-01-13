@@ -3,6 +3,16 @@ class Holding < ApplicationRecord
 
   monetize :amount
 
+  # Cost basis source priority (higher = takes precedence)
+  COST_BASIS_SOURCE_PRIORITY = {
+    nil => 0,
+    "provider" => 1,
+    "calculated" => 2,
+    "manual" => 3
+  }.freeze
+
+  COST_BASIS_SOURCES = %w[manual calculated provider].freeze
+
   belongs_to :account
   belongs_to :security
   belongs_to :account_provider, optional: true
@@ -10,9 +20,12 @@ class Holding < ApplicationRecord
   validates :qty, :currency, :date, :price, :amount, presence: true
   validates :qty, :price, :amount, numericality: { greater_than_or_equal_to: 0 }
   validates :external_id, uniqueness: { scope: :account_id }, allow_blank: true
+  validates :cost_basis_source, inclusion: { in: COST_BASIS_SOURCES }, allow_nil: true
 
   scope :chronological, -> { order(:date) }
   scope :for, ->(security) { where(security_id: security).order(:date) }
+  scope :with_locked_cost_basis, -> { where(cost_basis_locked: true) }
+  scope :with_unlocked_cost_basis, -> { where(cost_basis_locked: false) }
 
   delegate :ticker, to: :security
 
@@ -74,6 +87,53 @@ class Holding < ApplicationRecord
     end
 
     account.sync_later
+  end
+
+  # Returns the priority level for the current source (higher = better)
+  def cost_basis_source_priority
+    COST_BASIS_SOURCE_PRIORITY[cost_basis_source] || 0
+  end
+
+  # Check if this holding's cost_basis can be overwritten by the given source
+  def cost_basis_replaceable_by?(new_source)
+    return false if cost_basis_locked?
+
+    new_priority = COST_BASIS_SOURCE_PRIORITY[new_source] || 0
+
+    # Special case: when user unlocks a manual cost_basis, they're opting into
+    # recalculation. Allow only "calculated" source to replace it (from trades).
+    # This is the whole point of the unlock action.
+    if cost_basis_source == "manual"
+      return new_source == "calculated"
+    end
+
+    new_priority > cost_basis_source_priority
+  end
+
+  # Set cost_basis from user input (locks the value)
+  def set_manual_cost_basis!(value)
+    update!(
+      cost_basis: value,
+      cost_basis_source: "manual",
+      cost_basis_locked: true
+    )
+  end
+
+  # Unlock cost_basis to allow provider/calculated updates
+  def unlock_cost_basis!
+    update!(cost_basis_locked: false)
+  end
+
+  # Check if cost_basis is known (has a source and positive value)
+  def cost_basis_known?
+    cost_basis.present? && cost_basis.positive? && cost_basis_source.present?
+  end
+
+  # Human-readable source label for UI display
+  def cost_basis_source_label
+    return nil unless cost_basis_source.present?
+
+    I18n.t("holdings.cost_basis_sources.#{cost_basis_source}")
   end
 
   private

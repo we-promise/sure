@@ -41,5 +41,9 @@ module Sure
 
     # Enable Rack::Attack middleware for API rate limiting
     config.middleware.use Rack::Attack
+
+    # Handle OmniAuth/OIDC errors gracefully (must be before OmniAuth middleware)
+    require_relative "../app/middleware/omniauth_error_handler"
+    config.middleware.use OmniauthErrorHandler
   end
 end
