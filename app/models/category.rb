@@ -181,6 +181,12 @@ class Category < ApplicationRecord
     subcategory? ? "#{parent.name} > #{name}" : name
   end
 
+  # Returns the category name with non-breaking space indentation for subcategories.
+  # Used in select dropdowns to visually indicate hierarchy.
+  def name_with_indent
+    subcategory? ? "\u00A0\u00A0\u00A0\u00A0#{name}" : name
+  end
+
   # Predicate: is this the synthetic "Uncategorized" category?
   def uncategorized?
     !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)

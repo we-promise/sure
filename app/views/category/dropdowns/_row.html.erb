@@ -3,7 +3,8 @@
 
 <%= content_tag :div,
       class: ["filterable-item flex justify-between items-center border-none rounded-lg px-2 py-1 group w-full hover:bg-container-inset-hover",
-              { "bg-container-inset": is_selected }],
+              { "bg-container-inset": is_selected },
+              { "ml-4": category.subcategory? }],
       data: { filter_name: category.name } do %>
   <%= button_to transaction_category_path(
         @transaction.entry,
