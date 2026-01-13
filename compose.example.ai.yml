@@ -180,6 +180,7 @@ services:
 volumes:
   app-storage:
   postgres-data:
+  backup_data:
   redis-data:
   ollama:
   ollama-webui:

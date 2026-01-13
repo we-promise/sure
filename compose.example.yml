@@ -128,6 +128,7 @@ services:
 volumes:
   app-storage:
   postgres-data:
+  backup_data:
   redis-data:
 
 networks:
