@@ -17,7 +17,7 @@
       <%# Subsequent renders are injected by the Stimulus controller, which uses the templates from below. %>
       <span class="font-medium text-primary uppercase text-xs">to</span>
       <% if action.executor.type == "select" %>
-        <%= form.select :value, action.options || [], {} %>
+        <%= form.combobox :value, action.options || [] %>
       <% elsif action.executor.type == "text" %>
         <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
       <% end %>
