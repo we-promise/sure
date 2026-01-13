@@ -8,6 +8,9 @@ class Demo::DataCleaner
 
   # Main entry point for destroying all demo data
   def destroy_everything!
+    # Clear SSO audit logs first (they reference users)
+    SsoAuditLog.destroy_all
+
     Family.destroy_all
     Setting.destroy_all
     InviteCode.destroy_all
