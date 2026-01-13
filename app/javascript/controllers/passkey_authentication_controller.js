@@ -18,6 +18,17 @@ export default class extends Controller {
       return;
     }
 
+    // Check if WebAuthn is available (requires HTTPS or localhost)
+    if (!window.PublicKeyCredential) {
+      this.showError("Passkeys are not supported in this browser. Please use a modern browser with HTTPS.");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      this.showError("Passkeys require a secure connection (HTTPS). Please access this site via HTTPS.");
+      return;
+    }
+
     try {
       // Get authentication options from server
       const optionsResponse = await fetch(`${this.optionsUrlValue}?email=${encodeURIComponent(email)}`, {

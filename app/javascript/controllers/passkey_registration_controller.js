@@ -11,6 +11,17 @@ export default class extends Controller {
     event.preventDefault();
     this.clearError();
 
+    // Check if WebAuthn is available (requires HTTPS or localhost)
+    if (!window.PublicKeyCredential) {
+      this.showError("Passkeys are not supported in this browser. Please use a modern browser with HTTPS.");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      this.showError("Passkeys require a secure connection (HTTPS). Please access this site via HTTPS.");
+      return;
+    }
+
     try {
       // Get registration options from server
       const optionsResponse = await fetch(this.createOptionsUrlValue, {
