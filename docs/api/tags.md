@@ -24,7 +24,7 @@ The Tags API allows external applications to manage tags within Sure. Tags provi
 | Operation | Scope Required |
 | --- | --- |
 | List/View tags | `read` |
-| Create/Update/Delete tags | `read_write` |
+| Create/Update/Delete tags | `write` |
 
 ## Available endpoints
 
@@ -56,7 +56,7 @@ A tag response includes:
 
 Sure provides a predefined set of colors for tags. If no color is specified when creating a tag, one will be randomly assigned from this palette:
 
-```
+```text
 #e99537, #4da568, #6471eb, #db5a54, #df4e92,
 #c44fe9, #eb5429, #61c9ea, #805dee, #6b7c93
 ```
@@ -65,7 +65,7 @@ Sure provides a predefined set of colors for tags. If no color is specified when
 
 Example request:
 
-```
+```http
 POST /api/v1/tags
 Authorization: Bearer <access_token>
 Content-Type: application/json
@@ -96,7 +96,7 @@ Example response (201 Created):
 
 Example request:
 
-```
+```http
 PATCH /api/v1/tags/550e8400-e29b-41d4-a716-446655440001
 Authorization: Bearer <access_token>
 Content-Type: application/json
@@ -115,7 +115,7 @@ Both `name` and `color` are optional in update requests.
 
 Example request:
 
-```
+```http
 DELETE /api/v1/tags/550e8400-e29b-41d4-a716-446655440001
 Authorization: Bearer <access_token>
 ```

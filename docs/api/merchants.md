@@ -61,7 +61,7 @@ A merchant response includes:
 
 Example request:
 
-```
+```http
 GET /api/v1/merchants
 Authorization: Bearer <access_token>
 ```
