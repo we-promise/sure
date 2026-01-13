@@ -605,10 +605,9 @@ class Provider::YahooFinance < Provider
       max_age_match[1].to_i.seconds
     end
 
-    # Client for authentication requests (no retry on errors, different config)
+    # Client for authentication requests (no error raising - fc.yahoo.com returns 404 but sets cookie)
     def auth_client
       @auth_client ||= Faraday.new do |faraday|
-        faraday.response :raise_error
         faraday.headers["User-Agent"] = random_user_agent
         faraday.headers["Accept"] = "*/*"
         faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
