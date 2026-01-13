@@ -441,9 +441,17 @@ To switch back to YAML-based configuration:
 
 ### 6.6 JIT provisioning settings
 
-Each provider can configure a **Default Role** for JIT-created users (defaults to `member`).
+Each provider has a **Default Role** field (defaults to `member`) that sets the role for JIT-created users.
 
-For SAML/OIDC providers with group claims, expand **"Role Mapping"** to map IdP groups to Sure roles.
+**Role mapping from IdP groups:**
+
+Expand **"Role Mapping"** in the admin UI to map IdP group names to Sure roles. Enter comma-separated group names for each role:
+
+- **Super Admin Groups**: `Platform-Admins, IdP-Superusers`
+- **Admin Groups**: `Team-Leads, Managers`
+- **Member Groups**: `Everyone` or leave blank
+
+Mapping is case-sensitive and matches exact group claim values from the IdP. When a user belongs to multiple mapped groups, the highest role wins (`super_admin` > `admin` > `member`). If no groups match, the Default Role is used.
 
 ---
 
@@ -537,7 +545,7 @@ Note: Super‑admins cannot change their own role.
 
 ## 11. Audit Logging
 
-SSO events are logged to `sso_audit_logs`: `login`, `login_failed`, `logout`, `link`, `unlink`, `jit_account_created`.
+SSO events are logged to `sso_audit_logs`: `login`, `login_failed`, `logout`, `logout_idp` (federated logout), `link`, `unlink`, `jit_account_created`.
 
 Query via console:
 
