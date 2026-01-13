@@ -21,6 +21,22 @@ en:
       transfer: Transfer
     new:
       new_transaction: New transaction
+    bulk_updates:
+      new:
+        title: Edit transactions
+        overview: Overview
+        date: Date
+        transactions: Transactions
+        category: Category
+        category_prompt: Select a category
+        merchant: Merchant
+        merchant_prompt: Select a merchant
+        tags: Tags
+        none: None
+        notes: Notes
+        notes_placeholder: Enter a note that will be applied to selected transactions
+        cancel: Cancel
+        save: Save
     show:
       account_label: Account
       amount: Amount
