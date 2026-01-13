@@ -206,7 +206,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     @provider.send(:throttle_request)
     second_elapsed = Time.current - start_time
     min_interval = @provider.send(:min_request_interval)
-    assert second_elapsed >= (min_interval - 0.1), "Second request should wait at least #{min_interval - 0.1}s"
+    assert second_elapsed >= (min_interval - 0.05), "Second request should wait at least #{min_interval - 0.05}s"
   end
 
   # ================================
@@ -218,11 +218,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   end
 
   test "retry_interval returns default value" do
-    assert_equal 2.0, @provider.send(:retry_interval)
+    assert_equal 1.0, @provider.send(:retry_interval)
   end
 
   test "min_request_interval returns default value" do
-    assert_equal 1.5, @provider.send(:min_request_interval)
+    assert_equal 0.5, @provider.send(:min_request_interval)
   end
 
   # ================================
