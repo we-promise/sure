@@ -256,7 +256,7 @@ export default class extends Controller {
       // Sort by vertical position
       columnNodes.sort((a, b) => ((a.y0 + a.y1) / 2) - ((b.y0 + b.y1) / 2));
 
-      let lastVisibleY = -Infinity;
+      let lastVisibleY = Number.NEGATIVE_INFINITY;
 
       columnNodes.forEach(node => {
         const nodeY = (node.y0 + node.y1) / 2;
