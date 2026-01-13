@@ -8,7 +8,7 @@
           <div class="flex items-center justify-between mx-4 py-4">
             <div class="flex items-center gap-2 mb-1">
               <div>
-                <p class="text-sm font-medium text-primary">Export from <%= export.created_at.strftime("%B %d, %Y at %I:%M %p") %></p>
+                <p class="text-sm font-medium text-primary"><%= t("family_exports.list.export_from", date: l(export.created_at, format: :long)) %></p>
                 <p class="text-xs text-secondary"><%= export.filename %></p>
               </div>
 

@@ -9,6 +9,7 @@ ca:
       new: Nova exportació
       no_exports: Encara no hi ha exportacions.
     list:
+      export_from: "Exportació del %{date}"
       in_progress: En curs
       complete: Completat
       failed: Error

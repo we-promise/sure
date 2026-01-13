@@ -9,6 +9,7 @@ tr:
       new: Yeni Dışa Aktarma
       no_exports: Henüz hiç dışa aktarma yok.
     list:
+      export_from: "%{date} tarihli dışa aktarma"
       in_progress: Devam ediyor
       complete: Tamamlandı
       failed: Başarısız

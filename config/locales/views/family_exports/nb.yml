@@ -9,6 +9,7 @@ nb:
       new: Ny Eksport
       no_exports: Ingen eksporter ennå.
     list:
+      export_from: "Eksport fra %{date}"
       in_progress: Pågår
       complete: Fullført
       failed: Mislykket

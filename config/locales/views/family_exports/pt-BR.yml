@@ -9,6 +9,7 @@ pt-BR:
       new: Nova Exportação
       no_exports: Nenhuma exportação ainda.
     list:
+      export_from: "Exportação de %{date}"
       in_progress: Em andamento 
       complete: Concluído
       failed: Falhou

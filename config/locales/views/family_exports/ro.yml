@@ -9,6 +9,7 @@ ro:
       new: Export nou
       no_exports: Nu există încă exporturi.
     list:
+      export_from: "Export din %{date}"
       in_progress: În curs de desfășurare
       complete: Finalizat
       failed: Eșuat

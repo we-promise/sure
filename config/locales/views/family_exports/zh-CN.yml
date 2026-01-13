@@ -9,6 +9,7 @@ zh-CN:
       new: 新建导出
       no_exports: 暂无导出记录
     list:
+      export_from: "导出自 %{date}"
       complete: 已完成
       failed: 已失败
       in_progress: 进行中
