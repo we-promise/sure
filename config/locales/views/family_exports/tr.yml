@@ -1,8 +1,14 @@
 ---
 tr:
   family_exports:
+    access_denied: Erişim reddedildi
+    create:
+      success: Dışa aktarma başladı. Kısa süre içinde indirebileceksiniz.
     delete_confirmation: Bu dışa aktarma işlemini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
     delete_failed_confirmation: Bu başarısız dışa aktarma işlemini silmek istediğinizden emin misiniz?
+    destroy:
+      success: Dışa aktarma başarıyla silindi
+    export_not_ready: Dışa aktarma henüz indirmeye hazır değil
     exporting: Dışa aktarılıyor...
     index:
       title: Dışa aktarmalar
