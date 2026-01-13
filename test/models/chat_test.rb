@@ -15,7 +15,9 @@ class ChatTest < ActiveSupport::TestCase
 
   test "user sees assistant and user messages in normal mode" do
     chat = chats(:one)
-    assert_equal 3, chat.conversation_messages.count
+    with_env_overrides AI_DEBUG_MODE: nil do
+      assert_equal 3, chat.conversation_messages.count
+    end
   end
 
   test "creates with initial message" do
@@ -32,22 +34,38 @@ class ChatTest < ActiveSupport::TestCase
   test "creates with default model when model is nil" do
     prompt = "Test prompt"
 
-    assert_difference "@user.chats.count", 1 do
-      chat = @user.chats.start!(prompt, model: nil)
+    with_env_overrides OPENAI_MODEL: "" do
+      previous_setting = Setting.openai_model
+      Setting.openai_model = ""
+      begin
+        assert_difference "@user.chats.count", 1 do
+          chat = @user.chats.start!(prompt, model: nil)
 
-      assert_equal 1, chat.messages.count
-      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+          assert_equal 1, chat.messages.count
+          assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+        end
+      ensure
+        Setting.openai_model = previous_setting
+      end
     end
   end
 
   test "creates with default model when model is empty string" do
     prompt = "Test prompt"
 
-    assert_difference "@user.chats.count", 1 do
-      chat = @user.chats.start!(prompt, model: "")
+    with_env_overrides OPENAI_MODEL: "" do
+      previous_setting = Setting.openai_model
+      Setting.openai_model = ""
+      begin
+        assert_difference "@user.chats.count", 1 do
+          chat = @user.chats.start!(prompt, model: "")
 
-      assert_equal 1, chat.messages.count
-      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+          assert_equal 1, chat.messages.count
+          assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+        end
+      ensure
+        Setting.openai_model = previous_setting
+      end
     end
   end
 

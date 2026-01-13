@@ -15,26 +15,28 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create when hosted requires an invite code" do
-    with_env_overrides REQUIRE_INVITE_CODE: "true" do
-      assert_no_difference "User.count" do
-        post registration_url, params: { user: {
-          email: "john@example.com",
-          password: "Password1!" } }
-        assert_redirected_to new_registration_url
+    with_managed_hosting do
+      with_env_overrides REQUIRE_INVITE_CODE: "true" do
+        assert_no_difference "User.count" do
+          post registration_url, params: { user: {
+            email: "john@example.com",
+            password: "Password1!" } }
+          assert_redirected_to new_registration_url
 
-        post registration_url, params: { user: {
-          email: "john@example.com",
-          password: "Password1!",
-          invite_code: "foo" } }
-        assert_redirected_to new_registration_url
-      end
+          post registration_url, params: { user: {
+            email: "john@example.com",
+            password: "Password1!",
+            invite_code: "foo" } }
+          assert_redirected_to new_registration_url
+        end
 
-      assert_difference "User.count", +1 do
-        post registration_url, params: { user: {
-          email: "john@example.com",
-          password: "Password1!",
-          invite_code: InviteCode.generate! } }
-        assert_redirected_to root_url
+        assert_difference "User.count", +1 do
+          post registration_url, params: { user: {
+            email: "john@example.com",
+            password: "Password1!",
+            invite_code: InviteCode.generate! } }
+          assert_redirected_to root_url
+        end
       end
     end
   end

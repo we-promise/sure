@@ -14,10 +14,12 @@ class OnboardableTest < ActionDispatch::IntegrationTest
   end
 
   test "must have subscription to visit dashboard" do
-    @user.update!(onboarded_at: 1.day.ago)
+    with_managed_hosting do
+      @user.update!(onboarded_at: 1.day.ago)
 
-    get root_path
-    assert_redirected_to trial_onboarding_path
+      get root_path
+      assert_redirected_to trial_onboarding_path
+    end
   end
 
   test "onboarded subscribed user can visit dashboard" do
