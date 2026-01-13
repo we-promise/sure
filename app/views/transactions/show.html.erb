@@ -82,8 +82,8 @@
 
             <%= f.fields_for :entryable do |ef| %>
               <%= ef.collection_select :category_id,
-                      Current.family.categories.alphabetically,
-                    :id, :name,
+                      Current.family.categories.alphabetically_by_hierarchy,
+                    :id, :name_with_indent,
                     { label: t(".category_label"),
                       class: "text-subdued", include_blank: t(".uncategorized") },
                     "data-auto-submit-form-target": "auto" %>
