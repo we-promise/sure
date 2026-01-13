@@ -1,6 +1,9 @@
 ---
 tr:
   family_exports:
+    delete_confirmation: Bu dışa aktarma işlemini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+    delete_failed_confirmation: Bu başarısız dışa aktarma işlemini silmek istediğinizden emin misiniz?
+    exporting: Dışa aktarılıyor...
     index:
       title: Dışa aktarmalar
       new: Yeni Dışa Aktarma

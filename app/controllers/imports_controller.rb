@@ -14,8 +14,8 @@ class ImportsController < ApplicationController
   def index
     @pagy, @imports = pagy(Current.family.imports.ordered, limit: safe_per_page)
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Imports", imports_path ]
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.imports"), imports_path ]
     ]
     render layout: "settings"
   end

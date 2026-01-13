@@ -1,6 +1,9 @@
 ---
 ro:
   family_exports:
+    delete_confirmation: Sigur doriți să ștergeți acest export? Această acțiune nu poate fi anulată.
+    delete_failed_confirmation: Sigur doriți să ștergeți acest export eșuat?
+    exporting: Se exportă...
     index:
       title: Exporturi
       new: Export nou

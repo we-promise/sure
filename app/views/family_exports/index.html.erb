@@ -30,7 +30,7 @@
             <% if export.processing? || export.pending? %>
               <div class="flex items-center gap-2 text-secondary">
                 <div class="animate-spin h-4 w-4 border-2 border-secondary border-t-transparent rounded-full"></div>
-                <span class="text-sm">Exporting...</span>
+                <span class="text-sm"><%= t("family_exports.exporting") %></span>
               </div>
             <% elsif export.completed? %>
               <div class="flex items-center gap-2">
@@ -38,7 +38,7 @@
                     method: :delete,
                     class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
                     data: {
-                      turbo_confirm: "Are you sure you want to delete this export? This action cannot be undone."
+                      turbo_confirm: t("family_exports.delete_confirmation")
                     } do %>
                   <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
                 <% end %>
@@ -58,7 +58,7 @@
                     method: :delete,
                     class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
                     data: {
-                      turbo_confirm: "Are you sure you want to delete this failed export?"
+                      turbo_confirm: t("family_exports.delete_failed_confirmation")
                     } do %>
                   <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
                 <% end %>

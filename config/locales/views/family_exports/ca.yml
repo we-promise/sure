@@ -1,6 +1,9 @@
 ---
 ca:
   family_exports:
+    delete_confirmation: Estàs segur que vols eliminar aquesta exportació? Aquesta acció no es pot desfer.
+    delete_failed_confirmation: Estàs segur que vols eliminar aquesta exportació fallida?
+    exporting: Exportant...
     index:
       title: Exportacions
       new: Nova exportació

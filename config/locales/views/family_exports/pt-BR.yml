@@ -1,6 +1,9 @@
 ---
 pt-BR:
   family_exports:
+    delete_confirmation: Tem certeza de que deseja excluir esta exportação? Esta ação não pode ser desfeita.
+    delete_failed_confirmation: Tem certeza de que deseja excluir esta exportação falhada?
+    exporting: Exportando...
     index:
       title: Exportações
       new: Nova Exportação

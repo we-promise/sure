@@ -1,6 +1,9 @@
 ---
 nb:
   family_exports:
+    delete_confirmation: Er du sikker på at du vil slette denne eksporten? Denne handlingen kan ikke angres.
+    delete_failed_confirmation: Er du sikker på at du vil slette denne mislykkede eksporten?
+    exporting: Eksporterer...
     index:
       title: Eksporter
       new: Ny Eksport

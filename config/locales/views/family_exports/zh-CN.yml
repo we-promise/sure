@@ -1,6 +1,9 @@
 ---
 zh-CN:
   family_exports:
+    delete_confirmation: 确定要删除此导出吗？此操作无法撤销。
+    delete_failed_confirmation: 确定要删除此失败的导出吗？
+    exporting: 正在导出...
     index:
       title: 导出
       new: 新建导出

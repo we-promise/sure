@@ -1,6 +1,9 @@
 ---
 es:
   family_exports:
+    delete_confirmation: ¿Estás seguro de que quieres eliminar esta exportación? Esta acción no se puede deshacer.
+    delete_failed_confirmation: ¿Estás seguro de que quieres eliminar esta exportación fallida?
+    exporting: Exportando...
     index:
       title: Exportaciones
       new: Nueva exportación

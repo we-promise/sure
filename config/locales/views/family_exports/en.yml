@@ -1,6 +1,9 @@
 ---
 en:
   family_exports:
+    delete_confirmation: Are you sure you want to delete this export? This action cannot be undone.
+    delete_failed_confirmation: Are you sure you want to delete this failed export?
+    exporting: Exporting...
     index:
       title: Exports
       new: New Export
