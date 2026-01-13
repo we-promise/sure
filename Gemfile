@@ -74,6 +74,7 @@ gem "plaid"
 gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
+gem "webauthn", "~> 3.0"
 gem "activerecord-import"
 gem "rubyzip", "~> 2.3"
 

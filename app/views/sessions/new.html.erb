@@ -46,6 +46,29 @@
       <%= link_to t(".forgot_password"), new_password_reset_path, class: "font-medium text-sm text-primary hover:underline transition" %>
     </div>
   <% end %>
+
+  <div class="mt-6 relative">
+    <div class="absolute inset-0 flex items-center">
+      <div class="w-full border-t border-secondary"></div>
+    </div>
+    <div class="relative flex justify-center text-sm">
+      <span class="px-2 bg-container text-secondary"><%= t(".or") %></span>
+    </div>
+  </div>
+
+  <div class="mt-6"
+       data-controller="passkey-authentication"
+       data-passkey-authentication-options-url-value="<%= options_passkey_session_path %>"
+       data-passkey-authentication-authenticate-url-value="<%= passkey_session_path %>">
+    <div data-passkey-authentication-target="error" class="hidden text-red-600 text-sm mb-2 text-center"></div>
+    <input type="hidden" data-passkey-authentication-target="email" value="<%= @email %>">
+    <button type="button"
+            data-action="click->passkey-authentication#authenticate"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-secondary bg-container px-4 py-2 text-sm font-medium text-primary hover:bg-secondary transition">
+      <%= icon "key", size: "sm" %>
+      <span><%= t(".sign_in_with_passkey") %></span>
+    </button>
+  </div>
 <% end %>
 
 <% providers = AuthConfig.sso_providers %>

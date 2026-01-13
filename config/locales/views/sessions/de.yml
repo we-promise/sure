@@ -19,3 +19,5 @@ de:
       password_placeholder: Passwort eingeben
       openid_connect: Mit OpenID Connect anmelden
       google_auth_connect: Mit Google anmelden
+      or: oder
+      sign_in_with_passkey: Mit Passkey anmelden

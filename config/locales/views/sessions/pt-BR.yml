@@ -21,3 +21,5 @@ pt-BR:
       google_auth_connect: Entrar com Google
       demo_banner_title: "Modo de Demonstração Ativo"
       demo_banner_message: "Este é um ambiente de demonstração. As credenciais de login foram preenchidas para sua conveniência. Por favor, não insira informações reais ou sensíveis."
+      or: ou
+      sign_in_with_passkey: Entrar com Passkey

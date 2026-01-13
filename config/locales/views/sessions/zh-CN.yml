@@ -19,5 +19,7 @@ zh-CN:
       password_placeholder: 请输入密码
       submit: 登录
       title: 登录您的账户
+      or: 或
+      sign_in_with_passkey: 使用通行密钥登录
     openid_connect:
       failed: 无法通过 OpenID Connect 认证。

@@ -16,3 +16,5 @@ tr:
       title: Hesabınıza giriş yapın
       password_placeholder: Şifrenizi girin
       openid_connect: OpenID Connect ile giriş yap
+      or: veya
+      sign_in_with_passkey: Passkey ile giriş yap

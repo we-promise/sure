@@ -19,4 +19,6 @@ ca:
       password_placeholder: Introdueix la teva contrasenya
       openid_connect: Inicia sessió amb OpenID Connect
       google_auth_connect: Inicia sessió amb Google
+      or: o
+      sign_in_with_passkey: Inicia sessió amb Passkey
 

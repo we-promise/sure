@@ -8,3 +8,24 @@ es:
         enable_mfa: Habilitar 2FA
         mfa_description: Agrega una capa adicional de seguridad a tu cuenta al requerir un código de tu aplicación de autenticación al iniciar sesión
         mfa_title: Autenticación de 2FA
+        passkeys_title: Passkeys
+        passkeys_description: Inicia sesión con tu huella digital, rostro o llave de seguridad
+        add_passkey: Agregar Passkey
+        remove_passkey: Eliminar
+        remove_passkey_confirm_title: ¿Eliminar Passkey?
+        remove_passkey_confirm_body: ¿Estás seguro de que deseas eliminar esta passkey? Ya no podrás iniciar sesión con ella.
+        no_passkeys: No hay passkeys registradas aún.
+        passkey_added: "Agregada el %{date}"
+        passkey_last_used: "Última vez usada hace %{date}"
+      update:
+        success: Contraseña actualizada correctamente.
+        invalid_current_password: La contraseña actual es incorrecta.
+  passkeys:
+    destroy:
+      success: Passkey eliminada correctamente.
+  passkey_sessions:
+    options:
+      no_passkeys: No hay passkeys registradas para esta cuenta.
+    create:
+      invalid_session: Sesión inválida. Por favor, inténtalo de nuevo.
+      passkey_not_found: Passkey no encontrada.

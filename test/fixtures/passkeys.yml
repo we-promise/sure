@@ -1,0 +1,17 @@
+# Test passkeys for webauthn authentication
+# external_id is Base64 URL-safe encoded credential ID
+bob_passkey:
+  user: family_admin
+  external_id: <%= Base64.urlsafe_encode64("test-credential-id-bob", padding: false) %>
+  public_key: <%= Base64.urlsafe_encode64("test-public-key-bob", padding: false) %>
+  label: "Bob's MacBook"
+  sign_count: 5
+  last_used_at: <%= 1.day.ago %>
+
+bob_passkey_2:
+  user: family_admin
+  external_id: <%= Base64.urlsafe_encode64("test-credential-id-bob-2", padding: false) %>
+  public_key: <%= Base64.urlsafe_encode64("test-public-key-bob-2", padding: false) %>
+  label: "Bob's iPhone"
+  sign_count: 2
+  last_used_at: <%= 1.hour.ago %>

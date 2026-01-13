@@ -77,6 +77,12 @@ Rails.application.routes.draw do
   resource :password, only: %i[edit update]
   resource :email_confirmation, only: :new
 
+  # Passkey routes
+  resources :passkeys, only: %i[new create destroy]
+  resource :passkey_session, only: %i[new create] do
+    get :options, on: :collection
+  end
+
   resources :users, only: %i[update destroy] do
     delete :reset, on: :member
     delete :reset_with_sample_data, on: :member

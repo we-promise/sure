@@ -44,3 +44,58 @@
     </div>
   </div>
 <% end %>
+
+<%= settings_section title: t(".passkeys_title"), subtitle: t(".passkeys_description") do %>
+  <div class="space-y-4">
+    <% if Current.user.passkeys.any? %>
+      <div class="space-y-2">
+        <% Current.user.passkeys.each do |passkey| %>
+          <div class="p-3 shadow-border-xs bg-container rounded-lg flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-gray-25 flex justify-center items-center">
+                <%= icon "key" %>
+              </div>
+              <div class="text-sm">
+                <p class="text-primary font-medium"><%= passkey.label %></p>
+                <p class="text-secondary">
+                  <%= t(".passkey_added", date: passkey.created_at.strftime("%b %d, %Y")) %>
+                  <% if passkey.last_used_at %>
+                    · <%= t(".passkey_last_used", date: time_ago_in_words(passkey.last_used_at)) %>
+                  <% end %>
+                </p>
+              </div>
+            </div>
+            <div>
+              <%= render DS::Button.new(
+                text: t(".remove_passkey"),
+                variant: "secondary",
+                href: passkey_path(passkey),
+                method: :delete,
+                confirm: CustomConfirm.new(
+                  title: t(".remove_passkey_confirm_title"),
+                  body: t(".remove_passkey_confirm_body"),
+                  btn_text: t(".remove_passkey"),
+                  destructive: true
+                )
+              ) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".no_passkeys") %></p>
+    <% end %>
+
+    <div data-controller="passkey-registration"
+         data-passkey-registration-create-options-url-value="<%= new_passkey_path %>"
+         data-passkey-registration-create-url-value="<%= passkeys_path %>">
+      <div data-passkey-registration-target="error" class="hidden text-red-600 text-sm mb-2"></div>
+      <button type="button"
+              data-action="click->passkey-registration#register"
+              class="btn btn--secondary">
+        <%= icon "plus", class: "w-4 h-4 mr-2" %>
+        <%= t(".add_passkey") %>
+      </button>
+    </div>
+  </div>
+<% end %>
