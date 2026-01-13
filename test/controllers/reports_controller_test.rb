@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ReportsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in @user = users(:family_admin)
     @family = @user.family
@@ -220,5 +222,28 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "text/csv", @response.media_type
     # Verify the CSV content is generated (should not crash)
     assert_not_nil @response.body
+  end
+
+  test "index groups transactions by parent and subcategories" do
+    # Create parent category with subcategories
+    parent_category = @family.categories.create!(name: "Entertainment", classification: "expense", color: "#FF5733")
+    subcategory_movies = @family.categories.create!(name: "Movies", classification: "expense", parent: parent_category, color: "#33FF57")
+    subcategory_games = @family.categories.create!(name: "Games", classification: "expense", parent: parent_category, color: "#5733FF")
+
+    # Create transactions using helper
+    create_transaction(account: @family.accounts.first, name: "Cinema ticket", amount: 15, category: subcategory_movies)
+    create_transaction(account: @family.accounts.first, name: "Video game", amount: 60, category: subcategory_games)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+    assert_select "table.w-full"
+  end
+
+  test "index handles categories with nil colors" do
+    category = @family.categories.create!(name: "No Color Category", classification: "expense", color: nil)
+    create_transaction(account: @family.accounts.first, name: "Test transaction", amount: 25, category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
   end
 end
