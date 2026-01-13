@@ -351,45 +351,86 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: [ "funds_movement", "one_time", "cc_payment" ])
-        .includes(entry: :account, category: [])
+        .includes(entry: :account, category: :parent)
 
       # Apply filters
       transactions = apply_transaction_filters(transactions)
+
+      # Get trades in the period (matching income_statement logic)
+      trades = Trade
+        .joins(:entry)
+        .joins(entry: :account)
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
+        .includes(entry: :account, category: :parent)
 
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
       sort_direction = params[:sort_direction] || "desc"
 
-      # Group by category and type
+      # Group by category (tracking parent relationship) and type
+      # Structure: { [parent_category_id, type] => { parent_data, subcategories: { subcategory_id => data } } }
       grouped_data = {}
       family_currency = Current.family.currency
 
-      # Process transactions
-      transactions.each do |transaction|
-        entry = transaction.entry
-        is_expense = entry.amount > 0
-        type = is_expense ? "expense" : "income"
-        category_name = transaction.category&.name || "Uncategorized"
-        category_color = transaction.category&.color || Category::UNCATEGORIZED_COLOR
-
-        # Convert to family currency
-        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
-
-        key = [ category_name, type, category_color ]
-        grouped_data[key] ||= { total: 0, count: 0 }
-        grouped_data[key][:count] += 1
-        grouped_data[key][:total] += converted_amount
+      # Helper to initialize a category group hash
+      init_category_group = ->(id, name, color, type) do
+        { category_id: id, category_name: name, category_color: color, type: type, total: 0, count: 0, subcategories: {} }
       end
 
-      # Convert to array
-      result = grouped_data.map do |key, data|
-        {
-          category_name: key[0],
-          type: key[1],
-          category_color: key[2],
-          total: data[:total],
-          count: data[:count]
-        }
+      # Helper to initialize a subcategory hash
+      init_subcategory = ->(category) do
+        { category_id: category.id, category_name: category.name, category_color: category.color, total: 0, count: 0 }
+      end
+
+      # Helper to process an entry (transaction or trade)
+      process_entry = ->(category, entry, is_trade) do
+        type = entry.amount > 0 ? "expense" : "income"
+        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+
+        if category.nil?
+          # Uncategorized or Other Investments (for trades)
+          if is_trade
+            parent_key = [ :other_investments, type ]
+            grouped_data[parent_key] ||= init_category_group.call(:other_investments, Category.other_investments_name, Category::OTHER_INVESTMENTS_COLOR, type)
+          else
+            parent_key = [ :uncategorized, type ]
+            grouped_data[parent_key] ||= init_category_group.call(:uncategorized, Category.uncategorized_name, Category::UNCATEGORIZED_COLOR, type)
+          end
+        elsif category.parent_id.present?
+          # This is a subcategory - group under parent
+          parent = category.parent
+          parent_key = [ parent.id, type ]
+          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color, type)
+
+          # Add to subcategory
+          grouped_data[parent_key][:subcategories][category.id] ||= init_subcategory.call(category)
+          grouped_data[parent_key][:subcategories][category.id][:count] += 1
+          grouped_data[parent_key][:subcategories][category.id][:total] += converted_amount
+        else
+          # This is a root category (no parent)
+          parent_key = [ category.id, type ]
+          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color, type)
+        end
+
+        grouped_data[parent_key][:count] += 1
+        grouped_data[parent_key][:total] += converted_amount
+      end
+
+      # Process transactions
+      transactions.each do |transaction|
+        process_entry.call(transaction.category, transaction.entry, false)
+      end
+
+      # Process trades
+      trades.each do |trade|
+        process_entry.call(trade.category, trade.entry, true)
+      end
+
+      # Convert to array and sort subcategories
+      result = grouped_data.values.map do |parent_data|
+        subcategories = parent_data[:subcategories].values.sort_by { |s| sort_direction == "asc" ? s[:total] : -s[:total] }
+        parent_data.merge(subcategories: subcategories)
       end
 
       # Sort by amount (total) with the specified direction
