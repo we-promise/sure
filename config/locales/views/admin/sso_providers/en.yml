@@ -18,6 +18,9 @@ en:
           actions: "Actions"
           enabled: "Enabled"
           disabled: "Disabled"
+        legacy_providers_title: "Environment-Configured Providers"
+        legacy_providers_notice: "These providers are configured via environment variables or YAML and cannot be managed through this interface. To manage them here, migrate them to database-backed providers by enabling AUTH_PROVIDERS_SOURCE=db and recreating them in the UI."
+        env_configured: "Env/YAML"
       new:
         title: "Add SSO Provider"
         description: "Configure a new single sign-on authentication provider"
@@ -51,6 +54,7 @@ en:
         icon_placeholder: "e.g., key, google, github"
         icon_help: "Lucide icon name (optional)"
         enabled_label: "Enable this provider"
+        enabled_help: "Users can sign in with this provider when enabled"
         issuer_label: "Issuer"
         issuer_placeholder: "https://accounts.google.com"
         issuer_help: "OIDC issuer URL (will validate .well-known/openid-configuration endpoint)"

@@ -16,8 +16,15 @@ class Transaction < ApplicationRecord
     funds_movement: "funds_movement", # Movement of funds between accounts, excluded from budget analytics
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)
     loan_payment: "loan_payment", # A payment to a Loan account, treated as an expense in budgets
-    one_time: "one_time" # A one-time expense/income, excluded from budget analytics
+    one_time: "one_time", # A one-time expense/income, excluded from budget analytics
+    investment_contribution: "investment_contribution" # Transfer to investment/crypto account, excluded from budget analytics
   }
+
+  # All valid investment activity labels (for UI dropdown)
+  ACTIVITY_LABELS = [
+    "Buy", "Sell", "Sweep In", "Sweep Out", "Dividend", "Reinvestment",
+    "Interest", "Fee", "Transfer", "Contribution", "Withdrawal", "Exchange", "Other"
+  ].freeze
 
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]

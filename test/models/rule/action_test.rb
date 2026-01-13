@@ -100,4 +100,36 @@ class Rule::ActionTest < ActiveSupport::TestCase
       assert_equal new_name, transaction.reload.entry.name
     end
   end
+
+  test "set_investment_activity_label" do
+    # Does not modify transactions that are locked (user edited them)
+    @txn1.lock_attr!(:investment_activity_label)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_investment_activity_label",
+      value: "Dividend"
+    )
+
+    action.apply(@rule_scope)
+
+    assert_nil @txn1.reload.investment_activity_label
+
+    [ @txn2, @txn3 ].each do |transaction|
+      assert_equal "Dividend", transaction.reload.investment_activity_label
+    end
+  end
+
+  test "set_investment_activity_label ignores invalid values" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_investment_activity_label",
+      value: "InvalidLabel"
+    )
+
+    result = action.apply(@rule_scope)
+
+    assert_equal 0, result
+    assert_nil @txn1.reload.investment_activity_label
+  end
 end

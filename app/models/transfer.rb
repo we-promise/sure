@@ -16,6 +16,10 @@ class Transfer < ApplicationRecord
     def kind_for_account(account)
       if account.loan?
         "loan_payment"
+      elsif account.credit_card?
+        "cc_payment"
+      elsif account.investment? || account.crypto?
+        "investment_contribution"
       elsif account.liability?
         "cc_payment"
       else

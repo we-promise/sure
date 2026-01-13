@@ -55,9 +55,13 @@
       </div>
     </div>
 
-    <%= form.check_box :enabled,
-        label: "Enable this provider",
-        checked: sso_provider.enabled? %>
+    <div class="flex items-center justify-between">
+      <div class="space-y-1">
+        <p class="text-sm font-medium text-primary"><%= t("admin.sso_providers.form.enabled_label") %></p>
+        <p class="text-xs text-secondary"><%= t("admin.sso_providers.form.enabled_help") %></p>
+      </div>
+      <%= form.toggle :enabled %>
+    </div>
   </div>
 
   <div class="border-t border-primary pt-4 space-y-4">
