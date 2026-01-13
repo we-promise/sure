@@ -26,7 +26,7 @@
       <% categories = params[:nature] == "inflow" ? income_categories : expense_categories %>
       <div class="form-field combobox">
         <%= ef.combobox :category_id,
-              categories.alphabetically_by_hierarchy.map { |c| [c.name_with_indent, c.id] },
+              categories.map { |c| [c.name_with_indent, c.id] },
               label: t(".category"),
               placeholder: t(".category_prompt") %>
       </div>
