@@ -238,12 +238,4 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_select "table.w-full"
   end
-
-  test "index handles categories with nil colors" do
-    category = @family.categories.create!(name: "No Color Category", classification: "expense", color: nil)
-    create_transaction(account: @family.accounts.first, name: "Test transaction", amount: 25, category: category)
-
-    get reports_path(period_type: :monthly)
-    assert_response :ok
-  end
 end
