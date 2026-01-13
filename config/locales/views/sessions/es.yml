@@ -22,3 +22,5 @@ es:
       google_auth_connect: Inicia sesión con Google
       local_login_admin_only: El inicio de sesión local está restringido a administradores.
       no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Ponte en contacto con un administrador.
+      or: o
+      sign_in_with_passkey: Iniciar sesión con Passkey

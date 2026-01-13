@@ -8,3 +8,24 @@ zh-CN:
         enable_mfa: 启用双重认证
         mfa_description: 在登录时要求输入身份验证器应用中的代码，为账户增加额外安全层
         mfa_title: 双重认证
+        passkeys_title: 通行密钥
+        passkeys_description: 使用指纹、面容或安全密钥登录
+        add_passkey: 添加通行密钥
+        remove_passkey: 移除
+        remove_passkey_confirm_title: 移除通行密钥？
+        remove_passkey_confirm_body: 确定要移除此通行密钥吗？您将无法再使用它登录。
+        no_passkeys: 尚未注册通行密钥。
+        passkey_added: "添加于 %{date}"
+        passkey_last_used: "上次使用于 %{date} 前"
+      update:
+        success: 密码更新成功。
+        invalid_current_password: 当前密码不正确。
+  passkeys:
+    destroy:
+      success: 通行密钥已成功移除。
+  passkey_sessions:
+    options:
+      no_passkeys: 此账户未注册通行密钥。
+    create:
+      invalid_session: 会话无效。请重试。
+      passkey_not_found: 未找到通行密钥。

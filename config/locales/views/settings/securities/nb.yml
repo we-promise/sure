@@ -10,3 +10,24 @@ nb:
         mfa_description: Legg til et ekstra lag med sikkerhet til kontoen din ved å kreve
           en kode fra autentiseringsappen din når du logger inn
         mfa_title: To-faktor autentisering
+        passkeys_title: Passkeys
+        passkeys_description: Logg inn med fingeravtrykk, ansikt eller sikkerhetsnøkkel
+        add_passkey: Legg til Passkey
+        remove_passkey: Fjern
+        remove_passkey_confirm_title: Fjerne Passkey?
+        remove_passkey_confirm_body: Er du sikker på at du vil fjerne denne passkeyen? Du vil ikke lenger kunne logge inn med den.
+        no_passkeys: Ingen passkeys registrert ennå.
+        passkey_added: "Lagt til %{date}"
+        passkey_last_used: "Sist brukt for %{date} siden"
+      update:
+        success: Passordet ble oppdatert.
+        invalid_current_password: Nåværende passord er feil.
+  passkeys:
+    destroy:
+      success: Passkey fjernet.
+  passkey_sessions:
+    options:
+      no_passkeys: Ingen passkeys registrert for denne kontoen.
+    create:
+      invalid_session: Ugyldig økt. Vennligst prøv igjen.
+      passkey_not_found: Passkey ikke funnet.
