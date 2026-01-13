@@ -20,6 +20,7 @@ export default class extends Controller {
   static CORNER_RADIUS = 8;
   static DEFAULT_COLOR = "var(--color-gray-400)";
   static CSS_VAR_MAP = { "var(--color-success)": "#10A861" };
+  static MIN_LABEL_SPACING = 28; // Minimum vertical space needed for labels (2 lines)
 
   connect() {
     this.resizeObserver = new ResizeObserver(() => this.#draw());
@@ -55,9 +56,9 @@ export default class extends Controller {
     this.#createGradients(svg, sankeyData.links);
 
     const linkPaths = this.#drawLinks(svg, sankeyData.links);
-    const nodeGroups = this.#drawNodes(svg, sankeyData.nodes, width);
+    const { nodeGroups, hiddenLabels } = this.#drawNodes(svg, sankeyData.nodes, width);
 
-    this.#attachHoverEvents(linkPaths, nodeGroups, sankeyData);
+    this.#attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels);
   }
 
   // Dynamic padding prevents padding from dominating when there are many nodes
@@ -150,9 +151,9 @@ export default class extends Controller {
       .attr("fill", d => d.color || this.constructor.DEFAULT_COLOR)
       .attr("stroke", d => d.color ? "none" : "var(--color-gray-500)");
 
-    this.#addNodeLabels(nodeGroups, width);
+    const hiddenLabels = this.#addNodeLabels(nodeGroups, width, nodes);
 
-    return nodeGroups;
+    return { nodeGroups, hiddenLabels };
   }
 
   #nodePath(node) {
@@ -202,8 +203,9 @@ export default class extends Controller {
             L ${x0},${y1} Z`;
   }
 
-  #addNodeLabels(nodeGroups, width) {
+  #addNodeLabels(nodeGroups, width, nodes) {
     const controller = this;
+    const hiddenLabels = this.#calculateHiddenLabels(nodes);
 
     nodeGroups.append("text")
       .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
@@ -212,6 +214,8 @@ export default class extends Controller {
       .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
       .attr("class", "text-xs font-medium text-primary fill-current select-none")
       .style("cursor", "default")
+      .style("opacity", d => hiddenLabels.has(d.index) ? 0 : 1)
+      .style("transition", "opacity 0.2s ease")
       .each(function(d) {
         const textEl = d3.select(this);
         textEl.selectAll("tspan").remove();
@@ -225,9 +229,46 @@ export default class extends Controller {
           .style("font-size", "0.65rem")
           .text(controller.#formatCurrency(d.value));
       });
+
+    return hiddenLabels;
   }
 
-  #attachHoverEvents(linkPaths, nodeGroups, sankeyData) {
+  // Calculate which labels should be hidden to prevent overlap
+  #calculateHiddenLabels(nodes) {
+    const hiddenLabels = new Set();
+    const minSpacing = this.constructor.MIN_LABEL_SPACING;
+
+    // Group nodes by column (using depth which d3-sankey assigns)
+    const columns = new Map();
+    nodes.forEach(node => {
+      const depth = node.depth;
+      if (!columns.has(depth)) columns.set(depth, []);
+      columns.get(depth).push(node);
+    });
+
+    // For each column, check for overlapping labels
+    columns.forEach(columnNodes => {
+      // Sort by vertical position
+      columnNodes.sort((a, b) => ((a.y0 + a.y1) / 2) - ((b.y0 + b.y1) / 2));
+
+      let lastVisibleY = -Infinity;
+
+      columnNodes.forEach(node => {
+        const nodeY = (node.y0 + node.y1) / 2;
+
+        if (nodeY - lastVisibleY < minSpacing) {
+          // Too close to previous visible label, hide this one
+          hiddenLabels.add(node.index);
+        } else {
+          lastVisibleY = nodeY;
+        }
+      });
+    });
+
+    return hiddenLabels;
+  }
+
+  #attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels) {
     const applyHover = (targetLinks) => {
       const targetSet = new Set(targetLinks);
       const connectedNodes = new Set(targetLinks.flatMap(l => [l.source, l.target]));
@@ -237,17 +278,38 @@ export default class extends Controller {
         .style("filter", d => targetSet.has(d) ? this.constructor.HOVER_FILTER : "none");
 
       nodeGroups.style("opacity", d => connectedNodes.has(d) ? 1 : this.constructor.HOVER_OPACITY);
+
+      // Show labels for connected nodes (even if normally hidden)
+      nodeGroups.selectAll("text")
+        .style("opacity", d => connectedNodes.has(d) ? 1 : (hiddenLabels.has(d.index) ? 0 : this.constructor.HOVER_OPACITY));
     };
 
     const resetHover = () => {
       linkPaths.style("opacity", 1).style("filter", "none");
       nodeGroups.style("opacity", 1);
+      // Restore hidden labels to hidden state
+      nodeGroups.selectAll("text")
+        .style("opacity", d => hiddenLabels.has(d.index) ? 0 : 1);
     };
 
     linkPaths
       .on("mouseenter", (event, d) => {
         applyHover([d]);
         this.#showTooltip(event, d.value, d.percentage);
+      })
+      .on("mousemove", event => this.#updateTooltipPosition(event))
+      .on("mouseleave", () => {
+        resetHover();
+        this.#hideTooltip();
+      });
+
+    // Hover on node rectangles (not just text)
+    nodeGroups.selectAll("path")
+      .style("cursor", "default")
+      .on("mouseenter", (event, d) => {
+        const connectedLinks = sankeyData.links.filter(l => l.source === d || l.target === d);
+        applyHover(connectedLinks);
+        this.#showTooltip(event, d.value, d.percentage, d.name);
       })
       .on("mousemove", event => this.#updateTooltipPosition(event))
       .on("mouseleave", () => {
