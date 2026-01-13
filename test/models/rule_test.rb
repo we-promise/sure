@@ -260,4 +260,52 @@ class RuleTest < ActiveSupport::TestCase
   test "total_affected_resource_count returns zero for empty rules" do
     assert_equal 0, Rule.total_affected_resource_count([])
   end
+
+  test "set_transaction_category action returns hierarchically ordered options" do
+    parent = categories(:parent_category)
+    child = categories(:child_category)
+
+    rule = Rule.new(family: @family, resource_type: "transaction")
+    executor = Rule::ActionExecutor::SetTransactionCategory.new(rule)
+    options = executor.options
+
+    parent_option = options.find { |opt| opt[1] == parent.id }
+    child_option = options.find { |opt| opt[1] == child.id }
+
+    assert_not_nil parent_option, "Parent category should be in options"
+    assert_not_nil child_option, "Child category should be in options"
+
+    # Parent should come before child (hierarchical ordering)
+    parent_index = options.index(parent_option)
+    child_index = options.index(child_option)
+    assert parent_index < child_index, "Parent should appear before child in hierarchical order"
+
+    # Child should have indented name (non-breaking space prefix)
+    assert_equal "Food", parent_option[0]
+    assert_equal "\u00A0\u00A0\u00A0\u00A0Groceries", child_option[0], "Child should have indented name"
+  end
+
+  test "transaction_category condition filter returns hierarchically ordered options" do
+    parent = categories(:parent_category)
+    child = categories(:child_category)
+
+    rule = Rule.new(family: @family, resource_type: "transaction")
+    filter = Rule::ConditionFilter::TransactionCategory.new(rule)
+    options = filter.options
+
+    parent_option = options.find { |opt| opt[1] == parent.id }
+    child_option = options.find { |opt| opt[1] == child.id }
+
+    assert_not_nil parent_option, "Parent category should be in options"
+    assert_not_nil child_option, "Child category should be in options"
+
+    # Parent should come before child (hierarchical ordering)
+    parent_index = options.index(parent_option)
+    child_index = options.index(child_option)
+    assert parent_index < child_index, "Parent should appear before child in hierarchical order"
+
+    # Child should have indented name (non-breaking space prefix)
+    assert_equal "Food", parent_option[0]
+    assert_equal "\u00A0\u00A0\u00A0\u00A0Groceries", child_option[0], "Child should have indented name"
+  end
 end
