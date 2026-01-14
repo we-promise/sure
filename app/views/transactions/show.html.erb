@@ -265,6 +265,25 @@
           ) %>
         </div>
 
+        <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
+        <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
+          <div class="flex items-center justify-between gap-2 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary">Convert to Security Trade</h4>
+              <p class="text-secondary">Convert this transaction into a security trade (buy/sell) by providing ticker, shares, and price.</p>
+            </div>
+
+            <%= render DS::Button.new(
+              text: "Convert",
+              variant: "outline",
+              icon: "arrow-right-left",
+              href: convert_to_trade_transaction_path(@entry.transaction),
+              method: :get,
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
+
         <!-- Mark as Recurring Form -->
         <div class="flex items-center justify-between gap-2 p-3">
           <div class="text-sm space-y-1">

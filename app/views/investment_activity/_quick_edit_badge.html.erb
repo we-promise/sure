@@ -1,0 +1,89 @@
+<%# locals: (entry:, entryable:) %>
+<%
+  label = entryable.investment_activity_label
+  has_label = label.present?
+
+  # Build the correct URL based on entryable type
+  update_url = entryable.is_a?(Transaction) ? transaction_path(entry) : trade_path(entry)
+
+  # Color mapping for different investment activity labels
+  color = if has_label
+    case label
+    when "Buy"
+      "rgb(59 130 246)" # blue
+    when "Sell"
+      "rgb(239 68 68)" # red
+    when "Dividend", "Interest"
+      "rgb(34 197 94)" # green
+    when "Contribution"
+      "rgb(168 85 247)" # purple
+    when "Withdrawal"
+      "rgb(249 115 22)" # orange
+    when "Fee"
+      "rgb(107 114 128)" # gray
+    when "Transfer", "Sweep In", "Sweep Out", "Exchange"
+      "rgb(107 114 128)" # gray
+    when "Reinvestment"
+      "rgb(59 130 246)" # blue
+    else
+      "rgb(107 114 128)" # gray for "Other"
+    end
+  else
+    "rgb(140 140 140)" # slightly lighter gray for empty state
+  end
+
+  activity_labels = entryable.is_a?(Trade) ? Trade::ACTIVITY_LABELS : Transaction::ACTIVITY_LABELS
+%>
+
+<div class="relative"
+     data-controller="activity-label-quick-edit"
+     data-activity-label-quick-edit-url-value="<%= update_url %>"
+     data-activity-label-quick-edit-entryable-id-value="<%= entryable.id %>"
+     data-activity-label-quick-edit-current-label-value="<%= label %>">
+
+  <button type="button"
+          class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 cursor-pointer hover:opacity-80 transition-opacity"
+          style="<% if has_label %>
+            background-color: color-mix(in oklab, <%= color %> 15%, transparent);
+            border: 1px solid color-mix(in oklab, <%= color %> 25%, transparent);
+            color: <%= color %>;
+          <% else %>
+            background-color: var(--color-surface-inset);
+            border: 1px solid var(--color-border-secondary);
+            color: var(--color-text-secondary);
+          <% end %>"
+          data-action="click->activity-label-quick-edit#toggle"
+          data-activity-label-quick-edit-target="badge"
+          title="<%= has_label ? "Click to change activity label" : "Add activity label" %>">
+    <% if has_label %>
+      <%= label %>
+    <% else %>
+      <%= icon "tag", size: "xs", color: "current" %>
+      <span>Label</span>
+    <% end %>
+    <%= icon "chevron-down", size: "xs", color: "current" %>
+  </button>
+
+  <!-- Dropdown menu -->
+  <div class="hidden absolute right-0 z-50 mt-1 w-44 rounded-lg border border-primary bg-container shadow-lg"
+       data-activity-label-quick-edit-target="dropdown">
+    <div class="py-1 max-h-64 overflow-y-auto">
+      <% if has_label %>
+        <button type="button"
+                class="w-full text-left px-3 py-1.5 text-sm text-secondary hover:bg-surface-inset transition-colors border-b border-primary"
+                data-action="click->activity-label-quick-edit#select"
+                data-label="">
+          <span class="italic">Remove label</span>
+        </button>
+      <% end %>
+      <% activity_labels.each do |activity_label| %>
+        <button type="button"
+                class="w-full text-left px-3 py-1.5 text-sm text-primary hover:bg-surface-inset transition-colors <%= activity_label == label ? "font-semibold bg-surface-inset" : "" %>"
+                data-action="click->activity-label-quick-edit#select"
+                data-label="<%= activity_label %>">
+          <%= activity_label %>
+        </button>
+      <% end %>
+    </div>
+  </div>
+</div>

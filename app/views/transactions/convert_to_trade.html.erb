@@ -1,0 +1,140 @@
+<%
+  # Determine default label based on amount sign
+  # Negative amount (money going out) = Buy, Positive (money coming in) = Sell
+  default_label = @entry.amount > 0 ? "Sell" : "Buy"
+
+  # Get unique securities from account holdings for ticker suggestions
+  account_securities = @entry.account.holdings
+    .includes(:security)
+    .where.not(security: nil)
+    .map(&:security)
+    .uniq(&:ticker)
+    .sort_by(&:ticker)
+%>
+
+<%= render DS::Dialog.new(variant: "modal", reload_on_close: true) do |dialog| %>
+  <% dialog.with_header do %>
+    <h2 class="text-lg font-semibold text-primary">Convert to Security Trade</h2>
+    <p class="text-sm text-secondary">Convert this transaction into a trade with security details</p>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: create_trade_from_transaction_transaction_path(@transaction), method: :post, class: "space-y-4", data: { controller: "convert-to-trade", turbo_frame: "_top" } do |f| %>
+      <!-- Pre-filled Transaction Info (Read-only) -->
+      <div class="space-y-2 p-3 bg-surface-inset rounded-lg border border-primary">
+        <div class="text-sm">
+          <span class="text-secondary">Date:</span>
+          <span class="font-medium text-primary"><%= @entry.date.strftime("%b %d, %Y") %></span>
+        </div>
+        <div class="text-sm">
+          <span class="text-secondary">Account:</span>
+          <span class="font-medium text-primary"><%= @entry.account.name %></span>
+        </div>
+        <div class="text-sm">
+          <span class="text-secondary">Amount:</span>
+          <span class="font-medium <%= @entry.amount.negative? ? "text-green-600" : "text-primary" %>"><%= format_money(@entry.amount_money.abs) %></span>
+        </div>
+      </div>
+
+      <!-- Trade-Specific Fields -->
+      <div class="space-y-4">
+        <div class="space-y-1">
+          <%= f.label :ticker, "Security", class: "font-medium text-sm text-primary block" %>
+          <% if account_securities.any? %>
+            <%= f.select :ticker,
+                  options_for_select(
+                    [["Select a security...", ""]] +
+                    account_securities.map { |s| ["#{s.ticker}#{s.name.present? ? " - #{s.name.truncate(30)}" : ""}", s.ticker] } +
+                    [["+ Enter custom ticker", "__custom__"]],
+                    nil
+                  ),
+                  {},
+                  {
+                    class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                    data: {
+                      action: "change->convert-to-trade#toggleCustomTicker",
+                      convert_to_trade_target: "tickerSelect"
+                    }
+                  } %>
+            <div class="hidden mt-2" data-convert-to-trade-target="customWrapper">
+              <%= f.text_field :custom_ticker,
+                    placeholder: "AAPL",
+                    class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                    pattern: "[A-Za-z0-9.:-]{1,20}",
+                    title: "Enter a valid ticker symbol",
+                    data: { convert_to_trade_target: "customField" } %>
+            </div>
+            <p class="text-xs text-secondary">Select from your holdings or enter a custom ticker</p>
+          <% else %>
+            <%= f.text_field :ticker,
+                  placeholder: "AAPL",
+                  required: true,
+                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                  pattern: "[A-Za-z0-9.:-]{1,20}",
+                  title: "Enter a valid ticker symbol" %>
+            <p class="text-xs text-secondary">Enter the stock/ETF ticker symbol</p>
+          <% end %>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <%= f.label :qty, "Quantity (Shares)", class: "font-medium text-sm text-primary block" %>
+            <%= f.number_field :qty,
+                  step: "any",
+                  placeholder: "e.g. 20",
+                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" %>
+            <p class="text-xs text-secondary">Number of shares traded</p>
+          </div>
+
+          <div class="space-y-1">
+            <%= f.label :price, "Price per Share", class: "font-medium text-sm text-primary block" %>
+            <%= f.number_field :price,
+                  step: "0.0001",
+                  min: "0",
+                  placeholder: "e.g. 52.15",
+                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" %>
+            <p class="text-xs text-secondary">Price per share (<%= @entry.currency %>)</p>
+          </div>
+        </div>
+
+        <p class="text-xs text-secondary bg-surface-inset p-2 rounded">
+          <%= icon "info", size: "xs", class: "inline-block mr-1" %>
+          Enter at least qty OR price. The other will be calculated from the transaction amount (<%= format_money(@entry.amount_money.abs) %>).
+        </p>
+
+        <div class="space-y-1">
+          <%= f.label :investment_activity_label, "Activity Type", class: "font-medium text-sm text-primary block" %>
+          <%= f.select :investment_activity_label,
+                options_for_select(Trade::ACTIVITY_LABELS.map { |label| [label, label] }, default_label),
+                {},
+                { class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" } %>
+          <p class="text-xs text-secondary">Buy, Sell, or other activity type</p>
+        </div>
+
+        <div class="space-y-1">
+          <%= f.label :exchange_operating_mic, "Exchange (Optional)", class: "font-medium text-sm text-primary block" %>
+          <%= f.text_field :exchange_operating_mic,
+                placeholder: "XNAS",
+                class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                pattern: "[A-Z]{4}",
+                title: "Enter a 4-letter exchange MIC code (e.g., XNAS, XNYS)" %>
+          <p class="text-xs text-secondary">Leave blank to auto-detect</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4 border-t border-primary">
+        <%= render DS::Button.new(
+          text: "Cancel",
+          variant: "outline",
+          href: "#",
+          data: { action: "click->ds--dialog#close" }
+        ) %>
+        <%= render DS::Button.new(
+          text: "Convert to Trade",
+          variant: "primary",
+          type: "submit"
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

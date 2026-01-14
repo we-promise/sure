@@ -123,6 +123,9 @@ class ReportsController < ApplicationController
       # Investment metrics
       @investment_metrics = build_investment_metrics
 
+      # Investment flows (contributions/withdrawals)
+      @investment_flows = InvestmentFlowStatement.new(Current.family).period_totals(period: @period)
+
       # Flags for view rendering
       @has_accounts = Current.family.accounts.any?
     end
@@ -159,6 +162,14 @@ class ReportsController < ApplicationController
           partial: "reports/investment_performance",
           locals: { investment_metrics: @investment_metrics },
           visible: @investment_metrics[:has_investments],
+          collapsible: true
+        },
+        {
+          key: "investment_flows",
+          title: "reports.investment_flows.title",
+          partial: "reports/investment_flows",
+          locals: { investment_flows: @investment_flows },
+          visible: @investment_metrics[:has_investments] && (@investment_flows.contributions.amount > 0 || @investment_flows.withdrawals.amount > 0),
           collapsible: true
         },
         {
@@ -345,13 +356,11 @@ class ReportsController < ApplicationController
       # Apply filters
       transactions = apply_transaction_filters(transactions)
 
-      # Get trades in the period (matching income_statement logic)
-      trades = Trade
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
-        .includes(entry: :account, category: [])
+      # Trades are completely excluded from income/expense budgets
+      # Rationale: Trades represent portfolio rebalancing, not cash flow
+      # Example: Selling $10k AAPL to buy MSFT = no net worth change, not an expense
+      # See IncomeStatement::Totals for consistent exclusion logic
+      trades = Trade.none
 
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
@@ -562,13 +571,10 @@ class ReportsController < ApplicationController
 
       transactions = apply_transaction_filters(transactions)
 
-      # Get trades in the period (matching income_statement logic)
-      trades = Trade
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
-        .includes(entry: :account, category: [])
+      # Trades are completely excluded from income/expense budgets
+      # Rationale: Trades represent portfolio rebalancing, not cash flow
+      # See IncomeStatement::Totals for consistent exclusion logic
+      trades = Trade.none
 
       # Group by category, type, and month
       breakdown = {}

@@ -72,7 +72,8 @@ class PlaidAccount::Investments::TransactionsProcessor
         currency: transaction["iso_currency_code"],
         date: transaction["date"],
         name: transaction["name"],
-        source: "plaid"
+        source: "plaid",
+        activity_label: label_from_plaid_type(transaction)
       )
     end
 

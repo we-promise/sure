@@ -148,6 +148,124 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  def convert_to_trade
+    @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    @entry = @transaction.entry
+
+    unless @entry.account.investment?
+      flash[:alert] = "Only transactions in investment accounts can be converted to trades"
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    render :convert_to_trade
+  end
+
+  def create_trade_from_transaction
+    @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    @entry = @transaction.entry
+
+    unless @entry.account.investment?
+      flash[:alert] = "Only transactions in investment accounts can be converted to trades"
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    if @entry.excluded?
+      flash[:alert] = "This transaction has already been converted or excluded"
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    ActiveRecord::Base.transaction do
+      # Determine ticker - use custom_ticker if user selected the custom option
+      ticker = if params[:ticker] == "__custom__"
+        params[:custom_ticker].presence
+      else
+        params[:ticker].presence
+      end
+
+      unless ticker.present?
+        flash[:alert] = "Please select or enter a ticker symbol"
+        redirect_back_or_to transactions_path
+        return
+      end
+
+      # Find or create security
+      security = Security.find_or_create_by!(
+        ticker: ticker.upcase.strip,
+        exchange_operating_mic: params[:exchange_operating_mic].presence
+      )
+
+      activity_label = params[:investment_activity_label].presence
+
+      # Determine if buy or sell based on activity label or original transaction direction
+      is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount > 0)
+
+      # Get qty and price from user input
+      amount = @entry.amount.abs.to_f
+      qty = params[:qty].present? ? params[:qty].to_f.abs : nil
+      price = params[:price].present? ? params[:price].to_f : nil
+
+      # User must provide at least one of qty or price
+      # The other can be calculated from the transaction amount
+      if qty.nil? && price.nil?
+        flash[:alert] = "Please enter either quantity or price per share. The other will be calculated from the transaction amount."
+        redirect_back_or_to transactions_path, status: :see_other
+        return
+      elsif qty.nil? && price.present? && price > 0
+        # Calculate qty from amount and price
+        qty = (amount / price).round(6)
+      elsif price.nil? && qty.present? && qty > 0
+        # Calculate price from amount and qty
+        price = (amount / qty).round(4)
+      end
+
+      # Final validation
+      if qty.nil? || qty <= 0 || price.nil? || price <= 0
+        flash[:alert] = "Invalid quantity or price. Please enter valid positive values."
+        redirect_back_or_to transactions_path, status: :see_other
+        return
+      end
+
+      # For trades: positive qty = buy (money out), negative qty = sell (money in)
+      signed_qty = is_sell ? -qty : qty
+      trade_amount = qty * price
+      # Sells bring money in (negative amount), Buys take money out (positive amount)
+      signed_amount = is_sell ? -trade_amount : trade_amount
+
+      # Default activity label if not provided
+      activity_label ||= is_sell ? "Sell" : "Buy"
+
+      # Create trade entry
+      trade_entry = @entry.account.entries.create!(
+        name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
+        date: @entry.date,
+        amount: signed_amount,
+        currency: @entry.currency,
+        entryable: Trade.new(
+          security: security,
+          qty: signed_qty,
+          price: price,
+          currency: @entry.currency,
+          investment_activity_label: activity_label
+        )
+      )
+
+      # Mark original transaction as excluded (soft delete)
+      @entry.update!(excluded: true)
+    end
+
+    flash[:notice] = "Transaction converted to trade"
+    redirect_to account_path(@entry.account), status: :see_other
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+    flash[:alert] = "Failed to convert transaction: #{e.message}"
+    redirect_back_or_to transactions_path, status: :see_other
+  rescue StandardError => e
+    flash[:alert] = "Unexpected error during conversion: #{e.message}"
+    redirect_back_or_to transactions_path, status: :see_other
+  end
+
   def mark_as_recurring
     transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
 

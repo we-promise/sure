@@ -116,10 +116,28 @@ class Account::ProviderImportAdapter
         entry.transaction.save!
       end
 
-      # Set investment activity label if provided and not already set
-      if investment_activity_label.present? && entry.entryable.is_a?(Transaction)
-        if entry.transaction.investment_activity_label.blank?
-          entry.transaction.assign_attributes(investment_activity_label: investment_activity_label)
+      # Auto-detect investment activity labels for investment accounts
+      detected_label = investment_activity_label
+      if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
+        detected_label = detect_activity_label(name, amount)
+      end
+
+      # Auto-set kind for internal movements and contributions
+      auto_kind = nil
+      if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
+        auto_kind = "funds_movement"
+      elsif detected_label == "Contribution"
+        auto_kind = "investment_contribution"
+      end
+
+      # Set investment activity label and kind if detected
+      if entry.entryable.is_a?(Transaction)
+        if detected_label.present? && entry.transaction.investment_activity_label.blank?
+          entry.transaction.assign_attributes(investment_activity_label: detected_label)
+        end
+
+        if auto_kind.present?
+          entry.transaction.assign_attributes(kind: auto_kind)
         end
       end
 
@@ -458,8 +476,9 @@ class Account::ProviderImportAdapter
   # @param name [String, nil] Optional custom name for the trade
   # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
+  # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -496,7 +515,8 @@ class Account::ProviderImportAdapter
         security: security,
         qty: quantity,
         price: price,
-        currency: currency
+        currency: currency,
+        investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       )
 
       entry.assign_attributes(
@@ -762,5 +782,35 @@ class Account::ProviderImportAdapter
         }
       )
     )
+  end
+
+  # Auto-detects investment activity label from transaction name and amount
+  # Only detects extremely obvious cases to maintain high accuracy
+  # Users can always manually adjust the label afterward
+  #
+  # @param name [String] Transaction name/description
+  # @param amount [BigDecimal, Numeric] Transaction amount (positive or negative)
+  # @return [String, nil] Detected activity label or nil if no pattern matches
+  def detect_activity_label(name, amount)
+    return nil if name.blank?
+
+    name_lower = name.downcase.strip
+
+    # Only detect the most obvious patterns - be conservative to avoid false positives
+    # Users can manually adjust labels for edge cases
+    case name_lower
+    when /^dividend\b/, /\bdividend payment\b/, /\bqualified dividend\b/, /\bordinary dividend\b/
+      "Dividend"
+    when /^interest\b/, /\binterest income\b/, /\binterest payment\b/
+      "Interest"
+    when /^fee\b/, /\bmanagement fee\b/, /\badvisory fee\b/, /\btransaction fee\b/
+      "Fee"
+    when /\bemployer match\b/, /\bemployer contribution\b/
+      "Contribution"
+    when /\b401[k\(]/, /\bira contribution\b/, /\broth contribution\b/
+      "Contribution"
+    else
+      nil # Let user categorize manually - default to nil for safety
+    end
   end
 end

@@ -44,9 +44,9 @@
                   precision: 10,
                   disabled: @entry.linked? %>
 
-            <%= ef.select :category_id,
-                  Current.family.categories.expenses.alphabetically.map { |c| [c.name, c.id] },
-                  { include_blank: t(".no_category"), label: t(".category_label") },
+            <%= ef.select :investment_activity_label,
+                  Trade::ACTIVITY_LABELS.map { |label| [label, label] },
+                  { include_blank: t("transactions.form.none"), label: t("transactions.form.investment_activity_label") },
                   { data: { "auto-submit-form-target": "auto" } } %>
           <% end %>
         <% end %>
