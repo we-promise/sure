@@ -37,6 +37,9 @@ en:
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}
       one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
+      convert_to_trade_title: Convert to Security Trade
+      convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
+      convert_to_trade_button: Convert to Trade
     activity_labels:
       buy: Buy
       sell: Sell
@@ -140,10 +143,6 @@ en:
         invalid_qty_or_price: Invalid quantity or price. Please enter valid positive values.
         conversion_failed: "Failed to convert transaction: %{error}"
         unexpected_error: "Unexpected error during conversion: %{error}"
-    show:
-      convert_to_trade_title: Convert to Security Trade
-      convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
-      convert_to_trade_button: Convert to Trade
     searches:
       filters:
         amount_filter:
