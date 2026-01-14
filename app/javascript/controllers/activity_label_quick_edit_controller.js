@@ -24,7 +24,9 @@ export default class extends Controller {
     event.preventDefault()
     event.stopPropagation()
 
-    this.dropdownTarget.classList.toggle("hidden")
+    if (this.hasDropdownTarget) {
+      this.dropdownTarget.classList.toggle("hidden")
+    }
   }
 
   closeOnClickOutside(event) {
