@@ -140,18 +140,23 @@
     <div data-controller="passkey-registration"
          data-passkey-registration-create-options-url-value="<%= new_passkey_path %>"
          data-passkey-registration-create-url-value="<%= passkeys_path %>">
-      <div data-passkey-registration-target="error" class="hidden text-red-600 text-sm mb-2"></div>
-      <div class="flex items-center gap-3">
-        <input type="text"
-               data-passkey-registration-target="label"
-               placeholder="<%= t(".passkey_name_placeholder") %>"
-               class="form-field__input w-64">
-        <button type="button"
-                data-action="click->passkey-registration#register"
-                class="btn btn--secondary">
-          <%= icon "plus", class: "w-4 h-4 mr-2" %>
-          <%= t(".add_passkey") %>
-        </button>
+      <div data-passkey-registration-target="error" class="hidden bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4"></div>
+      <div class="p-3 shadow-border-xs bg-container rounded-lg flex justify-between items-center gap-4">
+        <div class="flex-1">
+          <label for="passkey-name" class="form-field__label"><%= t(".new_passkey_name") %></label>
+          <input type="text"
+                 id="passkey-name"
+                 data-passkey-registration-target="label"
+                 placeholder="<%= t(".passkey_name_placeholder") %>"
+                 class="form-field__input">
+        </div>
+        <div>
+          <%= render DS::Button.new(
+            text: t(".add_passkey"),
+            variant: "primary",
+            data: { action: "click->passkey-registration#register" }
+          ) %>
+        </div>
       </div>
     </div>
   </div>
