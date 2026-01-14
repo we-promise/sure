@@ -35,6 +35,12 @@ RUN apt-get update -qq \
 RUN gem install bundler foreman
 RUN gem install cocoapods
 
+# Create a non-root user for devcontainer usage
+RUN groupadd -g 1000 dev \
+  && useradd -m -u 1000 -g dev -s /bin/bash dev \
+  && mkdir -p /bundle /home/dev/.pub-cache \
+  && chown -R dev:dev /bundle /home/dev
+
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y nodejs \

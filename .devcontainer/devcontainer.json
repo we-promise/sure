@@ -7,6 +7,7 @@
     "redis"
   ],
   "workspaceFolder": "/workspace",
+  "remoteUser": "dev",
   "containerEnv": {
     "GIT_EDITOR": "code --wait",
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
