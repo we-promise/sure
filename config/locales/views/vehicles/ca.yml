@@ -23,4 +23,12 @@ ca:
       trend: Tendència
       unknown: Desconegut
       year: Any
-
+    tabs:
+      overview:
+        current_price: Preu actual
+        make_model: Marca i model
+        mileage: Quilometratge
+        purchase_price: Preu de compra
+        trend: Tendència
+        unknown: Desconegut
+        year: Any

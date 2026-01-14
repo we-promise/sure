@@ -1,0 +1,18 @@
+---
+ca:
+  UI:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Alterna les caselles de selecció
+  settings:
+    hostings:
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Ha fallat la sincronització del planificador
+    sso_identities:
+      destroy:
+        cannot_unlink_last: No es pot desvincular l'últim
+        success: Èxit
+  transactions:
+    show:
+      loan_payment: Pagament de préstec
+      transfer: Transferència

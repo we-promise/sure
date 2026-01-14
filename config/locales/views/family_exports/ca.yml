@@ -2,7 +2,6 @@
 ca:
   family_exports:
     list:
-      in_progress: En curs
       complete: Completat
       failed: Error
-
+      in_progress: En curs
