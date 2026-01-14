@@ -15,6 +15,11 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: API key for authentication. Supports read and read_write scopes.
   schemas:
     Pagination:
       type: object
@@ -213,6 +218,9 @@ components:
       required:
       - id
       - name
+      - balance
+      - currency
+      - classification
       - account_type
       properties:
         id:
@@ -220,8 +228,73 @@ components:
           format: uuid
         name:
           type: string
+        balance:
+          type: string
+          description: Formatted balance (e.g. "$1,234.56")
+        currency:
+          type: string
+          description: Currency code (e.g. "USD")
+        classification:
+          type: string
+          description: Account classification (e.g. "asset", "liability")
         account_type:
           type: string
+          description: Accountable type (e.g. "depository", "investment", "credit_card")
+    AccountDetail:
+      type: object
+      required:
+      - id
+      - name
+      - balance
+      - currency
+      - classification
+      - account_type
+      - is_active
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        balance:
+          type: string
+          description: Formatted balance (e.g. "$1,234.56")
+        currency:
+          type: string
+          description: Currency code (e.g. "USD")
+        classification:
+          type: string
+          description: Account classification (e.g. "asset", "liability")
+        account_type:
+          type: string
+          description: Accountable type (e.g. "depository", "investment", "credit_card")
+        subtype:
+          type: string
+          nullable: true
+          description: Account subtype (e.g. "checking", "savings")
+        institution_name:
+          type: string
+          nullable: true
+          description: Name of the financial institution
+        institution_domain:
+          type: string
+          nullable: true
+          description: Domain of the financial institution
+        notes:
+          type: string
+          nullable: true
+          description: Additional notes about the account
+        is_active:
+          type: boolean
+          description: Whether the account is active
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Category:
       type: object
       required:
@@ -301,6 +374,41 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/CategoryDetail"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    MerchantDetail:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    MerchantCollection:
+      type: object
+      required:
+      - merchants
+      - pagination
+      properties:
+        merchants:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MerchantDetail"
         pagination:
           "$ref": "#/components/schemas/Pagination"
     Merchant:
@@ -416,7 +524,628 @@ components:
       properties:
         message:
           type: string
+    AccountCollection:
+      type: object
+      required:
+      - accounts
+      - pagination
+      properties:
+        accounts:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Account"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    UsageApiKeyResponse:
+      type: object
+      required:
+      - api_key
+      - rate_limit
+      properties:
+        api_key:
+          type: object
+          required:
+          - name
+          - scopes
+          - last_used_at
+          - created_at
+          properties:
+            name:
+              type: string
+            scopes:
+              type: array
+              items:
+                type: string
+            last_used_at:
+              type: string
+              format: date-time
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+        rate_limit:
+          type: object
+          required:
+          - tier
+          - limit
+          - current_count
+          - remaining
+          - reset_in_seconds
+          - reset_at
+          properties:
+            tier:
+              type: string
+              enum:
+              - standard
+              - premium
+              - enterprise
+            limit:
+              type: integer
+            current_count:
+              type: integer
+            remaining:
+              type: integer
+            reset_in_seconds:
+              type: integer
+            reset_at:
+              type: string
+              format: date-time
+    UsageOAuthResponse:
+      type: object
+      required:
+      - authentication_method
+      - message
+      properties:
+        authentication_method:
+          type: string
+          enum:
+          - oauth
+        message:
+          type: string
+    SyncResponse:
+      type: object
+      required:
+      - id
+      - status
+      - syncable_type
+      - syncable_id
+      - message
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - pending
+          - syncing
+          - completed
+          - failed
+        syncable_type:
+          type: string
+        syncable_id:
+          type: string
+          format: uuid
+        syncing_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        window_start_date:
+          type: string
+          format: date
+          nullable: true
+        window_end_date:
+          type: string
+          format: date
+          nullable: true
+        message:
+          type: string
+    AuthTokenResponse:
+      type: object
+      required:
+      - access_token
+      - refresh_token
+      - token_type
+      - expires_in
+      - created_at
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          enum:
+          - Bearer
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+        created_at:
+          type: integer
+          description: Unix timestamp of token creation
+    AuthSignupResponse:
+      allOf:
+      - "$ref": "#/components/schemas/AuthTokenResponse"
+      - type: object
+        required:
+        - user
+        properties:
+          user:
+            type: object
+            required:
+            - id
+            - email
+            - first_name
+            - last_name
+            properties:
+              id:
+                type: string
+                format: uuid
+              email:
+                type: string
+                format: email
+              first_name:
+                type: string
+              last_name:
+                type: string
+    AuthLoginResponse:
+      allOf:
+      - "$ref": "#/components/schemas/AuthTokenResponse"
+      - type: object
+        required:
+        - user
+        properties:
+          user:
+            type: object
+            required:
+            - id
+            - email
+            - first_name
+            - last_name
+            properties:
+              id:
+                type: string
+                format: uuid
+              email:
+                type: string
+                format: email
+              first_name:
+                type: string
+              last_name:
+                type: string
 paths:
+  "/api/v1/accounts":
+    get:
+      summary: List accounts
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: accounts listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
+      responses:
+        '201':
+          description: account created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Account name
+                    balance:
+                      type: number
+                      description: Initial account balance
+                    currency:
+                      type: string
+                      description: Currency code (defaults to family currency if not provided)
+                    accountable_type:
+                      type: string
+                      description: Type of account (e.g. "Depository", "CreditCard", "Investment", "Property", "Loan", "OtherAsset", "OtherLiability")
+                    subtype:
+                      type: string
+                      description: Account subtype (e.g. "checking", "savings")
+                    institution_name:
+                      type: string
+                      description: Name of the financial institution
+                    institution_domain:
+                      type: string
+                      description: Domain of the financial institution
+                    notes:
+                      type: string
+                      description: Additional notes
+                    accountable_attributes:
+                      type: object
+                      description: Type-specific attributes (varies by accountable_type)
+                      additionalProperties: true
+                  required:
+                  - name
+                  - accountable_type
+              required:
+              - account
+        required: true
+  "/api/v1/accounts/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
+    - name: id
+      in: path
+      required: true
+      description: Account ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve an account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update an account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: account updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    balance:
+                      type: number
+                      description: Updates the current balance of the account
+                    subtype:
+                      type: string
+                    institution_name:
+                      type: string
+                    institution_domain:
+                      type: string
+                    notes:
+                      type: string
+                    accountable_attributes:
+                      type: object
+                      additionalProperties: true
+        required: true
+    delete:
+      summary: Delete an account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: cannot delete linked account
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/auth/signup":
+    post:
+      summary: Sign up a new user
+      tags:
+      - Authentication
+      security: []
+      parameters: []
+      responses:
+        '201':
+          description: user created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AuthSignupResponse"
+        '403':
+          description: invite code required or invalid
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                    password:
+                      type: string
+                      format: password
+                      description: Must be at least 8 characters with uppercase, lowercase, number, and special character
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                  required:
+                  - email
+                  - password
+                  - first_name
+                  - last_name
+                invite_code:
+                  type: string
+                  description: Required if invite codes are enabled
+                device:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                    device_name:
+                      type: string
+                    device_type:
+                      type: string
+                    os_version:
+                      type: string
+                    app_version:
+                      type: string
+                  required:
+                  - device_id
+                  - device_name
+                  - device_type
+                  - os_version
+                  - app_version
+              required:
+              - user
+              - device
+        required: true
+  "/api/v1/auth/login":
+    post:
+      summary: Log in a user
+      tags:
+      - Authentication
+      security: []
+      parameters: []
+      responses:
+        '200':
+          description: login successful
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AuthLoginResponse"
+        '401':
+          description: invalid credentials or MFA required
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - type: object
+                  properties:
+                    error:
+                      type: string
+                    mfa_required:
+                      type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                otp_code:
+                  type: string
+                  description: Required if user has MFA enabled
+                device:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                    device_name:
+                      type: string
+                    device_type:
+                      type: string
+                    os_version:
+                      type: string
+                    app_version:
+                      type: string
+                  required:
+                  - device_id
+                  - device_name
+                  - device_type
+                  - os_version
+                  - app_version
+              required:
+              - email
+              - password
+              - device
+        required: true
+  "/api/v1/auth/refresh":
+    post:
+      summary: Refresh an access token
+      tags:
+      - Authentication
+      security: []
+      parameters: []
+      responses:
+        '200':
+          description: token refreshed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AuthTokenResponse"
+        '400':
+          description: refresh token missing
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: invalid refresh token
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+                device:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                  required:
+                  - device_id
+              required:
+              - refresh_token
+        required: true
   "/api/v1/categories":
     get:
       summary: List categories
@@ -424,13 +1153,20 @@ paths:
       - Categories
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
       - name: Authorization
         in: header
-        required: true
+        required: false
         schema:
           type: string
-        description: Bearer token with read scope
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       - name: page
         in: query
         required: false
@@ -472,14 +1208,88 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/CategoryCollection"
+    post:
+      summary: Create category
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
+      responses:
+        '201':
+          description: category created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Category name
+                    classification:
+                      type: string
+                      enum:
+                      - income
+                      - expense
+                      description: Category classification
+                    color:
+                      type: string
+                      description: Category color (hex code)
+                    lucide_icon:
+                      type: string
+                      description: Lucide icon name
+                    parent_id:
+                      type: string
+                      format: uuid
+                      description: Parent category ID for subcategories
+                  required:
+                  - name
+                  - classification
+                  - color
+              required:
+              - category
+        required: true
   "/api/v1/categories/{id}":
     parameters:
     - name: Authorization
       in: header
-      required: true
+      required: false
       schema:
         type: string
-      description: Bearer token with read scope
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
     - name: id
       in: path
       required: true
@@ -492,6 +1302,7 @@ paths:
       - Categories
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: subcategory retrieved with parent
@@ -505,6 +1316,271 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a category
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: category updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '404':
+          description: category not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    classification:
+                      type: string
+                      enum:
+                      - income
+                      - expense
+                    color:
+                      type: string
+                    lucide_icon:
+                      type: string
+                    parent_id:
+                      type: string
+                      format: uuid
+        required: true
+    delete:
+      summary: Delete a category
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: category deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: category not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/merchants":
+    get:
+      summary: List merchants
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: merchants listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantCollection"
+    post:
+      summary: Create merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
+      responses:
+        '201':
+          description: merchant created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                merchant:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Merchant name
+                    color:
+                      type: string
+                      description: Merchant color (hex code)
+                  required:
+                  - name
+              required:
+              - merchant
+        required: true
+  "/api/v1/merchants/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
+    - name: id
+      in: path
+      required: true
+      description: Merchant ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchant retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: merchant updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                merchant:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    color:
+                      type: string
+        required: true
+    delete:
+      summary: Delete a merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchant deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/chats":
     get:
       summary: List chats
@@ -512,13 +1588,20 @@ paths:
       - Chats
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
       - name: Authorization
         in: header
-        required: true
+        required: false
         schema:
           type: string
-        description: Bearer token with read scope
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       responses:
         '200':
           description: chats listed
@@ -538,13 +1621,20 @@ paths:
       - Chats
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
       - name: Authorization
         in: header
-        required: true
+        required: false
         schema:
           type: string
-        description: Bearer token with write scope
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
       responses:
         '201':
           description: chat created
@@ -580,10 +1670,16 @@ paths:
     parameters:
     - name: Authorization
       in: header
-      required: true
+      required: false
       schema:
         type: string
-      description: Bearer token with read scope
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
     - name: id
       in: path
       required: true
@@ -596,6 +1692,7 @@ paths:
       - Chats
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: chat retrieved
@@ -615,6 +1712,7 @@ paths:
       - Chats
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '200':
@@ -651,6 +1749,7 @@ paths:
       - Chats
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '204':
           description: chat deleted
@@ -660,10 +1759,16 @@ paths:
     parameters:
     - name: Authorization
       in: header
-      required: true
+      required: false
       schema:
         type: string
-      description: Bearer token with write scope
+      description: Bearer token with write scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with write scope (alternative to Bearer token)
     - name: chat_id
       in: path
       required: true
@@ -676,6 +1781,7 @@ paths:
       - Chat Messages
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '201':
@@ -713,10 +1819,16 @@ paths:
     parameters:
     - name: Authorization
       in: header
-      required: true
+      required: false
       schema:
         type: string
-      description: Bearer token with write scope
+      description: Bearer token with write scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with write scope (alternative to Bearer token)
     - name: chat_id
       in: path
       required: true
@@ -729,6 +1841,7 @@ paths:
       - Chat Messages
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '202':
           description: retry started
@@ -755,13 +1868,20 @@ paths:
       - Transactions
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
       - name: Authorization
         in: header
-        required: true
+        required: false
         schema:
           type: string
-        description: Bearer token with read scope
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       - name: page
         in: query
         required: false
@@ -878,13 +1998,20 @@ paths:
       - Transactions
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
       - name: Authorization
         in: header
-        required: true
+        required: false
         schema:
           type: string
-        description: Bearer token with write scope
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
       responses:
         '201':
           description: transaction created
@@ -964,10 +2091,16 @@ paths:
     parameters:
     - name: Authorization
       in: header
-      required: true
+      required: false
       schema:
         type: string
-      description: Bearer token
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
     - name: id
       in: path
       required: true
@@ -980,6 +2113,7 @@ paths:
       - Transactions
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: transaction retrieved
@@ -999,6 +2133,7 @@ paths:
       - Transactions
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '200':
@@ -1062,6 +2197,7 @@ paths:
       - Transactions
       security:
       - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: transaction deleted
@@ -1071,6 +2207,90 @@ paths:
                 "$ref": "#/components/schemas/DeleteResponse"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/sync":
+    post:
+      summary: Trigger a family sync
+      description: Triggers a sync operation that will apply all active rules, sync all accounts, and auto-match transfers
+      tags:
+      - Sync
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
+      responses:
+        '202':
+          description: sync queued
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SyncResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/usage":
+    get:
+      summary: Get API usage information
+      description: Returns usage statistics for API key authentication or a message for OAuth authentication
+      tags:
+      - Usage
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
+      responses:
+        '200':
+          description: usage information retrieved
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - "$ref": "#/components/schemas/UsageApiKeyResponse"
+                - "$ref": "#/components/schemas/UsageOAuthResponse"
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:

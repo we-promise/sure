@@ -3,8 +3,9 @@
 class Api::V1::CategoriesController < Api::V1::BaseController
   include Pagy::Backend
 
-  before_action :ensure_read_scope
-  before_action :set_category, only: :show
+  before_action :ensure_read_scope, only: [ :index, :show ]
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  before_action :set_category, only: [ :show, :update, :destroy ]
 
   def index
     family = current_resource_owner.family
@@ -45,6 +46,65 @@ class Api::V1::CategoriesController < Api::V1::BaseController
     }, status: :internal_server_error
   end
 
+  def create
+    family = current_resource_owner.family
+    @category = family.categories.new(category_params)
+
+    if @category.save
+      render :show, status: :created
+    else
+      render json: {
+        error: "validation_failed",
+        message: "Category could not be created",
+        errors: @category.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  rescue => e
+    Rails.logger.error "CategoriesController#create error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
+  end
+
+  def update
+    if @category.update(category_params)
+      render :show
+    else
+      render json: {
+        error: "validation_failed",
+        message: "Category could not be updated",
+        errors: @category.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  rescue => e
+    Rails.logger.error "CategoriesController#update error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
+  end
+
+  def destroy
+    @category.destroy!
+
+    render json: {
+      message: "Category deleted successfully"
+    }, status: :ok
+  rescue => e
+    Rails.logger.error "CategoriesController#destroy error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
+  end
+
   private
 
     def set_category
@@ -59,6 +119,14 @@ class Api::V1::CategoriesController < Api::V1::BaseController
 
     def ensure_read_scope
       authorize_scope!(:read)
+    end
+
+    def ensure_write_scope
+      authorize_scope!(:write)
+    end
+
+    def category_params
+      params.require(:category).permit(:name, :color, :parent_id, :classification, :lucide_icon)
     end
 
     def apply_filters(query)

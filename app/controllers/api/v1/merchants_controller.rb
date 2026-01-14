@@ -1,85 +1,144 @@
 # frozen_string_literal: true
 
-module Api
-  module V1
-    # API v1 endpoint for merchants
-    # Provides read-only access to family and provider merchants
-    #
-    # @example List all merchants
-    #   GET /api/v1/merchants
-    #
-    # @example Get a specific merchant
-    #   GET /api/v1/merchants/:id
-    #
-    class MerchantsController < BaseController
-      before_action -> { authorize_scope!(:read) }
+class Api::V1::MerchantsController < Api::V1::BaseController
+  include Pagy::Backend
 
-      # List all merchants available to the family
-      #
-      # Returns both family-owned merchants and provider merchants
-      # that are assigned to the family's transactions.
-      #
-      # @return [Array<Hash>] JSON array of merchant objects
-      def index
-        family = current_resource_owner.family
+  before_action :ensure_read_scope, only: [ :index, :show ]
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  before_action :set_merchant, only: [ :show, :update, :destroy ]
 
-        # Single query with OR conditions - more efficient than Ruby deduplication
-        family_merchant_ids = family.merchants.select(:id)
-        provider_merchant_ids = family.transactions.select(:merchant_id)
+  def index
+    family = current_resource_owner.family
+    merchants_query = family.merchants.alphabetically
 
-        @merchants = Merchant
-          .where(id: family_merchant_ids)
-          .or(Merchant.where(id: provider_merchant_ids, type: "ProviderMerchant"))
-          .distinct
-          .alphabetically
+    # Handle pagination with Pagy
+    @pagy, @merchants = pagy(
+      merchants_query,
+      page: safe_page_param,
+      limit: safe_per_page_param
+    )
 
-        render json: @merchants.map { |m| merchant_json(m) }
-      rescue StandardError => e
-        Rails.logger.error("API Merchants Error: #{e.message}")
-        render json: { error: "Failed to fetch merchants" }, status: :internal_server_error
-      end
+    @per_page = safe_per_page_param
 
-      # Get a specific merchant by ID
-      #
-      # Returns a merchant if it belongs to the family or is assigned
-      # to any of the family's transactions.
-      #
-      # @param id [String] The merchant ID
-      # @return [Hash] JSON merchant object or error
-      def show
-        family = current_resource_owner.family
+    render :index
+  rescue => e
+    Rails.logger.error "MerchantsController#index error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
 
-        @merchant = family.merchants.find_by(id: params[:id]) ||
-                    Merchant.joins(:transactions)
-                            .where(transactions: { account_id: family.accounts.select(:id) })
-                            .distinct
-                            .find_by(id: params[:id])
-
-        if @merchant
-          render json: merchant_json(@merchant)
-        else
-          render json: { error: "Merchant not found" }, status: :not_found
-        end
-      rescue StandardError => e
-        Rails.logger.error("API Merchant Show Error: #{e.message}")
-        render json: { error: "Failed to fetch merchant" }, status: :internal_server_error
-      end
-
-      private
-
-        # Serialize a merchant to JSON format
-        #
-        # @param merchant [Merchant] The merchant to serialize
-        # @return [Hash] JSON-serializable hash
-        def merchant_json(merchant)
-          {
-            id: merchant.id,
-            name: merchant.name,
-            type: merchant.type,
-            created_at: merchant.created_at,
-            updated_at: merchant.updated_at
-          }
-        end
-    end
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
   end
+
+  def show
+    render :show
+  rescue => e
+    Rails.logger.error "MerchantsController#show error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
+  end
+
+  def create
+    family = current_resource_owner.family
+    @merchant = family.merchants.new(merchant_params)
+
+    if @merchant.save
+      render :show, status: :created
+    else
+      render json: {
+        error: "validation_failed",
+        message: "Merchant could not be created",
+        errors: @merchant.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  rescue => e
+    Rails.logger.error "MerchantsController#create error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
+  end
+
+  def update
+    if @merchant.update(merchant_params)
+      render :show
+    else
+      render json: {
+        error: "validation_failed",
+        message: "Merchant could not be updated",
+        errors: @merchant.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  rescue => e
+    Rails.logger.error "MerchantsController#update error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
+  end
+
+  def destroy
+    @merchant.destroy!
+
+    render json: {
+      message: "Merchant deleted successfully"
+    }, status: :ok
+  rescue => e
+    Rails.logger.error "MerchantsController#destroy error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
+  end
+
+  private
+
+    def set_merchant
+      family = current_resource_owner.family
+      @merchant = family.merchants.find(params[:id])
+    rescue ActiveRecord::RecordNotFound
+      render json: {
+        error: "not_found",
+        message: "Merchant not found"
+      }, status: :not_found
+    end
+
+    def ensure_read_scope
+      authorize_scope!(:read)
+    end
+
+    def ensure_write_scope
+      authorize_scope!(:write)
+    end
+
+    def merchant_params
+      params.require(:merchant).permit(:name, :color)
+    end
+
+    def safe_page_param
+      page = params[:page].to_i
+      page > 0 ? page : 1
+    end
+
+    def safe_per_page_param
+      per_page = params[:per_page].to_i
+
+      case per_page
+      when 1..100
+        per_page
+      else
+        25
+      end
+    end
 end
