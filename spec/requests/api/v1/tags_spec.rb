@@ -50,7 +50,7 @@ RSpec.describe "Api::V1::Tags", type: :request do
       description "Returns all tags belonging to the family"
       operationId "listTags"
       produces "application/json"
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :Authorization,
                 in: :header,
@@ -95,7 +95,7 @@ RSpec.describe "Api::V1::Tags", type: :request do
       operationId "createTag"
       consumes "application/json"
       produces "application/json"
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :Authorization,
                 in: :header,
@@ -176,7 +176,7 @@ RSpec.describe "Api::V1::Tags", type: :request do
       description "Returns a single tag by ID"
       operationId "getTag"
       produces "application/json"
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :Authorization,
                 in: :header,
@@ -226,7 +226,7 @@ RSpec.describe "Api::V1::Tags", type: :request do
       operationId "updateTag"
       consumes "application/json"
       produces "application/json"
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :Authorization,
                 in: :header,
@@ -304,7 +304,7 @@ RSpec.describe "Api::V1::Tags", type: :request do
       tags "Tags"
       description "Permanently deletes a tag"
       operationId "deleteTag"
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :Authorization,
                 in: :header,

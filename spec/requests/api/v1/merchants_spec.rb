@@ -51,7 +51,7 @@ RSpec.describe "Api::V1::Merchants", type: :request do
       description "Returns all family merchants and provider merchants assigned to transactions"
       operationId "listMerchants"
       produces "application/json"
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :Authorization,
                 in: :header,
@@ -97,7 +97,7 @@ RSpec.describe "Api::V1::Merchants", type: :request do
       description "Returns a single merchant by ID"
       operationId "getMerchant"
       produces "application/json"
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :Authorization,
                 in: :header,
