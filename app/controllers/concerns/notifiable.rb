@@ -16,7 +16,7 @@ module Notifiable
       end.compact
 
       view_context.safe_join(
-        notifications.map { |notification| view_context.tag.div(view_context.render(**notification)) }
+        notifications.map { |notification| view_context.render(**notification) }
       )
     end
 
@@ -26,7 +26,7 @@ module Notifiable
       notification = resolve_cta(flash[:cta])
       return nil unless notification
 
-      view_context.tag.div(view_context.render(**notification))
+      view_context.render(**notification)
     end
 
     def flash_notification_stream_items
