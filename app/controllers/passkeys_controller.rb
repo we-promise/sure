@@ -2,16 +2,22 @@ class PasskeysController < ApplicationController
   def new
     options = WebAuthn::Credential.options_for_create(
       user: {
-        id: Current.user.id,
+        id: Current.user.id.to_s,
         name: Current.user.email,
         display_name: Current.user.display_name
       },
-      exclude: Current.user.passkeys.pluck(:external_id)
+      # Decode the stored Base64URL external_ids to raw bytes for the exclude list
+      exclude: Current.user.passkeys.pluck(:external_id).map { |id| Base64.urlsafe_decode64(id) },
+      # Enable discoverable credentials (resident keys) for passwordless sign-in
+      authenticator_selection: {
+        resident_key: "preferred",
+        user_verification: "preferred"
+      }
     )
 
     session[:passkey_creation_challenge] = options.challenge
 
-    render json: options
+    render json: options.as_json
   end
 
   def create
@@ -37,6 +43,16 @@ class PasskeysController < ApplicationController
     render json: { success: true, passkey: { id: passkey.id, label: passkey.label } }
   rescue WebAuthn::Error => e
     render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
+  def update
+    passkey = Current.user.passkeys.find(params[:id])
+    passkey.update!(label: params[:label])
+
+    respond_to do |format|
+      format.html { redirect_to settings_security_path, notice: t(".success") }
+      format.json { render json: { success: true, passkey: { id: passkey.id, label: passkey.label } } }
+    end
   end
 
   def destroy

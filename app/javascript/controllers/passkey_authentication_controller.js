@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["email", "error"];
+  static targets = ["error"];
   static values = {
     optionsUrl: String,
     authenticateUrl: String
@@ -10,13 +10,6 @@ export default class extends Controller {
   async authenticate(event) {
     event.preventDefault();
     this.clearError();
-
-    const email = this.hasEmailTarget ? this.emailTarget.value : null;
-
-    if (!email) {
-      this.showError("Please enter your email address");
-      return;
-    }
 
     // Check if WebAuthn is available (requires HTTPS or localhost)
     if (!window.PublicKeyCredential) {
@@ -30,8 +23,8 @@ export default class extends Controller {
     }
 
     try {
-      // Get authentication options from server
-      const optionsResponse = await fetch(`${this.optionsUrlValue}?email=${encodeURIComponent(email)}`, {
+      // Get authentication options from server (no email required for discoverable credentials)
+      const optionsResponse = await fetch(this.optionsUrlValue, {
         method: "GET",
         headers: {
           "Accept": "application/json",
@@ -56,6 +49,7 @@ export default class extends Controller {
       }
 
       // Get credential via browser WebAuthn API
+      // For discoverable credentials, the browser will show all available passkeys
       const credential = await navigator.credentials.get({ publicKey: options });
 
       // Send credential to server
@@ -81,7 +75,7 @@ export default class extends Controller {
     } catch (error) {
       console.error("Passkey authentication failed:", error);
       if (error.name === "NotAllowedError") {
-        this.showError("Passkey authentication was cancelled");
+        this.showError("Passkey authentication was cancelled or no passkeys found");
       } else {
         this.showError(error.message || "Authentication failed");
       }

@@ -12,51 +12,27 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "new accepts email parameter" do
-    get new_passkey_session_path, params: { email: @user.email }
-
-    assert_response :success
-  end
-
-  test "options returns error for user without passkeys" do
-    user_without_passkeys = users(:family_member)
-
-    get options_passkey_session_path, params: { email: user_without_passkeys.email }
-
-    assert_response :unprocessable_entity
-    json = JSON.parse(response.body)
-    assert json["error"].present?
-  end
-
-  test "options returns error for unknown email" do
-    get options_passkey_session_path, params: { email: "unknown@example.com" }
-
-    assert_response :unprocessable_entity
-    json = JSON.parse(response.body)
-    assert json["error"].present?
-  end
-
-  test "options returns webauthn get options for user with passkeys" do
-    get options_passkey_session_path, params: { email: @user.email }
+  test "options returns webauthn get options for discoverable credentials" do
+    get options_passkey_session_path
 
     assert_response :success
     json = JSON.parse(response.body)
 
     assert json["challenge"].present?
-    assert json["allowCredentials"].present?
+    # For discoverable credentials, allowCredentials should be empty or not present
+    assert json["allowCredentials"].blank?
   end
 
-  test "create returns error without valid session" do
-    post passkey_session_path, params: { credential: {} }, as: :json
+  test "options stores challenge in session" do
+    get options_passkey_session_path
 
-    assert_response :unprocessable_entity
-    json = JSON.parse(response.body)
-    assert json["error"].present?
+    assert_response :success
+    assert session[:passkey_authentication_challenge].present?
   end
 
-  test "create returns error with invalid credential" do
+  test "create returns error with invalid credential format" do
     # First get options to set up the session
-    get options_passkey_session_path, params: { email: @user.email }
+    get options_passkey_session_path
     assert_response :success
 
     # Try to authenticate with invalid credential
@@ -65,12 +41,37 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create returns error when passkey not found" do
+    # First get options to set up the session
+    get options_passkey_session_path
+    assert_response :success
+
+    # Try to authenticate with a credential that doesn't exist
+    post passkey_session_path, params: {
+      credential: {
+        id: "nonexistent-credential-id",
+        type: "public-key",
+        rawId: Base64.urlsafe_encode64("nonexistent-credential-id", padding: false),
+        response: {
+          clientDataJSON: Base64.urlsafe_encode64("{}", padding: false),
+          authenticatorData: Base64.urlsafe_encode64("auth-data", padding: false),
+          signature: Base64.urlsafe_encode64("signature", padding: false),
+          userHandle: nil
+        }
+      }
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    json = JSON.parse(response.body)
+    assert json["error"].present?
+  end
+
   test "does not require authentication" do
     # These endpoints should be accessible without authentication
     get new_passkey_session_path
     assert_response :success
 
-    get options_passkey_session_path, params: { email: @user.email }
+    get options_passkey_session_path
     assert_response :success
   end
 end

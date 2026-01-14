@@ -72,13 +72,42 @@
     <% if Current.user.passkeys.any? %>
       <div class="space-y-2">
         <% Current.user.passkeys.each do |passkey| %>
-          <div class="p-3 shadow-border-xs bg-container rounded-lg flex justify-between items-center">
+          <div class="p-3 shadow-border-xs bg-container rounded-lg flex justify-between items-center"
+               data-controller="passkey-rename"
+               data-passkey-rename-url-value="<%= passkey_path(passkey) %>">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-full bg-gray-25 flex justify-center items-center">
                 <%= icon "key" %>
               </div>
               <div class="text-sm">
-                <p class="text-primary font-medium"><%= passkey.label %></p>
+                <div data-passkey-rename-target="display">
+                  <p class="text-primary font-medium">
+                    <span data-passkey-rename-target="labelText"><%= passkey.label %></span>
+                    <button type="button"
+                            data-action="click->passkey-rename#startEdit"
+                            class="ml-2 text-secondary hover:text-primary">
+                      <%= icon "pencil", class: "w-3 h-3 inline" %>
+                    </button>
+                  </p>
+                </div>
+                <div data-passkey-rename-target="edit" class="hidden">
+                  <div class="flex items-center gap-2">
+                    <input type="text"
+                           data-passkey-rename-target="input"
+                           value="<%= passkey.label %>"
+                           class="form-field__input text-sm py-1 px-2 w-48">
+                    <button type="button"
+                            data-action="click->passkey-rename#save"
+                            class="text-green-600 hover:text-green-700">
+                      <%= icon "check", class: "w-4 h-4" %>
+                    </button>
+                    <button type="button"
+                            data-action="click->passkey-rename#cancel"
+                            class="text-secondary hover:text-primary">
+                      <%= icon "x", class: "w-4 h-4" %>
+                    </button>
+                  </div>
+                </div>
                 <p class="text-secondary">
                   <%= t(".passkey_added", date: passkey.created_at.strftime("%b %d, %Y")) %>
                   <% if passkey.last_used_at %>

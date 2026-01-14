@@ -78,7 +78,7 @@ Rails.application.routes.draw do
   resource :email_confirmation, only: :new
 
   # Passkey routes
-  resources :passkeys, only: %i[new create destroy]
+  resources :passkeys, only: %i[new create update destroy]
   resource :passkey_session, only: %i[new create] do
     get :options, on: :collection
   end

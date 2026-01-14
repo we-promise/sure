@@ -1,5 +1,6 @@
 <div class="text-center mb-6">
   <h1 class="text-xl font-semibold text-primary"><%= t("sessions.new.title") %></h1>
+  <p class="text-sm text-secondary mt-2"><%= t("passkey_sessions.new.subtitle") %></p>
 </div>
 
 <div data-controller="passkey-authentication"
@@ -7,25 +8,14 @@
      data-passkey-authentication-authenticate-url-value="<%= passkey_session_path %>">
   <div data-passkey-authentication-target="error" class="hidden bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4 text-center"></div>
 
-  <%= styled_form_with url: "#", class: "space-y-4", data: { turbo: false } do |form| %>
-    <%= form.email_field :email,
-                         label: t("sessions.new.email"),
-                         autofocus: true,
-                         autocomplete: "email webauthn",
-                         required: "required",
-                         placeholder: t("sessions.new.email_placeholder"),
-                         value: @email,
-                         data: { passkey_authentication_target: "email" } %>
-
-    <button type="button"
-            data-action="click->passkey-authentication#authenticate"
-            class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition">
-      <%= icon "key", size: "sm" %>
-      <span><%= t("sessions.new.sign_in_with_passkey") %></span>
-    </button>
-  <% end %>
+  <button type="button"
+          data-action="click->passkey-authentication#authenticate"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition">
+    <%= icon "key", size: "sm" %>
+    <span><%= t("sessions.new.sign_in_with_passkey") %></span>
+  </button>
 
   <div class="mt-6 text-center">
-    <%= link_to t("sessions.new.forgot_password"), new_session_path, class: "font-medium text-sm text-secondary hover:text-primary transition" %>
+    <%= link_to t("passkey_sessions.new.use_password"), new_session_path, class: "font-medium text-sm text-secondary hover:text-primary transition" %>
   </div>
 </div>

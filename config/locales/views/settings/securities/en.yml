@@ -30,9 +30,14 @@ en:
         success: Password updated successfully.
         invalid_current_password: Current password is incorrect.
   passkeys:
+    update:
+      success: Passkey renamed successfully.
     destroy:
       success: Passkey removed successfully.
   passkey_sessions:
+    new:
+      subtitle: Use your passkey to sign in securely
+      use_password: Sign in with password instead
     options:
       no_passkeys: No passkeys registered for this account.
     create:
