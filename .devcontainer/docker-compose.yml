@@ -13,6 +13,7 @@ x-rails-env: &rails_env
 
 services:
   app:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
@@ -32,6 +33,7 @@ services:
       - redis
 
   worker:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
