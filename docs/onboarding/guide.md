@@ -15,20 +15,31 @@ This guide also covers the differences between **asset** and **liability** accou
 > - Open an [issue](https://github.com/we-promise/sure/issues/new/choose)
 > - Or if you know the answer, open a [PR](https://github.com/we-promise/sure/compare)!
 
+## Quick start (Codespaces + demo data)
+
+1. Create a GitHub Codespace for this repo.
+2. In the Codespace terminal run:
+   ```bash
+   bin/setup
+   rake demo_data:default
+   bin/dev
+   ```
+3. Open the forwarded **3000** port. Sign in with `user@example.com` / `Password1!` to explore the realistic sample dataset used in the screenshots below.
+
 
 ## 1. Creating your Sure Account
 
 Once Sure is installed, open a browser and navigate to [localhost:3000](http://localhost:3000/sessions/new).<br />
-You will see the **login page** (pictured below). Since we do not have an account yet, click on **Sign Up** to begin. 
+You will see the **login page** (pictured below). If you loaded demo data, sign in with the demo credentials; otherwise click on **Sign Up** to begin. 
 
 <img width="2508" height="1314" alt="Landing page on a fresh install." src="https://github.com/user-attachments/assets/2319dc87-5615-4473-bebc-8360dd983367" />
 <br />
 <br />
 
 You’ll be guided through a short series of screens to set your **login details**, **personal information**, and **preferences**.<br />
-When you arrive at the main dashboard, showing **No accounts yet**, you’re all set up!
+When you arrive at the main dashboard you’re all set up! If you ran `rake demo_data:default`, you’ll land on a fully populated workspace so you can click around without entering data first.
 
-<img width="2508" height="1314" alt="Blank home screen of Sure, with no accounts yet." src="https://github.com/user-attachments/assets/f06ba8e2-f188-4bf9-98a7-fdef724e9b5a" />
+<img width="1270" height="1140" alt="Dashboard populated by demo_data:default showing accounts, net worth, and recent activity." src="https://github.com/user-attachments/assets/9c6e03cc-3490-40ab-9a68-52e042c51293" />
 <br />
 <br />
 
@@ -108,7 +119,7 @@ Overpayment Example:
 
 ## 6. Adding Accounts
 
-For this example we'll add a **Savings Account**.<br />
+The demo dataset seeds cash, credit, and investment accounts so you can explore immediately. When you’re ready to add your own, follow these steps—for this example we'll add a **Savings Account**.<br />
 
 >[!TIP]
 >If you’re adding a **credit card**, **loan**, or any other **debt**, be sure to select a **Credit Card** or **Liability** account type instead of **Cash**. This will ensure balances update correctly and match what your bank shows.
@@ -136,7 +147,7 @@ To get this bar moving let's add some transactions!
 
 ## 7. Adding Transactions
 
-To add a transaction:
+The demo dataset already includes transactions so you can see charts move. To add your own:
 1. Go to the **Transactions** page (left sidebar, under **Home**, above **Budgets**)
 2. Click **+ New Transaction** (top right)
 3. Choose the transaction type:
