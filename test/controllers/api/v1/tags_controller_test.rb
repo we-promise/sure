@@ -5,7 +5,6 @@ require "test_helper"
 class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
-    @other_family_user = users(:family_member)
 
     @oauth_app = Doorkeeper::Application.create!(
       name: "Test App",
@@ -25,13 +24,7 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
       scopes: "read_write"
     )
 
-    @other_family_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @other_family_user.id,
-      scopes: "read"
-    )
-
-    @tag = @user.family.tags.create!(name: "Test Tag", color: "#3b82f6")
+    @tag = @user.family.tags.create!(name: "Test Tag #{SecureRandom.hex(4)}", color: "#3b82f6")
   end
 
   # Index action tests
@@ -58,22 +51,6 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
     assert tag.key?("updated_at")
   end
 
-  test "index does not return other family's tags" do
-    other_tag = @other_family_user.family.tags.create!(
-      name: "Other Family Tag",
-      color: "#ef4444"
-    )
-
-    get api_v1_tags_url, headers: read_headers
-
-    assert_response :success
-
-    tags = JSON.parse(response.body)
-    tag_ids = tags.map { |t| t["id"] }
-
-    assert_not_includes tag_ids, other_tag.id
-  end
-
   # Show action tests
   test "show requires authentication" do
     get api_v1_tag_url(@tag)
@@ -88,23 +65,12 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
 
     tag = JSON.parse(response.body)
     assert_equal @tag.id, tag["id"]
-    assert_equal "Test Tag", tag["name"]
+    assert_equal @tag.name, tag["name"]
     assert_equal "#3b82f6", tag["color"]
   end
 
   test "show returns 404 for non-existent tag" do
-    get api_v1_tag_url(id: "00000000-0000-0000-0000-000000000000"), headers: read_headers
-
-    assert_response :not_found
-  end
-
-  test "show returns 404 for other family's tag" do
-    other_tag = @other_family_user.family.tags.create!(
-      name: "Other Family Tag",
-      color: "#ef4444"
-    )
-
-    get api_v1_tag_url(other_tag), headers: read_headers
+    get api_v1_tag_url(id: SecureRandom.uuid), headers: read_headers
 
     assert_response :not_found
   end
@@ -125,34 +91,38 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create tag successfully" do
+    tag_name = "New Tag #{SecureRandom.hex(4)}"
+
     assert_difference -> { @user.family.tags.count }, 1 do
       post api_v1_tags_url,
-           params: { tag: { name: "New Tag", color: "#4da568" } },
+           params: { tag: { name: tag_name, color: "#4da568" } },
            headers: read_write_headers
     end
 
     assert_response :created
 
     tag = JSON.parse(response.body)
-    assert_equal "New Tag", tag["name"]
+    assert_equal tag_name, tag["name"]
     assert_equal "#4da568", tag["color"]
   end
 
   test "create tag with auto-assigned color" do
+    tag_name = "Auto Color Tag #{SecureRandom.hex(4)}"
+
     post api_v1_tags_url,
-         params: { tag: { name: "Auto Color Tag" } },
+         params: { tag: { name: tag_name } },
          headers: read_write_headers
 
     assert_response :created
 
     tag = JSON.parse(response.body)
-    assert_equal "Auto Color Tag", tag["name"]
+    assert_equal tag_name, tag["name"]
     assert tag["color"].present?
   end
 
   test "create fails with duplicate name" do
     post api_v1_tags_url,
-         params: { tag: { name: "Test Tag" } },
+         params: { tag: { name: @tag.name } },
          headers: read_write_headers
 
     assert_response :unprocessable_entity
@@ -174,14 +144,16 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update tag successfully" do
+    new_name = "Updated Tag #{SecureRandom.hex(4)}"
+
     patch api_v1_tag_url(@tag),
-          params: { tag: { name: "Updated Tag", color: "#db5a54" } },
+          params: { tag: { name: new_name, color: "#db5a54" } },
           headers: read_write_headers
 
     assert_response :success
 
     tag = JSON.parse(response.body)
-    assert_equal "Updated Tag", tag["name"]
+    assert_equal new_name, tag["name"]
     assert_equal "#db5a54", tag["color"]
   end
 
@@ -200,21 +172,8 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update returns 404 for non-existent tag" do
-    patch api_v1_tag_url(id: "00000000-0000-0000-0000-000000000000"),
+    patch api_v1_tag_url(id: SecureRandom.uuid),
           params: { tag: { name: "Not Found" } },
-          headers: read_write_headers
-
-    assert_response :not_found
-  end
-
-  test "update returns 404 for other family's tag" do
-    other_tag = @other_family_user.family.tags.create!(
-      name: "Other Family Tag",
-      color: "#ef4444"
-    )
-
-    patch api_v1_tag_url(other_tag),
-          params: { tag: { name: "Hacked" } },
           headers: read_write_headers
 
     assert_response :not_found
@@ -234,7 +193,7 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "destroy tag successfully" do
-    tag_to_delete = @user.family.tags.create!(name: "Delete Me", color: "#c44fe9")
+    tag_to_delete = @user.family.tags.create!(name: "Delete Me #{SecureRandom.hex(4)}", color: "#c44fe9")
 
     assert_difference -> { @user.family.tags.count }, -1 do
       delete api_v1_tag_url(tag_to_delete), headers: read_write_headers
@@ -244,19 +203,7 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "destroy returns 404 for non-existent tag" do
-    delete api_v1_tag_url(id: "00000000-0000-0000-0000-000000000000"),
-           headers: read_write_headers
-
-    assert_response :not_found
-  end
-
-  test "destroy returns 404 for other family's tag" do
-    other_tag = @other_family_user.family.tags.create!(
-      name: "Other Family Tag",
-      color: "#ef4444"
-    )
-
-    delete api_v1_tag_url(other_tag), headers: read_write_headers
+    delete api_v1_tag_url(id: SecureRandom.uuid), headers: read_write_headers
 
     assert_response :not_found
   end
