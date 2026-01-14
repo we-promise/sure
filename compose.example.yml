@@ -94,10 +94,12 @@ services:
       - sure_net
 
   backup:
+    profiles:
+      - backup
     image: prodrigestivill/postgres-backup-local
     restart: unless-stopped
     volumes:
-      - backup_data:/backups
+      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB:-sure_production}
@@ -128,7 +130,6 @@ services:
 volumes:
   app-storage:
   postgres-data:
-  backup_data:
   redis-data:
 
 networks:
