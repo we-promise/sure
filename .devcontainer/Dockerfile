@@ -47,7 +47,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 ARG FLUTTER_VERSION=3.24.0
-RUN curl -fsSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" \
+ARG TARGETARCH
+RUN if [ "${TARGETARCH}" = "arm64" ]; then flutter_arch="arm64"; else flutter_arch="x64"; fi \
+  && curl -fsSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${flutter_arch}_${FLUTTER_VERSION}-stable.tar.xz" \
   | tar -xJ -C /opt
 
 WORKDIR /workspace
