@@ -184,6 +184,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
 
       # Sanity check: if transaction net is way off from observed balance, data is likely incomplete
       # (e.g., pending charges not in history yet). Use 10% tolerance or minimum $5.
+      # Note: SimpleFIN always sends negative for liabilities, so we compare magnitudes only.
       tolerance = [ BigDecimal("5"), @observed.abs * BigDecimal("0.10") ].max
       if (net.abs - @observed.abs).abs > tolerance
         return [ :unknown, "net-balance-mismatch" ]
