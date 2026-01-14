@@ -66,8 +66,7 @@ If you want to allow automatic updates to recalculate your cost basis:
 1. Open the holding drawer
 2. Scroll to the **Settings** section
 3. Find "Cost basis locked"
-4. Click **Unlock cost basis**
-5. Confirm the action
+4. Click **Unlock**
 
 After unlocking:
 - The lock icon disappears
@@ -125,7 +124,7 @@ Create rules to automatically label transactions based on patterns:
 
 1. Go to **Settings > Rules**
 2. Create a new rule
-3. Set conditions (e.g., "IF name contains 'DIVIDEND'")
+3. Set conditions (e.g., "IF transaction name contains 'DIVIDEND'")
 4. Add action: "Set investment activity label"
 5. Choose the label (e.g., "Dividend")
 6. Save the rule
