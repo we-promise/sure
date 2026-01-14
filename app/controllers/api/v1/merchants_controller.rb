@@ -12,7 +12,7 @@ module Api
     #   GET /api/v1/merchants/:id
     #
     class MerchantsController < BaseController
-      before_action :ensure_read_scope
+      before_action -> { authorize_scope!(:read) }
 
       # List all merchants available to the family
       #
