@@ -5,17 +5,21 @@ info:
   version: v1
   description: OpenAPI documentation generated from executable request specs.
 servers:
-- url: https://app.sure.am
+- url: https://api.sure.app
   description: Production
 - url: http://localhost:3000
   description: Local development
 components:
   securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
     apiKeyAuth:
       type: apiKey
-      name: X-Api-Key
       in: header
-      description: API key for authentication. Generate one from your account settings.
+      name: X-Api-Key
+      description: API key for authentication. Supports read and read_write scopes.
   schemas:
     Pagination:
       type: object
@@ -54,13 +58,6 @@ components:
               type: string
           - type: object
           nullable: true
-        errors:
-          type: array
-          items:
-            type: string
-          nullable: true
-          description: Validation error messages (alternative to details used by trades,
-            valuations, etc.)
     ToolCall:
       type: object
       required:
@@ -221,20 +218,6 @@ components:
       required:
       - id
       - name
-      - account_type
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        account_type:
-          type: string
-    AccountDetail:
-      type: object
-      required:
-      - id
-      - name
       - balance
       - currency
       - classification
@@ -247,24 +230,71 @@ components:
           type: string
         balance:
           type: string
+          description: Formatted balance (e.g. "$1,234.56")
         currency:
           type: string
+          description: Currency code (e.g. "USD")
         classification:
           type: string
+          description: Account classification (e.g. "asset", "liability")
         account_type:
           type: string
-    AccountCollection:
+          description: Accountable type (e.g. "depository", "investment", "credit_card")
+    AccountDetail:
       type: object
       required:
-      - accounts
-      - pagination
+      - id
+      - name
+      - balance
+      - currency
+      - classification
+      - account_type
+      - is_active
+      - created_at
+      - updated_at
       properties:
-        accounts:
-          type: array
-          items:
-            "$ref": "#/components/schemas/AccountDetail"
-        pagination:
-          "$ref": "#/components/schemas/Pagination"
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        balance:
+          type: string
+          description: Formatted balance (e.g. "$1,234.56")
+        currency:
+          type: string
+          description: Currency code (e.g. "USD")
+        classification:
+          type: string
+          description: Account classification (e.g. "asset", "liability")
+        account_type:
+          type: string
+          description: Accountable type (e.g. "depository", "investment", "credit_card")
+        subtype:
+          type: string
+          nullable: true
+          description: Account subtype (e.g. "checking", "savings")
+        institution_name:
+          type: string
+          nullable: true
+          description: Name of the financial institution
+        institution_domain:
+          type: string
+          nullable: true
+          description: Domain of the financial institution
+        notes:
+          type: string
+          nullable: true
+          description: Additional notes about the account
+        is_active:
+          type: boolean
+          description: Whether the account is active
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Category:
       type: object
       required:
@@ -346,6 +376,41 @@ components:
             "$ref": "#/components/schemas/CategoryDetail"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    MerchantDetail:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    MerchantCollection:
+      type: object
+      required:
+      - merchants
+      - pagination
+      properties:
+        merchants:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MerchantDetail"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Merchant:
       type: object
       required:
@@ -357,31 +422,6 @@ components:
           format: uuid
         name:
           type: string
-    MerchantDetail:
-      type: object
-      required:
-      - id
-      - name
-      - type
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        type:
-          type: string
-          enum:
-          - FamilyMerchant
-          - ProviderMerchant
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
     Tag:
       type: object
       required:
@@ -396,32 +436,6 @@ components:
           type: string
         color:
           type: string
-    TagDetail:
-      type: object
-      required:
-      - id
-      - name
-      - color
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        color:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    TagCollection:
-      type: array
-      items:
-        "$ref": "#/components/schemas/TagDetail"
     Transfer:
       type: object
       required:
@@ -503,41 +517,6 @@ components:
             "$ref": "#/components/schemas/Transaction"
         pagination:
           "$ref": "#/components/schemas/Pagination"
-    Valuation:
-      type: object
-      required:
-      - id
-      - date
-      - amount
-      - currency
-      - kind
-      - account
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        date:
-          type: string
-          format: date
-        amount:
-          type: string
-        currency:
-          type: string
-        notes:
-          type: string
-          nullable: true
-        kind:
-          type: string
-        account:
-          "$ref": "#/components/schemas/Account"
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
     DeleteResponse:
       type: object
       required:
@@ -545,385 +524,221 @@ components:
       properties:
         message:
           type: string
-    ImportConfiguration:
-      type: object
-      properties:
-        date_col_label:
-          type: string
-          nullable: true
-        amount_col_label:
-          type: string
-          nullable: true
-        name_col_label:
-          type: string
-          nullable: true
-        category_col_label:
-          type: string
-          nullable: true
-        tags_col_label:
-          type: string
-          nullable: true
-        notes_col_label:
-          type: string
-          nullable: true
-        account_col_label:
-          type: string
-          nullable: true
-        date_format:
-          type: string
-          nullable: true
-        number_format:
-          type: string
-          nullable: true
-        signage_convention:
-          type: string
-          nullable: true
-    ImportStats:
-      type: object
-      properties:
-        rows_count:
-          type: integer
-          minimum: 0
-        valid_rows_count:
-          type: integer
-          minimum: 0
-          nullable: true
-    ImportSummary:
+    AccountCollection:
       type: object
       required:
-      - id
-      - type
-      - status
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        type:
-          type: string
-          enum:
-          - TransactionImport
-          - TradeImport
-          - AccountImport
-          - MintImport
-          - CategoryImport
-          - RuleImport
-        status:
-          type: string
-          enum:
-          - pending
-          - complete
-          - importing
-          - reverting
-          - revert_failed
-          - failed
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        account_id:
-          type: string
-          format: uuid
-          nullable: true
-        rows_count:
-          type: integer
-          minimum: 0
-        error:
-          type: string
-          nullable: true
-    ImportDetail:
-      type: object
-      required:
-      - id
-      - type
-      - status
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        type:
-          type: string
-          enum:
-          - TransactionImport
-          - TradeImport
-          - AccountImport
-          - MintImport
-          - CategoryImport
-          - RuleImport
-        status:
-          type: string
-          enum:
-          - pending
-          - complete
-          - importing
-          - reverting
-          - revert_failed
-          - failed
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        account_id:
-          type: string
-          format: uuid
-          nullable: true
-        error:
-          type: string
-          nullable: true
-        configuration:
-          "$ref": "#/components/schemas/ImportConfiguration"
-        stats:
-          "$ref": "#/components/schemas/ImportStats"
-    ImportCollection:
-      type: object
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            "$ref": "#/components/schemas/ImportSummary"
-        meta:
-          type: object
-          required:
-          - current_page
-          - total_pages
-          - total_count
-          - per_page
-          properties:
-            current_page:
-              type: integer
-              minimum: 1
-            next_page:
-              type: integer
-              nullable: true
-            prev_page:
-              type: integer
-              nullable: true
-            total_pages:
-              type: integer
-              minimum: 0
-            total_count:
-              type: integer
-              minimum: 0
-            per_page:
-              type: integer
-              minimum: 1
-    ImportResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          "$ref": "#/components/schemas/ImportDetail"
-    Trade:
-      type: object
-      required:
-      - id
-      - date
-      - amount
-      - currency
-      - name
-      - qty
-      - price
-      - account
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        date:
-          type: string
-          format: date
-        amount:
-          type: string
-        currency:
-          type: string
-        name:
-          type: string
-        notes:
-          type: string
-          nullable: true
-        qty:
-          type: string
-        price:
-          type: string
-        investment_activity_label:
-          type: string
-          nullable: true
-        account:
-          "$ref": "#/components/schemas/Account"
-        security:
-          type: object
-          nullable: true
-          properties:
-            id:
-              type: string
-              format: uuid
-            ticker:
-              type: string
-            name:
-              type: string
-              nullable: true
-        category:
-          type: object
-          nullable: true
-          properties:
-            id:
-              type: string
-              format: uuid
-            name:
-              type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    TradeCollection:
-      type: object
-      required:
-      - trades
+      - accounts
       - pagination
       properties:
-        trades:
+        accounts:
           type: array
           items:
-            "$ref": "#/components/schemas/Trade"
+            "$ref": "#/components/schemas/Account"
         pagination:
           "$ref": "#/components/schemas/Pagination"
-    Holding:
+    UsageApiKeyResponse:
       type: object
       required:
-      - id
-      - date
-      - qty
-      - price
-      - amount
-      - currency
-      - account
-      - security
-      - created_at
-      - updated_at
+      - api_key
+      - rate_limit
       properties:
-        id:
-          type: string
-          format: uuid
-        date:
-          type: string
-          format: date
-        qty:
-          type: string
-          description: Quantity of shares held
-        price:
-          type: string
-          description: Formatted price per share
-        amount:
-          type: string
-        currency:
-          type: string
-        cost_basis_source:
-          type: string
-          nullable: true
-        account:
-          "$ref": "#/components/schemas/Account"
-        security:
+        api_key:
           type: object
           required:
-          - id
-          - ticker
           - name
+          - scopes
+          - last_used_at
+          - created_at
           properties:
-            id:
-              type: string
-              format: uuid
-            ticker:
-              type: string
             name:
               type: string
+            scopes:
+              type: array
+              items:
+                type: string
+            last_used_at:
+              type: string
+              format: date-time
               nullable: true
-        avg_cost:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    HoldingCollection:
+            created_at:
+              type: string
+              format: date-time
+        rate_limit:
+          type: object
+          required:
+          - tier
+          - limit
+          - current_count
+          - remaining
+          - reset_in_seconds
+          - reset_at
+          properties:
+            tier:
+              type: string
+              enum:
+              - standard
+              - premium
+              - enterprise
+            limit:
+              type: integer
+            current_count:
+              type: integer
+            remaining:
+              type: integer
+            reset_in_seconds:
+              type: integer
+            reset_at:
+              type: string
+              format: date-time
+    UsageOAuthResponse:
       type: object
       required:
-      - holdings
-      - pagination
+      - authentication_method
+      - message
       properties:
-        holdings:
-          type: array
-          items:
-            "$ref": "#/components/schemas/Holding"
-        pagination:
-          "$ref": "#/components/schemas/Pagination"
+        authentication_method:
+          type: string
+          enum:
+          - oauth
+        message:
+          type: string
+    SyncResponse:
+      type: object
+      required:
+      - id
+      - status
+      - syncable_type
+      - syncable_id
+      - message
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - pending
+          - syncing
+          - completed
+          - failed
+        syncable_type:
+          type: string
+        syncable_id:
+          type: string
+          format: uuid
+        syncing_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        window_start_date:
+          type: string
+          format: date
+          nullable: true
+        window_end_date:
+          type: string
+          format: date
+          nullable: true
+        message:
+          type: string
+    AuthTokenResponse:
+      type: object
+      required:
+      - access_token
+      - refresh_token
+      - token_type
+      - expires_in
+      - created_at
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          enum:
+          - Bearer
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+        created_at:
+          type: integer
+          description: Unix timestamp of token creation
+    AuthSignupResponse:
+      allOf:
+      - "$ref": "#/components/schemas/AuthTokenResponse"
+      - type: object
+        required:
+        - user
+        properties:
+          user:
+            type: object
+            required:
+            - id
+            - email
+            - first_name
+            - last_name
+            properties:
+              id:
+                type: string
+                format: uuid
+              email:
+                type: string
+                format: email
+              first_name:
+                type: string
+              last_name:
+                type: string
+    AuthLoginResponse:
+      allOf:
+      - "$ref": "#/components/schemas/AuthTokenResponse"
+      - type: object
+        required:
+        - user
+        properties:
+          user:
+            type: object
+            required:
+            - id
+            - email
+            - first_name
+            - last_name
+            properties:
+              id:
+                type: string
+                format: uuid
+              email:
+                type: string
+                format: email
+              first_name:
+                type: string
+              last_name:
+                type: string
 paths:
-  "/api/v1/merchants":
-    get:
-      summary: List merchants
-      tags:
-      - Merchants
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: merchants listed
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  "$ref": "#/components/schemas/MerchantDetail"
-  "/api/v1/merchants/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      description: Merchant ID
-      schema:
-        type: string
-    get:
-      summary: Retrieve a merchant
-      tags:
-      - Merchants
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: merchant retrieved
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/MerchantDetail"
-        '404':
-          description: merchant not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts":
     get:
       summary: List accounts
       tags:
       - Accounts
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       - name: page
         in: query
         required: false
@@ -938,16 +753,218 @@ paths:
           type: integer
       responses:
         '200':
-          description: accounts paginated
+          description: accounts listed
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
+      responses:
+        '201':
+          description: account created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Account name
+                    balance:
+                      type: number
+                      description: Initial account balance
+                    currency:
+                      type: string
+                      description: Currency code (defaults to family currency if not provided)
+                    accountable_type:
+                      type: string
+                      description: Type of account (e.g. "Depository", "CreditCard", "Investment", "Property", "Loan", "OtherAsset", "OtherLiability")
+                    subtype:
+                      type: string
+                      description: Account subtype (e.g. "checking", "savings")
+                    institution_name:
+                      type: string
+                      description: Name of the financial institution
+                    institution_domain:
+                      type: string
+                      description: Domain of the financial institution
+                    notes:
+                      type: string
+                      description: Additional notes
+                    accountable_attributes:
+                      type: object
+                      description: Type-specific attributes (varies by accountable_type)
+                      additionalProperties: true
+                  required:
+                  - name
+                  - accountable_type
+              required:
+              - account
+        required: true
+  "/api/v1/accounts/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
+    - name: id
+      in: path
+      required: true
+      description: Account ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve an account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update an account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: account updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    balance:
+                      type: number
+                      description: Updates the current balance of the account
+                    subtype:
+                      type: string
+                    institution_name:
+                      type: string
+                    institution_domain:
+                      type: string
+                    notes:
+                      type: string
+                    accountable_attributes:
+                      type: object
+                      additionalProperties: true
+        required: true
+    delete:
+      summary: Delete an account
+      tags:
+      - Accounts
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: cannot delete linked account
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/auth/signup":
     post:
       summary: Sign up a new user
       tags:
-      - Auth
+      - Authentication
+      security: []
       parameters: []
       responses:
         '201':
@@ -955,45 +972,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                  refresh_token:
-                    type: string
-                  token_type:
-                    type: string
-                  expires_in:
-                    type: integer
-                  created_at:
-                    type: integer
-                  user:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      email:
-                        type: string
-                      first_name:
-                        type: string
-                      last_name:
-                        type: string
-                      ui_layout:
-                        type: string
-                        enum:
-                        - dashboard
-                        - intro
-                      ai_enabled:
-                        type: boolean
-        '422':
-          description: validation error
+                "$ref": "#/components/schemas/AuthSignupResponse"
+        '403':
+          description: invite code required or invalid
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-        '403':
-          description: invite code required or invalid
+        '422':
+          description: validation error
           content:
             application/json:
               schema:
@@ -1010,11 +997,10 @@ paths:
                     email:
                       type: string
                       format: email
-                      description: User email address
                     password:
                       type: string
-                      description: Password (min 8 chars, mixed case, number, special
-                        char)
+                      format: password
+                      description: Must be at least 8 characters with uppercase, lowercase, number, and special character
                     first_name:
                       type: string
                     last_name:
@@ -1022,18 +1008,20 @@ paths:
                   required:
                   - email
                   - password
+                  - first_name
+                  - last_name
+                invite_code:
+                  type: string
+                  description: Required if invite codes are enabled
                 device:
                   type: object
                   properties:
                     device_id:
                       type: string
-                      description: Unique device identifier
                     device_name:
                       type: string
-                      description: Human-readable device name
                     device_type:
                       type: string
-                      description: Device type (e.g. ios, android)
                     os_version:
                       type: string
                     app_version:
@@ -1044,19 +1032,16 @@ paths:
                   - device_type
                   - os_version
                   - app_version
-                invite_code:
-                  type: string
-                  nullable: true
-                  description: Invite code (required when invites are enforced)
               required:
               - user
               - device
         required: true
   "/api/v1/auth/login":
     post:
-      summary: Log in with email and password
+      summary: Log in a user
       tags:
-      - Auth
+      - Authentication
+      security: []
       parameters: []
       responses:
         '200':
@@ -1064,43 +1049,20 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                  refresh_token:
-                    type: string
-                  token_type:
-                    type: string
-                  expires_in:
-                    type: integer
-                  created_at:
-                    type: integer
-                  user:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      email:
-                        type: string
-                      first_name:
-                        type: string
-                      last_name:
-                        type: string
-                      ui_layout:
-                        type: string
-                        enum:
-                        - dashboard
-                        - intro
-                      ai_enabled:
-                        type: boolean
+                "$ref": "#/components/schemas/AuthLoginResponse"
         '401':
           description: invalid credentials or MFA required
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                oneOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - type: object
+                  properties:
+                    error:
+                      type: string
+                    mfa_required:
+                      type: boolean
       requestBody:
         content:
           application/json:
@@ -1112,10 +1074,10 @@ paths:
                   format: email
                 password:
                   type: string
+                  format: password
                 otp_code:
                   type: string
-                  nullable: true
-                  description: TOTP code if MFA is enabled
+                  description: Required if user has MFA enabled
                 device:
                   type: object
                   properties:
@@ -1140,75 +1102,12 @@ paths:
               - password
               - device
         required: true
-  "/api/v1/auth/sso_exchange":
-    post:
-      summary: Exchange mobile SSO authorization code for tokens
-      tags:
-      - Auth
-      description: Exchanges a one-time authorization code (received via deep link
-        after mobile SSO) for OAuth tokens. The code is single-use and expires after
-        5 minutes.
-      parameters: []
-      responses:
-        '200':
-          description: tokens issued
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                  refresh_token:
-                    type: string
-                  token_type:
-                    type: string
-                  expires_in:
-                    type: integer
-                  created_at:
-                    type: integer
-                  user:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      email:
-                        type: string
-                      first_name:
-                        type: string
-                      last_name:
-                        type: string
-                      ui_layout:
-                        type: string
-                        enum:
-                        - dashboard
-                        - intro
-                      ai_enabled:
-                        type: boolean
-        '401':
-          description: invalid or expired code
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                code:
-                  type: string
-                  description: One-time authorization code from mobile SSO callback
-              required:
-              - code
-        required: true
   "/api/v1/auth/refresh":
     post:
       summary: Refresh an access token
       tags:
-      - Auth
+      - Authentication
+      security: []
       parameters: []
       responses:
         '200':
@@ -1216,26 +1115,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                  refresh_token:
-                    type: string
-                  token_type:
-                    type: string
-                  expires_in:
-                    type: integer
-                  created_at:
-                    type: integer
-        '401':
-          description: invalid refresh token
+                "$ref": "#/components/schemas/AuthTokenResponse"
+        '400':
+          description: refresh token missing
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-        '400':
-          description: missing refresh token
+        '401':
+          description: invalid refresh token
           content:
             application/json:
               schema:
@@ -1248,7 +1136,6 @@ paths:
               properties:
                 refresh_token:
                   type: string
-                  description: The refresh token from a previous login or refresh
                 device:
                   type: object
                   properties:
@@ -1258,58 +1145,28 @@ paths:
                   - device_id
               required:
               - refresh_token
-              - device
         required: true
-  "/api/v1/auth/enable_ai":
-    patch:
-      summary: Enable AI features for the authenticated user
-      tags:
-      - Auth
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: ai enabled
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      email:
-                        type: string
-                      first_name:
-                        type: string
-                        nullable: true
-                      last_name:
-                        type: string
-                        nullable: true
-                      ui_layout:
-                        type: string
-                        enum:
-                        - dashboard
-                        - intro
-                      ai_enabled:
-                        type: boolean
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/categories":
     get:
       summary: List categories
       tags:
       - Categories
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       - name: page
         in: query
         required: false
@@ -1351,8 +1208,88 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/CategoryCollection"
+    post:
+      summary: Create category
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
+      responses:
+        '201':
+          description: category created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Category name
+                    classification:
+                      type: string
+                      enum:
+                      - income
+                      - expense
+                      description: Category classification
+                    color:
+                      type: string
+                      description: Category color (hex code)
+                    lucide_icon:
+                      type: string
+                      description: Lucide icon name
+                    parent_id:
+                      type: string
+                      format: uuid
+                      description: Parent category ID for subcategories
+                  required:
+                  - name
+                  - classification
+                  - color
+              required:
+              - category
+        required: true
   "/api/v1/categories/{id}":
     parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
     - name: id
       in: path
       required: true
@@ -1364,6 +1301,7 @@ paths:
       tags:
       - Categories
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       responses:
         '200':
@@ -1378,13 +1316,292 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a category
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: category updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '404':
+          description: category not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    classification:
+                      type: string
+                      enum:
+                      - income
+                      - expense
+                    color:
+                      type: string
+                    lucide_icon:
+                      type: string
+                    parent_id:
+                      type: string
+                      format: uuid
+        required: true
+    delete:
+      summary: Delete a category
+      tags:
+      - Categories
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: category deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: category not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/merchants":
+    get:
+      summary: List merchants
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: merchants listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantCollection"
+    post:
+      summary: Create merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
+      responses:
+        '201':
+          description: merchant created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                merchant:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Merchant name
+                    color:
+                      type: string
+                      description: Merchant color (hex code)
+                  required:
+                  - name
+              required:
+              - merchant
+        required: true
+  "/api/v1/merchants/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
+    - name: id
+      in: path
+      required: true
+      description: Merchant ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchant retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: merchant updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                merchant:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    color:
+                      type: string
+        required: true
+    delete:
+      summary: Delete a merchant
+      tags:
+      - Merchants
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchant deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/chats":
     get:
       summary: List chats
       tags:
       - Chats
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       responses:
         '200':
           description: chats listed
@@ -1403,8 +1620,21 @@ paths:
       tags:
       - Chats
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
-      parameters: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
       responses:
         '201':
           description: chat created
@@ -1438,6 +1668,18 @@ paths:
         required: true
   "/api/v1/chats/{id}":
     parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
     - name: id
       in: path
       required: true
@@ -1449,6 +1691,7 @@ paths:
       tags:
       - Chats
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       responses:
         '200':
@@ -1468,6 +1711,7 @@ paths:
       tags:
       - Chats
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       parameters: []
       responses:
@@ -1504,6 +1748,7 @@ paths:
       tags:
       - Chats
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       responses:
         '204':
@@ -1512,6 +1757,18 @@ paths:
           description: chat not found
   "/api/v1/chats/{chat_id}/messages":
     parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with write scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with write scope (alternative to Bearer token)
     - name: chat_id
       in: path
       required: true
@@ -1523,6 +1780,7 @@ paths:
       tags:
       - Chat Messages
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       parameters: []
       responses:
@@ -1559,6 +1817,18 @@ paths:
         required: true
   "/api/v1/chats/{chat_id}/messages/retry":
     parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with write scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with write scope (alternative to Bearer token)
     - name: chat_id
       in: path
       required: true
@@ -1570,6 +1840,7 @@ paths:
       tags:
       - Chat Messages
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       responses:
         '202':
@@ -1590,689 +1861,27 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/holdings":
-    get:
-      summary: List holdings
-      tags:
-      - Holdings
-      security:
-      - apiKeyAuth: []
-      parameters:
-      - name: page
-        in: query
-        required: false
-        description: 'Page number (default: 1)'
-        schema:
-          type: integer
-      - name: per_page
-        in: query
-        required: false
-        description: 'Items per page (default: 25, max: 100)'
-        schema:
-          type: integer
-      - name: account_id
-        in: query
-        required: false
-        description: Filter by account ID
-        schema:
-          type: string
-      - name: account_ids
-        in: query
-        required: false
-        description: Filter by multiple account IDs
-        schema:
-          type: array
-          items:
-            type: string
-      - name: date
-        in: query
-        required: false
-        description: Filter by exact date
-        schema:
-          type: string
-          format: date
-      - name: start_date
-        in: query
-        required: false
-        description: Filter holdings from this date (inclusive)
-        schema:
-          type: string
-          format: date
-      - name: end_date
-        in: query
-        required: false
-        description: Filter holdings until this date (inclusive)
-        schema:
-          type: string
-          format: date
-      - name: security_id
-        in: query
-        required: false
-        description: Filter by security ID
-        schema:
-          type: string
-      responses:
-        '200':
-          description: holdings paginated
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/HoldingCollection"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: invalid date filter
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/holdings/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      description: Holding ID
-      schema:
-        type: string
-    get:
-      summary: Retrieve holding
-      tags:
-      - Holdings
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: holding retrieved
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Holding"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '404':
-          description: holding not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/imports":
-    get:
-      summary: List imports
-      description: List all imports for the user's family with pagination and filtering.
-      tags:
-      - Imports
-      security:
-      - apiKeyAuth: []
-      parameters:
-      - name: page
-        in: query
-        required: false
-        description: 'Page number (default: 1)'
-        schema:
-          type: integer
-      - name: per_page
-        in: query
-        required: false
-        description: 'Items per page (default: 25, max: 100)'
-        schema:
-          type: integer
-      - name: status
-        in: query
-        required: false
-        description: Filter by status
-        schema:
-          type: string
-          enum:
-          - pending
-          - complete
-          - importing
-          - reverting
-          - revert_failed
-          - failed
-      - name: type
-        in: query
-        required: false
-        description: Filter by import type
-        schema:
-          type: string
-          enum:
-          - TransactionImport
-          - TradeImport
-          - AccountImport
-          - MintImport
-          - CategoryImport
-          - RuleImport
-      responses:
-        '200':
-          description: imports filtered by type
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ImportCollection"
-    post:
-      summary: Create import
-      description: Create a new import from raw CSV content.
-      tags:
-      - Imports
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '201':
-          description: import created
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ImportResponse"
-        '422':
-          description: validation error - file too large
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                raw_file_content:
-                  type: string
-                  description: The raw CSV content as a string
-                type:
-                  type: string
-                  enum:
-                  - TransactionImport
-                  - TradeImport
-                  - AccountImport
-                  - MintImport
-                  - CategoryImport
-                  - RuleImport
-                  description: Import type (defaults to TransactionImport)
-                account_id:
-                  type: string
-                  format: uuid
-                  description: Account ID to import into
-                publish:
-                  type: string
-                  description: Set to "true" to automatically queue for processing
-                    if configuration is valid
-                date_col_label:
-                  type: string
-                  description: Header name for the date column
-                amount_col_label:
-                  type: string
-                  description: Header name for the amount column
-                name_col_label:
-                  type: string
-                  description: Header name for the transaction name column
-                category_col_label:
-                  type: string
-                  description: Header name for the category column
-                tags_col_label:
-                  type: string
-                  description: Header name for the tags column
-                notes_col_label:
-                  type: string
-                  description: Header name for the notes column
-                date_format:
-                  type: string
-                  description: Date format pattern (e.g., "%m/%d/%Y")
-                number_format:
-                  type: string
-                  enum:
-                  - '1,234.56'
-                  - 1.234,56
-                  - 1 234,56
-                  - '1,234'
-                  description: Number format for parsing amounts
-                signage_convention:
-                  type: string
-                  enum:
-                  - inflows_positive
-                  - inflows_negative
-                  description: How to interpret positive/negative amounts
-                col_sep:
-                  type: string
-                  enum:
-                  - ","
-                  - ";"
-                  description: Column separator
-        required: true
-  "/api/v1/imports/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      description: Import ID
-      schema:
-        type: string
-    get:
-      summary: Retrieve an import
-      description: Retrieve detailed information about a specific import, including
-        configuration and row statistics.
-      tags:
-      - Imports
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: import retrieved
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ImportResponse"
-        '404':
-          description: import not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/tags":
-    get:
-      summary: List tags
-      tags:
-      - Tags
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: tags listed
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TagCollection"
-    post:
-      summary: Create tag
-      tags:
-      - Tags
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '201':
-          description: tag created with auto-assigned color
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TagDetail"
-        '422':
-          description: validation error - missing name
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                tag:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      description: Tag name (required)
-                    color:
-                      type: string
-                      description: Hex color code (optional, auto-assigned if not
-                        provided)
-                  required:
-                  - name
-              required:
-              - tag
-        required: true
-  "/api/v1/tags/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      description: Tag ID
-      schema:
-        type: string
-    get:
-      summary: Retrieve a tag
-      tags:
-      - Tags
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: tag retrieved
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TagDetail"
-        '404':
-          description: tag not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-    patch:
-      summary: Update a tag
-      tags:
-      - Tags
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '200':
-          description: tag updated
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TagDetail"
-        '404':
-          description: tag not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                tag:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                    color:
-                      type: string
-        required: true
-    delete:
-      summary: Delete a tag
-      tags:
-      - Tags
-      security:
-      - apiKeyAuth: []
-      responses:
-        '204':
-          description: tag deleted
-        '404':
-          description: tag not found
-  "/api/v1/trades":
-    get:
-      summary: List trades
-      tags:
-      - Trades
-      security:
-      - apiKeyAuth: []
-      parameters:
-      - name: page
-        in: query
-        required: false
-        description: 'Page number (default: 1)'
-        schema:
-          type: integer
-      - name: per_page
-        in: query
-        required: false
-        description: 'Items per page (default: 25, max: 100)'
-        schema:
-          type: integer
-      - name: account_id
-        in: query
-        required: false
-        description: Filter by account ID
-        schema:
-          type: string
-      - name: account_ids
-        in: query
-        required: false
-        description: Filter by multiple account IDs
-        schema:
-          type: array
-          items:
-            type: string
-      - name: start_date
-        in: query
-        required: false
-        description: Filter trades from this date (inclusive)
-        schema:
-          type: string
-          format: date
-      - name: end_date
-        in: query
-        required: false
-        description: Filter trades until this date (inclusive)
-        schema:
-          type: string
-          format: date
-      responses:
-        '200':
-          description: trades paginated
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TradeCollection"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: invalid date filter
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-    post:
-      summary: Create trade
-      tags:
-      - Trades
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '201':
-          description: trade created
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Trade"
-        '422':
-          description: validation error - missing security identifier
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '404':
-          description: account not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                trade:
-                  type: object
-                  properties:
-                    account_id:
-                      type: string
-                      format: uuid
-                      description: Account ID (required)
-                    date:
-                      type: string
-                      format: date
-                      description: Trade date (required)
-                    qty:
-                      type: number
-                      description: Quantity (required)
-                    price:
-                      type: number
-                      description: Price (required)
-                    type:
-                      type: string
-                      enum:
-                      - buy
-                      - sell
-                      description: Trade type (required)
-                    security_id:
-                      type: string
-                      format: uuid
-                      description: Security ID (one of security_id, ticker, manual_ticker
-                        required)
-                    ticker:
-                      type: string
-                      description: Ticker symbol
-                    manual_ticker:
-                      type: string
-                      description: Manual ticker for offline securities
-                    currency:
-                      type: string
-                      description: Currency (defaults to account currency)
-                    investment_activity_label:
-                      type: string
-                      description: Activity label (e.g. Buy, Sell)
-                    category_id:
-                      type: string
-                      format: uuid
-                      description: Category ID
-                  required:
-                  - account_id
-                  - date
-                  - qty
-                  - price
-                  - type
-              required:
-              - trade
-        required: true
-  "/api/v1/trades/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      description: Trade ID
-      schema:
-        type: string
-    get:
-      summary: Retrieve trade
-      tags:
-      - Trades
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: trade retrieved
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Trade"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '404':
-          description: trade not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-    patch:
-      summary: Update trade
-      tags:
-      - Trades
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '200':
-          description: trade updated
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Trade"
-        '404':
-          description: trade not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                trade:
-                  type: object
-                  properties:
-                    date:
-                      type: string
-                      format: date
-                    qty:
-                      type: number
-                    price:
-                      type: number
-                    type:
-                      type: string
-                      enum:
-                      - buy
-                      - sell
-                    nature:
-                      type: string
-                      enum:
-                      - inflow
-                      - outflow
-                    name:
-                      type: string
-                    notes:
-                      type: string
-                    currency:
-                      type: string
-                    investment_activity_label:
-                      type: string
-                    category_id:
-                      type: string
-                      format: uuid
-        required: true
-    delete:
-      summary: Delete trade
-      tags:
-      - Trades
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: trade deleted
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/DeleteResponse"
-        '404':
-          description: trade not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/transactions":
     get:
       summary: List transactions
       tags:
       - Transactions
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       - name: page
         in: query
         required: false
@@ -2388,8 +1997,21 @@ paths:
       tags:
       - Transactions
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
-      parameters: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
       responses:
         '201':
           description: transaction created
@@ -2467,6 +2089,18 @@ paths:
         required: true
   "/api/v1/transactions/{id}":
     parameters:
+    - name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Bearer token with read scope (alternative to X-Api-Key)
+    - name: X-Api-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: API key with read scope (alternative to Bearer token)
     - name: id
       in: path
       required: true
@@ -2478,6 +2112,7 @@ paths:
       tags:
       - Transactions
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       responses:
         '200':
@@ -2497,6 +2132,7 @@ paths:
       tags:
       - Transactions
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       parameters: []
       responses:
@@ -2554,14 +2190,13 @@ paths:
                       items:
                         type: string
                         format: uuid
-                      description: Array of tag IDs to assign. Omit to preserve existing
-                        tags; use [] to clear all tags.
         required: true
     delete:
       summary: Delete a transaction
       tags:
       - Transactions
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       responses:
         '200':
@@ -2576,145 +2211,87 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/valuations":
+  "/api/v1/sync":
     post:
-      summary: Create valuation
+      summary: Trigger a family sync
+      description: Triggers a sync operation that will apply all active rules, sync all accounts, and auto-match transfers
       tags:
-      - Valuations
+      - Sync
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
       parameters:
       - name: Authorization
         in: header
-        required: true
+        required: false
         schema:
           type: string
-        description: Bearer token with write scope
+        description: Bearer token with write scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with write scope (alternative to Bearer token)
       responses:
-        '201':
-          description: valuation created
+        '202':
+          description: sync queued
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Valuation"
-        '422':
-          description: validation error - missing date
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '404':
-          description: account not found
+                "$ref": "#/components/schemas/SyncResponse"
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                valuation:
-                  type: object
-                  properties:
-                    account_id:
-                      type: string
-                      format: uuid
-                      description: Account ID (required)
-                    amount:
-                      type: number
-                      description: Valuation amount (required)
-                    date:
-                      type: string
-                      format: date
-                      description: Valuation date (required)
-                    notes:
-                      type: string
-                      description: Additional notes
-                  required:
-                  - account_id
-                  - amount
-                  - date
-              required:
-              - valuation
-        required: true
-  "/api/v1/valuations/{id}":
-    parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token
-    - name: id
-      in: path
-      required: true
-      description: Valuation ID (entry ID)
-      schema:
-        type: string
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/usage":
     get:
-      summary: Retrieve a valuation
+      summary: Get API usage information
+      description: Returns usage statistics for API key authentication or a message for OAuth authentication
       tags:
-      - Valuations
+      - Usage
       security:
+      - bearerAuth: []
       - apiKeyAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Bearer token with read scope (alternative to X-Api-Key)
+      - name: X-Api-Key
+        in: header
+        required: false
+        schema:
+          type: string
+        description: API key with read scope (alternative to Bearer token)
       responses:
         '200':
-          description: valuation retrieved
+          description: usage information retrieved
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Valuation"
-        '404':
-          description: valuation not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-    patch:
-      summary: Update a valuation
-      tags:
-      - Valuations
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '200':
-          description: valuation updated with amount and date
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Valuation"
-        '422':
-          description: validation error - only one of amount/date provided
+                oneOf:
+                - "$ref": "#/components/schemas/UsageApiKeyResponse"
+                - "$ref": "#/components/schemas/UsageOAuthResponse"
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-        '404':
-          description: valuation not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                valuation:
-                  type: object
-                  properties:
-                    amount:
-                      type: number
-                      description: New valuation amount (must provide with date)
-                    date:
-                      type: string
-                      format: date
-                      description: New valuation date (must provide with amount)
-                    notes:
-                      type: string
-                      description: Additional notes
-        required: true
