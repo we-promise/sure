@@ -6,7 +6,7 @@ class Trade < ApplicationRecord
   belongs_to :security
 
   # Use the same activity labels as Transaction
-  ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup
+  ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
 
   validates :qty, presence: true
   validates :price, :currency, presence: true

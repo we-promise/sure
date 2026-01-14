@@ -62,13 +62,19 @@ export default class extends Controller {
     }
 
     // For other labels (Dividend, Interest, Fee, etc.) or for Trades, just save the label
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+    if (!csrfToken) {
+      console.error("CSRF token not found")
+      return
+    }
+
     try {
       const response = await fetch(this.urlValue, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
-          "Accept": "text/vnd.turbo-stream.html, application/json"
+          "X-CSRF-Token": csrfToken,
+          "Accept": "text/vnd.turbo-stream.html"
         },
         body: JSON.stringify({
           entry: {
@@ -81,8 +87,15 @@ export default class extends Controller {
       })
 
       if (response.ok) {
-        // Reload the page to show updated badge
-        window.location.reload()
+        const contentType = response.headers.get("content-type")
+        if (contentType?.includes("text/vnd.turbo-stream.html")) {
+          // Let Turbo handle the stream response
+          const html = await response.text()
+          Turbo.renderStreamMessage(html)
+        }
+        // Update local state and badge
+        this.currentLabelValue = label
+        this.close()
       } else {
         console.error("Failed to update activity label:", response.status)
       }

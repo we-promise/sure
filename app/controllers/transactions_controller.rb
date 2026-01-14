@@ -153,7 +153,7 @@ class TransactionsController < ApplicationController
     @entry = @transaction.entry
 
     unless @entry.account.investment?
-      flash[:alert] = "Only transactions in investment accounts can be converted to trades"
+      flash[:alert] = t(".convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
     end
@@ -165,87 +165,31 @@ class TransactionsController < ApplicationController
     @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
+    # Pre-transaction validations
     unless @entry.account.investment?
-      flash[:alert] = "Only transactions in investment accounts can be converted to trades"
+      flash[:alert] = t(".convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
     end
 
     if @entry.excluded?
-      flash[:alert] = "This transaction has already been converted or excluded"
+      flash[:alert] = t(".convert_to_trade.errors.already_converted")
       redirect_back_or_to transactions_path
       return
     end
 
+    # Resolve security before transaction
+    security = resolve_security_for_conversion
+    return if performed? # Early exit if redirect already happened
+
+    # Validate and calculate qty/price before transaction
+    qty, price = calculate_qty_and_price
+    return if performed? # Early exit if redirect already happened
+
+    activity_label = params[:investment_activity_label].presence
+    is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount > 0)
+
     ActiveRecord::Base.transaction do
-      # Determine security - either by ID (from holdings dropdown) or by custom ticker
-      security = if params[:security_id] == "__custom__"
-        # User entered a custom ticker - use resolver
-        ticker = params[:custom_ticker].presence
-        unless ticker.present?
-          flash[:alert] = "Please enter a ticker symbol"
-          redirect_back_or_to transactions_path
-          return
-        end
-
-        Security::Resolver.new(
-          ticker.strip,
-          exchange_operating_mic: params[:exchange_operating_mic].presence
-        ).resolve
-      elsif params[:security_id].present?
-        # User selected from holdings - use security directly by ID
-        found = Security.find_by(id: params[:security_id])
-        unless found
-          flash[:alert] = "Selected security no longer exists. Please select another."
-          redirect_back_or_to transactions_path
-          return
-        end
-        found
-      elsif params[:ticker].present?
-        # Fallback for accounts with no holdings (text field for ticker)
-        Security::Resolver.new(
-          params[:ticker].strip,
-          exchange_operating_mic: params[:exchange_operating_mic].presence
-        ).resolve
-      end
-
-      unless security
-        flash[:alert] = "Please select or enter a security"
-        redirect_back_or_to transactions_path
-        return
-      end
-
-      activity_label = params[:investment_activity_label].presence
-
-      # Determine if buy or sell based on activity label or original transaction direction
-      is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount > 0)
-
-      # Get qty and price from user input
-      amount = @entry.amount.abs.to_f
-      qty = params[:qty].present? ? params[:qty].to_f.abs : nil
-      price = params[:price].present? ? params[:price].to_f : nil
-
-      # User must provide at least one of qty or price
-      # The other can be calculated from the transaction amount
-      if qty.nil? && price.nil?
-        flash[:alert] = "Please enter either quantity or price per share. The other will be calculated from the transaction amount."
-        redirect_back_or_to transactions_path, status: :see_other
-        return
-      elsif qty.nil? && price.present? && price > 0
-        # Calculate qty from amount and price
-        qty = (amount / price).round(6)
-      elsif price.nil? && qty.present? && qty > 0
-        # Calculate price from amount and qty
-        price = (amount / qty).round(4)
-      end
-
-      # Final validation
-      if qty.nil? || qty <= 0 || price.nil? || price <= 0
-        flash[:alert] = "Invalid quantity or price. Please enter valid positive values."
-        redirect_back_or_to transactions_path, status: :see_other
-        return
-      end
-
       # For trades: positive qty = buy (money out), negative qty = sell (money in)
       signed_qty = is_sell ? -qty : qty
       trade_amount = qty * price
@@ -256,7 +200,7 @@ class TransactionsController < ApplicationController
       activity_label ||= is_sell ? "Sell" : "Buy"
 
       # Create trade entry
-      trade_entry = @entry.account.entries.create!(
+      @entry.account.entries.create!(
         name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
         date: @entry.date,
         amount: signed_amount,
@@ -274,13 +218,13 @@ class TransactionsController < ApplicationController
       @entry.update!(excluded: true)
     end
 
-    flash[:notice] = "Transaction converted to trade"
+    flash[:notice] = t(".convert_to_trade.success")
     redirect_to account_path(@entry.account), status: :see_other
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    flash[:alert] = "Failed to convert transaction: #{e.message}"
+    flash[:alert] = t(".convert_to_trade.errors.conversion_failed", error: e.message)
     redirect_back_or_to transactions_path, status: :see_other
   rescue StandardError => e
-    flash[:alert] = "Unexpected error during conversion: #{e.message}"
+    flash[:alert] = t(".convert_to_trade.errors.unexpected_error", error: e.message)
     redirect_back_or_to transactions_path, status: :see_other
   end
 
@@ -414,5 +358,65 @@ class TransactionsController < ApplicationController
 
     def preferences_params
       params.require(:preferences).permit(collapsed_sections: {})
+    end
+
+    # Helper methods for convert_to_trade
+
+    def resolve_security_for_conversion
+      if params[:security_id] == "__custom__"
+        ticker = params[:custom_ticker].presence
+        unless ticker.present?
+          flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
+          redirect_back_or_to transactions_path
+          return nil
+        end
+
+        Security::Resolver.new(
+          ticker.strip,
+          exchange_operating_mic: params[:exchange_operating_mic].presence
+        ).resolve
+      elsif params[:security_id].present?
+        found = Security.find_by(id: params[:security_id])
+        unless found
+          flash[:alert] = t("transactions.convert_to_trade.errors.security_not_found")
+          redirect_back_or_to transactions_path
+          return nil
+        end
+        found
+      elsif params[:ticker].present?
+        Security::Resolver.new(
+          params[:ticker].strip,
+          exchange_operating_mic: params[:exchange_operating_mic].presence
+        ).resolve
+      end.tap do |security|
+        if security.nil? && !performed?
+          flash[:alert] = t("transactions.convert_to_trade.errors.select_security")
+          redirect_back_or_to transactions_path
+        end
+      end
+    end
+
+    def calculate_qty_and_price
+      amount = @entry.amount.abs.to_f
+      qty = params[:qty].present? ? params[:qty].to_f.abs : nil
+      price = params[:price].present? ? params[:price].to_f : nil
+
+      if qty.nil? && price.nil?
+        flash[:alert] = t("transactions.convert_to_trade.errors.enter_qty_or_price")
+        redirect_back_or_to transactions_path, status: :see_other
+        return [ nil, nil ]
+      elsif qty.nil? && price.present? && price > 0
+        qty = (amount / price).round(6)
+      elsif price.nil? && qty.present? && qty > 0
+        price = (amount / qty).round(4)
+      end
+
+      if qty.nil? || qty <= 0 || price.nil? || price <= 0
+        flash[:alert] = t("transactions.convert_to_trade.errors.invalid_qty_or_price")
+        redirect_back_or_to transactions_path, status: :see_other
+        return [ nil, nil ]
+      end
+
+      [ qty, price ]
     end
 end

@@ -6,30 +6,30 @@
   # Build the correct URL based on entryable type
   update_url = entryable.is_a?(Transaction) ? transaction_path(entry) : trade_path(entry)
 
-  # Color mapping for different investment activity labels
+  # Color mapping for different investment activity labels using design system tokens
   color = if has_label
     case label
     when "Buy"
-      "rgb(59 130 246)" # blue
+      "var(--color-blue-500)"
     when "Sell"
-      "rgb(239 68 68)" # red
+      "var(--color-red-500)"
     when "Dividend", "Interest"
-      "rgb(34 197 94)" # green
+      "var(--color-green-500)"
     when "Contribution"
-      "rgb(168 85 247)" # purple
+      "var(--color-violet-500)"
     when "Withdrawal"
-      "rgb(249 115 22)" # orange
+      "var(--color-orange-500)"
     when "Fee"
-      "rgb(107 114 128)" # gray
+      "var(--color-gray-500)"
     when "Transfer", "Sweep In", "Sweep Out", "Exchange"
-      "rgb(107 114 128)" # gray
+      "var(--color-gray-500)"
     when "Reinvestment"
-      "rgb(59 130 246)" # blue
+      "var(--color-blue-500)"
     else
-      "rgb(107 114 128)" # gray for "Other"
+      "var(--color-gray-500)" # for "Other"
     end
   else
-    "rgb(140 140 140)" # slightly lighter gray for empty state
+    "var(--color-gray-400)" # slightly lighter for empty state
   end
 
   activity_labels = entryable.is_a?(Trade) ? Trade::ACTIVITY_LABELS : Transaction::ACTIVITY_LABELS
@@ -60,12 +60,12 @@
           <% end %>"
           data-action="click->activity-label-quick-edit#toggle"
           data-activity-label-quick-edit-target="badge"
-          title="<%= has_label ? "Click to change activity label" : "Add activity label" %>">
+          title="<%= has_label ? t("transactions.transaction.activity_type_tooltip") : t("transactions.show.activity_type") %>">
     <% if has_label %>
       <%= label %>
     <% else %>
       <%= icon "tag", size: "xs", color: "current" %>
-      <span>Label</span>
+      <span><%= t("transactions.show.activity_type") %></span>
     <% end %>
     <%= icon "chevron-down", size: "xs", color: "current" %>
   </button>
@@ -79,7 +79,7 @@
                 class="w-full text-left px-3 py-1.5 text-sm text-secondary hover:bg-surface-inset transition-colors border-b border-primary"
                 data-action="click->activity-label-quick-edit#select"
                 data-label="">
-          <span class="italic">Remove label</span>
+          <span class="italic"><%= t("transactions.form.none") %></span>
         </button>
       <% end %>
       <% activity_labels.each do |activity_label| %>
