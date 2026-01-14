@@ -7,43 +7,18 @@ class ReportsController < ApplicationController
   before_action :authenticate_for_export, only: :export_transactions
 
   def index
-    @period_type = params[:period_type]&.to_sym || :monthly
-    @start_date = parse_date_param(:start_date) || default_start_date
-    @end_date = parse_date_param(:end_date) || default_end_date
-
-    # Validate and fix date range if end_date is before start_date
-    validate_and_fix_date_range(show_flash: true)
-
-    # Build the period
-    @period = Period.custom(start_date: @start_date, end_date: @end_date)
-    @previous_period = build_previous_period
-
-    # Get aggregated data
-    @current_income_totals = Current.family.income_statement.income_totals(period: @period)
-    @current_expense_totals = Current.family.income_statement.expense_totals(period: @period)
-
-    @previous_income_totals = Current.family.income_statement.income_totals(period: @previous_period)
-    @previous_expense_totals = Current.family.income_statement.expense_totals(period: @previous_period)
-
-    # Calculate summary metrics
-    @summary_metrics = build_summary_metrics
-
-    # Build trend data (last 6 months)
-    @trends_data = build_trends_data
-
-    # Net worth metrics
-    @net_worth_metrics = build_net_worth_metrics
-
-    # Transactions breakdown
-    @transactions = build_transactions_breakdown
-
-    # Investment metrics (must be before build_reports_sections)
-    @investment_metrics = build_investment_metrics
+    setup_report_data(show_flash: true)
 
     # Build reports sections for collapsible/reorderable UI
     @reports_sections = build_reports_sections
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
+  end
+
+  def print
+    setup_report_data(show_flash: false)
+
+    render layout: "print"
   end
 
   def update_preferences
@@ -114,6 +89,44 @@ class ReportsController < ApplicationController
   end
 
   private
+    def setup_report_data(show_flash: false)
+      @period_type = params[:period_type]&.to_sym || :monthly
+      @start_date = parse_date_param(:start_date) || default_start_date
+      @end_date = parse_date_param(:end_date) || default_end_date
+
+      # Validate and fix date range if end_date is before start_date
+      validate_and_fix_date_range(show_flash: show_flash)
+
+      # Build the period
+      @period = Period.custom(start_date: @start_date, end_date: @end_date)
+      @previous_period = build_previous_period
+
+      # Get aggregated data
+      @current_income_totals = Current.family.income_statement.income_totals(period: @period)
+      @current_expense_totals = Current.family.income_statement.expense_totals(period: @period)
+
+      @previous_income_totals = Current.family.income_statement.income_totals(period: @previous_period)
+      @previous_expense_totals = Current.family.income_statement.expense_totals(period: @previous_period)
+
+      # Calculate summary metrics
+      @summary_metrics = build_summary_metrics
+
+      # Build trend data (last 6 months)
+      @trends_data = build_trends_data
+
+      # Net worth metrics
+      @net_worth_metrics = build_net_worth_metrics
+
+      # Transactions breakdown
+      @transactions = build_transactions_breakdown
+
+      # Investment metrics
+      @investment_metrics = build_investment_metrics
+
+      # Flags for view rendering
+      @has_accounts = Current.family.accounts.any?
+    end
+
     def preferences_params
       prefs = params.require(:preferences)
       {}.tap do |permitted|

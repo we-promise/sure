@@ -310,6 +310,74 @@ Security note on label selectors:
   - CNPG: `cnpg.io/cluster: <cluster-name>` (CNPG labels its pods)
   - RedisReplication: `app.kubernetes.io/instance: <release-name>` or `app.kubernetes.io/name: <cr-name>`
 
+#### Rolling update strategy
+
+When using topology spread constraints with `whenUnsatisfiable: DoNotSchedule`, you must configure the Kubernetes rolling update strategy to prevent deployment deadlocks.
+
+The chart now makes the rolling update strategy configurable for web and worker deployments. The defaults have been changed from Kubernetes defaults (`maxUnavailable=0`, `maxSurge=25%`) to:
+
+```yaml
+web:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+
+worker:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+```
+
+**Why these defaults?**
+
+With `maxSurge=0`, Kubernetes will terminate an old pod before creating a new one. This ensures that when all nodes are occupied (due to strict topology spreading), there is always space for the new pod to be scheduled.
+
+If you use `maxSurge > 0` with `DoNotSchedule` topology constraints and all nodes are occupied, Kubernetes cannot create the new pod (no space available) and cannot terminate the old pod (new pod must be ready first), resulting in a deployment deadlock.
+
+**Configuration examples:**
+
+For faster rollouts when not using strict topology constraints:
+
+```yaml
+web:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+worker:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+```
+
+For HA setups with topology spreading:
+
+```yaml
+web:
+  replicas: 3
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: sure
+          app.kubernetes.io/component: web
+```
+
+**Warning:** Using `maxSurge > 0` with `whenUnsatisfiable: DoNotSchedule` can cause deployment deadlocks when all nodes are occupied. If you need faster rollouts, either:
+- Use `whenUnsatisfiable: ScheduleAnyway` instead of `DoNotSchedule`
+- Ensure you have spare capacity on your nodes
+- Keep `maxSurge: 0` and accept slower rollouts
+
 Compatibility:
 - CloudNativePG v1.27.1 supports `minSyncReplicas`/`maxSyncReplicas` and standard k8s scheduling fields under `spec`.
 - OT redis-operator v0.21.0 supports scheduling under `spec.kubernetesConfig`.
@@ -370,13 +438,13 @@ stringData:
   # password: "__SET_SECRET__"
 ```
 
-Note: These are non-sensitive placeholder values. Do not commit real secrets to version control. Prefer External Secrets, Sealed Secrets, or your platform’s secret manager to source these at runtime.
+Note: These are non-sensitive placeholder values. Do not commit real secrets to version control. Prefer External Secrets, Sealed Secrets, or your platform's secret manager to source these at runtime.
 
 ### Linting Helm templates and YAML
 
 Helm template files under `charts/**/templates/**` contain template delimiters like `{{- ... }}` that raw YAML linters will flag as invalid. To avoid false positives in CI:
 
-- Use Helm’s linter for charts:
+- Use Helm's linter for charts:
   - `helm lint charts/sure`
 - Configure your YAML linter (e.g., yamllint) to ignore Helm template directories (exclude `charts/**/templates/**`), or use a Helm-aware plugin that preprocesses templates before linting.
 
@@ -588,7 +656,7 @@ See `values.yaml` for the complete configuration surface, including:
 - `redis-ha.*`: enable dandydev/redis-ha subchart and configure replicas/auth (Sentinel/HA); supports `existingSecret` and `existingSecretPasswordKey`
 - `redisOperator.*`: optionally install OT redis-operator (`redisOperator.enabled`) and/or render a `RedisSentinel` CR (`redisOperator.managed.enabled`); configure `name`, `replicas`, `auth.existingSecret/passwordKey`, `persistence.className/size`, scheduling knobs, and `operator.resources` (controller) / `workloadResources` (Redis pods)
 - `redisSimple.*`: optional single‑pod Redis (non‑HA) when `redis-ha.enabled=false`
-- `web.*`, `worker.*`: replicas, probes, resources, scheduling
+- `web.*`, `worker.*`: replicas, probes, resources, scheduling, **strategy** (rolling update configuration)
 - `migrations.*`: strategy job or initContainer
 - `simplefin.encryption.*`: enable + backfill options
 - `cronjobs.*`: custom CronJobs
@@ -635,7 +703,7 @@ helm uninstall sure -n sure
 
 ## Cleanup & reset (k3s)
 
-For local k3s experimentation it’s sometimes useful to completely reset the `sure` namespace, especially if CR finalizers or PVCs get stuck.
+For local k3s experimentation it's sometimes useful to completely reset the `sure` namespace, especially if CR finalizers or PVCs get stuck.
 
 The script below is a **last-resort tool** for cleaning the namespace. It:
 

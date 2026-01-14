@@ -18,8 +18,9 @@ class Account::ProviderImportAdapter
   # @param notes [String, nil] Optional transaction notes/memo
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
+  # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -114,7 +115,16 @@ class Account::ProviderImportAdapter
         entry.transaction.extra = existing.deep_merge(incoming)
         entry.transaction.save!
       end
+
+      # Set investment activity label if provided and not already set
+      if investment_activity_label.present? && entry.entryable.is_a?(Transaction)
+        if entry.transaction.investment_activity_label.blank?
+          entry.transaction.assign_attributes(investment_activity_label: investment_activity_label)
+        end
+      end
+
       entry.save!
+      entry.transaction.save! if entry.transaction.changed?
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
@@ -313,17 +323,32 @@ class Account::ProviderImportAdapter
         end
       end
 
-      holding.assign_attributes(
+      # Reconcile cost_basis to respect priority hierarchy
+      reconciled = Holding::CostBasisReconciler.reconcile(
+        existing_holding: holding.persisted? ? holding : nil,
+        incoming_cost_basis: cost_basis,
+        incoming_source: "provider"
+      )
+
+      # Build base attributes
+      attributes = {
         security: security,
         date: date,
         currency: currency,
         qty: quantity,
         price: price,
         amount: amount,
-        cost_basis: cost_basis,
         account_provider_id: account_provider_id,
         external_id: external_id
-      )
+      }
+
+      # Only update cost_basis if reconciliation says to
+      if reconciled[:should_update]
+        attributes[:cost_basis] = reconciled[:cost_basis]
+        attributes[:cost_basis_source] = reconciled[:cost_basis_source]
+      end
+
+      holding.assign_attributes(attributes)
 
       begin
         Holding.transaction(requires_new: true) do
@@ -353,11 +378,22 @@ class Account::ProviderImportAdapter
             updates = {
               qty: quantity,
               price: price,
-              amount: amount,
-              cost_basis: cost_basis
+              amount: amount
             }
 
-            # Adopt the row to this provider if it’s currently unowned
+            # Reconcile cost_basis to respect priority hierarchy
+            collision_reconciled = Holding::CostBasisReconciler.reconcile(
+              existing_holding: existing,
+              incoming_cost_basis: cost_basis,
+              incoming_source: "provider"
+            )
+
+            if collision_reconciled[:should_update]
+              updates[:cost_basis] = collision_reconciled[:cost_basis]
+              updates[:cost_basis_source] = collision_reconciled[:cost_basis_source]
+            end
+
+            # Adopt the row to this provider if it's currently unowned
             if account_provider_id.present? && existing.account_provider_id.nil?
               updates[:account_provider_id] = account_provider_id
             end

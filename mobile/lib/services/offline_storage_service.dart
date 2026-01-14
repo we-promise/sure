@@ -171,18 +171,31 @@ class OfflineStorageService {
   Future<void> syncTransactionsFromServer(List<Transaction> serverTransactions) async {
     _log.info('OfflineStorage', 'syncTransactionsFromServer called with ${serverTransactions.length} transactions from server');
 
+    // Log first transaction's accountId for debugging
+    if (serverTransactions.isNotEmpty) {
+      final firstTx = serverTransactions.first;
+      _log.info('OfflineStorage', 'First transaction: id=${firstTx.id}, accountId="${firstTx.accountId}", name="${firstTx.name}"');
+    }
+
     // Use upsert logic instead of clear + insert to preserve recently uploaded transactions
     _log.info('OfflineStorage', 'Upserting all transactions from server (preserving pending/failed)');
 
     int upsertedCount = 0;
+    int emptyAccountIdCount = 0;
     for (final transaction in serverTransactions) {
       if (transaction.id != null) {
+        if (transaction.accountId.isEmpty) {
+          emptyAccountIdCount++;
+        }
         await upsertTransactionFromServer(transaction);
         upsertedCount++;
       }
     }
 
     _log.info('OfflineStorage', 'Upserted $upsertedCount transactions from server');
+    if (emptyAccountIdCount > 0) {
+      _log.error('OfflineStorage', 'WARNING: $emptyAccountIdCount transactions had EMPTY accountId!');
+    }
   }
 
   Future<void> upsertTransactionFromServer(
@@ -199,15 +212,22 @@ class OfflineStorageService {
         ? accountId
         : transaction.accountId;
 
-    _log.debug('OfflineStorage', 'Upserting transaction ${transaction.id}: accountId="${transaction.accountId}" -> effective="$effectiveAccountId"');
+    // Log if transaction has empty accountId
+    if (transaction.accountId.isEmpty) {
+      _log.warning('OfflineStorage', 'Transaction ${transaction.id} has empty accountId from server! Provided accountId: $accountId, effective: $effectiveAccountId');
+    }
 
     // Check if we already have this transaction
     final existing = await getTransactionByServerId(transaction.id!);
 
     if (existing != null) {
-      _log.debug('OfflineStorage', 'Updating existing transaction (localId: ${existing.localId}, was ${existing.syncStatus})');
       // Update existing transaction, preserving its accountId if effectiveAccountId is empty
       final finalAccountId = effectiveAccountId.isEmpty ? existing.accountId : effectiveAccountId;
+
+      if (finalAccountId.isEmpty) {
+        _log.error('OfflineStorage', 'CRITICAL: Updating transaction ${transaction.id} with EMPTY accountId!');
+      }
+
       final updated = OfflineTransaction(
         id: transaction.id,
         localId: existing.localId,
@@ -221,10 +241,12 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
-      _log.debug('OfflineStorage', 'Transaction updated successfully with accountId="$finalAccountId"');
     } else {
-      _log.debug('OfflineStorage', 'Inserting new transaction with accountId="$effectiveAccountId"');
       // Insert new transaction
+      if (effectiveAccountId.isEmpty) {
+        _log.error('OfflineStorage', 'CRITICAL: Inserting transaction ${transaction.id} with EMPTY accountId!');
+      }
+
       final offlineTransaction = OfflineTransaction(
         id: transaction.id,
         localId: _uuid.v4(),
@@ -238,7 +260,6 @@ class OfflineStorageService {
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
-      _log.debug('OfflineStorage', 'Transaction inserted successfully');
     }
   }
 

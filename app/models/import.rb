@@ -22,6 +22,7 @@ class Import < ApplicationRecord
   belongs_to :account, optional: true
 
   before_validation :set_default_number_format
+  before_validation :ensure_utf8_encoding
 
   scope :ordered, -> { order(created_at: :desc) }
 
@@ -39,7 +40,9 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family
+  validate :rows_to_skip_within_file_bounds
 
   has_many :rows, dependent: :destroy
   has_many :mappings, dependent: :destroy
@@ -226,7 +229,8 @@ class Import < ApplicationRecord
         "qty_col_label", "ticker_col_label", "price_col_label",
         "entity_type_col_label", "notes_col_label", "currency_col_label",
         "date_format", "signage_convention", "number_format",
-        "exchange_operating_mic_col_label"
+        "exchange_operating_mic_col_label",
+        "rows_to_skip"
       )
     )
   end
@@ -253,7 +257,14 @@ class Import < ApplicationRecord
     end
 
     def parsed_csv
-      @parsed_csv ||= self.class.parse_csv_str(raw_file_str, col_sep: col_sep)
+      return @parsed_csv if defined?(@parsed_csv)
+
+      csv_content = raw_file_str || ""
+      if rows_to_skip.to_i > 0
+        csv_content = csv_content.lines.drop(rows_to_skip).join
+      end
+
+      @parsed_csv = self.class.parse_csv_str(csv_content, col_sep: col_sep)
     end
 
     def sanitize_number(value)
@@ -294,10 +305,83 @@ class Import < ApplicationRecord
       self.number_format ||= "1,234.56" # Default to US/UK format
     end
 
+    # Common encodings to try when UTF-8 detection fails
+    # Windows-1250 is prioritized for Central/Eastern European languages
+    COMMON_ENCODINGS = [ "Windows-1250", "Windows-1252", "ISO-8859-1", "ISO-8859-2" ].freeze
+
+    def ensure_utf8_encoding
+      # Handle nil or empty string first (before checking if changed)
+      return if raw_file_str.nil? || raw_file_str.bytesize == 0
+
+      # Only process if the attribute was changed
+      # Use will_save_change_to_attribute? which is safer for binary data
+      return unless will_save_change_to_raw_file_str?
+
+      # If already valid UTF-8, nothing to do
+      begin
+        if raw_file_str.encoding == Encoding::UTF_8 && raw_file_str.valid_encoding?
+          return
+        end
+      rescue ArgumentError
+        # raw_file_str might have invalid encoding, continue to detection
+      end
+
+      # Detect encoding using rchardet
+      begin
+        require "rchardet"
+        detection = CharDet.detect(raw_file_str)
+        detected_encoding = detection["encoding"]
+        confidence = detection["confidence"]
+
+        # Only convert if we have reasonable confidence in the detection
+        if detected_encoding && confidence > 0.75
+          # Force encoding and convert to UTF-8
+          self.raw_file_str = raw_file_str.force_encoding(detected_encoding).encode("UTF-8", invalid: :replace, undef: :replace)
+        else
+          # Fallback: try common encodings
+          try_common_encodings
+        end
+      rescue LoadError
+        # rchardet not available, fallback to trying common encodings
+        try_common_encodings
+      rescue ArgumentError, Encoding::CompatibilityError => e
+        # Handle encoding errors by falling back to common encodings
+        try_common_encodings
+      end
+    end
+
+    def try_common_encodings
+      COMMON_ENCODINGS.each do |encoding|
+        begin
+          test = raw_file_str.dup.force_encoding(encoding)
+          if test.valid_encoding?
+            self.raw_file_str = test.encode("UTF-8", invalid: :replace, undef: :replace)
+            return
+          end
+        rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
+          next
+        end
+      end
+
+      # If nothing worked, force UTF-8 and replace invalid bytes
+      self.raw_file_str = raw_file_str.force_encoding("UTF-8").scrub("?")
+    end
+
     def account_belongs_to_family
       return if account.nil?
       return if account.family_id == family_id
 
       errors.add(:account, "must belong to your family")
+    end
+
+    def rows_to_skip_within_file_bounds
+      return if raw_file_str.blank?
+      return if rows_to_skip.to_i == 0
+
+      line_count = raw_file_str.lines.count
+
+      if rows_to_skip.to_i >= line_count
+        errors.add(:rows_to_skip, "must be less than the number of lines in the file (#{line_count})")
+      end
     end
 end

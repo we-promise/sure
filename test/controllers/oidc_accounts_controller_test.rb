@@ -166,7 +166,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_not_nil new_user
     assert_equal new_user_auth["first_name"], new_user.first_name
     assert_equal new_user_auth["last_name"], new_user.last_name
-    assert_equal "admin", new_user.role
+    assert_equal "member", new_user.role
 
     # Verify OIDC identity was created
     oidc_identity = new_user.oidc_identities.first

@@ -5,10 +5,30 @@ en:
       brokerage_cash: Brokerage cash
     destroy:
       success: Holding deleted
+    update:
+      success: Cost basis saved.
+      error: Invalid cost basis value.
+    unlock_cost_basis:
+      success: Cost basis unlocked. It may be updated on next sync.
+    cost_basis_sources:
+      manual: User set
+      calculated: From trades
+      provider: From provider
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Set cost basis for %{ticker} (%{qty} shares)"
+      total_cost_basis_label: Total cost basis
+      or_per_share_label: "Or enter per share:"
+      per_share: per share
+      cancel: Cancel
+      save: Save
+      overwrite_confirm_title: Overwrite cost basis?
+      overwrite_confirm_body: "This will replace the current cost basis of %{current}."
     holding:
       per_share: per share
       shares: "%{qty} shares"
       unknown: "--"
+      no_cost_basis: No cost basis
     index:
       average_cost: Average cost
       holdings: Holdings
@@ -36,3 +56,8 @@ en:
       trade_history_entry: "%{qty} shares of %{security} at %{price}"
       total_return_label: Total Return
       unknown: Unknown
+      cost_basis_locked_label: Cost basis is locked
+      cost_basis_locked_description: Your manually set cost basis won't be changed by syncs.
+      unlock_cost_basis: Unlock
+      unlock_confirm_title: Unlock cost basis?
+      unlock_confirm_body: This will allow the cost basis to be updated by provider syncs or trade calculations.

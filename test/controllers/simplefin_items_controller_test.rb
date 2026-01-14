@@ -182,20 +182,21 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFIN setup token")
   end
 
-  test "should transfer accounts when updating simplefin item token" do
+  test "should update simplefin item access_url in place preserving account linkages" do
     @simplefin_item.update!(status: :requires_update)
+    original_item_id = @simplefin_item.id
 
     token = Base64.strict_encode64("https://example.com/claim")
 
-    # Create old SimpleFIN accounts linked to Maybe accounts
-    old_simplefin_account1 = @simplefin_item.simplefin_accounts.create!(
+    # Create SimpleFIN accounts linked to Maybe accounts
+    simplefin_account1 = @simplefin_item.simplefin_accounts.create!(
       name: "Test Checking",
       account_id: "sf_account_123",
       currency: "USD",
       current_balance: 1000,
       account_type: "depository"
     )
-    old_simplefin_account2 = @simplefin_item.simplefin_accounts.create!(
+    simplefin_account2 = @simplefin_item.simplefin_accounts.create!(
       name: "Test Savings",
       account_id: "sf_account_456",
       currency: "USD",
@@ -211,7 +212,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable_type: "Depository",
       accountable: Depository.create!(subtype: "checking"),
-      simplefin_account_id: old_simplefin_account1.id
+      simplefin_account_id: simplefin_account1.id
     )
     maybe_account2 = Account.create!(
       family: @family,
@@ -220,40 +221,19 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable_type: "Depository",
       accountable: Depository.create!(subtype: "savings"),
-      simplefin_account_id: old_simplefin_account2.id
+      simplefin_account_id: simplefin_account2.id
     )
 
-    # Update old SimpleFIN accounts to reference the Maybe accounts
-    old_simplefin_account1.update!(account: maybe_account1)
-    old_simplefin_account2.update!(account: maybe_account2)
+    # Update SimpleFIN accounts to reference the Maybe accounts
+    simplefin_account1.update!(account: maybe_account1)
+    simplefin_account2.update!(account: maybe_account2)
 
-    # Mock only the external API calls, let business logic run
+    # Mock only the external API calls
     mock_provider = mock()
     mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
-    mock_provider.expects(:get_accounts).returns({
-      accounts: [
-        {
-          id: "sf_account_123",
-          name: "Test Checking",
-          type: "depository",
-          currency: "USD",
-          balance: 1000,
-          transactions: []
-        },
-        {
-          id: "sf_account_456",
-          name: "Test Savings",
-          type: "depository",
-          currency: "USD",
-          balance: 5000,
-          transactions: []
-        }
-      ]
-    }).at_least_once
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
-    # Perform the update (async job), but execute enqueued jobs inline so we can
-    # assert the link transfers.
+    # Perform the update - job updates access_url and enqueues sync
     perform_enqueued_jobs(only: SimplefinConnectionUpdateJob) do
       patch simplefin_item_url(@simplefin_item), params: {
         simplefin_item: { setup_token: token }
@@ -263,40 +243,33 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     assert_equal "SimpleFIN connection updated.", flash[:notice]
 
-    # Verify accounts were transferred to new SimpleFIN accounts
-    assert Account.exists?(maybe_account1.id), "maybe_account1 should still exist"
-    assert Account.exists?(maybe_account2.id), "maybe_account2 should still exist"
+    # Verify the same SimpleFIN item was updated (not a new one created)
+    @simplefin_item.reload
+    assert_equal original_item_id, @simplefin_item.id
+    assert_equal "https://example.com/new_access", @simplefin_item.access_url
+    assert_equal "good", @simplefin_item.status
 
+    # Verify no duplicate SimpleFIN items were created
+    assert_equal 1, @family.simplefin_items.count
+
+    # Verify account linkages remain intact
     maybe_account1.reload
     maybe_account2.reload
+    assert_equal simplefin_account1.id, maybe_account1.simplefin_account_id
+    assert_equal simplefin_account2.id, maybe_account2.simplefin_account_id
 
-    # Find the new SimpleFIN item that was created
-    new_simplefin_item = @family.simplefin_items.where.not(id: @simplefin_item.id).first
-    assert_not_nil new_simplefin_item, "New SimpleFIN item should have been created"
-
-    new_sf_account1 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_123")
-    new_sf_account2 = new_simplefin_item.simplefin_accounts.find_by(account_id: "sf_account_456")
-
-    assert_not_nil new_sf_account1, "New SimpleFIN account with ID sf_account_123 should exist"
-    assert_not_nil new_sf_account2, "New SimpleFIN account with ID sf_account_456 should exist"
-
-    assert_equal new_sf_account1.id, maybe_account1.simplefin_account_id
-    assert_equal new_sf_account2.id, maybe_account2.simplefin_account_id
-
-    # The old item will be deleted asynchronously; until then, legacy links should be moved.
-
-    # Verify old SimpleFIN item is scheduled for deletion
-    @simplefin_item.reload
-    assert @simplefin_item.scheduled_for_deletion?
+    # Verify item is NOT scheduled for deletion (we updated it, not replaced it)
+    assert_not @simplefin_item.scheduled_for_deletion?
   end
 
-  test "should handle partial account matching during token update" do
+  test "should preserve account linkages when reconnecting even if accounts change" do
     @simplefin_item.update!(status: :requires_update)
+    original_item_id = @simplefin_item.id
 
     token = Base64.strict_encode64("https://example.com/claim")
 
-    # Create old SimpleFIN account
-    old_simplefin_account = @simplefin_item.simplefin_accounts.create!(
+    # Create SimpleFIN account linked to Maybe account
+    simplefin_account = @simplefin_item.simplefin_accounts.create!(
       name: "Test Checking",
       account_id: "sf_account_123",
       currency: "USD",
@@ -312,18 +285,16 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable_type: "Depository",
       accountable: Depository.create!(subtype: "checking"),
-      simplefin_account_id: old_simplefin_account.id
+      simplefin_account_id: simplefin_account.id
     )
-    old_simplefin_account.update!(account: maybe_account)
+    simplefin_account.update!(account: maybe_account)
 
-    # Mock only the external API calls, let business logic run
+    # Mock only the external API calls
     mock_provider = mock()
     mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
-    # Return empty accounts list to simulate account was removed from bank
-    mock_provider.expects(:get_accounts).returns({ accounts: [] }).at_least_once
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
-    # Perform update
+    # Perform update - job updates access_url and enqueues sync
     perform_enqueued_jobs(only: SimplefinConnectionUpdateJob) do
       patch simplefin_item_url(@simplefin_item), params: {
         simplefin_item: { setup_token: token }
@@ -332,15 +303,19 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
 
-    # Verify Maybe account still linked to old SimpleFIN account (no transfer occurred)
-    maybe_account.reload
-    old_simplefin_account.reload
-    assert_equal old_simplefin_account.id, maybe_account.simplefin_account_id
-    assert_equal maybe_account, old_simplefin_account.current_account
-
-    # Old item still scheduled for deletion
+    # Verify item was updated in place
     @simplefin_item.reload
-    assert @simplefin_item.scheduled_for_deletion?
+    assert_equal original_item_id, @simplefin_item.id
+    assert_equal "https://example.com/new_access", @simplefin_item.access_url
+
+    # Verify account linkage remains intact (linkage preserved regardless of sync results)
+    maybe_account.reload
+    simplefin_account.reload
+    assert_equal simplefin_account.id, maybe_account.simplefin_account_id
+    assert_equal maybe_account, simplefin_account.current_account
+
+    # Item is NOT scheduled for deletion (we updated it, not replaced it)
+    assert_not @simplefin_item.scheduled_for_deletion?
   end
 
   test "select_existing_account renders empty-state modal when no simplefin accounts exist" do

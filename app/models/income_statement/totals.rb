@@ -69,9 +69,9 @@ class IncomeStatement::Totals
           er.from_currency = ae.currency AND
           er.to_currency = :target_currency
         )
-        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
+        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment', 'investment_contribution')
           AND ae.excluded = false
-          AND a.family_id = :family_id
+                    AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
         GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
@@ -95,9 +95,9 @@ class IncomeStatement::Totals
           er.from_currency = ae.currency AND
           er.to_currency = :target_currency
         )
-        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
+        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment', 'investment_contribution')
           AND ae.excluded = false
-          AND a.family_id = :family_id
+                    AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
         GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL
@@ -126,7 +126,7 @@ class IncomeStatement::Totals
         WHERE a.family_id = :family_id
           AND a.status IN ('draft', 'active')
           AND ae.excluded = false
-          AND ae.date BETWEEN :start_date AND :end_date
+                    AND ae.date BETWEEN :start_date AND :end_date
         GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END, CASE WHEN t.category_id IS NULL THEN true ELSE false END
       SQL
     end

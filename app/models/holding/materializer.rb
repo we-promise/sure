@@ -31,34 +31,71 @@ class Holding::Materializer
 
       current_time = Time.now
 
-      # Separate holdings into those with and without computed cost_basis
-      holdings_with_cost_basis, holdings_without_cost_basis = @holdings.partition { |h| h.cost_basis.present? }
+      # Load existing holdings to check locked status and source priority
+      existing_holdings_map = load_existing_holdings_map
 
-      # Upsert holdings that have computed cost_basis (from trades)
-      # These will overwrite any existing provider cost_basis with the trade-derived value
-      if holdings_with_cost_basis.any?
+      # Separate holdings into categories based on cost_basis reconciliation
+      holdings_to_upsert_with_cost = []
+      holdings_to_upsert_without_cost = []
+
+      @holdings.each do |holding|
+        key = holding_key(holding)
+        existing = existing_holdings_map[key]
+
+        reconciled = Holding::CostBasisReconciler.reconcile(
+          existing_holding: existing,
+          incoming_cost_basis: holding.cost_basis,
+          incoming_source: "calculated"
+        )
+
+        base_attrs = holding.attributes
+          .slice("date", "currency", "qty", "price", "amount", "security_id")
+          .merge("account_id" => account.id, "updated_at" => current_time)
+
+        if existing&.cost_basis_locked?
+          # For locked holdings, preserve ALL cost_basis fields
+          holdings_to_upsert_without_cost << base_attrs
+        elsif reconciled[:should_update] && reconciled[:cost_basis].present?
+          # Update with new cost_basis and source
+          holdings_to_upsert_with_cost << base_attrs.merge(
+            "cost_basis" => reconciled[:cost_basis],
+            "cost_basis_source" => reconciled[:cost_basis_source]
+          )
+        else
+          # No cost_basis to set, or existing is better - don't touch cost_basis fields
+          holdings_to_upsert_without_cost << base_attrs
+        end
+      end
+
+      # Upsert with cost_basis updates
+      if holdings_to_upsert_with_cost.any?
         account.holdings.upsert_all(
-          holdings_with_cost_basis.map { |h|
-            h.attributes
-              .slice("date", "currency", "qty", "price", "amount", "security_id", "cost_basis")
-              .merge("account_id" => account.id, "updated_at" => current_time)
-          },
+          holdings_to_upsert_with_cost,
           unique_by: %i[account_id security_id date currency]
         )
       end
 
-      # Upsert holdings WITHOUT cost_basis column - preserves existing provider cost_basis
-      # This handles securities that have no trades (e.g., SimpleFIN-only holdings)
-      if holdings_without_cost_basis.any?
+      # Upsert without cost_basis (preserves existing)
+      if holdings_to_upsert_without_cost.any?
         account.holdings.upsert_all(
-          holdings_without_cost_basis.map { |h|
-            h.attributes
-              .slice("date", "currency", "qty", "price", "amount", "security_id")
-              .merge("account_id" => account.id, "updated_at" => current_time)
-          },
+          holdings_to_upsert_without_cost,
           unique_by: %i[account_id security_id date currency]
         )
       end
+    end
+
+    def load_existing_holdings_map
+      # Load holdings that might affect reconciliation:
+      # - Locked holdings (must preserve their cost_basis)
+      # - Holdings with a source (need to check priority)
+      account.holdings
+        .where(cost_basis_locked: true)
+        .or(account.holdings.where.not(cost_basis_source: nil))
+        .index_by { |h| holding_key(h) }
+    end
+
+    def holding_key(holding)
+      [ holding.account_id || account.id, holding.security_id, holding.date, holding.currency ]
     end
 
     def purge_stale_holdings
