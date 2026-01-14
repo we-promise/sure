@@ -2,7 +2,11 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="element-removal"
 export default class extends Controller {
+  static ANIMATION_DURATION = 300;
+
   connect() {
+    this.isRemoving = false;
+
     // Trigger fade-in animation
     requestAnimationFrame(() => {
       this.element.classList.remove("opacity-0", "translate-y-[-8px]");
@@ -11,6 +15,9 @@ export default class extends Controller {
   }
 
   remove() {
+    if (this.isRemoving) return;
+    this.isRemoving = true;
+
     // Trigger fade-out animation
     this.element.classList.remove("opacity-100", "translate-y-0");
     this.element.classList.add("opacity-0", "translate-y-[-8px]");
@@ -18,6 +25,6 @@ export default class extends Controller {
     // Wait for animation to complete before removing
     setTimeout(() => {
       this.element.remove();
-    }, 300); // Match duration-300
+    }, this.constructor.ANIMATION_DURATION);
   }
 }
