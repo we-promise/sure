@@ -20,8 +20,10 @@ services:
       - ./.bashrc:/root/.bashrc:ro,cached
       - ..:/workspace:cached
       - bundle_cache:/bundle
+      - pub_cache:/root/.pub-cache
     ports:
       - "3000:3000"
+      - "8080:8080"
     command: sleep infinity
     environment:
       <<: *rails_env
@@ -63,3 +65,4 @@ volumes:
   postgres-data:
   redis-data:
   bundle_cache:
+  pub_cache:
