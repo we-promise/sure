@@ -14,6 +14,14 @@ export default class extends Controller {
     });
   }
 
+  handleAnimationEnd(event) {
+    // Only trigger removal when the stroke-fill animation completes (the timer)
+    // Ignore other animations like spinner animations
+    if (event.animationName === "stroke-fill") {
+      this.remove();
+    }
+  }
+
   remove() {
     if (this.isRemoving) return;
     this.isRemoving = true;

@@ -3,16 +3,30 @@ module Notifiable
 
   included do
     helper_method :render_flash_notifications
+    helper_method :render_flash_cta
     helper_method :flash_notification_stream_items
   end
 
   private
     def render_flash_notifications
-      notifications = flash.flat_map { |type, data| resolve_notifications(type, data) }.compact
+      # CTAs are rendered separately in their own container, not in notification-tray
+      notifications = flash.flat_map do |type, data|
+        next [] if type == "cta"
+        resolve_notifications(type, data)
+      end.compact
 
       view_context.safe_join(
-        notifications.map { |notification| view_context.render(**notification) }
+        notifications.map { |notification| view_context.tag.div(view_context.render(**notification)) }
       )
+    end
+
+    def render_flash_cta
+      return nil unless flash[:cta]
+
+      notification = resolve_cta(flash[:cta])
+      return nil unless notification
+
+      view_context.tag.div(view_context.render(**notification))
     end
 
     def flash_notification_stream_items
@@ -34,7 +48,7 @@ module Notifiable
     end
 
     def resolve_cta(cta)
-      case cta[:type]
+      case cta["type"] || cta[:type]
       when "category_rule"
         { partial: "rules/category_rule_cta", locals: { cta: } }
       end
