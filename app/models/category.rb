@@ -66,7 +66,7 @@ class Category < ApplicationRecord
         circle-dollar-sign circle-parking coffee coins compass cookie cooking-pot
         credit-card dices dog drama drill droplet drum dumbbell film flame flower flower-2
         fuel gamepad-2 gem gift glasses globe graduation-cap hammer hand-heart
-        hand-helping hand-heartshake handshake headphones heart heart-pulse home hotel
+        hand-helping heart-handshake handshake headphones heart heart-pulse home hotel
         house ice-cream-cone key landmark laptop leaf lightbulb luggage mail map-pin
         martini mic monitor moon music package palette party-popper paw-print pen pencil
         percent phone pie-chart piggy-bank pill pizza plane plug popcorn power printer
