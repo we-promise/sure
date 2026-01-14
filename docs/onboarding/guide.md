@@ -32,7 +32,7 @@ This guide also covers the differences between **asset** and **liability** accou
 Once Sure is installed, open a browser and navigate to [localhost:3000](http://localhost:3000/sessions/new).<br />
 You will see the **login page** (pictured below). If you loaded demo data, sign in with the demo credentials; otherwise click on **Sign Up** to begin. 
 
-<img width="2508" height="1314" alt="Landing page on a fresh install." src="https://github.com/user-attachments/assets/2319dc87-5615-4473-bebc-8360dd983367" />
+<img width="2508" height="1314" alt="Login page on a fresh install." src="https://github.com/user-attachments/assets/c83bcd66-89d1-4326-82bc-5573c79eda4d" />
 <br />
 <br />
 
