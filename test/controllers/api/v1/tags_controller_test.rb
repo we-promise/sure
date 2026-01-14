@@ -263,11 +263,11 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  def read_headers
-    { "Authorization" => "Bearer #{@read_token.token}" }
-  end
+    def read_headers
+      { "Authorization" => "Bearer #{@read_token.token}" }
+    end
 
-  def read_write_headers
-    { "Authorization" => "Bearer #{@read_write_token.token}" }
-  end
+    def read_write_headers
+      { "Authorization" => "Bearer #{@read_write_token.token}" }
+    end
 end

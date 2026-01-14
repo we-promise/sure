@@ -108,7 +108,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  def auth_headers
-    { "Authorization" => "Bearer #{@access_token.token}" }
-  end
+    def auth_headers
+      { "Authorization" => "Bearer #{@access_token.token}" }
+    end
 end
