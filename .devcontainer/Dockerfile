@@ -46,7 +46,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y nodejs \
   && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-ARG FLUTTER_VERSION=3.30.0
+ARG FLUTTER_VERSION=3.38.7
 RUN curl -fsSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" \
   | tar -xJ -C /opt
 
