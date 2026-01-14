@@ -180,6 +180,14 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
       end
 
       eps = [ epsilon_base, (@observed.abs * BigDecimal("0.005")) ].max
+      net = m[:charges_total] - m[:payments_total]
+
+      # Sanity check: if transaction net is way off from observed balance, data is likely incomplete
+      # (e.g., pending charges not in history yet). Use 10% tolerance or minimum $5.
+      tolerance = [ BigDecimal("5"), @observed.abs * BigDecimal("0.10") ].max
+      if (net.abs - @observed.abs).abs > tolerance
+        return [ :unknown, "net-balance-mismatch" ]
+      end
 
       # Overpayment (credit): payments exceed charges by at least the observed balance (within eps)
       if (m[:payments_total] - m[:charges_total]) >= (@observed.abs - eps)
