@@ -178,24 +178,42 @@ class TransactionsController < ApplicationController
     end
 
     ActiveRecord::Base.transaction do
-      # Determine ticker - use custom_ticker if user selected the custom option
-      ticker = if params[:ticker] == "__custom__"
-        params[:custom_ticker].presence
-      else
-        params[:ticker].presence
+      # Determine security - either by ID (from holdings dropdown) or by custom ticker
+      security = if params[:security_id] == "__custom__"
+        # User entered a custom ticker - use resolver
+        ticker = params[:custom_ticker].presence
+        unless ticker.present?
+          flash[:alert] = "Please enter a ticker symbol"
+          redirect_back_or_to transactions_path
+          return
+        end
+
+        Security::Resolver.new(
+          ticker.strip,
+          exchange_operating_mic: params[:exchange_operating_mic].presence
+        ).resolve
+      elsif params[:security_id].present?
+        # User selected from holdings - use security directly by ID
+        found = Security.find_by(id: params[:security_id])
+        unless found
+          flash[:alert] = "Selected security no longer exists. Please select another."
+          redirect_back_or_to transactions_path
+          return
+        end
+        found
+      elsif params[:ticker].present?
+        # Fallback for accounts with no holdings (text field for ticker)
+        Security::Resolver.new(
+          params[:ticker].strip,
+          exchange_operating_mic: params[:exchange_operating_mic].presence
+        ).resolve
       end
 
-      unless ticker.present?
-        flash[:alert] = "Please select or enter a ticker symbol"
+      unless security
+        flash[:alert] = "Please select or enter a security"
         redirect_back_or_to transactions_path
         return
       end
-
-      # Find or create security
-      security = Security.find_or_create_by!(
-        ticker: ticker.upcase.strip,
-        exchange_operating_mic: params[:exchange_operating_mic].presence
-      )
 
       activity_label = params[:investment_activity_label].presence
 

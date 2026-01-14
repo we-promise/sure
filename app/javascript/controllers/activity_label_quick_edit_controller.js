@@ -5,7 +5,9 @@ export default class extends Controller {
   static values = {
     url: String,
     entryableId: String,
-    currentLabel: String
+    currentLabel: String,
+    entryableType: String,
+    convertUrl: String
   }
 
   connect() {
@@ -49,7 +51,17 @@ export default class extends Controller {
       return
     }
 
-    // Just save the label - convert to trade is available separately in detail panel
+    // For Transactions: Buy/Sell should prompt to convert to trade
+    if (this.entryableTypeValue === "Transaction" && (label === "Buy" || label === "Sell") && this.hasConvertUrlValue) {
+      this.close()
+      // Navigate to convert-to-trade modal in a Turbo frame, passing the selected label
+      const url = new URL(this.convertUrlValue, window.location.origin)
+      url.searchParams.set("activity_label", label)
+      Turbo.visit(url.toString(), { frame: "modal" })
+      return
+    }
+
+    // For other labels (Dividend, Interest, Fee, etc.) or for Trades, just save the label
     try {
       const response = await fetch(this.urlValue, {
         method: "PATCH",

@@ -33,13 +33,19 @@
   end
 
   activity_labels = entryable.is_a?(Trade) ? Trade::ACTIVITY_LABELS : Transaction::ACTIVITY_LABELS
+  entryable_type = entryable.is_a?(Trade) ? "Trade" : "Transaction"
+  convert_url = entryable.is_a?(Transaction) ? convert_to_trade_transaction_path(entryable) : nil
 %>
 
 <div class="relative"
      data-controller="activity-label-quick-edit"
      data-activity-label-quick-edit-url-value="<%= update_url %>"
      data-activity-label-quick-edit-entryable-id-value="<%= entryable.id %>"
-     data-activity-label-quick-edit-current-label-value="<%= label %>">
+     data-activity-label-quick-edit-current-label-value="<%= label %>"
+     data-activity-label-quick-edit-entryable-type-value="<%= entryable_type %>"
+     <% if convert_url %>
+     data-activity-label-quick-edit-convert-url-value="<%= convert_url %>"
+     <% end %>>
 
   <button type="button"
           class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 cursor-pointer hover:opacity-80 transition-opacity"

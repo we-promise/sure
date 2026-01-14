@@ -43,11 +43,6 @@
                   step: "any",
                   precision: 10,
                   disabled: @entry.linked? %>
-
-            <%= ef.select :investment_activity_label,
-                  Trade::ACTIVITY_LABELS.map { |label| [label, label] },
-                  { include_blank: t("transactions.form.none"), label: t("transactions.form.investment_activity_label") },
-                  { data: { "auto-submit-form-target": "auto" } } %>
           <% end %>
         <% end %>
       </div>

@@ -72,11 +72,27 @@ class TradesController < ApplicationController
 
       qty = update_params[:entryable_attributes][:qty]
       price = update_params[:entryable_attributes][:price]
+      nature = update_params[:nature]
 
       if qty.present? && price.present?
-        qty = update_params[:nature] == "inflow" ? -qty.to_d : qty.to_d
+        is_sell = nature == "inflow"
+        qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
         update_params[:entryable_attributes][:qty] = qty
         update_params[:amount] = qty * price.to_d
+
+        # Sync investment_activity_label with Buy/Sell type if not explicitly set to something else
+        # Check both the submitted param and the existing record's label
+        current_label = update_params[:entryable_attributes][:investment_activity_label].presence ||
+                        @entry.trade&.investment_activity_label
+        if current_label.blank? || current_label == "Buy" || current_label == "Sell"
+          update_params[:entryable_attributes][:investment_activity_label] = is_sell ? "Sell" : "Buy"
+        end
+
+        # Update entry name to reflect Buy/Sell change
+        ticker = @entry.trade&.security&.ticker
+        if ticker.present?
+          update_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", qty.abs, ticker)
+        end
       end
 
       update_params.except(:nature)
