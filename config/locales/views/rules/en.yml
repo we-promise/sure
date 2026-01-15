@@ -2,6 +2,9 @@
 en:
   rules:
     no_action: No Action
+    new:
+      title: "New %{resource_type} rule"
+      back_to_rules: Back to rules
     index:
       title: Rules
       delete_all: Delete all rules

@@ -30,3 +30,9 @@ en:
       settings: Settings
       account_value_on_date: Account value on date
       update_value: Update value
+    confirm_create:
+      title: Confirm new balance
+      confirm: Confirm
+    confirm_update:
+      title: Update balance
+      update: Update
