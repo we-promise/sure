@@ -1,0 +1,80 @@
+---
+fr:
+  settings:
+    providers:
+      show:
+        page_title: Fournisseurs de synchronisation
+        description: Configurez les identifiants pour les fournisseurs de synchronisation tiers. Les paramètres configurés ici remplaceront les variables d'environnement.
+        lunchflow_title: Lunch Flow
+        simplefin_title: SimpleFIN
+        enable_banking_title: Enable Banking (bêta)
+        coinstats_title: CoinStats
+      provider_form:
+        env_configuration_note: La configuration peut être définie via des variables d'environnement ou remplacée ci-dessous.
+        field_descriptions: "Descriptions des champs :"
+        optional: Facultatif
+        save_configuration: Enregistrer la configuration
+        configured: Configuré et prêt à l'emploi
+        not_configured: Non configuré
+      lunchflow_panel:
+        setup_instructions: "Instructions de configuration :"
+        step1_html: Visitez <a href="https://www.lunchflow.app" target="_blank" rel="noopener noreferrer" class="link">Lunch Flow</a> pour obtenir votre clé API
+        step2: Collez votre clé API ci-dessous et cliquez sur le bouton Enregistrer
+        step3_html: Après une connexion réussie, allez dans l'onglet <a href="%{accounts_url}" class="link">Comptes</a> pour configurer de nouveaux comptes et les lier aux existants
+        field_descriptions: "Descriptions des champs :"
+        api_key_description: Votre clé API Lunch Flow pour l'authentification (requis)
+        base_url_description: URL de base pour l'API Lunch Flow (facultatif, par défaut https://lunchflow.app/api/v1)
+        api_key_label: Clé API
+        api_key_placeholder_new: Collez la clé API ici
+        api_key_placeholder_update: Entrez une nouvelle clé API pour mettre à jour
+        base_url_label: URL de base (Facultatif)
+        base_url_placeholder: https://lunchflow.app/api/v1 (par défaut)
+        save_configuration: Enregistrer la configuration
+        update_configuration: Mettre à jour la configuration
+        configured_html: Configuré et prêt à l'emploi. Visitez l'onglet <a href="%{accounts_url}" class="link">Comptes</a> pour gérer et configurer les comptes.
+        not_configured: Non configuré
+      simplefin_panel:
+        setup_instructions: "Instructions de configuration :"
+        step1_html: Visitez <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFIN Bridge</a> pour obtenir votre jeton de configuration unique
+        step2: Collez le jeton ci-dessous et cliquez sur le bouton Enregistrer pour activer la synchronisation des données bancaires SimpleFIN
+        step3_html: Après une connexion réussie, allez dans l'onglet <a href="%{accounts_url}" class="link">Comptes</a> pour configurer de nouveaux comptes et les lier aux existants
+        field_descriptions: "Descriptions des champs :"
+        setup_token_description: Votre jeton de configuration unique SimpleFIN depuis SimpleFIN Bridge (consommé à la première utilisation)
+        setup_token_label: Jeton de configuration
+        setup_token_placeholder: Collez le jeton de configuration SimpleFIN
+        save_configuration: Enregistrer la configuration
+        configured_html: Configuré et prêt à l'emploi. Visitez l'onglet <a href="%{accounts_url}" class="link">Comptes</a> pour gérer et configurer les comptes.
+        not_configured: Non configuré
+      enable_banking_panel:
+        setup_instructions: "Instructions de configuration :"
+        step1_html: Visitez votre compte développeur <a href="https://enablebanking.com" target="_blank" rel="noopener noreferrer" class="link">Enable Banking</a> pour obtenir vos identifiants
+        step2: Sélectionnez votre code pays dans le menu déroulant ci-dessous
+        step3: Entrez votre ID d'application et collez votre certificat client (incluant la clé privée)
+        step4: Cliquez sur Enregistrer la configuration, puis utilisez « Ajouter une connexion » pour lier votre banque
+        field_descriptions: "Descriptions des champs :"
+        country_code_description: Code pays ISO 3166-1 alpha-2 (ex. GB, DE, FR) - détermine les banques disponibles
+        application_id_description: L'ID généré dans votre compte développeur Enable Banking
+        client_certificate_description: Le certificat généré lors de la création de votre application (doit inclure la clé privée)
+        configuration_locked: Configuration verrouillée
+        credentials_locked_note: Les identifiants ne peuvent pas être modifiés tant que vous avez des connexions bancaires actives. Supprimez d'abord toutes les connexions pour mettre à jour les identifiants.
+        select_country: Sélectionner un pays...
+        country_label: Pays
+        application_id_label: ID d'application
+        application_id_placeholder_new: Entrez l'ID d'application
+        application_id_placeholder_update: Entrez un nouvel ID pour mettre à jour
+        client_certificate_label: Certificat client (avec clé privée)
+        save_configuration: Enregistrer la configuration
+        update_configuration: Mettre à jour la configuration
+        connected_bank: Banque connectée
+        session_expires: "Session expire : %{date}"
+        unknown: Inconnu
+        connection: Connexion
+        session_expired: Session expirée - reconnectez-vous
+        configured: Configuré
+        ready_to_link: Prêt à lier les comptes
+        sync: Synchroniser
+        reconnect: Reconnecter
+        connect_bank: Connecter une banque
+        remove: Supprimer
+        remove_confirm: Êtes-vous sûr de vouloir supprimer cette connexion ?
+        add_connection: Ajouter une connexion

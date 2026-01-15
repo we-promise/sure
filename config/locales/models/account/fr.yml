@@ -11,12 +11,12 @@ fr:
         subtype: Sous-type
     models:
       account: Compte
-      account/credit: Carte de Crédit
-      account/depository: Compte Bancaire
+      account/credit_card: Carte de Crédit
+      account/depository: Liquidités
       account/investment: Investissement
+      account/crypto: Cryptomonnaie
       account/loan: Prêt
       account/other_asset: Autre Actif
       account/other_liability: Autre Passif
       account/property: Immobilier
       account/vehicle: Véhicule
-      account/crypto: Cryptomonnaie

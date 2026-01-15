@@ -5,6 +5,16 @@ fr:
     dashboard: Tableau de bord
     accounts: Comptes
     merchants: Marchands
+    guides: Guides
+    api_key: Clé API
+    profile_info: Profil
+    self_hosting: Auto-hébergement
+    security: Sécurité
+    ai_prompts: Prompts IA
+    import_export: Import/Export
+    bank_sync: Synchronisation bancaire
+    billing: Facturation
+    preferences: Préférences
     categories: Catégories
     tags: Étiquettes
     rules: Règles
@@ -12,7 +22,16 @@ fr:
     budgets: Budgets
     imports: Importations
     chats: Assistant
+    reports: Rapports
+    llm_usage: Utilisation LLM
+    sync_providers: Fournisseurs de synchronisation
   shared:
+    app_version:
+      version_label: "Version :"
+    transaction_tabs:
+      expense: Dépense
+      income: Revenu
+      transfer: Virement
     confirm_modal:
       accept: Confirmer
       body_html: "<p>Vous ne pourrez pas annuler cette action</p>"

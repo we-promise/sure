@@ -5,6 +5,26 @@ fr:
       brokerage_cash: Liquidités de courtage
     destroy:
       success: Position supprimée
+    update:
+      success: Prix de revient enregistré.
+      error: Valeur de prix de revient invalide.
+    unlock_cost_basis:
+      success: Prix de revient déverrouillé. Il peut être mis à jour lors de la prochaine synchronisation.
+    cost_basis_sources:
+      manual: Défini par l'utilisateur
+      calculated: Calculé à partir des opérations
+      provider: Du fournisseur
+    cost_basis_cell:
+      unknown: "--"
+      set: Définir
+      set_cost_basis_header: "Définir le prix de revient pour %{ticker} (%{qty} actions)"
+      total_cost_basis_label: Prix de revient total
+      or_per_share_label: "Ou saisir par action :"
+      per_share: par action
+      cancel: Annuler
+      save: Enregistrer
+      overwrite_confirm_title: Écraser le prix de revient ?
+      overwrite_confirm_body: "Cela remplacera le prix de revient actuel de %{current}."
     holding:
       per_share: par action
       shares: "%{qty} actions"
@@ -34,3 +54,11 @@ fr:
       trade_history_entry: "%{qty} actions de %{security} à %{price}"
       total_return_label: Rendement total
       unknown: Inconnu
+      cost_basis_locked_label: Le prix de revient est verrouillé
+      cost_basis_locked_description: Votre prix de revient défini manuellement ne sera pas modifié par les synchronisations.
+      unlock_cost_basis: Déverrouiller
+      unlock_confirm_title: Déverrouiller le prix de revient ?
+      unlock_confirm_body: Cela permettra la mise à jour du prix de revient par les synchronisations du fournisseur ou les calculs d'opérations.
+      no_trade_history: Aucun historique d'opérations disponible pour cette position.
+    new:
+      coming_soon: Bientôt disponible...

@@ -4,6 +4,22 @@ fr:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
   activerecord:
+    models:
+      category: catégorie
+      rule: règle
+      tag: étiquette
+      account: compte
+      transaction: transaction
+      entry: entrée
+      balance: solde
+      transfer: virement
+      import: importation
+      merchant: vendeur
+      holding: avoir
+      trade: opération
+      security: titre
+      family: foyer
+      user: utilisateur
     errors:
       messages:
         record_invalid: 'La validation a échoué : %{errors}'
@@ -23,18 +39,18 @@ fr:
     - sam
     abbr_month_names:
     -
-    - jan.
-    - fév.
-    - mars
-    - avr.
-    - mai
-    - juin
-    - juil.
-    - août
-    - sept.
-    - oct.
-    - nov.
-    - déc.
+    - Jan.
+    - Fév.
+    - Mars
+    - Avr.
+    - Mai
+    - Juin
+    - Juil.
+    - Août
+    - Sept.
+    - Oct.
+    - Nov.
+    - Déc.
     day_names:
     - dimanche
     - lundi
@@ -49,18 +65,18 @@ fr:
       short: "%-d %b"
     month_names:
     -
-    - janvier
-    - février
-    - mars
-    - avril
-    - mai
-    - juin
-    - juillet
-    - août
-    - septembre
-    - octobre
-    - novembre
-    - décembre
+    - Janvier
+    - Février
+    - Mars
+    - Avril
+    - Mai
+    - Juin
+    - Juillet
+    - Août
+    - Septembre
+    - Octobre
+    - Novembre
+    - Décembre
     order:
     - :day
     - :month
