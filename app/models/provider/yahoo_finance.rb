@@ -5,14 +5,32 @@ class Provider::YahooFinance < Provider
   Error = Class.new(Provider::Error)
   InvalidSecurityPriceError = Class.new(Error)
   RateLimitError = Class.new(Error)
+  AuthenticationError = Class.new(Error)
   InvalidSymbolError = Class.new(Error)
   MarketClosedError = Class.new(Error)
 
   # Cache duration for repeated requests (5 minutes)
   CACHE_DURATION = 5.minutes
 
+  # Maximum cache duration for cookie/crumb authentication
+  # Even if cookie has longer expiry, cap it to avoid stale crumbs
+  MAX_CRUMB_CACHE_DURATION = 1.hour
+
   # Maximum lookback window for historical data (configurable)
   MAX_LOOKBACK_WINDOW = 10.years
+
+  # Minimum delay between requests to avoid rate limiting (in seconds)
+  MIN_REQUEST_INTERVAL = 0.5
+
+  # Pool of modern browser user-agents to rotate through
+  # Based on https://github.com/ranaroussi/yfinance/pull/2277
+  USER_AGENTS = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0"
+  ].freeze
 
   def initialize
     # Yahoo Finance doesn't require an API key but we may want to add proxy support later
@@ -133,6 +151,7 @@ class Provider::YahooFinance < Provider
         return cached_result
       end
 
+      throttle_request
       response = client.get("#{base_url}/v1/finance/search") do |req|
         req.params["q"] = symbol.strip.upcase
         req.params["quotesCount"] = 25
@@ -160,12 +179,29 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
-      # Use quoteSummary endpoint which is more reliable
-      response = client.get("#{base_url}/v10/finance/quoteSummary/#{symbol}") do |req|
+      # quoteSummary endpoint requires cookie/crumb authentication
+      throttle_request
+      cookie, crumb = fetch_cookie_and_crumb
+
+      response = authenticated_client(cookie).get("#{base_url}/v10/finance/quoteSummary/#{symbol}") do |req|
         req.params["modules"] = "assetProfile,price,quoteType"
+        req.params["crumb"] = crumb
       end
 
       data = JSON.parse(response.body)
+
+      # Check for auth errors in response body
+      if data.dig("quoteSummary", "error", "code") == "Unauthorized"
+        # Clear cached crumb and retry once
+        clear_crumb_cache
+        cookie, crumb = fetch_cookie_and_crumb
+        response = authenticated_client(cookie).get("#{base_url}/v10/finance/quoteSummary/#{symbol}") do |req|
+          req.params["modules"] = "assetProfile,price,quoteType"
+          req.params["crumb"] = crumb
+        end
+        data = JSON.parse(response.body)
+      end
+
       result = data.dig("quoteSummary", "result", 0)
 
       raise Error, "No security info found for #{symbol}" unless result
@@ -231,6 +267,7 @@ class Provider::YahooFinance < Provider
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
+      throttle_request
       response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
         req.params["period1"] = period1
         req.params["period2"] = period2
@@ -416,8 +453,8 @@ class Provider::YahooFinance < Provider
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
-
       begin
+        throttle_request
         response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
           req.params["period1"] = period1
           req.params["period2"] = period2
@@ -457,10 +494,11 @@ class Provider::YahooFinance < Provider
     def client
       @client ||= Faraday.new(url: base_url) do |faraday|
         faraday.request(:retry, {
-          max: 3,
-          interval: 0.1,
+          max: max_retries,
+          interval: retry_interval,
           interval_randomness: 0.5,
           backoff_factor: 2,
+          retry_statuses: [ 429 ],
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
@@ -468,13 +506,138 @@ class Provider::YahooFinance < Provider
         faraday.response :raise_error
 
         # Yahoo Finance requires common browser headers to avoid blocking
-        faraday.headers["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+        # Rotate user-agents to reduce rate limiting (based on yfinance PR #2277)
+        faraday.headers["User-Agent"] = random_user_agent
         faraday.headers["Accept"] = "application/json"
         faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
         faraday.headers["Cache-Control"] = "no-cache"
         faraday.headers["Pragma"] = "no-cache"
 
         # Set reasonable timeouts
+        faraday.options.timeout = 10
+        faraday.options.open_timeout = 5
+      end
+    end
+
+    def random_user_agent
+      USER_AGENTS.sample
+    end
+
+    def max_retries
+      ENV.fetch("YAHOO_FINANCE_MAX_RETRIES", 5).to_i
+    end
+
+    def retry_interval
+      ENV.fetch("YAHOO_FINANCE_RETRY_INTERVAL", 1.0).to_f
+    end
+
+    def min_request_interval
+      ENV.fetch("YAHOO_FINANCE_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
+    end
+
+    def throttle_request
+      @last_request_time ||= Time.at(0)
+      elapsed = Time.current - @last_request_time
+      sleep_time = min_request_interval - elapsed
+      sleep(sleep_time) if sleep_time > 0
+      @last_request_time = Time.current
+    end
+
+    # ================================
+    #    Cookie/Crumb Authentication
+    # ================================
+
+    # Fetches and caches the Yahoo Finance cookie and crumb for authenticated endpoints
+    # The crumb is a CSRF token required by some Yahoo Finance endpoints (e.g., quoteSummary)
+    def fetch_cookie_and_crumb
+      cache_key = "#{@cache_prefix}_auth_crumb"
+      cached = Rails.cache.read(cache_key)
+      return cached if cached.present?
+
+      # Step 1: Get cookie from Yahoo Finance
+      cookie_response = auth_client.get("https://fc.yahoo.com")
+      cookie = extract_cookie(cookie_response)
+      cookie_max_age = extract_cookie_max_age(cookie_response)
+
+      raise AuthenticationError, "Failed to obtain Yahoo Finance cookie" if cookie.blank?
+
+      # Step 2: Get crumb using the cookie
+      crumb_response = auth_client.get("#{base_url}/v1/test/getcrumb") do |req|
+        req.headers["Cookie"] = cookie
+      end
+
+      crumb = crumb_response.body.strip
+
+      raise AuthenticationError, "Failed to obtain Yahoo Finance crumb" if crumb.blank?
+
+      # Cache the cookie/crumb pair using cookie's max-age, capped at MAX_CRUMB_CACHE_DURATION
+      cache_duration = [ cookie_max_age || MAX_CRUMB_CACHE_DURATION, MAX_CRUMB_CACHE_DURATION ].min
+      result = [ cookie, crumb ]
+      Rails.cache.write(cache_key, result, expires_in: cache_duration)
+      result
+    rescue Faraday::Error => e
+      raise AuthenticationError, "Failed to authenticate with Yahoo Finance: #{e.message}"
+    end
+
+    def clear_crumb_cache
+      Rails.cache.delete("#{@cache_prefix}_auth_crumb")
+    end
+
+    # Extract the authentication cookie from Yahoo Finance response
+    def extract_cookie(response)
+      set_cookie = response.headers["set-cookie"]
+      return nil if set_cookie.blank?
+
+      # Extract the cookie value (format: "A3=d=xxx&S=xxx; Max-Age=31557600; ...")
+      # We only need the part before the first semicolon
+      set_cookie.split(";").first
+    end
+
+    # Extract Max-Age from cookie header and convert to seconds
+    # Format: "...; Max-Age=31557600; ..."
+    def extract_cookie_max_age(response)
+      set_cookie = response.headers["set-cookie"]
+      return nil if set_cookie.blank?
+
+      max_age_match = set_cookie.match(/Max-Age=(\d+)/i)
+      return nil unless max_age_match
+
+      max_age_match[1].to_i.seconds
+    end
+
+    # Client for authentication requests (no error raising - fc.yahoo.com returns 404 but sets cookie)
+    def auth_client
+      @auth_client ||= Faraday.new do |faraday|
+        faraday.headers["User-Agent"] = random_user_agent
+        faraday.headers["Accept"] = "*/*"
+        faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
+        faraday.options.timeout = 10
+        faraday.options.open_timeout = 5
+      end
+    end
+
+    # Client for authenticated requests (includes cookie header)
+    def authenticated_client(cookie)
+      Faraday.new(url: base_url) do |faraday|
+        faraday.request(:retry, {
+          max: max_retries,
+          interval: retry_interval,
+          interval_randomness: 0.5,
+          backoff_factor: 2,
+          retry_statuses: [ 429 ],
+          exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
+        })
+
+        faraday.request :json
+        faraday.response :raise_error
+
+        faraday.headers["User-Agent"] = random_user_agent
+        faraday.headers["Accept"] = "application/json"
+        faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
+        faraday.headers["Cache-Control"] = "no-cache"
+        faraday.headers["Pragma"] = "no-cache"
+        faraday.headers["Cookie"] = cookie
+
         faraday.options.timeout = 10
         faraday.options.open_timeout = 5
       end
@@ -614,6 +777,12 @@ class Provider::YahooFinance < Provider
       case error
       when Faraday::TooManyRequestsError
         RateLimitError.new("Yahoo Finance rate limit exceeded", details: error.response&.dig(:body))
+      when Faraday::UnauthorizedError
+        # 401 indicates missing or invalid crumb/cookie authentication
+        AuthenticationError.new("Yahoo Finance authentication failed (invalid crumb)", details: error.response&.dig(:body))
+      when AuthenticationError
+        # Already an authentication error, return as is
+        error
       when Faraday::Error
         Error.new(
           error.message,

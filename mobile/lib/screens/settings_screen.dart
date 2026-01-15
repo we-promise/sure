@@ -1,9 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/offline_storage_service.dart';
+import '../services/log_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _handleClearLocalData(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Local Data'),
+        content: const Text(
+          'This will delete all locally cached transactions and accounts. '
+          'Your data on the server will not be affected. '
+          'Are you sure you want to continue?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Clear Data'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        final offlineStorage = OfflineStorageService();
+        final log = LogService.instance;
+
+        log.info('Settings', 'Clearing all local data...');
+        await offlineStorage.clearAllData();
+        log.info('Settings', 'Local data cleared successfully');
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Local data cleared successfully. Pull to refresh to sync from server.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } catch (e) {
+        final log = LogService.instance;
+        log.error('Settings', 'Failed to clear local data: $e');
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to clear local data: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
 
   Future<void> _handleLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -98,6 +161,29 @@ class SettingsScreen extends StatelessWidget {
             leading: Icon(Icons.info_outline),
             title: Text('App Version'),
             subtitle: Text('1.0.0'),
+          ),
+
+          const Divider(),
+
+          // Data Management Section
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Data Management',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+
+          // Clear local data button
+          ListTile(
+            leading: const Icon(Icons.delete_outline),
+            title: const Text('Clear Local Data'),
+            subtitle: const Text('Remove all cached transactions and accounts'),
+            onTap: () => _handleClearLocalData(context),
           ),
 
           const Divider(),
