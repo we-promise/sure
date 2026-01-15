@@ -21,6 +21,7 @@ en:
     header:
       buy: Buy
       current_market_price_label: Current Market Price
+      linked_with_plaid: Linked with Plaid
       overview: Overview
       purchase_price_label: Purchase Price
       purchase_qty_label: Purchase Quantity

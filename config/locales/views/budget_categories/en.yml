@@ -1,6 +1,11 @@
 ---
 en:
   budget_categories:
+    allocation_progress:
+      percent_set: "%{percent} set"
+      over_100_set: "> 100% set"
+      budget_exceeded: Budget exceeded by
+      left_to_allocate: left to allocate
     index:
       title: Edit your category budgets
       description: Adjust category budgets to set spending limits. Unallocated funds will be automatically assigned as uncategorized.

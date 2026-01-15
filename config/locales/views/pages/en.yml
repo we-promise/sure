@@ -4,6 +4,7 @@ en:
     changelog:
       title: What's new
       date_unavailable: Date unavailable
+      no_release_notes: No release notes available
     feedback:
       page_title: Feedback
       title: Leave feedback

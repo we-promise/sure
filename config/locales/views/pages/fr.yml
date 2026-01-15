@@ -4,6 +4,7 @@ fr:
     changelog:
       title: Nouveautés
       date_unavailable: Date indisponible
+      no_release_notes: Aucune note de version disponible
     feedback:
       page_title: Retour d'information
       title: Donnez votre avis

@@ -17,7 +17,7 @@
     <% end %>
 
     <% if entry.linked? %>
-      <span title="Linked with Plaid">
+      <span title="<%= t("transactions.header.linked_with_plaid") %>">
         <%= icon("refresh-ccw", size: "sm") %>
       </span>
     <% end %>

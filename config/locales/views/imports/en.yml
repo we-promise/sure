@@ -1,6 +1,11 @@
 ---
 en:
   import:
+    mappings:
+      form:
+        unassigned: "(unassigned)"
+        select_option: Select an option
+        leave_unassigned: Leave unassigned
     nav:
       upload: Upload
       configure: Configure
@@ -179,6 +184,7 @@ en:
       reverting: Reverting
       uploading: Processing rows
       view: View
+      revert_confirm: This will delete transactions that were imported, but you will still be able to review and re-import your data at any time.
     index:
       imports: Imports
       new: New Import

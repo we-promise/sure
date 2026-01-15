@@ -126,6 +126,7 @@ fr:
       edit_merchants: Modifier les marchands
       edit_tags: Modifier les étiquettes
       import: Importer
+      linked_with_plaid: Lié avec Plaid
     bulk_updates:
       new:
         title: Modifier les transactions

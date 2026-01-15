@@ -21,7 +21,7 @@
     </div>
     <div class="w-full md:w-2/3 text-secondary text-sm prose prose--github-release-notes">
       <h2 class="mb-5 text-xl text-primary"><%= @release_notes[:name] %></h2>
-      <%= (@release_notes[:body] || "No release notes available").html_safe %>
+      <%= (@release_notes[:body] || t("pages.changelog.no_release_notes")).html_safe %>
     </div>
   </div>
 </div>
