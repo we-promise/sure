@@ -6,7 +6,7 @@
         <%= import.account.name + " " %>
       <% end %>
 
-      <%= t(".label", type: import.type.titleize, datetime: import.updated_at.strftime("%b %-d, %Y at %l:%M %p")) %>
+      <%= t(".label", type: import.type.titleize, datetime: I18n.l(import.updated_at, format: :long)) %>
     <% end %>
 
     <% if import.pending? %>

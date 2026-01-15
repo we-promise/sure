@@ -28,6 +28,8 @@ en:
       empty_title: No rules yet
       empty_description: Set up rules to perform actions to your transactions and other data on every account sync.
     rule:
+      all_past_future: All past and future %{resource_type}
+      on_or_after: "%{resource_type} on or after %{date}"
       edit: Edit
       reapply: Re-apply rule
       delete: Delete

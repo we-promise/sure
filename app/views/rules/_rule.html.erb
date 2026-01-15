@@ -52,9 +52,9 @@
       <p class="flex items-center flex-wrap gap-1.5 m-0">
         <span class="px-2 py-1 border border-secondary rounded-full">
           <% if rule.effective_date.nil? %>
-            All past and future <%= rule.resource_type.pluralize %>
+            <%= t("rules.rule.all_past_future", resource_type: rule.resource_type.pluralize) %>
           <% else %>
-            <%= rule.resource_type.pluralize %> on or after <%= rule.effective_date.strftime("%b %-d, %Y") %>
+            <%= t("rules.rule.on_or_after", resource_type: rule.resource_type.pluralize, date: I18n.l(rule.effective_date, format: :long)) %>
           <% end %>
         </span>
       </p>

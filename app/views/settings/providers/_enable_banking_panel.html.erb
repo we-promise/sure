@@ -120,7 +120,7 @@
               <div>
                 <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connected_bank") %></p>
                 <p class="text-xs text-secondary">
-                  <%= t("settings.providers.enable_banking_panel.session_expires", date: item.session_expires_at&.strftime("%b %d, %Y") || t("settings.providers.enable_banking_panel.unknown")) %>
+                  <%= t("settings.providers.enable_banking_panel.session_expires", date: item.session_expires_at ? I18n.l(item.session_expires_at, format: :long) : t("settings.providers.enable_banking_panel.unknown")) %>
                 </p>
               </div>
             <% elsif item.session_expired? %>

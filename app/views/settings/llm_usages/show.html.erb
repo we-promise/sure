@@ -117,7 +117,7 @@
             <% @llm_usages.each do |usage| %>
               <tr class="<%= "bg-red-50 theme-dark:bg-red-950/30" if usage.failed? %>">
                 <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
-                  <%= usage.created_at.strftime("%b %d, %Y %I:%M %p") %>
+                  <%= I18n.l(usage.created_at, format: :long) %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary">
                   <%= usage.operation.humanize %>
