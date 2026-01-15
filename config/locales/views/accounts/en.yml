@@ -52,6 +52,10 @@ en:
       header:
         complete_setup: Complete setup
       activity:
+        new: New
+        new_balance: New balance
+        new_transaction: New transaction
+        search_placeholder: Search entries by name
         amount: Amount
         balance: Balance
         confirmed: Confirmed

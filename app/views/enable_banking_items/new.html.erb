@@ -17,22 +17,22 @@
                     <% if item.session_valid? %>
                     <div class="w-2 h-2 bg-success rounded-full"></div>
                     <div>
-                        <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connected Bank" %></p>
+                        <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t(".connected_bank") %></p>
                         <p class="text-xs text-secondary">
-                        Session expires: <%= item.session_expires_at&.strftime("%b %d, %Y") || "Unknown" %>
+                        <%= t(".session_expires", date: item.session_expires_at&.strftime("%b %d, %Y") || "Unknown") %>
                         </p>
                     </div>
                     <% elsif item.session_expired? %>
                     <div class="w-2 h-2 bg-warning rounded-full"></div>
                     <div>
                         <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connection" %></p>
-                        <p class="text-xs text-destructive">Session expired - re-authorization required</p>
+                        <p class="text-xs text-destructive"><%= t(".session_expired") %></p>
                     </div>
                     <% else %>
                     <div class="w-2 h-2 bg-secondary rounded-full"></div>
                     <div>
-                        <p class="text-sm font-medium text-primary">Configured</p>
-                        <p class="text-xs text-secondary">Ready to connect a bank</p>
+                        <p class="text-sm font-medium text-primary"><%= t(".configured") %></p>
+                        <p class="text-xs text-secondary"><%= t(".ready_to_connect") %></p>
                     </div>
                     <% end %>
                 </div>
@@ -43,28 +43,28 @@
                                     method: :post,
                                     class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-gray-50 transition-colors",
                                     data: { turbo: false } do %>
-                        Sync
+                        <%= t(".sync") %>
                     <% end %>
                     <% elsif item.session_expired? %>
                     <%= button_to reauthorize_enable_banking_item_path(item),
                                     method: :post,
                                     class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-warning hover:opacity-90 transition-colors",
                                     data: { turbo: false } do %>
-                        Reconnect
+                        <%= t(".reconnect") %>
                     <% end %>
                     <% else %>
                     <%= link_to select_bank_enable_banking_item_path(item),
                                 class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
                                 data: { turbo_frame: "modal" } do %>
-                        Connect Bank
+                        <%= t(".connect_bank") %>
                     <% end %>
                     <% end %>
 
                     <%= button_to enable_banking_item_path(item),
                                 method: :delete,
                                 class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
-                                data: { turbo_confirm: "Are you sure you want to remove this connection?" } do %>
-                    Remove
+                                data: { turbo_confirm: t(".confirm_remove") } do %>
+                    <%= t(".remove") %>
                     <% end %>
                 </div>
                 </div>
@@ -78,7 +78,7 @@
                                 class: "inline-flex items-center gap-2 justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
                                 data: { turbo_frame: "modal" } do %>
                     <%= icon "plus", size: "sm" %>
-                    Add Connection
+                    <%= t(".add_connection") %>
                 <% end %>
                 </div>
             <% end %>
@@ -88,18 +88,18 @@
                 <div class="flex items-start gap-3">
                 <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
                 <div class="text-sm text-secondary">
-                    <p class="font-medium text-primary mb-2">Enable Banking connection not configured</p>
-                    <p>Before you can link Enable Banking accounts, you need to configure your Enable Banking connection.</p>
+                    <p class="font-medium text-primary mb-2"><%= t(".not_configured") %></p>
+                    <p><%= t(".configure_first") %></p>
                 </div>
                 </div>
 
                 <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-                <p class="font-medium text-primary">Setup Steps:</p>
+                <p class="font-medium text-primary"><%= t(".setup_steps") %></p>
                 <ol class="list-decimal list-inside space-y-1 text-secondary">
-                    <li>Go to <strong>Settings → Providers</strong></li>
-                    <li>Find the <strong>Enable Banking</strong> section</li>
-                    <li>Enter your Enable Banking credentials</li>
-                    <li>Return here to link your accounts</li>
+                    <li><%= t(".step_1") %></li>
+                    <li><%= t(".step_2") %></li>
+                    <li><%= t(".step_3") %></li>
+                    <li><%= t(".step_4") %></li>
                 </ol>
                 </div>
 
@@ -107,7 +107,7 @@
                 <%= link_to settings_providers_path,
                             class: "w-full inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap rounded-lg hidden md:inline-flex px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
                             data: { turbo: false } do %>
-                    Go to Provider Settings
+                    <%= t(".go_to_settings") %>
                 <% end %>
                 </div>
             </div>

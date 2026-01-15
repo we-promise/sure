@@ -20,29 +20,29 @@
           <div class="flex items-center gap-2">
             <%= tag.p enable_banking_item.institution_display_name, class: "font-medium text-primary" %>
             <% if enable_banking_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse">Deletion in progress</p>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
           <p class="text-xs text-secondary">Enable Banking</p>
           <% if enable_banking_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>
-              <%= tag.span "Syncing..." %>
+              <%= tag.span t(".syncing") %>
             </div>
           <% elsif enable_banking_item.requires_update? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span "Reconnect" %>
+              <%= tag.span t(".reconnect") %>
             </div>
           <% else %>
             <p class="text-secondary">
               <% if enable_banking_item.last_synced_at %>
-                Last synced <%= time_ago_in_words(enable_banking_item.last_synced_at) %> ago
+                <%= t(".last_synced", time: time_ago_in_words(enable_banking_item.last_synced_at)) %>
                 <% if enable_banking_item.sync_status_summary %>
                   · <%= enable_banking_item.sync_status_summary %>
                 <% end %>
               <% else %>
-                Never synced
+                <%= t(".never_synced") %>
               <% end %>
             </p>
           <% end %>
@@ -56,7 +56,7 @@
                         class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
                         data: { turbo: false } do %>
             <%= icon "refresh-cw", size: "sm" %>
-            Update
+            <%= t(".update") %>
           <% end %>
         <% elsif Rails.env.development? %>
           <%= icon(
@@ -69,7 +69,7 @@
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
-            text: "Delete",
+            text: t(".delete"),
             icon: "trash-2",
             href: enable_banking_item_path(enable_banking_item),
             method: :delete,
@@ -98,10 +98,10 @@
 
         <% if enable_banking_item.unlinked_accounts_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm">Setup needed</p>
-            <p class="text-secondary text-sm"><%= pluralize(enable_banking_item.unlinked_accounts_count, "account") %> imported from Enable Banking need to be set up</p>
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".accounts_need_setup", count: pluralize(enable_banking_item.unlinked_accounts_count, "account")) %></p>
             <%= render DS::Link.new(
-              text: "Set up accounts",
+              text: t(".set_up_accounts"),
               icon: "settings",
               variant: "primary",
               href: setup_accounts_enable_banking_item_path(enable_banking_item),
@@ -110,8 +110,8 @@
           </div>
         <% elsif enable_banking_item.accounts.empty? && enable_banking_item.enable_banking_accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm">No accounts found</p>
-            <p class="text-secondary text-sm">No accounts were found from Enable Banking. Try syncing again.</p>
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_found") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
           </div>
         <% end %>
       </div>

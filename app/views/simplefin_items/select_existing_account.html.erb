@@ -1,7 +1,7 @@
 <%# Modal: Link an existing manual account to a SimpleFIN account %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Link SimpleFIN account") %>
+    <% dialog.with_header(title: t(".header_title")) %>
 
     <% dialog.with_body do %>
       <% if @available_simplefin_accounts.blank? %>
@@ -33,8 +33,8 @@
           </div>
 
           <div class="flex items-center justify-end gap-2">
-            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
-            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+            <%= render DS::Button.new(text: t(".link"), variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: t(".cancel"), variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
           </div>
         <% end %>
       <% end %>
