@@ -1,5 +1,5 @@
 # Create a simple dev user for local testing
-# Credentials: user@maybe.local / password
+# Credentials: user@example.com / password
 
 family = Family.find_or_create_by!(name: "Test Family") do |f|
   f.currency = "USD"
@@ -9,7 +9,7 @@ family = Family.find_or_create_by!(name: "Test Family") do |f|
   f.date_format = "%m-%d-%Y"
 end
 
-user = User.find_or_initialize_by(email: "user@maybe.local")
+user = User.find_or_initialize_by(email: "user@example.com")
 user.assign_attributes(
   family: family,
   first_name: "Test",
@@ -21,4 +21,4 @@ user.assign_attributes(
 )
 user.save!
 
-puts "Created dev user: user@maybe.local / password"
+puts "Created dev user: user@example.com / password"
