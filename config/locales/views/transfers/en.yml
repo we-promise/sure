@@ -3,6 +3,7 @@ en:
   transfers:
     account_links:
       data_error_missing_account: "Data Error: Missing account"
+      transfer_id: "Transfer ID: %{id}"
     create:
       success: Transfer created
     destroy:
