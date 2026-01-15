@@ -2,21 +2,21 @@
 
 <div id="<%= dom_id(transaction, "transfer_match") %>" class="flex items-center gap-1">
   <% if transaction.transfer.confirmed? %>
-    <span title="<%= transaction.transfer.payment? ? "Payment" : "Transfer" %> is confirmed">
+    <span title="<%= transaction.transfer.payment? ? t(".payment_confirmed") : t(".transfer_confirmed") %>">
       <%= icon "link-2", size: "sm", class: "text-secondary" %>
     </span>
   <% elsif transaction.transfer.pending? %>
     <span class="hidden lg:inline-flex items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
-      Auto-matched
+      <%= t(".auto_matched") %>
     </span>
     <span class="inline-flex lg:hidden items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
-      A/M
+      <%= t(".auto_matched_short") %>
     </span>
 
     <%= button_to transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
                     method: :patch,
                     class: "text-secondary flex items-center justify-center cursor-pointer",
-                    title: "Confirm match" do %>
+                    title: t(".confirm_match") do %>
       <%= icon "check", size: "sm", class: "text-secondary hover:text-primary" %>
     <% end %>
 
@@ -24,7 +24,7 @@
                     method: :patch,
                     data: { turbo: false },
                     class: "text-secondary hover:text-primary flex items-center justify-center cursor-pointer",
-                    title: "Reject match" do %>
+                    title: t(".reject_match") do %>
       <%= icon "x", size: "sm", class: "text-subdued hover:text-primary" %>
     <% end %>
   <% end %>
