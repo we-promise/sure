@@ -13,6 +13,26 @@ en:
     api_keys:
       show:
         title: "API Key Management"
+        created:
+          title: API Key Created Successfully
+          heading: API Key Created Successfully!
+          description: Your new API key "%{name}" has been created and is ready to use.
+        your_api_key: Your API Key
+        copy_key_instructions: Copy and store this key securely. You'll need it to authenticate your API requests.
+        copy_api_key: Copy API Key
+        how_to_use: How to use your API key
+        header_instructions: "Include your API key in the X-Api-Key header when making requests:"
+        continue_to_settings: Continue to API Key Settings
+        create_new_key: Create New Key
+        created_ago: "Created %{time} ago"
+        last_used_ago: "Last used %{time} ago"
+        never_used: Never used
+        active: Active
+        permissions: Permissions
+        scope_read_only: Read Only
+        scope_read_write: Read/Write
+        revoke_key: Revoke Key
+        revoke_confirm: Are you sure you want to revoke this API key?
         no_api_key:
           title: "API Key"
           heading: "Access your account data programmatically"
@@ -42,21 +62,28 @@ en:
           revoke_key: "Revoke Key"
           revoke_confirmation: "Are you sure you want to revoke this API key? This action cannot be undone and will immediately disable all applications using this key."
       new:
+        page_title: Create New API Key
         title: "Create API Key"
+        subtitle: Generate a new API key to access your Sure data programmatically.
         create_new_key: "Create New API Key"
         description: "Configure your new API key with a descriptive name and appropriate permissions."
         name_label: "API Key Name"
-        name_placeholder: "e.g., Production App, Analytics Dashboard"
-        name_help: "Choose a descriptive name to help you identify this key's purpose."
+        name_placeholder: "e.g., My Budget App, Portfolio Tracker"
+        name_help: "Choose a descriptive name to help you identify this key later."
         permissions_label: "Permissions"
-        permissions_help: "Select the permissions your API key needs. You can always create a new key with different permissions."
+        permissions_help: "Select the permissions this API key should have:"
+        scope_read_only: Read Only
+        scope_read_only_description: View your accounts, transactions, and balances
+        scope_read_write: Read/Write
+        scope_read_write_description: View your data and create new transactions
         scope_details:
           read_accounts: "View account information, balances, and account-level data"
           read_transactions: "View transaction data, categories, and transaction details"
           read_balances: "View historical balance data and account value trends"
           write_transactions: "Create and update transaction records (coming soon)"
-        security_warning_title: "Important Security Notice"
-        security_warning: "Your API key will be shown only once after creation. Store it securely and never share it publicly. If you lose it, you'll need to create a new one."
+        security_warning_title: Security Warning
+        security_warning: "Your API key will be displayed only once after creation. Make sure to copy and store it securely. Anyone with access to this key can access your data according to the permissions you select."
+        save_api_key: Save API Key
         create_key: "Create API Key"
         cancel: "Cancel"
       created:

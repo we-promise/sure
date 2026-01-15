@@ -1,0 +1,16 @@
+---
+en:
+  layouts:
+    application:
+      free_trial: Free trial
+      days_remaining: "%{days} days remaining"
+      upgrade: Upgrade
+    shared:
+      footer:
+        copyright: "(community fork of Maybe Finance)"
+        privacy_policy: Privacy Policy
+        terms_of_service: Terms of Service
+      confirm_dialog:
+        default_title: Are you sure?
+        default_subtitle: This action cannot be undone.
+        confirm: Confirm

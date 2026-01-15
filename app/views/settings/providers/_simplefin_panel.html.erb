@@ -1,15 +1,15 @@
 <div class="space-y-4">
   <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
+    <p class="text-primary font-medium"><%= t("settings.providers.simplefin_panel.setup_instructions") %></p>
     <ol>
-      <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFIN Bridge</a> to get your one-time setup token</li>
-      <li>Paste the token below and click the Save button to enable SimpleFIN bank data sync</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
+      <li><%= raw t("settings.providers.simplefin_panel.step1_html") %></li>
+      <li><%= t("settings.providers.simplefin_panel.step2") %></li>
+      <li><%= raw t("settings.providers.simplefin_panel.step3_html", accounts_url: accounts_path) %></li>
     </ol>
 
-    <p class="text-primary font-medium">Field descriptions:</p>
+    <p class="text-primary font-medium"><%= t("settings.providers.simplefin_panel.field_descriptions") %></p>
     <ul>
-      <li><strong>Setup Token:</strong> Your SimpleFIN one-time setup token from SimpleFIN Bridge (consumed on first use)</li>
+      <li><strong><%= t("settings.providers.simplefin_panel.setup_token_label") %>:</strong> <%= t("settings.providers.simplefin_panel.setup_token_description") %></li>
     </ul>
   </div>
 
@@ -26,12 +26,12 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :setup_token,
-                        label: "Setup Token",
-                        placeholder: "Paste SimpleFIN setup token",
+                        label: t("settings.providers.simplefin_panel.setup_token_label"),
+                        placeholder: t("settings.providers.simplefin_panel.setup_token_placeholder"),
                         type: :password %>
 
     <div class="flex justify-end">
-      <%= form.submit "Save Configuration",
+      <%= form.submit t("settings.providers.simplefin_panel.save_configuration"),
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
     </div>
   <% end %>
@@ -39,10 +39,10 @@
   <div class="flex items-center gap-2">
     <% if @simplefin_items&.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+      <p class="text-sm text-secondary"><%= raw t("settings.providers.simplefin_panel.configured_html", accounts_url: accounts_path) %></p>
     <% else %>
       <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary">Not configured</p>
+      <p class="text-sm text-secondary"><%= t("settings.providers.simplefin_panel.not_configured") %></p>
     <% end %>
   </div>
 </div>

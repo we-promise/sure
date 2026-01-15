@@ -8,6 +8,8 @@ en:
       print_report: Print Report
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
+      sections_label: "Reports sections"
+      section_instructions: "section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       periods:
         monthly: Monthly
         quarterly: Quarterly

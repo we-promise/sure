@@ -1,6 +1,6 @@
 <%# locals: (plan:, form:, checked: false) %>
 
-<% price = plan == "annual" ? 25 : 2.50 %>
+<% price = plan == "annual" ? 90 : 9 %>
 <% frequency = plan == "annual" ? "/year" : "/month" %>
 
 <div class="relative">
@@ -14,13 +14,17 @@
 
     <div class="mt-auto flex items-end gap-1">
       <p class="font-display text-xl lg:text-3xl font-medium text-primary">$<%= price %><%= frequency %></p>
+
+      <% if plan == "annual" %>
+        <span class="text-sm text-secondary mb-1"><%= t("subscriptions.plan_choice.or_weekly", amount: Money.new(price.to_f / 52).format) %></span>
+      <% end %>
     </div>
 
     <p class="text-sm text-secondary">
       <% if plan == "annual" %>
-        Charged annually
+        <%= t("subscriptions.plan_choice.billed_annually") %>
       <% else %>
-        Charged monthly
+        <%= t("subscriptions.plan_choice.billed_monthly") %>
       <% end %>
     </p>
   <% end %>

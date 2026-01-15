@@ -1,0 +1,29 @@
+---
+en:
+  settings:
+    llm_usages:
+      show:
+        title: LLM Usage & Costs
+        subtitle: Track your AI usage and estimated costs
+        start_date: Start Date
+        end_date: End Date
+        filter: Filter
+        total_requests: Total Requests
+        total_tokens: Total Tokens
+        prompt_completion: "%{prompt} prompt / %{completion} completion"
+        total_cost: Total Cost
+        avg_cost_per_request: Avg Cost/Request
+        requests_with_cost: "Based on %{with_cost} of %{total} requests with cost data"
+        cost_by_operation: Cost by Operation
+        cost_by_model: Cost by Model
+        recent_usage: Recent Usage
+        date: Date
+        operation: Operation
+        model: Model
+        tokens: Tokens
+        cost: Cost
+        failed: Failed
+        http_status: "HTTP Status: %{code}"
+        no_usage_data: No usage data found for the selected period
+        about_cost_estimates: About Cost Estimates
+        cost_estimates_description: Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show "N/A" and are not included in cost totals.
