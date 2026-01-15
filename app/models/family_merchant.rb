@@ -28,9 +28,10 @@ class FamilyMerchant < Merchant
     end
 
     def extract_domain(url)
-      url = "https://#{url}" unless url.start_with?("http://", "https://")
-      URI.parse(url).host&.sub(/\Awww\./, "")
+      original_url = url
+      normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
+      URI.parse(normalized_url).host&.sub(/\Awww\./, "")
     rescue URI::InvalidURIError
-      url.sub(/\Awww\./, "")
+      original_url.sub(/\Awww\./, "")
     end
 end
