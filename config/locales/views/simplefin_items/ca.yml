@@ -87,7 +87,7 @@ ca:
       setup_description: Tria els tipus de compte per als teus nous comptes SimpleFIN
         importats.
       setup_needed: Nous comptes llestos per configurar
-      stale_pending_accounts: 'in: %{accounts}'
+      stale_pending_accounts: 'a: %{accounts}'
       stale_pending_note: "(exclòs dels pressupostos)"
       status: Darrera sincronització fa %{timestamp}
       status_never: Mai sincronitzat
