@@ -1,0 +1,9 @@
+---
+en:
+  budgets:
+    show:
+      categories: Categories
+      edit: Edit
+      tabs:
+        budgeted: Budgeted
+        actual: Actual
