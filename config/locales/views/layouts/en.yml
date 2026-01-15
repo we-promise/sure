@@ -5,3 +5,8 @@ en:
       free_trial: Free trial
       days_remaining: "%{days} days remaining"
       upgrade: Upgrade
+    shared:
+      confirm_dialog:
+        default_title: Are you sure?
+        default_subtitle: This action cannot be undone.
+        confirm: Confirm

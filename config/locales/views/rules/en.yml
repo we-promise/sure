@@ -18,6 +18,14 @@ en:
       edit: Edit
       reapply: Re-apply rule
       delete: Delete
+    form:
+      name_label: Rule name (optional)
+      name_placeholder: Enter a name for this rule
+      add_condition: Add condition
+      add_condition_group: Add condition group
+      add_action: Add action
+      all_resources: All past and future %{resource}
+      starting_from: Starting from
     actions:
       value_placeholder: Enter a value
     apply_all:
