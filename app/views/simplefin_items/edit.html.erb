@@ -1,11 +1,11 @@
-<% content_for :title, "Update SimpleFin Connection" %>
+<% content_for :title, t(".title") %>
 
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Update SimpleFin Connection") do %>
+  <% dialog.with_header(title: t(".title")) do %>
     <div class="flex items-center gap-2">
       <%= icon "building-2", class: "text-primary" %>
-      <span class="text-primary">Get a new setup token to reconnect your SimpleFin account</span>
+      <span class="text-primary"><%= t(".header_description") %></span>
     </div>
   <% end %>
 
@@ -16,12 +16,12 @@
           <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
           <div>
             <p class="text-sm text-primary mb-2">
-              <strong>Your SimpleFIN connection needs to be updated:</strong>
+              <strong><%= t(".connection_needs_update") %></strong>
             </p>
             <ol class="text-xs text-secondary space-y-1 list-decimal list-inside">
-              <li>Visit <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> to create a new setup token</li>
-              <li>Copy the token and paste it below</li>
-              <li>Click "Update" to restore access</li>
+              <li><%= raw t(".step_1_html") %></li>
+              <li><%= t(".step_2") %></li>
+              <li><%= t(".step_3") %></li>
             </ol>
           </div>
         </div>
@@ -46,14 +46,14 @@
 
       <div class="flex gap-3">
         <%= render DS::Button.new(
-          text: "Update",
+          text: t(".update"),
           variant: "primary",
           icon: "refresh-cw",
           type: "submit",
           class: "flex-1"
         ) %>
         <%= render DS::Link.new(
-          text: "Cancel",
+          text: t(".cancel"),
           variant: "secondary",
           href: accounts_path
         ) %>

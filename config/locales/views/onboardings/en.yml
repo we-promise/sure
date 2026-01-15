@@ -1,8 +1,15 @@
 ---
 en:
   onboardings:
+    onboarding_nav:
+      setup: Setup
+      preferences: Preferences
+      goals: Goals
+      start: Start
     header:
       sign_out: Log out
+    logout:
+      sign_out: Sign out
     preferences:
       currency: Currency
       date_format: Date format
@@ -12,6 +19,10 @@ en:
       submit: Complete
       subtitle: Let's configure your preferences.
       title: Configure your preferences
+      color_theme: Color theme
+      system: System
+      light: Light
+      dark: Dark
     profile:
       country: Country
       first_name: First Name
@@ -22,7 +33,52 @@ en:
       subtitle: Let's complete your profile.
       title: Let's set up the basics
     show:
-      message: We’re really excited you’re here. In the next step we’ll ask you a
+      message: We're really excited you're here. In the next step we'll ask you a
         few questions to complete your profile and then get you all set up.
       setup: Set up account
       title: Meet %{product_name}
+      title_setup: Let's set up your account
+      subtitle_setup: First things first, let's get your profile set up.
+      first_name: First name
+      first_name_placeholder: First name
+      last_name: Last name
+      last_name_placeholder: Last name
+      household_name: Household name
+      household_name_placeholder: Household name
+      country: Country
+      continue: Continue
+    goals:
+      title: What brings you here?
+      description: Select one or more goals that you have with using %{product_name} as your personal finance tool.
+      next: Next
+      goal_unified_accounts: See all my accounts in one place
+      goal_cashflow: Understand cashflow and expenses
+      goal_budgeting: Manage financial plans and budgeting
+      goal_partner: Manage finances with a partner
+      goal_investments: Track investments
+      goal_ai_insights: Let AI help me understand my finances
+      goal_optimization: Analyze and optimize accounts
+      goal_reduce_stress: Reduce financial stress or anxiety
+    trial:
+      try_sure: Try Sure for 14 days.
+      no_credit_card: No credit card required
+      trial_description: Starting the trial activates your account for Sure. You won't need to enter payment details.
+      continue_trial: Continue trial
+      upgrade: Upgrade
+      how_trial_works: How your trial will work
+      today: Today
+      today_description: You'll get free access to Sure for 14 days
+      in_13_days: In 13 days (%{date})
+      in_13_days_description: We'll notify you to remind you when your trial will end.
+      in_14_days: In 14 days (%{date})
+      in_14_days_description: Your trial ends — subscribe to continue using Sure
+      whats_included: Here's what's included
+      feature_institutions: More than 10,000 institutions to connect to
+      feature_unlimited_accounts: Connect unlimited accounts and account types
+      feature_investments: Performance and investment returns across portfolio
+      feature_transactions: Comprehensive transaction tracking experience
+      feature_ai: Unlimited access and chats with Sure AI
+      feature_manual: Manual account tracking that works well
+      feature_currencies: Multiple currencies and near global coverage
+      feature_early_access: Early access to newly released features
+      feature_support: Priority human support from team

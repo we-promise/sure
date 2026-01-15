@@ -21,6 +21,15 @@ en:
         page_title: Billing
         subscription_subtitle: Update your subscription and billing details
         subscription_title: Manage subscription
+        subscribed_html: You are currently subscribed to the <span class="font-medium">%{plan}</span>.
+        renews_on_html: Your plan renews on <span class="font-medium">%{date}</span>.
+        trialing: You are currently trialing %{product_name}
+        days_remaining: "%{days} days remaining"
+        not_subscribed_html: You are currently <span class="font-medium">not subscribed</span>
+        subscribe_prompt: Once you subscribe to %{product_name}, you'll see your billing settings here.
+        manage: Manage
+        choose_plan: Choose plan
+        billing_via_stripe: Billing via Stripe
     preferences:
       show:
         country: Country
@@ -38,6 +47,7 @@ en:
         theme_system: System
         theme_title: Theme
         timezone: Timezone
+        translations_note: Please note, we are still working on translations for various languages.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
@@ -70,6 +80,8 @@ en:
         reset_account_with_sample_data: Reset and preload
         reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
         email: Email
+        unconfirmed_email_notice_html: "You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{link}."
+        resend_confirmation_link: request a new confirmation email
         first_name: First Name
         household_form_input_placeholder: Enter household name
         household_form_label: Household name
@@ -91,6 +103,10 @@ en:
         page_title: Security
         mfa_title: Two-Factor Authentication
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
+        mfa_enabled_html: Two-factor authentication is <span class="font-medium text-green-600">enabled</span>
+        mfa_enabled_description: Your account is protected with an additional layer of security.
+        mfa_disabled_html: Two-factor authentication is <span class="font-medium text-red-600">disabled</span>
+        mfa_disabled_description: Enable 2FA to add an extra layer of security to your account.
         enable_mfa: Enable 2FA
         disable_mfa: Disable 2FA
         disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
@@ -107,6 +123,7 @@ en:
         sso_confirm_button: Disconnect
         sso_warning_message: This is your only login method. You should set a password in your security settings before disconnecting, otherwise you may be locked out of your account.
     settings_nav:
+      esc: esc
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
@@ -131,6 +148,10 @@ en:
       whats_new_label: What's new
       api_keys_label: API Key
       bank_sync_label: Bank Sync
+      llm_usage_label: LLM Usage
+      providers_label: Providers
+      sso_providers_label: SSO Providers
+      users_label: Users
     settings_nav_link_large:
       next: Next
       previous: Back
@@ -139,3 +160,18 @@ en:
       choose: Upload photo
       choose_label: (optional)
       change: Change photo
+      preview_alt: Preview
+    bank_sync:
+      show:
+        page_title: Bank Sync
+        providers: Providers
+        no_providers: No providers configured
+        configure_providers: Configure providers to link your bank accounts.
+        lunchflow_description: "US, Canada, UK, EU, Brazil and Asia through multiple open banking providers."
+        plaid_description: "US & Canada bank connections with transactions, investments, and liabilities."
+        simplefin_description: "US & Canada connections via SimpleFIN protocol."
+        enable_banking_name: "Enable Banking (beta)"
+        enable_banking_description: "European bank connections via open banking APIs across multiple countries."
+    guides:
+      show:
+        page_title: Guides
