@@ -31,6 +31,20 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+        preconfigured_message: We have pre-configured your Mint import for you. Please proceed to the next step.
+        leave_empty: Leave empty
+        date: Date
+        amount: Amount
+        incomes_negative: Incomes are negative
+        incomes_positive: Incomes are positive
+        currency: Currency
+        format: Format
+        select_format: Select format
+        account_optional: Account (optional)
+        name_optional: Name (optional)
+        category_optional: Category (optional)
+        tags_optional: Tags (optional)
+        apply_configuration: Apply configuration
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
           on the CSV data.
@@ -41,9 +55,57 @@ en:
         title: Configure your import
       trade_import:
         date_format_label: Date format
+        select_column: Select column
+        date: Date
+        quantity: Quantity
+        buys_positive: Buys are positive qty
+        buys_negative: Buys are negative qty
+        default: Default
+        currency: Currency
+        format: Format
+        select_format: Select format
+        ticker: Ticker
+        leave_empty: Leave empty
+        stock_exchange_code: Stock exchange code
+        price: Price
+        account: Account
+        name: Name
+        no_provider_warning_html: "<strong>Note:</strong> The security prices provider is not configured. Your trade imports will work, but Sure will not backfill price history. Please go to your settings to configure this."
+        apply_configuration: Apply configuration
       transaction_import:
         date_format_label: Date format
         rows_to_skip_label: Skip first n rows
+        date: Date
+        select_column: Select column
+        select_format: Select format
+        amount: Amount
+        default: Default
+        currency: Currency
+        format: Format
+        amount_type_strategy: Amount type strategy
+        select_strategy: Select strategy
+        incomes_positive: Incomes are positive
+        incomes_negative: Incomes are negative
+        amount_type: Amount type
+        select_convention: Select convention
+        set: Set
+        as_amount_type_column: as amount type column
+        as_income_inflow_value: as "income" (inflow) value
+        leave_empty: Leave empty
+        account: Account
+        name: Name
+        category: Category
+        tags: Tags
+        notes: Notes
+        apply_configuration: Apply configuration
+      account_import:
+        leave_empty: Leave empty
+        entity_type: Entity Type
+        name: Name
+        balance: Balance
+        default: Default
+        currency: Currency
+        apply_configuration: Apply configuration
     confirms:
       mappings:
         create_account: Create account

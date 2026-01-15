@@ -1,5 +1,11 @@
 ---
 en:
+  rule:
+    conditions:
+      condition:
+        and: and
+        number_placeholder: "10"
+        enter_value: Enter a value
   rules:
     no_action: No Action
     new:
