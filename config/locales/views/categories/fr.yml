@@ -43,3 +43,6 @@ fr:
       show:
         bootstrap: Générer les catégories par défaut
         empty: Aucune catégorie trouvée
+        match_transfer: Associer virement/paiement
+        one_time_income: Revenu ponctuel
+        one_time_expense: Dépense ponctuelle

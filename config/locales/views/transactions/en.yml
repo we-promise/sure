@@ -90,6 +90,8 @@ en:
     merge_duplicate: Yes, merge them
     keep_both: No, keep both
     transaction:
+      one_time_income_title: One-time income (excluded from averages)
+      one_time_expense_title: One-time expense (excluded from averages)
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
       activity_type_tooltip: Investment activity type

@@ -43,3 +43,6 @@ en:
       show:
         bootstrap: Generate default categories
         empty: No categories found
+        match_transfer: Match transfer/payment
+        one_time_income: One-time income
+        one_time_expense: One-time expense
