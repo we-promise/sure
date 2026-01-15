@@ -1,0 +1,20 @@
+<div class="space-y-2">
+  <h3 class="text-lg font-medium text-primary"><%= t("installments.schedule.title") %></h3>
+
+  <div class="space-y-1">
+    <% schedule.each do |payment| %>
+      <% status = payment_status(payment) %>
+      <div class="flex items-center justify-between p-3 rounded-lg <%= status == :completed ? "bg-green-50" : "bg-surface" %> border <%= status == :completed ? "border-green-200" : "border-surface-inset" %>">
+        <div class="flex items-center gap-3">
+          <span class="px-2 py-1 rounded text-xs font-medium <%= status_classes(status) %>">
+            <%= t("installments.schedule.payment") %> <%= payment[:payment_number] %>
+          </span>
+          <span class="text-sm text-secondary">
+            <%= helpers.l(payment[:date], format: :short) %>
+          </span>
+        </div>
+        <span class="font-medium text-primary"><%= helpers.format_money(payment[:amount], currency: currency) %></span>
+      </div>
+    <% end %>
+  </div>
+</div>

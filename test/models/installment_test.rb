@@ -19,7 +19,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert installment.persisted?
@@ -37,7 +36,6 @@ class InstallmentTest < ActiveSupport::TestCase
     assert_includes installment.errors[:total_term], "can't be blank"
     assert_includes installment.errors[:payment_period], "can't be blank"
     assert_includes installment.errors[:first_payment_date], "can't be blank"
-    assert_includes installment.errors[:most_recent_payment_date], "can't be blank"
   end
 
   test "validates current_term is less than or equal to total_term" do
@@ -47,7 +45,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 7,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_not installment.valid?
@@ -61,7 +58,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_not installment.valid?
@@ -75,7 +71,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_not installment.valid?
@@ -89,7 +84,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: -1,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_not installment.valid?
@@ -104,7 +98,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: Date.current,
-      most_recent_payment_date: Date.current
     )
 
     assert_not installment.valid?
@@ -118,7 +111,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_equal 1200, installment.calculate_original_balance
@@ -131,7 +123,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: Date.current,
-      most_recent_payment_date: Date.current
     )
 
     assert_equal 1200, installment.calculate_current_balance
@@ -145,7 +136,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: 1.month.ago.to_date
     )
 
     # Should have 3 scheduled payments completed by today (6 months have passed)
@@ -161,7 +151,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 6,
       payment_period: "monthly",
       first_payment_date: 7.months.ago.to_date,
-      most_recent_payment_date: 1.month.ago.to_date
     )
 
     # All 6 payments should be scheduled by now
@@ -177,7 +166,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     schedule = installment.generate_payment_schedule
@@ -191,7 +179,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: Date.new(2024, 1, 15),
-      most_recent_payment_date: Date.new(2024, 1, 15)
     )
 
     schedule = installment.generate_payment_schedule
@@ -216,7 +203,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "weekly",
       first_payment_date: Date.new(2024, 1, 1),
-      most_recent_payment_date: Date.new(2024, 1, 1)
     )
 
     schedule = installment.generate_payment_schedule
@@ -234,7 +220,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "bi_weekly",
       first_payment_date: Date.new(2024, 1, 1),
-      most_recent_payment_date: Date.new(2024, 1, 1)
     )
 
     schedule = installment.generate_payment_schedule
@@ -251,7 +236,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "quarterly",
       first_payment_date: Date.new(2024, 1, 1),
-      most_recent_payment_date: Date.new(2024, 1, 1)
     )
 
     schedule = installment.generate_payment_schedule
@@ -269,7 +253,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "yearly",
       first_payment_date: Date.new(2024, 1, 1),
-      most_recent_payment_date: Date.new(2024, 1, 1)
     )
 
     schedule = installment.generate_payment_schedule
@@ -286,7 +269,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_not installment.completed?
@@ -299,7 +281,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 3.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     # Create 3 transactions linked to this installment
@@ -326,7 +307,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_equal 0, installment.payments_completed
@@ -353,7 +333,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: 1.month.from_now.to_date,
-      most_recent_payment_date: 1.month.from_now.to_date
     )
 
     next_date = installment.next_payment_date
@@ -368,7 +347,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 4.months.ago.to_date,
-      most_recent_payment_date: 1.month.ago.to_date
     )
 
     assert_nil installment.next_payment_date
@@ -381,7 +359,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 2,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     # With no actual transactions recorded, payments_completed = 0
@@ -396,7 +373,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 3.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     # Create all 3 transactions
@@ -423,7 +399,6 @@ class InstallmentTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_equal "USD", installment.currency

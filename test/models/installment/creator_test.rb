@@ -26,7 +26,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_difference "@loan_account.transactions.count", 3 do
@@ -41,7 +40,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: Date.current,
-      most_recent_payment_date: Date.current
     )
 
     assert_no_difference "@loan_account.transactions.count" do
@@ -56,7 +54,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: Date.new(2024, 1, 15),
-      most_recent_payment_date: Date.new(2024, 3, 15)
     )
 
     Installment::Creator.new(installment).call
@@ -75,7 +72,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 2,
       payment_period: "monthly",
       first_payment_date: 3.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     Installment::Creator.new(installment).call
@@ -93,14 +89,14 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: Date.current,
-      most_recent_payment_date: Date.current
     )
 
     assert_difference "RecurringTransaction.count", 1 do
       Installment::Creator.new(installment, source_account_id: @source_account.id).call
     end
 
-    recurring_transaction = RecurringTransaction.last
+    recurring_transaction = RecurringTransaction.find_by(installment_id: installment.id)
+    assert_not_nil recurring_transaction, "Expected a recurring transaction to be created for this installment"
     assert_equal installment.id, recurring_transaction.installment_id
     assert_equal -200, recurring_transaction.amount
     assert_equal "USD", recurring_transaction.currency
@@ -114,7 +110,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 0,
       payment_period: "monthly",
       first_payment_date: Date.current,
-      most_recent_payment_date: Date.current
     )
 
     assert_no_difference "RecurringTransaction.count" do
@@ -129,7 +124,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     Installment::Creator.new(installment).call
@@ -145,7 +139,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     assert_difference "@loan_account.balances.count", 1 do
@@ -164,7 +157,6 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       current_term: 3,
       payment_period: "monthly",
       first_payment_date: 6.months.ago.to_date,
-      most_recent_payment_date: Date.current
     )
 
     # Force an error by making the account invalid

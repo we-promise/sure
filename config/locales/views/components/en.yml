@@ -27,3 +27,19 @@ en:
       data_warnings: "Data warnings: %{count}"
       notices: "Notices: %{count}"
       view_data_quality: View data quality details
+  installments:
+    overview:
+      payment_progress: Payment Progress
+      of: of
+      next_payment: Next Payment
+      total_paid: Total Paid
+      remaining: Remaining
+      edit_details: Edit Installment Details
+    schedule:
+      title: Payment Schedule
+      payment: Payment
+    balance_comparison:
+      title: Balance Overview
+      calculated: Calculated Balance
+      bank: Bank Balance
+      mismatch_info: Calculated balance differs from bank - this is normal if you've made extra payments or missed payments

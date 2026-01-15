@@ -216,6 +216,15 @@ class RecurringTransaction < ApplicationRecord
     installment_id.present?
   end
 
+  # Check if the linked installment is complete and mark this recurring transaction inactive
+  # Should be called after a payment is recorded
+  def check_installment_completion
+    return unless installment_managed?
+    return unless installment.completed?
+
+    mark_inactive!
+  end
+
   # Check if this recurring transaction should be marked inactive
   def should_be_inactive?
     return false if last_occurrence_date.nil?
@@ -247,6 +256,9 @@ class RecurringTransaction < ApplicationRecord
     self.occurrence_count += 1
     self.status = "active"
     save!
+
+    # Check if linked installment is complete and mark inactive if needed
+    check_installment_completion
   end
 
   # Update amount variance tracking based on a new transaction

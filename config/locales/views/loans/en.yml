@@ -10,6 +10,38 @@ en:
       rate_type: Rate type
       term_months: Term (months)
       term_months_placeholder: '360'
+      tabs:
+        general: General
+        installment: Installment
+      installment:
+        cost_label: Installment Cost
+        cost_help: Amount you pay each payment period
+        total_term_label: Total Term
+        total_term_help: Total number of payments in the plan
+        current_term_label: Current Payment Number
+        current_term_help: Which payment you're currently on (0 if not started)
+        payment_period_label: Payment Period
+        payment_period_help: How often you make payments
+        payment_periods:
+          weekly: Weekly
+          bi_weekly: Bi-weekly
+          monthly: Monthly
+          quarterly: Quarterly
+          yearly: Yearly
+        payment_day_label: Payment Day
+        payment_day_help: Day of month you make payments (1-31)
+        first_payment_date_label: First Payment Date
+        first_payment_date_help: Calculated from last payment date and current term
+        current_balance_label: Current Balance
+        current_balance_help: Calculated from your payment schedule
+        original_balance_label: Original Loan Balance
+        original_balance_help: Total amount to be paid over the life of the plan
+        interest_rate_help: Optional - not used for payment calculations
+        rate_type_blank: None
+        source_account_label: Payment Source Account
+        source_account_help: Which account will make these payments (optional)
+        source_account_blank: Set up later
+        historical_note: We'll create %{count} historical transactions
     new:
       title: Enter loan details
     overview:
