@@ -1,5 +1,17 @@
 ---
 en:
+  breadcrumbs:
+    home: Home
+    dashboard: Dashboard
+    accounts: Accounts
+    merchants: Merchants
+    categories: Categories
+    tags: Tags
+    rules: Rules
+    transactions: Transactions
+    budgets: Budgets
+    imports: Imports
+    chats: Assistant
   shared:
     confirm_modal:
       accept: Confirm

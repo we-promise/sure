@@ -55,9 +55,9 @@ nav_sections = [
       href: previous_path,
       variant: "ghost",
     ) %>
-    <%= link_to previous_path, class: "hidden md:block uppercase bg-surface-inset-hover rounded-sm px-1 py-0.5 text-xs text-secondary shadow-sm ml-1 pointer-events-none", data: { controller: "hotkey", hotkey: "Escape" } do %>
+    <span class="hidden md:block uppercase bg-surface-inset-hover rounded-sm px-1 py-0.5 text-xs text-secondary shadow-sm ml-1">
       <kbd>esc</kbd>
-    <% end %>
+    </span>
   </div>
   <nav class="space-y-4 hidden md:block">
     <% nav_sections.compact.each do |section| %>
