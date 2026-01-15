@@ -1,0 +1,7 @@
+---
+en:
+  layouts:
+    application:
+      free_trial: Free trial
+      days_remaining: "%{days} days remaining"
+      upgrade: Upgrade

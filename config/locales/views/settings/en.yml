@@ -21,6 +21,15 @@ en:
         page_title: Billing
         subscription_subtitle: Update your subscription and billing details
         subscription_title: Manage subscription
+        subscribed_html: You are currently subscribed to the <span class="font-medium">%{plan}</span>.
+        renews_on_html: Your plan renews on <span class="font-medium">%{date}</span>.
+        trialing: You are currently trialing %{product_name}
+        days_remaining: "%{days} days remaining"
+        not_subscribed_html: You are currently <span class="font-medium">not subscribed</span>
+        subscribe_prompt: Once you subscribe to %{product_name}, you'll see your billing settings here.
+        manage: Manage
+        choose_plan: Choose plan
+        billing_via_stripe: Billing via Stripe
     preferences:
       show:
         country: Country

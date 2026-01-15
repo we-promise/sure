@@ -3,6 +3,8 @@ en:
   onboardings:
     header:
       sign_out: Log out
+    logout:
+      sign_out: Sign out
     preferences:
       currency: Currency
       date_format: Date format
