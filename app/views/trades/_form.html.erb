@@ -10,11 +10,11 @@
 
     <div class="space-y-2">
       <%= form.select :type, [
-          ["Buy", "buy"],
-          ["Sell", "sell"],
-          ["Deposit", "deposit"],
-          ["Withdrawal", "withdrawal"],
-          ["Interest", "interest"]
+          [t(".buy"), "buy"],
+          [t(".sell"), "sell"],
+          [t(".deposit"), "deposit"],
+          [t(".withdrawal"), "withdrawal"],
+          [t(".interest"), "interest"]
       ],
       { label: t(".type"), selected: type },
       { data: {
@@ -34,7 +34,7 @@
                             required: true %>
           </div>
         <% else %>
-          <%= form.text_field :manual_ticker, label: "Ticker symbol", placeholder: "AAPL", required: true %>
+          <%= form.text_field :manual_ticker, label: t(".ticker_symbol"), placeholder: t(".ticker_symbol_placeholder"), required: true %>
         <% end %>
       <% end %>
 
