@@ -9,6 +9,8 @@ fr:
       mileage: Kilométrage
       mileage_placeholder: '15000'
       mileage_unit: Unité
+      mileage_unit_miles: Miles
+      mileage_unit_kilometers: Kilomètres
       model: Modèle
       model_placeholder: Camry
       year: Année

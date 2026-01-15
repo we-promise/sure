@@ -8,6 +8,9 @@ fr:
       interest_rate_placeholder: '5,25'
       initial_balance: Solde initial du prêt
       rate_type: Type de taux
+      rate_type_fixed: Fixe
+      rate_type_variable: Variable
+      rate_type_adjustable: Ajustable
       term_months: Durée (mois)
       term_months_placeholder: '360'
     new:
