@@ -59,18 +59,21 @@ class Category < ApplicationRecord
   class << self
     def icon_codes
       %w[
-        ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3
-        bath battery bed-single beer bike bluetooth bone book-open briefcase building
-        bus cake calculator calendar-range camera car cat circle-dollar-sign coffee
-        coins compass cookie cooking-pot credit-card dices dog drama drill droplet
-        drum dumbbell film flame flower fuel gamepad-2 gift glasses globe graduation-cap
-        hammer hand-helping headphones heart heart-pulse home ice-cream-cone key
-        landmark laptop leaf lightbulb chart-line luggage mail map-pin mic monitor moon
-        music package palette paw-print pencil percent phone pie-chart piggy-bank pill
-        pizza plane plug power printer puzzle receipt receipt-text ribbon scale scissors
-        settings shield shirt shopping-bag shopping-cart smartphone sparkles sprout
-        stethoscope store sun tag target tent thermometer ticket train trees trophy truck
-        tv umbrella users utensils video wallet wallet-cards waves wifi wine wrench zap
+        ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3 bath
+        battery bed-single beer bike bluetooth bone book book-open briefcase building bus
+        cake calculator calendar-heart calendar-range camera car cat chart-line
+        circle-dollar-sign circle-parking coffee coins compass cookie cooking-pot
+        credit-card dices dog drama drill droplet drum dumbbell film flame flower flower-2
+        fuel gamepad-2 gem gift glasses globe graduation-cap hammer hand-heart
+        hand-helping heart-handshake handshake headphones heart heart-pulse home hotel
+        house ice-cream-cone key landmark laptop leaf lightbulb luggage mail map-pin
+        martini mic monitor moon music package palette party-popper paw-print pen pencil
+        percent phone pie-chart piggy-bank pill pizza plane plug popcorn power printer
+        puzzle receipt receipt-text ribbon scale scissors settings shield shield-plus
+        shirt shopping-bag shopping-basket shopping-cart smartphone sparkles sprout
+        stethoscope store sun tablet-smartphone tag target tent thermometer ticket train
+        trees tree-palm trending-up trophy truck tv umbrella undo-2 unplug users utensils
+        video wallet wallet-cards waves wifi wine wrench zap
       ]
     end
 

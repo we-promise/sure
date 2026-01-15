@@ -13,8 +13,8 @@ module Api
     #   { "tag": { "name": "WhiteHouse", "color": "#3b82f6" } }
     #
     class TagsController < BaseController
-      before_action :ensure_read_scope, only: %i[index show]
-      before_action :ensure_write_scope, only: %i[create update destroy]
+      before_action -> { authorize_scope!(:read) }, only: %i[index show]
+      before_action -> { authorize_scope!(:read_write) }, only: %i[create update destroy]
       before_action :set_tag, only: %i[show update destroy]
 
       # List all tags belonging to the family

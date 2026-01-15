@@ -15,8 +15,8 @@
 
 <%= render DS::Dialog.new(variant: "modal", reload_on_close: true) do |dialog| %>
   <% dialog.with_header do %>
-    <h2 class="text-lg font-semibold text-primary"><%= t(".convert_to_trade.title") %></h2>
-    <p class="text-sm text-secondary"><%= t(".convert_to_trade.description") %></p>
+    <h2 class="text-lg font-semibold text-primary"><%= t(".title") %></h2>
+    <p class="text-sm text-secondary"><%= t(".description") %></p>
   <% end %>
 
   <% dialog.with_body do %>
@@ -24,15 +24,15 @@
       <!-- Pre-filled Transaction Info (Read-only) -->
       <div class="space-y-2 p-3 bg-surface-inset rounded-lg border border-primary">
         <div class="text-sm">
-          <span class="text-secondary"><%= t(".convert_to_trade.date_label") %></span>
+          <span class="text-secondary"><%= t(".date_label") %></span>
           <span class="font-medium text-primary"><%= @entry.date.strftime("%b %d, %Y") %></span>
         </div>
         <div class="text-sm">
-          <span class="text-secondary"><%= t(".convert_to_trade.account_label") %></span>
+          <span class="text-secondary"><%= t(".account_label") %></span>
           <span class="font-medium text-primary"><%= @entry.account.name %></span>
         </div>
         <div class="text-sm">
-          <span class="text-secondary"><%= t(".convert_to_trade.amount_label") %></span>
+          <span class="text-secondary"><%= t(".amount_label") %></span>
           <span class="font-medium <%= @entry.amount.negative? ? "text-green-600" : "text-primary" %>"><%= format_money(@entry.amount_money.abs) %></span>
         </div>
       </div>
@@ -40,13 +40,13 @@
       <!-- Trade-Specific Fields -->
       <div class="space-y-4">
         <div class="space-y-1">
-          <%= f.label :security_id, t(".convert_to_trade.security_label"), class: "font-medium text-sm text-primary block" %>
+          <%= f.label :security_id, t(".security_label"), class: "font-medium text-sm text-primary block" %>
           <% if account_securities.any? %>
             <%= f.select :security_id,
                   options_for_select(
-                    [[t(".convert_to_trade.security_prompt"), ""]] +
+                    [[t(".security_prompt"), ""]] +
                     account_securities.map { |s| ["#{s.ticker}#{s.name.present? ? " - #{s.name.truncate(30)}" : ""}", s.id] } +
-                    [[t(".convert_to_trade.security_custom"), "__custom__"]],
+                    [[t(".security_custom"), "__custom__"]],
                     nil
                   ),
                   {},
@@ -59,79 +59,79 @@
                   } %>
             <div class="hidden mt-2" data-convert-to-trade-target="customWrapper">
               <%= f.text_field :custom_ticker,
-                    placeholder: t(".convert_to_trade.ticker_placeholder"),
+                    placeholder: t(".ticker_placeholder"),
                     class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
                     pattern: "[A-Za-z0-9.:-]{1,20}",
-                    title: t(".convert_to_trade.ticker_hint"),
+                    title: t(".ticker_hint"),
                     data: { convert_to_trade_target: "customField" } %>
             </div>
-            <p class="text-xs text-secondary"><%= t(".convert_to_trade.security_hint") %></p>
+            <p class="text-xs text-secondary"><%= t(".security_hint") %></p>
           <% else %>
             <%= f.text_field :ticker,
-                  placeholder: t(".convert_to_trade.ticker_placeholder"),
+                  placeholder: t(".ticker_placeholder"),
                   required: true,
                   class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
                   pattern: "[A-Za-z0-9.:-]{1,20}",
-                  title: t(".convert_to_trade.ticker_hint") %>
-            <p class="text-xs text-secondary"><%= t(".convert_to_trade.ticker_hint") %></p>
+                  title: t(".ticker_hint") %>
+            <p class="text-xs text-secondary"><%= t(".ticker_hint") %></p>
           <% end %>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1">
-            <%= f.label :qty, t(".convert_to_trade.quantity_label"), class: "font-medium text-sm text-primary block" %>
+            <%= f.label :qty, t(".quantity_label"), class: "font-medium text-sm text-primary block" %>
             <%= f.number_field :qty,
                   step: "any",
-                  placeholder: t(".convert_to_trade.quantity_placeholder"),
+                  placeholder: t(".quantity_placeholder"),
                   class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" %>
-            <p class="text-xs text-secondary"><%= t(".convert_to_trade.quantity_hint") %></p>
+            <p class="text-xs text-secondary"><%= t(".quantity_hint") %></p>
           </div>
 
           <div class="space-y-1">
-            <%= f.label :price, t(".convert_to_trade.price_label"), class: "font-medium text-sm text-primary block" %>
+            <%= f.label :price, t(".price_label"), class: "font-medium text-sm text-primary block" %>
             <%= f.number_field :price,
                   step: "0.0001",
                   min: "0",
-                  placeholder: t(".convert_to_trade.price_placeholder"),
+                  placeholder: t(".price_placeholder"),
                   class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" %>
-            <p class="text-xs text-secondary"><%= t(".convert_to_trade.price_hint", currency: @entry.currency) %></p>
+            <p class="text-xs text-secondary"><%= t(".price_hint", currency: @entry.currency) %></p>
           </div>
         </div>
 
         <p class="text-xs text-secondary bg-surface-inset p-2 rounded">
           <%= icon "info", size: "xs", class: "inline-block mr-1" %>
-          <%= t(".convert_to_trade.qty_or_price_hint", amount: format_money(@entry.amount_money.abs)) %>
+          <%= t(".qty_or_price_hint", amount: format_money(@entry.amount_money.abs)) %>
         </p>
 
         <div class="space-y-1">
-          <%= f.label :investment_activity_label, t(".convert_to_trade.trade_type_label"), class: "font-medium text-sm text-primary block" %>
+          <%= f.label :investment_activity_label, t(".trade_type_label"), class: "font-medium text-sm text-primary block" %>
           <%= f.select :investment_activity_label,
                 options_for_select([[t("transactions.activity_labels.buy"), "Buy"], [t("transactions.activity_labels.sell"), "Sell"]], default_label),
                 {},
                 { class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" } %>
-          <p class="text-xs text-secondary"><%= t(".convert_to_trade.trade_type_hint") %></p>
+          <p class="text-xs text-secondary"><%= t(".trade_type_hint") %></p>
         </div>
 
         <div class="space-y-1">
-          <%= f.label :exchange_operating_mic, t(".convert_to_trade.exchange_label"), class: "font-medium text-sm text-primary block" %>
+          <%= f.label :exchange_operating_mic, t(".exchange_label"), class: "font-medium text-sm text-primary block" %>
           <%= f.text_field :exchange_operating_mic,
-                placeholder: t(".convert_to_trade.exchange_placeholder"),
+                placeholder: t(".exchange_placeholder"),
                 class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
                 pattern: "[A-Z]{4}",
-                title: t(".convert_to_trade.exchange_hint") %>
-          <p class="text-xs text-secondary"><%= t(".convert_to_trade.exchange_hint") %></p>
+                title: t(".exchange_hint") %>
+          <p class="text-xs text-secondary"><%= t(".exchange_hint") %></p>
         </div>
       </div>
 
       <div class="flex justify-end gap-3 pt-4 border-t border-primary">
         <%= render DS::Button.new(
-          text: t(".convert_to_trade.cancel"),
+          text: t(".cancel"),
           variant: "outline",
           href: "#",
           data: { action: "click->ds--dialog#close" }
         ) %>
         <%= render DS::Button.new(
-          text: t(".convert_to_trade.submit"),
+          text: t(".submit"),
           variant: "primary",
           type: "submit"
         ) %>
