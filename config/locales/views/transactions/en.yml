@@ -1,6 +1,9 @@
 ---
 en:
   transactions:
+    selection_bar:
+      edit: Edit
+      delete: Delete
     unknown_name: Unknown transaction
     form:
       account: Account
@@ -21,6 +24,14 @@ en:
       transfer: Transfer
     new:
       new_transaction: New transaction
+      title: New transaction
+    transfer_match:
+      payment_confirmed: Payment is confirmed
+      transfer_confirmed: Transfer is confirmed
+      auto_matched: Auto-matched
+      auto_matched_short: A/M
+      confirm_match: Confirm match
+      reject_match: Reject match
     show:
       account_label: Account
       amount: Amount
@@ -37,6 +48,16 @@ en:
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}
       one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
+      expense: Expense
+      income: Income
+      additional_details: Additional details
+      payee: Payee
+      description: Description
+      memo: Memo
+      provider_extras: Provider extras
+      transfer_question: Transfer or Debt Payment?
+      transfer_description: Transfers and payments are special types of transactions that indicate money movement between 2 accounts.
+      open_matcher: Open matcher
     activity_labels:
       buy: Buy
       sell: Sell
@@ -69,6 +90,8 @@ en:
     merge_duplicate: Yes, merge them
     keep_both: No, keep both
     transaction:
+      one_time_income_title: One-time income (excluded from averages)
+      one_time_expense_title: One-time expense (excluded from averages)
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
       activity_type_tooltip: Investment activity type
@@ -88,10 +111,24 @@ en:
       edit_merchants: Edit merchants
       edit_tags: Edit tags
       import: Import
+      linked_with_plaid: Linked with Plaid
     index:
+      title: Transactions
       transaction: transaction
       transactions: transactions
       import: Import
+      new_rule: New rule
+      edit_rules: Edit rules
+      edit_categories: Edit categories
+      edit_tags: Edit tags
+      edit_merchants: Edit merchants
+      edit_imports: Edit imports
+      new_transaction: New transaction
+      drop_csv_title: Drop CSV to import
+      drop_csv_subtitle: Upload transactions directly
+      column_transaction: transaction
+      column_category: category
+      column_amount: amount
     toggle_recurring_section: Toggle upcoming recurring transactions
     search:
       filters:
@@ -125,6 +162,17 @@ en:
         status_filter:
           confirmed: Confirmed
           pending: Pending
+        account_filter:
+          filter_placeholder: Filter accounts
+        merchant_filter:
+          filter_placeholder: Filter merchants
+        tag_filter:
+          filter_placeholder: Filter tags
+        category_filter:
+          filter_placeholder: Filter category
+        date_filter:
+          start_date: Start date
+          end_date: End date
       menu:
         account_filter: Account
         amount_filter: Amount
@@ -143,3 +191,21 @@ en:
         less_than: less than
       form:
         toggle_selection_checkboxes: Toggle all checkboxes
+        search_placeholder: Search transactions ...
+        filter: Filter
+    bulk_updates:
+      new:
+        title: Edit transactions
+        overview: Overview
+        date: Date
+        transactions: Transactions
+        category: Category
+        select_category: Select a category
+        merchant: Merchant
+        select_merchant: Select a merchant
+        tags: Tags
+        none: None
+        notes: Notes
+        notes_placeholder: Enter a note that will be applied to selected transactions
+        cancel: Cancel
+        save: Save

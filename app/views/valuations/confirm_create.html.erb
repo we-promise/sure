@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Confirm new balance") %>
+  <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
     <%= styled_form_with model: @entry, url: valuations_path, class: "space-y-4" do |form| %>
       <%= form.hidden_field :account_id %>
@@ -13,7 +13,7 @@
           action_verb: "set",
           is_update: false %>
 
-      <%= form.submit "Confirm" %>
+      <%= form.submit t(".confirm") %>
     <% end %>
   <% end %>
 <% end %>

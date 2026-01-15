@@ -1,28 +1,28 @@
 <%= render DS::Dialog.new(variant: "drawer", frame: "bulk_transaction_edit_drawer") do |dialog| %>
-  <% dialog.with_header(title: "Edit transactions", data: { bulk_select_target: "bulkEditDrawerHeader" }) %>
+  <% dialog.with_header(title: t(".title"), data: { bulk_select_target: "bulkEditDrawerHeader" }) %>
 
   <% dialog.with_body do %>
     <%= styled_form_with url: transactions_bulk_update_path, scope: "bulk_update", class: "h-full flex flex-col justify-between gap-4", data: { turbo_frame: "_top" } do |form| %>
       <div class="space-y-4">
-        <%= render DS::Disclosure.new(title: "Overview", open: true) do %>
+        <%= render DS::Disclosure.new(title: t(".overview"), open: true) do %>
           <div class="pb-6 space-y-2">
-            <%= form.date_field :date, label: "Date", max: Date.current %>
+            <%= form.date_field :date, label: t(".date"), max: Date.current %>
           </div>
         <% end %>
 
-        <%= render DS::Disclosure.new(title: "Transactions", open: true) do %>
+        <%= render DS::Disclosure.new(title: t(".transactions"), open: true) do %>
           <div class="space-y-2">
-            <%= form.collection_select :category_id, Current.family.categories.alphabetically, :id, :name, { prompt: "Select a category", label: "Category", class: "text-subdued" } %>
-            <%= form.collection_select :merchant_id, Current.family.available_merchants.alphabetically, :id, :name, { prompt: "Select a merchant", label: "Merchant", class: "text-subdued" } %>
-            <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: "None", multiple: true, label: "Tags", container_class: "h-40" } %>
-            <%= form.text_area :notes, label: "Notes", placeholder: "Enter a note that will be applied to selected transactions", rows: 5 %>
+            <%= form.collection_select :category_id, Current.family.categories.alphabetically, :id, :name, { prompt: t(".select_category"), label: t(".category"), class: "text-subdued" } %>
+            <%= form.collection_select :merchant_id, Current.family.available_merchants.alphabetically, :id, :name, { prompt: t(".select_merchant"), label: t(".merchant"), class: "text-subdued" } %>
+            <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: t(".none"), multiple: true, label: t(".tags"), container_class: "h-40" } %>
+            <%= form.text_area :notes, label: t(".notes"), placeholder: t(".notes_placeholder"), rows: 5 %>
           </div>
         <% end %>
       </div>
 
       <div class="flex justify-end gap-2 mt-auto">
-        <%= render DS::Button.new(text: "Cancel", variant: "ghost", data: { action: "click->DS--dialog#close" }) %>
-        <%= render DS::Button.new(text: "Save", data: { bulk_select_scope_param: "bulk_update", action: "bulk-select#submitBulkRequest" }) %>
+        <%= render DS::Button.new(text: t(".cancel"), variant: "ghost", data: { action: "click->DS--dialog#close" }) %>
+        <%= render DS::Button.new(text: t(".save"), data: { bulk_select_scope_param: "bulk_update", action: "bulk-select#submitBulkRequest" }) %>
       </div>
     <% end %>
   <% end %>

@@ -14,11 +14,22 @@ en:
       edit: Edit category
     form:
       placeholder: Category name
+      color: Color
+      icon: Icon
+      poor_contrast: Poor contrast, choose darker color or
+      auto_adjust: auto-adjust.
+      income: Income
+      expense: Expense
+      classification: Classification
+      name: Name
+      parent_category: Parent category (optional)
+      unassigned: "(unassigned)"
     index:
       bootstrap: Use defaults (recommended)
       categories: Categories
       categories_expenses: Expense categories
       categories_incomes: Income categories
+      delete_all: Delete all
       empty: No categories found
       new: New category
     menu:
@@ -32,3 +43,6 @@ en:
       show:
         bootstrap: Generate default categories
         empty: No categories found
+        match_transfer: Match transfer/payment
+        one_time_income: One-time income
+        one_time_expense: One-time expense
