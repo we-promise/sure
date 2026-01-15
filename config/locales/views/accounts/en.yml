@@ -50,15 +50,19 @@ en:
       activity:
         amount: Amount
         balance: Balance
+        confirmed: Confirmed
         date: Date
         entries: entries
         entry: entry
+        filter: Filter
         new: New
         new_balance: New balance
         new_transaction: New transaction
         no_entries: No entries found
+        pending: Pending
         search:
           placeholder: Search entries by name
+        status: Status
         title: Activity
       chart:
         balance: Balance

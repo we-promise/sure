@@ -1,10 +1,10 @@
 # Provides currency normalization and validation for provider data imports
 #
 # This concern provides a shared method to parse and normalize currency codes
-# from external providers (Plaid, SimpleFIN, LunchFlow), ensuring:
+# from external providers (Plaid, SimpleFIN, LunchFlow, Enable Banking), ensuring:
 # - Consistent uppercase formatting (e.g., "eur" -> "EUR")
-# - Validation of 3-letter ISO currency codes
-# - Proper handling of nil, empty, and invalid values
+# - Validation against Money gem's known currencies (not just 3-letter format)
+# - Proper handling of nil, empty, and invalid values (e.g., "XXX")
 #
 # Usage:
 #   include CurrencyNormalizable
@@ -23,6 +23,7 @@ module CurrencyNormalizable
     #   parse_currency("usd")     # => "USD"
     #   parse_currency("EUR")     # => "EUR"
     #   parse_currency("  gbp  ") # => "GBP"
+    #   parse_currency("XXX")     # => nil (not a valid Money currency)
     #   parse_currency("invalid") # => nil (logs warning)
     #   parse_currency(nil)       # => nil
     #   parse_currency("")        # => nil
@@ -33,13 +34,31 @@ module CurrencyNormalizable
       # Normalize to uppercase 3-letter code
       normalized = currency_value.to_s.strip.upcase
 
-      # Validate it's a reasonable currency code (3 letters)
-      if normalized.match?(/\A[A-Z]{3}\z/)
+      # Validate it's a 3-letter format first
+      unless normalized.match?(/\A[A-Z]{3}\z/)
+        log_invalid_currency(currency_value)
+        return nil
+      end
+
+      # Validate against Money gem's known currencies
+      # This catches codes like "XXX" which are 3 letters but not valid for monetary operations
+      if valid_money_currency?(normalized)
         normalized
       else
         log_invalid_currency(currency_value)
         nil
       end
+    end
+
+    # Check if a currency code is valid in the Money gem
+    #
+    # @param code [String] Uppercase 3-letter currency code
+    # @return [Boolean] true if the Money gem recognizes this currency
+    def valid_money_currency?(code)
+      Money::Currency.new(code)
+      true
+    rescue Money::Currency::UnknownCurrencyError
+      false
     end
 
     # Log warning for invalid currency codes

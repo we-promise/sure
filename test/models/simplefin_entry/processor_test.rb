@@ -29,8 +29,8 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       payee: "Pizza Hut",
       description: "Order #1234",
       memo: "Carryout",
-      posted: Date.today.to_s,
-      transacted_at: (Date.today - 1).to_s,
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
       extra: { category: "restaurants", check_number: nil }
     }
 
@@ -64,7 +64,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       description: "Latte",
       memo: "Morning run",
       posted: nil,
-      transacted_at: (Date.today - 3).to_s
+      transacted_at: (Date.current - 3).to_s
     }
 
     SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
@@ -77,8 +77,8 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
   test "captures FX metadata when tx currency differs from account currency" do
     # Account is USD from setup; use EUR for tx
-    t_date = (Date.today - 5)
-    p_date = Date.today
+    t_date = (Date.current - 5)
+    p_date = Date.current
 
     tx = {
       id: "tx_fx_1",
@@ -106,8 +106,8 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       payee: "Test Store",
       description: "Auth",
       memo: "",
-      posted: Date.today.to_s, # provider says pending=true should still flag
-      transacted_at: (Date.today - 1).to_s,
+      posted: Date.current.to_s, # provider says pending=true should still flag
+      transacted_at: (Date.current - 1).to_s,
       pending: true
     }
 
@@ -120,7 +120,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
   test "posted==0 treated as missing, entry uses transacted_at date and flags pending" do
     # Simulate provider sending epoch-like zeros for posted and an integer transacted_at
-    t_epoch = (Date.today - 2).to_time.to_i
+    t_epoch = (Date.current - 2).to_time.to_i
     tx = {
       id: "tx_pending_zero_posted_1",
       amount: "-6.48",
@@ -140,5 +140,27 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal Time.at(t_epoch).to_date, entry.date, "expected entry.date to use transacted_at when posted==0"
     sf = entry.transaction.extra.fetch("simplefin")
     assert_equal true, sf["pending"], "expected pending flag to be true when posted==0 and/or pending=true"
+  end
+
+  test "infers pending when posted is explicitly 0 and transacted_at present (no explicit pending flag)" do
+    # Some SimpleFIN banks indicate pending by sending posted=0 + transacted_at, without pending flag
+    t_epoch = (Date.current - 1).to_time.to_i
+    tx = {
+      id: "tx_inferred_pending_1",
+      amount: "-15.00",
+      currency: "USD",
+      payee: "Gas Station",
+      description: "Fuel",
+      memo: "",
+      posted: 0,
+      transacted_at: t_epoch
+      # Note: NO pending flag set
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_inferred_pending_1", source: "simplefin")
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert_equal true, sf["pending"], "expected pending to be inferred from posted=0 + transacted_at present"
   end
 end

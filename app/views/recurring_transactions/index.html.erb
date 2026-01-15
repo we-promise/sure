@@ -2,7 +2,7 @@
   <header class="flex justify-between items-center text-primary font-medium">
     <h1 class="text-xl"><%= t("recurring_transactions.title") %></h1>
     <div class="flex items-center gap-2">
-      <% unless @family.recurring_transactions_disabled? %>        
+      <% unless @family.recurring_transactions_disabled? %>
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
               variant: "button",

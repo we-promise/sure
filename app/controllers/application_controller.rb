@@ -2,8 +2,14 @@ class ApplicationController < ActionController::Base
   include RestoreLayoutPreferences, Onboardable, Localize, AutoSync, Authentication, Invitable,
           SelfHostable, StoreLocation, Impersonatable, Breadcrumbable,
           FeatureGuardable, Notifiable
+  include Pundit::Authorization
 
   include Pagy::Backend
+
+  # Pundit uses current_user by default, but this app uses Current.user
+  def pundit_user
+    Current.user
+  end
 
   before_action :detect_os
   before_action :set_default_chat

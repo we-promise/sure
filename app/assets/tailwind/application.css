@@ -12,6 +12,7 @@
 
 @import "./google-sign-in.css";
 @import "./date-picker-dark-mode.css";
+@import "./print-report.css";
 
 @layer components {
   .pcr-app{
@@ -196,4 +197,8 @@
   opacity: 0;
   pointer-events: none;
   position: absolute;
+}
+
+.turbo-progress-bar {
+  margin-top: env(safe-area-inset-top);
 }

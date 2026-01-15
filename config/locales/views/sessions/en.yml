@@ -6,10 +6,15 @@ en:
       local_login_disabled: Local password login is disabled. Please use single sign-on.
     destroy:
       logout_successful: You have signed out successfully.
+    post_logout:
+      logout_successful: You have signed out successfully.
     openid_connect:
       failed: Could not authenticate via OpenID Connect.
     failure:
       failed: Could not authenticate.
+      sso_provider_unavailable: "The SSO provider is currently unavailable. Please try again later or contact an administrator."
+      sso_invalid_response: "Received an invalid response from the SSO provider. Please try again."
+      sso_failed: "Single sign-on authentication failed. Please try again."
     new:
       email: Email address
       email_placeholder: you@example.com

@@ -5,6 +5,7 @@ en:
       title: Reports
       subtitle: Comprehensive insights into your financial health
       export: Export CSV
+      print_report: Print Report
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
       periods:
@@ -69,8 +70,8 @@ en:
       add_transaction: Add Transaction
       add_account: Add Account
     transactions_breakdown:
-      title: Transactions Breakdown
-      no_transactions: No transactions found for the selected period and filters
+      title: Activity Breakdown
+      no_transactions: No activity found for the selected period and filters
       filters:
         title: Filters
         category: Category
@@ -102,12 +103,37 @@ en:
         expense: Expenses
         income: Income
         uncategorized: Uncategorized
-        transactions: transactions
+        entries:
+          one: entry
+          other: entries
         percentage: "% of Total"
       pagination:
-        showing: Showing %{count} transactions
+        showing:
+          one: Showing %{count} entry
+          other: Showing %{count} entries
         previous: Previous
         next: Next
+    net_worth:
+      title: Net Worth
+      current_net_worth: Current Net Worth
+      period_change: Period Change
+      assets_vs_liabilities: Assets vs Liabilities
+      total_assets: Assets
+      total_liabilities: Liabilities
+      no_assets: No assets
+      no_liabilities: No liabilities
+    investment_performance:
+      title: Investment Performance
+      portfolio_value: Portfolio Value
+      total_return: Total Return
+      contributions: Period Contributions
+      withdrawals: Period Withdrawals
+      top_holdings: Top Holdings
+      holding: Holding
+      weight: Weight
+      value: Value
+      return: Return
+      accounts: Investment Accounts
     google_sheets_instructions:
       title_with_key: "✅ Copy URL for Google Sheets"
       title_no_key: "⚠️ API Key Required"
@@ -124,3 +150,57 @@ en:
       open_sheets: Open Google Sheets
       go_to_api_keys: Go to API Keys
       close: Got it
+    print:
+      document_title: Financial Report
+      title: Financial Report
+      generated_on: "Generated %{date}"
+      # Summary section
+      summary:
+        title: Summary
+        income: Income
+        expenses: Expenses
+        net_savings: Net Savings
+        budget: Budget
+        vs_prior: "%{percent}% vs prior"
+        of_income: "%{percent}% of income"
+        used: used
+      # Net Worth section
+      net_worth:
+        title: Net Worth
+        current_balance: Current Balance
+        this_period: this period
+        assets: Assets
+        liabilities: Liabilities
+        no_liabilities: No liabilities
+      # Monthly Trends section
+      trends:
+        title: Monthly Trends
+        month: Month
+        income: Income
+        expenses: Expenses
+        net: Net
+        savings_rate: Savings Rate
+        average: Average
+        current_month_note: "* Current month (partial data)"
+      # Investments section
+      investments:
+        title: Investments
+        portfolio_value: Portfolio Value
+        total_return: Total Return
+        contributions: Contributions
+        withdrawals: Withdrawals
+        this_period: this period
+        top_holdings: Top Holdings
+        holding: Holding
+        weight: Weight
+        value: Value
+        return: Return
+      # Spending by Category section
+      spending:
+        title: Spending by Category
+        income: Income
+        expenses: Expenses
+        category: Category
+        amount: Amount
+        percent: "%"
+        more_categories: "+ %{count} more categories"

@@ -6,6 +6,7 @@ class Transaction::Search
   attribute :amount, :string
   attribute :amount_operator, :string
   attribute :types, array: true
+  attribute :status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -30,6 +31,7 @@ class Transaction::Search
       query = apply_active_accounts_filter(query, active_accounts_only)
       query = apply_category_filter(query, categories)
       query = apply_type_filter(query, types)
+      query = apply_status_filter(query, status)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
       query = EntrySearch.apply_search_filter(query, search)
@@ -47,8 +49,8 @@ class Transaction::Search
       Rails.cache.fetch("transaction_search_totals/#{cache_key_base}") do
         result = transactions_scope
                   .select(
-                    "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
-                    "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                    "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution')  THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                    "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution')  THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
                     "COUNT(entries.id) as transactions_count"
                   )
                   .joins(
@@ -98,14 +100,14 @@ class Transaction::Search
       if parent_category_ids.empty?
         query = query.left_joins(:category).where(
           "categories.name IN (?) OR (
-          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
+          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution'))
         )",
           categories
         )
       else
         query = query.left_joins(:category).where(
           "categories.name IN (?) OR categories.parent_id IN (?) OR (
-          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
+          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution'))
         )",
           categories, parent_category_ids
         )
@@ -152,5 +154,29 @@ class Transaction::Search
     def apply_tag_filter(query, tags)
       return query unless tags.present?
       query.joins(:tags).where(tags: { name: tags })
+    end
+
+    def apply_status_filter(query, statuses)
+      return query unless statuses.present?
+      return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
+
+      pending_condition = <<~SQL.squish
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+
+      confirmed_condition = <<~SQL.squish
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
+        AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
+      SQL
+
+      case statuses.sort
+      when [ "pending" ]
+        query.where(pending_condition)
+      when [ "confirmed" ]
+        query.where(confirmed_condition)
+      else
+        query
+      end
     end
 end

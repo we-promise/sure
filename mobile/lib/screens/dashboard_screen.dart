@@ -3,9 +3,13 @@ import 'package:provider/provider.dart';
 import '../models/account.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
+import '../providers/transactions_provider.dart';
+import '../services/log_service.dart';
 import '../widgets/account_card.dart';
+import '../widgets/connectivity_banner.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
+import 'log_viewer_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,13 +19,58 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final LogService _log = LogService.instance;
   bool _assetsExpanded = true;
   bool _liabilitiesExpanded = true;
+  bool _showSyncSuccess = false;
+  int _previousPendingCount = 0;
+  TransactionsProvider? _transactionsProvider;
 
   @override
   void initState() {
     super.initState();
     _loadAccounts();
+
+    // Listen for sync completion to show success indicator
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+      _previousPendingCount = _transactionsProvider?.pendingCount ?? 0;
+      _transactionsProvider?.addListener(_onTransactionsChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    _transactionsProvider?.removeListener(_onTransactionsChanged);
+    super.dispose();
+  }
+
+  void _onTransactionsChanged() {
+    final transactionsProvider = _transactionsProvider;
+    if (transactionsProvider == null || !mounted) {
+      return;
+    }
+    
+    final currentPendingCount = transactionsProvider.pendingCount;
+
+    // If pending count decreased, it means transactions were synced
+    if (_previousPendingCount > 0 && currentPendingCount < _previousPendingCount) {
+      setState(() {
+        _showSyncSuccess = true;
+      });
+
+      // Hide the success indicator after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _showSyncSuccess = false;
+          });
+        }
+      });
+    }
+
+    _previousPendingCount = currentPendingCount;
   }
 
   Future<void> _loadAccounts() async {
@@ -44,7 +93,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleRefresh() async {
-    await _loadAccounts();
+    await _performManualSync();
+  }
+
+  Future<void> _performManualSync() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken == null) {
+      await authProvider.logout();
+      return;
+    }
+
+    // Show syncing indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Syncing data from server...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
+        ),
+      );
+    }
+
+    try {
+      // Perform full sync: upload pending, download from server, sync accounts
+      await transactionsProvider.syncTransactions(accessToken: accessToken);
+
+      // Reload accounts to show updated balances
+      await _loadAccounts();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Sync completed successfully'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      _log.error('DashboardScreen', 'Error in _performManualSync: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(child: Text('Sync failed. Please try again.')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   List<String> _formatCurrencyItem(String currency, double amount) {
@@ -193,6 +319,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          if (_showSyncSuccess)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: AnimatedOpacity(
+                opacity: _showSyncSuccess ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: const Icon(
+                  Icons.cloud_done,
+                  color: Colors.green,
+                  size: 28,
+                ),
+              ),
+            ),
+          Semantics(
+            label: 'Open debug logs',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.bug_report),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LogViewerScreen()),
+                );
+              },
+              tooltip: 'Debug Logs',
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _handleRefresh,
@@ -205,14 +358,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: Consumer2<AuthProvider, AccountsProvider>(
-        builder: (context, authProvider, accountsProvider, _) {
-          // Show loading state during initialization or when loading
-          if (accountsProvider.isInitializing || accountsProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+      body: Column(
+        children: [
+          const ConnectivityBanner(),
+          Expanded(
+            child: Consumer2<AuthProvider, AccountsProvider>(
+              builder: (context, authProvider, accountsProvider, _) {
+                // Show loading state during initialization or when loading
+                if (accountsProvider.isInitializing || accountsProvider.isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
           // Show error state
           if (accountsProvider.errorMessage != null && 
@@ -418,7 +575,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           );
-        },
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
