@@ -8,28 +8,28 @@ ca:
         one: "L'acció del compte obsolet ha fallat: %{count}. Consulta els registres per a més detalls."
         other: "Les accions dels comptes obsolets han fallat: %{count}. Consulta els registres per a més detalls."
       stale_accounts_processed: 'Comptes obsolets: %{deleted} eliminats, %{moved} moguts.'
-      success: Els comptes SimpleFin s'han configurat correctament! Les teves transaccions
+      success: Els comptes SimpleFIN s'han configurat correctament! Les teves transaccions
         i posicions s'estan important en segon pla.
     create:
       errors:
-        blank_token: Introdueix un token de configuració SimpleFin.
+        blank_token: Introdueix un token de configuració SimpleFIN.
         create_failed: 'No s''ha pogut connectar: %{message}'
         invalid_token: Token de configuració invàlid. Comprova que has copiat el token
-          complet des de SimpleFin Bridge.
+          complet des de SimpleFIN Bridge.
         token_compromised: El token de configuració pot estar compromès, caducat o
           ja utilitzat. Crea'n un de nou.
         unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta
           amb el suport.
-      success: Connexió SimpleFin afegida correctament! Els teus comptes apareixeran
+      success: Connexió SimpleFIN afegida correctament! Els teus comptes apareixeran
         en breu mentre es sincronitzen en segon pla.
     destroy:
-      success: La connexió SimpleFin s'eliminarà
+      success: La connexió SimpleFIN s'eliminarà
     edit:
       setup_token:
         help_text: El token ha de ser una cadena llarga que comenci amb lletres i
           números
-        label: 'Token de configuració SimpleFin:'
-        placeholder: Enganxa aquí el teu token de configuració SimpleFin...
+        label: 'Token de configuració SimpleFIN:'
+        placeholder: Enganxa aquí el teu token de configuració SimpleFIN...
     link_existing_account:
       errors:
         invalid_simplefin_account: S'ha seleccionat un compte SimpleFIN invàlid
@@ -39,14 +39,14 @@ ca:
       cancel: Cancel·la
       connect: Connecta
       setup_token: Token de configuració
-      setup_token_placeholder: enganxa el teu token de configuració SimpleFin
-      title: Connecta SimpleFin
+      setup_token_placeholder: enganxa el teu token de configuració SimpleFIN
+      title: Connecta SimpleFIN
     reconciled_status:
       message:
         one: "%{count} transacció pendent duplicada conciliada"
         other: "%{count} transaccions pendents duplicades conciliades"
     select_existing_account:
-      all_accounts_already_linked: Sembla que ja s'han enllaçat tots els comptes de SimpleFin.
+      all_accounts_already_linked: Sembla que ja s'han enllaçat tots els comptes de SimpleFIN.
       cancel: Cancel·la
       check_provider_health: Comprova l'estat del proveïdor
       currently_linked_to: 'Actualment enllaçat a: %{account_name}'
@@ -73,7 +73,7 @@ ca:
       confirm_accept: Elimina la connexió
       confirm_body: Això eliminarà permanentment tots els comptes d'aquest grup i
         totes les dades associades.
-      confirm_title: Vols eliminar la connexió SimpleFin?
+      confirm_title: Vols eliminar la connexió SimpleFIN?
       delete: Elimina
       deletion_in_progress: "(eliminació en curs...)"
       duplicate_accounts_skipped: S'han omès alguns comptes perquè eren duplicats — utilitza 'Enllaça
@@ -84,7 +84,7 @@ ca:
       reconciled_details_note: "(consulta el resum de la sincronització per a més detalls)"
       requires_update: Cal tornar a autenticar
       setup_action: Configura nous comptes
-      setup_description: Tria els tipus de compte per als teus nous comptes SimpleFin
+      setup_description: Tria els tipus de compte per als teus nous comptes SimpleFIN
         importats.
       setup_needed: Nous comptes llestos per configurar
       stale_pending_accounts: 'in: %{accounts}'
@@ -100,13 +100,13 @@ ca:
         other: "%{count} transaccions pendents anteriors a %{days} dies"
     update:
       errors:
-        blank_token: Introdueix un token de configuració SimpleFin.
+        blank_token: Introdueix un token de configuració SimpleFIN.
         invalid_token: Token de configuració invàlid. Comprova que has copiat el token
-          complet des de SimpleFin Bridge.
+          complet des de SimpleFIN Bridge.
         token_compromised: El token de configuració pot estar compromès, caducat o
           ja utilitzat. Crea'n un de nou.
         unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta
           amb el suport.
         update_failed: 'No s''ha pogut actualitzar la connexió: %{message}'
-      success: Connexió SimpleFin actualitzada correctament! Els teus comptes s'estan
+      success: Connexió SimpleFIN actualitzada correctament! Els teus comptes s'estan
         tornant a connectar.
