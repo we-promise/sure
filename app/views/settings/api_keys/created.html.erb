@@ -25,7 +25,7 @@
         <div class="flex items-center justify-between gap-3">
           <code id="api-key-display" class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @api_key.plain_key %></code>
           <%= render DS::Button.new(
-            text: "Copy API Key",
+            text: t(".copy_key"),
             variant: "ghost",
             icon: "copy",
             data: { action: "clipboard#copy" }
@@ -85,7 +85,7 @@
 
     <div class="flex justify-end pt-4 border-t border-primary">
       <%= render DS::Link.new(
-        text: "Continue to API Key Settings",
+        text: t(".continue"),
         href: settings_api_key_path,
         variant: "primary"
       ) %>

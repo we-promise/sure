@@ -9,9 +9,21 @@ en:
         errors_notice_mobile: You have errors in your data.  Tap over the error tooltip to see
           details.
         title: Clean your data
+        data_cleaned: Your data has been cleaned
+        next_step: Next step
+        all_rows: All rows
+        error_rows: Error rows
     configurations:
       update:
         success: Import configured successfully.
+      show:
+        description: Select the columns that correspond to each field in your CSV.
+        title: Configure your import
+        template_found: Template configuration found
+        template_found_description: We found a configuration from a previous import for this account.  Would you like to apply it to this import?
+        manually_configure: Manually configure
+        apply_template: Apply template
+        sample_data_caption: Sample data from your uploaded CSV
       category_import:
         button_label: Continue
         description: Upload a simple CSV file (like the one we generate when you
@@ -42,6 +54,7 @@ en:
           and provide an account name we can use.
         rows_label: Rows
         unassigned_account: Need to create a new account for unassigned rows?
+        next: Next
       show:
         account_mapping_description: Assign all of your imported file's accounts to
           Maybe's existing accounts.  You can also add new accounts or leave them
@@ -69,6 +82,10 @@ en:
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
   imports:
+    revert_failure:
+      title: Reverting import failed
+      message: Please try again or contact support.
+      try_again: Try again
     empty:
       message: No imports yet.
       new: New Import

@@ -24,9 +24,29 @@ en:
     new:
       title: Enter property details
     overview:
+      edit_account_details: Edit account details
       living_area: Living Area
       market_value: Market Value
       purchase_price: Purchase Price
       trend: Trend
       unknown: Unknown
       year_built: Year Built
+    tabs:
+      overview:
+        edit_account_details: Edit account details
+    new:
+      enter_property_manually: Enter property manually
+      next: Next
+    address:
+      enter_property_manually: Enter property manually
+      address_line_1: Address Line 1
+      address_line_1_placeholder: 123 Main Street
+      city: City
+      city_placeholder: San Francisco
+      state_region: State/Region
+      state_region_placeholder: CA
+      postal_code: Postal Code
+      postal_code_placeholder: '12345'
+      country: Country
+      country_placeholder: USA
+      save: Save
