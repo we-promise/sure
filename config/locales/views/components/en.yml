@@ -30,6 +30,7 @@ en:
       processed: "Processed: %{count}"
     health:
       title: Health
+      view_error_details: View error details
       rate_limited: "Rate limited %{time_ago}"
       recently: recently
       errors: "Errors: %{count}"

@@ -95,7 +95,7 @@
             <span class="text-destructive"><%= t("provider_sync_summary.health.errors", count: total_errors) %></span>
             <% if error_details.any? %>
               <details class="mt-1">
-                <summary class="text-xs cursor-pointer text-secondary hover:text-primary">View error details</summary>
+                <summary class="text-xs cursor-pointer text-secondary hover:text-primary"><%= t("provider_sync_summary.health.view_error_details") %></summary>
                 <div class="mt-1 pl-2 border-l-2 border-destructive/30 space-y-1">
                   <% error_details.each do |detail| %>
                     <p class="text-xs text-destructive">

@@ -30,8 +30,8 @@ class TradesController < ApplicationController
 
   def update
     if @entry.update(update_entry_params)
-      @entry.sync_account_later
       @entry.mark_user_modified!
+      @entry.sync_account_later
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t("entries.update.success") }
