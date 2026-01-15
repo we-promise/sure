@@ -1,5 +1,5 @@
 # Create a simple dev user for local testing
-# Credentials: test@test.com / test
+# Credentials: test@test.com / password
 
 family = Family.find_or_create_by!(name: "Test Family") do |f|
   f.currency = "USD"
@@ -15,10 +15,10 @@ user.assign_attributes(
   first_name: "Test",
   last_name: "User",
   role: "admin",
-  password: "test",
+  password: "password",
   onboarded_at: Time.current,
   ai_enabled: true
 )
 user.save!
 
-puts "Created dev user: test@test.com / test"
+puts "Created dev user: test@test.com / password"
