@@ -1,0 +1,31 @@
+---
+fr:
+  enable_banking_items:
+    enable_banking_item:
+      provider_name: Enable Banking
+      deletion_in_progress: Suppression en cours
+      syncing: Synchronisation...
+      reconnect: Reconnecter
+      last_synced: Dernière synchronisation il y a %{time}
+      never_synced: Jamais synchronisé
+      update: Mettre à jour
+      delete: Supprimer
+      setup_needed: Configuration requise
+      accounts_need_setup: "%{count} importés depuis Enable Banking doivent être configurés"
+      set_up_accounts: Configurer les comptes
+      no_accounts_found: Aucun compte trouvé
+      no_accounts_description: Aucun compte n'a été trouvé depuis Enable Banking. Essayez de synchroniser à nouveau.
+    new:
+      link_enable_banking_title: Lier Enable Banking
+      connected_bank: Banque connectée
+      session_expires: "Session expire : %{date}"
+      session_expired: Session expirée - réautorisation requise
+      configured: Configuré
+      ready_to_connect: Prêt à connecter une banque
+      sync: Synchroniser
+      reconnect: Reconnecter
+      connect_bank: Connecter une banque
+      remove: Supprimer
+      confirm_remove: Êtes-vous sûr de vouloir supprimer cette connexion ?
+      add_connection: Ajouter une connexion
+      unknown: Inconnu

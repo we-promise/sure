@@ -23,7 +23,7 @@
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
-          <p class="text-xs text-secondary">Enable Banking</p>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
           <% if enable_banking_item.syncing? %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "loader", size: "sm", class: "animate-spin" %>

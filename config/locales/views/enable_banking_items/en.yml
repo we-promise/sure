@@ -87,6 +87,7 @@ en:
       link: Link
       cancel: Cancel
     enable_banking_item:
+      provider_name: Enable Banking
       deletion_in_progress: Deletion in progress
       syncing: Syncing...
       reconnect: Reconnect

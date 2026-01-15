@@ -1,6 +1,10 @@
 en:
   subscriptions:
     self_hosted_alert: "%{product_name} is not available in self-hosted mode."
+    plan_choice:
+      or_weekly: "or %{amount}/week"
+      billed_annually: Billed annually, 2 months free
+      billed_monthly: Billed monthly
     upgrade:
       title: Upgrade
       account_settings: Account Settings

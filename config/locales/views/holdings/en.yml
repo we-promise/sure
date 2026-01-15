@@ -62,3 +62,6 @@ en:
       unlock_cost_basis: Unlock
       unlock_confirm_title: Unlock cost basis?
       unlock_confirm_body: This will allow the cost basis to be updated by provider syncs or trade calculations.
+      no_trade_history: No trade history available for this holding.
+    new:
+      coming_soon: Coming soon...
