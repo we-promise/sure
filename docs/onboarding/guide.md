@@ -227,7 +227,7 @@ After unlocking:
 - Future syncs can update the cost basis
 - Calculated values (from trades) will replace the manual value
 
-- <img width="529" height="231" alt="image" src="https://github.com/user-attachments/assets/89d4c64f-7151-4702-b79f-1e22d47a2bee" />
+<img width="529" height="231" alt="image" src="https://github.com/user-attachments/assets/89d4c64f-7151-4702-b79f-1e22d47a2bee" />
 
 #### Bidirectional Conversion
 
