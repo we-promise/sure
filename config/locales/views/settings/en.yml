@@ -140,6 +140,10 @@ en:
       whats_new_label: What's new
       api_keys_label: API Key
       bank_sync_label: Bank Sync
+      llm_usage_label: LLM Usage
+      providers_label: Providers
+      sso_providers_label: SSO Providers
+      users_label: Users
     settings_nav_link_large:
       next: Next
       previous: Back
