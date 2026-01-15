@@ -1,8 +1,11 @@
 <%# locals: (message:, description: nil) %>
 
-<%= tag.div class: "relative flex gap-3 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-xs",
+<%= tag.div class: "relative flex gap-3 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-xs mb-3 transition-enter-exit animate-fade-up-initial",
             data: {
               controller: "element-removal",
+              element_removal_initial_class: "animate-fade-up-initial",
+              element_removal_visible_class: "animate-fade-up-visible",
+              element_removal_exit_class: "animate-fade-up-exit",
               action: "animationend->element-removal#remove"
             } do %>
   <div class="h-5 w-5 shrink-0 p-px text-primary">
