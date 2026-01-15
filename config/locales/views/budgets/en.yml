@@ -1,6 +1,9 @@
 ---
 en:
   budgets:
+    over_allocation_warning:
+      over_allocated_message: You have over-allocated your budget. Please fix your allocations.
+      fix_allocations: Fix allocations
     show:
       categories: Categories
       edit: Edit

@@ -1,18 +1,16 @@
 <%= render DS::Dialog.new(reload_on_close: params[:reload_on_close].present?) do |dialog| %>
   <%
     title = if @rule.name.present?
-              "Confirm changes to \"#{@rule.name}\""
+              t(".confirm_changes_with_name", name: @rule.name)
             else
-              "Confirm changes"
+              t(".confirm_changes")
             end
   %>
   <% dialog.with_header(title: title) %>
 
   <% dialog.with_body do %>
     <p class="text-secondary text-sm mb-4">
-      You are about to apply this rule to
-      <span class="text-primary font-medium"><%= @rule.affected_resource_count %> <%= @rule.resource_type.pluralize %></span>
-      that meet the specified rule criteria.  Please confirm if you wish to proceed with this change.
+      <%= raw t(".confirm_message_html", count: @rule.affected_resource_count, resource_type: @rule.resource_type.pluralize) %>
     </p>
 
     <% if @rule.actions.any? { |a| a.action_type == "auto_categorize" } %>
@@ -21,25 +19,23 @@
         <div class="flex items-start gap-2">
           <%= icon "info", class: "w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" %>
           <div class="text-xs">
-            <p class="font-medium text-blue-900 mb-1">AI Cost Estimation</p>
+            <p class="font-medium text-blue-900 mb-1"><%= t(".ai_cost_title") %></p>
             <% if @estimated_cost.present? %>
               <p class="text-blue-700">
-                This will use AI to categorize <%= affected_count %> transaction<%= "s" if affected_count != 1 %>.
-                Estimated cost: <span class="font-semibold">~$<%= sprintf("%.4f", @estimated_cost) %></span>
+                <%= t(".ai_cost_with_estimate", count: affected_count, cost: sprintf("%.4f", @estimated_cost)) %>
               </p>
             <% else %>
               <p class="text-blue-700">
-                This will use AI to categorize <%= affected_count %> transaction<%= "s" if affected_count != 1 %>.
                 <% if @selected_model.present? %>
-                  <span class="font-semibold">Cost estimation unavailable for model "<%= @selected_model %>".</span>
+                  <%= t(".ai_cost_no_model", count: affected_count, model: @selected_model) %>
                 <% else %>
-                  <span class="font-semibold">Cost estimation unavailable (no LLM provider configured).</span>
+                  <%= t(".ai_cost_no_provider", count: affected_count) %>
                 <% end %>
-                You may incur costs, please check with the model provider for the most up-to-date prices.
+                <%= t(".ai_cost_warning") %>
               </p>
             <% end %>
             <p class="text-blue-600 mt-1">
-              <%= link_to "View usage history", settings_llm_usage_path, class: "underline hover:text-blue-800" %>
+              <%= link_to t(".view_usage"), settings_llm_usage_path, class: "underline hover:text-blue-800" %>
             </p>
           </div>
         </div>
@@ -47,7 +43,7 @@
     <% end %>
 
     <%= render DS::Button.new(
-      text: "Confirm changes",
+      text: t(".confirm_button"),
       href: apply_rule_path(@rule),
       method: :post,
       full_width: true,

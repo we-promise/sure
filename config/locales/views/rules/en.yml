@@ -24,6 +24,11 @@ en:
       add_condition: Add condition
       add_condition_group: Add condition group
       add_action: Add action
+    condition_group:
+      and: and
+      match: match
+      of_following: of the following conditions
+      add_condition: Add condition
       all_resources: All past and future %{resource}
       starting_from: Starting from
     actions:
@@ -41,6 +46,23 @@ en:
       cost_unavailable_no_provider: Cost estimation unavailable (no LLM provider configured).
       cost_warning: You may incur costs, please check with the model provider for the most up-to-date prices.
       view_usage: View usage history
+    confirm:
+      confirm_changes_with_name: "Confirm changes to \"%{name}\""
+      confirm_changes: Confirm changes
+      confirm_message_html: "You are about to apply this rule to <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> that meet the specified rule criteria. Please confirm if you wish to proceed with this change."
+      ai_cost_title: AI Cost Estimation
+      ai_cost_with_estimate: "This will use AI to categorize %{count} transaction(s). Estimated cost: ~$%{cost}"
+      ai_cost_no_model: "This will use AI to categorize %{count} transaction(s). Cost estimation unavailable for model \"%{model}\"."
+      ai_cost_no_provider: "This will use AI to categorize %{count} transaction(s). Cost estimation unavailable (no LLM provider configured)."
+      ai_cost_warning: You may incur costs, please check with the model provider for the most up-to-date prices.
+      view_usage: View usage history
+      confirm_button: Confirm changes
+    category_rule_cta:
+      updated_to_category: "Updated to %{category_name}"
+      create_rule_description: You can create a rule to automatically categorize transactions like this one
+      dont_show_again: Don't show this again
+      dismiss: Dismiss
+      create_rule: Create rule
     recent_runs:
       title: Recent Runs
       description: View the execution history of your rules including success/failure status and transaction counts.

@@ -48,3 +48,12 @@ en:
         trades: "Trades"
         no_investments: "No investment accounts"
         add_investment: "Add an investment account to track your portfolio"
+    redis_configuration_error:
+      title: Redis Configuration Required
+      subtitle: Your self-hosted Sure installation needs Redis to be properly configured.
+      why_required: Why is Redis required?
+      explanation: Sure uses Redis to power Sidekiq background jobs for tasks like syncing account data, processing imports, and other background operations that keep your financial data up to date.
+      view_setup_guide: View Setup Guide
+      setup_guide_note: Follow our complete Docker setup guide to configure Redis
+      refresh_note: Once you've configured Redis, refresh this page to continue.
+      refresh_page: Refresh Page
