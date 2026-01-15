@@ -14,7 +14,7 @@
         <span class="font-medium uppercase text-xs"><%= t("rules.form.condition_group.and") %></span>
       </div>
       <p class="text-sm text-secondary"><%= t("rules.form.condition_group.match") %></p>
-      <%= form.select :operator, [["all", "and"], ["any", "or"]], { container_class: "w-fit" }, data: { rules_target: "operatorField" } %>
+      <%= form.select :operator, [[t("rules.form.condition_group.all"), "and"], [t("rules.form.condition_group.any"), "or"]], { container_class: "w-fit" }, data: { rules_target: "operatorField" } %>
       <p class="text-sm text-secondary"><%= t("rules.form.condition_group.of_following") %></p>
     </div>
 

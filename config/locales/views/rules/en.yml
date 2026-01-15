@@ -28,6 +28,16 @@ en:
       empty_title: No rules yet
       empty_description: Set up rules to perform actions to your transactions and other data on every account sync.
     rule:
+      if: IF
+      then: THEN
+      for: FOR
+      to: to
+      and_more_conditions:
+        one: and %{count} more condition
+        other: and %{count} more conditions
+      and_more_actions:
+        one: and %{count} more action
+        other: and %{count} more actions
       all_past_future: All past and future %{resource_type}
       on_or_after: "%{resource_type} on or after %{date}"
       edit: Edit
@@ -47,6 +57,8 @@ en:
     condition_group:
       and: and
       match: match
+      all: all
+      any: any
       of_following: of the following conditions
       add_condition: Add condition
       all_resources: All past and future %{resource}

@@ -57,6 +57,8 @@ fr:
     condition_group:
       and: et
       match: correspondre à
+      all: tous
+      any: n'importe lequel
       of_following: des conditions suivantes
       add_condition: Ajouter une condition
       all_resources: Toutes les %{resource} passées et futures

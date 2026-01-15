@@ -8,7 +8,7 @@
     <% if rule.conditions.any? %>
       <div class="flex items-center gap-2 mt-1">
         <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-          <span class="font-mono text-xs">IF</span>
+          <span class="font-mono text-xs"><%= t("rules.rule.if") %></span>
         </div>
         <p class="flex items-center flex-wrap gap-1.5 m-0">
           <span class="px-2 py-1 border border-secondary rounded-full">
@@ -19,14 +19,14 @@
             <% end %>
           </span>
           <% if rule.conditions.count > 1 %>
-            and <%= rule.conditions.count - 1 %> more <%= rule.conditions.count - 1 == 1 ? "condition" : "conditions" %>
+            <%= t("rules.rule.and_more_conditions", count: rule.conditions.count - 1) %>
           <% end %>
         </p>
       </div>
     <% end %>
     <div class="flex items-center gap-2 mt-1">
       <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-        <span class="font-mono text-xs">THEN</span>
+        <span class="font-mono text-xs"><%= t("rules.rule.then") %></span>
       </div>
       <p class="flex items-center flex-wrap gap-1.5 m-0">
         <span class="px-2 py-1 border border-secondary rounded-full">
@@ -34,20 +34,20 @@
             <%= t("rules.no_action") %>
           <% else %>
             <% if rule.actions.first.value && rule.actions.first.options %>
-              <%= rule.actions.first.executor.label %> to <%= rule.actions.first.value_display %>
+              <%= rule.actions.first.executor.label %> <%= t("rules.rule.to") %> <%= rule.actions.first.value_display %>
             <% else %>
               <%= rule.actions.first.executor.label %>
             <% end %>
           <% end %>
         </span>
         <% if rule.actions.count > 1 %>
-          and <%= rule.actions.count - 1 %> more <%= rule.actions.count - 1 == 1 ? "action" : "actions" %>
+          <%= t("rules.rule.and_more_actions", count: rule.actions.count - 1) %>
         <% end %>
       </p>
     </div>
     <div class="flex items-center gap-2 mt-1">
       <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-        <span class="font-mono text-xs">FOR</span>
+        <span class="font-mono text-xs"><%= t("rules.rule.for") %></span>
       </div>
       <p class="flex items-center flex-wrap gap-1.5 m-0">
         <span class="px-2 py-1 border border-secondary rounded-full">
