@@ -39,18 +39,18 @@ fr:
     - sam
     abbr_month_names:
     -
-    - jan.
-    - fév.
-    - mars
-    - avr.
-    - mai
-    - juin
-    - juil.
-    - août
-    - sept.
-    - oct.
-    - nov.
-    - déc.
+    - Jan.
+    - Fév.
+    - Mars
+    - Avr.
+    - Mai
+    - Juin
+    - Juil.
+    - Août
+    - Sept.
+    - Oct.
+    - Nov.
+    - Déc.
     day_names:
     - dimanche
     - lundi
@@ -65,18 +65,18 @@ fr:
       short: "%-d %b"
     month_names:
     -
-    - janvier
-    - février
-    - mars
-    - avril
-    - mai
-    - juin
-    - juillet
-    - août
-    - septembre
-    - octobre
-    - novembre
-    - décembre
+    - Janvier
+    - Février
+    - Mars
+    - Avril
+    - Mai
+    - Juin
+    - Juillet
+    - Août
+    - Septembre
+    - Octobre
+    - Novembre
+    - Décembre
     order:
     - :day
     - :month
