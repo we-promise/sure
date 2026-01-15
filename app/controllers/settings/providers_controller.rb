@@ -7,8 +7,8 @@ class Settings::ProvidersController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Sync Providers", nil ]
+      [ :"breadcrumbs.home", root_path ],
+      [ :"breadcrumbs.sync_providers", nil ]
     ]
 
     prepare_show_context

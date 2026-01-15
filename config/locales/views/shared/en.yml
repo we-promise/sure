@@ -12,6 +12,16 @@ en:
     budgets: Budgets
     imports: Imports
     chats: Assistant
+    reports: Reports
+    guides: Guides
+    self_hosting: Self-Hosting
+    security: Security
+    llm_usage: LLM Usage
+    ai_prompts: AI Prompts
+    api_key: API Key
+    sync_providers: Sync Providers
+    profile_info: Profile Info
+    import_export: Import/Export
   shared:
     confirm_modal:
       accept: Confirm
