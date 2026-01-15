@@ -80,7 +80,7 @@ fr:
       tags_label: Étiquettes
       transfer: Transfert
     new:
-      new_transaction: Nouvelle transaction
+      title: Nouvelle transaction
     show:
       account_label: Compte
       amount: Montant
