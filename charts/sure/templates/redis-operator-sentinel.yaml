@@ -11,6 +11,9 @@ metadata:
     {{- include "sure.labels" . | nindent 4 }}
 spec:
   clusterSize: {{ .Values.redisOperator.replicas | default 3 }}
+  podSecurityContext:
+    runAsUser: 1000
+    fsGroup: 1000
   redisSentinelConfig:
     redisReplicationName: {{ $name | quote }}
     masterGroupName: {{ (.Values.redisOperator.sentinel.masterGroupName | default "mymaster") | quote }}
