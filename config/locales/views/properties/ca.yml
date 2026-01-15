@@ -30,11 +30,4 @@ ca:
       trend: Tendència
       unknown: Desconegut
       year_built: Any de construcció
-    tabs:
-      overview:
-        living_area: Superfície habitable
-        market_value: Valor de mercat
-        purchase_price: Preu de compra
-        trend: Tendència
-        unknown: Desconegut
-        year_built: Any de construcció
+

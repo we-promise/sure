@@ -5,12 +5,12 @@ ca:
       edit: Edita %{account}
     form:
       make: Marca
-      make_placeholder: Toyota
+      make_placeholder: Cupra
       mileage: Quilometratge
       mileage_placeholder: '15000'
       mileage_unit: Unitat
       model: Model
-      model_placeholder: Camry
+      model_placeholder: Born
       year: Any
       year_placeholder: '2023'
     new:
@@ -23,12 +23,4 @@ ca:
       trend: Tendència
       unknown: Desconegut
       year: Any
-    tabs:
-      overview:
-        current_price: Preu actual
-        make_model: Marca i model
-        mileage: Quilometratge
-        purchase_price: Preu de compra
-        trend: Tendència
-        unknown: Desconegut
-        year: Any
+

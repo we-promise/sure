@@ -46,7 +46,7 @@ ca:
         callback_url: URL de retorn
         confidential: Confidencial?
         confidentiality:
-          'no': false
+          'no': No
           'yes': Sí
         name: Nom
         new: Nova aplicació

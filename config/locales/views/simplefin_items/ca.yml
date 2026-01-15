@@ -43,10 +43,10 @@ ca:
       title: Connecta SimpleFin
     reconciled_status:
       message:
-        one: "%{count} duplicate pending transaction reconciled"
-        other: "%{count} duplicate pending transactions reconciled"
+        one: "%{count} transacció pendent duplicada conciliada"
+        other: "%{count} transaccions pendents duplicades conciliades"
     select_existing_account:
-      all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
+      all_accounts_already_linked: Sembla que ja s'han enllaçat tots els comptes de SimpleFin.
       cancel: Cancel·la
       check_provider_health: Comprova l'estat del proveïdor
       currently_linked_to: 'Actualment enllaçat a: %{account_name}'

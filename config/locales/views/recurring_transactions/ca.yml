@@ -18,14 +18,15 @@ ca:
       title: No s'han trobat transaccions recurrents
     expected_on: S'esperava el %{date}
     identified: S'han identificat %{count} patrons de transaccions recurrents
-    identify_patterns: Identifica Patrons
+    identify_patterns: Identifica patrons
     info:
       automatic_description: "L'identificació automàtica també s'executa després de:"
       manual_description: Pots identificar patrons manualment o netejar transaccions
         recurrents obsoletes utilitzant els botons de dalt.
-      title: Detecció Automàtica de Patrons
-      triggers: '["Les importacions CSV estan completes (transaccions, negocis, comptes, etc.)",
-        "Qualsevol sincronització de proveïdor està completa (Plaid, SimpleFIN, etc.)"]'
+      title: Detecció automàtica de patrons
+      triggers:
+        - Importacions CSV completades (transaccions, operacions, comptes, etc.)
+        - Sincronitzacions de proveïdors completades (Plaid, SimpleFIN, etc.)
     marked_active: S'ha marcat la transacció recurrent com a activa
     marked_as_recurring: S'ha marcat la transacció com a recurrent
     marked_inactive: S'ha marcat la transacció recurrent com a inactiva
