@@ -1,6 +1,13 @@
 ---
 en:
   import:
+    nav:
+      upload: Upload
+      configure: Configure
+      clean: Clean
+      map: Map
+      confirm: Confirm
+      step_of: "Step %{step} of %{total}"
     cleans:
       show:
         description: Edit your data in the table below.  Red cells are invalid.

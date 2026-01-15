@@ -18,3 +18,8 @@ en:
       in_progress: In progress
       complete: Complete
       failed: Failed
+      export_from: "Export from %{date}"
+      exporting: "Exporting..."
+      no_exports: "No exports yet."
+      delete_confirm: "Are you sure you want to delete this export? This action cannot be undone."
+      delete_failed_confirm: "Are you sure you want to delete this failed export?"

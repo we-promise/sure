@@ -1,6 +1,8 @@
 ---
 en:
   transfers:
+    account_links:
+      data_error_missing_account: "Data Error: Missing account"
     create:
       success: Transfer created
     destroy:

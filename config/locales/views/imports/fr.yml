@@ -1,6 +1,13 @@
 ---
 fr:
   import:
+    nav:
+      upload: Téléverser
+      configure: Configurer
+      clean: Nettoyer
+      map: Associer
+      confirm: Confirmer
+      step_of: "Étape %{step} sur %{total}"
     mappings:
       form:
         unassigned: "(non attribué)"

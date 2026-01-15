@@ -28,6 +28,13 @@ en:
     budget_categories:
       categories: Categories
       amount: Amount
+    budgeted_summary:
+      expected_income: Expected income
+      amount_earned: "%{amount} earned"
+      amount_over: "%{amount} over"
+      amount_left: "%{amount} left"
+      budgeted: Budgeted
+      amount_spent: "%{amount} spent"
     actuals_summary:
       income: Income
       expenses: Expenses

@@ -16,6 +16,7 @@ en:
       provider: From provider
     cost_basis_cell:
       unknown: "--"
+      set: Set
       set_cost_basis_header: "Set cost basis for %{ticker} (%{qty} shares)"
       total_cost_basis_label: Total cost basis
       or_per_share_label: "Or enter per share:"

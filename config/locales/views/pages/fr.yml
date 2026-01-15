@@ -46,6 +46,9 @@ fr:
         title: "Bilan"
         no_items: "Pas encore de %{name}"
         add_accounts: "Ajoutez vos comptes %{name} pour voir une répartition complète"
+        name: "Nom"
+        weight: "Poids"
+        value: "Valeur"
       no_accounts:
         title: "Pas encore de comptes"
         description: "Ajoutez des comptes pour afficher les données de valeur nette"

@@ -1,6 +1,8 @@
 ---
 fr:
   transfers:
+    account_links:
+      data_error_missing_account: "Erreur de données : compte manquant"
     create:
       success: Transfert créé
     destroy:

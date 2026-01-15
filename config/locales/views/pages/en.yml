@@ -20,6 +20,9 @@ en:
         title: "Balance Sheet"
         no_items: "No %{name} yet"
         add_accounts: "Add your %{name} accounts to see a full breakdown"
+        name: "Name"
+        weight: "Weight"
+        value: "Value"
       cashflow_sankey:
         title: "Cashflow"
         no_data_title: "No cash flow data for this time period"

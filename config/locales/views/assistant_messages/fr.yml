@@ -1,0 +1,7 @@
+---
+fr:
+  assistant_messages:
+    tool_calls:
+      title: Appels d'outils
+      function: "Fonction :"
+      arguments: "Arguments :"

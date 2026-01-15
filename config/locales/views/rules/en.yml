@@ -11,6 +11,10 @@ en:
     new:
       title: "New %{resource_type} rule"
       back_to_rules: Back to rules
+    edit:
+      back_to_rules: Back to rules
+      title_with_name: "Edit %{resource_type} rule \"%{name}\""
+      title: "Edit %{resource_type} rule"
     index:
       title: Rules
       delete_all: Delete all rules

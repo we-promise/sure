@@ -1,18 +1,36 @@
 ---
 fr:
   properties:
+    edit:
+      edit: Modifier %{account}
+      title: Modifier la propriété
+      save: Enregistrer
+      next: Suivant
+    balances:
+      title: Valeur de la propriété
+      estimated_market_value: Valeur estimée du marché
+      estimated_market_value_tooltip: La valeur actuelle estimée de cette propriété
+      save: Enregistrer
+      next: Suivant
+    form_tabs:
+      overview: Aperçu
+      value: Valeur
+      address: Adresse
     overview_fields:
+      name: Nom
       name_label: Nom
       name_placeholder: Maison de vacances
       select_type: Sélectionner le type
+      property_type: Type de propriété
       property_type_label: Type de propriété
+      year_built: Année de construction
       year_built_optional: Année de construction (optionnel)
+      area: Surface
       area_optional: Surface (optionnel)
+      area_unit: Unité
+      area_unit_label: Unité de surface
       square_feet: Pieds carrés
       square_meters: Mètres carrés
-      area_unit_label: Unité de surface
-    edit:
-      edit: Modifier %{account}
     form:
       address_line1: Adresse
       address_line1_placeholder: 123, rue de la Paix
@@ -33,6 +51,8 @@ fr:
       year_built_placeholder: '2000'
     new:
       title: Saisir les détails de la propriété
+      enter_property_manually: Saisir la propriété manuellement
+      next: Suivant
     overview:
       living_area: Surface habitable
       market_value: Valeur du marché
@@ -41,3 +61,19 @@ fr:
       unknown: Inconnu
       year_built: Année de construction
       edit_account_details: Modifier les détails du compte
+    tabs:
+      overview:
+        edit_account_details: Modifier les détails du compte
+    address:
+      enter_property_manually: Saisir la propriété manuellement
+      address_line_1: Adresse ligne 1
+      address_line_1_placeholder: 123, rue de la Paix
+      city: Ville
+      city_placeholder: Paris
+      state_region: Région/Département
+      state_region_placeholder: Île-de-France
+      postal_code: Code postal
+      postal_code_placeholder: '75000'
+      country: Pays
+      country_placeholder: France
+      save: Enregistrer

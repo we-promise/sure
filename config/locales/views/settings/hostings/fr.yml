@@ -39,6 +39,11 @@ fr:
         label: ID client
         placeholder: Entrez votre ID client ici
         title: Brand Fetch
+        env_configured_message: Vous avez configuré avec succès votre ID client Brand Fetch via la variable d'environnement BRAND_FETCH_CLIENT_ID.
+        show_details: "(voir les détails)"
+        step1_html: Visitez <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> et créez un compte développeur Brand Fetch gratuit.
+        step2_html: Accédez à la page <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
+        step3_html: Appuyez sur l'icône œil sous la section « Votre ID client » pour révéler votre <strong>ID client</strong> et collez-le ci-dessous.
       openai_settings:
         description: Saisissez le jeton d'accès et configurez éventuellement un fournisseur compatible OpenAI personnalisé
         env_configured_message: Configuré avec succès via les variables d'environnement.
@@ -70,6 +75,10 @@ fr:
         placeholder: Entrez votre clé API ici
         plan: "Plan %{plan}"
         title: Twelve Data
+        show_details: "(voir les détails)"
+        step1_html: Visitez <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> et créez un compte développeur Twelve Data gratuit.
+        step2_html: Accédez à la page <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">Clés API</a>.
+        step3_html: Révélez votre <strong>Clé secrète</strong> et collez-la ci-dessous.
       update:
         failure: Valeur de paramètre invalide
         success: Paramètres mis à jour
