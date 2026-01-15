@@ -1,13 +1,13 @@
 <% content_for :title do %>
-  <%= t("reports.print.document_title") %> - <%= @start_date.strftime("%B %d, %Y") %> to <%= @end_date.strftime("%B %d, %Y") %>
+  <%= t("reports.print.document_title") %> - <%= I18n.l(@start_date, format: :long) %> to <%= I18n.l(@end_date, format: :long) %>
 <% end %>
 
 <div class="tufte-report">
   <%# Header %>
   <header class="tufte-header">
     <h1 class="tufte-title"><%= t("reports.print.title") %></h1>
-    <span class="tufte-period"><%= @start_date.strftime("%B %d, %Y") %> – <%= @end_date.strftime("%B %d, %Y") %></span>
-    <p class="tufte-meta"><%= Current.family.name %> · <%= t("reports.print.generated_on", date: Time.current.strftime("%B %d, %Y")) %></p>
+    <span class="tufte-period"><%= I18n.l(@start_date, format: :long) %> – <%= I18n.l(@end_date, format: :long) %></span>
+    <p class="tufte-meta"><%= Current.family.name %> · <%= t("reports.print.generated_on", date: I18n.l(Time.current, format: :long)) %></p>
   </header>
 
   <%# Summary %>
@@ -340,6 +340,6 @@
   <% end %>
 
   <footer class="tufte-footer">
-    <%= product_name %> · <%= @start_date.strftime("%B %Y") %> – <%= @end_date.strftime("%B %Y") %>
+    <%= product_name %> · <%= I18n.l(@start_date, format: "%B %Y") %> – <%= I18n.l(@end_date, format: "%B %Y") %>
   </footer>
 </div>

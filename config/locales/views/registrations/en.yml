@@ -24,3 +24,7 @@ en:
         then be able to configure additional settings within the app.
       welcome_title: Welcome to Self Hosted %{product_name}!
       password_placeholder: Enter your password
+      password_min_length: Minimum 8 characters
+      password_case: Upper and lowercase letters
+      password_number: A number (0-9)
+      password_special: A special character (!, @, #, $, %, etc)

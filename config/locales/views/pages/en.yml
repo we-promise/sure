@@ -3,12 +3,23 @@ en:
   pages:
     changelog:
       title: What's new
+      date_unavailable: Date unavailable
+      no_release_notes: No release notes available
+    feedback:
+      page_title: Feedback
+      title: Leave feedback
+      subtitle: Let us know if you have any specific feedback. Feel free to include links to videos or screenshots.
+      feature_request: Write a feature request
+      bug_report: File a bug report
+      discuss: Discuss %{product} with others
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
+      sections_label: "Dashboard sections"
+      section_instructions: "section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth
@@ -20,6 +31,9 @@ en:
         title: "Balance Sheet"
         no_items: "No %{name} yet"
         add_accounts: "Add your %{name} accounts to see a full breakdown"
+        name: "Name"
+        weight: "Weight"
+        value: "Value"
       cashflow_sankey:
         title: "Cashflow"
         no_data_title: "No cash flow data for this time period"
@@ -48,3 +62,12 @@ en:
         trades: "Trades"
         no_investments: "No investment accounts"
         add_investment: "Add an investment account to track your portfolio"
+    redis_configuration_error:
+      title: Redis Configuration Required
+      subtitle: Your self-hosted Sure installation needs Redis to be properly configured.
+      why_required: Why is Redis required?
+      explanation: Sure uses Redis to power Sidekiq background jobs for tasks like syncing account data, processing imports, and other background operations that keep your financial data up to date.
+      view_setup_guide: View Setup Guide
+      setup_guide_note: Follow our complete Docker setup guide to configure Redis
+      refresh_note: Once you've configured Redis, refresh this page to continue.
+      refresh_page: Refresh Page

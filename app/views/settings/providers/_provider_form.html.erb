@@ -14,12 +14,12 @@
     <% env_configured = configuration.fields.any? { |f| f.env_key && ENV[f.env_key].present? } %>
     <% if env_configured %>
       <p class="text-sm text-secondary">
-        Configuration can be set via environment variables or overridden below.
+        <%= t("settings.providers.provider_form.env_configuration_note") %>
       </p>
     <% end %>
 
     <% if configuration.fields.any? { |f| f.description.present? } %>
-      <p class="text-secondary text-sm mb-4">Field descriptions:</p>
+      <p class="text-secondary text-sm mb-4"><%= t("settings.providers.provider_form.field_descriptions") %></p>
       <ul class="text-sm text-secondary mb-4 list-disc ml-6 space-y-2">
         <% configuration.fields.each do |field| %>
           <% if field.description.present? %>
@@ -61,13 +61,13 @@
         <%= form.text_field field.setting_key,
                             label: field.label,
                             type: input_type,
-                            placeholder: field.default || (field.required ? "" : "Optional"),
+                            placeholder: field.default || (field.required ? "" : t("settings.providers.provider_form.optional")),
                             value: display_value,
                             disabled: disabled %>
       <% end %>
 
       <div class="flex justify-end">
-        <%= form.submit "Save Configuration",
+        <%= form.submit t("settings.providers.provider_form.save_configuration"),
                         class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
       </div>
     </div>
@@ -77,10 +77,10 @@
   <div class="flex items-center gap-2 mt-4">
     <% if configuration.configured? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use</p>
+      <p class="text-sm text-secondary"><%= t("settings.providers.provider_form.configured") %></p>
     <% else %>
       <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary">Not configured</p>
+      <p class="text-sm text-secondary"><%= t("settings.providers.provider_form.not_configured") %></p>
     <% end %>
   </div>
 </div>

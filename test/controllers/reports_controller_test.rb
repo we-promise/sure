@@ -107,8 +107,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert flash[:alert].present?, "Flash alert should be present"
     assert_match /End date cannot be before start date/, flash[:alert]
     # Verify the response body contains the swapped date range in the correct order
-    assert_includes @response.body, end_date.strftime("%b %-d, %Y")
-    assert_includes @response.body, start_date.strftime("%b %-d, %Y")
+    assert_includes @response.body, I18n.l(end_date, format: :long)
+    assert_includes @response.body, I18n.l(start_date, format: :long)
   end
 
   test "spending patterns returns data when expense transactions exist" do

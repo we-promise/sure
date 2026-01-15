@@ -1,9 +1,9 @@
-<%= content_for :page_title, "Sync Providers" %>
+<%= content_for :page_title, t(".page_title") %>
 
 <div class="space-y-4">
   <div>
     <p class="text-secondary mb-4">
-      Configure credentials for third-party sync providers. Settings configured here will override environment variables.
+      <%= t(".description") %>
     </p>
   </div>
 
@@ -14,25 +14,25 @@
     <% end %>
   <% end %>
 
-  <%= settings_section title: "Lunch Flow", collapsible: true, open: false do %>
+  <%= settings_section title: t(".lunchflow_title"), collapsible: true, open: false do %>
     <turbo-frame id="lunchflow-providers-panel">
       <%= render "settings/providers/lunchflow_panel" %>
     </turbo-frame>
   <% end %>
 
-  <%= settings_section title: "SimpleFIN", collapsible: true, open: false do %>
+  <%= settings_section title: t(".simplefin_title"), collapsible: true, open: false do %>
     <turbo-frame id="simplefin-providers-panel">
       <%= render "settings/providers/simplefin_panel" %>
     </turbo-frame>
   <% end %>
 
-  <%= settings_section title: "Enable Banking (beta)", collapsible: true, open: false do %>
+  <%= settings_section title: t(".enable_banking_title"), collapsible: true, open: false do %>
     <turbo-frame id="enable_banking-providers-panel">
       <%= render "settings/providers/enable_banking_panel" %>
     </turbo-frame>
   <% end %>
 
-  <%= settings_section title: "CoinStats", collapsible: true, open: false do %>
+  <%= settings_section title: t(".coinstats_title"), collapsible: true, open: false do %>
     <turbo-frame id="coinstats-providers-panel">
       <%= render "settings/providers/coinstats_panel" %>
     </turbo-frame>

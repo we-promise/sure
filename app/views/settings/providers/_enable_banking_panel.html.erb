@@ -1,18 +1,18 @@
 <div class="space-y-4">
   <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
+    <p class="text-primary font-medium"><%= t("settings.providers.enable_banking_panel.setup_instructions") %></p>
     <ol>
-      <li>Visit your <a href="https://enablebanking.com" target="_blank" rel="noopener noreferrer" class="link">Enable Banking</a> developer account to get your credentials</li>
-      <li>Select your country code from the dropdown below</li>
-      <li>Enter your Application ID and paste your Client Certificate (including the private key)</li>
-      <li>Click Save Configuration, then use "Add Connection" to link your bank</li>
+      <li><%= raw t("settings.providers.enable_banking_panel.step1_html") %></li>
+      <li><%= t("settings.providers.enable_banking_panel.step2") %></li>
+      <li><%= t("settings.providers.enable_banking_panel.step3") %></li>
+      <li><%= t("settings.providers.enable_banking_panel.step4") %></li>
     </ol>
 
-    <p class="text-primary font-medium">Field descriptions:</p>
+    <p class="text-primary font-medium"><%= t("settings.providers.enable_banking_panel.field_descriptions") %></p>
     <ul>
-      <li><strong>Country Code:</strong> ISO 3166-1 alpha-2 country code (e.g., GB, DE, FR) - determines available banks</li>
-      <li><strong>Application ID:</strong> The ID generated in your Enable Banking developer account</li>
-      <li><strong>Client Certificate:</strong> The certificate generated when you created your application (must include the private key)</li>
+      <li><strong><%= t("settings.providers.enable_banking_panel.country_label") %>:</strong> <%= t("settings.providers.enable_banking_panel.country_code_description") %></li>
+      <li><strong><%= t("settings.providers.enable_banking_panel.application_id_label") %>:</strong> <%= t("settings.providers.enable_banking_panel.application_id_description") %></li>
+      <li><strong><%= t("settings.providers.enable_banking_panel.client_certificate_label") %>:</strong> <%= t("settings.providers.enable_banking_panel.client_certificate_description") %></li>
     </ul>
   </div>
 
@@ -38,8 +38,8 @@
                        class: "space-y-3" do |form| %>
     <% if has_authenticated_connections && !is_new_record %>
       <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
-        <p class="font-medium">Configuration locked</p>
-        <p class="text-xs mt-1">Credentials cannot be changed while you have active bank connections. Remove all connections first to update credentials.</p>
+        <p class="font-medium"><%= t("settings.providers.enable_banking_panel.configuration_locked") %></p>
+        <p class="text-xs mt-1"><%= t("settings.providers.enable_banking_panel.credentials_locked_note") %></p>
       </div>
     <% end %>
 
@@ -78,18 +78,18 @@
                         ["Sweden (SE)", "SE"],
                         ["United Kingdom (GB)", "GB"]
                       ], enable_banking_item.country_code),
-                      { label: true, include_blank: "Select country..." },
-                      { label: "Country", class: "form-field__input", disabled: has_authenticated_connections && !is_new_record } %>
+                      { label: true, include_blank: t("settings.providers.enable_banking_panel.select_country") },
+                      { label: t("settings.providers.enable_banking_panel.country_label"), class: "form-field__input", disabled: has_authenticated_connections && !is_new_record } %>
 
       <%= form.text_field :application_id,
-                          label: "Application ID",
-                          placeholder: is_new_record ? "Enter application ID" : "Enter new ID to update",
+                          label: t("settings.providers.enable_banking_panel.application_id_label"),
+                          placeholder: is_new_record ? t("settings.providers.enable_banking_panel.application_id_placeholder_new") : t("settings.providers.enable_banking_panel.application_id_placeholder_update"),
                           value: enable_banking_item.application_id,
                           disabled: has_authenticated_connections && !is_new_record %>
     </div>
 
     <%= form.text_area :client_certificate,
-                        label: "Client Certificate (with Private Key)",
+                        label: t("settings.providers.enable_banking_panel.client_certificate_label"),
                         placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
                         rows: 6,
                         class: "form-field__input font-mono text-xs",
@@ -97,7 +97,7 @@
 
     <% unless has_authenticated_connections && !is_new_record %>
       <div class="flex justify-end">
-        <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+        <%= form.submit is_new_record ? t("settings.providers.enable_banking_panel.save_configuration") : t("settings.providers.enable_banking_panel.update_configuration"),
                         class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
       </div>
     <% end %>
@@ -118,22 +118,22 @@
             <% if item.session_valid? %>
               <div class="w-2 h-2 bg-success rounded-full"></div>
               <div>
-                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connected Bank" %></p>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connected_bank") %></p>
                 <p class="text-xs text-secondary">
-                  Session expires: <%= item.session_expires_at&.strftime("%b %d, %Y") || "Unknown" %>
+                  <%= t("settings.providers.enable_banking_panel.session_expires", date: item.session_expires_at ? I18n.l(item.session_expires_at, format: :long) : t("settings.providers.enable_banking_panel.unknown")) %>
                 </p>
               </div>
             <% elsif item.session_expired? %>
               <div class="w-2 h-2 bg-warning rounded-full"></div>
               <div>
-                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connection" %></p>
-                <p class="text-xs text-destructive">Session expired - reconnect</p>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connection") %></p>
+                <p class="text-xs text-destructive"><%= t("settings.providers.enable_banking_panel.session_expired") %></p>
               </div>
             <% else %>
               <div class="w-2 h-2 bg-secondary rounded-full"></div>
               <div>
-                <p class="text-sm font-medium text-primary">Configured</p>
-                <p class="text-xs text-secondary">Ready to link accounts</p>
+                <p class="text-sm font-medium text-primary"><%= t("settings.providers.enable_banking_panel.configured") %></p>
+                <p class="text-xs text-secondary"><%= t("settings.providers.enable_banking_panel.ready_to_link") %></p>
               </div>
             <% end %>
           </div>
@@ -144,28 +144,28 @@
                             method: :post,
                             class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-gray-50 transition-colors",
                             data: { turbo: false } do %>
-                Sync
+                <%= t("settings.providers.enable_banking_panel.sync") %>
               <% end %>
             <% elsif item.session_expired? %>
               <%= button_to reauthorize_enable_banking_item_path(item),
                             method: :post,
                             class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-warning hover:opacity-90 transition-colors",
                             data: { turbo: false } do %>
-                Reconnect
+                <%= t("settings.providers.enable_banking_panel.reconnect") %>
               <% end %>
             <% else %>
               <%= link_to select_bank_enable_banking_item_path(item),
                           class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
                           data: { turbo_frame: "modal" } do %>
-                Connect Bank
+                <%= t("settings.providers.enable_banking_panel.connect_bank") %>
               <% end %>
             <% end %>
 
             <%= button_to enable_banking_item_path(item),
                           method: :delete,
                           class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
-                          data: { turbo_confirm: "Are you sure you want to remove this connection?" } do %>
-              Remove
+                          data: { turbo_confirm: t("settings.providers.enable_banking_panel.remove_confirm") } do %>
+              <%= t("settings.providers.enable_banking_panel.remove") %>
             <% end %>
           </div>
         </div>
@@ -179,7 +179,7 @@
                         class: "inline-flex items-center gap-2 justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
                         data: { turbo_frame: "modal" } do %>
             <%= icon "plus", size: "sm" %>
-            Add Connection
+            <%= t("settings.providers.enable_banking_panel.add_connection") %>
           <% end %>
         </div>
       <% end %>

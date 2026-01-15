@@ -1,6 +1,8 @@
 ---
 en:
   invite_codes:
+    invite_code:
+      delete_confirm: Are you sure?
     index:
       invite_code_description: Generate a new code to see it displayed here. Generated
         codes that have been used will no longer be shown.
