@@ -37,6 +37,16 @@ en:
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}
       one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
+      expense: Expense
+      income: Income
+      additional_details: Additional details
+      payee: Payee
+      description: Description
+      memo: Memo
+      provider_extras: Provider extras
+      transfer_question: Transfer or Debt Payment?
+      transfer_description: Transfers and payments are special types of transactions that indicate money movement between 2 accounts.
+      open_matcher: Open matcher
     activity_labels:
       buy: Buy
       sell: Sell
