@@ -1,6 +1,9 @@
 ---
 en:
   lunchflow_items:
+    subtype_select:
+      select_subtype: Select subtype
+      select_type: Select type
     setup_required:
       title: Lunch Flow Setup Required
       api_key_not_configured: API Key Not Configured

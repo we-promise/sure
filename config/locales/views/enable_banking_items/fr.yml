@@ -1,6 +1,9 @@
 ---
 fr:
   enable_banking_items:
+    subtype_select:
+      select_subtype: Sélectionnez le sous-type
+      select_type: Sélectionnez le type
     enable_banking_item:
       provider_name: Enable Banking
       deletion_in_progress: Suppression en cours

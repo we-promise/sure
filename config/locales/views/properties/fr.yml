@@ -37,6 +37,8 @@ fr:
       area: Surface habitable
       area_placeholder: '2000'
       area_unit: Unité de mesure
+      area_unit_square_feet: Pieds carrés
+      area_unit_square_meters: Mètres carrés
       country: Pays
       country_placeholder: FR
       locality: Ville

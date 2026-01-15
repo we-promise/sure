@@ -32,6 +32,8 @@ en:
       area: Living area
       area_placeholder: '2000'
       area_unit: Unit of measurement
+      area_unit_square_feet: Square Feet
+      area_unit_square_meters: Square Meters
       country: Country
       country_placeholder: US
       locality: City

@@ -1,6 +1,9 @@
 ---
 en:
   enable_banking_items:
+    subtype_select:
+      select_subtype: Select subtype
+      select_type: Select type
     authorize:
       authorization_failed: Failed to initiate authorization
       bank_required: Please select a bank.
