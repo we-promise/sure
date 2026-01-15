@@ -7,8 +7,8 @@ class Settings::HostingsController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Self-Hosting", nil ]
+      [ :"breadcrumbs.home", root_path ],
+      [ :"breadcrumbs.self_hosting", nil ]
     ]
 
     # Determine which providers are currently selected

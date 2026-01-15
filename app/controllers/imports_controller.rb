@@ -6,17 +6,17 @@ class ImportsController < ApplicationController
   def publish
     @import.publish_later
 
-    redirect_to import_path(@import), notice: "Your import has started in the background."
+    redirect_to import_path(@import), notice: t(".started")
   rescue Import::MaxRowCountExceededError
-    redirect_back_or_to import_path(@import), alert: "Your import exceeds the maximum row count of #{@import.max_row_count}."
+    redirect_back_or_to import_path(@import), alert: t(".max_row_count_exceeded", count: @import.max_row_count)
   end
 
   def index
     @imports = Current.family.imports
     @exports = Current.user.admin? ? Current.family.family_exports.ordered.limit(10) : nil
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Import/Export", imports_path ]
+      [ :"breadcrumbs.home", root_path ],
+      [ :"breadcrumbs.import_export", imports_path ]
     ]
     render layout: "settings"
   end
@@ -41,20 +41,20 @@ class ImportsController < ApplicationController
 
       if file.size > Import::MAX_CSV_SIZE
         import.destroy
-        redirect_to new_import_path, alert: "File is too large. Maximum size is #{Import::MAX_CSV_SIZE / 1.megabyte}MB."
+        redirect_to new_import_path, alert: t(".file_too_large", size: Import::MAX_CSV_SIZE / 1.megabyte)
         return
       end
 
       unless Import::ALLOWED_MIME_TYPES.include?(file.content_type)
         import.destroy
-        redirect_to new_import_path, alert: "Invalid file type. Please upload a CSV file."
+        redirect_to new_import_path, alert: t(".invalid_file_type")
         return
       end
 
       # Stream reading is not fully applicable here as we store the raw string in the DB,
       # but we have validated size beforehand to prevent memory exhaustion from massive files.
       import.update!(raw_file_str: file.read)
-      redirect_to import_configuration_path(import), notice: "CSV uploaded successfully."
+      redirect_to import_configuration_path(import), notice: t(".csv_uploaded")
     else
       redirect_to import_upload_path(import)
     end
@@ -62,30 +62,30 @@ class ImportsController < ApplicationController
 
   def show
     if !@import.uploaded?
-      redirect_to import_upload_path(@import), alert: "Please finalize your file upload."
+      redirect_to import_upload_path(@import), alert: t(".finalize_upload")
     elsif !@import.publishable?
-      redirect_to import_confirm_path(@import), alert: "Please finalize your mappings before proceeding."
+      redirect_to import_confirm_path(@import), alert: t(".finalize_mappings")
     end
   end
 
   def revert
     @import.revert_later
-    redirect_to imports_path, notice: "Import is reverting in the background."
+    redirect_to imports_path, notice: t(".reverting")
   end
 
   def apply_template
     if @import.suggested_template
       @import.apply_template!(@import.suggested_template)
-      redirect_to import_configuration_path(@import), notice: "Template applied."
+      redirect_to import_configuration_path(@import), notice: t(".template_applied")
     else
-      redirect_to import_configuration_path(@import), alert: "No template found, please manually configure your import."
+      redirect_to import_configuration_path(@import), alert: t(".no_template")
     end
   end
 
   def destroy
     @import.destroy
 
-    redirect_to imports_path, notice: "Your import has been deleted."
+    redirect_to imports_path, notice: t(".deleted")
   end
 
   private

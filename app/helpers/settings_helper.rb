@@ -1,29 +1,29 @@
 module SettingsHelper
   SETTINGS_ORDER = [
     # General section
-    { name: "Accounts", path: :accounts_path },
-    { name: "Bank Sync", path: :settings_bank_sync_path },
-    { name: "Preferences", path: :settings_preferences_path },
-    { name: "Profile Info", path: :settings_profile_path },
-    { name: "Security", path: :settings_security_path },
-    { name: "Billing", path: :settings_billing_path, condition: :not_self_hosted? },
+    { name_key: "settings.settings_nav.accounts_label", path: :accounts_path },
+    { name_key: "settings.settings_nav.bank_sync_label", path: :settings_bank_sync_path },
+    { name_key: "settings.settings_nav.preferences_label", path: :settings_preferences_path },
+    { name_key: "settings.settings_nav.profile_label", path: :settings_profile_path },
+    { name_key: "settings.settings_nav.security_label", path: :settings_security_path },
+    { name_key: "settings.settings_nav.billing_label", path: :settings_billing_path, condition: :not_self_hosted? },
     # Transactions section
-    { name: "Categories", path: :categories_path },
-    { name: "Tags", path: :tags_path },
-    { name: "Rules", path: :rules_path },
-    { name: "Merchants", path: :family_merchants_path },
-    { name: "Recurring", path: :recurring_transactions_path },
+    { name_key: "settings.settings_nav.categories_label", path: :categories_path },
+    { name_key: "settings.settings_nav.tags_label", path: :tags_path },
+    { name_key: "settings.settings_nav.rules_label", path: :rules_path },
+    { name_key: "settings.settings_nav.merchants_label", path: :family_merchants_path },
+    { name_key: "settings.settings_nav.recurring_transactions_label", path: :recurring_transactions_path },
     # Advanced section
-    { name: "AI Prompts", path: :settings_ai_prompts_path, condition: :admin_user? },
-    { name: "LLM Usage", path: :settings_llm_usage_path, condition: :admin_user? },
-    { name: "API Key", path: :settings_api_key_path, condition: :admin_user? },
-    { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
-    { name: "Providers", path: :settings_providers_path, condition: :admin_user? },
-    { name: "Imports", path: :imports_path, condition: :admin_user? },
+    { name_key: "settings.settings_nav.ai_prompts_label", path: :settings_ai_prompts_path, condition: :admin_user? },
+    { name_key: "settings.settings_nav.llm_usage_label", path: :settings_llm_usage_path, condition: :admin_user? },
+    { name_key: "settings.settings_nav.api_keys_label", path: :settings_api_key_path, condition: :admin_user? },
+    { name_key: "settings.settings_nav.self_hosting_label", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
+    { name_key: "settings.settings_nav.providers_label", path: :settings_providers_path, condition: :admin_user? },
+    { name_key: "settings.settings_nav.imports_label", path: :imports_path, condition: :admin_user? },
     # More section
-    { name: "Guides", path: :settings_guides_path },
-    { name: "What's new", path: :changelog_path },
-    { name: "Feedback", path: :feedback_path }
+    { name_key: "settings.settings_nav.guides_label", path: :settings_guides_path },
+    { name_key: "settings.settings_nav.whats_new_label", path: :changelog_path },
+    { name_key: "settings.settings_nav.feedback_label", path: :feedback_path }
   ]
 
   def adjacent_setting(current_path, offset)
@@ -39,7 +39,7 @@ module SettingsHelper
     render partial: "settings/settings_nav_link_large", locals: {
       path: send(adjacent[:path]),
       direction: offset > 0 ? "next" : "previous",
-      title: adjacent[:name]
+      title: I18n.t(adjacent[:name_key])
     }
   end
 

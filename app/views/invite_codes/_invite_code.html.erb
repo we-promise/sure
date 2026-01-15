@@ -13,7 +13,7 @@
           <%= icon "check" %>
         </span>
       </button>
-      <%= button_to invite_code_path(invite_code), method: :delete, data: { confirm: "Are you sure?" }, class: "ml-2 text-red-600 text-xs" do %>
+      <%= button_to invite_code_path(invite_code), method: :delete, data: { confirm: t("invite_codes.invite_code.delete_confirm") }, class: "ml-2 text-red-600 text-xs" do %>
         <%= icon("trash-2", size: "sm", class: "inline mr-1") %>
       <% end %>
     </div>

@@ -1,9 +1,9 @@
-<%= content_for :page_title, "Edit #{@sso_provider.label}" %>
+<%= content_for :page_title, t(".page_title", label: @sso_provider.label) %>
 
 <div class="space-y-4">
-  <p class="text-secondary">Update configuration for <%= @sso_provider.label %>.</p>
+  <p class="text-secondary"><%= t(".description", label: @sso_provider.label) %></p>
 
-  <%= settings_section title: "Provider Configuration" do %>
+  <%= settings_section title: t(".provider_configuration") do %>
     <%= render "form", sso_provider: @sso_provider %>
   <% end %>
 </div>
