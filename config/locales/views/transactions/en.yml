@@ -21,6 +21,14 @@ en:
       transfer: Transfer
     new:
       new_transaction: New transaction
+      title: New transaction
+    transfer_match:
+      payment_confirmed: Payment is confirmed
+      transfer_confirmed: Transfer is confirmed
+      auto_matched: Auto-matched
+      auto_matched_short: A/M
+      confirm_match: Confirm match
+      reject_match: Reject match
     show:
       account_label: Account
       amount: Amount
