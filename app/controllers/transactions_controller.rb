@@ -95,6 +95,7 @@ class TransactionsController < ApplicationController
 
       @entry.sync_account_later
       @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       respond_to do |format|

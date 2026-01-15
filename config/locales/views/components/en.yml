@@ -15,6 +15,15 @@ en:
       imported: "Imported: %{count}"
       updated: "Updated: %{count}"
       skipped: "Skipped: %{count}"
+      protected:
+        one: "%{count} entry protected (not overwritten)"
+        other: "%{count} entries protected (not overwritten)"
+      view_protected: View protected entries
+    skip_reasons:
+      excluded: Excluded
+      user_modified: User modified
+      import_locked: CSV import
+      protected: Protected
     holdings:
       title: Holdings
       found: "Found: %{count}"

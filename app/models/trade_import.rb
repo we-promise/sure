@@ -28,7 +28,8 @@ class TradeImport < Import
             amount: row.signed_amount,
             name: row.name,
             currency: row.currency.presence || mapped_account.currency,
-            import: self
+            import: self,
+            import_locked: true  # Protect from provider sync overwrites
           ),
         )
       end

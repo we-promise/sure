@@ -37,6 +37,37 @@
           <span><%= t("provider_sync_summary.transactions.updated", count: tx_updated) %></span>
           <span><%= t("provider_sync_summary.transactions.skipped", count: tx_skipped) %></span>
         </div>
+
+        <%# Protected entries detail - shown when entries were skipped due to protection %>
+        <% if has_skipped_entries? %>
+          <div class="mt-2">
+            <div class="flex items-center gap-1">
+              <%= helpers.icon "shield-check", size: "sm" %>
+              <span class="text-secondary"><%= t("provider_sync_summary.transactions.protected", count: tx_skipped) %></span>
+            </div>
+            <% if skip_summary.any? %>
+              <div class="text-xs text-secondary mt-1">
+                <% skip_summary.each do |reason, count| %>
+                  <span class="mr-2"><%= t("provider_sync_summary.skip_reasons.#{reason}", default: reason.humanize) %>: <%= count %></span>
+                <% end %>
+              </div>
+            <% end %>
+            <% if skip_details.any? %>
+              <details class="mt-1">
+                <summary class="text-xs cursor-pointer text-secondary hover:text-primary">
+                  <%= t("provider_sync_summary.transactions.view_protected") %>
+                </summary>
+                <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
+                  <% skip_details.each do |detail| %>
+                    <p class="text-xs text-secondary">
+                      <%= detail["name"] %> (<%= t("provider_sync_summary.skip_reasons.#{detail["reason"]}", default: detail["reason"].humanize) %>)
+                    </p>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     <% end %>
 
@@ -62,6 +93,18 @@
           <% end %>
           <% if has_errors? %>
             <span class="text-destructive"><%= t("provider_sync_summary.health.errors", count: total_errors) %></span>
+            <% if error_details.any? %>
+              <details class="mt-1">
+                <summary class="text-xs cursor-pointer text-secondary hover:text-primary">View error details</summary>
+                <div class="mt-1 pl-2 border-l-2 border-destructive/30 space-y-1">
+                  <% error_details.each do |detail| %>
+                    <p class="text-xs text-destructive">
+                      <% if detail["name"].present? %><strong><%= detail["name"] %>:</strong> <% end %><%= detail["message"] %>
+                    </p>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
           <% elsif import_started? %>
             <span class="text-success"><%= t("provider_sync_summary.health.errors", count: 0) %></span>
           <% else %>
