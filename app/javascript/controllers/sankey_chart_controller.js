@@ -8,7 +8,9 @@ export default class extends Controller {
     data: Object,
     nodeWidth: { type: Number, default: 15 },
     nodePadding: { type: Number, default: 20 },
-    currencySymbol: { type: String, default: "$" }
+    currencySymbol: { type: String, default: "$" },
+    startDate: String,
+    endDate: String
   };
 
   connect() {
@@ -226,7 +228,8 @@ export default class extends Controller {
       .attr("dy", "-0.2em")
       .attr("text-anchor", (d) => (d.x0 < width / 2 ? "start" : "end"))
       .attr("class", "text-xs font-medium text-primary fill-current select-none")
-      .style("cursor", "default")
+      .style("cursor", (d) => this.#isClickableNode(d) ? "pointer" : "default")
+      .on("click", (event, d) => this.#handleNodeClick(d))
       .on("mouseenter", (event, d) => {
         // Find all links connected to this node
         const connectedLinks = sankeyData.links.filter(link => 
@@ -318,5 +321,20 @@ export default class extends Controller {
         .duration(100)
         .style("opacity", 0);
     }
+  }
+
+  #isClickableNode(node) {
+    // Exclude "Cash Flow" central node and "Surplus" node
+    const nonClickableNames = ["Cash Flow", "Surplus"];
+    return !nonClickableNames.includes(node.name);
+  }
+
+  #handleNodeClick(node) {
+    if (!this.#isClickableNode(node)) return;
+    if (!this.startDateValue || !this.endDateValue) return;
+
+    const categoryName = encodeURIComponent(node.name);
+    const url = `/transactions?q[categories][]=${categoryName}&q[start_date]=${this.startDateValue}&q[end_date]=${this.endDateValue}`;
+    window.location.href = url;
   }
 } 
