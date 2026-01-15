@@ -11,6 +11,13 @@ en:
       submit: Add transaction
       ticker_placeholder: AAPL
       type: Type
+      buy: Buy
+      sell: Sell
+      deposit: Deposit
+      withdrawal: Withdrawal
+      interest: Interest
+      ticker_symbol: Ticker symbol
+      ticker_symbol_placeholder: AAPL
     header:
       buy: Buy
       current_market_price_label: Current Market Price
@@ -38,3 +45,6 @@ en:
       note_placeholder: Add any additional notes here...
       quantity_label: Quantity
       settings: Settings
+      type: Type
+      buy: Buy
+      sell: Sell

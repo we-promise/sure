@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Match transfer or payment") %>
+  <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
     <%= styled_form_with(
           url: transaction_transfer_match_path(@entry),
@@ -10,7 +10,7 @@
       <section class="space-y-4">
         <div class="space-y-2">
           <h2 class="text-sm font-medium text-gray-700">
-            <%= @entry.amount.positive? ? "From account: #{@entry.account.name}" : "From account" %>
+            <%= @entry.amount.positive? ? t(".from_account", account_name: @entry.account.name) : t(".from_account_label") %>
           </h2>
 
           <% if @entry.amount.positive? %>
@@ -18,7 +18,7 @@
                   :entry_id,
                   [[entry_name_detailed(@entry), @entry.id]],
                   {
-                    label: "Outflow transaction",
+                    label: t(".outflow_transaction"),
                     selected: @entry.id,
                   },
                   disabled: true
@@ -37,7 +37,7 @@
       <section class="space-y-4">
         <div class="space-y-2">
           <h2 class="text-sm font-medium text-gray-700">
-            <%= @entry.amount.negative? ? "To account: #{@entry.account.name}" : "To account" %>
+            <%= @entry.amount.negative? ? t(".to_account", account_name: @entry.account.name) : t(".to_account_label") %>
           </h2>
 
           <% if @entry.amount.negative? %>
@@ -45,7 +45,7 @@
                   :entry_id,
                   [[entry_name_detailed(@entry), @entry.id]],
                   {
-                    label: "Inflow transaction",
+                    label: t(".inflow_transaction"),
                     selected: @entry.id,
                   },
                   disabled: true
@@ -57,7 +57,7 @@
         </div>
       </section>
 
-      <%= f.submit "Create transfer match" %>
+      <%= f.submit t(".submit") %>
     <% end %>
   <% end %>
 <% end %>

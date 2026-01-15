@@ -4,6 +4,14 @@ en:
     over_allocation_warning:
       over_allocated_message: You have over-allocated your budget. Please fix your allocations.
       fix_allocations: Fix allocations
+    edit:
+      title: Setup your budget
+      description: Enter your monthly earnings and planned spending below to setup your budget.
+      budgeted_spending: Budgeted spending
+      expected_income: Expected income
+      autosuggest_title: Autosuggest income & spending budget
+      autosuggest_description: This will be based on transaction history. AI can make mistakes, verify before continuing.
+      continue: Continue
     show:
       categories: Categories
       edit: Edit
