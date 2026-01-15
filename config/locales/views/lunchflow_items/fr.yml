@@ -4,3 +4,5 @@ fr:
     subtype_select:
       select_subtype: Sélectionnez le sous-type
       select_type: Sélectionnez le type
+    setup_accounts:
+      page_title: Configurer les comptes Lunch Flow

@@ -172,3 +172,6 @@ fr:
         simplefin_description: "Connexions États-Unis et Canada via le protocole SimpleFIN."
         enable_banking_name: "Enable Banking (bêta)"
         enable_banking_description: "Connexions bancaires européennes via les API d'open banking dans plusieurs pays."
+    guides:
+      show:
+        page_title: Guides
