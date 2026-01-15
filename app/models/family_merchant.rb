@@ -4,6 +4,7 @@ class FamilyMerchant < Merchant
   belongs_to :family
 
   before_validation :set_default_color
+  before_save :generate_logo_url_from_website, if: :should_generate_logo?
 
   validates :color, presence: true
   validates :name, uniqueness: { scope: :family }
@@ -11,5 +12,25 @@ class FamilyMerchant < Merchant
   private
     def set_default_color
       self.color = COLORS.sample
+    end
+
+    def should_generate_logo?
+      website_url_changed? || (website_url.present? && logo_url.blank?)
+    end
+
+    def generate_logo_url_from_website
+      if website_url.present? && Setting.brand_fetch_client_id.present?
+        domain = extract_domain(website_url)
+        self.logo_url = "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+      elsif website_url.blank?
+        self.logo_url = nil
+      end
+    end
+
+    def extract_domain(url)
+      url = "https://#{url}" unless url.start_with?("http://", "https://")
+      URI.parse(url).host&.sub(/\Awww\./, "")
+    rescue URI::InvalidURIError
+      url.sub(/\Awww\./, "")
     end
 end
