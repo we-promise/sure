@@ -1,0 +1,73 @@
+<%= content_for :page_title, t(".title") %>
+
+<div class="space-y-4">
+  <p class="text-secondary"><%= t(".description") %></p>
+
+  <%= settings_section title: t(".section_title") do %>
+    <div class="divide-y divide-primary">
+      <% @users.each do |user| %>
+        <div class="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center">
+              <span class="text-sm font-medium text-primary"><%= user.initials %></span>
+            </div>
+            <div>
+              <p class="font-medium text-primary"><%= user.display_name %></p>
+              <p class="text-sm text-secondary"><%= user.email %></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <% if user.id == Current.user.id %>
+              <span class="text-sm text-secondary"><%= t(".you") %></span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary">
+                <%= t(".roles.#{user.role}") %>
+              </span>
+            <% else %>
+              <%= form_with model: [:admin, user], method: :patch, class: "flex items-center gap-2" do |form| %>
+                <%= form.select :role,
+                    options_for_select([
+                      [t(".roles.member"), "member"],
+                      [t(".roles.admin"), "admin"],
+                      [t(".roles.super_admin"), "super_admin"]
+                    ], user.role),
+                    {},
+                    class: "text-sm rounded-lg border-primary bg-container text-primary px-2 py-1",
+                    onchange: "this.form.requestSubmit()" %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <% if @users.empty? %>
+      <div class="text-center py-6">
+        <%= icon "users", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
+        <p class="text-secondary"><%= t(".no_users") %></p>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: false do %>
+    <div class="space-y-3 text-sm">
+      <div class="flex items-start gap-3">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
+          <%= t(".roles.member") %>
+        </span>
+        <p class="text-secondary"><%= t(".role_descriptions.member") %></p>
+      </div>
+      <div class="flex items-start gap-3">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
+          <%= t(".roles.admin") %>
+        </span>
+        <p class="text-secondary"><%= t(".role_descriptions.admin") %></p>
+      </div>
+      <div class="flex items-start gap-3">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 shrink-0">
+          <%= t(".roles.super_admin") %>
+        </span>
+        <p class="text-secondary"><%= t(".role_descriptions.super_admin") %></p>
+      </div>
+    </div>
+  <% end %>
+</div>

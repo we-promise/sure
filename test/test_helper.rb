@@ -22,6 +22,7 @@ require "minitest/mock"
 require "minitest/autorun"
 require "mocha/minitest"
 require "aasm/minitest"
+require "webmock/minitest"
 
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"

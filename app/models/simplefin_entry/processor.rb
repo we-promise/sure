@@ -34,9 +34,27 @@ class SimplefinEntry::Processor
       # Include provider-supplied extra hash if present
       sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
 
-      # Pending detection: only use explicit provider flag
+      # Pending detection: explicit flag OR inferred from posted=0 + transacted_at
+      # SimpleFIN indicates pending via:
+      # 1. pending: true (explicit flag)
+      # 2. posted=0 (epoch zero) + transacted_at present (implicit - some banks use this pattern)
+      #
+      # Note: We only infer from posted=0, NOT from posted=nil/blank, because some providers
+      # don't supply posted dates even for settled transactions (would cause false positives).
       # We always set the key (true or false) to ensure deep_merge overwrites any stale value
-      if ActiveModel::Type::Boolean.new.cast(data[:pending])
+      is_pending = if ActiveModel::Type::Boolean.new.cast(data[:pending])
+        true
+      else
+        # Infer pending ONLY when posted is explicitly 0 (epoch) AND transacted_at is present
+        # posted=nil/blank is NOT treated as pending (some providers omit posted for settled txns)
+        posted_val = data[:posted]
+        transacted_val = data[:transacted_at]
+        posted_is_epoch_zero = posted_val.present? && posted_val.to_i.zero?
+        transacted_present = transacted_val.present? && transacted_val.to_i > 0
+        posted_is_epoch_zero && transacted_present
+      end
+
+      if is_pending
         sf["pending"] = true
         Rails.logger.debug("SimpleFIN: flagged pending transaction #{external_id}")
       else

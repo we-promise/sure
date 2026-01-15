@@ -102,19 +102,31 @@ class Family::AutoMerchantDetector
     end
 
     def find_or_create_ai_merchant(auto_detection)
-      # Only use (source, name) for find_or_create since that's the uniqueness constraint
-      ProviderMerchant.find_or_create_by!(
-        source: "ai",
-        name: auto_detection.business_name
-      ) do |pm|
-        pm.website_url = auto_detection.business_url
-        if Setting.brand_fetch_client_id.present?
-          pm.logo_url = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
-        end
+      # Strategy 1: Find existing merchant by website_url (most reliable for deduplication)
+      if auto_detection.business_url.present?
+        existing = ProviderMerchant.find_by(website_url: auto_detection.business_url)
+        return existing if existing
       end
+
+      # Strategy 2: Find by exact name match
+      existing = ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+      return existing if existing
+
+      # Strategy 3: Create new merchant
+      ProviderMerchant.create!(
+        source: "ai",
+        name: auto_detection.business_name,
+        website_url: auto_detection.business_url,
+        logo_url: build_logo_url(auto_detection.business_url)
+      )
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       # Race condition: another process created the merchant between our find and create
       ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+    end
+
+    def build_logo_url(business_url)
+      return nil unless Setting.brand_fetch_client_id.present? && business_url.present?
+      "#{default_logo_provider_url}/#{business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
     end
 
     def enhance_provider_merchant(merchant, auto_detection)

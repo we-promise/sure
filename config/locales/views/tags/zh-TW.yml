@@ -1,0 +1,23 @@
+---
+zh-TW:
+  tags:
+    create:
+      created: 標籤已建立
+      error: '建立標籤時發生錯誤：%{error}'
+    destroy:
+      deleted: 標籤已刪除
+    edit:
+      edit: 編輯標籤
+    form:
+      placeholder: 標籤名稱
+    index:
+      empty: 尚無標籤
+      new: 新增標籤
+      tags: 標籤
+    new:
+      new: 新增標籤
+    tag:
+      delete: 刪除
+      edit: 編輯
+    update:
+      updated: 標籤已更新

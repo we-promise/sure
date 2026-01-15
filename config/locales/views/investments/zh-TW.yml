@@ -1,0 +1,17 @@
+---
+zh-TW:
+  investments:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      none: 無
+      subtype_prompt: 選擇投資類型
+    new:
+      title: 請輸入帳戶餘額
+    show:
+      chart_title: 總價值
+    value_tooltip:
+      cash: 現金
+      holdings: 持股
+      total: 投資組合餘額
+      total_value_tooltip: 總投資組合餘額等於經紀帳戶現金（可用於交易）與持股目前市值的總和。
