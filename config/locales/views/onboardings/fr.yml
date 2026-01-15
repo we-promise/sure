@@ -1,0 +1,72 @@
+---
+fr:
+  onboardings:
+    header:
+      sign_out: Déconnexion
+    preferences:
+      color_theme: Thème de couleur
+      theme_system: Système
+      theme_light: Clair
+      theme_dark: Sombre
+      currency: Monnaie
+      date_format: Format de date
+      example: Compte d'exemple
+      locale: Langue
+      preview: Prévisualiser la façon dont les données s'affichent en fonction des préférences.
+      submit: Terminer
+      subtitle: Configurons vos préférences.
+      title: Configurez vos préférences
+    goals:
+      title: Qu'est-ce qui vous amène ici ?
+      subtitle: Sélectionnez un ou plusieurs objectifs que vous avez en utilisant %{product_name} comme outil de finances personnelles.
+      goal_unified_accounts: Voir tous mes comptes en un seul endroit
+      goal_cashflow: Comprendre les flux de trésorerie et les dépenses
+      goal_budgeting: Gérer les plans financiers et le budget
+      goal_partner: Gérer les finances avec un partenaire
+      goal_investments: Suivre les investissements
+      goal_ai_insights: Laisser l'IA m'aider à comprendre mes finances
+      goal_optimization: Analyser et optimiser les comptes
+      goal_reduce_stress: Réduire le stress ou l'anxiété financière
+      next: Suivant
+    trial:
+      try_sure: Essayez Sure pendant 14 jours.
+      no_credit_card: Aucune carte de crédit requise
+      trial_description: Démarrer l'essai active votre compte Sure. Vous n'aurez pas besoin d'entrer de détails de paiement.
+      continue_trial: Continuer l'essai
+      upgrade: Passer à l'offre payante
+      how_trial_works: Comment fonctionne votre essai
+      today: Aujourd'hui
+      today_description: Vous aurez un accès gratuit à Sure pendant 14 jours
+      in_13_days: "Dans 13 jours (%{date})"
+      in_13_days_description: Nous vous enverrons une notification pour vous rappeler quand votre essai se termine.
+      in_14_days: "Dans 14 jours (%{date})"
+      in_14_days_description: Votre essai se termine — abonnez-vous pour continuer à utiliser Sure
+      whats_included: Ce qui est inclus
+      feature_institutions: Plus de 10 000 institutions auxquelles se connecter
+      feature_unlimited_accounts: Connectez un nombre illimité de comptes et types de comptes
+      feature_investments: Performance et rendements des investissements à travers le portefeuille
+      feature_transactions: Expérience complète de suivi des transactions
+      feature_ai: Accès illimité et conversations avec Sure AI
+      feature_manual_tracking: Suivi manuel des comptes qui fonctionne bien
+      feature_currencies: Plusieurs devises et couverture quasi mondiale
+      feature_early_access: Accès anticipé aux nouvelles fonctionnalités
+      feature_support: Support humain prioritaire de l'équipe
+    profile:
+      country: Pays
+      first_name: Prénom
+      household_name: Nom du foyer
+      last_name: Nom de famille
+      profile_image: Photo de profil
+      submit: Continuer
+      subtitle: Complétons votre profil.
+      title: Configurons les bases
+    show:
+      title: Configurons votre compte
+      subtitle: Premières choses d'abord, configurons votre profil.
+      first_name: Prénom
+      last_name: Nom de famille
+      household_name: Nom du foyer
+      country: Pays
+      continue: Continuer
+      message: Nous sommes ravis de vous accueillir. Dans la prochaine étape, nous allons vous poser quelques questions pour compléter votre profil et ensuite configurer votre compte.
+      setup: Configurer le compte

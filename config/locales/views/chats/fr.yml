@@ -1,0 +1,31 @@
+---
+fr:
+  chats:
+    index:
+      title: Conversations
+      new_chat: Nouvelle conversation
+    chat:
+      edit_title: Modifier le titre
+      delete: Supprimer la conversation
+    chat_nav:
+      all_chats: Toutes les conversations
+      start_new: Nouvelle conversation
+      edit_title: Modifier le titre
+      delete: Supprimer la conversation
+    error:
+      failed: Échec de la génération de la réponse. Veuillez réessayer.
+      retry: Réessayer
+    ai_greeting:
+      greeting: "Bonjour %{name} ! Je suis une IA qui peut vous aider avec vos finances. J'ai accès au web et à vos données de compte."
+      greeting_anonymous: "Bonjour ! Je suis une IA qui peut vous aider avec vos finances. J'ai accès au web et à vos données de compte."
+      commands_hint: "Vous pouvez utiliser %{key} pour accéder aux commandes"
+      questions_intro: "Voici quelques questions que vous pouvez poser :"
+      question_portfolio: Évaluer le portefeuille d'investissement
+      question_spending: Afficher les analyses de dépenses
+      question_patterns: Trouver des tendances inhabituelles
+    ai_consent:
+      title: Activer les conversations IA
+      description_available: L'assistant IA peut répondre à vos questions financières et fournir des analyses basées sur vos données. Pour utiliser cette fonctionnalité, vous devez l'activer explicitement.
+      description_unavailable: Pour utiliser l'assistant IA, vous devez définir la variable d'environnement <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> ou la configurer dans les paramètres d'auto-hébergement de votre instance.
+      enable_button: Activer les conversations IA
+      disclaimer: Désactivable à tout moment. Toutes les données envoyées à nos fournisseurs IA sont anonymisées.

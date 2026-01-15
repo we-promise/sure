@@ -1,0 +1,131 @@
+---
+fr:
+  transactions:
+    transaction:
+      one_time_income_title: Revenu ponctuel (exclu des moyennes)
+      one_time_expense_title: Dépense ponctuelle (exclue des moyennes)
+      loan_payment: Paiement de prêt
+      transfer: Transfert
+    form:
+      account: Compte
+      account_prompt: Sélectionnez un compte
+      amount: Montant
+      category: Catégorie
+      category_prompt: Sélectionnez une catégorie
+      date: Date
+      description: Libellé
+      description_placeholder: Libellé de la transaction
+      expense: Dépense
+      income: Revenu
+      none: (aucun)
+      note_label: Notes
+      note_placeholder: Entrez une note
+      submit: Ajouter la transaction
+      tags_label: Étiquettes
+      transfer: Transfert
+    new:
+      new_transaction: Nouvelle transaction
+    show:
+      account_label: Compte
+      amount: Montant
+      category_label: Catégorie
+      date_label: Date
+      delete: Supprimer
+      delete_subtitle: Cette action supprime définitivement la transaction, affecte vos soldes historiques et ne peut pas être annulée.
+      delete_title: Supprimer la transaction
+      details: Détails
+      merchant_label: Marchand
+      name_label: Nom
+      nature: Type
+      none: "(aucun)"
+      note_label: Notes
+      note_placeholder: Entrez une note
+      overview: Aperçu
+      settings: Paramètres
+      tags_label: Étiquettes
+      uncategorized: "(non catégorisée)"
+      expense: Dépense
+      income: Revenu
+      exclude_title: Exclure
+      exclude_description: Les transactions exclues seront retirées des calculs de budget et des rapports.
+      one_time_income: Revenu ponctuel
+      one_time_expense: Dépense ponctuelle
+      one_time_description: Les transactions ponctuelles seront exclues de certains calculs de budget et rapports pour vous aider à voir ce qui est vraiment important.
+      transfer_title: Transfert ou paiement de dette ?
+      transfer_description: Les transferts et paiements sont des types spéciaux de transactions qui indiquent un mouvement d'argent entre 2 comptes.
+      open_matcher: Ouvrir le matcher
+    header:
+      edit_categories: Modifier les catégories
+      edit_imports: Modifier les importations
+      edit_merchants: Modifier les marchands
+      edit_tags: Modifier les étiquettes
+      import: Importer
+    bulk_updates:
+      new:
+        edit_transactions: Modifier les transactions
+        overview: Aperçu
+        transactions: Transactions
+        date: Date
+        category: Catégorie
+        select_category: Sélectionnez une catégorie
+        merchant: Marchand
+        select_merchant: Sélectionnez un marchand
+        tags: Étiquettes
+        notes: Notes
+        notes_placeholder: Entrez une note qui sera appliquée aux transactions sélectionnées
+        cancel: Annuler
+        save: Enregistrer
+    index:
+      title: Transactions
+      transaction: transaction
+      transactions: transactions
+      import: Importer
+      new_transaction: Nouvelle transaction
+      new_rule: Nouvelle règle
+      edit_rules: Modifier les règles
+      edit_categories: Modifier les catégories
+      edit_tags: Modifier les étiquettes
+      edit_merchants: Modifier les marchands
+      edit_imports: Modifier les importations
+      column_transaction: transaction
+      column_category: catégorie
+      column_amount: montant
+    summary:
+      total_transactions: Total des transactions
+      income: Revenus
+      expenses: Dépenses
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Égal à
+          greater_than: Supérieur à
+          less_than: Inférieur à
+          placeholder: '0'
+        badge:
+          expense: Dépense
+          income: Revenu
+          on_or_after: le %{date} et après
+          on_or_before: le %{date} et avant
+          transfer: Transfert
+        type_filter:
+          expense: Dépense
+          income: Revenu
+          transfer: Transfert
+      menu:
+        account_filter: Compte
+        amount_filter: Montant
+        apply: Appliquer
+        cancel: Annuler
+        category_filter: Catégorie
+        clear_filters: Effacer les filtres
+        date_filter: Date
+        merchant_filter: Marchand
+        tag_filter: Étiquette
+        type_filter: Type
+      search:
+        equal_to: égal à
+        greater_than: supérieur à
+        less_than: inférieur à
+      form:
+        filter: Filtrer
+        search_placeholder: Rechercher des transactions ...

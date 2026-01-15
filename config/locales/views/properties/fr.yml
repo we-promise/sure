@@ -1,0 +1,43 @@
+---
+fr:
+  properties:
+    overview_fields:
+      name_label: Nom
+      name_placeholder: Maison de vacances
+      select_type: Sélectionner le type
+      property_type_label: Type de propriété
+      year_built_optional: Année de construction (optionnel)
+      area_optional: Surface (optionnel)
+      square_feet: Pieds carrés
+      square_meters: Mètres carrés
+      area_unit_label: Unité de surface
+    edit:
+      edit: Modifier %{account}
+    form:
+      address_line1: Adresse
+      address_line1_placeholder: 123, rue de la Paix
+      area: Surface habitable
+      area_placeholder: '2000'
+      area_unit: Unité de mesure
+      country: Pays
+      country_placeholder: FR
+      locality: Ville
+      locality_placeholder: Paris
+      none: Aucun
+      postal_code: Code postal/ZIP
+      postal_code_placeholder: '75000'
+      region: Région/Département
+      region_placeholder: Île-de-France
+      subtype_prompt: Sélectionnez le type de propriété
+      year_built: Année de construction
+      year_built_placeholder: '2000'
+    new:
+      title: Saisir les détails de la propriété
+    overview:
+      living_area: Surface habitable
+      market_value: Valeur du marché
+      purchase_price: Prix d'achat
+      trend: Tendance
+      unknown: Inconnu
+      year_built: Année de construction
+      edit_account_details: Modifier les détails du compte

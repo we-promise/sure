@@ -1,0 +1,23 @@
+---
+fr:
+  family_exports:
+    new:
+      title: Exporter vos données
+      subtitle: Téléchargez toutes vos données financières
+      whats_included: "Ce qui est inclus :"
+      accounts_and_balances: Tous les comptes et soldes
+      transaction_history: Historique des transactions
+      investment_trades: Opérations d'investissement
+      categories_and_tags: Catégories et étiquettes
+      note_html: "<strong>Note :</strong> Cette exportation inclut toutes vos données, mais seules certaines données peuvent être réimportées via la fonction d'import CSV. Nous prenons en charge les importations de comptes, de transactions (avec catégorie et étiquettes) et d'opérations. Les autres données de compte ne peuvent pas être importées et sont uniquement pour vos archives."
+      cancel: Annuler
+      export_data: Exporter les données
+    list:
+      in_progress: En cours
+      complete: Terminé
+      failed: Échoué
+      export_from: Export du %{date}
+      exporting: Exportation...
+      no_exports: Aucune exportation pour le moment.
+      delete_confirm: Êtes-vous sûr de vouloir supprimer cette exportation ? Cette action est irréversible.
+      delete_failed_confirm: Êtes-vous sûr de vouloir supprimer cette exportation échouée ?

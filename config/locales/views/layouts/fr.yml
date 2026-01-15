@@ -1,0 +1,18 @@
+---
+fr:
+  layouts:
+    application:
+      nav_home: Accueil
+      nav_transactions: Transactions
+      nav_budgets: Budgets
+      nav_assistant: Assistant
+      free_trial: Essai gratuit
+      days_remaining:
+        one: "%{count} jour restant"
+        other: "%{count} jours restants"
+      upgrade: Passer à l'offre payante
+    shared:
+      confirm_dialog:
+        title: Êtes-vous sûr(e) ?
+        subtitle: Cette action est irréversible.
+        confirm: Confirmer

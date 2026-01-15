@@ -1,0 +1,62 @@
+---
+fr:
+  rules:
+    index:
+      title: Règles
+      delete_all: Supprimer toutes les règles
+      new_rule: Nouvelle règle
+      ai_warning: Les actions de règles activées par l'IA coûtent de l'argent. Assurez-vous de filtrer aussi étroitement que possible pour éviter des coûts inutiles.
+      rules_count: Règles
+      sort_by: "Trier par :"
+      sort_name: Nom
+      sort_updated_at: Date de mise à jour
+      toggle_sort: Inverser l'ordre de tri
+      no_rules: Aucune règle
+      no_rules_description: Configurez des règles pour effectuer des actions sur vos transactions et autres données à chaque synchronisation de compte.
+    rule:
+      if: SI
+      then: ALORS
+      for: POUR
+      and_more_conditions:
+        one: et %{count} condition de plus
+        other: et %{count} conditions de plus
+      and_more_actions:
+        one: et %{count} action de plus
+        other: et %{count} actions de plus
+      to: à
+      all_past_future: Toutes les %{resource_type} passées et futures
+      on_or_after: "%{resource_type} le ou après le %{date}"
+      edit: Modifier
+      reapply_rule: Ré-appliquer la règle
+      delete: Supprimer
+    new:
+      back_to_rules: Retour aux règles
+      title: Nouvelle règle %{resource_type}
+    edit:
+      back_to_rules: Retour aux règles
+      title_with_name: Modifier la règle %{resource_type} "%{name}"
+      title: Modifier la règle %{resource_type}
+    form:
+      rule_name: Nom de la règle (facultatif)
+      rule_name_placeholder: Entrez un nom pour cette règle
+      if: SI
+      then: ALORS
+      for: POUR
+      add_condition: Ajouter une condition
+      add_condition_group: Ajouter un groupe de conditions
+      add_action: Ajouter une action
+      all_past_future: Toutes les %{resource_type}s passées et futures
+      starting_from: À partir du
+    confirm:
+      title_with_name: Confirmer les modifications de "%{name}"
+      title: Confirmer les modifications
+      description: Vous êtes sur le point d'appliquer cette règle à
+      resources_count: "%{count} %{resource_type}"
+      criteria_notice: qui correspondent aux critères de la règle spécifiés. Veuillez confirmer si vous souhaitez procéder à cette modification.
+      confirm_button: Confirmer les modifications
+    category_rule_cta:
+      message: Mis à jour en %{category_name}
+      description: Vous pouvez créer une règle pour catégoriser automatiquement les transactions comme celle-ci
+      dont_show_again: Ne plus afficher
+      dismiss: Ignorer
+      create_rule: Créer une règle

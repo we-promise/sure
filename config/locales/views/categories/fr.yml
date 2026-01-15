@@ -1,0 +1,45 @@
+---
+fr:
+  categories:
+    bootstrap:
+      success: Catégories par défaut créées avec succès
+    category:
+      delete: Supprimer la catégorie
+      edit: Éditer la catégorie
+    create:
+      success: Catégorie créée avec succès
+    destroy:
+      success: Catégorie supprimée avec succès
+    edit:
+      edit: Éditer la catégorie
+    form:
+      placeholder: Nom de la catégorie
+      color: Couleur
+      icon: Icône
+      classification: Classification
+      name: Nom
+      parent_category: Catégorie parente (facultatif)
+      unassigned: "(non assigné)"
+      income: Revenu
+      expense: Dépense
+      poor_contrast: Contraste faible, choisissez une couleur plus foncée ou
+      auto_adjust: ajuster automatiquement.
+    index:
+      bootstrap: Utiliser les valeurs par défaut (recommandé)
+      categories: Catégories
+      categories_expenses: Catégories de dépenses
+      categories_incomes: Catégories de revenus
+      empty: Aucune catégorie trouvée
+      new: Nouvelle catégorie
+      delete_all: Tout supprimer
+    menu:
+      loading: Chargement...
+    new:
+      new_category: Nouvelle catégorie
+    update:
+      success: Catégorie mise à jour avec succès
+  category:
+    dropdowns:
+      show:
+        bootstrap: Générer les catégories par défaut
+        empty: Aucune catégorie trouvée
