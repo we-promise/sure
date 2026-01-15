@@ -31,7 +31,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     created_entry = Entry.order(:created_at).last
 
     assert_redirected_to account_url(created_entry.account)
-    assert_equal "Transaction created", flash[:notice]
+    assert_equal I18n.t("transactions.create.success"), flash[:notice]
     assert_enqueued_with(job: SyncJob)
   end
 
@@ -69,7 +69,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "test notes", @entry.notes
     assert_equal false, @entry.excluded
 
-    assert_equal "Transaction updated", flash[:notice]
+    assert_equal I18n.t("transactions.update.success"), flash[:notice]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
   end
