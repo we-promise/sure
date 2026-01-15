@@ -160,6 +160,7 @@ fr:
       choose: Charger une photo
       choose_label: (facultatif)
       change: Changer de photo
+      preview_alt: Aperçu
     bank_sync:
       show:
         page_title: Synchronisation bancaire

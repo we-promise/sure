@@ -26,6 +26,8 @@ fr:
     llm_usage: Utilisation LLM
     sync_providers: Fournisseurs de synchronisation
   shared:
+    app_version:
+      version_label: "Version :"
     transaction_tabs:
       expense: Dépense
       income: Revenu

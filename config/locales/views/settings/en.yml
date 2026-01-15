@@ -160,6 +160,7 @@ en:
       choose: Upload photo
       choose_label: (optional)
       change: Change photo
+      preview_alt: Preview
     bank_sync:
       show:
         page_title: Bank Sync

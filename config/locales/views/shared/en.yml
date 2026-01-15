@@ -23,6 +23,8 @@ en:
     profile_info: Profile Info
     import_export: Import/Export
   shared:
+    app_version:
+      version_label: "Version:"
     transaction_tabs:
       expense: Expense
       income: Income
