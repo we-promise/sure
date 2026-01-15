@@ -129,3 +129,14 @@ fr:
       choose: Charger une photo
       choose_label: (facultatif)
       change: Changer de photo
+    bank_sync:
+      show:
+        page_title: Synchronisation bancaire
+        providers: Fournisseurs
+        no_providers: Aucun fournisseur configuré
+        configure_providers: Configurez des fournisseurs pour lier vos comptes bancaires.
+        lunchflow_description: "États-Unis, Canada, Royaume-Uni, UE, Brésil et Asie via plusieurs fournisseurs d'open banking."
+        plaid_description: "Connexions bancaires États-Unis et Canada avec transactions, investissements et passifs."
+        simplefin_description: "Connexions États-Unis et Canada via le protocole SimpleFIN."
+        enable_banking_name: "Enable Banking (bêta)"
+        enable_banking_description: "Connexions bancaires européennes via les API d'open banking dans plusieurs pays."

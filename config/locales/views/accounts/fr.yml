@@ -37,6 +37,11 @@ fr:
       sync: Tout synchroniser
     new:
       import_accounts: Importer des comptes
+      container:
+        select: Sélectionner
+        navigate: Naviguer
+        close: Fermer
+        esc: ÉCHAP
       method_selector:
         connected_entry: Lier un compte
         connected_entry_eu: Lier un compte européen

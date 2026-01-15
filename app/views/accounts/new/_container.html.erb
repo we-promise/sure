@@ -29,13 +29,13 @@
     <div class="border-t border-alpha-black-25 px-4 pt-4 text-secondary text-sm justify-between hidden md:flex">
       <div class="flex space-x-5">
         <div class="flex items-center space-x-2">
-          <span>Select</span>
+          <span><%= t("accounts.new.container.select") %></span>
           <kbd class="bg-alpha-black-50 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.1)] p-1 rounded-md flex w-5 h-5 shrink-0 grow-0 items-center justify-center">
             <%= icon("corner-down-left", size: "xs") %>
           </kbd>
         </div>
         <div class="flex items-center space-x-2">
-          <span>Navigate</span>
+          <span><%= t("accounts.new.container.navigate") %></span>
           <kbd class="bg-alpha-black-50 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.1)] p-1 rounded-md flex w-5 h-5 shrink-0 grow-0 items-center justify-center">
             <%= icon("arrow-up", size: "xs") %>
           </kbd>
@@ -45,8 +45,8 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
-        <button data-action="DS--dialog#close">Close</button>
-        <kbd class="bg-alpha-black-50 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.1)] p-1 rounded-md flex w-8 h-5 shrink-0 grow-0 items-center justify-center text-xs">ESC</kbd>
+        <button data-action="DS--dialog#close"><%= t("accounts.new.container.close") %></button>
+        <kbd class="bg-alpha-black-50 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.1)] p-1 rounded-md flex w-8 h-5 shrink-0 grow-0 items-center justify-center text-xs"><%= t("accounts.new.container.esc") %></kbd>
       </div>
     </div>
   </div>

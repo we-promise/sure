@@ -40,6 +40,11 @@ en:
       syncing: "Syncing accounts..."
     new:
       import_accounts: Import accounts
+      container:
+        select: Select
+        navigate: Navigate
+        close: Close
+        esc: ESC
       method_selector:
         connected_entry: Link account
         connected_entry_eu: Link EU account

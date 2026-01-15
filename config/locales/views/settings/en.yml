@@ -152,3 +152,14 @@ en:
       choose: Upload photo
       choose_label: (optional)
       change: Change photo
+    bank_sync:
+      show:
+        page_title: Bank Sync
+        providers: Providers
+        no_providers: No providers configured
+        configure_providers: Configure providers to link your bank accounts.
+        lunchflow_description: "US, Canada, UK, EU, Brazil and Asia through multiple open banking providers."
+        plaid_description: "US & Canada bank connections with transactions, investments, and liabilities."
+        simplefin_description: "US & Canada connections via SimpleFIN protocol."
+        enable_banking_name: "Enable Banking (beta)"
+        enable_banking_description: "European bank connections via open banking APIs across multiple countries."
