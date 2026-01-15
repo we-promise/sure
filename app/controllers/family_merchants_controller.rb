@@ -116,7 +116,7 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color)
+      params.require(key).permit(:name, :color, :website_url)
     end
 
     def all_family_merchants

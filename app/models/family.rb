@@ -51,7 +51,8 @@ class Family < ApplicationRecord
       .where(family: self)
       .recently_unlinked
       .pluck(:merchant_id)
-    Merchant.where(id: (assigned_ids + recently_unlinked_ids).uniq)
+    family_merchant_ids = merchants.pluck(:id)
+    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
