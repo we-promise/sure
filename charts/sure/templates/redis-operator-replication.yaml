@@ -2,9 +2,9 @@
 {{- $name := .Values.redisOperator.name | default (printf "%s-redis" (include "sure.fullname" .)) -}}
 
 {{/* Prefer managed.* if provided; fallback to top-level */}}
-{{- $imgRepo := (coalesce .Values.redisOperator.managed.image.repository .Values.redisOperator.image.repository) | default "quay.io/opstree/redis" -}}
-{{- $imgTag  := (coalesce .Values.redisOperator.managed.image.tag        .Values.redisOperator.image.tag)        | default "v8.4.0" -}}
-{{- $replicas := (coalesce .Values.redisOperator.managed.replicas .Values.redisOperator.replicas) | default 3 -}}
+{{- $imgRepo := .Values.redisOperator.image.repository | default "quay.io/opstree/redis" -}}
+{{- $imgTag  := .Values.redisOperator.image.tag        | default "v8.4.0" -}}
+{{- $replicas := .Values.redisOperator.replicas | default 3 -}}
 {{- $nodeSelector := (coalesce .Values.redisOperator.managed.nodeSelector .Values.redisOperator.nodeSelector) -}}
 {{- $tolerations := (coalesce .Values.redisOperator.managed.tolerations  .Values.redisOperator.tolerations)  -}}
 {{- $affinity    := (coalesce .Values.redisOperator.managed.affinity     .Values.redisOperator.affinity)     -}}
