@@ -2,7 +2,12 @@
 fr:
   accounts:
     account:
+      link_lunchflow: Lier avec Lunch Flow
+      link_provider: Lier avec un fournisseur
+      unlink_provider: Dissocier du fournisseur
       troubleshoot: Dépannage
+      deletion_in_progress: suppression en cours...
+      complete_setup: Terminer la configuration
     account_sidebar_tabs:
       missing_historical: Manque les données historiques
       describe_party_provider: "%{product_name} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
@@ -27,6 +32,13 @@ fr:
       balance: Solde actuel
       name_label: Nom du compte
       name_placeholder: Nom de compte d'exemple
+      additional_details: Détails supplémentaires
+      institution_name_label: Nom de l'institution
+      institution_name_placeholder: ex., BNP Paribas
+      institution_domain_label: Domaine de l'institution
+      institution_domain_placeholder: ex., bnpparibas.com
+      notes_label: Notes
+      notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
     index:
       accounts: Comptes
       manual_accounts:
@@ -35,13 +47,23 @@ fr:
       sync: Tout synchroniser
     new:
       import_accounts: Importer des comptes
+      container:
+        select: Sélectionner
+        navigate: Naviguer
+        close: Fermer
+        esc: ÉCHAP
+        previous: Précédent
+        next: Suivant
       method_selector:
         connected_entry: Lier un compte
         connected_entry_eu: Lier un compte européen
         manual_entry: Saisir le solde du compte
+        link_with_provider: "Lier avec %{provider}"
         title: Comment voulez-vous l'ajouter ?
       title: Que voulez-vous ajouter ?
     show:
+      header:
+        complete_setup: Terminer la configuration
       activity:
         amount: Montant
         balance: Solde
@@ -53,10 +75,18 @@ fr:
         new_transaction: Nouvelle transaction
         no_entries: Aucune entrée trouvée
         title: Activité
+        search_placeholder: Rechercher des entrées par nom
       chart:
         balance: Solde
         owed: Montant dû
+        total_value: Valeur totale
+        holdings: Avoirs
+        cash: Liquidités
+        no_data: Aucune donnée disponible
       menu:
+        edit: Modifier
+        import_transactions: Importer des transactions
+        delete_account: Supprimer le compte
         confirm_accept: Supprimer "%{name}"
         confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique de valeur,
           affectant divers aspects de votre solde global. Cette action aura un impact direct sur vos calculs de valeur nette et les graphiques des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de restaurer l'information du compte car vous aurez besoin d'en ajouter un nouveau.</p>"
@@ -66,6 +96,49 @@ fr:
         manage: Gérer les comptes
     update:
       success: "Compte %{type} mis à jour"
+    sidebar:
+      missing_data: Données historiques manquantes
+      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
+      configure_providers: Configurez vos fournisseurs ici.
+      tabs:
+        all: Tout
+        assets: Actifs
+        debts: Dettes
+      new_asset: Nouvel actif
+      new_debt: Nouvelle dette
+      new_account: Nouveau compte
+      new_account_group: "Nouveau %{account_group}"
+    types:
+      depository: Liquidités
+      investment: Investissement
+      crypto: Crypto
+      property: Immobilier
+      vehicle: Véhicule
+      other_asset: Autre actif
+      credit_card: Carte de crédit
+      loan: Prêt
+      other_liability: Autre passif
+    sync_all:
+      syncing: "Synchronisation des comptes..."
+    confirm_unlink:
+      title: Dissocier le compte du fournisseur ?
+      description_html: "Vous êtes sur le point de dissocier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel."
+      warning_title: Ce que cela signifie
+      warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre fournisseur
+      warning_manual_updates: Vous devrez ajouter les transactions et mettre à jour les soldes manuellement
+      warning_transactions_kept: Toutes les transactions et soldes existants seront conservés
+      warning_can_delete: Après la dissociation, vous pourrez supprimer le compte si nécessaire
+      confirm_button: Confirmer et dissocier
+    unlink:
+      success: "Compte dissocié avec succès. C'est maintenant un compte manuel."
+      not_linked: "Le compte n'est pas lié à un fournisseur"
+      error: "Échec de la dissociation du compte : %{error}"
+      generic_error: "Une erreur inattendue s'est produite. Veuillez réessayer."
+    select_provider:
+      title: Sélectionner un fournisseur à lier
+      description: "Choisissez le fournisseur que vous souhaitez utiliser pour lier %{account_name}"
+      already_linked: "Le compte est déjà lié à un fournisseur"
+      no_providers: "Aucun fournisseur n'est actuellement configuré"
   email_confirmations:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.

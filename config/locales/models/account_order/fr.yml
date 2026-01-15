@@ -1,0 +1,15 @@
+---
+fr:
+  account_orders:
+    name_asc:
+      label: Nom (A-Z)
+      label_short: Nom ↑
+    name_desc:
+      label: Nom (Z-A)
+      label_short: Nom ↓
+    balance_asc:
+      label: Solde (croissant)
+      label_short: Solde ↑
+    balance_desc:
+      label: Solde (décroissant)
+      label_short: Solde ↓
