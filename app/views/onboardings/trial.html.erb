@@ -69,12 +69,12 @@
         </div>
 
         <div class="space-y-1.5 text-sm">
-          <p class="text-primary font-medium"><%= t('.in_13_days', date: 13.days.from_now.strftime("%B %d")) %></p>
+          <p class="text-primary font-medium"><%= t('.in_13_days', date: I18n.l(13.days.from_now, format: "%B %d")) %></p>
           <p class="text-secondary"><%= t('.in_13_days_description') %></p>
         </div>
 
         <div class="space-y-1.5 text-sm">
-          <p class="text-primary font-medium"><%= t('.in_14_days', date: 14.days.from_now.strftime("%B %d")) %></p>
+          <p class="text-primary font-medium"><%= t('.in_14_days', date: I18n.l(14.days.from_now, format: "%B %d")) %></p>
           <p class="text-secondary"><%= t('.in_14_days_description') %></p>
         </div>
       </div>

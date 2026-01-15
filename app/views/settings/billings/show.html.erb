@@ -16,7 +16,7 @@
               <%= t('.subscribed_html', plan: @family.subscription.name) %>
 
               <% if @family.next_billing_date %>
-                <%= t('.renews_on_html', date: @family.next_billing_date.strftime("%B %d, %Y")) %>
+                <%= t('.renews_on_html', date: I18n.l(@family.next_billing_date, format: :long)) %>
               <% end %>
             </p>
           <% elsif @family.trialing? %>

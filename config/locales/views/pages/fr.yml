@@ -3,6 +3,7 @@ fr:
   pages:
     changelog:
       title: Nouveautés
+      date_unavailable: Date indisponible
     feedback:
       page_title: Retour d'information
       title: Donnez votre avis

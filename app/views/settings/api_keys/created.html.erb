@@ -51,7 +51,7 @@
         </div>
         <div class="flex justify-between">
           <span class="text-secondary"><%= t("settings.api_keys.show.current_api_key.created_at") %>:</span>
-          <span class="text-primary"><%= @api_key.created_at.strftime("%B %d, %Y at %I:%M %p") %></span>
+          <span class="text-primary"><%= I18n.l(@api_key.created_at, format: :long) %></span>
         </div>
       </div>
     </div>

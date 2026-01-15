@@ -15,7 +15,7 @@
         <% end %>
         <div>
           <a class="text-primary font-medium text-sm" href="https://github.com/<%= @release_notes[:username] %>"><%= "@#{@release_notes[:username]}" %></a>
-          <div class="text-secondary text-sm"><%= @release_notes[:published_at]&.strftime("%B %d, %Y") || "Date unavailable" %></div>
+          <div class="text-secondary text-sm"><%= @release_notes[:published_at] ? I18n.l(@release_notes[:published_at], format: :long) : t("pages.changelog.date_unavailable") %></div>
         </div>
       </div>
     </div>

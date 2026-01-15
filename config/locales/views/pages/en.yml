@@ -3,6 +3,7 @@ en:
   pages:
     changelog:
       title: What's new
+      date_unavailable: Date unavailable
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
