@@ -1,0 +1,15 @@
+---
+en:
+  account_orders:
+    name_asc:
+      label: Name (A-Z)
+      label_short: Name ↑
+    name_desc:
+      label: Name (Z-A)
+      label_short: Name ↓
+    balance_asc:
+      label: Balance (Low to High)
+      label_short: Balance ↑
+    balance_desc:
+      label: Balance (High to Low)
+      label_short: Balance ↓

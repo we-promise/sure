@@ -1,18 +1,32 @@
 ---
 fr:
+  rule:
+    conditions:
+      condition:
+        and: et
+        number_placeholder: "10"
+        enter_value: Entrez une valeur
   rules:
+    no_action: Aucune action
+    new:
+      title: "Nouvelle règle %{resource_type}"
+      back_to_rules: Retour aux règles
+    edit:
+      back_to_rules: Retour aux règles
+      title_with_name: Modifier la règle %{resource_type} "%{name}"
+      title: Modifier la règle %{resource_type}
     index:
       title: Règles
       delete_all: Supprimer toutes les règles
       new_rule: Nouvelle règle
-      ai_warning: Les actions de règles activées par l'IA coûtent de l'argent. Assurez-vous de filtrer aussi étroitement que possible pour éviter des coûts inutiles.
-      rules_count: Règles
+      ai_cost_warning: Les actions de règles activées par l'IA coûtent de l'argent. Assurez-vous de filtrer aussi étroitement que possible pour éviter des coûts inutiles.
+      rules: Règles
       sort_by: "Trier par :"
       sort_name: Nom
-      sort_updated_at: Date de mise à jour
-      toggle_sort: Inverser l'ordre de tri
-      no_rules: Aucune règle
-      no_rules_description: Configurez des règles pour effectuer des actions sur vos transactions et autres données à chaque synchronisation de compte.
+      sort_updated_at: Mis à jour le
+      toggle_sort_direction: Inverser l'ordre de tri
+      empty_title: Aucune règle pour l'instant
+      empty_description: Configurez des règles pour effectuer des actions sur vos transactions et autres données à chaque synchronisation de compte.
     rule:
       if: SI
       then: ALORS
@@ -27,36 +41,70 @@ fr:
       all_past_future: Toutes les %{resource_type} passées et futures
       on_or_after: "%{resource_type} le ou après le %{date}"
       edit: Modifier
-      reapply_rule: Ré-appliquer la règle
+      reapply: Ré-appliquer la règle
       delete: Supprimer
-    new:
-      back_to_rules: Retour aux règles
-      title: Nouvelle règle %{resource_type}
-    edit:
-      back_to_rules: Retour aux règles
-      title_with_name: Modifier la règle %{resource_type} "%{name}"
-      title: Modifier la règle %{resource_type}
     form:
-      rule_name: Nom de la règle (facultatif)
-      rule_name_placeholder: Entrez un nom pour cette règle
-      if: SI
-      then: ALORS
-      for: POUR
+      name_label: Nom de la règle (facultatif)
+      name_placeholder: Entrez un nom pour cette règle
       add_condition: Ajouter une condition
       add_condition_group: Ajouter un groupe de conditions
       add_action: Ajouter une action
-      all_past_future: Toutes les %{resource_type}s passées et futures
+    condition_group:
+      and: et
+      match: correspondre à
+      of_following: des conditions suivantes
+      add_condition: Ajouter une condition
+      all_resources: Toutes les %{resource} passées et futures
       starting_from: À partir du
+    actions:
+      value_placeholder: Entrez une valeur
+    apply_all:
+      button: Appliquer tout
+      confirm_title: Appliquer toutes les règles
+      confirm_message: Vous êtes sur le point d'appliquer %{count} règles affectant %{transactions} transactions uniques. Veuillez confirmer si vous souhaitez continuer.
+      confirm_button: Confirmer et tout appliquer
+      success: Toutes les règles ont été mises en file d'attente pour exécution
+      ai_cost_title: Estimation du coût IA
+      ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions} transactions.
+      estimated_cost: "Coût estimé : ~%{cost}$"
+      cost_unavailable_model: Estimation du coût non disponible pour le modèle "%{model}".
+      cost_unavailable_no_provider: Estimation du coût non disponible (aucun fournisseur LLM configuré).
+      cost_warning: Vous pourriez encourir des frais, veuillez vérifier auprès du fournisseur du modèle pour les prix les plus récents.
+      view_usage: Voir l'historique d'utilisation
     confirm:
-      title_with_name: Confirmer les modifications de "%{name}"
-      title: Confirmer les modifications
-      description: Vous êtes sur le point d'appliquer cette règle à
-      resources_count: "%{count} %{resource_type}"
-      criteria_notice: qui correspondent aux critères de la règle spécifiés. Veuillez confirmer si vous souhaitez procéder à cette modification.
+      confirm_changes_with_name: "Confirmer les modifications de « %{name} »"
+      confirm_changes: Confirmer les modifications
+      confirm_message_html: "Vous êtes sur le point d'appliquer cette règle à <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> qui correspondent aux critères spécifiés. Veuillez confirmer si vous souhaitez procéder à cette modification."
+      ai_cost_title: Estimation du coût IA
+      ai_cost_with_estimate: "Cela utilisera l'IA pour catégoriser %{count} transaction(s). Coût estimé : ~%{cost}$"
+      ai_cost_no_model: "Cela utilisera l'IA pour catégoriser %{count} transaction(s). Estimation du coût non disponible pour le modèle « %{model} »."
+      ai_cost_no_provider: "Cela utilisera l'IA pour catégoriser %{count} transaction(s). Estimation du coût non disponible (aucun fournisseur LLM configuré)."
+      ai_cost_warning: Vous pourriez encourir des frais, veuillez vérifier auprès du fournisseur du modèle pour les prix les plus récents.
+      view_usage: Voir l'historique d'utilisation
       confirm_button: Confirmer les modifications
     category_rule_cta:
-      message: Mis à jour en %{category_name}
-      description: Vous pouvez créer une règle pour catégoriser automatiquement les transactions comme celle-ci
+      updated_to_category: "Mis à jour en %{category_name}"
+      create_rule_description: Vous pouvez créer une règle pour catégoriser automatiquement les transactions comme celle-ci
       dont_show_again: Ne plus afficher
       dismiss: Ignorer
       create_rule: Créer une règle
+    recent_runs:
+      title: Exécutions récentes
+      description: Consultez l'historique d'exécution de vos règles, y compris le statut de réussite/échec et le nombre de transactions.
+      unnamed_rule: Règle sans nom
+      columns:
+        date_time: Date/Heure
+        execution_type: Type
+        status: Statut
+        rule_name: Nom de la règle
+        transactions_counts:
+          queued: En file
+          processed: Traitées
+          modified: Modifiées
+      execution_types:
+        manual: Manuel
+        scheduled: Planifié
+      statuses:
+        pending: En attente
+        success: Succès
+        failed: Échec

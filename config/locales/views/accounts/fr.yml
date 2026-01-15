@@ -2,8 +2,11 @@
 fr:
   accounts:
     account:
+      link_lunchflow: Lier avec Lunch Flow
+      link_provider: Lier avec un fournisseur
+      unlink_provider: Dissocier du fournisseur
       troubleshoot: Dépannage
-      deletion_in_progress: "(suppression en cours...)"
+      deletion_in_progress: suppression en cours...
       complete_setup: Terminer la configuration
     account_sidebar_tabs:
       missing_historical: Manque les données historiques
@@ -29,6 +32,13 @@ fr:
       balance: Solde actuel
       name_label: Nom du compte
       name_placeholder: Nom de compte d'exemple
+      additional_details: Détails supplémentaires
+      institution_name_label: Nom de l'institution
+      institution_name_placeholder: ex., BNP Paribas
+      institution_domain_label: Domaine de l'institution
+      institution_domain_placeholder: ex., bnpparibas.com
+      notes_label: Notes
+      notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
     index:
       accounts: Comptes
       manual_accounts:
@@ -46,13 +56,9 @@ fr:
         connected_entry: Lier un compte
         connected_entry_eu: Lier un compte européen
         manual_entry: Saisir le solde du compte
+        link_with_provider: "Lier avec %{provider}"
         title: Comment voulez-vous l'ajouter ?
       title: Que voulez-vous ajouter ?
-      container:
-        select: Sélectionner
-        navigate: Naviguer
-        close: Fermer
-        esc: ÉCHAP
     show:
       header:
         complete_setup: Terminer la configuration
@@ -110,6 +116,27 @@ fr:
       credit_card: Carte de crédit
       loan: Prêt
       other_liability: Autre passif
+    sync_all:
+      syncing: "Synchronisation des comptes..."
+    confirm_unlink:
+      title: Dissocier le compte du fournisseur ?
+      description_html: "Vous êtes sur le point de dissocier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel."
+      warning_title: Ce que cela signifie
+      warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre fournisseur
+      warning_manual_updates: Vous devrez ajouter les transactions et mettre à jour les soldes manuellement
+      warning_transactions_kept: Toutes les transactions et soldes existants seront conservés
+      warning_can_delete: Après la dissociation, vous pourrez supprimer le compte si nécessaire
+      confirm_button: Confirmer et dissocier
+    unlink:
+      success: "Compte dissocié avec succès. C'est maintenant un compte manuel."
+      not_linked: "Le compte n'est pas lié à un fournisseur"
+      error: "Échec de la dissociation du compte : %{error}"
+      generic_error: "Une erreur inattendue s'est produite. Veuillez réessayer."
+    select_provider:
+      title: Sélectionner un fournisseur à lier
+      description: "Choisissez le fournisseur que vous souhaitez utiliser pour lier %{account_name}"
+      already_linked: "Le compte est déjà lié à un fournisseur"
+      no_providers: "Aucun fournisseur n'est actuellement configuré"
   email_confirmations:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.

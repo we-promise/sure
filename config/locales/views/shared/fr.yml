@@ -22,6 +22,9 @@ fr:
     budgets: Budgets
     imports: Importations
     chats: Assistant
+    reports: Rapports
+    llm_usage: Utilisation LLM
+    sync_providers: Fournisseurs de synchronisation
   shared:
     confirm_modal:
       accept: Confirmer

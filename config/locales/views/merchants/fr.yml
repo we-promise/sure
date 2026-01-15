@@ -3,9 +3,10 @@ fr:
   family_merchants:
     create:
       error: 'Erreur lors de la création du marchand : %{error}'
-      success: Marchand créé avec succès
+      success: Nouveau marchand créé avec succès
     destroy:
       success: Marchand supprimé avec succès
+      unlinked_success: Marchand retiré de vos transactions
     edit:
       title: Modifier le marchand
     form:
@@ -13,18 +14,49 @@ fr:
     index:
       empty: Aucun marchand pour l'instant
       new: Nouveau marchand
+      merge: Fusionner les marchands
       title: Marchands
+      family_title: Marchands familiaux
+      family_empty: Aucun marchand familial pour l'instant
+      provider_title: Marchands des fournisseurs
+      provider_empty: Aucun marchand de fournisseur lié à cette famille pour l'instant
+      provider_read_only: Les marchands des fournisseurs sont synchronisés depuis vos institutions connectées. Ils ne peuvent pas être modifiés ici.
+      provider_info: Ces marchands ont été détectés automatiquement par vos connexions bancaires ou l'IA. Vous pouvez les modifier pour créer votre propre copie, ou les supprimer pour les dissocier de vos transactions.
+      unlinked_title: Récemment dissociés
+      unlinked_info: Ces marchands ont été récemment retirés de vos transactions. Ils disparaîtront de cette liste après 30 jours sauf s'ils sont réassignés à une transaction.
+      table:
+        merchant: Marchand
+        actions: Actions
+        source: Source
     merchant:
       confirm_accept: Supprimer le marchand
-      confirm_body: Êtes-vous sûr de vouloir supprimer ce marchand ? La suppression de ce marchand
-        dissocierait toutes les transactions associées et pourrait affecter vos rapports.
+      confirm_body: Êtes-vous sûr de vouloir supprimer ce marchand ? La suppression de ce marchand dissociera toutes les transactions associées et pourrait affecter vos rapports.
       confirm_title: Supprimer le marchand ?
       delete: Supprimer le marchand
       edit: Modifier le marchand
     family_merchant:
       edit: Modifier
       delete: Supprimer
+    merge:
+      title: Fusionner les marchands
+      description: Sélectionnez un marchand cible et les marchands à fusionner. Toutes les transactions des marchands fusionnés seront réassignées à la cible.
+      target_label: Fusionner dans (cible)
+      select_target: Sélectionner le marchand cible...
+      sources_label: Marchands à fusionner
+      sources_hint: Les marchands sélectionnés seront fusionnés dans la cible. Les marchands familiaux seront supprimés, les marchands des fournisseurs seront dissociés.
+      submit: Fusionner la sélection
     new:
       title: Nouveau marchand
+    perform_merge:
+      success: "%{count} marchands fusionnés avec succès"
+      no_merchants_selected: Aucun marchand sélectionné pour la fusion
+      target_not_found: Marchand cible introuvable
+      invalid_merchants: Marchands sélectionnés invalides
+    provider_merchant:
+      edit: Modifier
+      remove: Supprimer
+      remove_confirm_title: Supprimer le marchand ?
+      remove_confirm_body: Êtes-vous sûr de vouloir supprimer %{name} ? Cela dissociera toutes les transactions associées de ce marchand mais ne supprimera pas le marchand lui-même.
     update:
       success: Marchand mis à jour avec succès
+      converted_success: Marchand converti et mis à jour avec succès

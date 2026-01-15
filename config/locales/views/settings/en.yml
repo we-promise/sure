@@ -47,6 +47,7 @@ en:
         theme_system: System
         theme_title: Theme
         timezone: Timezone
+        translations_note: Please note, we are still working on translations for various languages.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
@@ -79,6 +80,8 @@ en:
         reset_account_with_sample_data: Reset and preload
         reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
         email: Email
+        unconfirmed_email_notice_html: "You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{link}."
+        resend_confirmation_link: request a new confirmation email
         first_name: First Name
         household_form_input_placeholder: Enter household name
         household_form_label: Household name
@@ -100,6 +103,10 @@ en:
         page_title: Security
         mfa_title: Two-Factor Authentication
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
+        mfa_enabled_html: Two-factor authentication is <span class="font-medium text-green-600">enabled</span>
+        mfa_enabled_description: Your account is protected with an additional layer of security.
+        mfa_disabled_html: Two-factor authentication is <span class="font-medium text-red-600">disabled</span>
+        mfa_disabled_description: Enable 2FA to add an extra layer of security to your account.
         enable_mfa: Enable 2FA
         disable_mfa: Disable 2FA
         disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
@@ -116,6 +123,7 @@ en:
         sso_confirm_button: Disconnect
         sso_warning_message: This is your only login method. You should set a password in your security settings before disconnecting, otherwise you may be locked out of your account.
     settings_nav:
+      esc: esc
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts

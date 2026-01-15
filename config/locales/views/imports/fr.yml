@@ -8,16 +8,33 @@ fr:
         leave_unassigned: Laisser non attribué
     cleans:
       show:
-        description: Editez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
+        description: Éditez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
         errors_notice: Vous avez des erreurs dans vos données. Survolez l'erreur pour voir les détails.
         errors_notice_mobile: Vous avez des erreurs dans vos données. Cliquez sur l'icône d'aide de l'erreur pour voir les détails.
         title: Nettoyez vos données
+        data_cleaned: Vos données ont été nettoyées
+        next_step: Étape suivante
+        all_rows: Toutes les lignes
+        error_rows: Lignes avec erreurs
     configurations:
-      mint_import:
-        date_format_label: Format de date
+      update:
+        success: Importation configurée avec succès.
       show:
         description: Sélectionnez les colonnes qui correspondent à chaque champ dans votre CSV.
         title: Configurez votre importation
+        template_found: Configuration de modèle trouvée
+        template_found_description: Nous avons trouvé une configuration d'une importation précédente pour ce compte. Voulez-vous l'appliquer à cette importation ?
+        manually_configure: Configurer manuellement
+        apply_template: Appliquer le modèle
+        sample_data_caption: Échantillon de données de votre CSV téléversé
+      category_import:
+        button_label: Continuer
+        description: Téléversez un simple fichier CSV (comme celui que nous générons lorsque vous exportez vos données). Nous associerons automatiquement les colonnes pour vous.
+        instructions: Sélectionnez continuer pour analyser votre CSV et passer à l'étape de nettoyage.
+      rule_import:
+        description: Configurez votre importation de règles. Les règles seront créées ou mises à jour en fonction des données CSV.
+        process_button: Traiter les règles
+        process_help: Cliquez sur le bouton ci-dessous pour traiter votre CSV et générer les lignes de règles.
       trade_import:
         date_format_label: Format de date
         date_label: Date
@@ -81,6 +98,15 @@ fr:
         tags_label: Étiquettes
         notes_label: Notes
         apply_configuration: Appliquer la configuration
+        rows_to_skip_label: Sauter les n premières lignes
+      account_import:
+        leave_empty: Laisser vide
+        entity_type: Type d'entité
+        name: Nom
+        balance: Solde
+        default: Par défaut
+        currency: Devise
+        apply_configuration: Appliquer la configuration
     confirms:
       mappings:
         create_account: Créer un compte
@@ -88,7 +114,8 @@ fr:
         sure_mapping_label: "%{mapping} dans %{product_name}"
         no_accounts: Vous n'avez pas encore de comptes. Veuillez créer un compte que nous pouvons utiliser pour les lignes non affectées de votre CSV ou retournez à l'étape Nettoyer et fournissez un nom de compte que nous pouvons utiliser.
         rows_label: Lignes
-        unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées?
+        unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées ?
+        next: Suivant
       show:
         account_mapping_description: "Affectez tous les comptes de votre fichier importé aux comptes %{product_name} existants. Vous pouvez également ajouter de nouveaux comptes ou les laisser sans catégorie."
         account_mapping_title: Attribuez vos comptes
@@ -100,14 +127,33 @@ fr:
         tag_mapping_title: Attribuez vos étiquettes
     uploads:
       show:
-        description: Coller ou téléverser votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
+        description: Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
         instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
         instructions_2: Votre CSV doit avoir une ligne d'en-tête
         instructions_3: Vous pouvez nommer vos colonnes comme vous le souhaitez. Vous les associerez à un stade ultérieur.
         instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
         title: Importez vos données
+        drop_csv_title: Déposez le CSV à importer
+        drop_csv_subtitle: Téléverser des transactions directement
+        upload_csv_tab: Téléverser CSV
+        copy_paste_tab: Copier/Coller
+        account_optional: Compte (facultatif)
+        multi_account_import: Importation multi-comptes
+        browse_to_add_html: "<span class=\"font-semibold text-primary\">Cliquez pour sélectionner</span> ou glissez-déposez"
+        paste_csv_placeholder: "Collez vos données CSV ici..."
+        upload_csv: Téléverser CSV
+        download_sample_html: "Besoin d'aide ? %{download_link} pour voir le format attendu."
+        download_sample_link: Téléchargez un exemple de CSV
+        col_sep: Séparateur de colonnes
+        comma: Virgule (,)
+        semicolon: Point-virgule (;)
+        tab: Tabulation
   imports:
+    revert_failure:
+      title: Échec de l'annulation de l'importation
+      message: Veuillez réessayer ou contacter le support.
+      try_again: Réessayer
     empty:
       message: Aucune importation pour l'instant.
       new: Nouvelle Importation
@@ -131,8 +177,10 @@ fr:
     new:
       description: Vous pouvez manuellement importer divers types de données via CSV ou utiliser un des modèles d'importation que nous proposons comme Mint.
       import_accounts: Importer les comptes
+      import_categories: Importer les catégories
       import_mint: Importer depuis Mint
       import_portfolio: Importer les investissements
+      import_rules: Importer les règles
       import_transactions: Importer les transactions
       resume: Reprendre %{type}
       sources: Sources

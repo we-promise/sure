@@ -13,77 +13,91 @@ fr:
     api_keys:
       show:
         title: "Gestion des clés API"
-      no_api_key:
-        title: "Clé API"
-        description: "Accédez de manière programmée à vos données %{product_name} avec une clé API sécurisée."
-        what_you_can_do: "Ce que vous pouvez faire avec l'API :"
-        feature_1: "Accéder à vos données de compte de manière automatisée"
-        feature_2: "Construire des intégrations et applications personnalisées"
-        feature_3: "Automatiser la récupération et l'analyse des données"
-        security_note_title: "Sécurité avant tout"
-        security_note: "Votre clé API aura des autorisations limitées en fonction des domaines que vous sélectionnez. Vous ne pouvez avoir qu'une seule clé API active à la fois."
-        create_api_key: "Créer une clé API"
-      current_api_key:
-        title: "Votre Clé API"
-        description: "Votre clé API active est prête à être utilisée. Gardez-la en sécurité et ne la partagez jamais publiquement."
-        active: "Active"
-        key_name: "Nom"
-        created_at: "Créée le"
-        last_used: "Dernière utilisation"
-        expires: "Expire le"
-        ago: "il y a"
-        never_used: "Jamais utilisée"
-        never_expires: "N'expire jamais"
-        permissions: "Autorisations"
-        usage_instructions_title: "Comment utiliser votre clé API"
-        usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes à l'API %{product_name} :"
-        regenerate_key: "Créer une nouvelle clé"
-        revoke_key: "Révoquer la clé"
-        revoke_confirmation: "Êtes-vous sûr de vouloir révoquer cette clé API ? Cette action ne peut pas être annulée et désactivera immédiatement toutes les applications utilisant cette clé."
+        created:
+          title: Clé API créée avec succès
+          heading: Clé API créée avec succès !
+          description: Votre nouvelle clé API « %{name} » a été créée et est prête à être utilisée.
+        your_api_key: Votre clé API
+        copy_key_instructions: Copiez et stockez cette clé en sécurité. Vous en aurez besoin pour authentifier vos requêtes API.
+        copy_api_key: Copier la clé API
+        how_to_use: Comment utiliser votre clé API
+        header_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors de vos requêtes :"
+        continue_to_settings: Continuer vers les paramètres de la clé API
+        create_new_key: Créer une nouvelle clé
+        created_ago: "Créée il y a %{time}"
+        last_used_ago: "Dernière utilisation il y a %{time}"
+        never_used: Jamais utilisée
+        active: Active
+        permissions: Autorisations
+        scope_read_only: Lecture seule
+        scope_read_write: Lecture/Écriture
+        revoke_key: Révoquer la clé
+        revoke_confirm: Êtes-vous sûr de vouloir révoquer cette clé API ?
+        no_api_key:
+          title: "Clé API"
+          heading: "Accédez à vos données de compte par programmation"
+          description: "Accédez de manière programmée à vos données Sure avec une clé API sécurisée."
+          what_you_can_do: "Ce que vous pouvez faire avec l'API :"
+          feature_1: "Accéder à vos données de compte de manière automatisée"
+          feature_2: "Construire des intégrations et applications personnalisées"
+          feature_3: "Automatiser la récupération et l'analyse des données"
+          security_note_title: "Sécurité avant tout"
+          security_note: "Votre clé API aura des autorisations limitées en fonction des domaines que vous sélectionnez. Vous ne pouvez avoir qu'une seule clé API active à la fois."
+          create_api_key: "Créer une clé API"
+        current_api_key:
+          title: "Votre Clé API"
+          description: "Votre clé API active est prête à être utilisée. Gardez-la en sécurité et ne la partagez jamais publiquement."
+          active: "Active"
+          key_name: "Nom"
+          created_at: "Créée le"
+          last_used: "Dernière utilisation"
+          expires: "Expire le"
+          ago: "il y a"
+          never_used: "Jamais utilisée"
+          never_expires: "N'expire jamais"
+          permissions: "Autorisations"
+          usage_instructions_title: "Comment utiliser votre clé API"
+          usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes à l'API Sure :"
+          regenerate_key: "Créer une nouvelle clé"
+          revoke_key: "Révoquer la clé"
+          revoke_confirmation: "Êtes-vous sûr de vouloir révoquer cette clé API ? Cette action ne peut pas être annulée et désactivera immédiatement toutes les applications utilisant cette clé."
       new:
+        page_title: Créer une nouvelle clé API
         title: "Créer une clé API"
-        page_title: "Créer une nouvelle clé API"
-        subtitle: "Générez une nouvelle clé API pour accéder à vos données %{product_name} de manière programmée."
+        subtitle: "Générez une nouvelle clé API pour accéder à vos données Sure de manière programmée."
         create_new_key: "Créer une nouvelle clé API"
         description: "Configurez votre nouvelle clé API avec un nom descriptif et des autorisations appropriées."
         name_label: "Nom de la clé API"
-        name_placeholder: "Application de production, Tableau de bord analytique"
+        name_placeholder: "ex. : Mon application budget, Suivi de portefeuille"
         name_help: "Choisissez un nom descriptif pour identifier cette clé plus tard."
         permissions_label: "Autorisations"
         permissions_help: "Sélectionnez les autorisations que cette clé API doit avoir :"
-        scope_read_only: "Lecture seule"
-        scope_read_only_description: "Voir vos comptes, transactions et soldes"
-        scope_read_write: "Lecture/Écriture"
-        scope_read_write_description: "Voir vos données et créer de nouvelles transactions"
+        scope_read_only: Lecture seule
+        scope_read_only_description: Voir vos comptes, transactions et soldes
+        scope_read_write: Lecture/Écriture
+        scope_read_write_description: Voir vos données et créer de nouvelles transactions
         scope_details:
           read_accounts: "Afficher les informations du compte, les soldes et les données au niveau du compte"
           read_transactions: "Afficher les données de transaction, les catégories et les détails des transactions"
           read_balances: "Afficher les données historiques des soldes et les tendances des valeurs des comptes"
-          write_transactions: "Créer et mettre à jour des enregistrements de transaction (prochainement disponible)"
-        security_warning_title: "Avertissement de sécurité"
+          write_transactions: "Créer et mettre à jour des enregistrements de transaction (prochainement)"
+        security_warning_title: Avertissement de sécurité
         security_warning: "Votre clé API sera affichée une seule fois après sa création. Assurez-vous de la copier et de la stocker en sécurité. Toute personne ayant accès à cette clé peut accéder à vos données selon les autorisations sélectionnées."
-        save_key: "Enregistrer la clé API"
+        save_api_key: Enregistrer la clé API
         create_key: "Créer une clé API"
         cancel: "Annuler"
       created:
         title: "Clé API créée"
-        page_title: "Clé API créée"
-        subtitle: "Votre nouvelle clé API a été générée avec succès."
-        success_title: "Clé API créée avec succès !"
-        success_description: "Votre nouvelle clé API \"%{name}\" a été créée et est prête à être utilisée."
+        success_title: "Clé API créée avec succès"
+        success_description: "Votre nouvelle clé API est prête à être utilisée. Assurez-vous de la copier maintenant car vous ne pourrez plus la voir."
         your_api_key: "Votre clé API"
-        copy_store_securely: "Copiez et stockez cette clé en sécurité. Vous en aurez besoin pour authentifier vos requêtes API."
-        key_details: "Détails de la clé"
-        key_name: "Nom :"
-        permissions: "Autorisations :"
-        created_label: "Créée le :"
-        security_warning_title: "Note de sécurité importante"
-        security_warning: "C'est la seule fois où votre clé API sera affichée. Assurez-vous de la copier maintenant et de la stocker en sécurité. Si vous perdez cette clé, vous devrez en générer une nouvelle."
+        key_name: "Nom"
+        permissions: "Autorisations"
         critical_warning_title: "⚠️ Critique : Sauvegardez votre clé API maintenant"
         critical_warning_1: "C'est le seul moment où vous verrez votre clé API en clair."
         critical_warning_2: "Copiez-la et stockez-la de manière sécurisée dans votre gestionnaire de mots de passe ou dans l'application."
-        critical_warning_3: "Si vous l'avez perdue, vous devrez en créer une nouvelle."
-        usage_instructions_title: "Comment utiliser votre clé API"
-        usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors de vos requêtes :"
+        critical_warning_3: "Si vous perdez cette clé, vous devrez en créer une nouvelle."
+        usage_instructions_title: "Démarrage rapide"
+        usage_instructions: "Utilisez votre clé API en l'incluant dans l'en-tête X-Api-Key :"
         copy_key: "Copier la clé API"
         continue: "Continuer vers les paramètres de la clé API"
