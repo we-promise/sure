@@ -20,6 +20,16 @@ metadata:
     {{- include "sure.labels" . | nindent 4 }}
 spec:
   clusterSize: {{ $replicas }}
+  # Pod-level volume permission fix for PV mounts
+  podSecurityContext:
+    fsGroup: 1000
+    fsGroupChangePolicy: OnRootMismatch
+
+  # Container-level user/group
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+  
   kubernetesConfig:
     image: {{ printf "%s:%s" $imgRepo $imgTag | quote }}
     redisSecret:
