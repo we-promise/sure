@@ -16,15 +16,15 @@
       <p class="font-display text-xl lg:text-3xl font-medium text-primary">$<%= price %><%= frequency %></p>
 
       <% if plan == "annual" %>
-        <span class="text-sm text-secondary mb-1">or <%= Money.new(price.to_f / 52).format %>/week</span>
+        <span class="text-sm text-secondary mb-1"><%= t("subscriptions.plan_choice.or_weekly", amount: Money.new(price.to_f / 52).format) %></span>
       <% end %>
     </div>
 
     <p class="text-sm text-secondary">
       <% if plan == "annual" %>
-        Billed annually, 2 months free
+        <%= t("subscriptions.plan_choice.billed_annually") %>
       <% else %>
-        Billed monthly
+        <%= t("subscriptions.plan_choice.billed_monthly") %>
       <% end %>
     </p>
   <% end %>
