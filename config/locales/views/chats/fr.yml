@@ -1,0 +1,38 @@
+---
+fr:
+  chats:
+    demo_banner_title: Mode démo actif
+    demo_banner_message: "Vous utilisez un LLM Qwen3 open-weight avec des crédits fournis par Cloudflare Workers AI. Comme le code est principalement testé sur `gpt-4.1`, les résultats peuvent varier, mais vos tokens ne sont pas utilisés pour l'entraînement ailleurs !"
+    thinking_indicator:
+      thinking: Réflexion en cours...
+    ai_consent:
+      title: Rencontrez votre assistant financier IA
+      description_available: Obtenez des analyses personnalisées, des réponses à vos questions et des suggestions intelligentes pour mieux gérer votre argent.
+      description_unavailable_html: Pour utiliser l'assistant IA, vous devez définir la variable d'environnement <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> ou la configurer dans les paramètres d'auto-hébergement de votre instance.
+      enable_button: Activer l'assistant IA
+      disclaimer: Désactivable à tout moment. Toutes les données envoyées à nos fournisseurs IA sont anonymisées.
+    ai_greeting:
+      introduction: "Bonjour %{name} ! Je suis une IA qui peut vous aider avec vos finances. J'ai accès au web et à vos données de compte."
+      default_name: là
+      slash_commands_html: 'Vous pouvez utiliser <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> pour accéder aux commandes'
+      questions_label: "Voici quelques questions que vous pouvez poser :"
+      question_portfolio: Évaluer le portefeuille d'investissement
+      question_spending: Afficher les analyses de dépenses
+      question_patterns: Trouver des tendances inhabituelles
+    chat_title:
+      new_chat: Nouvelle conversation
+    chat:
+      updated_ago: "il y a %{time}"
+      edit_title: Modifier le titre
+      delete: Supprimer
+    chat_nav:
+      all_chats: Toutes les conversations
+      start_new: Nouvelle conversation
+      edit_title: Modifier le titre
+      delete: Supprimer
+    error:
+      error_message: Une erreur s'est produite. Veuillez réessayer.
+      retry: Réessayer
+    index:
+      title: Conversations
+      new_chat: Nouvelle conversation

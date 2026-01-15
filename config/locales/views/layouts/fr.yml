@@ -1,0 +1,22 @@
+---
+fr:
+  layouts:
+    application:
+      nav_home: Accueil
+      nav_transactions: Transactions
+      nav_budgets: Budgets
+      nav_assistant: Assistant
+      free_trial: Essai gratuit
+      days_remaining:
+        one: "%{count} jour restant"
+        other: "%{count} jours restants"
+      upgrade: Passer à l'offre payante
+    shared:
+      footer:
+        copyright: "(fork communautaire de Maybe Finance)"
+        privacy_policy: Politique de confidentialité
+        terms_of_service: Conditions d'utilisation
+      confirm_dialog:
+        title: Êtes-vous sûr(e) ?
+        subtitle: Cette action est irréversible.
+        confirm: Confirmer

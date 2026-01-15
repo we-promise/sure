@@ -1,0 +1,11 @@
+---
+fr:
+  transfer_matches:
+    matching_fields:
+      select_method: Sélectionnez une méthode pour faire correspondre vos transactions.
+      match_existing: Correspondre à une transaction existante (recommandé)
+      create_new: Créer une nouvelle transaction
+      matching_method: Méthode de correspondance
+      matching_transaction: Transaction correspondante
+      target_account: Compte cible
+      no_transactions_found: Nous n'avons pas trouvé de transactions correspondantes dans vos autres comptes. Veuillez sélectionner un compte et nous créerons une nouvelle transaction d'entrée pour vous.
