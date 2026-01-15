@@ -8,6 +8,8 @@ fr:
       print_report: Imprimer le rapport
       drag_to_reorder: "Glisser pour réorganiser la section"
       toggle_section: "Afficher/masquer la section"
+      sections_label: "Sections des rapports"
+      section_instructions: "section. Appuyez sur Entrée ou Espace pour saisir et réorganiser, puis utilisez les touches fléchées pour déplacer."
       periods:
         monthly: Mensuel
         quarterly: Trimestriel

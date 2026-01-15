@@ -28,6 +28,8 @@ fr:
       new: Nouveau
       drag_to_reorder: "Glisser pour réordonner"
       toggle_section: "Afficher/masquer la section"
+      sections_label: "Sections du tableau de bord"
+      section_instructions: "section. Appuyez sur Entrée ou Espace pour saisir et réorganiser, puis utilisez les touches fléchées pour déplacer."
       cashflow_sankey:
         title: Flux de trésorerie
         no_data_title: Aucune donnée de flux de trésorerie pour cette période

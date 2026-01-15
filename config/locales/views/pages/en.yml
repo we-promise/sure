@@ -18,6 +18,8 @@ en:
       new: "New"
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
+      sections_label: "Dashboard sections"
+      section_instructions: "section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth
