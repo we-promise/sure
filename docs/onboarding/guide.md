@@ -36,9 +36,11 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > The next sections of this guide cover how to **manually add accounts and transactions** in Sure.<br />
 > If you'd like to use an integration with a data provider instead, see:
 > 
-> - **Lunch Flow** (WIP)
+> - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Plaid**](/docs/hosting/plaid.md)
-> - **SimpleFin** (WIP)
+> - [**SimpleFIN**](https://beta-bridge.simplefin.org/)
+> - [**Enable Banking**](https://enablebanking.com/) (beta)
+> - [**CoinStats**](https://coinstats.app//) (beta)
 >
 > Even if you use an integration, we still recommend reading through this guide to understand **account types** and how they work in Sure.
 
