@@ -30,9 +30,14 @@ en:
     form:
       name_label: Rule name (optional)
       name_placeholder: Enter a name for this rule
+      if_label: IF
+      then_label: THEN
+      for_label: FOR
       add_condition: Add condition
       add_condition_group: Add condition group
       add_action: Add action
+      all_resources: All Resources
+      starting_from: Starting From
     condition_group:
       and: and
       match: match

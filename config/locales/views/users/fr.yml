@@ -2,7 +2,7 @@
 fr:
   users:
     user_menu:
-      version: "Version :"
+      version: Version
       settings: Paramètres
       changelog: Nouveautés
       feedback: Commentaires

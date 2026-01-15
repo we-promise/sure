@@ -46,9 +46,14 @@ fr:
     form:
       name_label: Nom de la règle (facultatif)
       name_placeholder: Entrez un nom pour cette règle
+      if_label: SI
+      then_label: ALORS
+      for_label: POUR
       add_condition: Ajouter une condition
       add_condition_group: Ajouter un groupe de conditions
       add_action: Ajouter une action
+      all_resources: Toutes les ressources
+      starting_from: À partir du
     condition_group:
       and: et
       match: correspondre à

@@ -1,11 +1,67 @@
 ---
 fr:
   transactions:
+    selection_bar:
+      edit: Modifier
+      delete: Supprimer
+    unknown_name: Transaction inconnue
     transaction:
       one_time_income_title: Revenu ponctuel (exclu des moyennes)
       one_time_expense_title: Dépense ponctuelle (exclue des moyennes)
       loan_payment: Paiement de prêt
       transfer: Transfert
+      pending: En attente
+      pending_tooltip: Transaction en attente — peut changer une fois confirmée
+      activity_type_tooltip: Type d'activité d'investissement
+      possible_duplicate: Doublon ?
+      potential_duplicate_tooltip: Ceci pourrait être un doublon d'une autre transaction
+      review_recommended: À vérifier
+      review_recommended_tooltip: Grande différence de montant — vérification recommandée pour vérifier si c'est un doublon
+    transfer_match:
+      payment_confirmed: Paiement confirmé
+      transfer_confirmed: Transfert confirmé
+      auto_matched: Auto-associé
+      auto_matched_short: A/A
+      confirm_match: Confirmer l'association
+      reject_match: Rejeter l'association
+    merge_duplicate:
+      success: Transactions fusionnées avec succès
+      failure: Impossible de fusionner les transactions
+    dismiss_duplicate:
+      success: Conservées comme transactions séparées
+      failure: Impossible d'ignorer la suggestion de doublon
+    activity_labels:
+      buy: Achat
+      sell: Vente
+      sweep_in: Versement automatique
+      sweep_out: Retrait automatique
+      dividend: Dividende
+      reinvestment: Réinvestissement
+      interest: Intérêts
+      fee: Frais
+      transfer: Transfert
+      contribution: Apport
+      withdrawal: Retrait
+      exchange: Échange
+      other: Autre
+    mark_recurring: Marquer comme récurrent
+    mark_recurring_subtitle: Suivre ceci comme une transaction récurrente. La variance de montant est automatiquement calculée à partir des 6 derniers mois de transactions similaires.
+    mark_recurring_title: Transaction récurrente
+    merchant_label: Marchand
+    name_label: Nom
+    nature: Type
+    none: "(aucun)"
+    note_label: Notes
+    note_placeholder: Entrez une note
+    overview: Aperçu
+    settings: Paramètres
+    tags_label: Étiquettes
+    uncategorized: "(non catégorisée)"
+    potential_duplicate_title: Possible doublon détecté
+    potential_duplicate_description: Cette transaction en attente pourrait être identique à la transaction confirmée ci-dessous. Si c'est le cas, fusionnez-les pour éviter un double comptage.
+    merge_duplicate_button: Oui, les fusionner
+    keep_both: Non, garder les deux
+    toggle_recurring_section: Afficher/masquer les transactions récurrentes à venir
     form:
       account: Compte
       account_prompt: Sélectionnez un compte
@@ -34,6 +90,16 @@ fr:
       delete_subtitle: Cette action supprime définitivement la transaction, affecte vos soldes historiques et ne peut pas être annulée.
       delete_title: Supprimer la transaction
       details: Détails
+      exclude: Exclure
+      activity_type: Type d'activité
+      activity_type_description: Type d'activité d'investissement (Achat, Vente, Dividende, etc.). Détecté automatiquement ou défini manuellement.
+      one_time_title: "%{type} ponctuel(le)"
+      additional_details: Détails supplémentaires
+      payee: Bénéficiaire
+      description: Description
+      memo: Mémo
+      provider_extras: Extras du fournisseur
+      transfer_question: Transfert ou paiement de dette ?
       merchant_label: Marchand
       name_label: Nom
       nature: Type
@@ -62,6 +128,7 @@ fr:
       import: Importer
     bulk_updates:
       new:
+        title: Modifier les transactions
         edit_transactions: Modifier les transactions
         overview: Aperçu
         transactions: Transactions
@@ -71,6 +138,7 @@ fr:
         merchant: Marchand
         select_merchant: Sélectionnez un marchand
         tags: Étiquettes
+        none: Aucune
         notes: Notes
         notes_placeholder: Entrez une note qui sera appliquée aux transactions sélectionnées
         cancel: Annuler
@@ -90,6 +158,18 @@ fr:
       column_transaction: transaction
       column_category: catégorie
       column_amount: montant
+      drop_csv_title: Déposez un CSV pour importer
+      drop_csv_subtitle: Téléchargez des transactions directement
+    search:
+      filters:
+        account: Compte
+        date: Date
+        type: Type
+        status: Statut
+        amount: Montant
+        category: Catégorie
+        tag: Étiquette
+        merchant: Marchand
     summary:
       total_transactions: Total des transactions
       income: Revenus
@@ -107,10 +187,26 @@ fr:
           on_or_after: le %{date} et après
           on_or_before: le %{date} et avant
           transfer: Transfert
+          confirmed: Confirmé
+          pending: En attente
         type_filter:
           expense: Dépense
           income: Revenu
           transfer: Transfert
+        status_filter:
+          confirmed: Confirmé
+          pending: En attente
+        account_filter:
+          filter_placeholder: Filtrer les comptes
+        merchant_filter:
+          filter_placeholder: Filtrer les marchands
+        tag_filter:
+          filter_placeholder: Filtrer les étiquettes
+        category_filter:
+          filter_placeholder: Filtrer les catégories
+        date_filter:
+          start_date: Date de début
+          end_date: Date de fin
       menu:
         account_filter: Compte
         amount_filter: Montant
@@ -120,6 +216,7 @@ fr:
         clear_filters: Effacer les filtres
         date_filter: Date
         merchant_filter: Marchand
+        status_filter: Statut
         tag_filter: Étiquette
         type_filter: Type
       search:
@@ -127,5 +224,6 @@ fr:
         greater_than: supérieur à
         less_than: inférieur à
       form:
+        toggle_selection_checkboxes: Basculer toutes les cases
         filter: Filtrer
         search_placeholder: Rechercher des transactions ...
