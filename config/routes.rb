@@ -397,6 +397,7 @@ Rails.application.routes.draw do
 
   get "privacy", to: redirect("about:blank")
   get "terms", to: redirect("about:blank")
+  get "intro", to: "pages#intro"
 
   # Admin namespace for super admin functionality
   namespace :admin do
