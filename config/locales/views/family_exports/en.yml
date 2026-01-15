@@ -14,6 +14,12 @@ en:
       historical_balances: Historical balances
       note_html: "<strong>Note:</strong> The download will start automatically. Check your browser's download folder for the file."
       export_data: Export data
+    create:
+      started: "Export started. You'll be able to download it shortly."
+    download:
+      not_ready: "Export not ready for download"
+    destroy:
+      deleted: "Export deleted successfully"
     list:
       in_progress: In progress
       complete: Complete
