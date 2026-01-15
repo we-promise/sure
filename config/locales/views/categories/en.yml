@@ -19,6 +19,7 @@ en:
       categories: Categories
       categories_expenses: Expense categories
       categories_incomes: Income categories
+      delete_all: Delete all
       empty: No categories found
       new: New category
     menu:

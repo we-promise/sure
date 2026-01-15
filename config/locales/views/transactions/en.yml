@@ -148,6 +148,17 @@ en:
         status_filter:
           confirmed: Confirmed
           pending: Pending
+        account_filter:
+          filter_placeholder: Filter accounts
+        merchant_filter:
+          filter_placeholder: Filter merchants
+        tag_filter:
+          filter_placeholder: Filter tags
+        category_filter:
+          filter_placeholder: Filter category
+        date_filter:
+          start_date: Start date
+          end_date: End date
       menu:
         account_filter: Account
         amount_filter: Amount
@@ -166,6 +177,8 @@ en:
         less_than: less than
       form:
         toggle_selection_checkboxes: Toggle all checkboxes
+        search_placeholder: Search transactions ...
+        filter: Filter
     bulk_updates:
       new:
         title: Edit transactions

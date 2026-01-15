@@ -1,3 +1,14 @@
 en:
   subscriptions:
     self_hosted_alert: "%{product_name} is not available in self-hosted mode."
+    upgrade:
+      title: Upgrade
+      account_settings: Account Settings
+      sign_out: Sign out
+      trial_remaining: Your trial has %{days} days remaining
+      trial_over: Your trial is over
+      unlock: Unlock
+      today: today
+      pick_plan: To continue using Sure pick a plan below.
+      subscribe: Subscribe and unlock Sure
+      stripe_redirect: In the next step, you'll be redirected to Stripe which handles our billing.

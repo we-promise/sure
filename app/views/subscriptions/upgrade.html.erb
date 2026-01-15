@@ -1,17 +1,17 @@
 <div class="flex flex-col h-full justify-between bg-surface">
   <nav class="p-4">
-    <h1 class="sr-only">Upgrade</h1>
+    <h1 class="sr-only"><%= t('.title') %></h1>
 
     <div class="flex justify-end gap-2">
       <%= render DS::Link.new(
-        text: "Account Settings",
+        text: t('.account_settings'),
         icon: "settings",
         variant: "ghost",
         href: settings_profile_path,
       ) %>
 
       <%= render DS::Button.new(
-        text: "Sign out",
+        text: t('.sign_out'),
         icon: "log-out",
         icon_position: :right,
         variant: "ghost",
@@ -25,18 +25,18 @@
     <%= image_tag "logo-color.png", class: "w-16 mb-6" %>
 
     <% if Current.family.trialing? %>
-      <p class="text-xl lg:text-3xl text-primary font-display font-medium">Your trial has <%= Current.family.days_left_in_trial %> days remaining</p>
+      <p class="text-xl lg:text-3xl text-primary font-display font-medium"><%= t('.trial_remaining', days: Current.family.days_left_in_trial) %></p>
     <% else %>
-      <p class="text-xl lg:text-3xl text-primary font-display font-medium">Your trial is over</p>
+      <p class="text-xl lg:text-3xl text-primary font-display font-medium"><%= t('.trial_over') %></p>
     <% end %>
 
     <h2 class="text-xl lg:text-3xl font-display font-medium mb-2">
-      <span class="text-secondary">Unlock</span>
+      <span class="text-secondary"><%= t('.unlock') %></span>
       <span class="bg-gradient-to-r from-[#EABE7F] to-[#957049] bg-clip-text text-transparent">Sure</span>
-      <span class="text-secondary">today</span>
+      <span class="text-secondary"><%= t('.today') %></span>
     </h2>
 
-    <p class="text-sm text-secondary mb-8">To continue using Sure pick a plan below.</p>
+    <p class="text-sm text-secondary mb-8"><%= t('.pick_plan') %></p>
 
     <%= form_with url: new_subscription_path, method: :get, class: "max-w-xs", data: { turbo: false } do |form| %>
       <div class="space-y-4 mb-6">
@@ -46,13 +46,13 @@
 
       <div class="text-center space-y-2">
         <%= render DS::Button.new(
-          text: "Subscribe and unlock Sure",
+          text: t('.subscribe'),
           variant: "primary",
           full_width: true
         ) %>
 
         <p class="text-xs text-secondary">
-          In the next step, you'll be redirected to Stripe which handles our billing.
+          <%= t('.stripe_redirect') %>
         </p>
       </div>
     <% end %>

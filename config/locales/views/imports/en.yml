@@ -105,6 +105,9 @@ en:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
+      item: item
+      count: count
+      publish: Publish import
     importing:
       title: Import in progress
       message: Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app.

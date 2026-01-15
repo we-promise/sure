@@ -14,3 +14,14 @@ en:
       question_portfolio: Evaluate investment portfolio
       question_spending: Show spending insights
       question_patterns: Find unusual patterns
+    error:
+      error_message: Failed to generate response. Please try again.
+      retry: Retry
+    chat:
+      edit_title: Edit chat title
+      delete: Delete chat
+    chat_nav:
+      all_chats: All chats
+      start_new: Start new chat
+      edit_title: Edit chat title
+      delete: Delete chat
