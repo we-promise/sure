@@ -49,6 +49,8 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      header:
+        complete_setup: Complete setup
       activity:
         amount: Amount
         balance: Balance

@@ -7,3 +7,10 @@ en:
       tabs:
         budgeted: Budgeted
         actual: Actual
+    budget_header:
+      today: Today
+    budget_donut:
+      spent: Spent
+      of_budget: of %{amount}
+      new_budget: New budget
+      unused: Unused
