@@ -25,3 +25,9 @@ en:
       of_budget: of %{amount}
       new_budget: New budget
       unused: Unused
+    budget_categories:
+      categories: Categories
+      amount: Amount
+    actuals_summary:
+      income: Income
+      expenses: Expenses
