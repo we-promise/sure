@@ -4,32 +4,32 @@
   <span class="text-green-500">
     <%= icon("check-circle", color: "current") %>
   </span>
-  <p class="text-sm text-primary italic">We have pre-configured your Mint import for you. Please proceed to the next step.</p>
+  <p class="text-sm text-primary italic"><%= t("import.configurations.mint_import.preconfigured_message") %></p>
 </div>
 
 <%= styled_form_with model: @import, url: import_configuration_path(@import), scope: :import, method: :patch, class: "space-y-4" do |form| %>
   <div class="flex items-center gap-4">
-    <%= form.select :date_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Date" }, required: true, disabled: import.complete? %>
+    <%= form.select :date_col_label, import.csv_headers, { include_blank: t("import.configurations.mint_import.leave_empty"), label: t("import.configurations.mint_import.date") }, required: true, disabled: import.complete? %>
     <%= form.select :date_format, Family::DATE_FORMATS, { label: t(".date_format_label")}, label: true, required: true, disabled: import.complete? %>
   </div>
 
   <div class="flex items-center gap-4">
-    <%= form.select :amount_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Amount" }, required: true, disabled: import.complete? %>
-    <%= form.select :signage_convention, [["Incomes are negative", "inflows_negative"], ["Incomes are positive", "inflows_positive"]], { label: true }, disabled: import.complete? %>
+    <%= form.select :amount_col_label, import.csv_headers, { include_blank: t("import.configurations.mint_import.leave_empty"), label: t("import.configurations.mint_import.amount") }, required: true, disabled: import.complete? %>
+    <%= form.select :signage_convention, [[t("import.configurations.mint_import.incomes_negative"), "inflows_negative"], [t("import.configurations.mint_import.incomes_positive"), "inflows_positive"]], { label: true }, disabled: import.complete? %>
   </div>
 
   <div class="flex items-center gap-4">
-    <%= form.select :currency_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Currency" }, disabled: import.complete? %>
-    <%= form.select :number_format, Import::NUMBER_FORMATS.keys, { label: "Format", prompt: "Select format" }, required: true %>
+    <%= form.select :currency_col_label, import.csv_headers, { include_blank: t("import.configurations.mint_import.leave_empty"), label: t("import.configurations.mint_import.currency") }, disabled: import.complete? %>
+    <%= form.select :number_format, Import::NUMBER_FORMATS.keys, { label: t("import.configurations.mint_import.format"), prompt: t("import.configurations.mint_import.select_format") }, required: true %>
   </div>
 
   <% unless import.account.present? %>
-    <%= form.select :account_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Account (optional)" }, disabled: import.complete? %>
+    <%= form.select :account_col_label, import.csv_headers, { include_blank: t("import.configurations.mint_import.leave_empty"), label: t("import.configurations.mint_import.account_optional") }, disabled: import.complete? %>
   <% end %>
 
-  <%= form.select :name_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Name (optional)" }, disabled: import.complete? %>
-  <%= form.select :category_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Category (optional)" }, disabled: import.complete? %>
-  <%= form.select :tags_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Tags (optional)" }, disabled: import.complete? %>
+  <%= form.select :name_col_label, import.csv_headers, { include_blank: t("import.configurations.mint_import.leave_empty"), label: t("import.configurations.mint_import.name_optional") }, disabled: import.complete? %>
+  <%= form.select :category_col_label, import.csv_headers, { include_blank: t("import.configurations.mint_import.leave_empty"), label: t("import.configurations.mint_import.category_optional") }, disabled: import.complete? %>
+  <%= form.select :tags_col_label, import.csv_headers, { include_blank: t("import.configurations.mint_import.leave_empty"), label: t("import.configurations.mint_import.tags_optional") }, disabled: import.complete? %>
 
-  <%= form.submit "Apply configuration", disabled: import.complete? %>
+  <%= form.submit t("import.configurations.mint_import.apply_configuration"), disabled: import.complete? %>
 <% end %>

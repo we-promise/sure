@@ -29,7 +29,7 @@ class ChatsController < ApplicationController
     @chat.update!(chat_params)
 
     respond_to do |format|
-      format.html { redirect_back_or_to chat_path(@chat), notice: "Chat updated" }
+      format.html { redirect_back_or_to chat_path(@chat), notice: t(".updated") }
       format.turbo_stream { render turbo_stream: turbo_stream.replace(dom_id(@chat, :title), partial: "chats/chat_title", locals: { chat: @chat }) }
     end
   end
@@ -38,7 +38,7 @@ class ChatsController < ApplicationController
     @chat.destroy
     clear_last_viewed_chat
 
-    redirect_to chats_path, notice: "Chat was successfully deleted"
+    redirect_to chats_path, notice: t(".deleted")
   end
 
   def retry
