@@ -83,6 +83,28 @@ fr:
         manage: Gérer les comptes
     update:
       success: "Compte %{type} mis à jour"
+    sidebar:
+      missing_data: Données historiques manquantes
+      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
+      configure_providers: Configurez vos fournisseurs ici.
+      tabs:
+        all: Tout
+        assets: Actifs
+        debts: Dettes
+      new_asset: Nouvel actif
+      new_debt: Nouvelle dette
+      new_account: Nouveau compte
+      new_account_group: "Nouveau %{account_group}"
+    types:
+      depository: Liquidités
+      investment: Investissement
+      crypto: Crypto
+      property: Immobilier
+      vehicle: Véhicule
+      other_asset: Autre actif
+      credit_card: Carte de crédit
+      loan: Prêt
+      other_liability: Autre passif
   email_confirmations:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.

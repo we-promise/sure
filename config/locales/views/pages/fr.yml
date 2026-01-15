@@ -21,14 +21,16 @@ fr:
       refresh_description: Une fois Redis configuré, actualisez cette page pour continuer.
       refresh_page: Actualiser la page
     dashboard:
-      welcome_back: Content de vous revoir
-      happening_with_finance: Voici ce qui se passe avec vos finances
+      welcome: "Content de vous revoir, %{name}"
+      subtitle: "Voici ce qui se passe avec vos finances"
       new: Nouveau
+      drag_to_reorder: "Glisser pour réordonner"
+      toggle_section: "Afficher/masquer la section"
       cashflow_sankey:
         title: Flux de trésorerie
-        no_cashflow: Aucune donnée de flux de trésorerie pour cette période
-        add_transactions_to_display_cashflow: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendre la période
-        new: Ajouter une transaction
+        no_data_title: Aucune donnée de flux de trésorerie pour cette période
+        no_data_description: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendez la période
+        add_transaction: Ajouter une transaction
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée
         title: Valeur nette
@@ -41,8 +43,29 @@ fr:
         add_account_to_display: Ajouter des comptes pour afficher les données de valeur nette
         new: Ajouter un compte
       balance_sheet:
-        name: Nom
-        weight: Poids
-        value: Valeur
-        no_accounts_yet: Pas encore de %{classification}
-        add_accounts_prompt: Ajoutez vos comptes %{classification} pour voir une répartition complète
+        title: "Bilan"
+        no_items: "Pas encore de %{name}"
+        add_accounts: "Ajoutez vos comptes %{name} pour voir une répartition complète"
+      no_accounts:
+        title: "Pas encore de comptes"
+        description: "Ajoutez des comptes pour afficher les données de valeur nette"
+        add_account: "Ajouter un compte"
+      outflows_donut:
+        title: "Dépenses"
+        total_outflows: "Total des dépenses"
+        categories: "Catégories"
+        value: "Valeur"
+        weight: "Poids"
+      investment_summary:
+        title: "Investissements"
+        total_return: "Rendement total"
+        holding: "Avoir"
+        weight: "Poids"
+        value: "Valeur"
+        return: "Rendement"
+        period_activity: "Activité %{period}"
+        contributions: "Contributions"
+        withdrawals: "Retraits"
+        trades: "Transactions"
+        no_investments: "Pas de comptes d'investissement"
+        add_investment: "Ajoutez un compte d'investissement pour suivre votre portefeuille"
