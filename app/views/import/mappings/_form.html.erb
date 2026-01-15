@@ -6,17 +6,17 @@
                      class: "grid grid-cols-3 gap-2 items-center",
                      data: { controller: "auto-submit-form" },
                      html: { id: dom_id(mapping, :form) } do |form| %>
-  <span><%= mapping.key.blank? ? "(unassigned)" : mapping.key %></span>
+  <span><%= mapping.key.blank? ? t("import.mappings.form.unassigned") : mapping.key %></span>
 
   <% if mapping.mappable_class.present? %>
     <%= form.hidden_field :mappable_type, value: mapping.mappable_class, id: dom_id(mapping, :mappable_type) %>
     <%= form.select :mappable_id,
                       mapping.selectable_values,
-                      { container_class: mapping.invalid? ? "border-red-500" : nil, include_blank: mapping.requires_selection? ? "Select an option" : "Leave unassigned", selected: mapping.create_when_empty? ? mapping.class::CREATE_NEW_KEY : mapping.mappable_id },
+                      { container_class: mapping.invalid? ? "border-red-500" : nil, include_blank: mapping.requires_selection? ? t("import.mappings.form.select_option") : t("import.mappings.form.leave_unassigned"), selected: mapping.create_when_empty? ? mapping.class::CREATE_NEW_KEY : mapping.mappable_id },
                       "data-auto-submit-form-target": "auto", "data-autosubmit-trigger-event": "change", disabled: mapping.import.complete?, id: dom_id(mapping, :mappable_id) %>
   <% else %>
     <%= form.select :value, mapping.selectable_values,
-                      { container_class: mapping.invalid? ? "border-red-500" : nil, include_blank: mapping.requires_selection? ? "Select an option" : "Leave unassigned" },
+                      { container_class: mapping.invalid? ? "border-red-500" : nil, include_blank: mapping.requires_selection? ? t("import.mappings.form.select_option") : t("import.mappings.form.leave_unassigned") },
                       "data-auto-submit-form-target": "auto", "data-autosubmit-trigger-event": "change", disabled: mapping.import.complete?, id: dom_id(mapping, :value) %>
   <% end %>
 

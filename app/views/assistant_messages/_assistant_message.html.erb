@@ -4,7 +4,7 @@
   <% if assistant_message.reasoning? %>
     <details class="group mb-1">
       <summary class="flex items-center gap-2">
-        <p class="text-secondary text-sm">Assistant reasoning</p>
+        <p class="text-secondary text-sm"><%= t("assistant_messages.assistant_message.assistant_reasoning") %></p>
         <%= icon("chevron-down", class: "group-open:transform group-open:rotate-180") %>
       </summary>
 
