@@ -1,5 +1,11 @@
 ---
 en:
+  components:
+    ui:
+      account:
+        activity_date:
+          balance_tooltip: Manually set balance
+          no_balance_data: No balance data
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"

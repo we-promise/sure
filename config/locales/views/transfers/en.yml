@@ -1,6 +1,9 @@
 ---
 en:
   transfers:
+    account_links:
+      data_error_missing_account: "Data Error: Missing account"
+      transfer_id: "Transfer ID: %{id}"
     create:
       success: Transfer created
     destroy:
@@ -27,5 +30,11 @@ en:
       note_placeholder: Add a note to this transfer
       overview: Overview
       settings: Settings
+      from: From
+      to: To
+      date: Date
+      amount: Amount
+      category: Category
+      uncategorized: Uncategorized
     update:
       success: Transfer updated

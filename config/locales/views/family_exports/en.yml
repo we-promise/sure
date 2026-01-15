@@ -1,7 +1,25 @@
 ---
 en:
   family_exports:
+    new:
+      title: Export data
+      subtitle: Download your data in CSV format
+      whats_included: What's included
+      transactions: Transactions
+      trades: Trades
+      accounts: Accounts
+      tags: Tags
+      categories: Categories
+      merchants: Merchants
+      historical_balances: Historical balances
+      note_html: "<strong>Note:</strong> The download will start automatically. Check your browser's download folder for the file."
+      export_data: Export data
     list:
       in_progress: In progress
       complete: Complete
       failed: Failed
+      export_from: "Export from %{date}"
+      exporting: "Exporting..."
+      no_exports: "No exports yet."
+      delete_confirm: "Are you sure you want to delete this export? This action cannot be undone."
+      delete_failed_confirm: "Are you sure you want to delete this failed export?"

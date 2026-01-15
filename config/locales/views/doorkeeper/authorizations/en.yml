@@ -1,0 +1,7 @@
+---
+en:
+  doorkeeper:
+    authorizations:
+      error:
+        title: Authorization Error
+        go_back: Go back

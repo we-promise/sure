@@ -1,6 +1,34 @@
 ---
 en:
+  breadcrumbs:
+    home: Home
+    dashboard: Dashboard
+    accounts: Accounts
+    merchants: Merchants
+    categories: Categories
+    tags: Tags
+    rules: Rules
+    transactions: Transactions
+    budgets: Budgets
+    imports: Imports
+    chats: Assistant
+    reports: Reports
+    guides: Guides
+    self_hosting: Self-Hosting
+    security: Security
+    llm_usage: LLM Usage
+    ai_prompts: AI Prompts
+    api_key: API Key
+    sync_providers: Sync Providers
+    profile_info: Profile Info
+    import_export: Import/Export
   shared:
+    app_version:
+      version_label: "Version:"
+    transaction_tabs:
+      expense: Expense
+      income: Income
+      transfer: Transfer
     confirm_modal:
       accept: Confirm
       body_html: "<p>You will not be able to undo this decision</p>"
