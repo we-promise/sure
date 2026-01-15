@@ -135,8 +135,10 @@ class EnableBankingItem::Importer
       return if balances.empty?
 
       # Find the most relevant balance (prefer "closingBooked" or "expected")
-      balance = balances.find { |b| b[:balance_type] == "closingBooked" } ||
-                balances.find { |b| b[:balance_type] == "expected" } ||
+      balance = balances.find { |b| b[:balance_type] == "ITAV" } ||
+                balances.find { |b| b[:balance_type] == "CLAV" } ||
+                balances.find { |b| b[:balance_type] == "ITBD" } ||
+                balances.find { |b| b[:balance_type] == "CLBD" } ||
                 balances.first
 
       if balance.present?
