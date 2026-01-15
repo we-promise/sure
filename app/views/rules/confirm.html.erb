@@ -10,7 +10,7 @@
 
   <% dialog.with_body do %>
     <p class="text-secondary text-sm mb-4">
-      <%= raw t(".confirm_message_html", count: @rule.affected_resource_count, resource_type: @rule.resource_type.pluralize) %>
+      <%= t(".confirm_message_html", count: @rule.affected_resource_count, resource_type: @rule.resource_type.pluralize) %>
     </p>
 
     <% if @rule.actions.any? { |a| a.action_type == "auto_categorize" } %>
