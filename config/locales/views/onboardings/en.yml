@@ -1,6 +1,11 @@
 ---
 en:
   onboardings:
+    onboarding_nav:
+      setup: Setup
+      preferences: Preferences
+      goals: Goals
+      start: Start
     header:
       sign_out: Log out
     logout:

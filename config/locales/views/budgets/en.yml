@@ -1,6 +1,9 @@
 ---
 en:
   budgets:
+    budget_nav:
+      setup: Setup
+      categories: Categories
     over_allocation_warning:
       over_allocated_message: You have over-allocated your budget. Please fix your allocations.
       fix_allocations: Fix allocations

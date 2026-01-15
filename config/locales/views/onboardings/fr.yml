@@ -1,6 +1,11 @@
 ---
 fr:
   onboardings:
+    onboarding_nav:
+      setup: Configuration
+      preferences: Préférences
+      goals: Objectifs
+      start: Démarrer
     header:
       sign_out: Déconnexion
     preferences:

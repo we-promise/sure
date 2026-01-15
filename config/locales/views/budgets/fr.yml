@@ -1,6 +1,9 @@
 ---
 fr:
   budgets:
+    budget_nav:
+      setup: Configuration
+      categories: Catégories
     budget_header:
       today: Aujourd'hui
     budget_donut:
