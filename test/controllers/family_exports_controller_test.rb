@@ -25,7 +25,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
   test "admin can view export modal" do
     get new_family_export_path
     assert_response :success
-    assert_select "h2", text: "Export your data"
+    assert_select "h2", text: I18n.t("family_exports.new.title")
   end
 
   test "admin can create export" do
@@ -34,7 +34,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
-    assert_equal "Export started. You'll be able to download it shortly.", flash[:notice]
+    assert_equal I18n.t("family_exports.create.started"), flash[:notice]
 
     export = @family.family_exports.last
     assert_equal "pending", export.status
