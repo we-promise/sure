@@ -89,9 +89,22 @@ en:
       edit_tags: Edit tags
       import: Import
     index:
+      title: Transactions
       transaction: transaction
       transactions: transactions
       import: Import
+      new_rule: New rule
+      edit_rules: Edit rules
+      edit_categories: Edit categories
+      edit_tags: Edit tags
+      edit_merchants: Edit merchants
+      edit_imports: Edit imports
+      new_transaction: New transaction
+      drop_csv_title: Drop CSV to import
+      drop_csv_subtitle: Upload transactions directly
+      column_transaction: transaction
+      column_category: category
+      column_amount: amount
     toggle_recurring_section: Toggle upcoming recurring transactions
     search:
       filters:
@@ -143,3 +156,19 @@ en:
         less_than: less than
       form:
         toggle_selection_checkboxes: Toggle all checkboxes
+    bulk_updates:
+      new:
+        title: Edit transactions
+        overview: Overview
+        date: Date
+        transactions: Transactions
+        category: Category
+        select_category: Select a category
+        merchant: Merchant
+        select_merchant: Select a merchant
+        tags: Tags
+        none: None
+        notes: Notes
+        notes_placeholder: Enter a note that will be applied to selected transactions
+        cancel: Cancel
+        save: Save

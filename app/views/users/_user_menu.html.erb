@@ -19,7 +19,7 @@
       <% if self_hosted? %>
         <div class="px-4 py-3 border-t border-tertiary">
           <p class="text-sm">
-            <span class="font-medium text-primary">Version:</span>
+            <span class="font-medium text-primary"><%= t(".version") %>:</span>
             <%= link_to Sure.version.to_release_tag, "https://github.com/we-promise/sure/releases/tag/#{Sure.version.to_release_tag}", target: "_blank", class: "hover:underline" %>
 
             <% if Sure.commit_sha.present? %>
@@ -30,16 +30,16 @@
       <% end %>
     <% end %>
 
-    <% menu.with_item(variant: "link", text: "Settings", icon: "settings", href: accounts_path(return_to: request.fullpath)) %>
-    <% menu.with_item(variant: "link", text: "Changelog", icon: "box", href: changelog_path) %>
+    <% menu.with_item(variant: "link", text: t(".settings"), icon: "settings", href: accounts_path(return_to: request.fullpath)) %>
+    <% menu.with_item(variant: "link", text: t(".changelog"), icon: "box", href: changelog_path) %>
 
     <% if self_hosted? %>
-      <% menu.with_item(variant: "link", text: "Feedback", icon: "megaphone", href: feedback_path) %>
+      <% menu.with_item(variant: "link", text: t(".feedback"), icon: "megaphone", href: feedback_path) %>
     <% end %>
-    <% menu.with_item(variant: "link", text: "Contact", icon: "message-square-more", href: "https://discord.gg/36ZGBsxYEK") %>
+    <% menu.with_item(variant: "link", text: t(".contact"), icon: "message-square-more", href: "https://discord.gg/36ZGBsxYEK") %>
 
     <% menu.with_item(variant: "divider") %>
 
-    <% menu.with_item(variant: "button", text: "Log out", icon: "log-out", href: session_path(Current.session), method: :delete) %>
+    <% menu.with_item(variant: "button", text: t(".log_out"), icon: "log-out", href: session_path(Current.session), method: :delete) %>
   <% end %>
 </div>

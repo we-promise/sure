@@ -3,3 +3,14 @@ en:
   chats:
     demo_banner_title: "Demo Mode Active"
     demo_banner_message: "You are using an open-weights Qwen3 LLM with credits provided by Cloudflare Workers AI.  Result may vary since the codebase was mostly tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
+    index:
+      title: Chats
+      new_chat: New chat
+    ai_greeting:
+      introduction: "Hey %{name}! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data."
+      default_name: there
+      slash_commands_html: 'You can use <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> to access commands'
+      questions_label: "Here's a few questions you can ask:"
+      question_portfolio: Evaluate investment portfolio
+      question_spending: Show spending insights
+      question_patterns: Find unusual patterns
