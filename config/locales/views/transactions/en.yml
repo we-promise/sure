@@ -1,6 +1,9 @@
 ---
 en:
   transactions:
+    selection_bar:
+      edit: Edit
+      delete: Delete
     unknown_name: Unknown transaction
     form:
       account: Account
