@@ -1,11 +1,16 @@
 ---
 en:
   chats:
-    demo_banner_title: "Demo Mode Active"
-    demo_banner_message: "You are using an open-weights Qwen3 LLM with credits provided by Cloudflare Workers AI.  Result may vary since the codebase was mostly tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
-    index:
-      title: Chats
-      new_chat: New chat
+    demo_banner_title: Demo Mode Active
+    demo_banner_message: "You are using an open-weight Qwen3 LLM with credits provided by Cloudflare Workers AI. Since the codebase is primarily tested on `gpt-4.1`, results may vary, but your tokens are not used for training elsewhere! 🤖"
+    thinking_indicator:
+      thinking: Thinking...
+    ai_consent:
+      title: Meet your AI financial assistant
+      description_available: Get personalized insights, answers to your questions, and smart suggestions to help you manage your money better.
+      description_unavailable_html: To use the AI assistant, you need to set the <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> environment variable or configure it in the Self-Hosting settings of your instance.
+      enable_button: Enable AI Chats
+      disclaimer: Disable anytime. All data sent to our LLM providers is anonymized.
     ai_greeting:
       introduction: "Hey %{name}! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data."
       default_name: there
@@ -14,10 +19,10 @@ en:
       question_portfolio: Evaluate investment portfolio
       question_spending: Show spending insights
       question_patterns: Find unusual patterns
-    error:
-      error_message: Failed to generate response. Please try again.
-      retry: Retry
+    chat_title:
+      new_chat: New chat
     chat:
+      updated_ago: "%{time} ago"
       edit_title: Edit chat title
       delete: Delete chat
     chat_nav:
@@ -25,3 +30,9 @@ en:
       start_new: Start new chat
       edit_title: Edit chat title
       delete: Delete chat
+    error:
+      error_message: Failed to generate response. Please try again.
+      retry: Retry
+    index:
+      title: Chats
+      new_chat: New chat

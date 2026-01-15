@@ -10,7 +10,7 @@
       icon: "menu",
       href: path,
       frame: chat_frame,
-      text: t('.all_chats')
+      text: t(".all_chats")
     ) %>
 
     <div class="grow">
@@ -19,19 +19,19 @@
   </div>
 
   <%= render DS::Menu.new(icon_vertical: true) do |menu| %>
-    <% menu.with_item(variant: "link", text: t('.start_new'), href: new_chat_path, icon: "plus") %>
+    <% menu.with_item(variant: "link", text: t(".start_new"), href: new_chat_path, icon: "plus") %>
 
     <% unless chat.new_record? %>
       <% menu.with_item(
         variant: "link",
-        text: t('.edit_title'),
+        text: t(".edit_title"),
         href: edit_chat_path(chat, ctx: "chat"),
         icon: "pencil",
         frame: dom_id(chat, "title")) %>
 
       <% menu.with_item(
         variant: "button",
-        text: t('.delete'),
+        text: t(".delete"),
         href: chat_path(chat),
         icon: "trash-2",
         method: :delete,

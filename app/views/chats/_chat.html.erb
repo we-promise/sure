@@ -7,21 +7,21 @@
     <% end %>
 
     <p class="text-sm text-secondary">
-      <%= time_ago_in_words(chat.updated_at) %> ago
+      <%= t(".updated_ago", time: time_ago_in_words(chat.updated_at)) %>
     </p>
   </div>
 
   <%= render DS::Menu.new(icon_vertical: true) do |menu| %>
     <% menu.with_item(
       variant: "link",
-      text: t('.edit_title'),
+      text: t(".edit_title"),
       href: edit_chat_path(chat, ctx: "list"),
       icon: "pencil",
       frame: dom_id(chat, "title")) %>
 
     <% menu.with_item(
       variant: "button",
-      text: t('.delete'),
+      text: t(".delete"),
       href: chat_path(chat),
       icon: "trash-2",
       method: :delete,
