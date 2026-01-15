@@ -5,47 +5,46 @@
     <% brokerage_cash = reconciliation_dry_run.new_cash_balance || 0 %>
     <% holdings_value = reconciliation_dry_run.new_balance - brokerage_cash %>
 
-    <p>This will <%= action_verb %> the account value on <span class="font-medium text-primary"><%= I18n.l(entry.date, format: :long) %></span> to:</p>
+    <p><%= t("valuations.confirmation_contents.investment_intro", action: action_verb, date: I18n.l(entry.date, format: :long)) %></p>
 
     <div class="bg-container rounded-lg p-4 space-y-2 border border-primary">
       <div class="flex justify-between">
-        <span>Total account value</span>
+        <span><%= t("valuations.confirmation_contents.total_account_value") %></span>
         <span class="font-medium text-primary"><%= Money.new(reconciliation_dry_run.new_balance, account.currency).format %></span>
       </div>
       <div class="flex justify-between text-xs">
-        <span>Holdings value</span>
+        <span><%= t("valuations.confirmation_contents.holdings_value") %></span>
         <span><%= Money.new(holdings_value, account.currency).format %></span>
       </div>
       <div class="flex justify-between text-xs">
-        <span>Brokerage cash</span>
+        <span><%= t("valuations.confirmation_contents.brokerage_cash") %></span>
         <span class="<%= brokerage_cash.negative? ? "text-red-500" : "text-green-500" %>"><%= Money.new(brokerage_cash, account.currency).format %></span>
       </div>
     </div>
   <% else %>
     <p><%= action_verb.capitalize %>
       <% if account.depository? %>
-        account balance
+        <%= t("valuations.confirmation_contents.account_balance") %>
       <% elsif account.credit_card? %>
-        credit card balance
+        <%= t("valuations.confirmation_contents.credit_card_balance") %>
       <% elsif account.loan? %>
-        loan balance
+        <%= t("valuations.confirmation_contents.loan_balance") %>
       <% elsif account.property? %>
-        property value
+        <%= t("valuations.confirmation_contents.property_value") %>
       <% elsif account.vehicle? %>
-        vehicle value
+        <%= t("valuations.confirmation_contents.vehicle_value") %>
       <% elsif account.crypto? %>
-        crypto balance
+        <%= t("valuations.confirmation_contents.crypto_balance") %>
       <% elsif account.other_asset? %>
-        asset value
+        <%= t("valuations.confirmation_contents.asset_value") %>
       <% elsif account.other_liability? %>
-        liability balance
+        <%= t("valuations.confirmation_contents.liability_balance") %>
       <% else %>
-        balance
+        <%= t("valuations.confirmation_contents.balance") %>
       <% end %>
-      on <span class="font-medium text-primary"><%= I18n.l(entry.date, format: :long) %></span> to
-      <span class="font-medium text-primary"><%= entry.amount_money.format %></span>.
+      <%= t("valuations.confirmation_contents.on_date_to", date: I18n.l(entry.date, format: :long), amount: entry.amount_money.format) %>
     </p>
   <% end %>
 
-  <p>All future transactions and balances will be recalculated based on this <%= is_update ? "change" : "update" %>.</p>
+  <p><%= is_update ? t("valuations.confirmation_contents.recalculation_change") : t("valuations.confirmation_contents.recalculation_update") %></p>
 </div>

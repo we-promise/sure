@@ -36,3 +36,20 @@ en:
     confirm_update:
       title: Update balance
       update: Update
+    confirmation_contents:
+      investment_intro: "This will %{action} the account value on %{date} to:"
+      total_account_value: Total account value
+      holdings_value: Holdings value
+      brokerage_cash: Brokerage cash
+      account_balance: account balance
+      credit_card_balance: credit card balance
+      loan_balance: loan balance
+      property_value: property value
+      vehicle_value: vehicle value
+      crypto_balance: crypto balance
+      asset_value: asset value
+      liability_balance: liability balance
+      balance: balance
+      on_date_to: "on %{date} to %{amount}."
+      recalculation_change: All future transactions and balances will be recalculated based on this change.
+      recalculation_update: All future transactions and balances will be recalculated based on this update.

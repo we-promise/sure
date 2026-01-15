@@ -1,6 +1,8 @@
 ---
 fr:
   assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raisonnement de l'assistant
     tool_calls:
       title: Appels d'outils
       function: "Fonction :"

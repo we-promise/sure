@@ -4,6 +4,13 @@ en:
     changelog:
       title: What's new
       date_unavailable: Date unavailable
+    feedback:
+      page_title: Feedback
+      title: Leave feedback
+      subtitle: Let us know if you have any specific feedback. Feel free to include links to videos or screenshots.
+      feature_request: Write a feature request
+      bug_report: File a bug report
+      discuss: Discuss %{product} with others
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"

@@ -31,7 +31,7 @@
         <dl class="space-y-3 px-3 py-2">
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary">
-              <%= t('.spending', date: @budget_category.budget.start_date.strftime("%b %Y")) %>
+              <%= t('.spending', date: I18n.l(@budget_category.budget.start_date, format: "%B %Y")) %>
             </dt>
             <dd class="text-primary font-medium">
               <%= format_money @budget_category.actual_spending_money %>
@@ -104,7 +104,7 @@
                   <div class="flex justify-between w-full">
                     <div>
                       <p class="text-secondary text-xs uppercase">
-                        <%= transaction.entry.date.strftime("%b %d") %>
+                        <%= I18n.l(transaction.entry.date, format: "%b %d") %>
                       </p>
                       <%= link_to transaction.entry.name,
                                   transactions_path,
