@@ -12,3 +12,15 @@ account:
   family: dylan_family
   type: AccountImport
   status: pending
+
+pdf:
+  family: dylan_family
+  type: PdfImport
+  status: pending
+
+pdf_processed:
+  family: dylan_family
+  type: PdfImport
+  status: complete
+  ai_summary: "This is a bank statement from Chase Bank for the period January 1-31, 2024. It shows 15 transactions with an opening balance of $5,000 and closing balance of $4,500."
+  document_type: bank_statement
