@@ -5,6 +5,7 @@ require "test_helper"
 class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
+    @other_family_user = users(:empty)
 
     @oauth_app = Doorkeeper::Application.create!(
       name: "Test App",
@@ -51,6 +52,19 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
     assert tag.key?("updated_at")
   end
 
+  test "index does not return tags from other families" do
+    other_tag = @other_family_user.family.tags.create!(name: "Other Tag", color: "#3b82f6")
+
+    get api_v1_tags_url, headers: read_headers
+
+    assert_response :success
+    tags = JSON.parse(response.body)
+    tag_ids = tags.map { |t| t["id"] }
+
+    assert_includes tag_ids, @tag.id
+    assert_not_includes tag_ids, other_tag.id
+  end
+
   # Show action tests
   test "show requires authentication" do
     get api_v1_tag_url(@tag)
@@ -71,6 +85,14 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
 
   test "show returns 404 for non-existent tag" do
     get api_v1_tag_url(id: SecureRandom.uuid), headers: read_headers
+
+    assert_response :not_found
+  end
+
+  test "show returns 404 for tag from another family" do
+    other_tag = @other_family_user.family.tags.create!(name: "Other Tag", color: "#3b82f6")
+
+    get api_v1_tag_url(other_tag), headers: read_headers
 
     assert_response :not_found
   end
@@ -179,6 +201,16 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "update returns 404 for tag from another family" do
+    other_tag = @other_family_user.family.tags.create!(name: "Other Tag", color: "#3b82f6")
+
+    patch api_v1_tag_url(other_tag),
+          params: { tag: { name: "Hacker Update" } },
+          headers: read_write_headers
+
+    assert_response :not_found
+  end
+
   # Destroy action tests
   test "destroy requires authentication" do
     delete api_v1_tag_url(@tag)
@@ -204,6 +236,16 @@ class Api::V1::TagsControllerTest < ActionDispatch::IntegrationTest
 
   test "destroy returns 404 for non-existent tag" do
     delete api_v1_tag_url(id: SecureRandom.uuid), headers: read_write_headers
+
+    assert_response :not_found
+  end
+
+  test "destroy returns 404 for tag from another family" do
+    other_tag = @other_family_user.family.tags.create!(name: "Other Tag", color: "#3b82f6")
+
+    assert_no_difference -> { @other_family_user.family.tags.count } do
+      delete api_v1_tag_url(other_tag), headers: read_write_headers
+    end
 
     assert_response :not_found
   end
