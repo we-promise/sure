@@ -13,29 +13,29 @@
         <div class="text-sm space-y-1">
           <% if @family.has_active_subscription? %>
             <p class="text-primary">
-              <span>You are currently subscribed to the <span class="font-medium"><%= @family.subscription.name %></span>.</span>
+              <%= t('.subscribed_html', plan: @family.subscription.name) %>
 
               <% if @family.next_billing_date %>
-                <span>Your plan renews on <span class="font-medium"><%= @family.next_billing_date.strftime("%B %d, %Y") %></span>.</span>
+                <%= t('.renews_on_html', date: I18n.l(@family.next_billing_date, format: :long)) %>
               <% end %>
             </p>
           <% elsif @family.trialing? %>
             <p class="text-primary">
-              You are currently trialing <%= product_name %>
+              <%= t('.trialing', product_name: product_name) %>
               <span class="text-secondary">
-                (<%= @family.days_left_in_trial %> days remaining)
+                (<%= t('.days_remaining', days: @family.days_left_in_trial) %>)
               </span>
             </p>
           <% else %>
-            <p class="text-primary">You are currently <span class="font-medium">not subscribed</span></p>
-            <p class="text-secondary">Once you subscribe to <%= product_name %>, you'll see your billing settings here.</p>
+            <p class="text-primary"><%= t('.not_subscribed_html') %></p>
+            <p class="text-secondary"><%= t('.subscribe_prompt', product_name: product_name) %></p>
           <% end %>
         </div>
       </div>
 
       <% if @family.has_active_subscription? %>
         <%= render DS::Link.new(
-          text: "Manage",
+          text: t('.manage'),
           icon: "external-link",
           variant: "primary",
           icon_position: "right",
@@ -44,7 +44,7 @@
         ) %>
       <% else %>
         <%= render DS::Link.new(
-          text: "Choose plan",
+          text: t('.choose_plan'),
           variant: "primary",
           icon: "plus",
           icon_position: "right",
@@ -55,7 +55,7 @@
 
     <div class="flex items-center gap-2">
       <%= image_tag "stripe-logo.svg", class: "w-5 h-5 shrink-0" %>
-      <p class="text-secondary text-sm">Billing via Stripe</p>
+      <p class="text-secondary text-sm"><%= t('.billing_via_stripe') %></p>
     </div>
   </div>
 <% end %>

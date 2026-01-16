@@ -24,12 +24,12 @@
                 max: Date.current %>
 
           <%= f.money_field :amount,
-                label: "Account value on date",
+                label: t(".account_value_on_date"),
                 disable_currency: true %>
 
           <div class="flex justify-end">
             <%= render DS::Button.new(
-              text: "Update value",
+              text: t(".update_value"),
               variant: :primary,
               type: "submit"
             ) %>

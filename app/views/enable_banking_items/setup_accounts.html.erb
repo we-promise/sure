@@ -1,8 +1,8 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Set Up Your Enable Banking Accounts") do %>
+  <% dialog.with_header(title: t(".title")) do %>
     <div class="flex items-center gap-2">
       <%= icon "building-2", class: "text-primary" %>
-      <span class="text-primary">Choose the correct account types for your imported accounts</span>
+      <span class="text-primary"><%= t(".header_description") %></span>
     </div>
   <% end %>
 
@@ -13,7 +13,7 @@
                   data: {
                     controller: "loading-button",
                     action: "submit->loading-button#showLoading",
-                    loading_button_loading_text_value: "Creating Accounts...",
+                    loading_button_loading_text_value: t(".creating_accounts"),
                     turbo_frame: "_top"
                   },
                   class: "space-y-6" do |form| %>
@@ -24,7 +24,7 @@
             <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
             <div>
               <p class="text-sm text-primary mb-2">
-                <strong>Choose the correct account type for each Enable Banking account:</strong>
+                <strong><%= t(".account_type_instructions") %></strong>
               </p>
               <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
                 <% @account_type_options.reject { |_, type| type == "skip" }.each do |label, _| %>
@@ -41,15 +41,15 @@
             <%= icon "calendar", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
             <div class="flex-1">
               <p class="text-sm text-primary mb-3">
-                <strong>Historical Data Range:</strong>
+                <strong><%= t(".historical_data_range") %></strong>
               </p>
               <%= form.date_field :sync_start_date,
-                    label: "Start syncing transactions from:",
+                    label: t(".start_sync_from"),
                     value: @enable_banking_item.sync_start_date || 3.months.ago.to_date,
                     min: 1.year.ago.to_date,
                     max: Date.current,
                     class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
-                    help_text: "Select how far back you want to sync transaction history. Maximum 1 year of history available." %>
+                    help_text: t(".sync_help_text") %>
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@
                     <p><%= enable_banking_account.account_type_display %></p>
                   <% end %>
                   <% if enable_banking_account.current_balance.present? %>
-                    <p>Balance: <%= number_to_currency(enable_banking_account.current_balance, unit: enable_banking_account.currency) %></p>
+                    <p><%= t(".balance") %> <%= number_to_currency(enable_banking_account.current_balance, unit: enable_banking_account.currency) %></p>
                   <% end %>
                 </div>
               </div>
@@ -77,7 +77,7 @@
 
             <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="<%= enable_banking_account.id %>">
               <div>
-                <%= label_tag "account_types[#{enable_banking_account.id}]", "Account Type:",
+                <%= label_tag "account_types[#{enable_banking_account.id}]", t(".account_type_label"),
                              class: "block text-sm font-medium text-primary mb-2" %>
                 <%= select_tag "account_types[#{enable_banking_account.id}]",
                               options_for_select(@account_type_options, "skip"),
@@ -100,7 +100,7 @@
 
       <div class="flex gap-3">
         <%= render DS::Button.new(
-          text: "Create Accounts",
+          text: t(".create_accounts"),
           variant: "primary",
           icon: "plus",
           type: "submit",
@@ -108,7 +108,7 @@
           data: { loading_button_target: "button" }
         ) %>
         <%= render DS::Link.new(
-          text: "Cancel",
+          text: t(".cancel"),
           variant: "secondary",
           href: accounts_path
         ) %>

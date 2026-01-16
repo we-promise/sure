@@ -1,0 +1,80 @@
+---
+en:
+  settings:
+    providers:
+      show:
+        page_title: Sync Providers
+        description: Configure credentials for third-party sync providers. Settings configured here will override environment variables.
+        lunchflow_title: Lunch Flow
+        simplefin_title: SimpleFIN
+        enable_banking_title: Enable Banking (beta)
+        coinstats_title: CoinStats
+      provider_form:
+        env_configuration_note: Configuration can be set via environment variables or overridden below.
+        field_descriptions: "Field descriptions:"
+        optional: Optional
+        save_configuration: Save Configuration
+        configured: Configured and ready to use
+        not_configured: Not configured
+      lunchflow_panel:
+        setup_instructions: "Setup instructions:"
+        step1_html: Visit <a href="https://www.lunchflow.app" target="_blank" rel="noopener noreferrer" class="link">Lunch Flow</a> to get your API key
+        step2: Paste your API key below and click the Save button
+        step3_html: After a successful connection, go to the <a href="%{accounts_url}" class="link">Accounts</a> tab to set up new accounts and link them to your existing ones
+        field_descriptions: "Field descriptions:"
+        api_key_description: Your Lunch Flow API key for authentication (required)
+        base_url_description: Base URL for Lunch Flow API (optional, defaults to https://lunchflow.app/api/v1)
+        api_key_label: API Key
+        api_key_placeholder_new: Paste API key here
+        api_key_placeholder_update: Enter new API key to update
+        base_url_label: Base URL (Optional)
+        base_url_placeholder: https://lunchflow.app/api/v1 (default)
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        configured_html: Configured and ready to use. Visit the <a href="%{accounts_url}" class="link">Accounts</a> tab to manage and set up accounts.
+        not_configured: Not configured
+      simplefin_panel:
+        setup_instructions: "Setup instructions:"
+        step1_html: Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFIN Bridge</a> to get your one-time setup token
+        step2: Paste the token below and click the Save button to enable SimpleFIN bank data sync
+        step3_html: After a successful connection, go to the <a href="%{accounts_url}" class="link">Accounts</a> tab to set up new accounts and link them to your existing ones
+        field_descriptions: "Field descriptions:"
+        setup_token_description: Your SimpleFIN one-time setup token from SimpleFIN Bridge (consumed on first use)
+        setup_token_label: Setup Token
+        setup_token_placeholder: Paste SimpleFIN setup token
+        save_configuration: Save Configuration
+        configured_html: Configured and ready to use. Visit the <a href="%{accounts_url}" class="link">Accounts</a> tab to manage and set up accounts.
+        not_configured: Not configured
+      enable_banking_panel:
+        setup_instructions: "Setup instructions:"
+        step1_html: Visit your <a href="https://enablebanking.com" target="_blank" rel="noopener noreferrer" class="link">Enable Banking</a> developer account to get your credentials
+        step2: Select your country code from the dropdown below
+        step3: Enter your Application ID and paste your Client Certificate (including the private key)
+        step4: Click Save Configuration, then use "Add Connection" to link your bank
+        field_descriptions: "Field descriptions:"
+        country_code_description: ISO 3166-1 alpha-2 country code (e.g., GB, DE, FR) - determines available banks
+        application_id_description: The ID generated in your Enable Banking developer account
+        client_certificate_description: The certificate generated when you created your application (must include the private key)
+        configuration_locked: Configuration locked
+        credentials_locked_note: Credentials cannot be changed while you have active bank connections. Remove all connections first to update credentials.
+        select_country: Select country...
+        country_label: Country
+        application_id_label: Application ID
+        application_id_placeholder_new: Enter application ID
+        application_id_placeholder_update: Enter new ID to update
+        client_certificate_label: Client Certificate (with Private Key)
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        connected_bank: Connected Bank
+        session_expires: "Session expires: %{date}"
+        unknown: Unknown
+        connection: Connection
+        session_expired: Session expired - reconnect
+        configured: Configured
+        ready_to_link: Ready to link accounts
+        sync: Sync
+        reconnect: Reconnect
+        connect_bank: Connect Bank
+        remove: Remove
+        remove_confirm: Are you sure you want to remove this connection?
+        add_connection: Add Connection

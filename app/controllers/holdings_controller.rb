@@ -38,7 +38,7 @@ class HoldingsController < ApplicationController
       @holding.destroy_holding_and_entries!
       flash[:notice] = t(".success")
     else
-      flash[:alert] = "You cannot delete this holding"
+      flash[:alert] = t(".cannot_delete")
     end
 
     respond_to do |format|

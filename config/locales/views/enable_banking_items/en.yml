@@ -1,6 +1,9 @@
 ---
 en:
   enable_banking_items:
+    subtype_select:
+      select_subtype: Select subtype
+      select_type: Select type
     authorize:
       authorization_failed: Failed to initiate authorization
       bank_required: Please select a bank.
@@ -35,6 +38,25 @@ en:
         invalid_enable_banking_account: Invalid Enable Banking account selected
     new:
       link_enable_banking_title: Link Enable Banking
+      connected_bank: Connected Bank
+      session_expires: "Session expires: %{date}"
+      session_expired: Session expired - re-authorization required
+      configured: Configured
+      ready_to_connect: Ready to connect a bank
+      sync: Sync
+      reconnect: Reconnect
+      connect_bank: Connect Bank
+      remove: Remove
+      confirm_remove: Are you sure you want to remove this connection?
+      add_connection: Add Connection
+      not_configured: Enable Banking connection not configured
+      configure_first: Before you can link Enable Banking accounts, you need to configure your Enable Banking connection.
+      setup_steps: "Setup Steps:"
+      step_1: Go to Settings → Providers
+      step_2: Find the Enable Banking section
+      step_3: Enter your Enable Banking credentials
+      step_4: Return here to link your accounts
+      go_to_settings: Go to Provider Settings
     reauthorize:
       invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
       reauthorization_failed: Reauthorization failed
@@ -47,3 +69,37 @@ en:
       title: Select Your Bank
     update:
       success: Enable Banking configuration updated.
+    setup_accounts:
+      title: Set Up Your Enable Banking Accounts
+      header_description: Choose the correct account types for your imported accounts
+      account_type_instructions: "Choose the correct account type for each Enable Banking account:"
+      historical_data_range: "Historical Data Range:"
+      start_sync_from: "Start syncing transactions from:"
+      sync_help_text: Select how far back you want to sync transaction history. Maximum 1 year of history available.
+      balance: "Balance:"
+      account_type_label: "Account Type:"
+      creating_accounts: Creating Accounts...
+      create_accounts: Create Accounts
+      cancel: Cancel
+    select_existing_account:
+      header_title: Link Enable Banking account
+      all_linked: All Enable Banking accounts appear to be linked already.
+      try_after_sync: If you just connected or synced, try again after the sync completes.
+      unlink_first: To link a different account, first unlink it from the account's actions menu.
+      balance: "Balance:"
+      link: Link
+      cancel: Cancel
+    enable_banking_item:
+      provider_name: Enable Banking
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing...
+      reconnect: Reconnect
+      last_synced: Last synced %{time} ago
+      never_synced: Never synced
+      update: Update
+      delete: Delete
+      setup_needed: Setup needed
+      accounts_need_setup: "%{count} imported from Enable Banking need to be set up"
+      set_up_accounts: Set up accounts
+      no_accounts_found: No accounts found
+      no_accounts_description: No accounts were found from Enable Banking. Try syncing again.

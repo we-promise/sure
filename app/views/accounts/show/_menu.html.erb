@@ -1,12 +1,12 @@
 <%# locals: (account:) %>
 
 <%= render DS::Menu.new(testid: "account-menu") do |menu| %>
-  <% menu.with_item(variant: "link", text: "Edit", href: edit_account_path(account), icon: "pencil-line", data: { turbo_frame: :modal }) %>
+  <% menu.with_item(variant: "link", text: t('.edit'), href: edit_account_path(account), icon: "pencil-line", data: { turbo_frame: :modal }) %>
 
   <% unless account.crypto? %>
     <% menu.with_item(
       variant: "link",
-      text: "Import transactions",
+      text: t('.import_transactions'),
       href: imports_path({ import: { type: account.investment? ? "TradeImport" : "TransactionImport", account_id: account.id } }),
       icon: "download",
       data: { turbo_frame: :_top }
@@ -16,7 +16,7 @@
   <% unless account.linked? %>
     <% menu.with_item(
       variant: "button",
-      text: "Delete account",
+      text: t('.delete_account'),
       href: account_path(account),
       method: :delete,
       icon: "trash-2",

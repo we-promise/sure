@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Enter property manually") %>
+  <% dialog.with_header(title: t(".enter_property_manually")) %>
   <% dialog.with_body do %>
     <div class="flex gap-4">
       <!-- Left sidebar with tabs -->
@@ -13,25 +13,25 @@
 
             <%= form.fields_for :address do |address_form| %>
               <%= address_form.text_field :line1,
-                    label: "Address Line 1",
-                    placeholder: "123 Main Street" %>
+                    label: t(".address_line_1"),
+                    placeholder: t(".address_line_1_placeholder") %>
 
               <div class="flex items-center gap-2">
                 <%= address_form.text_field :locality,
-                      label: "City",
-                      placeholder: "San Francisco" %>
+                      label: t(".city"),
+                      placeholder: t(".city_placeholder") %>
                 <%= address_form.text_field :region,
-                      label: "State/Region",
-                      placeholder: "CA" %>
+                      label: t(".state_region"),
+                      placeholder: t(".state_region_placeholder") %>
               </div>
 
               <div class="flex items-center gap-2">
                 <%= address_form.text_field :postal_code,
-                      label: "Postal Code",
-                      placeholder: "12345" %>
+                      label: t(".postal_code"),
+                      placeholder: t(".postal_code_placeholder") %>
                 <%= address_form.text_field :country,
-                      label: "Country",
-                      placeholder: "USA" %>
+                      label: t(".country"),
+                      placeholder: t(".country_placeholder") %>
               </div>
             <% end %>
           </div>
@@ -39,7 +39,7 @@
           <!-- Save button -->
           <div class="flex justify-end mt-4">
             <%= render DS::Button.new(
-              text: "Save",
+              text: t(".save"),
               variant: "primary",
             ) %>
           </div>
