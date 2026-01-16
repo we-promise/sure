@@ -30,6 +30,7 @@ class TradesController < ApplicationController
 
   def update
     if @entry.update(update_entry_params)
+      @entry.mark_user_modified!
       @entry.sync_account_later
 
       respond_to do |format|

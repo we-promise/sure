@@ -1,0 +1,5 @@
+---
+fr:
+  oidc_accounts:
+    link:
+      account_creation_disabled: La création de nouveaux comptes via l'authentification unique est désactivée. Veuillez contacter un administrateur pour créer votre compte.

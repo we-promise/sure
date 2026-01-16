@@ -29,6 +29,6 @@ dependencies:
     condition: cnpg.enabled
   - name: redis-operator
     alias: redisOperator
-    version: "~0.21.0"
+    version: "~0.23.0"
     repository: "https://ot-container-kit.github.io/helm-charts"
     condition: redisOperator.enabled

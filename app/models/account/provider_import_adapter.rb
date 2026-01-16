@@ -1,8 +1,14 @@
 class Account::ProviderImportAdapter
-  attr_reader :account
+  attr_reader :account, :skipped_entries
 
   def initialize(account)
     @account = account
+    @skipped_entries = []
+  end
+
+  # Resets skipped entries tracking (call at start of new sync batch)
+  def reset_skipped_entries!
+    @skipped_entries = []
   end
 
   # Imports a transaction from a provider
@@ -31,6 +37,24 @@ class Account::ProviderImportAdapter
         e.entryable = Transaction.new
       end
 
+      # === TYPE COLLISION CHECK: Must happen before protection check ===
+      # If entry exists but is a different type (e.g., Trade), that's an error.
+      # This prevents external_id collisions across different entryable types.
+      if entry.persisted? && !entry.entryable.is_a?(Transaction)
+        raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
+      end
+
+      # === PROTECTION CHECK: Skip entries that should not be overwritten ===
+      # Check persisted Transaction entries for protection flags before making changes.
+      # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
+      if entry.persisted?
+        skip_reason = determine_skip_reason(entry)
+        if skip_reason
+          record_skip(entry, skip_reason)
+          return entry
+        end
+      end
+
       # If this is a new entry, check for potential duplicates from manual/CSV imports
       # This handles the case where a user manually created or CSV imported a transaction
       # before linking their account to a provider
@@ -38,7 +62,14 @@ class Account::ProviderImportAdapter
       if entry.new_record?
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
         if duplicate
-          # "Claim" the duplicate by updating its external_id and source
+          # Check if duplicate is protected - if so, link but don't modify
+          if duplicate.protected_from_sync?
+            duplicate.update!(external_id: external_id, source: source)
+            record_skip(duplicate, determine_skip_reason(duplicate) || "protected")
+            return duplicate
+          end
+
+          # "Claim" the unprotected duplicate by updating its external_id and source
           # This prevents future duplicate checks from matching it again
           entry = duplicate
           entry.assign_attributes(external_id: external_id, source: source)
@@ -80,11 +111,6 @@ class Account::ProviderImportAdapter
 
       # Track if this is a new posted transaction (for fuzzy suggestion after save)
       is_new_posted = entry.new_record? && !incoming_pending
-
-      # Validate entryable type matches to prevent external_id collisions
-      if entry.persisted? && !entry.entryable.is_a?(Transaction)
-        raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
-      end
 
       entry.assign_attributes(
         amount: amount,
@@ -812,5 +838,31 @@ class Account::ProviderImportAdapter
     else
       nil # Let user categorize manually - default to nil for safety
     end
+  end
+
+  # Determines why an entry should be skipped during sync.
+  # Returns nil if entry should NOT be skipped.
+  #
+  # @param entry [Entry] The entry to check
+  # @return [String, nil] Skip reason or nil if entry can be synced
+  def determine_skip_reason(entry)
+    return "excluded" if entry.excluded?
+    return "user_modified" if entry.user_modified?
+    return "import_locked" if entry.import_locked?
+    nil
+  end
+
+  # Records a skipped entry for stats collection.
+  #
+  # @param entry [Entry] The entry that was skipped
+  # @param reason [String] Why it was skipped
+  def record_skip(entry, reason)
+    @skipped_entries << {
+      id: entry.id,
+      name: entry.name,
+      reason: reason,
+      external_id: entry.external_id,
+      account_name: entry.account.name
+    }
   end
 end

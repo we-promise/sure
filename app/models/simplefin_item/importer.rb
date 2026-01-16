@@ -342,10 +342,12 @@ class SimplefinItem::Importer
     end
 
     def import_with_chunked_history
-      # SimpleFin's actual limit is 60 days (not 365 as documented)
-      # Use 60-day chunks to stay within limits
+      # SimpleFin's actual limit is 60 days per request (not 365 as documented).
+      # SimpleFin typically only provides 60-90 days of history (bank-dependent).
+      # Use adaptive chunking: start with 2 chunks, continue if new data found,
+      # stop after 2 consecutive empty chunks. Max 6 chunks (360 days) for safety.
       chunk_size_days = 60
-      max_requests = 22
+      max_requests = 6  # Down from 22 - SimpleFIN rarely provides >90 days anyway
       current_end_date = Time.current
 
       # Decide how far back to walk:
@@ -359,11 +361,11 @@ class SimplefinItem::Importer
       default_start_date = implied_max_lookback_days.days.ago
       target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
 
-      # Enforce maximum 3-year lookback to respect SimpleFin's actual 60-day limit per request
-      # With 22 requests max: 60 days × 22 = 1,320 days = 3.6 years, so 3 years is safe
-      max_lookback_date = 3.years.ago.beginning_of_day
+      # Enforce maximum 1-year lookback since SimpleFIN rarely provides more than 90 days
+      # This saves unnecessary API calls while still covering edge cases
+      max_lookback_date = 1.year.ago.beginning_of_day
       if target_start_date < max_lookback_date
-        Rails.logger.info "SimpleFin: Limiting sync start date from #{target_start_date.strftime('%Y-%m-%d')} to #{max_lookback_date.strftime('%Y-%m-%d')} due to rate limits"
+        Rails.logger.info "SimpleFin: Limiting sync start date from #{target_start_date.strftime('%Y-%m-%d')} to #{max_lookback_date.strftime('%Y-%m-%d')} (SimpleFIN typically provides 60-90 days max)"
         target_start_date = max_lookback_date
       end
 
@@ -373,8 +375,11 @@ class SimplefinItem::Importer
 
       total_accounts_imported = 0
       chunk_count = 0
+      consecutive_empty_chunks = 0
+      total_new_transactions = 0
+      stopped_early = false
 
-      Rails.logger.info "SimpleFin chunked sync: syncing from #{target_start_date.strftime('%Y-%m-%d')} to #{current_end_date.strftime('%Y-%m-%d')}"
+      Rails.logger.info "SimpleFin chunked sync: syncing from #{target_start_date.strftime('%Y-%m-%d')} to #{current_end_date.strftime('%Y-%m-%d')} (max #{max_requests} chunks)"
 
       # Walk backwards from current_end_date in proper chunks
       chunk_end_date = current_end_date
@@ -398,6 +403,9 @@ class SimplefinItem::Importer
         end
 
         Rails.logger.info "SimpleFin chunked sync: fetching chunk #{chunk_count}/#{max_requests} (#{chunk_start_date.strftime('%Y-%m-%d')} to #{chunk_end_date.strftime('%Y-%m-%d')}) - #{actual_days} days"
+
+        # Count transactions before this chunk
+        pre_chunk_tx_count = count_linked_transactions
 
         accounts_data = fetch_accounts_data(start_date: chunk_start_date, end_date: chunk_end_date)
         return if accounts_data.nil? # Error already handled
@@ -432,6 +440,26 @@ class SimplefinItem::Importer
           end
         end
 
+        # Count new transactions in this chunk (adaptive stopping)
+        post_chunk_tx_count = count_linked_transactions
+        new_txns_in_chunk = [ post_chunk_tx_count - pre_chunk_tx_count, 0 ].max
+        total_new_transactions += new_txns_in_chunk
+
+        Rails.logger.info "SimpleFin chunked sync: chunk #{chunk_count} added #{new_txns_in_chunk} new transactions"
+
+        # Adaptive stopping: if chunk returned no new transactions, increment counter
+        if new_txns_in_chunk.zero?
+          consecutive_empty_chunks += 1
+          # Stop after 2 consecutive empty chunks (allow for gaps in bank data)
+          if consecutive_empty_chunks >= 2
+            Rails.logger.info "SimpleFin chunked sync: stopping early - #{consecutive_empty_chunks} consecutive empty chunks (SimpleFIN likely doesn't have more history)"
+            stopped_early = true
+            break
+          end
+        else
+          consecutive_empty_chunks = 0
+        end
+
         # Stop if we've reached our target start date
         if chunk_start_date <= target_start_date
           Rails.logger.info "SimpleFin chunked sync: reached target start date, stopping"
@@ -442,7 +470,23 @@ class SimplefinItem::Importer
         chunk_end_date = chunk_start_date
       end
 
-      Rails.logger.info "SimpleFin chunked sync completed: #{chunk_count} chunks processed, #{total_accounts_imported} account records imported"
+      # Record chunked history stats for observability
+      stats["chunked_history"] = {
+        "chunks_processed" => chunk_count,
+        "total_new_transactions" => total_new_transactions,
+        "stopped_early" => stopped_early,
+        "reason" => stopped_early ? "no_new_data" : (chunk_count >= max_requests ? "max_chunks" : "reached_target")
+      }
+      persist_stats!
+
+      Rails.logger.info "SimpleFin chunked sync completed: #{chunk_count} chunks processed, #{total_accounts_imported} account records, #{total_new_transactions} new transactions#{stopped_early ? " (stopped early)" : ""}"
+    end
+
+    # Count total transactions in linked SimpleFIN accounts (for adaptive chunking)
+    def count_linked_transactions
+      simplefin_item.simplefin_accounts
+        .select { |sfa| sfa.current_account.present? }
+        .sum { |sfa| sfa.raw_transactions_payload.to_a.size }
     end
 
     def import_regular_sync

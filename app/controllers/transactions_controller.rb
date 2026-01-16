@@ -93,9 +93,10 @@ class TransactionsController < ApplicationController
         }
       end
 
-      @entry.sync_account_later
       @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      @entry.sync_account_later
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
