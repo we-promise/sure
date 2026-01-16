@@ -8,7 +8,7 @@ class Settings::ProvidersController < ApplicationController
   def show
     @breadcrumbs = [
       [ "Home", root_path ],
-      [ "Sync Providers", nil ]
+      [ "Bank Sync Providers", nil ]
     ]
 
     prepare_show_context
@@ -124,7 +124,8 @@ class Settings::ProvidersController < ApplicationController
       Provider::Factory.ensure_adapters_loaded
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
         config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
-        config.provider_key.to_s.casecmp("enable_banking").zero? || \
+        config.provider_key.to_s.casecmp("enable_banking").zero?  || \
+        config.provider_key.to_s.casecmp("sophtron").zero? || \
         config.provider_key.to_s.casecmp("coinstats").zero?
       end
 
@@ -132,6 +133,8 @@ class Settings::ProvidersController < ApplicationController
       @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
+      # Providers page only needs to know whether any Sophtron connections exist with valid credentials
+      @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
     end
 end
