@@ -9,7 +9,7 @@ class AddWalletAddressToCoinstatsAccounts < ActiveRecord::Migration[7.2]
 
     # Créer le nouvel index composite unique
     add_index :coinstats_accounts,
-              [:coinstats_item_id, :account_id, :wallet_address],
+              [ :coinstats_item_id, :account_id, :wallet_address ],
               unique: true,
               name: "index_coinstats_accounts_on_item_account_and_wallet"
   end
