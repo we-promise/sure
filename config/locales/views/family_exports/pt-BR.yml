@@ -1,7 +1,21 @@
 ---
 pt-BR:
   family_exports:
+    access_denied: Acesso negado
+    create:
+      success: Exportação iniciada. Você poderá baixá-la em breve.
+    delete_confirmation: Tem certeza de que deseja excluir esta exportação? Esta ação não pode ser desfeita.
+    delete_failed_confirmation: Tem certeza de que deseja excluir esta exportação falhada?
+    destroy:
+      success: Exportação excluída com sucesso
+    export_not_ready: Exportação não está pronta para download
+    exporting: Exportando...
+    index:
+      title: Exportações
+      new: Nova Exportação
+      no_exports: Nenhuma exportação ainda.
     list:
-      in_progress: Em andamento 
+      export_from: "Exportação de %{date}"
+      in_progress: Em andamento
       complete: Concluído
       failed: Falhou

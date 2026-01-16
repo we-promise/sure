@@ -58,12 +58,8 @@ de:
       uploading: Zeilen werden verarbeitet
       view: Anzeigen
     index:
-      imports: Importe
+      title: Importe
       new: Neuer Import
-      title: Import/Export
-      exports: Exporte
-      new_export: Neuer Export
-      no_exports: Noch keine Exporte vorhanden.
     new:
       description: Du kannst verschiedene Datentypen manuell über CSV importieren oder eine unserer Importvorlagen wie Mint verwenden.
       import_accounts: Konten importieren

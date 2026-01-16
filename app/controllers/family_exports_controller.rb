@@ -13,29 +13,33 @@ class FamilyExportsController < ApplicationController
     FamilyDataExportJob.perform_later(@export)
 
     respond_to do |format|
-      format.html { redirect_to imports_path, notice: "Export started. You'll be able to download it shortly." }
+      format.html { redirect_to family_exports_path, notice: t("family_exports.create.success") }
       format.turbo_stream {
-        stream_redirect_to imports_path, notice: "Export started. You'll be able to download it shortly."
+        stream_redirect_to family_exports_path, notice: t("family_exports.create.success")
       }
     end
   end
 
   def index
-    @exports = Current.family.family_exports.ordered.limit(10)
-    render layout: false # For turbo frame
+    @pagy, @exports = pagy(Current.family.family_exports.ordered, limit: safe_per_page)
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.exports"), family_exports_path ]
+    ]
+    render layout: "settings"
   end
 
   def download
     if @export.downloadable?
       redirect_to @export.export_file, allow_other_host: true
     else
-      redirect_to imports_path, alert: "Export not ready for download"
+      redirect_to family_exports_path, alert: t("family_exports.export_not_ready")
     end
   end
 
   def destroy
     @export.destroy
-    redirect_to imports_path, notice: "Export deleted successfully"
+    redirect_to family_exports_path, notice: t("family_exports.destroy.success")
   end
 
   private
@@ -46,7 +50,7 @@ class FamilyExportsController < ApplicationController
 
     def require_admin
       unless Current.user.admin?
-        redirect_to root_path, alert: "Access denied"
+        redirect_to root_path, alert: t("family_exports.access_denied")
       end
     end
 end

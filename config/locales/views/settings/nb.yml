@@ -81,6 +81,7 @@ nb:
       feedback_label: Tilbakemelding
       general_section_title: Generelt
       imports_label: Importer
+      exports_label: Eksporter
       logout: Logg ut
       merchants_label: Forhandlere
       other_section_title: Mer
