@@ -201,16 +201,28 @@ class CoinstatsEntry::Processor
     # Converts a USD amount to the family's currency using exchange rates.
     # @param usd_amount [BigDecimal] Amount in USD
     # @return [BigDecimal] Converted amount in target currency
+    # @note If conversion fails, returns USD amount but logs error - this may cause
+    #       data inconsistency as the amount will be labeled with family currency
     def convert_to_family_currency(usd_amount)
       return BigDecimal("0") if usd_amount.zero?
       return usd_amount if family_currency.to_s.upcase == "USD"
 
-      # Use Money class for conversion with fallback_rate: 1 to avoid errors
-      Money.new(usd_amount, "USD")
-           .exchange_to(family_currency, date: date, fallback_rate: 1)
-           .amount
+      # Try to get exchange rate without fallback first to detect missing rates
+      transaction_date = date rescue Date.current
+      exchange_rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: family_currency, date: transaction_date)
+
+      if exchange_rate.present?
+        Money.new(usd_amount, "USD")
+             .exchange_to(family_currency, date: transaction_date)
+             .amount
+      else
+        # No exchange rate available - log error and use USD amount
+        # WARNING: This creates data inconsistency (USD amount labeled as family currency)
+        Rails.logger.error "CoinstatsEntry::Processor - No exchange rate found for USD->#{family_currency} on #{transaction_date}, using unconverted USD amount. This may cause incorrect transaction display."
+        usd_amount
+      end
     rescue => e
-      Rails.logger.warn "CoinstatsEntry::Processor - Currency conversion failed (#{e.message}), using USD amount"
+      Rails.logger.error "CoinstatsEntry::Processor - Currency conversion failed (#{e.message}), using unconverted USD amount. This may cause incorrect transaction display."
       usd_amount
     end
 

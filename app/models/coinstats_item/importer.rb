@@ -322,17 +322,27 @@ class CoinstatsItem::Importer
     # @param usd_amount [Numeric] Amount in USD
     # @param target_currency [String] Target currency code (e.g., "EUR")
     # @return [BigDecimal] Converted amount in target currency
+    # @note If conversion fails, returns USD amount but logs error - this may cause
+    #       data inconsistency as the amount will be labeled with family currency
     def convert_to_family_currency(usd_amount, target_currency)
       return BigDecimal("0") if usd_amount.to_f.zero?
       return BigDecimal(usd_amount.to_s) if target_currency.to_s.upcase == "USD"
 
-      # Use Money class for conversion with fallback_rate: 1 to avoid errors
-      # if exchange rate is not available (will use 1:1 as fallback)
-      Money.new(usd_amount, "USD")
-           .exchange_to(target_currency, date: Date.current, fallback_rate: 1)
-           .amount
+      # Try to get exchange rate without fallback first to detect missing rates
+      exchange_rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: target_currency, date: Date.current)
+
+      if exchange_rate.present?
+        Money.new(usd_amount, "USD")
+             .exchange_to(target_currency, date: Date.current)
+             .amount
+      else
+        # No exchange rate available - log error and use USD amount
+        # WARNING: This creates data inconsistency (USD amount labeled as family currency)
+        Rails.logger.error "CoinstatsItem::Importer - No exchange rate found for USD->#{target_currency}, using unconverted USD amount. This may cause incorrect balance display."
+        BigDecimal(usd_amount.to_s)
+      end
     rescue => e
-      Rails.logger.warn "CoinstatsItem::Importer - Currency conversion failed (#{e.message}), using USD amount"
+      Rails.logger.error "CoinstatsItem::Importer - Currency conversion failed (#{e.message}), using unconverted USD amount. This may cause incorrect balance display."
       BigDecimal(usd_amount.to_s)
     end
 end
