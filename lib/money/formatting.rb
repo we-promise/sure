@@ -31,11 +31,11 @@ module Money::Formatting
     end
 
     def locale_options(locale)
-      locale_sym = locale.to_sym
+      locale_sym = (locale || I18n.locale || :en).to_sym
 
-      # French locale: symbol after number with space, comma as decimal separator
+      # French locale: symbol after number with non-breaking space, comma as decimal separator
       if locale_sym == :fr
-        return { delimiter: " ", separator: ",", format: "%n %u" }
+        return { delimiter: "\u00A0", separator: ",", format: "%n\u00A0%u" }
       end
 
       # German locale: symbol after number with space, comma as decimal separator

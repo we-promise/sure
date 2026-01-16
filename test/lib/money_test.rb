@@ -91,8 +91,9 @@ class MoneyTest < ActiveSupport::TestCase
   end
 
   test "formats correctly for French locale" do
-    assert_equal "1 000,12 €", Money.new(1000.12, :eur).format(locale: :fr)
-    assert_equal "1 000,12 $", Money.new(1000.12, :usd).format(locale: :fr)
+    # French uses non-breaking spaces (NBSP = \u00A0) between thousands and before currency symbol
+    assert_equal "1\u00A0000,12\u00A0€", Money.new(1000.12, :eur).format(locale: :fr)
+    assert_equal "1\u00A0000,12\u00A0$", Money.new(1000.12, :usd).format(locale: :fr)
   end
 
   test "formats correctly for German locale" do
@@ -106,6 +107,10 @@ class MoneyTest < ActiveSupport::TestCase
 
   test "formats correctly for Italian locale" do
     assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :it)
+  end
+
+  test "formats correctly for Portuguese (Brazil) locale" do
+    assert_equal "R$ 1.000,12", Money.new(1000.12, :brl).format(locale: :"pt-BR")
   end
 
   test "converts currency when rate available" do
