@@ -44,6 +44,10 @@ export default class extends Controller {
       // Show/hide field sections
       this.generalFieldsTarget.classList.remove("hidden")
       this.installmentFieldsTarget.classList.add("hidden")
+
+      // Toggle required validation: enable for General, disable for Installment
+      this.enableRequiredFields(this.generalFieldsTarget)
+      this.disableRequiredFields(this.installmentFieldsTarget)
     } else {
       this.installmentTabTarget.classList.add("bg-container", "text-primary", "shadow-sm")
       this.installmentTabTarget.classList.remove("text-subdued", "hover:bg-container")
@@ -52,7 +56,27 @@ export default class extends Controller {
 
       this.generalFieldsTarget.classList.add("hidden")
       this.installmentFieldsTarget.classList.remove("hidden")
+
+      // Toggle required validation: enable for Installment, disable for General
+      this.enableRequiredFields(this.installmentFieldsTarget)
+      this.disableRequiredFields(this.generalFieldsTarget)
     }
+  }
+
+  // Disable required validation on all inputs within container
+  disableRequiredFields(container) {
+    container.querySelectorAll("[required]").forEach(field => {
+      field.dataset.wasRequired = "true"
+      field.removeAttribute("required")
+    })
+  }
+
+  // Re-enable required validation on inputs that were previously required
+  enableRequiredFields(container) {
+    container.querySelectorAll("[data-was-required]").forEach(field => {
+      field.setAttribute("required", "required")
+      delete field.dataset.wasRequired
+    })
   }
 
   calculateBalance() {
@@ -112,8 +136,8 @@ export default class extends Controller {
     const currentTerm = parseInt(this.currentTermTarget.value) || 0
     const paymentPeriod = this.paymentPeriodTarget.value
 
-    // Need valid payment day (1-31) and at least 1 payment made to calculate
-    if (paymentDay < 1 || paymentDay > 31 || currentTerm < 1) {
+    // Only require valid payment day (1-31)
+    if (paymentDay < 1 || paymentDay > 31) {
       this.firstPaymentDateTarget.value = ""
       if (this.hasFirstPaymentDateDisplayTarget) {
         this.firstPaymentDateDisplayTarget.value = ""
@@ -121,12 +145,16 @@ export default class extends Controller {
       return
     }
 
-    // Get the most recent past occurrence of the payment day
-    const lastPaymentDate = this.getMostRecentPastDate(paymentDay)
+    let firstPaymentDate
 
-    // Calculate first payment date by going backwards from last payment date
-    // first_payment_date = last_payment_date - (current_term - 1) periods
-    const firstPaymentDate = this.subtractPeriods(lastPaymentDate, currentTerm - 1, paymentPeriod)
+    if (currentTerm === 0) {
+      // No payments made yet - first payment date is the NEXT occurrence of payment day
+      firstPaymentDate = this.getNextOccurrenceOfDay(paymentDay)
+    } else {
+      // Payments have been made - calculate backwards from most recent payment
+      const lastPaymentDate = this.getMostRecentPastDate(paymentDay)
+      firstPaymentDate = this.subtractPeriods(lastPaymentDate, currentTerm - 1, paymentPeriod)
+    }
 
     // Format as YYYY-MM-DD for date input
     const formattedDate = this.formatDate(firstPaymentDate)
@@ -166,6 +194,31 @@ export default class extends Controller {
     const adjustedDay = Math.min(dayOfMonth, lastDayOfPrevMonth)
 
     return new Date(prevYear, prevMonth, adjustedDay)
+  }
+
+  // Get the next occurrence of a given day of month (for current_term = 0)
+  // e.g., if today is Jan 14 and day is 15, returns Jan 15
+  // e.g., if today is Jan 14 and day is 10, returns Feb 10
+  getNextOccurrenceOfDay(dayOfMonth) {
+    const today = new Date()
+    const currentDay = today.getDate()
+    const currentMonth = today.getMonth()
+    const currentYear = today.getFullYear()
+
+    // If the day is in the future this month, use current month
+    if (dayOfMonth > currentDay) {
+      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+      const adjustedDay = Math.min(dayOfMonth, lastDayOfMonth)
+      return new Date(currentYear, currentMonth, adjustedDay)
+    }
+
+    // Otherwise, use next month
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
+    const lastDayOfNextMonth = new Date(nextYear, nextMonth + 1, 0).getDate()
+    const adjustedDay = Math.min(dayOfMonth, lastDayOfNextMonth)
+
+    return new Date(nextYear, nextMonth, adjustedDay)
   }
 
   subtractPeriods(date, periods, paymentPeriod) {

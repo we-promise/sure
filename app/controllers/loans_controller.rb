@@ -25,7 +25,7 @@ class LoansController < ApplicationController
         calculated_balance = calculate_current_balance_from_params(installment_data)
 
         account_attrs = account_params.merge(balance: calculated_balance)
-        @account = Current.family.accounts.create!(account_attrs.except(:installment, :return_to))
+        @account = Current.family.accounts.create!(account_attrs.except(:installment_attributes, :return_to))
 
         # Create installment (most_recent_payment_date is calculated, not stored)
         installment = @account.create_installment!(
@@ -46,7 +46,7 @@ class LoansController < ApplicationController
       redirect_to account_params[:return_to].presence || @account,
                   notice: t("accounts.create.success", type: "Loan")
     rescue ActiveRecord::RecordInvalid => e
-      @account ||= Current.family.accounts.build(account_params.except(:installment, :return_to))
+      @account ||= Current.family.accounts.build(account_params.except(:installment_attributes, :return_to))
       @account.build_installment(installment_params) unless @account.installment
       render :new, status: :unprocessable_entity
     end
