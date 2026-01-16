@@ -104,6 +104,25 @@
               <%= icon "alert-circle", size: "sm", color: "warning" %>
               <%= tag.span stale_status[:message], class: "text-sm" %>
             </div>
+          <% elsif (pending_status = simplefin_item.stale_pending_status)[:count] > 0 %>
+            <div class="text-secondary">
+              <div class="flex items-center gap-1">
+                <%= icon "clock", size: "sm", color: "secondary" %>
+                <%= tag.span pending_status[:message], class: "text-sm" %>
+                <span class="text-xs text-tertiary"><%= t(".stale_pending_note") %></span>
+              </div>
+              <% if pending_status[:accounts]&.any? %>
+                <div class="text-xs text-tertiary ml-5">
+                  <%= t(".stale_pending_accounts", accounts: pending_status[:accounts].join(", ")) %>
+                </div>
+              <% end %>
+            </div>
+          <% elsif (reconciled_status = simplefin_item.last_sync_reconciled_status)[:count] > 0 %>
+            <div class="text-success flex items-center gap-1">
+              <%= icon "check-circle", size: "sm", color: "success" %>
+              <%= tag.span reconciled_status[:message], class: "text-sm" %>
+              <span class="text-xs text-tertiary"><%= t(".reconciled_details_note") %></span>
+            </div>
           <% elsif simplefin_item.rate_limited_message.present? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "clock", size: "sm", color: "warning" %>
@@ -117,7 +136,7 @@
           <% elsif duplicate_only_errors %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "info", size: "sm" %>
-              <%= tag.span "Some accounts were skipped as duplicates — use ‘Link existing accounts’ to merge.", class: "text-secondary" %>
+              <%= tag.span t(".duplicate_accounts_skipped"), class: "text-secondary" %>
             </div>
           <% else %>
             <p class="text-secondary">

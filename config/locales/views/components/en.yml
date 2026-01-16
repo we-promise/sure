@@ -24,6 +24,28 @@ en:
       rate_limited: "Rate limited %{time_ago}"
       recently: recently
       errors: "Errors: %{count}"
+      pending_reconciled:
+        one: "%{count} duplicate pending transaction reconciled"
+        other: "%{count} duplicate pending transactions reconciled"
+      view_reconciled: View reconciled transactions
+      duplicate_suggestions:
+        one: "%{count} possible duplicate needs review"
+        other: "%{count} possible duplicates need review"
+      view_duplicate_suggestions: View suggested duplicates
+      stale_pending:
+        one: "%{count} stale pending transaction (excluded from budgets)"
+        other: "%{count} stale pending transactions (excluded from budgets)"
+      view_stale_pending: View affected accounts
+      stale_pending_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      stale_unmatched:
+        one: "%{count} pending transaction needs manual review"
+        other: "%{count} pending transactions need manual review"
+      view_stale_unmatched: View transactions needing review
+      stale_unmatched_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
       data_warnings: "Data warnings: %{count}"
       notices: "Notices: %{count}"
       view_data_quality: View data quality details

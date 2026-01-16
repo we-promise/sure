@@ -1,0 +1,30 @@
+---
+zh-TW:
+  valuations:
+    form:
+      amount: 金額
+      submit: 新增餘額更新
+    header:
+      balance: 餘額
+    index:
+      change: 變動
+      date: 日期
+      new_entry: 新增紀錄
+      no_valuations: 此帳戶尚無價值紀錄
+      valuations: 價值
+      value: 價值
+    new:
+      title: 新餘額
+    show:
+      amount: 金額
+      date_label: 日期
+      delete: 刪除
+      delete_subtitle: 此操作將無法復原
+      delete_title: 刪除紀錄
+      details: 詳情
+      name_label: 名稱
+      name_placeholder: 為此紀錄輸入名稱
+      note_label: 備註
+      note_placeholder: 加入關於此紀錄的額外資訊
+      overview: 概覽
+      settings: 設定

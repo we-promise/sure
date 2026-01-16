@@ -1,0 +1,10 @@
+---
+fr:
+  number:
+    currency:
+      format:
+        delimiter: " "
+        format: "%n %u"
+        precision: 2
+        separator: ","
+        unit: "€"

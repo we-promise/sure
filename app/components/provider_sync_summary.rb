@@ -127,6 +127,58 @@ class ProviderSyncSummary < ViewComponent::Base
     total_errors > 0
   end
 
+  # Stale pending transactions (auto-excluded)
+  def stale_pending_excluded
+    stats["stale_pending_excluded"].to_i
+  end
+
+  def has_stale_pending?
+    stale_pending_excluded > 0
+  end
+
+  def stale_pending_details
+    stats["stale_pending_details"] || []
+  end
+
+  # Stale unmatched pending (need manual review - couldn't be automatically matched)
+  def stale_unmatched_pending
+    stats["stale_unmatched_pending"].to_i
+  end
+
+  def has_stale_unmatched_pending?
+    stale_unmatched_pending > 0
+  end
+
+  def stale_unmatched_details
+    stats["stale_unmatched_details"] || []
+  end
+
+  # Pending→posted reconciliation stats
+  def pending_reconciled
+    stats["pending_reconciled"].to_i
+  end
+
+  def has_pending_reconciled?
+    pending_reconciled > 0
+  end
+
+  def pending_reconciled_details
+    stats["pending_reconciled_details"] || []
+  end
+
+  # Duplicate suggestions needing user review
+  def duplicate_suggestions_created
+    stats["duplicate_suggestions_created"].to_i
+  end
+
+  def has_duplicate_suggestions_created?
+    duplicate_suggestions_created > 0
+  end
+
+  def duplicate_suggestions_details
+    stats["duplicate_suggestions_details"] || []
+  end
+
   # Data quality / warnings
   def data_warnings
     stats["data_warnings"].to_i

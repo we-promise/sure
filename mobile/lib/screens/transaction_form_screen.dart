@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/account.dart';
 import '../providers/auth_provider.dart';
-import '../services/transactions_service.dart';
+import '../providers/transactions_provider.dart';
+import '../services/log_service.dart';
+import '../services/connectivity_service.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Account account;
@@ -22,7 +24,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   final _amountController = TextEditingController();
   final _dateController = TextEditingController();
   final _nameController = TextEditingController();
-  final _transactionsService = TransactionsService();
+  final _log = LogService.instance;
 
   String _nature = 'expense';
   bool _showMoreFields = false;
@@ -87,11 +89,15 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       _isSubmitting = true;
     });
 
+    _log.info('TransactionForm', 'Starting transaction creation...');
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
       final accessToken = await authProvider.getValidAccessToken();
 
       if (accessToken == null) {
+        _log.warning('TransactionForm', 'Access token is null, session expired');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -108,7 +114,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       final parsedDate = DateFormat('yyyy/MM/dd').parse(_dateController.text);
       final apiDate = DateFormat('yyyy-MM-dd').format(parsedDate);
 
-      final result = await _transactionsService.createTransaction(
+      _log.info('TransactionForm', 'Calling TransactionsProvider.createTransaction (offline-first)');
+
+      // Use TransactionsProvider for offline-first transaction creation
+      final success = await transactionsProvider.createTransaction(
         accessToken: accessToken,
         accountId: widget.account.id,
         name: _nameController.text.trim(),
@@ -120,29 +129,36 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       );
 
       if (mounted) {
-        if (result['success'] == true) {
+        if (success) {
+          _log.info('TransactionForm', 'Transaction created successfully (saved locally)');
+          
+          // Check current connectivity status to show appropriate message
+          final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
+          final isOnline = connectivityService.isOnline;
+          
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Transaction created successfully'),
+            SnackBar(
+              content: Text(
+                isOnline
+                    ? 'Transaction created successfully'
+                    : 'Transaction saved (will sync when online)'
+              ),
               backgroundColor: Colors.green,
             ),
           );
           Navigator.pop(context, true); // Return true to indicate success
         } else {
-          final error = result['error'] ?? 'Failed to create transaction';
+          _log.error('TransactionForm', 'Failed to create transaction');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
+            const SnackBar(
+              content: Text('Failed to create transaction'),
               backgroundColor: Colors.red,
             ),
           );
-
-          if (error == 'unauthorized') {
-            await authProvider.logout();
-          }
         }
       }
     } catch (e) {
+      _log.error('TransactionForm', 'Exception during transaction creation: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -3,14 +3,21 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/accounts_provider.dart';
 import 'providers/transactions_provider.dart';
+import 'providers/chat_provider.dart';
 import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/main_navigation_screen.dart';
 import 'services/api_config.dart';
+import 'services/connectivity_service.dart';
+import 'services/log_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiConfig.initialize();
+
+  // Add initial log entry
+  LogService.instance.info('App', 'Sure Finance app starting...');
+
   runApp(const SureApp());
 }
 
@@ -21,9 +28,36 @@ class SureApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => LogService.instance),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => AccountsProvider()),
-        ChangeNotifierProvider(create: (_) => TransactionsProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProxyProvider<ConnectivityService, AccountsProvider>(
+          create: (_) => AccountsProvider(),
+          update: (_, connectivityService, accountsProvider) {
+            if (accountsProvider == null) {
+              final provider = AccountsProvider();
+              provider.setConnectivityService(connectivityService);
+              return provider;
+            } else {
+              accountsProvider.setConnectivityService(connectivityService);
+              return accountsProvider;
+            }
+          },
+        ),
+        ChangeNotifierProxyProvider<ConnectivityService, TransactionsProvider>(
+          create: (_) => TransactionsProvider(),
+          update: (_, connectivityService, transactionsProvider) {
+            if (transactionsProvider == null) {
+              final provider = TransactionsProvider();
+              provider.setConnectivityService(connectivityService);
+              return provider;
+            } else {
+              transactionsProvider.setConnectivityService(connectivityService);
+              return transactionsProvider;
+            }
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'Sure Finance',
@@ -94,7 +128,7 @@ class SureApp extends StatelessWidget {
         routes: {
           '/config': (context) => const BackendConfigScreen(),
           '/login': (context) => const LoginScreen(),
-          '/dashboard': (context) => const DashboardScreen(),
+          '/home': (context) => const MainNavigationScreen(),
         },
         home: const AppWrapper(),
       ),
@@ -169,7 +203,7 @@ class _AppWrapperState extends State<AppWrapper> {
         }
 
         if (authProvider.isAuthenticated) {
-          return const DashboardScreen();
+          return const MainNavigationScreen();
         }
 
         return LoginScreen(

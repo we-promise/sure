@@ -1,6 +1,6 @@
-# Configuring OpenID Connect and SSO providers
+# Configuring OpenID Connect, SAML, and SSO Providers
 
-This guide shows how to enable OpenID Connect (OIDC) and other single sign-on (SSO) providers for Sure using Google, GitHub, or another OIDC‑compatible identity provider (e.g. Keycloak, Authentik).
+This guide shows how to enable OpenID Connect (OIDC), SAML 2.0, and other single sign-on (SSO) providers for Sure using Google, GitHub, or another identity provider (e.g. Keycloak, Authentik, Okta, Azure AD).
 
 It also documents the new `config/auth.yml` and environment variables that control:
 
@@ -174,6 +174,26 @@ To enable Google:
 
    - `http://localhost:3000/auth/<provider_name>/callback`
 
+### 3.5 Bootstrapping the first super‑admin
+
+The first `super_admin` must be set via Rails console. Access the console in your container/pod or directly on the server:
+
+```bash
+bin/rails console
+```
+
+Then promote a user:
+
+```ruby
+# Set super_admin role
+User.find_by(email: "admin@example.com").update!(role: :super_admin)
+
+# Verify
+User.find_by(email: "admin@example.com").role  # => "super_admin"
+```
+
+Once set, super‑admins can promote other users via the web UI at `/admin/users`.
+
 ---
 
 ## 4. Example configurations
@@ -250,3 +270,298 @@ With these settings, you can run Sure in:
 - Domain‑restricted and link‑only enterprise SSO modes
 
 Use the combination that best fits your self‑hosted environment and security posture.
+
+---
+
+## 5. Multiple OIDC Providers
+
+Sure supports configuring multiple OIDC providers simultaneously, allowing users to choose between different identity providers (e.g., Keycloak, Authentik, Okta) on the login page.
+
+### 5.1 YAML-based multi-provider configuration
+
+To add multiple OIDC providers in `config/auth.yml`, add additional provider entries with unique names:
+
+```yaml
+providers:
+  # First OIDC provider (e.g., Keycloak)
+  - id: "keycloak"
+    strategy: "openid_connect"
+    name: "keycloak"
+    label: "Sign in with Keycloak"
+    icon: "key"
+    issuer: <%= ENV["OIDC_KEYCLOAK_ISSUER"] %>
+    client_id: <%= ENV["OIDC_KEYCLOAK_CLIENT_ID"] %>
+    client_secret: <%= ENV["OIDC_KEYCLOAK_CLIENT_SECRET"] %>
+    redirect_uri: <%= ENV["OIDC_KEYCLOAK_REDIRECT_URI"] %>
+
+  # Second OIDC provider (e.g., Authentik)
+  - id: "authentik"
+    strategy: "openid_connect"
+    name: "authentik"
+    label: "Sign in with Authentik"
+    icon: "shield"
+    issuer: <%= ENV["OIDC_AUTHENTIK_ISSUER"] %>
+    client_id: <%= ENV["OIDC_AUTHENTIK_CLIENT_ID"] %>
+    client_secret: <%= ENV["OIDC_AUTHENTIK_CLIENT_SECRET"] %>
+    redirect_uri: <%= ENV["OIDC_AUTHENTIK_REDIRECT_URI"] %>
+```
+
+Set the corresponding environment variables:
+
+```bash
+# Keycloak provider
+OIDC_KEYCLOAK_ISSUER="https://keycloak.example.com/realms/myrealm"
+OIDC_KEYCLOAK_CLIENT_ID="sure-client"
+OIDC_KEYCLOAK_CLIENT_SECRET="your-keycloak-secret"
+OIDC_KEYCLOAK_REDIRECT_URI="https://yourdomain.com/auth/keycloak/callback"
+
+# Authentik provider
+OIDC_AUTHENTIK_ISSUER="https://authentik.example.com/application/o/sure/"
+OIDC_AUTHENTIK_CLIENT_ID="sure-authentik-client"
+OIDC_AUTHENTIK_CLIENT_SECRET="your-authentik-secret"
+OIDC_AUTHENTIK_REDIRECT_URI="https://yourdomain.com/auth/authentik/callback"
+```
+
+**Important:** Each provider must have a unique `name` field, which determines the callback URL path (`/auth/<name>/callback`).
+
+---
+
+## 6. Database-Backed Provider Management
+
+For more dynamic provider management, Sure supports storing SSO provider configurations in the database with a web-based admin interface.
+
+### 6.1 Enabling database providers
+
+Set the feature flag to load providers from the database instead of YAML:
+
+```bash
+AUTH_PROVIDERS_SOURCE=db
+```
+
+When enabled:
+- Providers are loaded from the `sso_providers` database table
+- Changes take effect immediately (no server restart required)
+- Providers can be managed through the admin UI at `/admin/sso_providers`
+
+When disabled (default):
+- Providers are loaded from `config/auth.yml`
+- Changes require a server restart
+
+### 6.2 Admin UI for SSO providers
+
+Super-admin users can manage SSO providers through the web interface:
+
+1. Navigate to `/admin/sso_providers`
+2. View all configured providers (enabled/disabled status)
+3. Add new providers with the "Add Provider" button
+4. Edit existing providers (credentials, labels, icons)
+5. Enable/disable providers with the toggle button
+6. Delete providers (with confirmation)
+
+**Security notes:**
+- Only users with `super_admin` role can access the admin interface
+- All provider changes are logged with user ID and timestamp
+- Client secrets are encrypted in the database using Rails 7.2 encryption
+- Admin endpoints are rate-limited (10 requests/minute per IP)
+
+### 6.3 Seeding providers from YAML to database
+
+To migrate your existing YAML configuration to the database:
+
+```bash
+# Dry run (preview changes without saving)
+DRY_RUN=true rails sso_providers:seed
+
+# Apply changes
+rails sso_providers:seed
+```
+
+The seeding task:
+- Reads providers from `config/auth.yml`
+- Creates or updates database records (idempotent)
+- Preserves existing client secrets if not provided in YAML
+- Provides detailed output (created/updated/skipped/errors)
+
+To list all providers in the database:
+
+```bash
+rails sso_providers:list
+```
+
+### 6.4 Migration workflow
+
+Recommended steps to migrate from YAML to database-backed providers:
+
+1. **Backup your configuration:**
+   ```bash
+   cp config/auth.yml config/auth.yml.backup
+   ```
+
+2. **Run migrations:**
+   ```bash
+   rails db:migrate
+   ```
+
+3. **Seed providers from YAML (dry run first):**
+   ```bash
+   DRY_RUN=true rails sso_providers:seed
+   ```
+
+4. **Review the output, then apply:**
+   ```bash
+   rails sso_providers:seed
+   ```
+
+5. **Enable database provider source:**
+   ```bash
+   # Add to .env or environment
+   AUTH_PROVIDERS_SOURCE=db
+   ```
+
+6. **Restart the application:**
+   ```bash
+   # Docker Compose
+   docker-compose restart app
+
+   # Or your process manager
+   systemctl restart sure
+   ```
+
+7. **Verify providers are loaded:**
+   - Check logs for `[ProviderLoader] Loaded N provider(s) from database`
+   - Visit `/admin/sso_providers` to manage providers
+
+### 6.5 Rollback to YAML
+
+To switch back to YAML-based configuration:
+
+1. Remove or set `AUTH_PROVIDERS_SOURCE=yaml`
+2. Restart the application
+3. Providers will be loaded from `config/auth.yml`
+
+### 6.6 JIT provisioning settings
+
+Each provider has a **Default Role** field (defaults to `member`) that sets the role for JIT-created users.
+
+**Role mapping from IdP groups:**
+
+Expand **"Role Mapping"** in the admin UI to map IdP group names to Sure roles. Enter comma-separated group names for each role:
+
+- **Super Admin Groups**: `Platform-Admins, IdP-Superusers`
+- **Admin Groups**: `Team-Leads, Managers`
+- **Member Groups**: `Everyone` or leave blank
+
+Mapping is case-sensitive and matches exact group claim values from the IdP. When a user belongs to multiple mapped groups, the highest role wins (`super_admin` > `admin` > `member`). If no groups match, the Default Role is used.
+
+---
+
+## 7. Troubleshooting
+
+### Provider not appearing on login page
+
+- **YAML mode:** Check that required environment variables are set (e.g., `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
+- **DB mode:** Verify provider is enabled in `/admin/sso_providers`
+- Check application logs for provider loading messages
+- Verify `AUTH_PROVIDERS_SOURCE` is set correctly
+
+### Discovery endpoint validation fails
+
+When adding an OIDC provider, Sure validates the `.well-known/openid-configuration` endpoint:
+
+- Ensure the issuer URL is correct and accessible
+- Check firewall rules allow outbound HTTPS to the issuer
+- Verify the issuer returns valid JSON with an `issuer` field
+- For self-signed certificates, you may need to configure SSL verification
+
+### Rate limiting errors (429)
+
+Admin endpoints are rate-limited to 10 requests per minute per IP:
+
+- Wait 60 seconds before retrying
+- If legitimate traffic is being blocked, adjust limits in `config/initializers/rack_attack.rb`
+
+### Callback URL mismatch
+
+Each provider requires a callback URL configured in your identity provider:
+
+- **Format:** `https://yourdomain.com/auth/<provider_name>/callback`
+- **Example:** For a provider with `name: "keycloak"`, use `https://yourdomain.com/auth/keycloak/callback`
+- The callback URL is shown in the admin UI when editing a provider (with copy button)
+
+---
+
+## 8. Security Considerations
+
+### Encryption
+
+- Client secrets are encrypted at rest using Rails 7.2 ActiveRecord Encryption
+- Encryption keys are derived from `SECRET_KEY_BASE` by default
+- For additional security, set custom encryption keys (see `.env` for `ACTIVE_RECORD_ENCRYPTION_*` variables)
+
+### Issuer validation
+
+- OIDC identities store the issuer claim from the ID token
+- On subsequent logins, Sure verifies the issuer matches the configured provider
+- This prevents issuer impersonation attacks
+
+### Admin access
+
+- SSO provider management requires `super_admin` role
+- Regular `admin` users (family admins) cannot access `/admin/sso_providers`
+- All provider changes are logged with user ID
+
+### Rate limiting
+
+- Admin endpoints: 10 requests/minute per IP
+- OAuth token endpoint: 10 requests/minute per IP
+- Failed login attempts should be monitored separately
+
+---
+
+## 9. SAML 2.0 Support
+
+Sure supports SAML 2.0 via database-backed providers. Select **"SAML 2.0"** as the strategy when adding a provider at `/admin/sso_providers`.
+
+Configure with either:
+- **IdP Metadata URL** (recommended) - auto-fetches configuration
+- **Manual config** - IdP SSO URL + certificate
+
+In your IdP, set:
+- **ACS URL**: `https://yourdomain.com/auth/<provider_name>/callback`
+- **Entity ID**: `https://yourdomain.com` (your `APP_URL`)
+- **Name ID**: Email Address
+
+---
+
+## 10. User Administration
+
+Super‑admins can manage user roles at `/admin/users`.
+
+Roles: `member` (standard), `admin` (family admin), `super_admin` (platform admin).
+
+Note: Super‑admins cannot change their own role.
+
+---
+
+## 11. Audit Logging
+
+SSO events are logged to `sso_audit_logs`: `login`, `login_failed`, `logout`, `logout_idp` (federated logout), `link`, `unlink`, `jit_account_created`.
+
+Query via console:
+
+```ruby
+SsoAuditLog.by_event("login").recent.limit(50)
+SsoAuditLog.by_event("login_failed").where("created_at > ?", 24.hours.ago)
+```
+
+---
+
+## 12. User SSO Identity Management
+
+Users manage linked SSO identities at **Settings > Security**.
+
+SSO-only users (no password) cannot unlink their last identity.
+
+---
+
+For additional help, see the main [hosting documentation](../README.md) or open an issue on GitHub.

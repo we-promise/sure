@@ -116,7 +116,7 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color)
+      params.require(key).permit(:name, :color, :website_url)
     end
 
     def all_family_merchants
@@ -125,7 +125,6 @@ class FamilyMerchantsController < ApplicationController
       combined_ids = (family_merchant_ids + provider_merchant_ids).uniq
 
       Merchant.where(id: combined_ids)
-              .distinct
               .order(Arel.sql("LOWER(COALESCE(name, ''))"))
     end
 end
