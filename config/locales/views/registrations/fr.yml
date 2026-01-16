@@ -8,6 +8,7 @@ fr:
       user:
         create: Continuer
   registrations:
+    closed: Les inscriptions sont actuellement fermées.
     create:
       failure: Il y a eu un problème lors de l'inscription.
       invalid_invite_code: Code d'invitation invalide, veuillez essayer à nouveau.
