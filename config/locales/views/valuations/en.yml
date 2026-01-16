@@ -36,6 +36,9 @@ en:
     confirm_update:
       title: Update balance
       update: Update
+    action_verbs:
+      set: Set
+      update: Update
     confirmation_contents:
       investment_intro: "This will %{action} the account value on %{date} to:"
       total_account_value: Total account value

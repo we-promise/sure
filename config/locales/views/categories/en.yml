@@ -10,6 +10,8 @@ en:
       success: Category created successfully
     destroy:
       success: Category deleted successfully
+    destroy_all:
+      all_deleted: All categories deleted
     edit:
       edit: Edit category
     form:
