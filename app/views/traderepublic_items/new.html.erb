@@ -1,0 +1,97 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", default: "Connect Trade Republic")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description", default: "Enter your Trade Republic phone number and PIN to connect your account.") %>
+        </p>
+
+        <%= form_with model: @traderepublic_item, url: traderepublic_items_path, method: :post, class: "space-y-4" do |f| %>
+          <%= hidden_field_tag :accountable_type, @accountable_type %>
+          <%= hidden_field_tag :return_to, @return_to %>
+
+          <div class="space-y-4">
+            <div>
+              <%= f.label :name, t(".name_label", default: "Connection Name"), class: "block text-sm font-medium text-primary mb-1" %>
+              <%= f.text_field :name, 
+                  value: "Trade Republic",
+                  placeholder: t(".name_placeholder", default: "Trade Republic"),
+                  class: "w-full px-3 py-2 border border-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent" %>
+              <% if @traderepublic_item.errors[:name].any? %>
+                <p class="text-xs text-error mt-1"><%= @traderepublic_item.errors[:name].first %></p>
+              <% end %>
+            </div>
+
+            <div>
+              <%= f.label :phone_number, t(".phone_label", default: "Phone Number"), class: "block text-sm font-medium text-primary mb-1" %>
+              <%= f.text_field :phone_number, 
+                  placeholder: t(".phone_placeholder", default: "+491234567890"),
+                  class: "w-full px-3 py-2 border border-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent",
+                  autocomplete: "tel" %>
+              <% if @traderepublic_item.errors[:phone_number].any? %>
+                <p class="text-xs text-error mt-1"><%= @traderepublic_item.errors[:phone_number].first %></p>
+              <% end %>
+              <p class="text-xs text-secondary mt-1">
+                <%= t(".phone_help", default: "International format with country code (e.g., +491234567890 for Germany)") %>
+              </p>
+            </div>
+
+            <div>
+              <%= f.label :pin, t(".pin_label", default: "PIN"), class: "block text-sm font-medium text-primary mb-1" %>
+              <%= f.password_field :pin, 
+                  placeholder: t(".pin_placeholder", default: "••••"),
+                  class: "w-full px-3 py-2 border border-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent",
+                  autocomplete: "off" %>
+              <% if @traderepublic_item.errors[:pin].any? %>
+                <p class="text-xs text-error mt-1"><%= @traderepublic_item.errors[:pin].first %></p>
+              <% end %>
+              <p class="text-xs text-secondary mt-1">
+                <%= t(".pin_help", default: "Your 4-digit Trade Republic PIN") %>
+              </p>
+            </div>
+
+            <div class="p-3 bg-info/10 border border-info rounded-lg">
+              <p class="text-xs text-info">
+                <%= icon "info", class: "inline-block w-4 h-4 mr-1" %>
+                <%= t(".security_notice", default: "Your credentials are encrypted and stored securely. After connecting, you will receive a verification code on your phone.") %>
+              </p>
+            </div>
+          </div>
+
+          <div id="loading-spinner" class="hidden flex items-center justify-center gap-2 text-sm text-secondary py-2">
+            <%= icon "loader-2", class: "w-4 h-4 animate-spin" %>
+            <span><%= t(".sending_code", default: "Sending verification code...") %></span>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= link_to t(".cancel", default: "Cancel"), @return_to || new_account_path,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+            <%= f.submit t(".connect", default: "Connect"),
+                id: "connect-btn",
+                data: { disable_with: false },
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <script>
+    (function() {
+      const form = document.querySelector('form');
+      const loadingSpinner = document.getElementById('loading-spinner');
+      const connectBtn = document.getElementById('connect-btn');
+
+      form?.addEventListener('submit', (e) => {
+        // Show loading spinner
+        loadingSpinner?.classList.remove('hidden');
+        // Disable button
+        connectBtn?.setAttribute('disabled', 'disabled');
+        connectBtn?.classList.add('button-bg-disabled');
+      });
+    })();
+  </script>
+<% end %>
