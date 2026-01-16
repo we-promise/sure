@@ -15,7 +15,7 @@ RSpec.configure do |config|
       },
       servers: [
         {
-          url: 'https://api.sure.app',
+          url: 'https://app.sure.am',
           description: 'Production'
         },
         {
