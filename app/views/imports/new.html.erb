@@ -140,6 +140,35 @@
             <%= render "shared/ruler" %>
           </li>
         <% end %>
+
+        <% if params[:type].nil? || params[:type] == "PdfImport" %>
+          <li>
+            <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full" do |form| %>
+              <%= form.hidden_field :type, value: "PdfImport" %>
+              <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
+                <div class="flex items-center gap-2">
+                  <div class="bg-red-500/5 rounded-md w-8 h-8 flex items-center justify-center">
+                    <span class="text-red-500">
+                      <%= icon("file-text", color: "current") %>
+                    </span>
+                  </div>
+                  <div class="text-left">
+                    <span class="text-sm text-primary group-hover:text-secondary block">
+                      <%= t(".import_pdf") %>
+                    </span>
+                    <span class="text-xs text-secondary">
+                      <%= t(".import_pdf_description") %>
+                    </span>
+                  </div>
+                </div>
+                <%= icon("chevron-right") %>
+                <%= form.file_field :csv_file, accept: "application/pdf", class: "hidden", onchange: "this.form.submit()" %>
+              </label>
+            <% end %>
+
+            <%= render "shared/ruler" %>
+          </li>
+        <% end %>
       </ul>
     </div>
   <% end %>

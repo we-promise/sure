@@ -26,6 +26,14 @@ class ImportsController < ApplicationController
   end
 
   def create
+    file = import_params[:csv_file]
+
+    # Handle PDF file uploads - process with AI
+    if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
+      create_pdf_import(file)
+      return
+    end
+
     type = params.dig(:import, :type).to_s
     type = "TransactionImport" unless Import::TYPES.include?(type)
 
@@ -36,35 +44,36 @@ class ImportsController < ApplicationController
       date_format: Current.family.date_format,
     )
 
-    if import_params[:csv_file].present?
-      file = import_params[:csv_file]
-
+    if file.present?
       if file.size > Import::MAX_CSV_SIZE
         import.destroy
-        redirect_to new_import_path, alert: "File is too large. Maximum size is #{Import::MAX_CSV_SIZE / 1.megabyte}MB."
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: Import::MAX_CSV_SIZE / 1.megabyte)
         return
       end
 
       unless Import::ALLOWED_MIME_TYPES.include?(file.content_type)
         import.destroy
-        redirect_to new_import_path, alert: "Invalid file type. Please upload a CSV file."
+        redirect_to new_import_path, alert: t("imports.create.invalid_file_type")
         return
       end
 
       # Stream reading is not fully applicable here as we store the raw string in the DB,
       # but we have validated size beforehand to prevent memory exhaustion from massive files.
       import.update!(raw_file_str: file.read)
-      redirect_to import_configuration_path(import), notice: "CSV uploaded successfully."
+      redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
     else
       redirect_to import_upload_path(import)
     end
   end
 
   def show
+    # PDF imports have their own flow - show the summary page
+    return if @import.is_a?(PdfImport)
+
     if !@import.uploaded?
-      redirect_to import_upload_path(@import), alert: "Please finalize your file upload."
+      redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload")
     elsif !@import.publishable?
-      redirect_to import_confirm_path(@import), alert: "Please finalize your mappings before proceeding."
+      redirect_to import_confirm_path(@import), alert: t("imports.show.finalize_mappings")
     end
   end
 
@@ -95,5 +104,18 @@ class ImportsController < ApplicationController
 
     def import_params
       params.require(:import).permit(:csv_file)
+    end
+
+    def create_pdf_import(file)
+      if file.size > Import::MAX_PDF_SIZE
+        redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)
+        return
+      end
+
+      pdf_import = Current.family.imports.create!(type: "PdfImport")
+      pdf_import.pdf_file.attach(file)
+      pdf_import.process_with_ai_later
+
+      redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     end
 end

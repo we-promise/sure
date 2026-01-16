@@ -13,6 +13,12 @@ module Provider::LlmConcept
     raise NotImplementedError, "Subclasses must implement #auto_detect_merchants"
   end
 
+  PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data)
+
+  def process_pdf(pdf_content:, family: nil)
+    raise NotImplementedError, "Subclasses must implement #process_pdf"
+  end
+
   ChatMessage = Data.define(:id, :output_text)
   ChatStreamChunk = Data.define(:type, :data, :usage)
   ChatResponse = Data.define(:id, :model, :messages, :function_requests)

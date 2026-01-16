@@ -3,9 +3,13 @@ class Import < ApplicationRecord
   MappingError = Class.new(StandardError)
 
   MAX_CSV_SIZE = 10.megabytes
+  MAX_PDF_SIZE = 25.megabytes
   ALLOWED_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+  ALLOWED_PDF_MIME_TYPES = %w[application/pdf].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport].freeze
+  DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
+
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -20,6 +24,8 @@ class Import < ApplicationRecord
 
   belongs_to :family
   belongs_to :account, optional: true
+
+  has_one_attached :pdf_file
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
