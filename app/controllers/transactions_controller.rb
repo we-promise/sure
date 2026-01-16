@@ -154,7 +154,7 @@ class TransactionsController < ApplicationController
     @entry = @transaction.entry
 
     unless @entry.account.investment?
-      flash[:alert] = t(".convert_to_trade.errors.not_investment_account")
+      flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
     end
@@ -168,13 +168,13 @@ class TransactionsController < ApplicationController
 
     # Pre-transaction validations
     unless @entry.account.investment?
-      flash[:alert] = t(".convert_to_trade.errors.not_investment_account")
+      flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
     end
 
     if @entry.excluded?
-      flash[:alert] = t(".convert_to_trade.errors.already_converted")
+      flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
       redirect_back_or_to transactions_path
       return
     end
@@ -220,13 +220,13 @@ class TransactionsController < ApplicationController
       @entry.update!(excluded: true)
     end
 
-    flash[:notice] = t(".convert_to_trade.success")
+    flash[:notice] = t("transactions.convert_to_trade.success")
     redirect_to account_path(@entry.account), status: :see_other
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    flash[:alert] = t(".convert_to_trade.errors.conversion_failed", error: e.message)
+    flash[:alert] = t("transactions.convert_to_trade.errors.conversion_failed", error: e.message)
     redirect_back_or_to transactions_path, status: :see_other
   rescue StandardError => e
-    flash[:alert] = t(".convert_to_trade.errors.unexpected_error", error: e.message)
+    flash[:alert] = t("transactions.convert_to_trade.errors.unexpected_error", error: e.message)
     redirect_back_or_to transactions_path, status: :see_other
   end
 
@@ -399,9 +399,9 @@ class TransactionsController < ApplicationController
     end
 
     def calculate_qty_and_price
-      amount = @entry.amount.abs.to_f
-      qty = params[:qty].present? ? params[:qty].to_f.abs : nil
-      price = params[:price].present? ? params[:price].to_f : nil
+      amount = @entry.amount.abs
+      qty = params[:qty].present? ? params[:qty].to_d.abs : nil
+      price = params[:price].present? ? params[:price].to_d : nil
 
       if qty.nil? && price.nil?
         flash[:alert] = t("transactions.convert_to_trade.errors.enter_qty_or_price")
