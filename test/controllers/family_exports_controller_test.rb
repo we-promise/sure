@@ -25,7 +25,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
   test "admin can view export modal" do
     get new_family_export_path
     assert_response :success
-    assert_select "h2", text: "Export your data"
+    assert_select "h2", text: I18n.t("family_exports.new.title")
   end
 
   test "admin can create export" do
@@ -34,7 +34,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
-    assert_equal "Export started. You'll be able to download it shortly.", flash[:notice]
+    assert_equal I18n.t("family_exports.create.started"), flash[:notice]
 
     export = @family.family_exports.last
     assert_equal "pending", export.status
@@ -48,7 +48,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_match export1.filename, response.body
-    assert_match "Exporting...", response.body
+    assert_match I18n.t("family_exports.list.exporting"), response.body
   end
 
   test "admin can download completed export" do
@@ -68,7 +68,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
 
     get download_family_export_path(export)
     assert_redirected_to imports_path
-    assert_equal "Export not ready for download", flash[:alert]
+    assert_equal I18n.t("family_exports.download.not_ready"), flash[:alert]
   end
 
   test "admin can delete export" do
@@ -79,7 +79,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
-    assert_equal "Export deleted successfully", flash[:notice]
+    assert_equal I18n.t("family_exports.destroy.deleted"), flash[:notice]
   end
 
   test "admin can delete export with attached file" do
@@ -96,7 +96,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
-    assert_equal "Export deleted successfully", flash[:notice]
+    assert_equal I18n.t("family_exports.destroy.deleted"), flash[:notice]
   end
 
   test "admin can delete failed export with attached file" do
@@ -113,7 +113,7 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
-    assert_equal "Export deleted successfully", flash[:notice]
+    assert_equal I18n.t("family_exports.destroy.deleted"), flash[:notice]
   end
 
   test "export file is purged when export is deleted" do

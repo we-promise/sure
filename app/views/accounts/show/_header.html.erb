@@ -11,7 +11,7 @@
             <h2 class="font-medium text-xl truncate <%= "animate-pulse" if account.syncing? %>"><%= title %></h2>
             <% if account.draft? %>
               <%= render DS::Link.new(
-                  text: "Complete setup",
+                  text: t('.complete_setup'),
                   href: edit_account_path(account),
                   variant: :outline,
                   size: :sm,

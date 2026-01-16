@@ -6,7 +6,7 @@
 
 <div class="space-y-4" data-controller="drag-and-drop-import">
   <!-- Overlay -->
-  <%= render "imports/drag_drop_overlay", title: "Drop CSV to upload", subtitle: "Your file will be uploaded automatically" %>
+  <%= render "imports/drag_drop_overlay", title: t(".drop_csv_title"), subtitle: t(".drop_csv_subtitle") %>
 
   <div class="space-y-4 mx-auto max-w-md">
     <div class="text-center space-y-2">
@@ -16,8 +16,8 @@
 
     <%= render DS::Tabs.new(active_tab: params[:tab] || "csv-upload", url_param_key: "tab", testid: "import-tabs") do |tabs| %>
       <% tabs.with_nav do |nav| %>
-        <% nav.with_btn(id: "csv-upload", label: "Upload CSV") %>
-        <% nav.with_btn(id: "csv-paste", label: "Copy & Paste") %>
+        <% nav.with_btn(id: "csv-upload", label: t(".upload_csv_tab")) %>
+        <% nav.with_btn(id: "csv-paste", label: t(".copy_paste_tab")) %>
       <% end %>
 
       <% tabs.with_panel(tab_id: "csv-upload") do %>
@@ -25,7 +25,7 @@
           <%= form.select :col_sep, Import::SEPARATORS, label: true %>
 
           <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
-            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: t(".account_optional"), include_blank: t(".multi_account_import"), selected: @import.account_id } %>
           <% end %>
 
           <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
@@ -33,7 +33,7 @@
               <div data-file-upload-target="uploadText" class="flex flex-col items-center">
                 <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
                 <p class="mb-2 text-md text-gray text-center">
-                  <span class="font-medium text-primary">Browse</span> to add your CSV file here
+                  <%= raw t(".browse_to_add_html") %>
                 </p>
               </div>
 
@@ -48,7 +48,7 @@
             </div>
           </div>
 
-          <%= form.submit "Upload CSV", disabled: @import.complete? %>
+          <%= form.submit t(".upload_csv"), disabled: @import.complete? %>
         <% end %>
       <% end %>
 
@@ -57,16 +57,16 @@
           <%= form.select :col_sep, Import::SEPARATORS, label: true %>
 
           <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
-            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: t(".account_optional"), include_blank: t(".multi_account_import"), selected: @import.account_id } %>
           <% end %>
 
           <%= form.text_area :raw_file_str,
                        rows: 10,
                        required: true,
-                       placeholder: "Paste your CSV file contents here",
+                       placeholder: t(".paste_csv_placeholder"),
                        "data-auto-submit-form-target": "auto" %>
 
-          <%= form.submit "Upload CSV", disabled: @import.complete? %>
+          <%= form.submit t(".upload_csv"), disabled: @import.complete? %>
         <% end %>
       <% end %>
     <% end %>
@@ -74,7 +74,7 @@
 
   <div class="flex justify-center">
     <span class="text-secondary text-sm">
-      <%= link_to "Download a sample CSV", "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false } %> to see the required CSV format
+      <%= raw t(".download_sample_html", download_link: link_to(t(".download_sample_link"), "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false })) %>
     </span>
   </div>
 </div>

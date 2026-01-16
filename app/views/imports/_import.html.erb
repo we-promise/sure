@@ -6,7 +6,7 @@
         <%= import.account.name + " " %>
       <% end %>
 
-      <%= t(".label", type: import.type.titleize, datetime: import.updated_at.strftime("%b %-d, %Y at %l:%M %p")) %>
+      <%= t(".label", type: import.type.titleize, datetime: I18n.l(import.updated_at, format: :long)) %>
     <% end %>
 
     <% if import.pending? %>
@@ -43,7 +43,7 @@
           method: :put,
           class: "flex items-center gap-2 text-orange-500 hover:text-orange-600",
           data: {
-            turbo_confirm: "This will delete transactions that were imported, but you will still be able to review and re-import your data at any time."
+            turbo_confirm: t("imports.import.revert_confirm")
           } do %>
         <%= icon "rotate-ccw", class: "w-5 h-5 text-destructive" %>
       <% end %>

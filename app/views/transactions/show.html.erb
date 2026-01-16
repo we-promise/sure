@@ -19,7 +19,7 @@
                 <div class="flex items-center justify-between">
                   <div>
                     <p class="text-sm font-medium text-primary"><%= potential_match.name %></p>
-                    <p class="text-xs text-secondary"><%= potential_match.date.strftime("%b %d, %Y") %> • <%= potential_match.account.name %></p>
+                    <p class="text-xs text-secondary"><%= I18n.l(potential_match.date, format: :long) %> • <%= potential_match.account.name %></p>
                   </div>
                   <p class="text-sm font-medium <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
                     <%= format_money(-potential_match.amount_money) %>
@@ -65,7 +65,7 @@
           <% unless @entry.transaction.transfer? %>
             <div class="flex items-center gap-2">
               <%= f.select :nature,
-                    [["Expense", "outflow"], ["Income", "inflow"]],
+                    [[t(".expense"), "outflow"], [t(".income"), "inflow"]],
                     { container_class: "w-1/3", label: t(".nature"), selected: @entry.amount.negative? ? "inflow" : "outflow" },
                     { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? } %>
 
@@ -139,7 +139,7 @@
     <% end %>
 
     <% if (details = build_transaction_extra_details(@entry)) %>
-      <% dialog.with_section(title: "Additional details", open: false) do %>
+      <% dialog.with_section(title: t(".additional_details"), open: false) do %>
         <div class="px-3 py-2 space-y-3">
           <% if details[:kind] == :simplefin %>
             <% sf = details[:simplefin] %>
@@ -147,19 +147,19 @@
               <dl class="space-y-2">
                 <% if sf[:payee].present? %>
                   <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm">Payee</dt>
+                    <dt class="text-secondary text-sm"><%= t(".payee") %></dt>
                     <dd class="text-sm text-primary"><%= sf[:payee] %></dd>
                   </div>
                 <% end %>
                 <% if sf[:description].present? %>
                   <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm">Description</dt>
+                    <dt class="text-secondary text-sm"><%= t(".description") %></dt>
                     <dd class="text-sm text-primary"><%= sf[:description] %></dd>
                   </div>
                 <% end %>
                 <% if sf[:memo].present? %>
                   <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm">Memo</dt>
+                    <dt class="text-secondary text-sm"><%= t(".memo") %></dt>
                     <dd class="text-sm text-primary"><%= sf[:memo] %></dd>
                   </div>
                 <% end %>
@@ -168,7 +168,7 @@
 
             <% if details[:provider_extras].present? %>
               <div class="pt-2">
-                <h4 class="text-sm text-secondary mb-1">Provider extras</h4>
+                <h4 class="text-sm text-secondary mb-1"><%= t(".provider_extras") %></h4>
                 <dl class="space-y-2">
                   <% details[:provider_extras].each do |ex| %>
                     <div class="flex items-center justify-between gap-2">
@@ -252,12 +252,12 @@
 
         <div class="flex items-center justify-between gap-4 p-3">
           <div class="text-sm space-y-1">
-            <h4 class="text-primary">Transfer or Debt Payment?</h4>
-            <p class="text-secondary">Transfers and payments are special types of transactions that indicate money movement between 2 accounts.</p>
+            <h4 class="text-primary"><%= t(".transfer_question") %></h4>
+            <p class="text-secondary"><%= t(".transfer_description") %></p>
           </div>
 
           <%= render DS::Link.new(
-            text: "Open matcher",
+            text: t(".open_matcher"),
             icon: "arrow-left-right",
             variant: "outline",
             href: new_transaction_transfer_match_path(@entry),
