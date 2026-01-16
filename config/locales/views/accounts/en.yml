@@ -59,10 +59,6 @@ en:
       header:
         complete_setup: Complete setup
       activity:
-        new: New
-        new_balance: New balance
-        new_transaction: New transaction
-        search_placeholder: Search entries by name
         amount: Amount
         balance: Balance
         confirmed: Confirmed
@@ -75,8 +71,7 @@ en:
         new_transaction: New transaction
         no_entries: No entries found
         pending: Pending
-        search:
-          placeholder: Search entries by name
+        search_placeholder: Search entries by name
         status: Status
         title: Activity
       chart:
