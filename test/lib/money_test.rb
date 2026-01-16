@@ -90,6 +90,24 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "€ 1.000,12", Money.new(1000.12, :eur).format(locale: :nl)
   end
 
+  test "formats correctly for French locale" do
+    assert_equal "1 000,12 €", Money.new(1000.12, :eur).format(locale: :fr)
+    assert_equal "1 000,12 $", Money.new(1000.12, :usd).format(locale: :fr)
+  end
+
+  test "formats correctly for German locale" do
+    assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :de)
+    assert_equal "1.000,12 $", Money.new(1000.12, :usd).format(locale: :de)
+  end
+
+  test "formats correctly for Spanish locale" do
+    assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :es)
+  end
+
+  test "formats correctly for Italian locale" do
+    assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :it)
+  end
+
   test "converts currency when rate available" do
     ExchangeRate.expects(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1.2))
 

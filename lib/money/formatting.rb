@@ -31,7 +31,35 @@ module Money::Formatting
     end
 
     def locale_options(locale)
-      case [ currency.iso_code, locale.to_sym ]
+      locale_sym = locale.to_sym
+
+      # French locale: symbol after number with space, comma as decimal separator
+      if locale_sym == :fr
+        return { delimiter: " ", separator: ",", format: "%n %u" }
+      end
+
+      # German locale: symbol after number with space, comma as decimal separator
+      if locale_sym == :de
+        return { delimiter: ".", separator: ",", format: "%n %u" }
+      end
+
+      # Spanish locale: symbol after number with space, comma as decimal separator
+      if locale_sym == :es
+        return { delimiter: ".", separator: ",", format: "%n %u" }
+      end
+
+      # Italian locale: symbol after number with space, comma as decimal separator
+      if locale_sym == :it
+        return { delimiter: ".", separator: ",", format: "%n %u" }
+      end
+
+      # Portuguese (Brazil) locale: symbol before, comma as decimal separator
+      if locale_sym == :"pt-BR"
+        return { delimiter: ".", separator: ",", format: "%u %n" }
+      end
+
+      # Currency-specific overrides for remaining locales
+      case [ currency.iso_code, locale_sym ]
       when [ "EUR", :nl ], [ "EUR", :pt ]
         { delimiter: ".", separator: ",", format: "%u %n" }
       when [ "EUR", :en ], [ "EUR", :en_IE ]
