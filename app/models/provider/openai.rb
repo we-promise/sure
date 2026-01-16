@@ -112,6 +112,30 @@ class Provider::Openai < Provider
     end
   end
 
+  def process_pdf(pdf_content:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.process_pdf",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = PdfProcessor.new(
+        client,
+        model: effective_model,
+        pdf_content: pdf_content,
+        custom_provider: custom_provider?,
+        langfuse_trace: trace,
+        family: family
+      ).process
+
+      trace&.update(output: result.to_h)
+
+      result
+    end
+  end
+
   def chat_response(
     prompt,
     model:,
