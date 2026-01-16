@@ -2,9 +2,9 @@
 en:
   transactions:
     create:
-      success: "Transaction created"
+      created: "Transaction created"
     update:
-      success: "Transaction updated"
+      updated: "Transaction updated"
     selection_bar:
       edit: Edit
       delete: Delete
