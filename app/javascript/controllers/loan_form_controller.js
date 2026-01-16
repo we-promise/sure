@@ -78,11 +78,35 @@ export default class extends Controller {
     }
   }
 
+  enforcePaymentDayLimit() {
+    if (!this.hasPaymentDayTarget) {
+      return
+    }
+
+    const original = this.paymentDayTarget.value
+    const digitsOnly = original.replace(/\D/g, "")
+    const limited = digitsOnly.slice(0, 2)
+
+    if (limited !== original) {
+      const selectionStart = this.paymentDayTarget.selectionStart
+      const selectionEnd = this.paymentDayTarget.selectionEnd
+
+      this.paymentDayTarget.value = limited
+
+      if (selectionStart !== null && selectionEnd !== null) {
+        const newPosition = Math.min(selectionStart, limited.length)
+        this.paymentDayTarget.setSelectionRange(newPosition, newPosition)
+      }
+    }
+  }
+
   calculateFirstPaymentDate() {
     // Calculate first payment date from payment day, current term, and payment period
     if (!this.hasPaymentDayTarget || !this.hasCurrentTermTarget || !this.hasPaymentPeriodTarget || !this.hasFirstPaymentDateTarget) {
       return
     }
+
+    this.enforcePaymentDayLimit()
 
     const paymentDay = parseInt(this.paymentDayTarget.value) || 0
     const currentTerm = parseInt(this.currentTermTarget.value) || 0

@@ -1,42 +1,35 @@
 <%# locals: (account:, url:) %>
-
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
 <% end %>
-
 <%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false, controller: "loan-form" }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
   <%= form.hidden_field :accountable_type %>
   <%= form.hidden_field :return_to, value: params[:return_to] %>
-
   <%# Tab Switcher - directly under title %>
   <fieldset class="bg-surface-inset rounded-lg p-1 grid grid-cols-2 gap-x-2">
     <button type="button"
             data-loan-form-target="generalTab"
             data-action="click->loan-form#showGeneral"
-            class="px-4 py-2 rounded-lg text-sm font-medium bg-container text-primary shadow-sm">
+      class="px-4 py-2 rounded-lg text-sm font-medium bg-container text-primary shadow-sm">
       <%= t("loans.form.tabs.general") %>
     </button>
     <button type="button"
             data-loan-form-target="installmentTab"
             data-action="click->loan-form#showInstallment"
-            class="px-4 py-2 rounded-lg text-sm font-medium text-subdued hover:bg-container">
+      class="px-4 py-2 rounded-lg text-sm font-medium text-subdued hover:bg-container">
       <%= t("loans.form.tabs.installment") %>
     </button>
   </fieldset>
-
   <div class="grow space-y-2">
     <%# ==================== GENERAL TAB ==================== %>
     <div data-loan-form-target="generalFields" class="space-y-2">
       <%# Account Name %>
       <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
-
       <%# Balance (for non-linked accounts) %>
       <% unless account.linked? %>
         <%= form.money_field :balance, label: t("accounts.form.balance"), required: true, default_currency: Current.family.currency %>
       <% end %>
-
       <%= render "shared/ruler", classes: "my-2" %>
-
       <%# Loan-specific fields %>
       <%= form.fields_for :accountable do |loan_form| %>
         <div class="flex items-center gap-2">
@@ -45,7 +38,6 @@
                                    default_currency: Current.family.currency,
                                    required: true %>
         </div>
-
         <div class="flex items-center gap-2">
           <%= loan_form.number_field :interest_rate,
                                    label: t("loans.form.interest_rate"),
@@ -56,7 +48,6 @@
                              [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
                              { label: t("loans.form.rate_type") } %>
         </div>
-
         <div class="flex items-center gap-2">
           <%= loan_form.number_field :term_months,
                                    label: t("loans.form.term_months"),
@@ -64,14 +55,11 @@
         </div>
       <% end %>
     </div>
-
     <%# ==================== INSTALLMENT TAB ==================== %>
     <div data-loan-form-target="installmentFields" class="hidden space-y-2">
       <%# Account Name %>
       <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label"), id: "account_name_installment" %>
-
       <%= render "shared/ruler", classes: "my-2" %>
-
       <%# Installment-specific fields %>
       <%= form.fields_for :installment_attributes, account.installment || account.build_installment do |inst_form| %>
         <%# Installment Cost %>
@@ -83,7 +71,6 @@
                                     loan_form_target: "installmentCost",
                                     action: "input->loan-form#calculateBalance"
                                   } %>
-
         <%# Total Term + Payment Period (same row) %>
         <div class="flex items-center gap-2">
           <%= inst_form.number_field :total_term,
@@ -109,7 +96,6 @@
                                 }
                               } %>
         </div>
-
         <%# Current Term + Payment Day (same row) %>
         <div class="flex items-center gap-2">
           <%= inst_form.number_field :current_term,
@@ -128,12 +114,12 @@
                                      placeholder: "15",
                                      min: 1,
                                      max: 31,
+                                     maxlength: 2,
                                      data: {
                                        loan_form_target: "paymentDay",
                                        action: "input->loan-form#calculateFirstPaymentDate"
                                      } %>
         </div>
-
         <%# First Payment Date (calculated, read-only) %>
         <%# Hidden field for form submission (disabled fields are not submitted) %>
         <%= inst_form.hidden_field :first_payment_date, data: { loan_form_target: "firstPaymentDate" } %>
@@ -145,7 +131,6 @@
                                 id: "first_payment_date_display",
                                 name: "_first_payment_date_display",
                                 data: { loan_form_target: "firstPaymentDateDisplay" } %>
-
         <%# Current Balance (calculated, read-only) %>
         <%= inst_form.money_field :current_balance,
                                  label: t("loans.form.installment.current_balance_label"),
@@ -153,7 +138,6 @@
                                  default_currency: Current.family.currency,
                                  disabled: true,
                                  data: { loan_form_target: "currentBalance" } %>
-
         <%# Original Balance (calculated, read-only) %>
         <%= inst_form.money_field :original_balance,
                                  label: t("loans.form.installment.original_balance_label"),
@@ -161,7 +145,6 @@
                                  default_currency: Current.family.currency,
                                  disabled: true,
                                  data: { loan_form_target: "originalBalance" } %>
-
         <%# Source Account (optional) %>
         <%= inst_form.select :source_account_id,
                             options_from_collection_for_select(Current.family.accounts.assets.visible, :id, :name),
@@ -172,23 +155,19 @@
                             } %>
       <% end %>
     </div>
-
     <%# Additional Details (collapsed) %>
     <details class="group">
       <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
         <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
         <%= t("accounts.form.additional_details") %>
       </summary>
-
       <div class="space-y-2 mt-2 pl-4 border-l border-primary">
         <%= form.text_field :institution_name,
             label: t("accounts.form.institution_name_label"),
             placeholder: account.provider&.institution_name || t("accounts.form.institution_name_placeholder") %>
-
         <%= form.text_field :institution_domain,
             label: t("accounts.form.institution_domain_label"),
             placeholder: account.provider&.institution_domain || t("accounts.form.institution_domain_placeholder") %>
-
         <%= form.text_area :notes,
             label: t("accounts.form.notes_label"),
             placeholder: t("accounts.form.notes_placeholder"),
@@ -196,6 +175,5 @@
       </div>
     </details>
   </div>
-
   <%= form.submit %>
 <% end %>
