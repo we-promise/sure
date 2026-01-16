@@ -239,20 +239,25 @@ class CoinstatsItem::Importer
 
       # Calculate balance from the matching token only, not all tokens
       # Each coinstats_account represents a single token/coin in the wallet
-      token_balance = calculate_token_balance(matching_token)
+      token_balance_usd = calculate_token_balance(matching_token)
+
+      # Convert from USD to family's currency
+      family_currency = coinstats_item.family.currency
+      converted_balance = convert_to_family_currency(token_balance_usd, family_currency)
 
       {
         # Use existing account_id if set, otherwise extract from matching token
         id: coinstats_account.account_id.presence || matching_token&.dig(:coinId) || matching_token&.dig(:id),
         name: coinstats_account.name,
-        balance: token_balance,
-        currency: "USD", # CoinStats returns values in USD
+        balance: converted_balance,
+        currency: family_currency,
         address: existing_raw["address"] || existing_raw[:address],
         blockchain: existing_raw["blockchain"] || existing_raw[:blockchain],
         # Extract logo from the matching token
         institution_logo: matching_token&.dig(:imgUrl),
-        # Preserve original data
-        raw_balance_data: balance_data
+        # Preserve original data (including USD amount for reference)
+        raw_balance_data: balance_data,
+        original_balance_usd: token_balance_usd
       }
     end
 
@@ -311,5 +316,23 @@ class CoinstatsItem::Importer
       amount = token[:amount] || token[:balance] || 0
       price = token[:price] || token[:priceUsd] || 0
       (amount.to_f * price.to_f)
+    end
+
+    # Converts a USD amount to the family's currency using exchange rates.
+    # @param usd_amount [Numeric] Amount in USD
+    # @param target_currency [String] Target currency code (e.g., "EUR")
+    # @return [BigDecimal] Converted amount in target currency
+    def convert_to_family_currency(usd_amount, target_currency)
+      return BigDecimal("0") if usd_amount.to_f.zero?
+      return BigDecimal(usd_amount.to_s) if target_currency.to_s.upcase == "USD"
+
+      # Use Money class for conversion with fallback_rate: 1 to avoid errors
+      # if exchange rate is not available (will use 1:1 as fallback)
+      Money.new(usd_amount, "USD")
+           .exchange_to(target_currency, date: Date.current, fallback_rate: 1)
+           .amount
+    rescue => e
+      Rails.logger.warn "CoinstatsItem::Importer - Currency conversion failed (#{e.message}), using USD amount"
+      BigDecimal(usd_amount.to_s)
     end
 end

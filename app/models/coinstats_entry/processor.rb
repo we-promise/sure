@@ -165,7 +165,8 @@ class CoinstatsEntry::Processor
         BigDecimal("0")
       end
 
-      absolute_amount = parsed_amount.abs
+      # Convert from USD to family's currency
+      converted_amount = convert_to_family_currency(parsed_amount.abs)
 
       # App convention: negative amount = income (inflow), positive amount = expense (outflow)
       # coinData.count is negative for outgoing transactions
@@ -173,10 +174,10 @@ class CoinstatsEntry::Processor
 
       if coin_count.to_f < 0 || outgoing_transaction_type?
         # Outgoing transaction = expense = positive
-        absolute_amount
+        converted_amount
       else
         # Incoming transaction = income = negative
-        -absolute_amount
+        -converted_amount
       end
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse CoinStats transaction amount: #{usd_value.inspect} - #{e.message}"
@@ -189,8 +190,28 @@ class CoinstatsEntry::Processor
     end
 
     def currency
-      # CoinStats values are always in USD
-      "USD"
+      # Use family's currency instead of USD
+      family_currency
+    end
+
+    def family_currency
+      @family_currency ||= coinstats_account.coinstats_item.family.currency
+    end
+
+    # Converts a USD amount to the family's currency using exchange rates.
+    # @param usd_amount [BigDecimal] Amount in USD
+    # @return [BigDecimal] Converted amount in target currency
+    def convert_to_family_currency(usd_amount)
+      return BigDecimal("0") if usd_amount.zero?
+      return usd_amount if family_currency.to_s.upcase == "USD"
+
+      # Use Money class for conversion with fallback_rate: 1 to avoid errors
+      Money.new(usd_amount, "USD")
+           .exchange_to(family_currency, date: date, fallback_rate: 1)
+           .amount
+    rescue => e
+      Rails.logger.warn "CoinstatsEntry::Processor - Currency conversion failed (#{e.message}), using USD amount"
+      usd_amount
     end
 
     def date
