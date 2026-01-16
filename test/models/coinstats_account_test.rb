@@ -199,4 +199,57 @@ class CoinstatsAccountTest < ActiveSupport::TestCase
 
     assert_equal [], @coinstats_account.raw_transactions_payload
   end
+
+  # Multi-wallet tests
+  test "account_id is unique per coinstats_item and wallet_address" do
+    @coinstats_account.update!(
+      account_id: "ethereum",
+      wallet_address: "0xAAA123"
+    )
+
+    duplicate = @coinstats_item.coinstats_accounts.build(
+      name: "Duplicate Ethereum",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: "0xAAA123"
+    )
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:account_id], "has already been taken"
+  end
+
+  test "allows same account_id with different wallet_address" do
+    @coinstats_account.update!(
+      account_id: "ethereum",
+      wallet_address: "0xAAA123"
+    )
+
+    different_wallet = @coinstats_item.coinstats_accounts.build(
+      name: "Different Ethereum Wallet",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: "0xBBB456"
+    )
+
+    assert different_wallet.valid?
+  end
+
+  test "allows multiple accounts with nil wallet_address for backwards compatibility" do
+    first_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Legacy Account 1",
+      currency: "USD",
+      account_id: "bitcoin",
+      wallet_address: nil
+    )
+
+    second_account = @coinstats_item.coinstats_accounts.build(
+      name: "Legacy Account 2",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: nil
+    )
+
+    assert second_account.valid?
+    assert second_account.save
+  end
 end
