@@ -19,7 +19,7 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to settings_profile_path
-    assert_equal "Member removed successfully.", flash[:notice]
+    assert_equal I18n.t("settings.profiles.destroy.member_removed"), flash[:notice]
     assert_raises(ActiveRecord::RecordNotFound) { User.find(@member.id) }
   end
 
@@ -60,7 +60,7 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to settings_profile_path
-    assert_equal "Member removed successfully.", flash[:notice]
+    assert_equal I18n.t("settings.profiles.destroy.member_removed"), flash[:notice]
     assert_raises(ActiveRecord::RecordNotFound) { User.find(@member.id) }
     assert_raises(ActiveRecord::RecordNotFound) { Invitation.find(invitation.id) }
   end

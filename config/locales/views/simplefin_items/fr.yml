@@ -1,6 +1,60 @@
 ---
 fr:
   simplefin_items:
+    new:
+      title: Ajouter une connexion SimpleFin
+      setup_token_label: Jeton de configuration SimpleFin
+      setup_token_placeholder: Collez votre jeton de configuration SimpleFin ici...
+      get_token_from: Obtenez votre jeton de configuration depuis
+      simplefin_bridge: SimpleFin Bridge
+      how_to_title: "Comment obtenir votre jeton de configuration :"
+      step_1: Visitez
+      step_2: Connectez votre compte bancaire avec vos identifiants bancaires en ligne
+      step_3: Copiez le jeton de configuration SimpleFin qui apparaît (ce sera une longue chaîne encodée en Base64)
+      step_4: Collez-le ci-dessus et cliquez sur "Ajouter une connexion"
+      token_note: "Les jetons de configuration ne peuvent être utilisés qu'une seule fois. Si la connexion échoue, vous devrez en créer un nouveau."
+      submit: Ajouter la connexion
+    index:
+      title: Connexions SimpleFIN
+      subtitle: Gérez vos connexions de comptes bancaires SimpleFIN
+      add_connection: Ajouter une connexion
+      no_connections: Aucune connexion SimpleFIN
+      no_connections_description: Connectez vos comptes bancaires via SimpleFIN pour synchroniser automatiquement les transactions.
+      add_first_connection: Ajouter votre première connexion
+    show:
+      back_to_connections: Retour aux connexions SimpleFIN
+      sync: Synchroniser
+      delete: Supprimer
+      delete_confirm: Êtes-vous sûr ?
+      syncing_accounts: Synchronisation des comptes...
+      simplefin_accounts: Comptes SimpleFIN
+      unknown_type: Type inconnu
+      view_account: Voir le compte
+      set_up_account: Configurer le compte
+      no_accounts_found: Aucun compte trouvé
+      try_syncing_again: Essayez de synchroniser à nouveau pour importer vos comptes.
+      sync_now: Synchroniser maintenant
+    setup_accounts:
+      title: Configurer les comptes SimpleFIN
+      header_title: Configurer vos comptes SimpleFIN
+      header_subtitle: Choisissez les types de comptes corrects pour vos comptes importés
+      choose_account_type: "Choisissez le type de compte correct pour chaque compte SimpleFIN :"
+      type_checking_savings: Compte courant ou épargne
+      type_checking_savings_desc: Comptes bancaires réguliers
+      type_credit_card: Carte de crédit
+      type_credit_card_desc: Comptes de carte de crédit
+      type_investment: Investissement
+      type_investment_desc: Comptes de courtage, PEA, assurance-vie
+      type_loan: Prêt ou hypothèque
+      type_loan_desc: Comptes de dette
+      type_other: Autre actif
+      type_other_desc: Tout le reste
+      historical_data_range: "Plage de données historiques :"
+      sync_start_date_label: "Commencer la synchronisation des transactions depuis :"
+      sync_start_date_help: Sélectionnez jusqu'où vous souhaitez remonter l'historique des transactions. Maximum 3 ans d'historique disponible.
+      account_type_label: "Type de compte :"
+      create_accounts: Créer les comptes
+      cancel: Annuler
     create:
       success: Connexion SimpleFIN ajoutée avec succès ! Vos comptes apparaîtront sous peu lors de la synchronisation en arrière-plan.
       errors:
@@ -20,12 +74,23 @@ fr:
         update_failed: "Échec de la mise à jour de la connexion : %{message}"
         unexpected: Une erreur inattendue s'est produite. Veuillez réessayer ou contacter le support.
     edit:
+      title: Mettre à jour la connexion SimpleFIN
+      subtitle: Obtenez un nouveau jeton de configuration pour reconnecter votre compte SimpleFIN
+      update_needed: "Votre connexion SimpleFIN doit être mise à jour :"
+      step_1_html: 'Visitez <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> pour créer un nouveau jeton de configuration'
+      step_2: Copiez le jeton et collez-le ci-dessous
+      step_3: Cliquez sur "Mettre à jour la connexion" pour restaurer l'accès
+      update_connection: Mettre à jour la connexion
+      cancel: Annuler
       setup_token:
         label: "Jeton de configuration SimpleFIN :"
         placeholder: "Collez votre jeton de configuration SimpleFIN ici..."
         help_text: "Le jeton doit être une longue chaîne commençant par des lettres et des chiffres"
     complete_account_setup:
       success: Les comptes SimpleFIN ont été configurés avec succès ! Vos transactions et positions sont en cours d'importation en arrière-plan.
+    subtype_select:
+      select_subtype: Sélectionner le sous-type
+      select_type: Sélectionner le type
     simplefin_item:
       add_new: Ajouter une nouvelle connexion
       confirm_accept: Supprimer la connexion

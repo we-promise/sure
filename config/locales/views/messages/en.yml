@@ -1,0 +1,7 @@
+---
+en:
+  messages:
+    chat_form:
+      placeholder: Ask anything ...
+      coming_soon: Coming soon
+      disclaimer: AI responses are informational only and are not financial advice.

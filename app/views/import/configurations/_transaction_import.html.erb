@@ -19,11 +19,11 @@
   <div class="flex items-center gap-4">
     <%= form.select :date_col_label,
                     import.csv_headers,
-                    { label: "Date", prompt: "Select column" },
+                    { label: t("import.configurations.transaction_import.date"), prompt: t("import.configurations.transaction_import.select_column") },
                     required: true %>
     <%= form.select :date_format,
                     Family::DATE_FORMATS,
-                    { label: t(".date_format_label"), prompt: "Select format" },
+                    { label: t(".date_format_label"), prompt: t("import.configurations.transaction_import.select_format") },
                     required: true %>
   </div>
 
@@ -31,21 +31,21 @@
   <div class="flex items-center gap-4">
     <%= form.select :amount_col_label,
                     import.csv_headers,
-                    { label: "Amount", container_class: "w-2/5", prompt: "Select column" },
+                    { label: t("import.configurations.transaction_import.amount"), container_class: "w-2/5", prompt: t("import.configurations.transaction_import.select_column") },
                     required: true %>
     <%= form.select :currency_col_label,
                     import.csv_headers,
-                    { include_blank: "Default", label: "Currency", container_class: "w-1/5" } %>
+                    { include_blank: t("import.configurations.transaction_import.default"), label: t("import.configurations.transaction_import.currency"), container_class: "w-1/5" } %>
     <%= form.select :number_format,
                     Import::NUMBER_FORMATS.keys,
-                    { label: "Format", prompt: "Select format", container_class: "w-2/5" },
+                    { label: t("import.configurations.transaction_import.format"), prompt: t("import.configurations.transaction_import.select_format"), container_class: "w-2/5" },
                     required: true %>
   </div>
 
   <%# Amount Type Strategy %>
   <%= form.select :amount_type_strategy,
                   Import::AMOUNT_TYPE_STRATEGIES.map { |strategy| [strategy.humanize, strategy] },
-                  { label: "Amount type strategy", prompt: "Select strategy" },
+                  { label: t("import.configurations.transaction_import.amount_type_strategy"), prompt: t("import.configurations.transaction_import.select_strategy") },
                   required: true,
                   data: {
                     action: "import#handleAmountTypeStrategyChange",
@@ -58,8 +58,8 @@
     <div class="flex items-center gap-2">
       <span class="text-sm shrink-0 text-secondary">↪</span>
       <%= form.select :signage_convention,
-                      [["Incomes are positive", "inflows_positive"], ["Incomes are negative", "inflows_negative"]],
-                      { label: "Amount type", prompt: "Select convention" },
+                      [[t("import.configurations.transaction_import.incomes_positive"), "inflows_positive"], [t("import.configurations.transaction_import.incomes_negative"), "inflows_negative"]],
+                      { label: t("import.configurations.transaction_import.amount_type"), prompt: t("import.configurations.transaction_import.select_convention") },
                       required: @import.amount_type_strategy == "signed_amount" %>
     </div>
   <% end %>
@@ -70,23 +70,23 @@
     <div class="space-y-2">
       <div class="flex items-center gap-2 text-sm">
         <span class="shrink-0 text-secondary">↪</span>
-        <span class="text-secondary">Set</span>
+        <span class="text-secondary"><%= t("import.configurations.transaction_import.set") %></span>
         <%= form.select :entity_type_col_label,
                         import.csv_headers,
-                        { prompt: "Select column", container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
+                        { prompt: t("import.configurations.transaction_import.select_column"), container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
                         required: @import.amount_type_strategy == "custom_column",
                         data: { action: "import#handleAmountTypeChange" } %>
-        <span class="text-secondary">as amount type column</span>
+        <span class="text-secondary"><%= t("import.configurations.transaction_import.as_amount_type_column") %></span>
       </div>
 
       <div class="items-center gap-2 text-sm <%= @import.entity_type_col_label.nil? ? "hidden" : "flex" %>" data-import-target="amountTypeValue">
         <span class="shrink-0 text-secondary">↪</span>
-        <span class="text-secondary">Set</span>
+        <span class="text-secondary"><%= t("import.configurations.transaction_import.set") %></span>
         <%= form.select :amount_type_inflow_value,
                         @import.selectable_amount_type_values,
-                        { prompt: "Select column", container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
+                        { prompt: t("import.configurations.transaction_import.select_column"), container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
                         required: @import.amount_type_strategy == "custom_column" %>
-        <span class="text-secondary">as "income" (inflow) value</span>
+        <span class="text-secondary"><%= t("import.configurations.transaction_import.as_income_inflow_value") %></span>
       </div>
     </div>
   <% end %>
@@ -95,21 +95,21 @@
   <% unless import.account.present? %>
     <%= form.select :account_col_label,
                     import.csv_headers,
-                    { include_blank: "Leave empty", label: "Account" } %>
+                    { include_blank: t("import.configurations.transaction_import.leave_empty"), label: t("import.configurations.transaction_import.account") } %>
   <% end %>
 
   <%= form.select :name_col_label,
                   import.csv_headers,
-                  { include_blank: "Leave empty", label: "Name" } %>
+                  { include_blank: t("import.configurations.transaction_import.leave_empty"), label: t("import.configurations.transaction_import.name") } %>
   <%= form.select :category_col_label,
                   import.csv_headers,
-                  { include_blank: "Leave empty", label: "Category" } %>
+                  { include_blank: t("import.configurations.transaction_import.leave_empty"), label: t("import.configurations.transaction_import.category") } %>
   <%= form.select :tags_col_label,
                   import.csv_headers,
-                  { include_blank: "Leave empty", label: "Tags" } %>
+                  { include_blank: t("import.configurations.transaction_import.leave_empty"), label: t("import.configurations.transaction_import.tags") } %>
   <%= form.select :notes_col_label,
                   import.csv_headers,
-                  { include_blank: "Leave empty", label: "Notes" } %>
+                  { include_blank: t("import.configurations.transaction_import.leave_empty"), label: t("import.configurations.transaction_import.notes") } %>
 
-  <%= form.submit "Apply configuration", disabled: import.complete? %>
+  <%= form.submit t("import.configurations.transaction_import.apply_configuration"), disabled: import.complete? %>
 <% end %>

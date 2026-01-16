@@ -3,15 +3,38 @@ fr:
   pages:
     changelog:
       title: Nouveautés
+      date_unavailable: Date indisponible
+      no_release_notes: Aucune note de version disponible
+    feedback:
+      page_title: Retour d'information
+      title: Donnez votre avis
+      subtitle: Faites-nous part de vos commentaires. N'hésitez pas à inclure des liens vers des vidéos ou des captures d'écran.
+      feature_request: Proposer une fonctionnalité
+      bug_report: Signaler un bug
+      discuss: Discuter de %{product} avec d'autres
+    redis_configuration_error:
+      page_title: Configuration Redis requise - %{product}
+      title: Configuration Redis requise
+      subtitle: Votre installation auto-hébergée de %{product} nécessite que Redis soit correctement configuré.
+      why_redis_title: Pourquoi Redis est-il requis ?
+      why_redis_description: "%{product} utilise Redis pour alimenter les tâches en arrière-plan Sidekiq comme la synchronisation des données de compte, le traitement des importations et d'autres opérations en arrière-plan qui maintiennent vos données financières à jour."
+      view_setup_guide: Voir le guide d'installation
+      setup_guide_description: Suivez notre guide complet d'installation Docker pour configurer Redis
+      refresh_description: Une fois Redis configuré, actualisez cette page pour continuer.
+      refresh_page: Actualiser la page
     dashboard:
-      welcome_back: Content de vous revoir
-      happening_with_finance: Voici ce qui se passe avec vos finances
+      welcome: "Content de vous revoir, %{name}"
+      subtitle: "Voici ce qui se passe avec vos finances"
       new: Nouveau
-      cashflow:
+      drag_to_reorder: "Glisser pour réordonner"
+      toggle_section: "Afficher/masquer la section"
+      sections_label: "Sections du tableau de bord"
+      section_instructions: "section. Appuyez sur Entrée ou Espace pour saisir et réorganiser, puis utilisez les touches fléchées pour déplacer."
+      cashflow_sankey:
         title: Flux de trésorerie
-        no_cashflow: Aucune donnée de flux de trésorerie pour cette période
-        add_transactions_to_display_cashflow: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendre la période
-        new: Ajouter une transaction
+        no_data_title: Aucune donnée de flux de trésorerie pour cette période
+        no_data_description: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendez la période
+        add_transaction: Ajouter une transaction
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée
         title: Valeur nette
@@ -19,7 +42,37 @@ fr:
         new_account: Nouveau compte
         no_account_subtitle: Comme aucun compte n'a été ajouté, il n'y a pas de données à afficher. Ajoutez vos premiers comptes pour commencer à consulter les données du tableau de bord.
         no_account_title: Pas encore de comptes
-      no_account_graph_placeholder:
+      no_accounts_graph_placeholder:
         no_account_yet: Pas encore de compte
         add_account_to_display: Ajouter des comptes pour afficher les données de valeur nette
         new: Ajouter un compte
+      balance_sheet:
+        title: "Bilan"
+        no_items: "Pas encore de %{name}"
+        add_accounts: "Ajoutez vos comptes %{name} pour voir une répartition complète"
+        name: "Nom"
+        weight: "Poids"
+        value: "Valeur"
+      no_accounts:
+        title: "Pas encore de comptes"
+        description: "Ajoutez des comptes pour afficher les données de valeur nette"
+        add_account: "Ajouter un compte"
+      outflows_donut:
+        title: "Dépenses"
+        total_outflows: "Total des dépenses"
+        categories: "Catégories"
+        value: "Valeur"
+        weight: "Poids"
+      investment_summary:
+        title: "Investissements"
+        total_return: "Rendement total"
+        holding: "Avoir"
+        weight: "Poids"
+        value: "Valeur"
+        return: "Rendement"
+        period_activity: "Activité %{period}"
+        contributions: "Contributions"
+        withdrawals: "Retraits"
+        trades: "Transactions"
+        no_investments: "Pas de comptes d'investissement"
+        add_investment: "Ajoutez un compte d'investissement pour suivre votre portefeuille"

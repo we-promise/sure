@@ -6,6 +6,8 @@ en:
       link_provider: Link with provider
       unlink_provider: Unlink from provider
       troubleshoot: Troubleshoot
+      deletion_in_progress: deletion in progress...
+      complete_setup: Complete setup
     chart:
       data_not_available: Data not available for the selected period
     create:
@@ -38,6 +40,13 @@ en:
       syncing: "Syncing accounts..."
     new:
       import_accounts: Import accounts
+      container:
+        select: Select
+        navigate: Navigate
+        close: Close
+        esc: ESC
+        previous: Previous
+        next: Next
       method_selector:
         connected_entry: Link account
         connected_entry_eu: Link EU account
@@ -47,7 +56,13 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      header:
+        complete_setup: Complete setup
       activity:
+        new: New
+        new_balance: New balance
+        new_transaction: New transaction
+        search_placeholder: Search entries by name
         amount: Amount
         balance: Balance
         confirmed: Confirmed
@@ -67,6 +82,10 @@ en:
       chart:
         balance: Balance
         owed: Amount owed
+        total_value: Total value
+        holdings: Holdings
+        cash: Cash
+        no_data: No data available
       menu:
         confirm_accept: Delete "%{name}"
         confirm_body_html: "<p>By deleting this account, you will erase its value
@@ -76,7 +95,8 @@ en:
           the account information because you'll need to add it as a new account.</p>"
         confirm_title: Delete account?
         edit: Edit
-        import: Import transactions
+        import_transactions: Import transactions
+        delete_account: Delete account
         manage: Manage accounts
     update:
       success: "%{type} account updated"

@@ -159,6 +159,7 @@ module LanguagesHelper
     "fr",   # French - 61 translation files
     "de",   # German - 62 translation files
     "es",   # Spanish - 61 translation files
+    "fr",   # French - 62 translation files
     "tr",   # Turkish - 58 translation files
     "nb",   # Norwegian Bokmål - 57 translation files
     "ca",   # Catalan - 57 translation files

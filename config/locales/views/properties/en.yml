@@ -3,12 +3,37 @@ en:
   properties:
     edit:
       edit: Edit %{account}
+      title: Edit property
+      save: Save
+      next: Next
+    balances:
+      title: Property value
+      estimated_market_value: Estimated market value
+      estimated_market_value_tooltip: The current estimated value of this property
+      save: Save
+      next: Next
+    form_tabs:
+      overview: Overview
+      value: Value
+      address: Address
+    overview_fields:
+      name: Name
+      name_placeholder: My property
+      select_type: Select property type
+      property_type: Property type
+      year_built: Year built
+      area: Area
+      area_unit: Unit
+      square_feet: Square feet
+      square_meters: Square meters
     form:
       address_line1: Street address
       address_line1_placeholder: 123 Main St
       area: Living area
       area_placeholder: '2000'
       area_unit: Unit of measurement
+      area_unit_square_feet: Square Feet
+      area_unit_square_meters: Square Meters
       country: Country
       country_placeholder: US
       locality: City
@@ -24,9 +49,29 @@ en:
     new:
       title: Enter property details
     overview:
+      edit_account_details: Edit account details
       living_area: Living Area
       market_value: Market Value
       purchase_price: Purchase Price
       trend: Trend
       unknown: Unknown
       year_built: Year Built
+    tabs:
+      overview:
+        edit_account_details: Edit account details
+    new:
+      enter_property_manually: Enter property manually
+      next: Next
+    address:
+      enter_property_manually: Enter property manually
+      address_line_1: Address Line 1
+      address_line_1_placeholder: 123 Main Street
+      city: City
+      city_placeholder: San Francisco
+      state_region: State/Region
+      state_region_placeholder: CA
+      postal_code: Postal Code
+      postal_code_placeholder: '12345'
+      country: Country
+      country_placeholder: USA
+      save: Save

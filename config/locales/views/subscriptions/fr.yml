@@ -1,3 +1,18 @@
 fr:
   subscriptions:
     self_hosted_alert: "%{product_name} n'est pas disponible en mode auto-hébergé."
+    plan_choice:
+      or_weekly: "ou %{amount}/semaine"
+      billed_annually: Facturé annuellement, 2 mois gratuits
+      billed_monthly: Facturé mensuellement
+    upgrade:
+      title: Mise à niveau
+      account_settings: Paramètres du compte
+      sign_out: Déconnexion
+      trial_remaining: Votre essai a encore %{days} jours
+      trial_over: Votre essai est terminé
+      unlock: Débloquer
+      today: aujourd'hui
+      pick_plan: Pour continuer à utiliser Sure, choisissez un abonnement ci-dessous.
+      subscribe: S'abonner et débloquer Sure
+      stripe_redirect: À l'étape suivante, vous serez redirigé vers Stripe qui gère notre facturation.

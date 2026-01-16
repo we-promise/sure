@@ -38,7 +38,7 @@
                           data: { turbo_frame: :modal },
                           class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors" do %>
                 <%= icon "alert-circle", size: "xs" %>
-                <span><%= header_unlinked_count %> <%= header_unlinked_count == 1 ? "account" : "accounts" %> need setup</span>
+                <span><%= t(".accounts_need_setup", count: header_unlinked_count) %></span>
               <% end %>
             <% end %>
             <% if simplefin_item.scheduled_for_deletion? %>
@@ -54,20 +54,20 @@
             <% if stats.present? %>
               <div class="flex items-center gap-2 mt-1">
                 <% if stats["unlinked_accounts"].to_i > 0 %>
-                  <%= render DS::Tooltip.new(text: "Accounts need setup", icon: "link-2", size: "sm") %>
-                  <span class="text-xs text-secondary">Unlinked: <%= stats["unlinked_accounts"].to_i %></span>
+                  <%= render DS::Tooltip.new(text: t(".tooltip_accounts_need_setup"), icon: "link-2", size: "sm") %>
+                  <span class="text-xs text-secondary"><%= t(".unlinked_count", count: stats["unlinked_accounts"].to_i) %></span>
                 <% end %>
 
                 <% if stats["accounts_skipped"].to_i > 0 %>
-                  <%= render DS::Tooltip.new(text: "Some accounts were skipped due to errors during sync", icon: "alert-triangle", size: "sm", color: "warning") %>
-                  <span class="text-xs text-warning">Skipped: <%= stats["accounts_skipped"].to_i %></span>
+                  <%= render DS::Tooltip.new(text: t(".tooltip_accounts_skipped"), icon: "alert-triangle", size: "sm", color: "warning") %>
+                  <span class="text-xs text-warning"><%= t(".skipped_count", count: stats["accounts_skipped"].to_i) %></span>
                 <% end %>
 
                 <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
                   <% ts = stats["rate_limited_at"] %>
                   <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
                   <%= render DS::Tooltip.new(
-                        text: (ago ? "Rate limited (" + ago + " ago)" : "Rate limited recently"),
+                        text: (ago ? t(".rate_limited_with_time", time: ago) : t(".rate_limited")),
                         icon: "clock",
                         size: "sm",
                         color: "warning"
@@ -82,7 +82,7 @@
                 <% end %>
 
                 <% if stats["total_accounts"].to_i > 0 %>
-                  <span class="text-xs text-secondary">Total: <%= stats["total_accounts"].to_i %></span>
+                  <span class="text-xs text-secondary"><%= t(".total_count", count: stats["total_accounts"].to_i) %></span>
                 <% end %>
               </div>
             <% end %>

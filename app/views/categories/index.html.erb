@@ -5,7 +5,7 @@
     <%= render DS::Menu.new do |menu| %>
       <% menu.with_item(
           variant: "button",
-          text: "Delete all",
+          text: t(".delete_all"),
           href: destroy_all_categories_path,
           method: :delete,
           icon: "trash-2",

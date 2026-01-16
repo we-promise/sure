@@ -70,7 +70,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
-      flash[:notice] = "Transaction created"
+      flash[:notice] = t(".created")
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account) }
@@ -98,7 +98,7 @@ class TransactionsController < ApplicationController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
+        format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
           render turbo_stream: [
             turbo_stream.replace(

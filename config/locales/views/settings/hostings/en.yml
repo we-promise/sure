@@ -40,6 +40,11 @@ en:
         label: Client ID
         placeholder: Enter your Client ID here
         title: Brand Fetch Settings
+        env_configured_message: You have successfully configured your Brand Fetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
+        show_details: "(show details)"
+        step1_html: Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brand Fetch Developer account.
+        step2_html: Go to the <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> page.
+        step3_html: Tap the eye icon under the "Your Client ID" section to reveal your <strong>Client ID</strong> and paste it below.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -71,6 +76,10 @@ en:
         placeholder: Enter your API key here
         plan: "%{plan} plan"
         title: Twelve Data
+        show_details: "(show details)"
+        step1_html: Visit <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> and create a free Twelve Data Developer account.
+        step2_html: Go to the <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> page.
+        step3_html: Reveal your <strong>Secret Key</strong> and paste it below.
       update:
         failure: Invalid setting value
         success: Settings updated

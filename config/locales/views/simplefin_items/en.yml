@@ -26,11 +26,35 @@ en:
         update_failed: "Failed to update connection: %{message}"
         unexpected: An unexpected error occurred. Please try again or contact support.
     edit:
+      title: Update SimpleFin Connection
+      header_description: Get a new setup token to reconnect your SimpleFin account
+      connection_needs_update: "Your SimpleFIN connection needs to be updated:"
+      step_1_html: Visit <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> to create a new setup token
+      step_2: Copy the token and paste it below
+      step_3: Click "Update" to restore access
+      update: Update
+      cancel: Cancel
       setup_token:
         label: "SimpleFIN Setup Token:"
         placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
     setup_accounts:
+      title: Set Up SimpleFin Accounts
+      header_title: Set Up Your SimpleFin Accounts
+      header_description: Choose the correct account types for your imported accounts
+      account_type_instructions: "Choose the correct account type for each SimpleFin account:"
+      account_type_checking_or_savings: Checking or Savings - Regular bank accounts
+      account_type_credit_card: Credit Card - Credit card accounts
+      account_type_investment: Investment - Brokerage, 401(k), IRA accounts
+      account_type_loan: Loan or Mortgage - Debt accounts
+      account_type_other: Other Asset - Everything else
+      transaction_history: "Transaction History:"
+      transaction_history_description: SimpleFin typically provides 60-90 days of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type.
+      balance: "Balance:"
+      account_type_label: "Account Type:"
+      creating_accounts: Creating Accounts...
+      create_accounts: Create Accounts
+      cancel: Cancel
       stale_accounts:
         title: "Accounts No Longer in SimpleFIN"
         description: "These accounts exist in your database but are no longer provided by SimpleFIN. This can happen when account configurations change upstream."
@@ -74,16 +98,30 @@ en:
       stale_pending_accounts: "in: %{accounts}"
       reconciled_details_note: "(see sync summary for details)"
       duplicate_accounts_skipped: "Some accounts were skipped as duplicates — use 'Link existing accounts' to merge."
+      accounts_need_setup:
+        one: "%{count} account needs setup"
+        other: "%{count} accounts need setup"
+      tooltip_accounts_need_setup: Accounts need setup
+      tooltip_accounts_skipped: Some accounts were skipped due to errors during sync
+      unlinked_count: "Unlinked: %{count}"
+      skipped_count: "Skipped: %{count}"
+      rate_limited: Rate limited recently
+      rate_limited_with_time: "Rate limited (%{time} ago)"
+      total_count: "Total: %{count}"
     select_existing_account:
+      header_title: Link SimpleFIN account
       title: "Link %{account_name} to SimpleFIN"
       description: Select a SimpleFIN account to link to your existing account
       cancel: Cancel
+      link: Link
       link_account: Link account
       no_accounts_found: No SimpleFIN accounts found for this family.
       wait_for_sync: If you just connected or synced, try again after the sync completes.
-      unlink_to_move: To move a link, first unlink it from the account’s actions menu.
+      unlink_to_move: To move a link, first unlink it from the account's actions menu.
+      check_provider_health: Check your SimpleFIN connection status.
       all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
       currently_linked_to: "Currently linked to: %{account_name}"
+      balance: "Balance:"
 
     link_existing_account:
       success: Account successfully linked to SimpleFIN
@@ -98,3 +136,8 @@ en:
       message:
         one: "%{count} pending transaction older than %{days} days"
         other: "%{count} pending transactions older than %{days} days"
+    subtype_select:
+      please_select_subtype: Please select a subtype
+      please_select_type: Please select a type
+      select_subtype: Select subtype
+      select_type: Select type

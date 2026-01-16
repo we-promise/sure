@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Update balance") %>
+  <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
     <%= styled_form_with model: @entry, url: valuation_path(@entry), method: :patch, class: "space-y-4", data: { turbo_frame: :_top } do |form| %>
       <%= form.hidden_field :date %>
@@ -12,7 +12,7 @@
           action_verb: "update",
           is_update: true %>
 
-      <%= form.submit "Update" %>
+      <%= form.submit t(".update") %>
     <% end %>
   <% end %>
 <% end %>
