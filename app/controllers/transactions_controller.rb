@@ -188,7 +188,8 @@ class TransactionsController < ApplicationController
     return if performed? # Early exit if redirect already happened
 
     activity_label = params[:investment_activity_label].presence
-    is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount > 0)
+    # Infer sell from amount sign: negative amount = money coming in = sell
+    is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
 
     ActiveRecord::Base.transaction do
       # For trades: positive qty = buy (money out), negative qty = sell (money in)

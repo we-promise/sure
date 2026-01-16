@@ -81,6 +81,7 @@ class TradeImport < Import
     def investment_activity_label_for(qty)
       # Set activity label based on quantity signage
       # Buy trades have positive qty, Sell trades have negative qty
+      return nil if qty.blank? || qty.to_d.zero?
       qty.to_d.positive? ? "Buy" : "Sell"
     end
 
