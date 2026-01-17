@@ -1,0 +1,11 @@
+one:
+  rule: one
+  rule_name: "Test Rule"
+  execution_type: "manual"
+  status: "pending"
+  transactions_queued: 10
+  transactions_processed: 5
+  transactions_modified: 3
+  pending_jobs_count: 2
+  executed_at: <%= Time.current %>
+  run_metadata: {}
