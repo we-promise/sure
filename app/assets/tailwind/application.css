@@ -147,42 +147,42 @@
   }
 }
 
-/* Global custom scrollbar - Light mode */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* Windows-specific scrollbar styling with dark mode support */
+.windows {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
-  border-radius: 4px;
-}
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-alpha-black-500);
+    border-radius: 10px;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
-}
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-alpha-black-700);
+  }
 
-/* Global custom scrollbar - Dark mode */
-[data-theme=dark] ::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.6);
-}
-
-[data-theme=dark] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.8);
-}
-
-/* Firefox scrollbar */
-* {
+  /* Firefox scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  scrollbar-color: var(--color-alpha-black-500) transparent;
 }
 
-[data-theme=dark] * {
-  scrollbar-color: rgba(75, 85, 99, 0.6) transparent;
+/* Windows dark mode */
+[data-theme=dark] .windows {
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-alpha-white-500);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-alpha-white-700);
+  }
+
+  scrollbar-color: var(--color-alpha-white-500) transparent;
 }
 
 /* Thin scrollbar variant */
@@ -192,13 +192,29 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(156, 163, 175, 0.5);
+    background: var(--color-alpha-black-500);
     border-radius: 10px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: rgba(156, 163, 175, 0.7);
+    background: var(--color-alpha-black-700);
   }
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-alpha-black-500) transparent;
+}
+
+/* Scrollbar dark mode */
+[data-theme=dark] .scrollbar {
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-alpha-white-500);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-alpha-white-700);
+  }
+
+  scrollbar-color: var(--color-alpha-white-500) transparent;
 }
 
 .no-scrollbar::-webkit-scrollbar {
