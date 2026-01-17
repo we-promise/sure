@@ -1,0 +1,105 @@
+# Render Blueprint Spec for Sure
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Main web application
+  - type: web
+    name: sure-web
+    runtime: docker
+    region: singapore
+    plan: starter
+    healthCheckPath: /up
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: SELF_HOSTED
+        value: "true"
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: RAILS_FORCE_SSL
+        value: "true"
+      - key: RAILS_ASSUME_SSL
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sure-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sure-redis
+          property: connectionString
+      # Optional: OpenAI for AI features
+      - key: OPENAI_ACCESS_TOKEN
+        sync: false
+      # Optional: Email configuration
+      - key: SMTP_ADDRESS
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_SENDER
+        sync: false
+      # Optional: App domain
+      - key: APP_DOMAIN
+        sync: false
+    disk:
+      name: sure-storage
+      mountPath: /rails/storage
+      sizeGB: 10
+
+  # Background worker for Sidekiq
+  - type: worker
+    name: sure-worker
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerCommand: bundle exec sidekiq
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: SELF_HOSTED
+        value: "true"
+      - key: SECRET_KEY_BASE
+        fromService:
+          type: web
+          name: sure-web
+          envVarKey: SECRET_KEY_BASE
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sure-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sure-redis
+          property: connectionString
+      # Optional: OpenAI for AI features
+      - key: OPENAI_ACCESS_TOKEN
+        sync: false
+    disk:
+      name: sure-worker-storage
+      mountPath: /rails/storage
+      sizeGB: 10
+
+  # Redis for caching and Sidekiq
+  - type: keyvalue
+    name: sure-redis
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Only allow internal connections
+
+# PostgreSQL database
+databases:
+  - name: sure-db
+    region: singapore
+    plan: basic-256mb
+    databaseName: sure_production
+    user: sure_user
+    ipAllowList: []  # Only allow internal connections
