@@ -1,6 +1,8 @@
 class Settings::LlmUsagesController < ApplicationController
   layout "settings"
 
+  guard_feature unless: -> { Current.user.ai_available? }
+
   def show
     @breadcrumbs = [
       [ "Home", root_path ],
