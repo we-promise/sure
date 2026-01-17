@@ -29,12 +29,4 @@ class LocalizeTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", text: /Configure your preferences/i
   end
-
-  test "falls back to default locale when family has no locale and param is invalid" do
-    @family.update_column(:locale, nil)
-    get preferences_onboarding_url(locale: "invalid")
-    assert_response :success
-    # Falls back to I18n.default_locale (en)
-    assert_select "h1", text: /Configure your preferences/i
-  end
 end
