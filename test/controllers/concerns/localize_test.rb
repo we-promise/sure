@@ -9,7 +9,7 @@ class LocalizeTest < ActionDispatch::IntegrationTest
   end
 
   teardown do
-    @family.update!(locale: @original_locale || "en")
+    @family.reload.update!(locale: @original_locale || "en")
   end
 
   test "uses family locale by default" do
