@@ -7,8 +7,7 @@ export default class extends Controller {
   static values = {
     data: Object,
     nodeWidth: { type: Number, default: 15 },
-    nodePadding: { type: Number, default: 20 },
-    currencySymbol: { type: String, default: "$" }
+    nodePadding: { type: Number, default: 20 }
   };
 
   connect() {
@@ -257,7 +256,7 @@ export default class extends Controller {
           .style("font-size", "0.65rem"); // Explicitly set smaller font size
 
         financialDetailsTspan.append("tspan")
-          .text(stimulusControllerInstance.currencySymbolValue + Number.parseFloat(d.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          .text(d.value_formatted);
       });
   }
 
@@ -271,29 +270,24 @@ export default class extends Controller {
   }
 
   #showTooltip(event, linkData) {
-    this.#displayTooltip(event, linkData.value, linkData.percentage);
+    this.#displayTooltip(event, linkData.value_formatted, linkData.percentage);
   }
 
   #showNodeTooltip(event, nodeData) {
-    this.#displayTooltip(event, nodeData.value, nodeData.percentage, nodeData.name);
+    this.#displayTooltip(event, nodeData.value_formatted, nodeData.percentage, nodeData.name);
   }
 
-  #displayTooltip(event, value, percentage, title = null) {
+  #displayTooltip(event, formattedValue, percentage, title = null) {
     if (!this.tooltip) {
       this.#createTooltip();
     }
 
-    // Format the tooltip content
-    const formattedValue = this.currencySymbolValue + Number.parseFloat(value).toLocaleString(undefined, { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
-    });
     const percentageText = percentage ? `${percentage}%` : "0%";
-    
-    const content = title 
+
+    const content = title
       ? `${title}<br/>${formattedValue} (${percentageText})`
       : `${formattedValue} (${percentageText})`;
-    
+
     this.tooltip
       .html(content)
       .style("left", `${event.pageX + 10}px`)

@@ -42,7 +42,7 @@
                   <p class="text-sm text-secondary"><%= category[:name] %></p>
 
                   <p class="text-3xl font-medium text-primary">
-                    <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ",") %>
+                    <%= format_money Money.new(category[:amount], category[:currency]) %>
                   </p>
 
                   <p class="text-sm text-secondary"><%= category[:percentage] %>%</p>

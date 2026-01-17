@@ -131,9 +131,17 @@ class PagesController < ApplicationController
       links = []
       node_indices = {}
 
+      format_value = ->(val) { Money.new(val, currency).format }
+
       add_node = ->(unique_key, display_name, value, percentage, color) {
         node_indices[unique_key] ||= begin
-          nodes << { name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          nodes << {
+            name: display_name,
+            value: value.to_f.round(2),
+            value_formatted: format_value.call(value),
+            percentage: percentage.to_f.round(1),
+            color: color
+          }
           nodes.size - 1
         end
       }
@@ -157,7 +165,7 @@ class PagesController < ApplicationController
         # Use name as fallback key for synthetic categories (no id)
         node_key = "income_#{ct.category.id || ct.category.name}"
         idx = add_node.call(node_key, ct.category.name, val, percentage, color)
-        links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
+        links << { source: idx, target: cash_flow_idx, value: val, value_formatted: format_value.call(val), color: color, percentage: percentage }
       end
 
       # Expense side (top-level categories only)
@@ -173,7 +181,7 @@ class PagesController < ApplicationController
         # Use name as fallback key for synthetic categories (no id)
         node_key = "expense_#{ct.category.id || ct.category.name}"
         idx = add_node.call(node_key, ct.category.name, val, percentage, color)
-        links << { source: cash_flow_idx, target: idx, value: val, color: color, percentage: percentage }
+        links << { source: cash_flow_idx, target: idx, value: val, value_formatted: format_value.call(val), color: color, percentage: percentage }
       end
 
       # Surplus/Deficit
@@ -181,14 +189,13 @@ class PagesController < ApplicationController
       if net.positive?
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
-        links << { source: cash_flow_idx, target: idx, value: net, color: "var(--color-success)", percentage: percentage }
+        links << { source: cash_flow_idx, target: idx, value: net, value_formatted: format_value.call(net), color: "var(--color-success)", percentage: percentage }
       end
 
-      { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency).symbol }
+      { nodes: nodes, links: links }
     end
 
     def build_outflows_donut_data(expense_totals)
-      currency_symbol = Money::Currency.new(expense_totals.currency).symbol
       total = expense_totals.total
 
       categories = expense_totals.category_totals
@@ -207,6 +214,6 @@ class PagesController < ApplicationController
           }
         end
 
-      { categories: categories, total: total.to_f.round(2), currency: expense_totals.currency, currency_symbol: currency_symbol }
+      { categories: categories, total: total.to_f.round(2), currency: expense_totals.currency }
     end
 end
