@@ -3,9 +3,11 @@ require "digest/md5"
 class SimplefinEntry::Processor
   include CurrencyNormalizable
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
-  def initialize(simplefin_transaction, simplefin_account:)
+  # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
+  def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)
     @simplefin_transaction = simplefin_transaction
     @simplefin_account = simplefin_account
+    @shared_import_adapter = import_adapter
   end
 
   def process
@@ -76,7 +78,8 @@ class SimplefinEntry::Processor
     end
 
     def import_adapter
-      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+      # Use shared adapter if provided, otherwise create new one
+      @import_adapter ||= @shared_import_adapter || Account::ProviderImportAdapter.new(account)
     end
 
     def account

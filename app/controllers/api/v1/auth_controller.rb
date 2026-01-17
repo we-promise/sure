@@ -36,9 +36,10 @@ module Api
         user = User.new(user_signup_params)
 
         # Create family for new user
+        # First user of an instance becomes super_admin
         family = Family.new
         user.family = family
-        user.role = :admin
+        user.role = User.role_for_new_family_creator
 
         if user.save
           # Claim invite code if provided

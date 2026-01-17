@@ -26,6 +26,9 @@ class Transaction < ApplicationRecord
     "Interest", "Fee", "Transfer", "Contribution", "Withdrawal", "Exchange", "Other"
   ].freeze
 
+  # Internal movement labels that should be excluded from budget (auto cash management)
+  INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {

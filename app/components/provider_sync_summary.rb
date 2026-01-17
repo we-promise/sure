@@ -68,6 +68,19 @@ class ProviderSyncSummary < ViewComponent::Base
     stats.key?("tx_seen") || stats.key?("tx_imported") || stats.key?("tx_updated")
   end
 
+  # Skip statistics (protected entries not overwritten)
+  def has_skipped_entries?
+    tx_skipped > 0
+  end
+
+  def skip_summary
+    stats["skip_summary"] || {}
+  end
+
+  def skip_details
+    stats["skip_details"] || []
+  end
+
   # Holdings statistics
   def holdings_found
     stats["holdings_found"].to_i
@@ -125,6 +138,14 @@ class ProviderSyncSummary < ViewComponent::Base
 
   def has_errors?
     total_errors > 0
+  end
+
+  def error_details
+    stats["errors"] || []
+  end
+
+  def error_buckets
+    stats["error_buckets"] || {}
   end
 
   # Stale pending transactions (auto-excluded)

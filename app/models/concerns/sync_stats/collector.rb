@@ -180,6 +180,37 @@ module SyncStats
       sync.update!(sync_stats: { "cleared_at" => Time.current.iso8601 })
     end
 
+    # Collects statistics about entries that were skipped during sync.
+    # Skipped entries are those protected from sync overwrites (user-modified,
+    # import-locked, excluded, or converted to different types).
+    #
+    # @param sync [Sync] The sync record to update
+    # @param skipped_entries [Array<Hash>] Array of skipped entry info with :id, :name, :reason, :account_name
+    # @return [Hash] The skip stats that were collected
+    def collect_skip_stats(sync, skipped_entries:)
+      return {} unless sync.respond_to?(:sync_stats)
+      return {} if skipped_entries.blank?
+
+      # Group by reason for summary breakdown
+      by_reason = skipped_entries.group_by { |e| e[:reason] }
+
+      skip_stats = {
+        "tx_skipped" => skipped_entries.size,
+        "skip_summary" => by_reason.transform_values(&:size),
+        "skip_details" => skipped_entries.first(20).map do |e|
+          {
+            "entry_id" => e[:id].to_s,
+            "name" => e[:name],
+            "reason" => e[:reason],
+            "account_name" => e[:account_name]
+          }
+        end
+      }
+
+      merge_sync_stats(sync, skip_stats)
+      skip_stats
+    end
+
     private
 
       # Merges new stats into the existing sync_stats hash.
