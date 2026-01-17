@@ -82,11 +82,13 @@ class Security::Resolver
         filtered_candidates = filtered_candidates.select { |s| s.country_code.upcase.to_s == country_code.upcase.to_s }
       end
 
-      # 1. Prefer exact exchange_operating_mic matches (if one was provided)
-      # 2. Rank by country relevance (lower index in the list is more relevant)
-      # 3. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
+      # 1. Prefer exact ticker matches (MSTR before MSTRX when searching for "MSTR")
+      # 2. Prefer exact exchange_operating_mic matches (if one was provided)
+      # 3. Rank by country relevance (lower index in the list is more relevant)
+      # 4. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
       sorted_candidates = filtered_candidates.sort_by do |s|
         [
+          s.ticker.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
           exchange_operating_mic.present? && s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s ? 0 : 1,
           sorted_country_codes_by_relevance.index(s.country_code&.upcase.to_s) || sorted_country_codes_by_relevance.length,
           sorted_exchange_operating_mics_by_relevance.index(s.exchange_operating_mic&.upcase.to_s) || sorted_exchange_operating_mics_by_relevance.length

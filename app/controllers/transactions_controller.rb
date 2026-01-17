@@ -366,17 +366,25 @@ class TransactionsController < ApplicationController
 
     def resolve_security_for_conversion
       if params[:security_id] == "__custom__"
-        ticker = params[:custom_ticker].presence
-        unless ticker.present?
+        # User selected "Enter custom ticker" - check for combobox selection or manual entry
+        if params[:ticker].present?
+          # Combobox selection: format is "SYMBOL|EXCHANGE"
+          ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
+          Security::Resolver.new(
+            ticker_symbol.strip,
+            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence
+          ).resolve
+        elsif params[:custom_ticker].present?
+          # Manual entry from combobox's name_when_new or fallback text field
+          Security::Resolver.new(
+            params[:custom_ticker].strip,
+            exchange_operating_mic: params[:exchange_operating_mic].presence
+          ).resolve
+        else
           flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
           redirect_back_or_to transactions_path
           return nil
         end
-
-        Security::Resolver.new(
-          ticker.strip,
-          exchange_operating_mic: params[:exchange_operating_mic].presence
-        ).resolve
       elsif params[:security_id].present?
         found = Security.find_by(id: params[:security_id])
         unless found
@@ -386,8 +394,16 @@ class TransactionsController < ApplicationController
         end
         found
       elsif params[:ticker].present?
+        # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE"
+        ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
         Security::Resolver.new(
-          params[:ticker].strip,
+          ticker_symbol.strip,
+          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence
+        ).resolve
+      elsif params[:custom_ticker].present?
+        # Manual entry from combobox's name_when_new (no existing holdings path)
+        Security::Resolver.new(
+          params[:custom_ticker].strip,
           exchange_operating_mic: params[:exchange_operating_mic].presence
         ).resolve
       end.tap do |security|
