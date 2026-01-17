@@ -153,6 +153,12 @@ class UserTest < ActiveSupport::TestCase
     Setting.openai_access_token = previous
   end
 
+  test "ai_available? returns false when OPENAI_ACCESS_TOKEN is set to DISABLED" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: "DISABLED" do
+      assert_not @user.ai_available?
+    end
+  end
+
   test "update_dashboard_preferences handles concurrent updates atomically" do
     @user.update!(preferences: {})
 

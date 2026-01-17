@@ -105,6 +105,7 @@ class User < ApplicationRecord
   end
 
   def ai_available?
+    return false if ENV["OPENAI_ACCESS_TOKEN"] == "DISABLED"
     !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
   end
 
