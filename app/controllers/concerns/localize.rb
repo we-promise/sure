@@ -13,7 +13,7 @@ module Localize
     end
 
     def locale_from_param
-      return unless params[:locale].present?
+      return unless params[:locale].is_a?(String) && params[:locale].present?
       locale = params[:locale].to_sym
       locale if I18n.available_locales.include?(locale)
     end

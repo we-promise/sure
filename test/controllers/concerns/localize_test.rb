@@ -4,7 +4,12 @@ class LocalizeTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
     @family = @user.family
+    @original_locale = @family.locale
     @family.update!(locale: "en")
+  end
+
+  teardown do
+    @family.update!(locale: @original_locale || "en")
   end
 
   test "uses family locale by default" do
