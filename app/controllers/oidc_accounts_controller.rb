@@ -13,6 +13,10 @@ class OidcAccountsController < ApplicationController
 
     @email = @pending_auth["email"]
     @user_exists = User.exists?(email: @email) if @email.present?
+
+    # Determine whether we should offer JIT account creation for this
+    # pending auth, based on JIT mode and allowed domains.
+    @allow_account_creation = !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(@email)
   end
 
   def create_link
@@ -31,6 +35,13 @@ class OidcAccountsController < ApplicationController
       oidc_identity = OidcIdentity.create_from_omniauth(
         build_auth_hash(@pending_auth),
         user
+      )
+
+      # Log account linking
+      SsoAuditLog.log_link!(
+        user: user,
+        provider: @pending_auth["provider"],
+        request: request
       )
 
       # Clear pending auth from session
@@ -77,26 +88,53 @@ class OidcAccountsController < ApplicationController
       return
     end
 
-    # Create user with a secure random password since they're using OIDC
-    secure_password = SecureRandom.base58(32)
+    email = @pending_auth["email"]
+
+    # Respect global JIT configuration: in link_only mode or when the email
+    # domain is not allowed, block JIT account creation and send the user
+    # back to the login page with a clear message.
+    unless !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)
+      redirect_to new_session_path, alert: "SSO account creation is disabled. Please contact an administrator."
+      return
+    end
+
+    # Create SSO-only user without local password.
+    # Security: JIT users should NOT have password_digest set to prevent
+    # chained authentication attacks where SSO users gain local login access
+    # via password reset.
+    # Allow user to edit first_name and last_name from the form, but email comes from OIDC
+    user_params = params.fetch(:user, {}).permit(:first_name, :last_name)
     @user = User.new(
-      email: @pending_auth["email"],
-      first_name: @pending_auth["first_name"],
-      last_name: @pending_auth["last_name"],
-      password: secure_password,
-      password_confirmation: secure_password
+      email: email,
+      first_name: user_params[:first_name].presence || @pending_auth["first_name"],
+      last_name: user_params[:last_name].presence || @pending_auth["last_name"],
+      skip_password_validation: true
     )
 
     # Create new family for this user
     @user.family = Family.new
-    @user.role = :admin
+
+    # Use provider-configured default role, or fall back to admin for family creators
+    # First user of an instance always becomes super_admin regardless of provider config
+    provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }
+    provider_default_role = provider_config&.dig(:settings, :default_role)
+    @user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
 
     if @user.save
-      # Create the OIDC identity
-      OidcIdentity.create_from_omniauth(
+      # Create the OIDC (or other SSO) identity
+      identity = OidcIdentity.create_from_omniauth(
         build_auth_hash(@pending_auth),
         @user
       )
+
+      # Only log JIT account creation if identity was successfully created
+      if identity.persisted?
+        SsoAuditLog.log_jit_account_created!(
+          user: @user,
+          provider: @pending_auth["provider"],
+          request: request
+        )
+      end
 
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)

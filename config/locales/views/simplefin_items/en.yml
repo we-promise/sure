@@ -2,43 +2,60 @@
 en:
   simplefin_items:
     new:
-      title: Connect SimpleFin
+      title: Connect SimpleFIN
       setup_token: Setup token
-      setup_token_placeholder: paste your SimpleFin setup token
+      setup_token_placeholder: paste your SimpleFIN setup token
       connect: Connect
       cancel: Cancel
     create:
-      success: SimpleFin connection added successfully! Your accounts will appear shortly as they sync in the background.
+      success: SimpleFIN connection added successfully! Your accounts will appear shortly as they sync in the background.
       errors:
-        blank_token: Please enter a SimpleFin setup token.
-        invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge.
+        blank_token: Please enter a SimpleFIN setup token.
+        invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
         token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
         create_failed: "Failed to connect: %{message}"
         unexpected: An unexpected error occurred. Please try again or contact support.
     destroy:
-      success: SimpleFin connection will be removed
+      success: SimpleFIN connection will be removed
     update:
-      success: SimpleFin connection updated successfully! Your accounts are being reconnected.
+      success: SimpleFIN connection updated successfully! Your accounts are being reconnected.
       errors:
-        blank_token: Please enter a SimpleFin setup token.
-        invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFin Bridge.
+        blank_token: Please enter a SimpleFIN setup token.
+        invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
         token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
         update_failed: "Failed to update connection: %{message}"
         unexpected: An unexpected error occurred. Please try again or contact support.
     edit:
       setup_token:
-        label: "SimpleFin Setup Token:"
-        placeholder: "Paste your SimpleFin setup token here..."
+        label: "SimpleFIN Setup Token:"
+        placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
+    setup_accounts:
+      stale_accounts:
+        title: "Accounts No Longer in SimpleFIN"
+        description: "These accounts exist in your database but are no longer provided by SimpleFIN. This can happen when account configurations change upstream."
+        action_prompt: "What would you like to do?"
+        action_delete: "Delete account and all transactions"
+        action_move: "Move transactions to:"
+        action_skip: "Skip for now"
+        transaction_count:
+          one: "%{count} transaction"
+          other: "%{count} transactions"
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       no_accounts: "No accounts to set up."
-      success: "Successfully created %{count} SimpleFIN account(s)! Your transactions and holdings are being imported in the background."
+      success:
+        one: "Successfully created %{count} SimpleFIN account! Your transactions and holdings are being imported in the background."
+        other: "Successfully created %{count} SimpleFIN accounts! Your transactions and holdings are being imported in the background."
+      stale_accounts_processed: "Stale accounts: %{deleted} deleted, %{moved} moved."
+      stale_accounts_errors:
+        one: "%{count} stale account action failed. Check logs for details."
+        other: "%{count} stale account actions failed. Check logs for details."
     simplefin_item:
       add_new: Add new connection
       confirm_accept: Delete connection
       confirm_body: This will permanently delete all the accounts in this group and all associated data.
-      confirm_title: Delete SimpleFin connection?
+      confirm_title: Delete SimpleFIN connection?
       delete: Delete
       deletion_in_progress: "(deletion in progress...)"
       error: Error occurred while syncing data
@@ -46,15 +63,38 @@ en:
       no_accounts_title: No accounts found
       requires_update: Reconnect
       setup_needed: New accounts ready to set up
-      setup_description: Choose account types for your newly imported SimpleFin accounts.
+      setup_description: Choose account types for your newly imported SimpleFIN accounts.
       setup_action: Set Up New Accounts
       status: Last synced %{timestamp} ago
       status_never: Never synced
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
       update: Update
+      stale_pending_note: "(excluded from budgets)"
+      stale_pending_accounts: "in: %{accounts}"
+      reconciled_details_note: "(see sync summary for details)"
+      duplicate_accounts_skipped: "Some accounts were skipped as duplicates — use 'Link existing accounts' to merge."
     select_existing_account:
       title: "Link %{account_name} to SimpleFIN"
       description: Select a SimpleFIN account to link to your existing account
       cancel: Cancel
       link_account: Link account
+      no_accounts_found: No SimpleFIN accounts found for this family.
+      wait_for_sync: If you just connected or synced, try again after the sync completes.
+      unlink_to_move: To move a link, first unlink it from the account’s actions menu.
+      all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
+      currently_linked_to: "Currently linked to: %{account_name}"
+
+    link_existing_account:
+      success: Account successfully linked to SimpleFIN
+      errors:
+        only_manual: Only manual accounts can be linked
+        invalid_simplefin_account: Invalid SimpleFIN account selected
+    reconciled_status:
+      message:
+        one: "%{count} duplicate pending transaction reconciled"
+        other: "%{count} duplicate pending transactions reconciled"
+    stale_pending_status:
+      message:
+        one: "%{count} pending transaction older than %{days} days"
+        other: "%{count} pending transactions older than %{days} days"

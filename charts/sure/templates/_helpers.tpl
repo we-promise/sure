@@ -69,10 +69,42 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- printf "redis://default:$(REDIS_PASSWORD)@%s:6379/0" $host -}}
   {{- else if .Values.redisSimple.enabled -}}
     {{- $host := printf "%s-redis.%s.svc.cluster.local" (include "sure.fullname" .) .Release.Namespace -}}
-    {{- printf "redis://default:$(REDIS_PASSWORD)@%s:%d/0" $host (.Values.redisSimple.service.port | default 6379) -}}
+    {{- printf "redis://default:$(REDIS_PASSWORD)@%s:%d/0" $host (int (.Values.redisSimple.service.port | default 6379)) -}}
   {{- else -}}
     {{- "" -}}
   {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Check if Redis Sentinel is enabled and configured */}}
+{{- define "sure.redisSentinelEnabled" -}}
+{{- if and .Values.redisOperator.managed.enabled .Values.redisOperator.sentinel.enabled (eq (.Values.redisOperator.mode | default "replication") "sentinel") -}}
+true
+{{- else -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Compute Redis Sentinel hosts (comma-separated list of host:port) */}}
+{{- define "sure.redisSentinelHosts" -}}
+{{- if eq (include "sure.redisSentinelEnabled" .) "true" -}}
+  {{- $name := .Values.redisOperator.name | default (printf "%s-redis" (include "sure.fullname" .)) -}}
+  {{- $replicas := .Values.redisOperator.replicas | default 3 -}}
+  {{- $port := .Values.redisOperator.probes.sentinel.port | default 26379 -}}
+  {{- $hosts := list -}}
+  {{- range $i := until (int $replicas) -}}
+    {{- $host := printf "%s-sentinel-%d.%s-sentinel-headless.%s.svc.cluster.local:%d" $name $i $name $.Release.Namespace (int $port) -}}
+    {{- $hosts = append $hosts $host -}}
+  {{- end -}}
+  {{- join "," $hosts -}}
+{{- else -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Get Redis Sentinel master group name */}}
+{{- define "sure.redisSentinelMaster" -}}
+{{- if eq (include "sure.redisSentinelEnabled" .) "true" -}}
+  {{- .Values.redisOperator.sentinel.masterGroupName | default "mymaster" -}}
+{{- else -}}
 {{- end -}}
 {{- end -}}
 

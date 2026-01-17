@@ -6,7 +6,17 @@ metadata:
     {{- include "sure.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.worker.replicas }}
-  revisionHistoryLimit: 2
+  revisionHistoryLimit: {{ .Values.worker.revisionHistoryLimit | default 2 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      {{- if and .Values.worker.strategy .Values.worker.strategy.rollingUpdate }}
+      maxUnavailable: {{ .Values.worker.strategy.rollingUpdate.maxUnavailable | default 1 }}
+      maxSurge: {{ .Values.worker.strategy.rollingUpdate.maxSurge | default 0 }}
+      {{- else }}
+      maxUnavailable: 1
+      maxSurge: 0
+      {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/component: worker

@@ -1,13 +1,14 @@
 module TransactionsHelper
   def transaction_search_filters
     [
-      { key: "account_filter", label: "Account", icon: "layers" },
-      { key: "date_filter", label: "Date", icon: "calendar" },
-      { key: "type_filter", label: "Type", icon: "tag" },
-      { key: "amount_filter", label: "Amount", icon: "hash" },
-      { key: "category_filter", label: "Category", icon: "shapes" },
-      { key: "tag_filter", label: "Tag", icon: "tags" },
-      { key: "merchant_filter", label: "Merchant", icon: "store" }
+      { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
+      { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
+      { key: "type_filter", label: t("transactions.search.filters.type"), icon: "tag" },
+      { key: "status_filter", label: t("transactions.search.filters.status"), icon: "clock" },
+      { key: "amount_filter", label: t("transactions.search.filters.amount"), icon: "hash" },
+      { key: "category_filter", label: t("transactions.search.filters.category"), icon: "shapes" },
+      { key: "tag_filter", label: t("transactions.search.filters.tag"), icon: "tags" },
+      { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" }
     ]
   end
 

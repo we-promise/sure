@@ -1,0 +1,12 @@
+<%# locals: title:, message: %>
+<div class="mb-4 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 theme-dark:bg-blue-900/20 theme-dark:text-blue-400 theme-dark:border-blue-800 p-4" role="status" aria-live="polite">
+  <div class="flex items-start gap-3">
+    <div class="shrink-0">
+      <%= icon "info", size: "sm", color: "blue-600" %>
+    </div>
+    <div class="flex-1 text-sm">
+      <h3 class="font-semibold mb-1"><%= title %></h3>
+      <p><%= message %></p>
+    </div>
+  </div>
+</div>

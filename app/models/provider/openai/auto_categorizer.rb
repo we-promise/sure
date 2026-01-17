@@ -534,7 +534,8 @@ class Provider::Openai::AutoCategorizer
     # Format transactions in a simpler, more readable way for smaller LLMs
     def format_transactions_simply
       transactions.map do |t|
-        "- ID: #{t[:id]}, Amount: #{t[:amount]}, Type: #{t[:classification]}, Description: \"#{t[:description]}\""
+        description = t[:description].presence || t[:merchant].presence || ""
+        "- ID: #{t[:id]}, Amount: #{t[:amount]}, Type: #{t[:classification]}, Description: \"#{description}\""
       end.join("\n")
     end
 end

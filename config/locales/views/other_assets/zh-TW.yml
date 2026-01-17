@@ -1,0 +1,9 @@
+---
+zh-TW:
+  other_assets:
+    edit:
+      edit: 編輯 %{account}
+      balance_tracking_info: "「其他資產」是透過「新餘額」進行手動估值來追蹤，而非透過交易紀錄。現金流不會影響帳戶餘額。"
+    new:
+      title: 輸入資產詳情
+      balance_tracking_info: "「其他資產」是透過「新餘額」進行手動估值來追蹤，而非透過交易紀錄。現金流不會影響帳戶餘額。"

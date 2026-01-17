@@ -1,0 +1,4 @@
+---
+zh-CN:
+  subscriptions:
+    self_hosted_alert: "%{product_name} 在自托管模式下不可用。"

@@ -11,13 +11,17 @@ module Syncable
 
   # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,
   # we do not create a new sync, and attempt to expand the sync window if needed.
+  #
+  # NOTE: Uses `visible` scope (syncs < 5 min old) instead of `incomplete` to prevent
+  # getting stuck on stale syncs after server/Sidekiq restarts. If a sync is older than
+  # 5 minutes, we assume its job was lost and create a new sync.
   def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     Sync.transaction do
       with_lock do
-        sync = self.syncs.incomplete.first
+        sync = self.syncs.visible.first
 
         if sync
-          Rails.logger.info("There is an existing sync, expanding window if needed (#{sync.id})")
+          Rails.logger.info("There is an existing recent sync, expanding window if needed (#{sync.id})")
           sync.expand_window_if_needed(window_start_date, window_end_date)
 
           # Update parent relationship if one is provided and sync doesn't already have a parent

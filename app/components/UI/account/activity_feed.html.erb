@@ -1,5 +1,5 @@
 <%= turbo_frame_tag dom_id(account, "entries") do %>
-  <div class="bg-container p-5 shadow-border-xs rounded-xl">
+  <div class="bg-container px-3 py-4 lg:p-4 shadow-border-xs rounded-xl" data-controller="checkbox-toggle">
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t("accounts.show.activity.title"), class: "font-medium text-lg" %>
 
@@ -46,8 +46,54 @@
                             "data-auto-submit-form-target": "auto" %>
             </div>
           </div>
-        </div>
+
+          <%= render DS::Menu.new(variant: "button", no_padding: true) do |menu| %>
+            <% menu.with_button(
+              id: "activity-status-filter-button",
+              type: "button",
+              text: t("accounts.show.activity.filter"),
+              variant: "outline",
+              icon: "list-filter"
+            ) %>
+
+            <% menu.with_custom_content do %>
+              <div class="p-3 space-y-3 min-w-[160px]">
+                <p class="text-xs font-medium text-secondary uppercase"><%= t("accounts.show.activity.status") %></p>
+                <div class="flex items-center gap-3">
+                  <%= check_box_tag "q[status][]",
+                                    "confirmed",
+                                    params.dig(:q, :status)&.include?("confirmed"),
+                                    id: "q_status_confirmed",
+                                    class: "checkbox checkbox--light",
+                                    form: "entries-search",
+                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
+                  <%= label_tag "q_status_confirmed", t("accounts.show.activity.confirmed"), class: "text-sm text-primary" %>
+                </div>
+                <div class="flex items-center gap-3">
+                  <%= check_box_tag "q[status][]",
+                                    "pending",
+                                    params.dig(:q, :status)&.include?("pending"),
+                                    id: "q_status_pending",
+                                    class: "checkbox checkbox--light",
+                                    form: "entries-search",
+                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
+                  <%= label_tag "q_status_pending", t("accounts.show.activity.pending"), class: "text-sm text-primary" %>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
       <% end %>
+      <%= button_tag type: "button",
+            id: "toggle-checkboxes-button",
+            aria: { label: t(".toggle_selection_checkboxes") },
+            class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
+            data: {
+              action: "click->checkbox-toggle#toggle",
+              checkbox_toggle_target: "toggleButton"
+            } do %>
+            <%= helpers.icon("list-todo") %>
+        <% end %>
+      </div>
     </div>
 
     <% if activity_dates.empty? %>
@@ -66,8 +112,11 @@
         <div class="grid bg-container-inset rounded-xl grid-cols-12 items-center uppercase text-xs font-medium text-secondary px-5 py-3 mb-4">
           <div class="pl-0.5 col-span-8 flex items-center gap-4">
             <%= check_box_tag "selection_entry",
-                              class: "checkbox checkbox--light",
-                              data: { action: "bulk-select#togglePageSelection" } %>
+                              class: "checkbox checkbox--light hidden lg:block",
+                              data: {
+                                action: "bulk-select#togglePageSelection",
+                                checkbox_toggle_target: "selectionEntry"
+                              } %>
             <%= tag.p t("accounts.show.activity.date") %>
           </div>
 

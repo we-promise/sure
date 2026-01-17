@@ -2,6 +2,8 @@ class Security::Price::Importer
   MissingSecurityPriceError = Class.new(StandardError)
   MissingStartPriceError    = Class.new(StandardError)
 
+  PROVISIONAL_LOOKBACK_DAYS = 7
+
   def initialize(security:, security_provider:, start_date:, end_date:, clear_cache: false)
     @security          = security
     @security_provider = security_provider
@@ -24,6 +26,7 @@ class Security::Price::Importer
     end
 
     prev_price_value = start_price_value
+    prev_currency = prev_price_currency || db_price_currency || "USD"
 
     unless prev_price_value.present?
       Rails.logger.error("Could not find a start price for #{security.ticker} on or before #{start_date}")
@@ -40,28 +43,53 @@ class Security::Price::Importer
     end
 
     gapfilled_prices = effective_start_date.upto(end_date).map do |date|
-      db_price_value       = db_prices[date]&.price
-      provider_price_value = provider_prices[date]&.price
-      provider_currency    = provider_prices[date]&.currency
+      db_price             = db_prices[date]
+      db_price_value       = db_price&.price
+      provider_price       = provider_prices[date]
+      provider_price_value = provider_price&.price
+      provider_currency    = provider_price&.currency
 
-      chosen_price = if clear_cache
-        provider_price_value || db_price_value   # overwrite when possible
+      has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
+      has_db_price = db_price_value.present? && db_price_value.to_f > 0
+      is_provisional = db_price&.provisional
+
+      # Choose price and currency from the same source to avoid mismatches
+      chosen_price, chosen_currency = if clear_cache || is_provisional
+        # For provisional/cache clear: only use provider price, let gap-fill handle missing
+        # This ensures stale DB values don't persist when provider has no weekend data
+        [ provider_price_value, provider_currency ]
+      elsif has_db_price
+        # For non-provisional with valid DB price: preserve existing value (user edits)
+        [ db_price_value, db_price&.currency ]
       else
-        db_price_value || provider_price_value   # fill gaps
+        # Fill gaps with provider data
+        [ provider_price_value, provider_currency ]
       end
 
       # Gap-fill using LOCF (last observation carried forward)
-      # Treat nil or zero prices as invalid and use previous price
+      # Treat nil or zero prices as invalid and use previous price/currency
+      used_locf = false
       if chosen_price.nil? || chosen_price.to_f <= 0
         chosen_price = prev_price_value
+        chosen_currency = prev_currency
+        used_locf = true
       end
       prev_price_value = chosen_price
+      prev_currency = chosen_currency || prev_currency
+
+      provisional = determine_provisional_status(
+        date: date,
+        has_provider_price: has_provider_price,
+        used_locf: used_locf,
+        existing_provisional: db_price&.provisional
+      )
 
       {
         security_id: security.id,
         date:        date,
         price:       chosen_price,
-        currency:    provider_currency || prev_price_currency || db_price_currency || "USD"
+        currency:    chosen_currency || "USD",
+        provisional: provisional
       }
     end
 
@@ -73,7 +101,7 @@ class Security::Price::Importer
 
     def provider_prices
       @provider_prices ||= begin
-        provider_fetch_start_date = effective_start_date - 5.days
+        provider_fetch_start_date = effective_start_date - PROVISIONAL_LOOKBACK_DAYS.days
 
         response = security_provider.fetch_security_prices(
           symbol: security.ticker,
@@ -104,7 +132,14 @@ class Security::Price::Importer
     end
 
     def all_prices_exist?
+      return false if has_refetchable_provisional_prices?
       db_prices.count == expected_count
+    end
+
+    def has_refetchable_provisional_prices?
+      Security::Price.where(security_id: security.id, date: start_date..end_date)
+                     .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
+                     .exists?
     end
 
     def expected_count
@@ -112,25 +147,82 @@ class Security::Price::Importer
     end
 
     # Skip over ranges that already exist unless clearing cache
+    # Also includes dates with refetchable provisional prices
     def effective_start_date
       return start_date if clear_cache
 
-      (start_date..end_date).detect { |d| !db_prices.key?(d) } || end_date
+      refetchable_dates = Security::Price.where(security_id: security.id, date: start_date..end_date)
+                                         .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
+                                         .pluck(:date)
+                                         .to_set
+
+      (start_date..end_date).detect do |d|
+        !db_prices.key?(d) || refetchable_dates.include?(d)
+      end || end_date
     end
 
     def start_price_value
-      provider_price_value = provider_prices.select { |date, _| date <= start_date }
-                                            .max_by { |date, _| date }
-                                            &.last&.price
-      db_price_value       = db_prices[start_date]&.price
-      provider_price_value || db_price_value
+      # When processing full range (first sync), use original behavior
+      if effective_start_date == start_date
+        provider_price_value = provider_prices.select { |date, _| date <= start_date }
+                                              .max_by { |date, _| date }
+                                              &.last&.price
+        db_price_value = db_prices[start_date]&.price
+
+        return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+        return db_price_value if db_price_value.present? && db_price_value.to_f > 0
+        return nil
+      end
+
+      # For partial range (effective_start_date > start_date), use recent data
+      # This prevents stale prices from old trade dates propagating to current gap-fills
+      cutoff_date = effective_start_date
+
+      # First try provider prices (most recent before cutoff)
+      provider_price_value = provider_prices
+        .select { |date, _| date < cutoff_date }
+        .max_by { |date, _| date }
+        &.last&.price
+
+      return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+
+      # Fall back to most recent DB price before cutoff
+      currency = prev_price_currency || db_price_currency
+      Security::Price
+        .where(security_id: security.id)
+        .where("date < ?", cutoff_date)
+        .where("price > 0")
+        .where(provisional: false)
+        .then { |q| currency.present? ? q.where(currency: currency) : q }
+        .order(date: :desc)
+        .limit(1)
+        .pick(:price)
+    end
+
+    def determine_provisional_status(date:, has_provider_price:, used_locf:, existing_provisional:)
+      # Provider returned real price => NOT provisional
+      return false if has_provider_price
+
+      # Gap-filled (LOCF) => provisional if recent (including weekends)
+      # Weekend prices inherit uncertainty from Friday and get fixed via cascade
+      # when the next weekday sync fetches correct Friday price
+      if used_locf
+        is_recent = date >= PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date
+        return is_recent
+      end
+
+      # Otherwise preserve existing status
+      existing_provisional || false
     end
 
     def upsert_rows(rows)
       batch_size         = 200
       total_upsert_count = 0
+      now = Time.current
 
-      rows.each_slice(batch_size) do |batch|
+      rows_with_timestamps = rows.map { |row| row.merge(updated_at: now) }
+
+      rows_with_timestamps.each_slice(batch_size) do |batch|
         ids = Security::Price.upsert_all(
           batch,
           unique_by: %i[security_id date currency],

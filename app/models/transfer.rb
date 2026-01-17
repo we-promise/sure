@@ -16,6 +16,10 @@ class Transfer < ApplicationRecord
     def kind_for_account(account)
       if account.loan?
         "loan_payment"
+      elsif account.credit_card?
+        "cc_payment"
+      elsif account.investment? || account.crypto?
+        "investment_contribution"
       elsif account.liability?
         "cc_payment"
       else
@@ -133,6 +137,7 @@ class Transfer < ApplicationRecord
       return unless inflow_transaction&.entry && outflow_transaction&.entry
 
       date_diff = (inflow_transaction.entry.date - outflow_transaction.entry.date).abs
-      errors.add(:base, "Must be within 4 days") if date_diff > 4
+      max_days = status == "confirmed" ? 30 : 4
+      errors.add(:base, "Must be within #{max_days} days") if date_diff > max_days
     end
 end
