@@ -115,7 +115,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "DD/MM/YYYY", from: "user_family_attributes_date_format"
     select "Dark", from: "user_theme"
 
-    click_button "Complete"
+    # Button text is now in Spanish ("Completar") due to locale preview
+    click_button "Completar"
 
     # Wait for redirect to goals page to ensure form was submitted
     assert_current_path goals_onboarding_path
