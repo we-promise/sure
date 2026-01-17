@@ -11,8 +11,8 @@ else
     { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
     { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
     { name: t(".nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
-    { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
-  ]
+    (Current.user.ai_available? ? { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true } : nil)
+  ].compact
 end %>
 
 <% desktop_nav_items = mobile_nav_items.reject { |item| item[:mobile_only] } %>
@@ -164,7 +164,9 @@ end %>
               <%= icon("eye", size: "sm", class: "hidden", data: { privacy_mode_target: "iconOn" }) %>
             </button>
 
-            <%= icon("panel-right", as_button: true, data: { action: "app-layout#toggleRightSidebar" }) %>
+            <% if Current.user.ai_available? %>
+              <%= icon("panel-right", as_button: true, data: { action: "app-layout#toggleRightSidebar" }) %>
+            <% end %>
           </div>
         </div>
       <% end %>
@@ -177,25 +179,27 @@ end %>
     <% end %>
 
     <%# DESKTOP - Right sidebar %>
-    <%= tag.div class: class_names(
-          "hidden lg:block h-full shrink-0 max-w-[400px] transition-all duration-300 border-divider",
-          Current.user.show_ai_sidebar? ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
-        ),
-        inert: !Current.user.show_ai_sidebar?,
-        data: { app_layout_target: "rightSidebar" } do %>
-      <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", turbo_permanent: true } do %>
-        <div class="flex flex-col h-full justify-between shrink-0">
-          <%= turbo_frame_tag chat_frame, src: chat_view_path(@chat), loading: "lazy", class: "h-full" do %>
-            <div class="flex justify-center items-center h-full">
-              <%= icon("loader-circle", class: "animate-spin") %>
+    <% if Current.user.ai_available? %>
+      <%= tag.div class: class_names(
+            "hidden lg:block h-full shrink-0 max-w-[400px] transition-all duration-300 border-divider",
+            Current.user.show_ai_sidebar? ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
+          ),
+          inert: !Current.user.show_ai_sidebar?,
+          data: { app_layout_target: "rightSidebar" } do %>
+        <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", turbo_permanent: true } do %>
+          <div class="flex flex-col h-full justify-between shrink-0">
+            <%= turbo_frame_tag chat_frame, src: chat_view_path(@chat), loading: "lazy", class: "h-full" do %>
+              <div class="flex justify-center items-center h-full">
+                <%= icon("loader-circle", class: "animate-spin") %>
+              </div>
+            <% end %>
+          </div>
+
+          <% unless Current.user.ai_enabled? %>
+            <div class="absolute backdrop-blur-lg inset-0 h-full w-full flex flex-col justify-center items-center px-4">
+              <%= render "chats/ai_consent" %>
             </div>
           <% end %>
-        </div>
-
-        <% unless Current.user.ai_enabled? %>
-          <div class="absolute backdrop-blur-lg inset-0 h-full w-full flex flex-col justify-center items-center px-4">
-            <%= render "chats/ai_consent" %>
-          </div>
         <% end %>
       <% end %>
     <% end %>

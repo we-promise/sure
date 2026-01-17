@@ -197,6 +197,12 @@ class UserTest < ActiveSupport::TestCase
     @user.family.update!(assistant_type: "builtin")
   end
 
+  test "ai_available? returns false when OPENAI_ACCESS_TOKEN is set to DISABLED" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: "DISABLED" do
+      assert_not @user.ai_available?
+    end
+  end
+
   test "intro layout collapses sidebars and enables ai" do
     user = User.new(
       family: families(:empty),
