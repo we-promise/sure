@@ -218,7 +218,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     name = build_name(
       credit_debit_indicator: "CRDT",
       debtor_name: "CARD-1234",
-      remittance_information: ["ACME SHOP"],
+      remittance_information: [ "ACME SHOP" ],
       bank_transaction_code: { description: "Card Purchase" }
     )
 
@@ -229,7 +229,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     name = build_name(
       credit_debit_indicator: "CRDT",
       debtor_name: "ACME SHOP",
-      remittance_information: ["Receipt #42"],
+      remittance_information: [ "Receipt #42" ],
       bank_transaction_code: { description: "Transfer" }
     )
 
