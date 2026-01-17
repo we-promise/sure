@@ -1,24 +1,47 @@
 import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="element-removal"
+//
+// Provides enter/exit animations for dismissible elements like notifications.
+//
+// Basic usage (no animation):
+//   <div data-controller="element-removal">
+//     <button data-action="click->element-removal#remove">Close</button>
+//   </div>
+//
+// With fade-up animation (recommended for notifications):
+//   <div data-controller="element-removal"
+//        data-element-removal-initial-class="animate-fade-up-initial"
+//        data-element-removal-visible-class="animate-fade-up-visible"
+//        data-element-removal-exit-class="animate-fade-up-exit"
+//        class="transition-enter-exit animate-fade-up-initial">
+//     Content auto-fades in on connect, fades out on remove
+//   </div>
+//
+// Available animation presets (from animation-utils.css):
+//   - animate-fade-up-*: Fade + translate up (notifications, toasts)
+//   - animate-fade-*: Simple fade (overlays)
+//   - animate-scale-*: Scale + fade (modals, popovers)
+//
+// The controller:
+// 1. On connect: swaps initial -> visible classes (fade in)
+// 2. On remove(): swaps visible -> exit classes, waits for transition, removes element
+//
 export default class extends Controller {
-  static ANIMATION_DURATION = 300;
+  static values = {
+    duration: { type: Number, default: 300 },
+  };
+
+  static classes = ["initial", "visible", "exit"];
 
   connect() {
     this.isRemoving = false;
 
-    // Trigger fade-in animation
-    requestAnimationFrame(() => {
-      this.element.classList.remove("opacity-0", "translate-y-[-8px]");
-      this.element.classList.add("opacity-100", "translate-y-0");
-    });
-  }
-
-  handleAnimationEnd(event) {
-    // Only trigger removal when the stroke-fill animation completes (the timer)
-    // Ignore other animations like spinner animations
-    if (event.animationName === "stroke-fill") {
-      this.remove();
+    if (this.hasInitialClass && this.hasVisibleClass) {
+      requestAnimationFrame(() => {
+        this.element.classList.remove(...this.initialClasses);
+        this.element.classList.add(...this.visibleClasses);
+      });
     }
   }
 
@@ -26,13 +49,15 @@ export default class extends Controller {
     if (this.isRemoving) return;
     this.isRemoving = true;
 
-    // Trigger fade-out animation
-    this.element.classList.remove("opacity-100", "translate-y-0");
-    this.element.classList.add("opacity-0", "translate-y-[-8px]");
-    
-    // Wait for animation to complete before removing
-    setTimeout(() => {
+    if (this.hasVisibleClass && this.hasExitClass) {
+      this.element.classList.remove(...this.visibleClasses);
+      this.element.classList.add(...this.exitClasses);
+
+      setTimeout(() => {
+        this.element.remove();
+      }, this.durationValue);
+    } else {
       this.element.remove();
-    }, this.constructor.ANIMATION_DURATION);
+    }
   }
 }

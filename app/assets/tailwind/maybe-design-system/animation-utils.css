@@ -1,0 +1,58 @@
+/*
+  Animation utilities for enter/exit transitions.
+  Use with element-removal controller for dismissible elements.
+
+  Available presets:
+  - animate-fade-up-*: Fade + translate up (notifications, toasts)
+  - animate-fade-*: Simple fade (overlays, dialogs)
+  - animate-scale-*: Scale + fade (modals, popovers)
+
+  Each preset has three states:
+  - *-initial: Starting state (hidden)
+  - *-visible: Visible state (shown)
+  - *-exit: Exit state (hidden, for removal)
+*/
+
+/* Fade up animation (notifications, toasts) */
+@utility animate-fade-up-initial {
+  @apply opacity-0 -translate-y-2;
+}
+
+@utility animate-fade-up-visible {
+  @apply opacity-100 translate-y-0;
+}
+
+@utility animate-fade-up-exit {
+  @apply opacity-0 -translate-y-2;
+}
+
+/* Fade animation (dialogs, overlays) */
+@utility animate-fade-initial {
+  @apply opacity-0;
+}
+
+@utility animate-fade-visible {
+  @apply opacity-100;
+}
+
+@utility animate-fade-exit {
+  @apply opacity-0;
+}
+
+/* Scale animation (modals, popovers) */
+@utility animate-scale-initial {
+  @apply opacity-0 scale-95;
+}
+
+@utility animate-scale-visible {
+  @apply opacity-100 scale-100;
+}
+
+@utility animate-scale-exit {
+  @apply opacity-0 scale-95;
+}
+
+/* Standard transition preset for enter/exit animations */
+@utility transition-enter-exit {
+  @apply transition-all duration-300 ease-out;
+}
