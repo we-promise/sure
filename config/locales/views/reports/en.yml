@@ -141,8 +141,12 @@ en:
       taxable_realized_note: These gains may be subject to taxes
       no_data: "-"
       view_details: View details
-      holdings_count: holdings
-      sells_count: sells
+      holdings_count:
+        one: "%{count} holding"
+        other: "%{count} holdings"
+      sells_count:
+        one: "%{count} sell"
+        other: "%{count} sells"
       holdings: Holdings
       sell_trades: Sell Trades
       and_more: "+%{count} more"

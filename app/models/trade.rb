@@ -61,9 +61,10 @@ class Trade < ApplicationRecord
       # Use preloaded holdings if available (set by reports controller to avoid N+1)
       # Otherwise fall back to database query
       holding = if defined?(@preloaded_holdings) && @preloaded_holdings.present?
-        @preloaded_holdings.find do |h|
-          h.security_id == security_id && h.date <= entry.date
-        end
+        # Use select + max_by for deterministic selection regardless of array order
+        @preloaded_holdings
+          .select { |h| h.security_id == security_id && h.date <= entry.date }
+          .max_by(&:date)
       else
         entry.account.holdings
           .where(security_id: security_id)

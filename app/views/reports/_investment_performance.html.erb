@@ -151,7 +151,7 @@
                 <summary class="cursor-pointer text-xs text-secondary hover:text-primary flex items-center gap-1">
                   <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
                   <%= t("reports.investment_performance.view_details") %>
-                  (<%= data[:holdings].count %> <%= t("reports.investment_performance.holdings_count") %>, <%= data[:sell_trades].count %> <%= t("reports.investment_performance.sells_count") %>)
+                  (<%= t("reports.investment_performance.holdings_count", count: data[:holdings].count) %>, <%= t("reports.investment_performance.sells_count", count: data[:sell_trades].count) %>)
                 </summary>
 
                 <div class="mt-2 space-y-2 text-xs">
