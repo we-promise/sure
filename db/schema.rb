@@ -49,6 +49,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.jsonb "holdings_snapshot_data"
+    t.datetime "holdings_snapshot_at"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -509,13 +511,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.uuid "account_provider_id"
     t.string "cost_basis_source"
     t.boolean "cost_basis_locked", default: false, null: false
-    t.uuid "provider_security_id"
-    t.boolean "security_locked", default: false, null: false
     t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
     t.index ["account_provider_id"], name: "index_holdings_on_account_provider_id"
-    t.index ["provider_security_id"], name: "index_holdings_on_provider_security_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
   end
 
@@ -615,8 +614,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
-    t.integer "rows_count", default: 0, null: false
     t.integer "rows_to_skip", default: 0, null: false
+    t.integer "rows_count", default: 0, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -994,6 +993,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.integer "failed_fetch_count", default: 0, null: false
     t.datetime "last_health_check_at"
     t.string "website_url"
+    t.index "upper((ticker)::text), COALESCE(upper((exchange_operating_mic)::text), ''::text)", name: "index_securities_on_ticker_and_exchange_operating_mic_unique", unique: true
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
   end
@@ -1185,8 +1185,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
+    t.decimal "realized_gain", precision: 19, scale: 4
+    t.decimal "cost_basis_amount", precision: 19, scale: 4
+    t.string "cost_basis_currency"
+    t.integer "holding_period_days"
+    t.string "realized_gain_confidence"
+    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
+    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1305,7 +1312,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
-  add_foreign_key "holdings", "securities", column: "provider_security_id"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
