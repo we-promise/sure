@@ -38,8 +38,12 @@ class EnableBankingAccount::Processor
       account = enable_banking_account.current_account
       balance = enable_banking_account.current_balance || 0
 
+      # For credit cards, compute balance based on credit limit
+      if account.accountable_type == "CreditCard"
+        available_credit = account.accountable.available_credit || 0
+        balance = available_credit - balance
       # For liability accounts, ensure positive balances
-      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
+      elsif account.accountable_type == "Loan"
         balance = -balance
       end
 
