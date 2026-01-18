@@ -1,0 +1,14 @@
+---
+nl:
+  shared:
+    confirm_modal:
+      accept: Bevestigen
+      body_html: "<p>U kunt deze beslissing niet ongedaan maken</p>"
+      cancel: Annuleren
+      title: Weet u het zeker?
+    money_field:
+      label: Bedrag
+    syncing_notice:
+      syncing: Accountsgegevens synchroniseren...
+    trend_change:
+      no_change: "geen verandering"

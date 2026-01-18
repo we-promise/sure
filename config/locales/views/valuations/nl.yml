@@ -1,0 +1,30 @@
+---
+nl:
+  valuations:
+    form:
+      amount: Bedrag
+      submit: Voeg balansupdate toe
+    header:
+      balance: Balans
+    index:
+      change: wijziging
+      date: datum
+      new_entry: Nieuwe invoer
+      no_valuations: Nog geen waarderingen voor dit account
+      valuations: Waarderingen
+      value: waarde
+    new:
+      title: Nieuwe balans
+    show:
+      amount: Bedrag
+      date_label: Datum
+      delete: Verwijder
+      delete_subtitle: Deze actie kan niet ongedaan worden gemaakt
+      delete_title: Verwijder invoer
+      details: Details
+      name_label: Naam
+      name_placeholder: Voer een naam in voor deze invoer
+      note_label: Notities
+      note_placeholder: Voeg eventuele aanvullende details toe over deze invoer
+      overview: Overzicht
+      settings: Instellingen

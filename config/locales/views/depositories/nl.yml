@@ -1,0 +1,10 @@
+---
+nl:
+  depositories:
+    edit:
+      edit: "%{account} bewerken"
+    form:
+      none: Geen
+      subtype_prompt: Selecteer accounttype
+    new:
+      title: Saldo invoeren

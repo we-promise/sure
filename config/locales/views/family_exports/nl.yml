@@ -1,0 +1,7 @@
+---
+nl:
+  family_exports:
+    list:
+      in_progress: Bezig
+      complete: Voltooid
+      failed: Mislukt
