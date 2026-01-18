@@ -59,13 +59,14 @@ class Trade < ApplicationRecord
       return nil unless sell?
 
       # Use preloaded holdings if available (set by reports controller to avoid N+1)
-      # Otherwise fall back to database query
-      holding = if defined?(@preloaded_holdings) && @preloaded_holdings.present?
+      # Treat defined-but-empty preload as authoritative to prevent DB fallback
+      holding = if defined?(@preloaded_holdings)
         # Use select + max_by for deterministic selection regardless of array order
-        @preloaded_holdings
+        (@preloaded_holdings || [])
           .select { |h| h.security_id == security_id && h.date <= entry.date }
           .max_by(&:date)
       else
+        # Fall back to database query only when not preloaded
         entry.account.holdings
           .where(security_id: security_id)
           .where("date <= ?", entry.date)
