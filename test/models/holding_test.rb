@@ -323,7 +323,7 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.provider_security_id
   end
 
-  test "remap_security! merges holdings on collision by deleting duplicates" do
+  test "remap_security! merges holdings on collision by combining qty and amount" do
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
 
     # Create an existing holding for the new security on the same date
@@ -337,15 +337,21 @@ class HoldingTest < ActiveSupport::TestCase
     )
 
     amzn_security = @amzn.security
+    amzn_qty = @amzn.qty
+    amzn_amount = @amzn.amount
     initial_count = @account.holdings.count
 
-    # Remap should merge by deleting the duplicate
+    # Remap should merge by combining qty and amount
     @amzn.remap_security!(new_security)
 
-    # The AMZN holding on collision date should be deleted
+    # The AMZN holding on collision date should be deleted, merged into GOOG
     assert_equal initial_count - 1, @account.holdings.count
-    # The existing GOOG holding should still exist
-    assert existing_goog.reload
+
+    # The existing GOOG holding should have merged values
+    existing_goog.reload
+    assert_equal 5 + amzn_qty, existing_goog.qty
+    assert_equal 500 + amzn_amount, existing_goog.amount
+
     # No holdings should remain for the old AMZN security
     assert_equal 0, @account.holdings.where(security: amzn_security).count
   end

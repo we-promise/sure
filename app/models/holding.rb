@@ -138,7 +138,7 @@ class Holding < ApplicationRecord
 
   # Remap this holding (and all other holdings for the same security) to a different security
   # Also moves all trades for the old security to the new security
-  # If the target security already has holdings on some dates, merge by deleting duplicates
+  # If the target security already has holdings on some dates, merge by combining qty/amount
   def remap_security!(new_security)
     return if new_security.id == security_id
 
@@ -154,7 +154,15 @@ class Holding < ApplicationRecord
       # Process each holding for the old security
       account.holdings.where(security: old_security).find_each do |holding|
         if collision_dates.include?(holding.date)
-          # Collision: delete this holding (keep the existing one for new_security)
+          # Collision: merge into existing holding for new_security
+          existing = account.holdings.find_by!(security: new_security, date: holding.date)
+          merged_qty = existing.qty + holding.qty
+          merged_amount = existing.amount + holding.amount
+          existing.update!(
+            qty: merged_qty,
+            amount: merged_amount,
+            price: merged_qty.positive? ? merged_amount / merged_qty : 0
+          )
           holding.destroy!
         else
           # No collision: update to new security
@@ -169,11 +177,20 @@ class Holding < ApplicationRecord
       account.trades.where(security: old_security).update_all(security_id: new_security.id)
     end
 
-    # Reload self to reflect changes (may raise if self was destroyed)
-    reload rescue nil
+    # Reload self to reflect changes (may raise RecordNotFound if self was destroyed)
+    begin
+      reload
+    rescue ActiveRecord::RecordNotFound
+      nil
+    end
   end
 
   # Reset security (and all related holdings) back to what the provider originally sent
+  # Note: This moves ALL trades for current_security back to original_security. If the user
+  # had legitimate trades for the target security before remapping, those would also be moved.
+  # In practice this is rare since SimpleFIN doesn't provide trades, and Plaid trades would
+  # typically be for real tickers not CUSTOM: ones. A more robust solution would track which
+  # trades were moved during remap, but that adds significant complexity for an edge case.
   def reset_security_to_provider!
     return unless provider_security_id.present?
 
@@ -184,7 +201,7 @@ class Holding < ApplicationRecord
     return unless original_security.present?
 
     transaction do
-      # Move trades back
+      # Move trades back (see note above about limitation)
       account.trades.where(security: current_security).update_all(security_id: original_security.id)
 
       # Reset ALL holdings that were remapped from this provider_security
