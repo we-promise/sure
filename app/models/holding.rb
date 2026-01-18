@@ -138,41 +138,39 @@ class Holding < ApplicationRecord
 
   # Remap this holding (and all other holdings for the same security) to a different security
   # Also moves all trades for the old security to the new security
+  # If the target security already has holdings on some dates, merge by deleting duplicates
   def remap_security!(new_security)
     return if new_security.id == security_id
 
     old_security = security
 
-    # Check for collision on ANY date where we have holdings for the old security
-    # AND the new security already exists
-    collision = account.holdings
-      .where(security: new_security)
-      .where(date: account.holdings.where(security: old_security).select(:date))
-      .first
-
-    if collision
-      errors.add(:security, :collision,
-        message: I18n.t("holdings.errors.security_collision",
-          ticker: new_security.ticker,
-          date: collision.date.to_s))
-      raise ActiveRecord::RecordInvalid, self
-    end
-
     transaction do
-      # Update ALL holdings for the old security to the new security
+      # Find dates where the new security already has holdings (collision dates)
+      collision_dates = account.holdings
+        .where(security: new_security)
+        .where(date: account.holdings.where(security: old_security).select(:date))
+        .pluck(:date)
+
+      # Process each holding for the old security
       account.holdings.where(security: old_security).find_each do |holding|
-        holding.provider_security_id ||= old_security.id
-        holding.security = new_security
-        holding.security_locked = true
-        holding.save!
+        if collision_dates.include?(holding.date)
+          # Collision: delete this holding (keep the existing one for new_security)
+          holding.destroy!
+        else
+          # No collision: update to new security
+          holding.provider_security_id ||= old_security.id
+          holding.security = new_security
+          holding.security_locked = true
+          holding.save!
+        end
       end
 
       # Move all trades for old security to new security
       account.trades.where(security: old_security).update_all(security_id: new_security.id)
     end
 
-    # Reload self to reflect changes
-    reload
+    # Reload self to reflect changes (may raise if self was destroyed)
+    reload rescue nil
   end
 
   # Reset security (and all related holdings) back to what the provider originally sent
