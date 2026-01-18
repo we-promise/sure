@@ -101,10 +101,12 @@ nav_sections = [
           </li>
         <% end %>
       <% end %>
-      <%= button_to session_path(Current.session), method: :delete, class: "flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-surface-hover w-full" do %>
-        <%= icon("log-out", color: "current") %>
-        <span><%= t(".logout") %></span>
-      <% end %>
+      <li>
+        <%= button_to session_path(Current.session), method: :delete, class: "flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-surface-hover w-full" do %>
+          <%= icon("log-out", color: "current") %>
+          <span><%= t(".logout") %></span>
+        <% end %>
+      </li>
     </ul>
   </nav>
 </div>
