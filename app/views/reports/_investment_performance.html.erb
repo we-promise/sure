@@ -29,7 +29,7 @@
             (<%= investment_metrics[:unrealized_trend].percent_formatted %>)
           </p>
         <% else %>
-          <p class="text-xl font-semibold text-secondary">-</p>
+          <p class="text-xl font-semibold text-secondary"><%= t("reports.investment_performance.no_data") %></p>
         <% end %>
       </div>
 
@@ -101,7 +101,7 @@
                         <%= holding.trend.percent_formatted %>
                       </span>
                     <% else %>
-                      <span class="text-secondary">-</span>
+                      <span class="text-secondary"><%= t("reports.investment_performance.no_data") %></span>
                     <% end %>
                   </td>
                 </tr>
@@ -117,9 +117,9 @@
       <div class="space-y-3">
         <h4 class="text-sm font-medium text-secondary uppercase"><%= t("reports.investment_performance.gains_by_tax_treatment") %></h4>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="flex flex-wrap gap-4">
           <% investment_metrics[:gains_by_tax_treatment].each do |treatment, data| %>
-            <div class="bg-container-inset rounded-lg p-4 space-y-3">
+            <div class="bg-container-inset rounded-lg p-4 space-y-3 flex-1 min-w-64">
               <div class="flex items-center justify-between">
                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= tax_treatment_badge_classes(treatment) %>" title="<%= t("accounts.tax_treatment_descriptions.#{treatment}") %>">
                   <%= t("accounts.tax_treatments.#{treatment}") %>
@@ -141,7 +141,7 @@
               </div>
 
               <% if treatment == :taxable && data[:realized_gain].amount > 0 %>
-                <p class="text-xs text-amber-600 theme-dark:text-amber-400 flex items-center gap-1">
+                <p class="text-xs text-warning flex items-center gap-1">
                   <%= icon("alert-triangle", size: "sm") %>
                   <%= t("reports.investment_performance.taxable_realized_note") %>
                 </p>
@@ -161,8 +161,8 @@
                       <% data[:holdings].first(5).each do |holding| %>
                         <div class="flex justify-between pl-2">
                           <span class="text-primary"><%= holding.ticker %></span>
-                          <span class="<%= holding.trend ? '' : 'text-secondary' %>" style="<%= holding.trend ? "color: #{holding.trend.color}" : '' %>">
-                            <%= holding.trend ? format_money(Money.new(holding.trend.value, Current.family.currency)) : "-" %>
+                          <span class="<%= holding.trend ? "" : "text-secondary" %>" style="<%= holding.trend ? "color: #{holding.trend.color}" : "" %>">
+                            <%= holding.trend ? format_money(Money.new(holding.trend.value, Current.family.currency)) : t("reports.investment_performance.no_data") %>
                           </span>
                         </div>
                       <% end %>
@@ -179,8 +179,8 @@
                         <% gain = trade.realized_gain_loss %>
                         <div class="flex justify-between pl-2">
                           <span class="text-primary"><%= trade.security.ticker %></span>
-                          <span class="<%= gain ? '' : 'text-secondary' %>" style="<%= gain ? "color: #{gain.color}" : '' %>">
-                            <%= gain ? format_money(Money.new(gain.value, Current.family.currency)) : "-" %>
+                          <span class="<%= gain ? "" : "text-secondary" %>" style="<%= gain ? "color: #{gain.color}" : "" %>">
+                            <%= gain ? format_money(Money.new(gain.value, Current.family.currency)) : t("reports.investment_performance.no_data") %>
                           </span>
                         </div>
                       <% end %>

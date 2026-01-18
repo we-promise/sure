@@ -422,18 +422,35 @@ class ReportsController < ApplicationController
 
     def build_gains_by_tax_treatment(investment_statement)
       currency = Current.family.currency
-      current_holdings = investment_statement.current_holdings.to_a
+      # Eager-load account and accountable to avoid N+1 when accessing tax_treatment
+      current_holdings = investment_statement.current_holdings
+        .includes(account: :accountable)
+        .to_a
 
       # Group holdings by tax treatment (from account)
       holdings_by_treatment = current_holdings.group_by { |h| h.account.tax_treatment || :taxable }
 
       # Get sell trades in period with realized gains
+      # Eager-load security, account, and accountable to avoid N+1
       sell_trades = Current.family.trades
         .joins(:entry)
         .where(entries: { date: @period.date_range })
         .where("trades.qty < 0")
         .includes(:security, entry: { account: :accountable })
         .to_a
+
+      # Preload holdings for all accounts that have sell trades to avoid N+1 in realized_gain_loss
+      account_ids = sell_trades.map { |t| t.entry.account_id }.uniq
+      holdings_by_account = Holding
+        .where(account_id: account_ids)
+        .where("date <= ?", @period.date_range.end)
+        .order(date: :desc)
+        .group_by(&:account_id)
+
+      # Inject preloaded holdings into trades for realized_gain_loss calculation
+      sell_trades.each do |trade|
+        trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
+      end
 
       trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
 

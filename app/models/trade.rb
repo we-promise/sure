@@ -58,12 +58,19 @@ class Trade < ApplicationRecord
     def calculate_realized_gain_loss
       return nil unless sell?
 
-      # Find the holding snapshot at or before the trade date to get avg_cost
-      holding = entry.account.holdings
-        .where(security_id: security_id)
-        .where("date <= ?", entry.date)
-        .order(date: :desc)
-        .first
+      # Use preloaded holdings if available (set by reports controller to avoid N+1)
+      # Otherwise fall back to database query
+      holding = if defined?(@preloaded_holdings) && @preloaded_holdings.present?
+        @preloaded_holdings.find do |h|
+          h.security_id == security_id && h.date <= entry.date
+        end
+      else
+        entry.account.holdings
+          .where(security_id: security_id)
+          .where("date <= ?", entry.date)
+          .order(date: :desc)
+          .first
+      end
 
       return nil unless holding&.avg_cost
 
