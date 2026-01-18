@@ -134,6 +134,17 @@ en:
       value: Value
       return: Return
       accounts: Investment Accounts
+      gains_by_tax_treatment: Gains by Tax Treatment
+      unrealized_gains: Unrealized Gains
+      realized_gains: Realized Gains
+      total_gains: Total Gains
+      taxable_realized_note: These gains may be subject to taxes
+      view_details: View details
+      holdings_count: holdings
+      sells_count: sells
+      holdings: Holdings
+      sell_trades: Sell Trades
+      and_more: "+%{count} more"
     investment_flows:
       title: Investment Flows
       description: Track money flowing into and out of your investment accounts

@@ -39,9 +39,37 @@ class Trade < ApplicationRecord
     Trend.new(current: current_value, previous: cost_basis)
   end
 
+  # Calculates realized gain/loss for sell trades based on avg_cost at time of sale
+  # Returns nil for buy trades or when cost basis cannot be determined
+  def realized_gain_loss
+    return @realized_gain_loss if defined?(@realized_gain_loss)
+
+    @realized_gain_loss = calculate_realized_gain_loss
+  end
+
   # Trades are always excluded from expense budgets
   # They represent portfolio management, not living expenses
   def excluded_from_budget?
     true
   end
+
+  private
+
+    def calculate_realized_gain_loss
+      return nil unless sell?
+
+      # Find the holding snapshot at or before the trade date to get avg_cost
+      holding = entry.account.holdings
+        .where(security_id: security_id)
+        .where("date <= ?", entry.date)
+        .order(date: :desc)
+        .first
+
+      return nil unless holding&.avg_cost
+
+      cost_basis = holding.avg_cost * qty.abs
+      sale_proceeds = price_money * qty.abs
+
+      Trend.new(current: sale_proceeds, previous: cost_basis)
+    end
 end
