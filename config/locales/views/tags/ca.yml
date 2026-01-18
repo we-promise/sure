@@ -3,7 +3,7 @@ ca:
   tags:
     create:
       created: Etiqueta creada
-      error: "Error en crear l'etiqueta: %{error}"
+      error: 'Error en crear l''etiqueta: %{error}'
     destroy:
       deleted: Etiqueta eliminada
     edit:
@@ -21,4 +21,3 @@ ca:
       edit: Edita
     update:
       updated: Etiqueta actualitzada
-

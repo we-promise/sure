@@ -2,9 +2,9 @@
 ca:
   email_confirmation_mailer:
     confirmation_email:
-      body: Has sol·licitat recentment canviar la teva adreça de correu electrònic. Fes clic al botó de sota per confirmar aquest canvi.
+      body: Has sol·licitat recentment canviar la teva adreça de correu electrònic.
+        Fes clic al botó de sota per confirmar aquest canvi.
       cta: Confirma el canvi de correu
       expiry_notice: Aquest enllaç caducarà en %{hours} hores.
       greeting: Hola!
-      subject: '%{product_name}: Confirma el canvi de correu'
-
+      subject: "%{product_name}: Confirma el canvi de correu"

@@ -1,0 +1,53 @@
+---
+ca:
+  recurring_transactions:
+    already_exists: A manual recurring transaction already exists for this pattern
+    amount_range: 'Rang: %{min} a %{max}'
+    badges:
+      manual: Manual
+    cleaned_up: S'han netejat %{count} transaccions recurrents obsoletes
+    cleanup_stale: Neteja Obsoletes
+    confirm_delete: Segur que vols eliminar aquesta transacció recurrent?
+    creation_failed: No s'ha pogut crear la transacció recurrent. Comprova els detalls
+      de la transacció i torna-ho a provar.
+    day_of_month: Dia %{day} del mes
+    deleted: S'ha eliminat la transacció recurrent
+    empty:
+      description: Clica "Identifica Patrons" per detectar automàticament transaccions
+        recurrents del teu historial de transaccions.
+      title: No s'han trobat transaccions recurrents
+    expected_on: S'esperava el %{date}
+    identified: S'han identificat %{count} patrons de transaccions recurrents
+    identify_patterns: Identifica patrons
+    info:
+      automatic_description: "L'identificació automàtica també s'executa després de:"
+      manual_description: Pots identificar patrons manualment o netejar transaccions
+        recurrents obsoletes utilitzant els botons de dalt.
+      title: Detecció automàtica de patrons
+      triggers:
+        - Importacions CSV completades (transaccions, operacions, comptes, etc.)
+        - Sincronitzacions de proveïdors completades (Plaid, SimpleFIN, etc.)
+    marked_active: S'ha marcat la transacció recurrent com a activa
+    marked_as_recurring: S'ha marcat la transacció com a recurrent
+    marked_inactive: S'ha marcat la transacció recurrent com a inactiva
+    projected: Projectat
+    recurring: Recurrent
+    settings:
+      enable_description: Detecta automàticament patrons de transaccions recurrents i
+        mostra les transaccions projectades properes.
+      enable_label: Activa Transaccions Recurrents
+    settings_updated: S'han actualitzat les configuracions de transaccions recurrents
+    status:
+      active: Activa
+      inactive: Inactiva
+    table:
+      actions: Accions
+      amount: Import
+      expected_day: Dia Esperat
+      last_occurrence: Última Ocurrència
+      merchant: Nom
+      next_date: Propera Data
+      status: Estat
+    title: Transaccions Recurrents
+    unexpected_error: S'ha produït un error inesperat en crear la transacció recurrent
+    upcoming: Transaccions Recurrents Properes

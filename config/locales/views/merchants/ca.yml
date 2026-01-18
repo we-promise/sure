@@ -2,27 +2,36 @@
 ca:
   family_merchants:
     create:
-      error: "Error en crear el comerç: %{error}"
+      error: 'Error en crear el comerç: %{error}'
       success: Comerç creat correctament
     destroy:
       success: Comerç eliminat correctament
+      unlinked_success: El comerç s'ha eliminat de les teves transaccions
     edit:
       title: Edita el comerç
     form:
       name_placeholder: Nom del comerç
     index:
       empty: Encara no hi ha comerços
-      new: Nou comerç
-      title: Comerços
-      family_title: Comerços familiars
       family_empty: Encara no hi ha comerços familiars
-      provider_title: Comerços del proveïdor
+      family_title: Comerços familiars
+      merge: Fusiona comerços
+      new: Nou comerç
       provider_empty: Encara no hi ha comerços del proveïdor vinculats a aquesta família
-      provider_read_only: Els comerços del proveïdor se sincronitzen automàticament amb les institucions connectades. No es poden editar aquí.
+      provider_info: Aquests comerços es van detectar automàticament mitjançant les teves connexions
+        bancàries o IA. Pots editar-los per crear la teva pròpia còpia, o eliminar-los per desvincular-los
+        de les teves transaccions.
+      provider_read_only: Els comerços del proveïdor se sincronitzen automàticament
+        amb les institucions connectades. No es poden editar aquí.
+      provider_title: Comerços del proveïdor
       table:
-        merchant: Comerç
         actions: Accions
+        merchant: Comerç
         source: Origen
+      title: Comerços
+      unlinked_info: Aquests comerços s'han eliminat recentment de les teves transaccions.
+        Desapareixeran d'aquesta llista després de 30 dies a menys que s'assignin novament a una transacció.
+      unlinked_title: Recently unlinked
     merchant:
       confirm_accept: Elimina el comerç
       confirm_body: Segur que vols eliminar aquest comerç? Si l'elimines, es desvincularan
@@ -30,8 +39,30 @@ ca:
       confirm_title: Vols eliminar el comerç?
       delete: Elimina el comerç
       edit: Edita el comerç
+    merge:
+      description: Select a target merchant and the merchants to merge into it. All
+        transactions from merged merchants will be reassigned to the target.
+      select_target: Select target merchant...
+      sources_hint: Selected merchants will be merged into the target. Family merchants
+        will be deleted, provider merchants will be unlinked.
+      sources_label: Merchants to merge
+      submit: Merge selected
+      target_label: Merge into (target)
+      title: Merge merchants
     new:
       title: Nou comerç
+    perform_merge:
+      invalid_merchants: Invalid merchants selected
+      no_merchants_selected: No merchants selected to merge
+      success: Successfully merged %{count} merchants
+      target_not_found: Target merchant not found
+    provider_merchant:
+      edit: Edit
+      remove: Remove
+      remove_confirm_body: Are you sure you want to remove %{name}? This will unlink
+        all associated transactions from this merchant but will not delete the merchant
+        itself.
+      remove_confirm_title: Remove merchant?
     update:
+      converted_success: Merchant converted and updated successfully
       success: Comerç actualitzat correctament
-

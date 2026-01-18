@@ -2,7 +2,10 @@
 ca:
   other_assets:
     edit:
+      balance_tracking_info: L'estat dels Altres Actius es segueix mitjançant valoracions manuals
+        utilitzant 'Nou saldo', no transaccions. El flux de caixa no afectarà el saldo del compte.
       edit: Edita %{account}
     new:
+      balance_tracking_info: L'estat dels Altres Actius es segueix mitjançant valoracions manuals
+        utilitzant 'Nou saldo', no transaccions. El flux de caixa no afectarà el saldo del compte.
       title: Introdueix els detalls de l'actiu
-

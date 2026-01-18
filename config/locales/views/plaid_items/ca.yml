@@ -8,17 +8,24 @@ ca:
     plaid_item:
       add_new: Afegeix nova connexió
       confirm_accept: Elimina institució
-      confirm_body: Això eliminarà permanentment tots els comptes d'aquest grup i totes les dades associades.
+      confirm_body: Això eliminarà permanentment tots els comptes d'aquest grup i
+        totes les dades associades.
       confirm_title: Vols eliminar la institució?
       connection_lost: Connexió perduda
-      connection_lost_description: Aquesta connexió ja no és vàlida. Hauràs d'eliminar-la i tornar-la a afegir per continuar sincronitzant dades.
+      connection_lost_description: Aquesta connexió ja no és vàlida. Hauràs d'eliminar-la
+        i tornar-la a afegir per continuar sincronitzant dades.
       delete: Elimina
       error: S'ha produït un error en sincronitzar les dades
-      no_accounts_description: No hem pogut carregar cap compte d'aquesta entitat financera.
+      no_accounts_description: No hem pogut carregar cap compte d'aquesta entitat
+        financera.
       no_accounts_title: No s'han trobat comptes
       requires_update: Cal tornar a autenticar
       status: Darrera sincronització fa %{timestamp}
       status_never: Cal sincronitzar dades
       syncing: Sincronitzant...
       update: Actualitza la connexió
-
+    select_existing_account:
+      cancel: Cancel·la
+      description: Selecciona un compte Plaid per enllaçar-lo al teu compte existent
+      link_account: Enllaça el compte
+      title: Enllaça %{account_name} amb Plaid

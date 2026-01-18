@@ -14,5 +14,5 @@ ca:
       cash: Efectiu
       holdings: Posicions
       total: Saldo del portafolis
-      total_value_tooltip: El saldo total del portafolis és la suma de l'efectiu de broker (disponible per operar) i el valor de mercat actual de les teves posicions.
-
+      total_value_tooltip: El saldo total del portafolis és la suma de l'efectiu de
+        broker (disponible per operar) i el valor de mercat actual de les teves posicions.

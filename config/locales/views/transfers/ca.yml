@@ -19,7 +19,8 @@ ca:
       title: Nova transferència
     show:
       delete: Elimina transferència
-      delete_subtitle: Això eliminarà la transferència. No s'eliminaran les transaccions associades.
+      delete_subtitle: Això eliminarà la transferència. No s'eliminaran les transaccions
+        associades.
       delete_title: Vols eliminar la transferència?
       details: Detalls
       note_label: Notes

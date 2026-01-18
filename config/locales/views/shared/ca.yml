@@ -10,6 +10,9 @@ ca:
       label: Import
     syncing_notice:
       syncing: S'estan sincronitzant les dades dels comptes...
+    transaction_tabs:
+      expense: Despesa
+      income: Ingrés
+      transfer: Transferència
     trend_change:
-      no_change: "sense canvis"
-
+      no_change: sense canvis

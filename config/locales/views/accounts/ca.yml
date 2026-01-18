@@ -1,22 +1,51 @@
 ---
 ca:
+  account:
+    entries:
+      destroy:
+        success: Èxit
   accounts:
     account:
+      link_lunchflow: Enllaça amb Lunch Flow
+      link_provider: Enllaça amb proveïdor
       troubleshoot: Resolució de problemes
+      unlink_provider: Desenllaça del proveïdor
     chart:
       data_not_available: Dades no disponibles per al període seleccionat
+    confirm_unlink:
+      confirm_button: Confirma i desenllaça
+      description_html: Estàs a punt de desenllaçar <strong>%{account_name}</strong> de
+        <strong>%{provider_name}</strong>. Això el convertirà en un compte manual.
+      title: Vols desenllaçar el compte del proveïdor?
+      warning_can_delete: Després de desenllaçar-lo, podràs eliminar el compte
+        si és necessari
+      warning_manual_updates: Hauràs d'afegir transaccions i actualitzar saldos
+        manualment
+      warning_no_sync: El compte ja no sincronitzarà automàticament amb el teu proveïdor
+      warning_title: Això significa
+      warning_transactions_kept: Totes les transaccions i saldos existents es conservaran
     create:
-      success: "Compte %{type} creat"
+      success: Compte %{type} creat
     destroy:
-      success: "El compte %{type} s'ha programat per a l'eliminació"
+      cannot_delete_linked: No es pot eliminar un compte enllaçat. Si us plau, desenllaça'l primer.
+      success: El compte %{type} s'ha programat per a l'eliminació
     empty:
-      empty_message: Afegeix un compte mitjançant connexió, importació o introducció manual.
+      empty_message: Afegeix un compte mitjançant connexió, importació o introducció
+        manual.
       new_account: Nou compte
       no_accounts: Encara no hi ha cap compte
     form:
+      additional_details: Detalls addicionals
       balance: Saldo actual
+      institution_domain_label: Domini de l'institució
+      institution_domain_placeholder: p. ex., chase.com
+      institution_name_label: Nom de l'institució
+      institution_name_placeholder: p. ex., Chase Bank
       name_label: Nom del compte
       name_placeholder: Exemple de nom de compte
+      notes_label: Notes
+      notes_placeholder: Emmagatzema informació addicional com números de compte, codis de sortida,
+        IBAN, números de ruta, etc.
     index:
       accounts: Comptes
       manual_accounts:
@@ -28,62 +57,84 @@ ca:
       method_selector:
         connected_entry: Enllaça el compte
         connected_entry_eu: Enllaça el compte de la UE
-        link_with_provider: "Enllaça amb %{provider}"
+        link_with_provider: Enllaça amb %{provider}
+        lunchflow_entry: Enllaça compte de Lunch Flow
         manual_entry: Introdueix el saldo del compte
         title: Com vols afegir-lo?
       title: Què vols afegir?
+    select_provider:
+      already_linked: Aquest compte ja està enllaçat a un proveïdor
+      description: Tria quin proveïdor vols utilitzar per enllaçar %{account_name}
+      no_providers: Actualment no hi ha cap proveïdor configurat
+      title: Selecciona un proveïdor per enllaçar
     show:
       activity:
         amount: Import
         balance: Saldo
+        confirmed: Confirmada
         date: Data
         entries: entrades
         entry: entrada
+        filter: Filtra
         new: Nou
         new_balance: Nou saldo
         new_transaction: Nova transacció
         no_entries: No s'han trobat entrades
+        pending: Pendent
         search:
           placeholder: Cerca entrades per nom
+        status: Estat
         title: Activitat
       chart:
         balance: Saldo
         owed: Import degut
       menu:
         confirm_accept: Elimina "%{name}"
-        confirm_body_html: "<p>En eliminar aquest compte, s’esborrarà l’historial de valors,
-          afectant diversos aspectes del teu compte global. Aquesta acció tindrà un impacte
-          directe en el càlcul del teu patrimoni net i els gràfics dels comptes.</p><br /> <p>Després de l’eliminació,
-          no hi haurà manera de restaurar la informació del compte perquè hauràs d’afegir-lo com un compte nou.</p>"
+        confirm_body_html: "<p>En eliminar aquest compte, s'esborrarà l'historial
+          de valors, afectant diversos aspectes del teu compte global. Aquesta acció
+          tindrà un impacte directe en el càlcul del teu patrimoni net i els gràfics
+          dels comptes.</p><br /> <p>Després de l'eliminació, no hi haurà manera de
+          restaurar la informació del compte perquè hauràs d'afegir-lo com un compte
+          nou.</p>"
         confirm_title: Vols eliminar el compte?
         edit: Edita
         import: Importa transaccions
         manage: Gestiona els comptes
-    update:
-      success: "Compte %{type} actualitzat"
     sidebar:
-      missing_data: Falten dades històriques
-      missing_data_description: "%{product} utilitza proveïdors externs per obtenir tipus de canvi històrics, preus de valors i més. Aquestes dades són necessàries per calcular saldos històrics precisos dels comptes."
       configure_providers: Configura els teus proveïdors aquí.
+      missing_data: Falten dades històriques
+      missing_data_description: "%{product} utilitza proveïdors externs per obtenir
+        tipus de canvi històrics, preus de valors i més. Aquestes dades són necessàries
+        per calcular saldos històrics precisos dels comptes."
+      new_account: Nou compte
+      new_account_group: Nou %{account_group}
+      new_asset: Nou actiu
+      new_debt: Nou deute
       tabs:
         all: Tots
         assets: Actius
         debts: Deutes
-      new_asset: Nou actiu
-      new_debt: Nou deute
-      new_account: Nou compte
-      new_account_group: "Nou %{account_group}"
+    sync_all:
+      syncing: Sincronitzant comptes...
     types:
+      credit_card: Targeta de crèdit
+      crypto: Cripto
       depository: Efectiu
       investment: Inversió
-      crypto: Cripto
+      loan: Préstec
+      other_asset: Altre actiu
+      other_liability: Altra passiu
       property: Propietat
       vehicle: Vehicle
-      other_asset: Altre actiu
-      credit_card: Targeta de crèdit
-      loan: Préstec
-      other_liability: Altra passiu
+    unlink:
+      error: "No s'ha pogut desenllaçar el compte: %{error}"
+      generic_error: S'ha produït un error inesperat. Si us plau, torna-ho a intentar.
+      not_linked: El compte no està enllaçat a cap proveïdor
+      success: El compte s'ha desenllaçat correctament. Ara és un compte manual.
+    update:
+      success: Compte %{type} actualitzat
   email_confirmations:
     new:
       invalid_token: L'enllaç de confirmació no és vàlid o ha caducat.
-      success_login: El teu correu electrònic ha estat confirmat. Inicia sessió amb la nova adreça electrònica.
+      success_login: El teu correu electrònic ha estat confirmat. Inicia sessió amb
+        la nova adreça electrònica.

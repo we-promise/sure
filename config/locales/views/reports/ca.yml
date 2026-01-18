@@ -1,0 +1,209 @@
+---
+ca:
+  reports:
+    budget_performance:
+      budgeted: Pressupostat
+      no_budgets: No s'ha configurat cap categoria de pressupost per aquest mes
+      over_by: Superat per
+      remaining: Restant
+      spent: Gastat
+      status:
+        good: Sota control
+        over: Pressupost superat
+        warning: Proper al límit
+      suggested_daily: "%{amount} suggerits al dia per a %{days} dies restants"
+      title: Rendiment del pressupost
+    empty_state:
+      add_account: Afegir compte
+      add_transaction: Afegir transacció
+      description: Comença a fer seguiment de les teves finances afegint transaccions o connectant
+        els teus comptes per veure informes complets
+      title: No hi ha dades disponibles
+    google_sheets_instructions:
+      close: D'acord
+      example: Exemple
+      go_to_api_keys: Anar a claus API
+      need_key: Per importar dades a Google Sheets, necessites una clau API.
+      open_sheets: Obrir Google Sheets
+      ready: La teva URL CSV (amb clau API) està preparada.
+      security_warning: Aquesta URL inclou la teva clau API. Mantingues-la segura!
+      step1: Anar a Configuració → Claus API
+      step2: Crea una nova clau API amb permisos de "lectura"
+      step3: Còpia la clau API
+      step4: 'Afegeix-la a aquesta URL com: ?api_key=TEVA_CLAU'
+      steps: |-
+        Per importar a Google Sheets:
+        1. Crea un full de Google nou
+        2. A la cel·la A1, introdueix la fórmula que es mostra a continuació
+        3. Prem Enter
+      then_use: Després usa l'URL completa amb =IMPORTDATA() a Google Sheets.
+      title_no_key: "⚠️ Es requereix clau API"
+      title_with_key: "✅ Copia l'URL per a Google Sheets"
+    index:
+      date_range:
+        from: Des de
+        to: Fins a
+      drag_to_reorder: Arrossega per reordenar la secció
+      export: Exporta CSV
+      periods:
+        custom: Rang personalitzat
+        last_6_months: Últims 6 mesos
+        monthly: Mensual
+        quarterly: Trimestral
+        ytd: Any fins avui
+      print_report: Imprimir informe
+      showing_period: Mostrant dades des de %{start} fins a %{end}
+      subtitle: Informació completa sobre la teva salut financera
+      title: Informes
+      toggle_section: Commutar visibilitat de la secció
+    invalid_date_range: La data final no pot ser anterior a la data inicial. Les dates s'han
+      canviat.
+    investment_performance:
+      accounts: Comptes d'inversió
+      contributions: Contribucions del període
+      holding: Participació
+      portfolio_value: Valor del portfoli
+      return: Rendiment
+      title: Rendiment de la inversió
+      top_holdings: Principals participacions
+      total_return: Rendiment total
+      value: Valor
+      weight: Pes
+      withdrawals: Retirades del període
+    net_worth:
+      assets_vs_liabilities: Actius vs. Passius
+      current_net_worth: Patrimoni net actual
+      no_assets: No hi ha actius
+      no_liabilities: No hi ha passius
+      period_change: Canvi del període
+      title: Patrimoni net
+      total_assets: Actius
+      total_liabilities: Passius
+    print:
+      document_title: Informe financer
+      generated_on: Generat el %{date}
+      investments:
+        contributions: Contribucions
+        holding: Participació
+        portfolio_value: Valor del portfoli
+        return: Rendiment
+        this_period: aquest període
+        title: Inversions
+        top_holdings: Principals participacions
+        total_return: Rendiment total
+        value: Valor
+        weight: Pes
+        withdrawals: Retirades
+      net_worth:
+        assets: Actius
+        current_balance: Saldo actual
+        liabilities: Passius
+        no_liabilities: No hi ha passius
+        this_period: aquest període
+        title: Patrimoni net
+      spending:
+        amount: Import
+        category: Categoria
+        expenses: Despeses
+        income: Ingressos
+        more_categories: "+ %{count} categories més"
+        percent: "%"
+        title: Despeses per categoria
+      summary:
+        budget: Pressupost
+        expenses: Despeses
+        income: Ingressos
+        net_savings: Estalvi net
+        of_income: "%{percent}% dels ingressos"
+        title: Resum
+        used: utilitzat
+        vs_prior: "%{percent}% vs període anterior"
+      title: Informe financer
+      trends:
+        average: Mitjana
+        current_month_note: "* Mes actual (dades parcials)"
+        expenses: Despeses
+        income: Ingressos
+        month: Mes
+        net: Net
+        savings_rate: Taxa d'estalvi
+        title: Tendències mensuals
+    summary:
+      budget_performance: Rendiment del pressupost
+      income_minus_expenses: Ingressos menys despeses
+      net_savings: Estalvi net
+      no_budget_data: No hi ha dades de pressupost per aquest període
+      of_budget_used: del pressupost utilitzat
+      total_expenses: Despeses totals
+      total_income: Ingressos totals
+      vs_previous: vs període anterior
+    transactions_breakdown:
+      export:
+        csv: CSV
+        excel: Excel
+        google_sheets: Obrir a Google Sheets
+        label: Exportar
+        pdf: PDF
+      filters:
+        account: Compte
+        all_accounts: Tots els comptes
+        all_categories: Totes les categories
+        all_tags: Totes les etiquetes
+        amount_max: Màxim import
+        amount_min: Mínim import
+        apply: Aplicar filtres
+        category: Categoria
+        clear: Esborrar filtres
+        date_range: Rang de dates
+        tag: Etiqueta
+        title: Filtres
+      no_transactions: No s'ha trobat activitat per al període i filtres seleccionats
+      pagination:
+        next: Següent
+        previous: Anterior
+        showing:
+          one: Mostrant %{count} entrada
+          other: Mostrant %{count} entrades
+      sort:
+        amount_asc: Import (baix a alt)
+        amount_desc: Import (alt a baix)
+        date_desc: Data (més recent)
+        label: Ordenar per
+      table:
+        amount: Import
+        category: Categoria
+        entries:
+          one: entrada
+          other: entrades
+        expense: Despeses
+        income: Ingressos
+        percentage: "% del total"
+        type: Tipus
+        uncategorized: Sense categoria
+      title: Detall d'activitat
+    trends:
+      avg_monthly_expenses: Mitjana mensual de despeses
+      avg_monthly_income: Mitjana mensual d'ingressos
+      avg_monthly_savings: Mitjana mensual d'estalvi
+      avg_per_transaction: Mitjana per transacció
+      current: actual
+      expenses: Despeses
+      income: Ingressos
+      insight_higher_weekday: Gastes %{percent}% més per transacció en dies laborables
+        que en caps de setmana
+      insight_higher_weekend: Gastes %{percent}% més per transacció en caps de setmana
+        que en dies laborables
+      insight_similar: El teu gast per transacció és similar en dies laborables i caps de setmana
+      insight_title: Anàlisi
+      month: Mes
+      monthly_breakdown: Detall mensual
+      net: Net
+      no_data: No hi ha dades de tendències disponibles
+      no_spending_data: No hi ha dades de despeses disponibles per aquest període
+      savings_rate: Taxa d'estalvi
+      spending_patterns: Patrons de despesa
+      title: Tendències i anàlisi
+      total: Total
+      transactions: Transaccions
+      weekday_spending: Despeses laborables
+      weekend_spending: Despeses de cap de setmana

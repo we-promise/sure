@@ -1,0 +1,158 @@
+---
+ca:
+  lunchflow_items:
+    complete_account_setup:
+      all_skipped: S'han omès tots els comptes. No s'ha creat cap compte.
+      creation_failed: "No s'han pogut crear els comptes: %{error}"
+      no_accounts: No hi ha comptes per configurar.
+      success: S'han creat correctament %{count} compte(s).
+    create:
+      success: La connexió amb Lunch Flow s'ha creat correctament
+    destroy:
+      success: La connexió amb Lunch Flow s'ha eliminat
+    index:
+      title: Connexions Lunch Flow
+    link_accounts:
+      all_already_linked:
+        one: El compte seleccionat (%{names}) ja està enllaçat
+        other: "Tots els %{count} comptes seleccionats ja estan enllaçats: %{names}"
+      api_error: "Error d'API: %{message}"
+      invalid_account_names:
+        one: No es pot enllaçar un compte sense nom
+        other: No es poden enllaçar %{count} comptes sense nom
+      link_failed: No s'han pogut enllaçar els comptes
+      no_accounts_selected: Si us plau, selecciona almenys un compte
+      no_api_key: No hi ha clau API
+      partial_invalid: S'han enllaçat correctament %{created_count} compte(s), %{already_linked_count}
+        ja estaven enllaçats, %{invalid_count} compte(s) tenien noms no vàlids
+      partial_success: "S'han enllaçat correctament %{created_count} compte(s). %{already_linked_count}
+        compte(s) ja estaven enllaçats: %{already_linked_names}"
+      success:
+        one: S'ha enllaçat correctament %{count} compte
+        other: S'han enllaçat correctament %{count} comptes
+    link_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      api_error: "Error d'API: %{message}"
+      invalid_account_name: No es pot enllaçar un compte sense nom
+      lunchflow_account_already_linked: Aquest compte de Lunch Flow ja està enllaçat
+        a un altre compte
+      lunchflow_account_not_found: No s'ha trobat el compte de Lunch Flow
+      missing_parameters: Falten els paràmetres requerits
+      no_api_key: No hi ha clau API
+      success: S'ha enllaçat correctament %{account_name} amb Lunch Flow
+    loading:
+      loading_message: Carregant comptes de Lunch Flow...
+      loading_title: Carregant
+    lunchflow_item:
+      accounts_need_setup: Els comptes necessiten configuració
+      delete: Eliminar connexió
+      deletion_in_progress: s'està eliminant...
+      error: Error
+      no_accounts_description: Aquesta connexió encara no té comptes enllaçats.
+      no_accounts_title: No hi ha comptes
+      setup_action: Configurar nous comptes
+      setup_description: "%{linked} de %{total} comptes enllaçats. Tria els tipus de comptes
+        per als teus comptes de Lunch Flow importats recentment."
+      setup_needed: Nous comptes preparats per a la configuració
+      status: Sincronitzat %{timestamp} fa
+      status_never: Mai sincronitzat
+      status_with_summary: Sincronitzat per última vegada %{timestamp} fa • %{summary}
+      syncing: Sincronitzant...
+      total: Total
+      unlinked: Sense enllaç
+    select_accounts:
+      accounts_selected: comptes seleccionats
+      api_error: "Error d'API: %{message}"
+      cancel: Cancel·la
+      configure_name_in_lunchflow: No es pot importar - si us plau, configura el nom del compte a
+        Lunchflow
+      description: Selecciona els comptes que vols enllaçar amb el teu compte de %{product_name}.
+      link_accounts: Enllaça els comptes seleccionats
+      no_accounts_found: No s'han trobat comptes. Si us plau, comprova la configuració de la teva clau API.
+      no_api_key: La clau API de Lunch Flow no està configurada. Configura-la a Configuració.
+      no_credentials_configured: Primer, configura la teva clau API de Lunch Flow a
+        Configuració de proveïdors.
+      no_name_placeholder: "(Sense nom)"
+      title: Selecciona comptes de Lunch Flow
+    select_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      all_accounts_already_linked: Tots els comptes de Lunch Flow ja estan enllaçats
+      api_error: "Error d'API: %{message}"
+      cancel: Cancel·la
+      configure_name_in_lunchflow: No es pot importar - si us plau, configura el nom del compte a
+        Lunchflow
+      description: Selecciona un compte de Lunch Flow per enllaçar-lo amb aquest compte. Les transaccions
+        se sincronitzaran i deduplicaran automàticament.
+      link_account: Enllaça compte
+      no_account_specified: No s'ha especificat cap compte
+      no_accounts_found: No s'han trobat comptes de Lunch Flow. Si us plau, comprova la configuració de la teva clau API.
+      no_api_key: La clau API de Lunch Flow no està configurada. Configura-la a Configuració.
+      no_credentials_configured: Primer, configura la teva clau API de Lunch Flow a
+        Configuració de proveïdors.
+      no_name_placeholder: "(Sense nom)"
+      title: Enllaça %{account_name} amb Lunch Flow
+    setup_accounts:
+      account_type_label: 'Tipus de compte:'
+      account_types:
+        credit_card: Targeta de crèdit
+        depository: Compte corrent o d'estalvis
+        investment: Compte d'inversió
+        loan: Prèstec o hipoteca
+        other_asset: Alt actiu
+        skip: Omet aquest compte
+      all_accounts_linked: Tots els teus comptes de Lunch Flow ja s'han configurat.
+      api_error: "Error d'API: %{message}"
+      balance: Saldo
+      cancel: Cancel·la
+      choose_account_type: 'Tria el tipus de compte correcte per a cada compte de Lunch Flow:'
+      create_accounts: Crear comptes
+      creating_accounts: Creant comptes...
+      fetch_failed: No s'han pogut obtenir els comptes
+      historical_data_range: 'Rang de dades històriques:'
+      no_accounts_to_setup: No hi ha comptes per configurar
+      no_api_key: La clau API de Lunch Flow no està configurada. Si us plau, comprova la configuració
+        de la connexió.
+      subtitle: Tria els tipus de comptes correctes per als teus comptes importats
+      subtype_labels:
+        credit_card: Targeta de crèdit
+        depository: 'Subtipus de compte:'
+        investment: "Tipus d'inversió:"
+        loan: "Tipus de préstec:"
+        other_asset: Alt actiu
+      subtype_messages:
+        credit_card: Les targetes de crèdit es configuraran automàticament com a comptes de targeta de crèdit.
+        other_asset: No calen opcions addicionals per als Altres Actius.
+      subtypes:
+        depository:
+          cd: Certificat de Dipòsit
+          checking: Compte corrent
+          hsa: Compte d'estalvis de salut
+          money_market: Fons mercant
+          savings: Compte d'estalvis
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: Pla 529
+          angel: Àngel
+          brokerage: Corredoria
+          hsa: Compte d'estalvis de salut
+          ira: IRA tradicional
+          mutual_fund: Fons comú d'inversió
+          pension: Jubilació
+          retirement: Jubilació
+          roth_401k: 401(k) Roth
+          roth_ira: IRA Roth
+          tsp: Pla d'estalvis de retirada (TSP)
+        loan:
+          auto: Prèstec de vehicle
+          mortgage: Hipoteca
+          other: Alt préstec
+          student: Prèstec estudiantil
+      sync_start_date_help: Selecciona fins on vols sincronitzar l'historial de transaccions.
+        Està disponible un màxim de 3 anys d'historial.
+      sync_start_date_label: 'Començar a sincronitzar transaccions des de:'
+      title: Configura els teus comptes de Lunch Flow
+    sync:
+      success: S'ha iniciat la sincronització
+    update:
+      success: La connexió amb Lunch Flow s'ha actualitzat

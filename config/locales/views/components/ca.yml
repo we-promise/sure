@@ -1,0 +1,51 @@
+---
+ca:
+  provider_sync_summary:
+    accounts:
+      institutions: 'Institucions: %{count}'
+      linked: 'Vinculats: %{count}'
+      title: Comptes
+      total: 'Total: %{count}'
+      unlinked: 'Desvinculats: %{count}'
+    health:
+      data_warnings: 'Avisos de dades: %{count}'
+      duplicate_suggestions:
+        one: "%{count} duplicada possible necessita revisió"
+        other: "%{count} duplicades possibles necessiten revisió"
+      errors: 'Errors: %{count}'
+      notices: 'Notificacions: %{count}'
+      pending_reconciled:
+        one: "%{count} transacció pendent duplicada conciliada"
+        other: "%{count} transaccions pendents duplicades conciliades"
+      rate_limited: Sota límit de %{time_ago}
+      recently: recentment
+      stale_pending:
+        one: "%{count} transacció pendent obsoleta (exclòs dels pressupostos)"
+        other: "%{count} transaccions pendents obsoletes (exclòs dels pressupostos)"
+      stale_pending_count:
+        one: "%{count} transacció"
+        other: "%{count} transaccions"
+      stale_unmatched:
+        one: "%{count} transacció pendent necessita revisió manual"
+        other: "%{count} transaccions pendents necessiten revisió manual"
+      stale_unmatched_count:
+        one: "%{count} transacció"
+        other: "%{count} transaccions"
+      title: Estat
+      view_data_quality: Veure detalls de qualitat de dades
+      view_duplicate_suggestions: Veure duplicades suggerides
+      view_reconciled: Veure transaccions conciliades
+      view_stale_pending: Veure comptes afectats
+      view_stale_unmatched: Veure transaccions que necessiten revisió
+    holdings:
+      found: 'Trobat: %{count}'
+      processed: 'Processat: %{count}'
+      title: Posicions
+    last_sync: 'Última sincronització: fa %{time_ago}'
+    title: Resum de sincronització
+    transactions:
+      imported: 'Importat: %{count}'
+      seen: 'Vist: %{count}'
+      skipped: 'Omès: %{count}'
+      title: Transaccions
+      updated: 'Actualitzat: %{count}'

@@ -1,54 +1,112 @@
 ---
 ca:
   simplefin_items:
-    new:
-      title: Connecta SimpleFin
-      setup_token: Token de configuració
-      setup_token_placeholder: enganxa el teu token de configuració SimpleFin
-      connect: Connecta
-      cancel: Cancel·la
+    complete_account_setup:
+      all_skipped: S'han ignorat tots els comptes. No s'ha creat cap compte.
+      no_accounts: No hi ha comptes per configurar.
+      stale_accounts_errors:
+        one: "L'acció del compte obsolet ha fallat: %{count}. Consulta els registres per a més detalls."
+        other: "Les accions dels comptes obsolets han fallat: %{count}. Consulta els registres per a més detalls."
+      stale_accounts_processed: 'Comptes obsolets: %{deleted} eliminats, %{moved} moguts.'
+      success: Els comptes SimpleFIN s'han configurat correctament! Les teves transaccions
+        i posicions s'estan important en segon pla.
     create:
-      success: Connexió SimpleFin afegida correctament! Els teus comptes apareixeran en breu mentre es sincronitzen en segon pla.
       errors:
-        blank_token: Introdueix un token de configuració SimpleFin.
-        invalid_token: Token de configuració invàlid. Comprova que has copiat el token complet des de SimpleFin Bridge.
-        token_compromised: El token de configuració pot estar compromès, caducat o ja utilitzat. Crea'n un de nou.
-        create_failed: "No s'ha pogut connectar: %{message}"
-        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta amb el suport.
+        blank_token: Introdueix un token de configuració SimpleFIN.
+        create_failed: 'No s''ha pogut connectar: %{message}'
+        invalid_token: Token de configuració invàlid. Comprova que has copiat el token
+          complet des de SimpleFIN Bridge.
+        token_compromised: El token de configuració pot estar compromès, caducat o
+          ja utilitzat. Crea'n un de nou.
+        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta
+          amb el suport.
+      success: Connexió SimpleFIN afegida correctament! Els teus comptes apareixeran
+        en breu mentre es sincronitzen en segon pla.
     destroy:
-      success: La connexió SimpleFin s'eliminarà
-    update:
-      success: Connexió SimpleFin actualitzada correctament! Els teus comptes s'estan tornant a connectar.
-      errors:
-        blank_token: Introdueix un token de configuració SimpleFin.
-        invalid_token: Token de configuració invàlid. Comprova que has copiat el token complet des de SimpleFin Bridge.
-        token_compromised: El token de configuració pot estar compromès, caducat o ja utilitzat. Crea'n un de nou.
-        update_failed: "No s'ha pogut actualitzar la connexió: %{message}"
-        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta amb el suport.
+      success: La connexió SimpleFIN s'eliminarà
     edit:
       setup_token:
-        label: "Token de configuració SimpleFin:"
-        placeholder: "Enganxa aquí el teu token de configuració SimpleFin..."
-        help_text: "El token ha de ser una cadena llarga que comenci amb lletres i números"
-    complete_account_setup:
-      success: Els comptes SimpleFin s'han configurat correctament! Les teves transaccions i posicions s'estan important en segon pla.
+        help_text: El token ha de ser una cadena llarga que comenci amb lletres i
+          números
+        label: 'Token de configuració SimpleFIN:'
+        placeholder: Enganxa aquí el teu token de configuració SimpleFIN...
+    link_existing_account:
+      errors:
+        invalid_simplefin_account: S'ha seleccionat un compte SimpleFIN invàlid
+        only_manual: Només es poden enllaçar comptes manuals
+      success: S'ha enllaçat el compte correctament amb SimpleFIN
+    new:
+      cancel: Cancel·la
+      connect: Connecta
+      setup_token: Token de configuració
+      setup_token_placeholder: enganxa el teu token de configuració SimpleFIN
+      title: Connecta SimpleFIN
+    reconciled_status:
+      message:
+        one: "%{count} transacció pendent duplicada conciliada"
+        other: "%{count} transaccions pendents duplicades conciliades"
+    select_existing_account:
+      all_accounts_already_linked: Sembla que ja s'han enllaçat tots els comptes de SimpleFIN.
+      cancel: Cancel·la
+      check_provider_health: Comprova l'estat del proveïdor
+      currently_linked_to: 'Actualment enllaçat a: %{account_name}'
+      description: Selecciona un compte SimpleFIN per enllaçar-lo al teu compte existent
+      link_account: Enllaça el compte
+      no_accounts_found: No s'han trobat comptes SimpleFIN per a aquesta família.
+      title: Enllaça %{account_name} amb SimpleFIN
+      unlink_to_move: Per moure un enllaç, primer des-enllaça'l del menú d'accions del compte.
+      wait_for_sync: Si acabes de connectar o sincronitzar, torna-ho a provar després que la sincronització completi.
+    setup_accounts:
+      stale_accounts:
+        action_delete: Elimina el compte i totes les transaccions
+        action_move: 'Mou les transaccions a:'
+        action_prompt: Què vols fer?
+        action_skip: Omet ara
+        description: Aquests comptes existeixen a la teva base de dades però ja no s'ofereixen
+          per SimpleFIN. Això pot passar quan les configuracions del compte canvien a nivell superior.
+        title: Comptes ja no disponibles a SimpleFIN
+        transaction_count:
+          one: "%{count} transacció"
+          other: "%{count} transaccions"
     simplefin_item:
       add_new: Afegeix nova connexió
       confirm_accept: Elimina la connexió
-      confirm_body: Això eliminarà permanentment tots els comptes d'aquest grup i totes les dades associades.
-      confirm_title: Vols eliminar la connexió SimpleFin?
+      confirm_body: Això eliminarà permanentment tots els comptes d'aquest grup i
+        totes les dades associades.
+      confirm_title: Vols eliminar la connexió SimpleFIN?
       delete: Elimina
       deletion_in_progress: "(eliminació en curs...)"
+      duplicate_accounts_skipped: S'han omès alguns comptes perquè eren duplicats — utilitza 'Enllaça
+        comptes existents' per fusionar-los.
       error: S'ha produït un error en sincronitzar les dades
       no_accounts_description: Aquesta connexió encara no té cap compte sincronitzat.
       no_accounts_title: No s'han trobat comptes
+      reconciled_details_note: "(consulta el resum de la sincronització per a més detalls)"
       requires_update: Cal tornar a autenticar
-      setup_needed: Nous comptes llestos per configurar
-      setup_description: Tria els tipus de compte per als teus nous comptes SimpleFin importats.
       setup_action: Configura nous comptes
+      setup_description: Tria els tipus de compte per als teus nous comptes SimpleFIN
+        importats.
+      setup_needed: Nous comptes llestos per configurar
+      stale_pending_accounts: 'a: %{accounts}'
+      stale_pending_note: "(exclòs dels pressupostos)"
       status: Darrera sincronització fa %{timestamp}
       status_never: Mai sincronitzat
-      status_with_summary: "Darrera sincronització fa %{timestamp} • %{summary}"
+      status_with_summary: Darrera sincronització fa %{timestamp} • %{summary}
       syncing: Sincronitzant...
       update: Actualitza la connexió
-
+    stale_pending_status:
+      message:
+        one: "%{count} transacció pendent anterior a %{days} dies"
+        other: "%{count} transaccions pendents anteriors a %{days} dies"
+    update:
+      errors:
+        blank_token: Introdueix un token de configuració SimpleFIN.
+        invalid_token: Token de configuració invàlid. Comprova que has copiat el token
+          complet des de SimpleFIN Bridge.
+        token_compromised: El token de configuració pot estar compromès, caducat o
+          ja utilitzat. Crea'n un de nou.
+        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta
+          amb el suport.
+        update_failed: 'No s''ha pogut actualitzar la connexió: %{message}'
+      success: Connexió SimpleFIN actualitzada correctament! Els teus comptes s'estan
+        tornant a connectar.
