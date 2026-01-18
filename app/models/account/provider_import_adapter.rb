@@ -319,20 +319,25 @@ class Account::ProviderImportAdapter
         unless holding
           # Fallback path 1a: match by provider_security (for remapped holdings)
           # This allows re-matching a holding that was remapped to a different security
-          holding = account.holdings.find_by(
+          # Scope by account_provider_id to avoid cross-provider overwrites
+          fallback_1a_attrs = {
             provider_security: security,
             date: date,
             currency: currency
-          )
+          }
+          fallback_1a_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
+          holding = account.holdings.find_by(fallback_1a_attrs)
 
           # Fallback path 1b: match by provider_security ticker (for remapped holdings when
           # Security::Resolver returns a different security instance for the same ticker)
+          # Scope by account_provider_id to avoid cross-provider overwrites
           unless holding
-            holding = account.holdings
+            scope = account.holdings
               .joins("INNER JOIN securities AS ps ON ps.id = holdings.provider_security_id")
               .where(date: date, currency: currency)
               .where("ps.ticker = ?", security.ticker)
-              .first
+            scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
+            holding = scope.first
           end
 
           # Fallback path 2: match by (security, date, currency) — and when provided,

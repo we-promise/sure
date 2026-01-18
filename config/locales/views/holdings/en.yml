@@ -55,6 +55,7 @@ en:
       delete_subtitle: This will delete the holding and all your associated trades
         on this account.  This action cannot be undone.
       delete_title: Delete holding
+      edit_security: Edit security
       history: History
       no_trade_history: No trade history available for this holding.
       overview: Overview

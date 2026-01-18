@@ -42,6 +42,9 @@ module Security::Provided
 
     return price if price.present?
 
+    # Don't fetch prices for offline securities (e.g., custom tickers from SimpleFIN)
+    return nil if offline?
+
     # Make sure we have a data provider before fetching
     return nil unless provider.present?
     response = provider.fetch_security_price(
