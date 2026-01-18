@@ -63,7 +63,7 @@ class Security::Resolver
         exchange_matches = s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s
 
         if country_code && exchange_operating_mic
-          ticker_matches && exchange_matches && s.country_code.upcase.to_s == country_code.upcase.to_s
+          ticker_matches && exchange_matches && s.country_code&.upcase.to_s == country_code.upcase.to_s
         else
           ticker_matches && exchange_matches
         end
@@ -79,7 +79,7 @@ class Security::Resolver
 
       # If a country code is specified, we MUST find a match with the same code
       if country_code.present?
-        filtered_candidates = filtered_candidates.select { |s| s.country_code.upcase.to_s == country_code.upcase.to_s }
+        filtered_candidates = filtered_candidates.select { |s| s.country_code&.upcase.to_s == country_code.upcase.to_s }
       end
 
       # 1. Prefer exact ticker matches (MSTR before MSTRX when searching for "MSTR")
