@@ -148,30 +148,30 @@ class Provider::YahooFinance < Provider
     with_provider_response do
       cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
-        return cached_result
+        cached_result
+      else
+        throttle_request
+        response = client.get("#{base_url}/v1/finance/search") do |req|
+          req.params["q"] = symbol.strip.upcase
+          req.params["quotesCount"] = 25
+        end
+
+        data = JSON.parse(response.body)
+        quotes = data.dig("quotes") || []
+
+        securities = quotes.filter_map do |quote|
+          Security.new(
+            symbol: quote["symbol"],
+            name: quote["longname"] || quote["shortname"] || quote["symbol"],
+            logo_url: nil, # Yahoo search doesn't provide logos
+            exchange_operating_mic: map_exchange_mic(quote["exchange"]),
+            country_code: map_country_code(quote["exchDisp"])
+          )
+        end
+
+        cache_result(cache_key, securities)
+        securities
       end
-
-      throttle_request
-      response = client.get("#{base_url}/v1/finance/search") do |req|
-        req.params["q"] = symbol.strip.upcase
-        req.params["quotesCount"] = 25
-      end
-
-      data = JSON.parse(response.body)
-      quotes = data.dig("quotes") || []
-
-      securities = quotes.filter_map do |quote|
-        Security.new(
-          symbol: quote["symbol"],
-          name: quote["longname"] || quote["shortname"] || quote["symbol"],
-          logo_url: nil, # Yahoo search doesn't provide logos
-          exchange_operating_mic: map_exchange_mic(quote["exchange"]),
-          country_code: map_country_code(quote["exchDisp"])
-        )
-      end
-
-      cache_result(cache_key, securities)
-      securities
     rescue JSON::ParserError => e
       raise Error, "Invalid search response format: #{e.message}"
     end
@@ -230,33 +230,35 @@ class Provider::YahooFinance < Provider
     with_provider_response do
       cache_key = "security_price_#{symbol}_#{exchange_operating_mic}_#{date}"
       if cached_result = get_cached_result(cache_key)
-        return cached_result
+        cached_result
+      else
+        # For a single date, we'll fetch a range and find the closest match
+        end_date = date
+        start_date = date - 10.days # Extended range for better coverage
+
+        prices_response = fetch_security_prices(
+          symbol: symbol,
+          exchange_operating_mic: exchange_operating_mic,
+          start_date: start_date,
+          end_date: end_date
+        )
+
+        raise Error, "Failed to fetch security prices: #{prices_response.error.message}" unless prices_response.success?
+
+        prices = prices_response.data
+        if prices.length == 1
+          target_price = prices.first
+        else
+          # Find the exact date or the closest previous date
+          target_price = prices.find { |p| p.date == date } ||
+                        prices.select { |p| p.date <= date }.max_by(&:date)
+
+          raise Error, "No price found for #{symbol} on or before #{date}" unless target_price
+        end
+
+        cache_result(cache_key, target_price)
+        target_price
       end
-
-      # For a single date, we'll fetch a range and find the closest match
-      end_date = date
-      start_date = date - 10.days # Extended range for better coverage
-
-      prices_response = fetch_security_prices(
-        symbol: symbol,
-        exchange_operating_mic: exchange_operating_mic,
-        start_date: start_date,
-        end_date: end_date
-      )
-
-      raise Error, "Failed to fetch security prices: #{prices_response.error.message}" unless prices_response.success?
-
-      prices = prices_response.data
-      return prices.first if prices.length == 1
-
-      # Find the exact date or the closest previous date
-      target_price = prices.find { |p| p.date == date } ||
-                    prices.select { |p| p.date <= date }.max_by(&:date)
-
-      raise Error, "No price found for #{symbol} on or before #{date}" unless target_price
-
-      cache_result(cache_key, target_price)
-      target_price
     end
   end
 
