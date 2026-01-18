@@ -219,6 +219,36 @@ Sidekiq handles asynchronous tasks:
 - **NEVER create new styles** in design system files without permission
 - **Always generate semantic HTML**
 
+### Animation Patterns
+
+The design system provides standardized enter/exit animation utilities in `animation-utils.css`. Use these with the `element-removal` Stimulus controller for consistent dismissible elements.
+
+**Available animation presets:**
+- `animate-fade-up-*` - Fade + translate up (notifications, toasts)
+- `animate-fade-*` - Simple fade (overlays, dialogs)
+- `animate-scale-*` - Scale + fade (modals, popovers)
+
+Each preset has three states: `-initial`, `-visible`, `-exit`
+
+**Standard transition:**
+- `transition-enter-exit` - Applies `transition-all duration-300 ease-out`
+
+**Usage with element-removal controller:**
+```erb
+<%= tag.div class: "transition-enter-exit animate-fade-up-initial",
+            data: {
+              controller: "element-removal",
+              element_removal_initial_class: "animate-fade-up-initial",
+              element_removal_visible_class: "animate-fade-up-visible",
+              element_removal_exit_class: "animate-fade-up-exit"
+            } do %>
+  <!-- Content auto-fades in on connect, fades out on remove -->
+  <button data-action="click->element-removal#remove">Close</button>
+<% end %>
+```
+
+**Important:** Always use design system animation tokens. Never hardcode animation classes like `opacity-0 translate-y-[-8px]` directly in templates.
+
 ## Component Architecture
 
 ### ViewComponent vs Partials Decision Making
