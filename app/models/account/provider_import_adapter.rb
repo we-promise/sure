@@ -413,6 +413,9 @@ class Account::ProviderImportAdapter
       # Only update security if not locked by user
       if holding.new_record? || holding.security_replaceable_by_provider?
         attributes[:security] = security
+        # Track the provider's original security so reset_security_to_provider! works
+        # Only set if not already set (preserves original if user remapped then unlocked)
+        attributes[:provider_security_id] = security.id if holding.provider_security_id.blank?
       end
 
       # Only update cost_basis if reconciliation says to
