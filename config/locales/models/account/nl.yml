@@ -11,7 +11,7 @@ nl:
         subtype: Subtype
     models:
       account: Account
-      account/credit: Credit Card
+      account/credit: Creditcard
       account/depository: Bankrekening
       account/investment: Belegging
       account/loan: Lening

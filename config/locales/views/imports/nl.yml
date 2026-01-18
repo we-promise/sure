@@ -37,13 +37,13 @@ nl:
         rows_label: Rijen
         unassigned_account: Moet u een nieuw account aanmaken voor niet-toegewezen rijen?
       show:
-        account_mapping_description: Wijs alle accounts van uw geïmporteerde bestand toe aan bestaande Maybe accounts. U kunt ook nieuwe accounts toevoegen of ze ongecategoriseerd laten.
+        account_mapping_description: Wijs alle accounts van uw geïmporteerde bestand toe aan bestaande %{product_name} accounts. U kunt ook nieuwe accounts toevoegen of ze ongecategoriseerd laten.
         account_mapping_title: Uw accounts toewijzen
-        account_type_mapping_description: Wijs alle accounttypen van uw geïmporteerde bestand toe aan Maybe's accounttypen
+        account_type_mapping_description: Wijs alle accounttypen van uw geïmporteerde bestand toe aan %{product_name} accounttypen
         account_type_mapping_title: Uw accounttypen toewijzen
-        category_mapping_description: Wijs alle categorieën van uw geïmporteerde bestand toe aan bestaande Maybe categorieën. U kunt ook nieuwe categorieën toevoegen of ze ongecategoriseerd laten.
+        category_mapping_description: Wijs alle categorieën van uw geïmporteerde bestand toe aan bestaande %{product_name} categorieën. U kunt ook nieuwe categorieën toevoegen of ze ongecategoriseerd laten.
         category_mapping_title: Uw categorieën toewijzen
-        tag_mapping_description: Wijs alle tags van uw geïmporteerde bestand toe aan bestaande Maybe tags. U kunt ook nieuwe tags toevoegen of ze ongecategoriseerd laten.
+        tag_mapping_description: Wijs alle tags van uw geïmporteerde bestand toe aan bestaande %{product_name} tags. U kunt ook nieuwe tags toevoegen of ze ongecategoriseerd laten.
         tag_mapping_title: Uw tags toewijzen
     uploads:
       show:

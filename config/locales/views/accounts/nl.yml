@@ -72,11 +72,11 @@ nl:
         confirm_accept: Verwijder "%{name}"
         confirm_body_html: "<p>Door dit account te verwijderen, wist u de waarde geschiedenis, wat verschillende aspecten van uw totale account beïnvloedt. Deze actie heeft een directe impact op uw netto waarde berekeningen en de account grafieken.</p><br /> <p>Na verwijdering is er geen manier om de account informatie te herstellen omdat u het als een nieuw account moet toevoegen.</p>"
         confirm_title: Account verwijderen?
-        edit: Weizigen
+        edit: Bewerken
         import: Transacties importeren
         manage: Beheer accounts
     update:
-      success: "%{type} account geupdate"
+      success: "%{type} account bijgewerkt"
     sidebar:
       missing_data: Ontbrekende historische gegevens
       missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, beveiligingsprijzen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountbalansen te berekenen."

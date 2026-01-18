@@ -21,7 +21,7 @@ nl:
       forgot_password: Wachtwoord vergeten?
       password: Wachtwoord
       submit: Inloggen
-      title: Sure
+      title: "%{product_name}"
       password_placeholder: Voer uw wachtwoord in
       openid_connect: Inloggen met OpenID Connect
       google_auth_connect: Inloggen met Google

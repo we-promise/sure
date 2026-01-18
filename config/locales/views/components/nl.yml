@@ -31,7 +31,7 @@ nl:
     health:
       title: Status
       view_error_details: Foutdetails bekijken
-      rate_limited: "Rate limited %{time_ago}"
+      rate_limited: "Snelheidslimiet bereikt %{time_ago} geleden"
       recently: recent
       errors: "Fouten: %{count}"
       pending_reconciled:

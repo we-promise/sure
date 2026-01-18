@@ -53,7 +53,7 @@ nl:
           body: Weet u zeker dat u uw account wilt resetten? Dit zal al uw accounts, categorieën, handelaren, tags en andere gegevens verwijderen. Deze actie kan niet ongedaan worden gemaakt.
           title: Account resetten?
         confirm_reset_with_sample_data:
-          body: Weet u zeker dat u uw account wilt resetten en voorbeeldgegevens wilt laden? Dit zal uw bestaande gegevens verwijderen en vervangen door demogegevens zodat u Sure veilig kunt verkennen.
+          body: Weet u zeker dat u uw account wilt resetten en voorbeeldgegevens wilt laden? Dit zal uw bestaande gegevens verwijderen en vervangen door demogegevens zodat u %{product_name} veilig kunt verkennen.
           title: Account resetten en voorbeeldgegevens laden?
         confirm_remove_invitation:
           body: "Weet u zeker dat u de uitnodiging voor %{email} wilt verwijderen?"

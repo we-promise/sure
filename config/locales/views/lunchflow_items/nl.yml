@@ -45,7 +45,7 @@ nl:
       accounts_selected: accounts geselecteerd
       api_error: "API fout: %{message}"
       cancel: Annuleren
-      configure_name_in_lunchflow: Kan niet importeren - configureer accountnaam in Lunchflow
+      configure_name_in_lunchflow: Kan niet importeren - configureer accountnaam in Lunch Flow
       description: Selecteer de accounts die u wilt koppelen aan uw %{product_name} account.
       link_accounts: Geselecteerde accounts koppelen
       no_accounts_found: Geen accounts gevonden. Controleer uw API key configuratie.
@@ -57,7 +57,7 @@ nl:
       all_accounts_already_linked: Alle Lunch Flow accounts zijn al gekoppeld
       api_error: "API fout: %{message}"
       cancel: Annuleren
-      configure_name_in_lunchflow: Kan niet importeren - configureer accountnaam in Lunchflow
+      configure_name_in_lunchflow: Kan niet importeren - configureer accountnaam in Lunch Flow
       description: Selecteer een Lunch Flow account om te koppelen aan dit account. Transacties worden automatisch gesynchroniseerd en gededupliceerd.
       link_account: Account koppelen
       no_account_specified: Geen account opgegeven
