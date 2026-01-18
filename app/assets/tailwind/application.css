@@ -147,35 +147,74 @@
   }
 }
 
-/* Custom scrollbar implementation for Windows browsers */
+/* Windows-specific scrollbar styling with dark mode support */
 .windows {
   ::-webkit-scrollbar {
     width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #d6d6d6;
+    background: var(--color-alpha-black-500);
     border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #a6a6a6;
-  }  
+    background: var(--color-alpha-black-700);
+  }
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-alpha-black-500) transparent;
 }
 
+/* Windows dark mode */
+[data-theme=dark] .windows {
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-alpha-white-500);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-alpha-white-700);
+  }
+
+  scrollbar-color: var(--color-alpha-white-500) transparent;
+}
+
+/* Thin scrollbar variant */
 .scrollbar {
   &::-webkit-scrollbar {
     width: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d6d6d6;
+    background: var(--color-alpha-black-500);
     border-radius: 10px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: #a6a6a6;
+    background: var(--color-alpha-black-700);
   }
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-alpha-black-500) transparent;
+}
+
+/* Scrollbar dark mode */
+[data-theme=dark] .scrollbar {
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-alpha-white-500);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-alpha-white-700);
+  }
+
+  scrollbar-color: var(--color-alpha-white-500) transparent;
 }
 
 .no-scrollbar::-webkit-scrollbar {
