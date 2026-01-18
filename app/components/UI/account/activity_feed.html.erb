@@ -3,24 +3,41 @@
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t("accounts.show.activity.title"), class: "font-medium text-lg" %>
 
-      <% if account.manual? %>
-        <%= render DS::Menu.new(variant: "button") do |menu| %>
-          <% menu.with_button(text: t("accounts.show.activity.new"), variant: "secondary", icon: "plus") %>
+      <% unless account.crypto? %>
+        <% if account.manual? %>
+          <%# Manual accounts: dropdown with balance + activity/transaction %>
+          <%= render DS::Menu.new(variant: "button") do |menu| %>
+            <% menu.with_button(text: t("accounts.show.activity.new"), variant: "secondary", icon: "plus") %>
 
-          <% menu.with_item(
-              variant: "link",
-              text: t("accounts.show.activity.new_balance"),
-              icon: "circle-dollar-sign",
-              href: new_valuation_path(account_id: account.id),
-              data: { turbo_frame: :modal }) %>
-
-          <% unless account.crypto? %>
             <% menu.with_item(
                 variant: "link",
-                text: t("accounts.show.activity.new_transaction"),
+                text: t("accounts.show.activity.new_balance"),
+                icon: "circle-dollar-sign",
+                href: new_valuation_path(account_id: account.id),
+                data: { turbo_frame: :modal }) %>
+
+            <% menu.with_item(
+                variant: "link",
+                text: account.investment? ? t("accounts.show.activity.new_activity") : t("accounts.show.activity.new_transaction"),
                 icon: "credit-card",
                 href: account.investment? ? new_trade_path(account_id: account.id) : new_transaction_path(account_id: account.id),
                 data: { turbo_frame: :modal }) %>
+          <% end %>
+        <% elsif account.investment? %>
+          <%# Linked investment accounts: simple button to new activity %>
+          <%= link_to new_trade_path(account_id: account.id),
+                      data: { turbo_frame: :modal },
+                      class: "flex gap-1 font-medium items-center bg-gray-50 theme-dark:bg-gray-700 hover:bg-gray-100 theme-dark:hover:bg-gray-600 text-primary p-2 rounded-lg" do %>
+            <span class="text-primary"><%= helpers.icon("plus", color: "current") %></span>
+            <span class="text-sm"><%= t("accounts.show.activity.new_activity") %></span>
+          <% end %>
+        <% else %>
+          <%# Linked non-investment accounts: simple button to new transaction %>
+          <%= link_to new_transaction_path(account_id: account.id),
+                      data: { turbo_frame: :modal },
+                      class: "flex gap-1 font-medium items-center bg-gray-50 theme-dark:bg-gray-700 hover:bg-gray-100 theme-dark:hover:bg-gray-600 text-primary p-2 rounded-lg" do %>
+            <span class="text-primary"><%= helpers.icon("plus", color: "current") %></span>
+            <span class="text-sm"><%= t("accounts.show.activity.new_transaction") %></span>
           <% end %>
         <% end %>
       <% end %>

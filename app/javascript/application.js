@@ -3,7 +3,10 @@ import "@hotwired/turbo-rails";
 import "controllers";
 
 Turbo.StreamActions.redirect = function () {
-  Turbo.visit(this.target);
+  // Force a full page navigation that bypasses morphing
+  // This ensures stale DOM elements are cleared
+  Turbo.cache.clear();
+  Turbo.visit(this.target, { action: "replace" });
 };
 
 // Register service worker for PWA offline support
