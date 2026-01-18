@@ -4,8 +4,7 @@ import "controllers";
 
 Turbo.StreamActions.redirect = function () {
   // Force a full page navigation that bypasses morphing
-  // This ensures stale DOM elements are cleared
-  Turbo.cache.clear();
+  // Using "replace" action ensures clean DOM without clearing entire cache
   Turbo.visit(this.target, { action: "replace" });
 };
 

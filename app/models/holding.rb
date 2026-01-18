@@ -158,10 +158,19 @@ class Holding < ApplicationRecord
           existing = account.holdings.find_by!(security: new_security, date: holding.date)
           merged_qty = existing.qty + holding.qty
           merged_amount = existing.amount + holding.amount
+
+          # Calculate weighted average cost basis if both holdings have cost_basis
+          merged_cost_basis = if existing.cost_basis.present? && holding.cost_basis.present? && merged_qty.positive?
+            ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
+          else
+            existing.cost_basis # Keep existing if we can't calculate weighted average
+          end
+
           existing.update!(
             qty: merged_qty,
             amount: merged_amount,
-            price: merged_qty.positive? ? merged_amount / merged_qty : 0
+            price: merged_qty.positive? ? merged_amount / merged_qty : 0,
+            cost_basis: merged_cost_basis
           )
           holding.destroy!
         else
