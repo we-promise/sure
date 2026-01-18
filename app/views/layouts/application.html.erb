@@ -18,22 +18,24 @@
     data-app-layout-collapsed-sidebar-class="<%= collapsed_sidebar_class %>"
     data-app-layout-user-id-value="<%= Current.user.id %>">
     <div
-      class="hidden fixed inset-0 bg-surface z-20 h-full w-full pt-[calc(env(safe-area-inset-top)+0.75rem)] pr-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pl-3 overflow-y-auto transition-all duration-300"
+      class="hidden fixed inset-0 bg-surface z-20 h-full w-full px-3 pt-[calc(env(safe-area-inset-top)+0.35rem)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] overflow-hidden transition-all duration-300 flex flex-col"
       data-app-layout-target="mobileSidebar">
-      <div class="mb-2">
+      <div class="flex items-center pb-2 shrink-0 touch-none">
         <%= icon("x", as_button: true, data: { action: "app-layout#closeMobileSidebar" }) %>
       </div>
 
-      <%= render(
-        "accounts/account_sidebar_tabs",
-        family: Current.family,
-        active_tab: @account_group_tab,
-        mobile: true
-      ) %>
+      <div class="overflow-y-auto grow overscroll-contain">
+        <%= render(
+          "accounts/account_sidebar_tabs",
+          family: Current.family,
+          active_tab: @account_group_tab,
+          mobile: true
+        ) %>
+      </div>
     </div>
 
     <%# MOBILE - Top nav %>
-    <nav class="lg:hidden flex justify-between items-center p-3">
+    <nav class="lg:hidden flex justify-between items-center px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.35rem)] touch-none overscroll-none">
       <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
 
       <%= link_to root_path, class: "block" do %>
@@ -158,7 +160,7 @@
     <% end %>
 
     <%# MOBILE - Bottom Nav %>
-    <%= tag.nav class: "lg:hidden bg-surface fixed bottom-0 left-0 w-full shrink-0 z-10 pb-[env(safe-area-inset-bottom)] border-t border-tertiary flex justify-around" do %>
+    <%= tag.nav class: "lg:hidden bg-surface fixed bottom-0 left-0 w-full shrink-0 z-10 pb-[env(safe-area-inset-bottom)] border-t border-tertiary flex justify-around touch-none" do %>
       <% mobile_nav_items.each do |nav_item| %>
         <%= render "layouts/shared/nav_item", **nav_item %>
       <% end %>
