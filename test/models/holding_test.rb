@@ -238,6 +238,148 @@ class HoldingTest < ActiveSupport::TestCase
     assert_not @amzn.cost_basis_replaceable_by?("manual")
   end
 
+  # Security remapping tests
+
+  test "security_replaceable_by_provider? returns false when locked" do
+    @amzn.update!(security_locked: true)
+    assert_not @amzn.security_replaceable_by_provider?
+  end
+
+  test "security_replaceable_by_provider? returns true when not locked" do
+    @amzn.update!(security_locked: false)
+    assert @amzn.security_replaceable_by_provider?
+  end
+
+  test "security_remapped? returns true when provider_security differs from security" do
+    other_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+    @amzn.update!(provider_security: other_security)
+    assert @amzn.security_remapped?
+  end
+
+  test "security_remapped? returns false when provider_security is nil" do
+    assert_nil @amzn.provider_security_id
+    assert_not @amzn.security_remapped?
+  end
+
+  test "security_remapped? returns false when provider_security equals security" do
+    @amzn.update!(provider_security: @amzn.security)
+    assert_not @amzn.security_remapped?
+  end
+
+  test "remap_security! changes holding security and locks it" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    @amzn.remap_security!(new_security)
+
+    assert_equal new_security, @amzn.security
+    assert @amzn.security_locked?
+    assert_equal old_security, @amzn.provider_security
+  end
+
+  test "remap_security! updates all holdings for the same security" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    # There are 2 AMZN holdings (from load_holdings) - yesterday and today
+    amzn_holdings_count = @account.holdings.where(security: old_security).count
+    assert_equal 2, amzn_holdings_count
+
+    @amzn.remap_security!(new_security)
+
+    # All holdings should now be for the new security
+    assert_equal 0, @account.holdings.where(security: old_security).count
+    assert_equal 2, @account.holdings.where(security: new_security).count
+
+    # All should be locked with provider_security set
+    @account.holdings.where(security: new_security).each do |h|
+      assert h.security_locked?
+      assert_equal old_security, h.provider_security
+    end
+  end
+
+  test "remap_security! moves trades to new security" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    # Create a trade for the old security
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+    assert_equal 1, @account.trades.where(security: old_security).count
+
+    @amzn.remap_security!(new_security)
+
+    # Trade should have moved to the new security
+    assert_equal 0, @account.trades.where(security: old_security).count
+    assert_equal 1, @account.trades.where(security: new_security).count
+  end
+
+  test "remap_security! does nothing when security is same" do
+    current_security = @amzn.security
+
+    @amzn.remap_security!(current_security)
+
+    assert_equal current_security, @amzn.security
+    assert_not @amzn.security_locked?
+    assert_nil @amzn.provider_security_id
+  end
+
+  test "remap_security! raises error on collision" do
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    # Create an existing holding for the new security on the same date
+    @account.holdings.create!(
+      date: @amzn.date,
+      security: new_security,
+      qty: 5,
+      price: 100,
+      amount: 500,
+      currency: "USD"
+    )
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      @amzn.remap_security!(new_security)
+    end
+
+    assert_match(/already have a holding/i, error.message)
+  end
+
+  test "reset_security_to_provider! restores original security" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    @amzn.remap_security!(new_security)
+    assert_equal new_security, @amzn.security
+    assert @amzn.security_locked?
+
+    @amzn.reset_security_to_provider!
+
+    assert_equal old_security, @amzn.security
+    assert_not @amzn.security_locked?
+    assert_nil @amzn.provider_security_id
+  end
+
+  test "reset_security_to_provider! moves trades back" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+
+    @amzn.remap_security!(new_security)
+    assert_equal 1, @account.trades.where(security: new_security).count
+
+    @amzn.reset_security_to_provider!
+    assert_equal 0, @account.trades.where(security: new_security).count
+    assert_equal 1, @account.trades.where(security: old_security).count
+  end
+
+  test "reset_security_to_provider! does nothing if not remapped" do
+    old_security = @amzn.security
+    @amzn.reset_security_to_provider!
+
+    assert_equal old_security, @amzn.security
+    assert_nil @amzn.provider_security_id
+  end
+
   private
 
     def load_holdings

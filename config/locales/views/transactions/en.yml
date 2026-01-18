@@ -137,6 +137,7 @@ en:
       cancel: Cancel
       submit: Convert to Trade
       success: Transaction converted to trade
+      conversion_note: "Converted from transaction: %{original_name} (%{original_date})"
       errors:
         not_investment_account: Only transactions in investment accounts can be converted to trades
         already_converted: This transaction has already been converted or excluded

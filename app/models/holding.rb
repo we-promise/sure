@@ -16,6 +16,7 @@ class Holding < ApplicationRecord
   belongs_to :account
   belongs_to :security
   belongs_to :account_provider, optional: true
+  belongs_to :provider_security, class_name: "Security", optional: true
 
   validates :qty, :currency, :date, :price, :amount, presence: true
   validates :qty, :price, :amount, numericality: { greater_than_or_equal_to: 0 }
@@ -122,6 +123,84 @@ class Holding < ApplicationRecord
   # Unlock cost_basis to allow provider/calculated updates
   def unlock_cost_basis!
     update!(cost_basis_locked: false)
+  end
+
+  # Check if this holding's security can be changed by provider sync
+  def security_replaceable_by_provider?
+    !security_locked?
+  end
+
+  # Check if user has remapped this holding to a different security
+  # Also verifies the provider_security record still exists (FK should prevent deletion, but be safe)
+  def security_remapped?
+    provider_security_id.present? && security_id != provider_security_id && provider_security.present?
+  end
+
+  # Remap this holding (and all other holdings for the same security) to a different security
+  # Also moves all trades for the old security to the new security
+  def remap_security!(new_security)
+    return if new_security.id == security_id
+
+    old_security = security
+
+    # Check for collision on ANY date where we have holdings for the old security
+    # AND the new security already exists
+    collision = account.holdings
+      .where(security: new_security)
+      .where(date: account.holdings.where(security: old_security).select(:date))
+      .first
+
+    if collision
+      errors.add(:security, :collision,
+        message: I18n.t("holdings.errors.security_collision",
+          ticker: new_security.ticker,
+          date: collision.date.to_s))
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    transaction do
+      # Update ALL holdings for the old security to the new security
+      account.holdings.where(security: old_security).find_each do |holding|
+        holding.provider_security_id ||= old_security.id
+        holding.security = new_security
+        holding.security_locked = true
+        holding.save!
+      end
+
+      # Move all trades for old security to new security
+      account.trades.where(security: old_security).update_all(security_id: new_security.id)
+    end
+
+    # Reload self to reflect changes
+    reload
+  end
+
+  # Reset security (and all related holdings) back to what the provider originally sent
+  def reset_security_to_provider!
+    return unless provider_security_id.present?
+
+    current_security = security
+    original_security = provider_security
+
+    # Guard against deleted provider_security (shouldn't happen due to FK, but be safe)
+    return unless original_security.present?
+
+    transaction do
+      # Move trades back
+      account.trades.where(security: current_security).update_all(security_id: original_security.id)
+
+      # Reset ALL holdings that were remapped from this provider_security
+      account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
+        holding.update!(
+          security: original_security,
+          security_locked: false,
+          provider_security_id: nil
+        )
+      end
+    end
+
+    # Reload self to reflect changes
+    reload
   end
 
   # Check if cost_basis is known (has a source and positive value)

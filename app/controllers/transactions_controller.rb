@@ -201,12 +201,17 @@ class TransactionsController < ApplicationController
       # Default activity label if not provided
       activity_label ||= is_sell ? "Sell" : "Buy"
 
-      # Create trade entry
+      # Create trade entry with note about conversion
+      conversion_note = t("transactions.convert_to_trade.conversion_note",
+        original_name: @entry.name,
+        original_date: I18n.l(@entry.date, format: :long))
+
       @entry.account.entries.create!(
         name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
         date: @entry.date,
         amount: signed_amount,
         currency: @entry.currency,
+        notes: conversion_note,
         entryable: Trade.new(
           security: security,
           qty: signed_qty,
