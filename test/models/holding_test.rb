@@ -323,11 +323,11 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.provider_security_id
   end
 
-  test "remap_security! raises error on collision" do
+  test "remap_security! merges holdings on collision by deleting duplicates" do
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
 
     # Create an existing holding for the new security on the same date
-    @account.holdings.create!(
+    existing_goog = @account.holdings.create!(
       date: @amzn.date,
       security: new_security,
       qty: 5,
@@ -336,11 +336,18 @@ class HoldingTest < ActiveSupport::TestCase
       currency: "USD"
     )
 
-    error = assert_raises(ActiveRecord::RecordInvalid) do
-      @amzn.remap_security!(new_security)
-    end
+    amzn_security = @amzn.security
+    initial_count = @account.holdings.count
 
-    assert_match(/already have a holding/i, error.message)
+    # Remap should merge by deleting the duplicate
+    @amzn.remap_security!(new_security)
+
+    # The AMZN holding on collision date should be deleted
+    assert_equal initial_count - 1, @account.holdings.count
+    # The existing GOOG holding should still exist
+    assert existing_goog.reload
+    # No holdings should remain for the old AMZN security
+    assert_equal 0, @account.holdings.where(security: amzn_security).count
   end
 
   test "reset_security_to_provider! restores original security" do

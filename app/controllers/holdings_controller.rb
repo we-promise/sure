@@ -77,9 +77,6 @@ class HoldingsController < ApplicationController
       format.html { redirect_to account_path(@holding.account, tab: "holdings") }
       format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
     end
-  rescue ActiveRecord::RecordInvalid
-    flash[:alert] = @holding.errors.full_messages.join(", ")
-    redirect_to account_path(@holding.account, tab: "holdings")
   end
 
   def reset_security
