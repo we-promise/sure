@@ -211,7 +211,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_000001) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_coinstats_accounts_on_account_id"
+    t.string "wallet_address"
+    t.index [ :coinstats_item_id, :account_id, :wallet_address ], name: "index_coinstats_accounts_on_item_account_and_wallet", unique: true
     t.index ["coinstats_item_id"], name: "index_coinstats_accounts_on_coinstats_item_id"
   end
 

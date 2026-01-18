@@ -26,7 +26,7 @@
   <% if series.any? %>
     <div
     id="netWorthChart"
-    class="w-full flex-1 relative min-h-52"
+    class="w-full flex-1 min-h-52"
     data-controller="time-series-chart"
     data-time-series-chart-data-value="<%= series.to_json %>"></div>
   <% else %>
