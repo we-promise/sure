@@ -8,7 +8,7 @@ fr:
         invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous avez copié le jeton complet depuis SimpleFIN Bridge.
         token_compromised: Le jeton de configuration est peut-être compromis, expiré ou déjà utilisé. Veuillez en créer un nouveau.
         create_failed: "Échec de la connexion : %{message}"
-        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer ou contacter le support.
+        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
     destroy:
       success: La connexion SimpleFIN va être supprimée
     update:
@@ -18,7 +18,7 @@ fr:
         invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous avez copié le jeton complet depuis SimpleFIN Bridge.
         token_compromised: Le jeton de configuration est peut-être compromis, expiré ou déjà utilisé. Veuillez en créer un nouveau.
         update_failed: "Échec de la mise à jour de la connexion : %{message}"
-        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer ou contacter le support.
+        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
     edit:
       setup_token:
         label: "Jeton de configuration SimpleFIN :"

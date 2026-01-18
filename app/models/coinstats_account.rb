@@ -10,7 +10,7 @@ class CoinstatsAccount < ApplicationRecord
   has_one :account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
-  validates :account_id, uniqueness: { scope: :coinstats_item_id, allow_nil: true }
+  validates :account_id, uniqueness: { scope: [ :coinstats_item_id, :wallet_address ], allow_nil: true }
 
   # Alias for compatibility with provider adapter pattern
   alias_method :current_account, :account
