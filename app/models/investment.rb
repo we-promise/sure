@@ -54,15 +54,6 @@ class Investment < ApplicationRecord
     "other" => { short: "Other", long: "Other Investment", region: nil, tax_treatment: :taxable }
   }.freeze
 
-  REGION_LABELS = {
-    "us" => "United States",
-    "uk" => "United Kingdom",
-    "ca" => "Canada",
-    "au" => "Australia",
-    "eu" => "Europe",
-    nil => "General"
-  }.freeze
-
   def tax_treatment
     SUBTYPES.dig(subtype, :tax_treatment) || :taxable
   end
@@ -78,6 +69,10 @@ class Investment < ApplicationRecord
 
     def icon
       "chart-line"
+    end
+
+    def region_label_for(region)
+      I18n.t("accounts.subtype_regions.#{region || 'generic'}")
     end
   end
 end
