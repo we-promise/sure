@@ -3,8 +3,7 @@ import "@hotwired/turbo-rails";
 import "controllers";
 
 Turbo.StreamActions.redirect = function () {
-  // Force a full page navigation that bypasses morphing
-  // Using "replace" action ensures clean DOM without clearing entire cache
+  // Use "replace" to avoid adding form submission to browser history
   Turbo.visit(this.target, { action: "replace" });
 };
 
