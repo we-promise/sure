@@ -110,7 +110,7 @@ nl:
       accounts_label: Accounts
       advanced_section_title: Geavanceerd
       ai_prompts_label: AI Prompts
-      api_key_label: API Sleutel
+      api_key_label: API Key
       billing_label: Facturering
       categories_label: Categorieën
       feedback_label: Feedback
@@ -129,7 +129,7 @@ nl:
       tags_label: Tags
       transactions_section_title: Transacties
       whats_new_label: Wat is nieuw
-      api_keys_label: API Sleutel
+      api_keys_label: API Key
       bank_sync_label: Bank Sync
     settings_nav_link_large:
       next: Volgende
