@@ -365,6 +365,8 @@ class TransactionsController < ApplicationController
     # Helper methods for convert_to_trade
 
     def resolve_security_for_conversion
+      user_country = Current.family.country
+
       if params[:security_id] == "__custom__"
         # User selected "Enter custom ticker" - check for combobox selection or manual entry
         if params[:ticker].present?
@@ -372,13 +374,15 @@ class TransactionsController < ApplicationController
           ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
           Security::Resolver.new(
             ticker_symbol.strip,
-            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence
+            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+            country_code: user_country
           ).resolve
         elsif params[:custom_ticker].present?
           # Manual entry from combobox's name_when_new or fallback text field
           Security::Resolver.new(
             params[:custom_ticker].strip,
-            exchange_operating_mic: params[:exchange_operating_mic].presence
+            exchange_operating_mic: params[:exchange_operating_mic].presence,
+            country_code: user_country
           ).resolve
         else
           flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
@@ -398,13 +402,15 @@ class TransactionsController < ApplicationController
         ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
         Security::Resolver.new(
           ticker_symbol.strip,
-          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence
+          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+          country_code: user_country
         ).resolve
       elsif params[:custom_ticker].present?
         # Manual entry from combobox's name_when_new (no existing holdings path)
         Security::Resolver.new(
           params[:custom_ticker].strip,
-          exchange_operating_mic: params[:exchange_operating_mic].presence
+          exchange_operating_mic: params[:exchange_operating_mic].presence,
+          country_code: user_country
         ).resolve
       end.tap do |security|
         if security.nil? && !performed?
