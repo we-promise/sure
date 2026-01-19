@@ -362,7 +362,7 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
-        .includes(entry: :account, category: :parent)
+        .includes(entry: :account)
 
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
@@ -424,7 +424,7 @@ class ReportsController < ApplicationController
 
       # Process trades
       trades.each do |trade|
-        process_entry.call(trade.category, trade.entry, true)
+        process_entry.call(nil, trade.entry, true)
       end
 
       # Convert to array and sort subcategories
