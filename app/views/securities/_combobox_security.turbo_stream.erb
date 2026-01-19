@@ -8,7 +8,7 @@
         <%= combobox_security.name.presence || combobox_security.symbol %>
       </span>
       <span class="text-xs text-secondary">
-        <%= "#{combobox_security.symbol} (#{combobox_security.exchange_name})" %>
+        <%= t("securities.combobox.exchange_label", symbol: combobox_security.symbol, exchange: combobox_security.exchange_name) %>
       </span>
     </div>
     <% if combobox_security.country_code.present? %>

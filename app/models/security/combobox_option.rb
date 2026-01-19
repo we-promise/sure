@@ -12,6 +12,11 @@ class Security::ComboboxOption
   end
 
   def to_combobox_display
-    "#{symbol} - #{name} (#{exchange_name})"
+    I18n.t(
+      "securities.combobox.display",
+      symbol: symbol,
+      name: name,
+      exchange: exchange_name
+    )
   end
 end
