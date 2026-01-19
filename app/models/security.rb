@@ -4,7 +4,7 @@ class Security < ApplicationRecord
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes
   # Data stored in config/exchanges.yml
-  EXCHANGES = YAML.load_file(Rails.root.join("config", "exchanges.yml")).freeze
+  EXCHANGES = YAML.safe_load_file(Rails.root.join("config", "exchanges.yml")).freeze
 
   before_validation :upcase_symbols
 
