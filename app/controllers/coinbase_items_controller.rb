@@ -247,18 +247,21 @@ class CoinbaseItemsController < ApplicationController
         next
       end
 
-      # Skip if already linked (race condition protection)
-      if coinbase_account.account.present?
-        Rails.logger.info("Coinbase account #{coinbase_account_id} already linked, skipping")
-        next
+      # Lock row to prevent concurrent account creation (race condition protection)
+      coinbase_account.with_lock do
+        # Re-check after acquiring lock - another request may have created the account
+        if coinbase_account.account.present?
+          Rails.logger.info("Coinbase account #{coinbase_account_id} already linked, skipping")
+          next
+        end
+
+        # Create account as Crypto exchange (all Coinbase accounts are crypto)
+        account = Account.create_from_coinbase_account(coinbase_account)
+        coinbase_account.ensure_account_provider!(account)
+        created_accounts << account
       end
 
-      # Create account as Crypto exchange (all Coinbase accounts are crypto)
-      account = Account.create_from_coinbase_account(coinbase_account)
-      coinbase_account.ensure_account_provider!(account)
-      created_accounts << account
-
-      # Reload to pick up the new account_provider association
+      # Reload to pick up the new account_provider association (outside lock)
       coinbase_account.reload
 
       # Process holdings immediately so user sees them right away
