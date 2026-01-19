@@ -77,7 +77,7 @@ en:
       date: Date
       status: Status
       actions: Actions
-      filename: File nameX
+      filename: File name
     import:
       complete: Complete
       delete: Delete
