@@ -29,9 +29,9 @@ nl:
       date_label: Datum
       delete: Verwijderen
       delete_subtitle: Deze actie kan niet ongedaan worden gemaakt
-      delete_title: Trade Verwijderen
+      delete_title: Transactie verwijderen
       details: Details
-      exclude_subtitle: Deze trade wordt niet meegenomen in rapporten en berekeningen
+      exclude_subtitle: Deze transactie wordt niet meegenomen in rapporten en berekeningen
       exclude_title: Uitsluiten van analyses
       no_category: Geen categorie
       note_label: Notitie

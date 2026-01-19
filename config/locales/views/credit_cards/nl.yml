@@ -14,7 +14,7 @@ nl:
       minimum_payment: Minimumbetaling
       minimum_payment_placeholder: '100'
     new:
-      title: Creditcard gegevens invoeren
+      title: Creditcardgegevens invoeren
     overview:
       amount_owed: Schuldig bedrag
       annual_fee: Jaarlijkse kosten

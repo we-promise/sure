@@ -143,13 +143,13 @@ nl:
     google_sheets_instructions:
       title_with_key: "✅ Kopieer URL voor Google Sheets"
       title_no_key: "⚠️ API Key vereist"
-      ready: Uw CSV URL (met API key) is klaar.
+      ready: Uw CSV URL (met API Key) is klaar.
       steps: "Om te importeren in Google Sheets:\n1. Maak een nieuwe Google Sheet\n2. Voer in cel A1 de onderstaande formule in\n3. Druk op Enter"
-      security_warning: "Deze URL bevat uw API key. Houd deze veilig!"
-      need_key: Om gegevens te importeren in Google Sheets heeft u een API key nodig.
+      security_warning: "Deze URL bevat uw API Key. Houd deze veilig!"
+      need_key: Om gegevens te importeren in Google Sheets heeft u een API Key nodig.
       step1: "Ga naar Instellingen → API Keys"
-      step2: "Maak een nieuwe API key aan met \"lezen\" permissie"
-      step3: Kopieer de API key
+      step2: "Maak een nieuwe API Key aan met \"lezen\" permissie"
+      step3: Kopieer de API Key
       step4: "Voeg deze toe aan de URL als: ?api_key=UW_KEY"
       example: Voorbeeld
       then_use: Gebruik dan de volledige URL met =IMPORTDATA() in Google Sheets.

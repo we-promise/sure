@@ -13,7 +13,9 @@ nl:
     destroy:
       success: CoinStats provider verbinding ingepland voor verwijdering.
     link_wallet:
-      success: "%{count} crypto wallet(s) succesvol gekoppeld."
+      success:
+        one: "%{count} crypto wallet succesvol gekoppeld."
+        other: "%{count} crypto wallets succesvol gekoppeld."
       missing_params: "Ontbrekende vereiste parameters: adres en blockchain."
       failed: Crypto wallet koppelen mislukt.
       error: "Crypto wallet koppelen mislukt: %{message}."
@@ -33,8 +35,8 @@ nl:
       not_configured_step3_html: Volg de <strong>installatie-instructies</strong> om de provider configuratie te voltooien
       go_to_settings: Ga naar Provider Instellingen
       setup_instructions: "Installatie-instructies:"
-      step1_html: Bezoek het <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> om een API key te verkrijgen.
-      step2: Voer hieronder uw API key in en klik op Configureren.
+      step1_html: Bezoek het <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> om een API Key te verkrijgen.
+      step2: Voer hieronder uw API Key in en klik op Configureren.
       step3_html: Na een succesvolle verbinding, bezoek het <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Accounts</a> tabblad om crypto wallets in te stellen.
       api_key_label: API Key
       api_key_placeholder: Vereist

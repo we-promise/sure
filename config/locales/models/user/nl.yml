@@ -17,4 +17,4 @@ nl:
             base:
               cannot_deactivate_admin_with_other_users: Admin kan account niet verwijderen terwijl andere gebruikers aanwezig zijn. Verwijder eerst alle leden.
             profile_image:
-              invalid_file_size: bestandsgrootte moet minder zijn dan %{max_megabytes}MB
+              invalid_file_size: bestandsgrootte moet minder zijn dan %{max_megabytes} MB

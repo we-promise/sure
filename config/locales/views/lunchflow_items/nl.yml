@@ -48,8 +48,8 @@ nl:
       configure_name_in_lunchflow: Kan niet importeren - configureer accountnaam in Lunch Flow
       description: Selecteer de accounts die u wilt koppelen aan uw %{product_name} account.
       link_accounts: Geselecteerde accounts koppelen
-      no_accounts_found: Geen accounts gevonden. Controleer uw API key configuratie.
-      no_api_key: Lunch Flow API key is niet geconfigureerd. Configureer deze in Instellingen.
+      no_accounts_found: Geen accounts gevonden. Controleer uw API Key configuratie.
+      no_api_key: Lunch Flow API Key is niet geconfigureerd. Configureer deze in Instellingen.
       no_name_placeholder: "(Geen naam)"
       title: Lunch Flow Accounts selecteren
     select_existing_account:
@@ -61,8 +61,8 @@ nl:
       description: Selecteer een Lunch Flow account om te koppelen aan dit account. Transacties worden automatisch gesynchroniseerd en gededupliceerd.
       link_account: Account koppelen
       no_account_specified: Geen account opgegeven
-      no_accounts_found: Geen Lunch Flow accounts gevonden. Controleer uw API key configuratie.
-      no_api_key: Lunch Flow API key is niet geconfigureerd. Configureer deze in Instellingen.
+      no_accounts_found: Geen Lunch Flow accounts gevonden. Controleer uw API Key configuratie.
+      no_api_key: Lunch Flow API Key is niet geconfigureerd. Configureer deze in Instellingen.
       no_name_placeholder: "(Geen naam)"
       title: "%{account_name} koppelen met Lunch Flow"
     link_existing_account:
@@ -79,7 +79,7 @@ nl:
       api_error: "API fout: %{message}"
       fetch_failed: "Accounts ophalen mislukt"
       no_accounts_to_setup: "Geen accounts om in te stellen"
-      no_api_key: "Lunch Flow API key is niet geconfigureerd. Controleer uw verbindingsinstellingen."
+      no_api_key: "Lunch Flow API Key is niet geconfigureerd. Controleer uw verbindingsinstellingen."
       account_types:
         skip: Dit account overslaan
         depository: Betaal- of Spaarrekening
