@@ -35,7 +35,7 @@ class CoinbaseAccount::HoldingsProcessor
 
     Rails.logger.info(
       "CoinbaseAccount::HoldingsProcessor - Importing holding for #{coinbase_account.id}: " \
-      "#{quantity} #{crypto_code} @ #{current_price} = #{amount} USD"
+      "#{quantity} #{crypto_code} @ #{current_price} = #{amount} #{native_currency}"
     )
 
     # Import the holding using the adapter
@@ -130,14 +130,14 @@ class CoinbaseAccount::HoldingsProcessor
         return (native_amount.to_d / quantity).round(8)
       end
 
-      # Fetch spot price from Coinbase API
+      # Fetch spot price from Coinbase API in native currency
       provider = coinbase_provider
       if provider
-        spot_data = provider.get_spot_price("#{crypto_code}-USD")
+        spot_data = provider.get_spot_price("#{crypto_code}-#{native_currency}")
         if spot_data && spot_data["amount"].present?
           price = spot_data["amount"].to_d
           Rails.logger.info(
-            "CoinbaseAccount::HoldingsProcessor - Fetched spot price for #{crypto_code}: $#{price}"
+            "CoinbaseAccount::HoldingsProcessor - Fetched spot price for #{crypto_code}: #{price} #{native_currency}"
           )
           return price
         end

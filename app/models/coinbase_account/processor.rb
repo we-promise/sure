@@ -160,8 +160,8 @@ class CoinbaseAccount::Processor
       security = find_or_create_security(txn_data)
       return unless security
 
-      # Extract data from transaction
-      date = Time.parse(txn_data["created_at"]).to_date
+      # Extract data from transaction (use Time.zone.parse for timezone safety)
+      date = Time.zone.parse(txn_data["created_at"]).to_date
       qty = txn_data.dig("amount", "amount").to_d.abs
       native_amount = txn_data.dig("native_amount", "amount").to_d.abs
 
@@ -257,7 +257,7 @@ class CoinbaseAccount::Processor
       security = find_or_create_security(buy_data)
       return unless security
 
-      date = Time.parse(buy_data["created_at"]).to_date
+      date = Time.zone.parse(buy_data["created_at"]).to_date
       qty = buy_data.dig("amount", "amount").to_d
       price = buy_data.dig("unit_price", "amount").to_d
       total = buy_data.dig("total", "amount").to_d
@@ -302,7 +302,7 @@ class CoinbaseAccount::Processor
       security = find_or_create_security(sell_data)
       return unless security
 
-      date = Time.parse(sell_data["created_at"]).to_date
+      date = Time.zone.parse(sell_data["created_at"]).to_date
       qty = sell_data.dig("amount", "amount").to_d
       price = sell_data.dig("unit_price", "amount").to_d
       total = sell_data.dig("total", "amount").to_d

@@ -257,6 +257,17 @@ class CoinbaseItemsController < ApplicationController
       account = Account.create_from_coinbase_account(coinbase_account)
       coinbase_account.ensure_account_provider!(account)
       created_accounts << account
+
+      # Reload to pick up the new account_provider association
+      coinbase_account.reload
+
+      # Process holdings immediately so user sees them right away
+      # (sync_later is async and would delay holdings visibility)
+      begin
+        CoinbaseAccount::HoldingsProcessor.new(coinbase_account).process
+      rescue => e
+        Rails.logger.error("Failed to process holdings for #{coinbase_account.id}: #{e.message}")
+      end
     end
 
     # Only clear pending if ALL accounts are now linked
