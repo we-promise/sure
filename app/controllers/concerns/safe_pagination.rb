@@ -4,7 +4,7 @@ module SafePagination
   extend ActiveSupport::Concern
 
   private
-    def safe_per_page(default = 20)
+    def safe_per_page(default = 10)
       allowed_values = [ 10, 20, 50, 100 ]
       per_page = params[:per_page].to_i
 
