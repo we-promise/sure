@@ -16,7 +16,7 @@ nl:
         no_api_key:
           title: "API Key"
           heading: "Toegang tot uw accountgegevens via programma's"
-          description: "Krijg programmatische toegang tot uw Sure gegevens met een beveiligde API Key."
+          description: "Krijg programmatische toegang tot uw %{product_name} gegevens met een beveiligde API Key."
           what_you_can_do: "Wat u kunt doen met de API:"
           feature_1: "Programmatisch toegang tot uw accountgegevens"
           feature_2: "Aangepaste integraties en applicaties bouwen"
@@ -37,7 +37,7 @@ nl:
           never_expires: "Verloopt nooit"
           permissions: "Rechten"
           usage_instructions_title: "Hoe uw API Key te gebruiken"
-          usage_instructions: "Voeg uw API Key toe in de X-Api-Key header bij het maken van verzoeken naar de Maybe API:"
+          usage_instructions: "Voeg uw API Key toe in de X-Api-Key header bij het maken van verzoeken naar de %{product_name} API:"
           regenerate_key: "Nieuwe key aanmaken"
           revoke_key: "Key intrekken"
           revoke_confirmation: "Weet u zeker dat u deze API Key wilt intrekken? Deze actie kan niet ongedaan worden gemaakt en zal alle applicaties die deze key gebruiken onmiddellijk uitschakelen."
