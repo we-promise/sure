@@ -42,6 +42,16 @@ class Holding::Materializer
         key = holding_key(holding)
         existing = existing_holdings_map[key]
 
+        # Skip provider-sourced holdings - they have authoritative data from the provider
+        # (e.g., Coinbase, SimpleFIN) and should not be overwritten by calculated holdings
+        if existing&.account_provider_id.present?
+          Rails.logger.debug(
+            "Holding::Materializer - Skipping provider-sourced holding id=#{existing.id} " \
+            "security_id=#{existing.security_id} date=#{existing.date}"
+          )
+          next
+        end
+
         reconciled = Holding::CostBasisReconciler.reconcile(
           existing_holding: existing,
           incoming_cost_basis: holding.cost_basis,
@@ -88,9 +98,11 @@ class Holding::Materializer
       # Load holdings that might affect reconciliation:
       # - Locked holdings (must preserve their cost_basis)
       # - Holdings with a source (need to check priority)
+      # - Provider-sourced holdings (must not be overwritten by calculated holdings)
       account.holdings
         .where(cost_basis_locked: true)
         .or(account.holdings.where.not(cost_basis_source: nil))
+        .or(account.holdings.where.not(account_provider_id: nil))
         .index_by { |h| holding_key(h) }
     end
 
@@ -101,12 +113,15 @@ class Holding::Materializer
     def purge_stale_holdings
       portfolio_security_ids = account.entries.trades.map { |entry| entry.entryable.security_id }.uniq
 
-      # If there are no securities in the portfolio, delete all holdings
+      # Never delete provider-sourced holdings (they have authoritative data from Coinbase, SimpleFIN, etc.)
+      purgeable_holdings = account.holdings.where(account_provider_id: nil)
+
+      # If there are no securities in the portfolio, delete all non-provider holdings
       if portfolio_security_ids.empty?
-        Rails.logger.info("Clearing all holdings (no securities)")
-        account.holdings.delete_all
+        Rails.logger.info("Clearing all non-provider holdings (no securities)")
+        purgeable_holdings.delete_all
       else
-        deleted_count = account.holdings.delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
+        deleted_count = purgeable_holdings.delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
         Rails.logger.info("Purged #{deleted_count} stale holdings") if deleted_count > 0
       end
     end

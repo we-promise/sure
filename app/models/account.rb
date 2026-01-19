@@ -76,7 +76,10 @@ class Account < ApplicationRecord
   class << self
     def create_and_sync(attributes, skip_initial_sync: false)
       attributes[:accountable_attributes] ||= {} # Ensure accountable is created, even if empty
-      account = new(attributes.merge(cash_balance: attributes[:balance]))
+      # Default cash_balance to balance unless explicitly provided (e.g., Crypto sets it to 0)
+      attrs = attributes.dup
+      attrs[:cash_balance] = attrs[:balance] unless attrs.key?(:cash_balance)
+      account = new(attrs)
       initial_balance = attributes.dig(:accountable_attributes, :initial_balance)&.to_d
 
       transaction do
@@ -175,6 +178,31 @@ class Account < ApplicationRecord
       )
     end
 
+    def create_from_coinbase_account(coinbase_account)
+      # All Coinbase accounts are crypto exchange accounts
+      # Use USD as base currency - crypto holdings are tracked via Holdings/Securities
+      family = coinbase_account.coinbase_item.family
+
+      # Get USD value from Coinbase's native_balance (the USD equivalent)
+      usd_balance = coinbase_account.raw_payload&.dig("native_balance", "amount").to_d
+
+      attributes = {
+        family: family,
+        name: coinbase_account.name,
+        balance: usd_balance,
+        cash_balance: 0, # No cash - all value is in holdings
+        currency: family.currency || "USD",
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
+        }
+      }
+
+      # Skip initial sync - provider sync will handle balance/holdings creation
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
 
     private
 
@@ -264,6 +292,14 @@ class Account < ApplicationRecord
   # Get long version of the subtype label
   def long_subtype_label
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
+  end
+
+  # Determines if this account supports manual trade entry
+  # Investment accounts always support trades; Crypto only if subtype is "exchange"
+  def supports_trades?
+    return true if investment?
+    return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
+    false
   end
 
   # The balance type determines which "component" of balance is being tracked.

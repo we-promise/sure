@@ -1,3 +1,13 @@
 <%# locals: (account:, url:) %>
 
-<%= render "accounts/form", account: account, url: url %>
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.select :subtype,
+                 Crypto::SUBTYPES.map { |k, v| [v[:long], k] },
+                 { label: t(".subtype_label"), prompt: t(".subtype_prompt"), include_blank: t(".subtype_none") } %>
+
+  <%= form.select :tax_treatment,
+                 Crypto.tax_treatments.keys.map { |k| [t("accounts.tax_treatments.#{k}"), k] },
+                 { label: t(".tax_treatment_label") },
+                 { class: "form-field__input" } %>
+  <p class="text-xs text-secondary -mt-1"><%= t(".tax_treatment_hint") %></p>
+<% end %>
