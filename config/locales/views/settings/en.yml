@@ -140,6 +140,8 @@ en:
       choose_label: (optional)
       change: Change photo
     providers:
+      show:
+        coinbase_title: Coinbase
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://www.coinbase.com/settings/api" target="_blank" class="text-primary underline">Coinbase API Settings</a>

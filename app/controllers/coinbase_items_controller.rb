@@ -136,7 +136,22 @@ class CoinbaseItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    coinbase_account = CoinbaseAccount.find(params[:coinbase_account_id])
+
+    # Scope lookup to family's coinbase accounts for security
+    coinbase_account = Current.family.coinbase_items
+      .joins(:coinbase_accounts)
+      .where(coinbase_accounts: { id: params[:coinbase_account_id] })
+      .first&.coinbase_accounts&.find_by(id: params[:coinbase_account_id])
+
+    unless coinbase_account
+      flash[:alert] = t(".errors.invalid_coinbase_account")
+      if turbo_frame_request?
+        render turbo_stream: Array(flash_notification_stream_items)
+      else
+        redirect_to account_path(@account), alert: flash[:alert]
+      end
+      return
+    end
 
     # Guard: only manual accounts can be linked (no existing provider links)
     if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
@@ -146,17 +161,6 @@ class CoinbaseItemsController < ApplicationController
       else
         return redirect_to account_path(@account), alert: flash[:alert]
       end
-    end
-
-    # Verify the Coinbase account belongs to this family's Coinbase items
-    unless Current.family.coinbase_items.include?(coinbase_account.coinbase_item)
-      flash[:alert] = t(".errors.invalid_coinbase_account")
-      if turbo_frame_request?
-        render turbo_stream: Array(flash_notification_stream_items)
-      else
-        redirect_to account_path(@account), alert: flash[:alert]
-      end
-      return
     end
 
     # Relink behavior: detach any existing link and point provider link at the chosen account

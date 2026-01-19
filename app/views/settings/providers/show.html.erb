@@ -38,7 +38,7 @@
     </turbo-frame>
   <% end %>
 
-  <%= settings_section title: "Coinbase", collapsible: true, open: false do %>
+  <%= settings_section title: t(".coinbase_title"), collapsible: true, open: false do %>
     <turbo-frame id="coinbase-providers-panel">
       <%= render "settings/providers/coinbase_panel" %>
     </turbo-frame>

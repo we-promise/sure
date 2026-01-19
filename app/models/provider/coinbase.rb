@@ -57,7 +57,7 @@ class Provider::Coinbase
   # Get spot price for a currency pair (e.g., "BTC-USD")
   # This is a public endpoint that doesn't require authentication
   def get_spot_price(currency_pair)
-    response = HTTParty.get("#{API_BASE_URL}/v2/prices/#{currency_pair}/spot")
+    response = HTTParty.get("#{API_BASE_URL}/v2/prices/#{currency_pair}/spot", timeout: 10)
     handle_response(response)["data"]
   rescue => e
     Rails.logger.warn("Coinbase: Failed to fetch spot price for #{currency_pair}: #{e.message}")
@@ -83,7 +83,8 @@ class Provider::Coinbase
 
       response = HTTParty.get(
         url,
-        headers: auth_headers("GET", path)
+        headers: auth_headers("GET", path),
+        timeout: 30
       )
 
       handle_response(response)
@@ -108,7 +109,8 @@ class Provider::Coinbase
 
         response = HTTParty.get(
           url,
-          headers: auth_headers("GET", current_path.split("?").first)
+          headers: auth_headers("GET", current_path.split("?").first),
+          timeout: 30
         )
 
         data = handle_response(response)

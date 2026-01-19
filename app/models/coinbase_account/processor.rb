@@ -157,9 +157,6 @@ class CoinbaseAccount::Processor
       qty = txn_data.dig("amount", "amount").to_d.abs
       native_amount = txn_data.dig("native_amount", "amount").to_d.abs
 
-      # Calculate price per unit
-      price = qty > 0 ? (native_amount / qty).round(8) : 0
-
       # Get subtotal from buy/sell details if available (more accurate)
       if txn_type == "buy" && txn_data["buy"]
         subtotal = txn_data.dig("buy", "subtotal", "amount").to_d
@@ -168,6 +165,9 @@ class CoinbaseAccount::Processor
         subtotal = txn_data.dig("sell", "subtotal", "amount").to_d
         native_amount = subtotal if subtotal > 0
       end
+
+      # Calculate price per unit (after subtotal override for accuracy)
+      price = qty > 0 ? (native_amount / qty).round(8) : 0
 
       # Build notes from available Coinbase metadata
       notes_parts = []
