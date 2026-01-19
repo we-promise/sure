@@ -18,7 +18,7 @@ nl:
         financial_data_providers: Financiële gegevensproviders
         sync_settings: Synchronisatie-instellingen
         invites: Uitnodigingscodes
-        title: Self-Hosting
+        title: Zelfhosting
         danger_zone: Gevarenzone
         clear_cache: Datacache wissen
         clear_cache_warning: Het wissen van de datacache verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Dit verwijdert geen accounts, transacties, categorieën of andere gegevens van gebruikers.
@@ -26,11 +26,11 @@ nl:
           title: Datacache wissen?
           body: Weet u zeker dat u de datacache wilt wissen? Dit verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Deze actie kan niet ongedaan worden gemaakt.
       provider_selection:
-        title: Provider selectie
+        title: Providerselectie
         description: Kies welke service te gebruiken voor het ophalen van wisselkoersen en effectenprijzen. Yahoo Finance is gratis en vereist geen API Key. Twelve Data vereist een gratis API Key maar biedt mogelijk meer gegevensdekking.
         exchange_rate_provider_label: Wisselkoersprovider
         securities_provider_label: Effecten (aandelenprijzen) provider
-        env_configured_message: Provider selectie is uitgeschakeld omdat omgevingsvariabelen (EXCHANGE_RATE_PROVIDER of SECURITIES_PROVIDER) zijn ingesteld. Om selectie hier in te schakelen, verwijder deze omgevingsvariabelen uit uw configuratie.
+        env_configured_message: Providerselectie is uitgeschakeld omdat omgevingsvariabelen (EXCHANGE_RATE_PROVIDER of SECURITIES_PROVIDER) zijn ingesteld. Om selectie hier in te schakelen, verwijder deze omgevingsvariabelen uit uw configuratie.
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
