@@ -51,7 +51,8 @@ At this point, the only file in your current working directory should be `compos
 
 ### Step 3 (optional): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
+By default, our `compose.example.yml` file runs without any configuration.  
+That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
 
 If you're running the app locally and don't care much about security, you can skip this step.
 
