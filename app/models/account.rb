@@ -180,18 +180,18 @@ class Account < ApplicationRecord
 
     def create_from_coinbase_account(coinbase_account)
       # All Coinbase accounts are crypto exchange accounts
-      # Use USD as base currency - crypto holdings are tracked via Holdings/Securities
       family = coinbase_account.coinbase_item.family
 
-      # Get USD value from Coinbase's native_balance (the USD equivalent)
-      usd_balance = coinbase_account.raw_payload&.dig("native_balance", "amount").to_d
+      # Extract native balance and currency from Coinbase (e.g., USD, EUR, GBP)
+      native_balance = coinbase_account.raw_payload&.dig("native_balance", "amount").to_d
+      native_currency = coinbase_account.raw_payload&.dig("native_balance", "currency") || family.currency
 
       attributes = {
         family: family,
         name: coinbase_account.name,
-        balance: usd_balance,
+        balance: native_balance,
         cash_balance: 0, # No cash - all value is in holdings
-        currency: family.currency || "USD",
+        currency: native_currency,
         accountable_type: "Crypto",
         accountable_attributes: {
           subtype: "exchange",

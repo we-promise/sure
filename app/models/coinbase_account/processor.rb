@@ -51,48 +51,49 @@ class CoinbaseAccount::Processor
     end
 
     # Updates the linked Account with current balance from Coinbase.
-    # Balance is the USD value of all holdings in this account.
+    # Balance is in the user's native currency (USD, EUR, GBP, etc.).
     def process_account!
       account = coinbase_account.current_account
 
       # Calculate balance from holdings value or native_balance
-      usd_value = calculate_usd_balance
+      native_value = calculate_native_balance
 
       Rails.logger.info(
         "CoinbaseAccount::Processor - Updating account #{account.id} balance: " \
-        "#{usd_value} USD (#{coinbase_account.current_balance} #{coinbase_account.currency})"
+        "#{native_value} #{native_currency} (#{coinbase_account.current_balance} #{coinbase_account.currency})"
       )
 
       account.update!(
-        balance: usd_value,
+        balance: native_value,
         cash_balance: 0, # Crypto accounts have no cash, all value is in holdings
-        currency: "USD"
+        currency: native_currency
       )
     end
 
-    # Calculates the USD value of this Coinbase wallet.
-    def calculate_usd_balance
-      # Primary source: Coinbase's native_balance (USD equivalent) if available
+    # Calculates the value of this Coinbase wallet in the user's native currency.
+    def calculate_native_balance
+      # Primary source: Coinbase's native_balance if available
       native_amount = coinbase_account.raw_payload&.dig("native_balance", "amount")
       return native_amount.to_d if native_amount.present?
 
-      # Try to calculate using spot price
+      # Try to calculate using spot price (always fetched in native currency pair)
       crypto_code = coinbase_account.currency
-      quantity = coinbase_account.current_balance.to_d
+      quantity = (coinbase_account.current_balance || 0).to_d
       return 0 if quantity.zero?
 
       # Fetch spot price from Coinbase
       provider = coinbase_account.coinbase_item&.coinbase_provider
       if provider
-        spot_data = provider.get_spot_price("#{crypto_code}-USD")
+        # Coinbase spot price API returns price in the pair's quote currency
+        spot_data = provider.get_spot_price("#{crypto_code}-#{native_currency}")
         if spot_data && spot_data["amount"].present?
           price = spot_data["amount"].to_d
-          usd_value = (quantity * price).round(2)
+          native_value = (quantity * price).round(2)
           Rails.logger.info(
-            "CoinbaseAccount::Processor - Calculated USD value for #{crypto_code}: " \
-            "#{quantity} * $#{price} = $#{usd_value}"
+            "CoinbaseAccount::Processor - Calculated #{native_currency} value for #{crypto_code}: " \
+            "#{quantity} * #{price} = #{native_value}"
           )
-          return usd_value
+          return native_value
         end
       end
 
@@ -107,9 +108,16 @@ class CoinbaseAccount::Processor
 
       # Last resort: Return 0 if we can't calculate value
       Rails.logger.warn(
-        "CoinbaseAccount::Processor - Could not calculate USD value for #{crypto_code}, returning 0"
+        "CoinbaseAccount::Processor - Could not calculate #{native_currency} value for #{crypto_code}, returning 0"
       )
       0
+    end
+
+    # Get native currency from Coinbase (USD, EUR, GBP, etc.)
+    def native_currency
+      @native_currency ||= coinbase_account.raw_payload&.dig("native_balance", "currency") ||
+                           coinbase_account.current_account&.currency ||
+                           "USD"
     end
 
     # Processes transactions (buys, sells, sends, receives) as trades.
@@ -192,6 +200,9 @@ class CoinbaseAccount::Processor
         return
       end
 
+      # Get currency from native_amount or fall back to account's native currency
+      txn_currency = txn_data.dig("native_amount", "currency") || native_currency
+
       # Create the trade
       if txn_type == "buy"
         # Buy: positive qty, money going out (negative amount)
@@ -199,7 +210,7 @@ class CoinbaseAccount::Processor
           date: date,
           name: "Buy #{qty.round(8)} #{security.ticker}",
           amount: -native_amount,
-          currency: "USD",
+          currency: txn_currency,
           external_id: external_id,
           source: "coinbase",
           notes: notes,
@@ -207,18 +218,18 @@ class CoinbaseAccount::Processor
             security: security,
             qty: qty,
             price: price,
-            currency: "USD",
+            currency: txn_currency,
             investment_activity_label: "Buy"
           )
         )
-        Rails.logger.info("CoinbaseAccount::Processor - Created buy trade: #{qty} #{security.ticker} @ $#{price}")
+        Rails.logger.info("CoinbaseAccount::Processor - Created buy trade: #{qty} #{security.ticker} @ #{price} #{txn_currency}")
       else
         # Sell: negative qty, money coming in (positive amount)
         account.entries.create!(
           date: date,
           name: "Sell #{qty.round(8)} #{security.ticker}",
           amount: native_amount,
-          currency: "USD",
+          currency: txn_currency,
           external_id: external_id,
           source: "coinbase",
           notes: notes,
@@ -226,11 +237,11 @@ class CoinbaseAccount::Processor
             security: security,
             qty: -qty,
             price: price,
-            currency: "USD",
+            currency: txn_currency,
             investment_activity_label: "Sell"
           )
         )
-        Rails.logger.info("CoinbaseAccount::Processor - Created sell trade: #{qty} #{security.ticker} @ $#{price}")
+        Rails.logger.info("CoinbaseAccount::Processor - Created sell trade: #{qty} #{security.ticker} @ #{price} #{txn_currency}")
       end
     rescue => e
       Rails.logger.error "CoinbaseAccount::Processor - Failed to process transaction #{txn_data['id']}: #{e.message}"
@@ -250,7 +261,7 @@ class CoinbaseAccount::Processor
       qty = buy_data.dig("amount", "amount").to_d
       price = buy_data.dig("unit_price", "amount").to_d
       total = buy_data.dig("total", "amount").to_d
-      currency = buy_data.dig("total", "currency") || "USD"
+      currency = buy_data.dig("total", "currency") || native_currency
 
       external_id = "coinbase_buy_#{buy_data['id']}"
       existing = account.entries.find_by(external_id: external_id)
@@ -295,7 +306,7 @@ class CoinbaseAccount::Processor
       qty = sell_data.dig("amount", "amount").to_d
       price = sell_data.dig("unit_price", "amount").to_d
       total = sell_data.dig("total", "amount").to_d
-      currency = sell_data.dig("total", "currency") || "USD"
+      currency = sell_data.dig("total", "currency") || native_currency
 
       external_id = "coinbase_sell_#{sell_data['id']}"
       existing = account.entries.find_by(external_id: external_id)

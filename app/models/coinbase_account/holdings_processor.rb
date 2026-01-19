@@ -39,11 +39,12 @@ class CoinbaseAccount::HoldingsProcessor
     )
 
     # Import the holding using the adapter
+    # Use native currency from Coinbase (USD, EUR, GBP, etc.)
     holding = import_adapter.import_holding(
       security: security,
       quantity: quantity,
       amount: amount,
-      currency: account.currency,
+      currency: native_currency,
       date: Date.current,
       price: current_price,
       cost_basis: nil, # Coinbase doesn't provide cost basis in basic API
@@ -78,11 +79,18 @@ class CoinbaseAccount::HoldingsProcessor
     end
 
     def quantity
-      @quantity ||= coinbase_account.current_balance.to_d
+      @quantity ||= (coinbase_account.current_balance || 0).to_d
     end
 
     def crypto_code
       @crypto_code ||= coinbase_account.currency.to_s.upcase
+    end
+
+    def native_currency
+      # Get native currency from Coinbase (USD, EUR, GBP, etc.) or fall back to account currency
+      @native_currency ||= coinbase_account.raw_payload&.dig("native_balance", "currency") ||
+                           account&.currency ||
+                           "USD"
     end
 
     def resolve_security
