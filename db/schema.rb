@@ -49,6 +49,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.jsonb "holdings_snapshot_data"
+    t.datetime "holdings_snapshot_at"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -197,46 +199,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.index ["user_id"], name: "index_chats_on_user_id"
   end
 
-  create_table "coinbase_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "coinbase_item_id", null: false
-    t.string "name"
-    t.string "account_id"
-    t.string "currency"
-    t.decimal "current_balance", precision: 19, scale: 4
-    t.string "account_status"
-    t.string "account_type"
-    t.string "provider"
-    t.jsonb "institution_metadata"
-    t.jsonb "raw_payload"
-    t.jsonb "raw_transactions_payload"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_coinbase_accounts_on_account_id"
-    t.index ["coinbase_item_id"], name: "index_coinbase_accounts_on_coinbase_item_id"
-  end
-
-  create_table "coinbase_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.string "name"
-    t.string "institution_id"
-    t.string "institution_name"
-    t.string "institution_domain"
-    t.string "institution_url"
-    t.string "institution_color"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
-    t.boolean "pending_account_setup", default: false
-    t.datetime "sync_start_date"
-    t.jsonb "raw_payload"
-    t.jsonb "raw_institution_payload"
-    t.text "api_key"
-    t.text "api_secret"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["family_id"], name: "index_coinbase_items_on_family_id"
-    t.index ["status"], name: "index_coinbase_items_on_status"
-  end
-
   create_table "coinstats_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "coinstats_item_id", null: false
     t.string "name"
@@ -252,7 +214,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "wallet_address"
-    t.index ["coinstats_item_id", "account_id", "wallet_address"], name: "index_coinstats_accounts_on_item_account_and_wallet", unique: true
+    t.index [ :coinstats_item_id, :account_id, :wallet_address ], name: "index_coinstats_accounts_on_item_account_and_wallet", unique: true
     t.index ["coinstats_item_id"], name: "index_coinstats_accounts_on_coinstats_item_id"
   end
 
@@ -294,7 +256,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
-    t.string "tax_treatment", default: "taxable", null: false
   end
 
   create_table "data_enrichments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -655,8 +616,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
-    t.integer "rows_count", default: 0, null: false
     t.integer "rows_to_skip", default: 0, null: false
+    t.integer "rows_count", default: 0, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -1034,6 +995,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.integer "failed_fetch_count", default: 0, null: false
     t.datetime "last_health_check_at"
     t.string "website_url"
+    t.index "upper((ticker)::text), COALESCE(upper((exchange_operating_mic)::text), ''::text)", name: "index_securities_on_ticker_and_exchange_operating_mic_unique", unique: true
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
   end
@@ -1225,8 +1187,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
+    t.decimal "realized_gain", precision: 19, scale: 4
+    t.decimal "cost_basis_amount", precision: 19, scale: 4
+    t.string "cost_basis_currency"
+    t.integer "holding_period_days"
+    t.string "realized_gain_confidence"
+    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
+    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1329,8 +1298,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
-  add_foreign_key "coinbase_accounts", "coinbase_items"
-  add_foreign_key "coinbase_items", "families"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
