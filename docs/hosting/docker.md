@@ -98,8 +98,8 @@ POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 #### Using HTTPS
 
 Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  
-The docker instance runs in plain HTTP and you need to tell it that you are redirecting your HTTPS stream to the HTTP one.  
-To do this, edit the `compose.yml` file and find the line stating :  
+The Docker instance runs in plain HTTP and you need to tell it that you are redirecting your HTTPS stream to the HTTP one.  
+To do this, edit the `compose.yml` file and find the line stating:  
 
 ```yaml
 RAILS_ASSUME_SSL: "false"
