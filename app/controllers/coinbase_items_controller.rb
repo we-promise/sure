@@ -182,7 +182,7 @@ class CoinbaseItemsController < ApplicationController
             previous_account.destroy_later if previous_account.may_mark_for_deletion?
           end
         rescue => e
-          Rails.logger.warn("Failed disabling-orphan check for account ##{previous_account&.id}: #{e.class} - #{e.message}")
+          Rails.logger.warn("Failed orphan cleanup for account ##{previous_account&.id}: #{e.class} - #{e.message}")
         end
       end
     end
