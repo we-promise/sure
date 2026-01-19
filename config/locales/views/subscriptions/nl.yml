@@ -1,0 +1,3 @@
+nl:
+  subscriptions:
+    self_hosted_alert: "%{product_name} is niet beschikbaar in zelfgehoste modus."

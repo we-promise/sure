@@ -124,9 +124,17 @@ class Security::Resolver
     end
 
     # Non-exhaustive list of common country codes for help in choosing "close" matches
-    # These are generally sorted by market cap.
+    # User's country (if provided) is prioritized first, then sorted by market cap.
     def sorted_country_codes_by_relevance
-      %w[US CN JP IN GB CA FR DE CH SA TW AU NL SE KR IE ES AE IT HK BR DK SG MX RU IL ID BE TH NO]
+      base_order = %w[US CN JP IN GB CA FR DE CH SA TW AU NL SE KR IE ES AE IT HK BR DK SG MX RU IL ID BE TH NO]
+
+      # Prioritize user's country if provided
+      if country_code.present?
+        user_country = country_code.upcase
+        [ user_country ] + (base_order - [ user_country ])
+      else
+        base_order
+      end
     end
 
     # Non-exhaustive list of common exchange operating MICs for help in choosing "close" matches

@@ -89,4 +89,70 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "Investments", account.short_subtype_label
     assert_equal "Investments", account.long_subtype_label
   end
+
+  # Tax treatment tests (TaxTreatable concern)
+
+  test "tax_treatment delegates to accountable for Investment" do
+    investment = Investment.new(subtype: "401k")
+    account = @family.accounts.create!(
+      name: "Test 401k",
+      balance: 1000,
+      currency: "USD",
+      accountable: investment
+    )
+
+    assert_equal :tax_deferred, account.tax_treatment
+    assert_equal I18n.t("accounts.tax_treatments.tax_deferred"), account.tax_treatment_label
+  end
+
+  test "tax_treatment delegates to accountable for Crypto" do
+    crypto = Crypto.new(tax_treatment: :taxable)
+    account = @family.accounts.create!(
+      name: "Test Crypto",
+      balance: 500,
+      currency: "USD",
+      accountable: crypto
+    )
+
+    assert_equal :taxable, account.tax_treatment
+    assert_equal I18n.t("accounts.tax_treatments.taxable"), account.tax_treatment_label
+  end
+
+  test "tax_treatment returns nil for non-investment accounts" do
+    # Depository accounts don't have tax_treatment
+    assert_nil @account.tax_treatment
+    assert_nil @account.tax_treatment_label
+  end
+
+  test "tax_advantaged? returns true for tax-advantaged accounts" do
+    investment = Investment.new(subtype: "401k")
+    account = @family.accounts.create!(
+      name: "Test 401k",
+      balance: 1000,
+      currency: "USD",
+      accountable: investment
+    )
+
+    assert account.tax_advantaged?
+    assert_not account.taxable?
+  end
+
+  test "tax_advantaged? returns false for taxable accounts" do
+    investment = Investment.new(subtype: "brokerage")
+    account = @family.accounts.create!(
+      name: "Test Brokerage",
+      balance: 1000,
+      currency: "USD",
+      accountable: investment
+    )
+
+    assert_not account.tax_advantaged?
+    assert account.taxable?
+  end
+
+  test "taxable? returns true for accounts without tax_treatment" do
+    # Depository accounts
+    assert @account.taxable?
+    assert_not @account.tax_advantaged?
+  end
 end
