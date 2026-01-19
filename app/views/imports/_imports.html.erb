@@ -1,0 +1,122 @@
+<%= settings_section collapsible: true, title: t("imports.index.imports") do %>
+  <div class="space-y-4">
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p>
+          <%= t("imports.index.imports") %>
+        </p>
+        <span class="text-subdued">&middot;</span>
+        <p><%= @imports.count %></p>
+      </div>
+
+      <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+        <% if @imports.any? %>
+          <table class="w-full overflow-x-auto">
+            <thead>
+            <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+              <th class="px-2 py-3 text-left min-w-44">
+                <%= t("imports.table.date") %>
+              </th>
+              <th class="px-2 py-3 text-left min-w-32">
+                <%= t("imports.table.operation") %>
+              </th>
+              <th class="px-2 py-3 text-left min-w-24">
+                <%= t("imports.table.status") %>
+              </th>
+              <th class="px-2 py-3 text-right min-w-20">
+                <%= t("imports.table.actions") %>
+              </th>
+            </tr>
+            </thead>
+            <tbody>
+            <% @imports.ordered.each do |import| %>
+              <tr class="border-b border-subdued hover:bg-surface-hover">
+                <td class="px-2 py-3">
+                  <span class="text-sm text-secondary">
+                    <%= import.updated_at.strftime("%b %-d, %Y %l:%M %p") %>
+                  </span>
+                </td>
+                <td class="px-2 py-3">
+                  <%= link_to import_path(import), class: "font-medium text-sm text-primary hover:underline" do %>
+                    <% if import.account.present? %>
+                      <%= import.account.name + " " %>
+                    <% end %>
+                    <%= import.type.titleize.gsub(/ Import\z/, '') %>
+                  <% end %>
+                </td>
+                <td class="px-2 py-3">
+                  <% if import.pending? %>
+                    <span class="px-1 py text-xs rounded-full bg-gray-500/5 text-sm text-secondary border border-alpha-black-50">
+                      <%= t(".in_progress") %>
+                    </span>
+                  <% elsif import.importing? %>
+                    <span class="px-1 py text-xs animate-pulse rounded-full bg-orange-500/5 text-sm text-orange-500 border border-alpha-black-50">
+                      <%= t(".uploading") %>
+                    </span>
+                  <% elsif import.failed? %>
+                    <span class="px-1 py text-xs rounded-full bg-red-500/5 text-sm text-red-500 border border-alpha-black-50">
+                      <%= t(".failed") %>
+                    </span>
+                  <% elsif import.reverting? %>
+                    <span class="px-1 py text-xs rounded-full bg-orange-500/5 text-sm text-orange-500 border border-alpha-black-50">
+                      <%= t(".reverting") %>
+                    </span>
+                  <% elsif import.revert_failed? %>
+                    <span class="px-1 py text-xs rounded-full bg-red-500/5 text-sm text-red-500 border border-alpha-black-50">
+                      <%= t(".revert_failed") %>
+                    </span>
+                  <% elsif import.complete? %>
+                    <span class="px-1 py text-xs rounded-full bg-green-500/5 text-sm text-green-500 border border-alpha-black-50">
+                      <%= t(".complete") %>
+                    </span>
+                  <% end %>
+                </td>
+                <td class="px-2 py-3 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <% if import.complete? || import.revert_failed? %>
+                      <%= button_to revert_import_path(import),
+                                    method: :put,
+                                    class: "flex items-center gap-2",
+                                    data: {
+                                      turbo_confirm: "This will delete transactions that were imported, but you will still be able to review and re-import your data at any time."
+                                    } do %>
+                        <%= icon "rotate-ccw", class: "w-5 h-5 text-destructive" %>
+                      <% end %>
+
+                    <% else %>
+                      <%= button_to import_path(import),
+                                    method: :delete,
+                                    class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
+                                    data: {
+                                      turbo_confirm: CustomConfirm.for_resource_deletion("import")
+                                    } do %>
+                        <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
+                      <% end %>
+                    <% end %>
+
+                    <%= link_to import_path(import),
+                                class: "flex items-center gap-2 text-primary hover:text-primary-hover" do %>
+                      <%= icon "eye", class: "w-5 h-5" %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <p class="text-sm text-secondary text-center py-8 font-medium">
+            <%= t("imports.empty.message") %>
+          </p>
+        <% end %>
+      </div>
+    </div>
+
+    <%= link_to new_import_path,
+                class: "bg-container-inset inline-flex items-center justify-center gap-2 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full font-medium text-primary text-sm text-center",
+                data: { turbo_frame: :modal } do %>
+      <%= icon("plus") %>
+      <%= t("imports.index.new") %>
+    <% end %>
+  </div>
+<% end %>

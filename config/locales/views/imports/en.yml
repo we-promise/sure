@@ -72,6 +72,12 @@ en:
     empty:
       message: No imports yet.
       new: New Import
+    table:
+      operation: Operation
+      date: Date
+      status: Status
+      actions: Actions
+      filename: File nameX
     import:
       complete: Complete
       delete: Delete
