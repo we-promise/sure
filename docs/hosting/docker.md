@@ -59,10 +59,10 @@ If you're running the app locally and don't care much about security, you can sk
 
 In order to configure the app, you will need to create a file called `.env`, which is where Docker will read environment variables from.
 
-To do this, run the following command:
+To do this, you should get our .env.example to have a good start :
 
 ```bash
-touch .env
+curl -o .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
 #### Generate the app secret key
