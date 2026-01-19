@@ -1,6 +1,6 @@
 <%# locals: (account_group:, mobile: false, all_tab: false, open: nil, **args) %>
-
-<div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>">
+<% group_id = account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>
+<div id="<%= group_id %>">
   <% is_open = open.nil? ? account_group.accounts.any? { |account| page_active?(account_path(account)) } : open %>
   <%= render DS::Disclosure.new(align: :left, open: is_open) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -10,7 +10,6 @@
           <%= account_group.name %>
         <% end %>
       </div>
-
       <div class="ml-auto text-right grow">
         <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary" %>
         <%= turbo_frame_tag "#{account_group.key}_sparkline", src: accountable_sparkline_path(account_group.key), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
@@ -20,7 +19,6 @@
         <% end %>
       </div>
     <% end %>
-
     <div class="space-y-1">
       <% account_group.accounts.each do |account| %>
         <%= link_to account_path(account),
@@ -30,14 +28,12 @@
                   ),
                   title: account.name do %>
           <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
-
           <div class="min-w-0 grow">
             <div class="flex items-center gap-2 mb-0.5">
               <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
             </div>
             <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
           </div>
-
           <div class="ml-auto text-right grow h-10">
             <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap" %>
             <%= turbo_frame_tag dom_id(account, :sparkline), src: sparkline_account_path(account), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
@@ -49,10 +45,10 @@
         <% end %>
       <% end %>
     </div>
-
     <div class="my-2">
+      <% new_account_group_path = account_group.key == "installment" ? new_loan_path(step: "method_select", installment: true) : new_polymorphic_path(account_group.key, step: "method_select") %>
       <%= render DS::Link.new(
-      href: new_polymorphic_path(account_group.key, step: "method_select"),
+      href: new_account_group_path,
       text: t("accounts.sidebar.new_account_group", account_group: account_group.name.downcase.singularize),
       icon: "plus",
       full_width: true,

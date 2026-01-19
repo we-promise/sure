@@ -145,7 +145,7 @@ class AccountsTest < ApplicationSystemTestCase
       within_testid("account-sidebar-tabs") do
         click_on "All"
         group_label = if accountable_type == "Installment"
-          I18n.t("accounts.types.loan", default: Accountable.from_type("Loan").display_name)
+          I18n.t("accounts.types.installment", default: "Installment")
         else
           key = accountable_type.underscore
           I18n.t("accounts.types.#{key}", default: Accountable.from_type(accountable_type).display_name)

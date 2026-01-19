@@ -1,6 +1,6 @@
 class AccountableSparklinesController < ApplicationController
   def show
-    @accountable = Accountable.from_type(params[:accountable_type]&.classify)
+    @accountable = Accountable.from_type(accountable_class_name)
 
     etag_key = cache_key
 
@@ -22,20 +22,30 @@ class AccountableSparklinesController < ApplicationController
     end
   end
 
-  private
-    def family
-      Current.family
-    end
+    private
+      def family
+        Current.family
+      end
 
-    def accountable
-      Accountable.from_type(params[:accountable_type]&.classify)
-    end
+      def account_ids
+        scope = family.accounts.visible.where(accountable_type: @accountable.name)
+        scope = installment_mode? ? scope.where(id: installment_account_ids) : scope.where.not(id: installment_account_ids)
+        scope.pluck(:id)
+      end
 
-    def account_ids
-      family.accounts.visible.where(accountable_type: accountable.name).pluck(:id)
-    end
+      def installment_account_ids
+        @installment_account_ids ||= family.accounts.joins(:installment).pluck(:id)
+      end
 
-    def cache_key
-      family.build_cache_key("#{@accountable.name}_sparkline", invalidate_on_data_updates: true)
-    end
+      def installment_mode?
+        params[:accountable_type] == "installment"
+      end
+
+      def accountable_class_name
+        installment_mode? ? "Loan" : params[:accountable_type]&.classify
+      end
+
+      def cache_key
+        family.build_cache_key("#{@accountable.name}_sparkline_#{params[:accountable_type]}", invalidate_on_data_updates: true)
+      end
 end

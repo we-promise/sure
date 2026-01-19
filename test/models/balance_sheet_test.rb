@@ -75,6 +75,24 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == I18n.t("accounts.types.other_liability") }.total
   end
 
+  test "splits installment accounts into their own group" do
+    loan_account = create_account(balance: 8000, accountable: Loan.new)
+    installment_account = create_account(balance: 4000, accountable: Loan.new)
+    installment_account.create_installment!(
+      installment_cost: 200,
+      total_term: 20,
+      current_term: 0,
+      payment_period: "monthly",
+      first_payment_date: Date.current
+    )
+
+    liability_groups = BalanceSheet.new(@family).liabilities.account_groups
+
+    assert_equal 2, liability_groups.size
+    assert_equal 8000, liability_groups.find { |ag| ag.name == I18n.t("accounts.types.loan") }.total
+    assert_equal 4000, liability_groups.find { |ag| ag.name == I18n.t("accounts.types.installment", default: "Installment") }.total
+  end
+
   private
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes
