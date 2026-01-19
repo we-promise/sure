@@ -415,8 +415,73 @@ class ReportsController < ApplicationController
         period_contributions: period_totals.contributions,
         period_withdrawals: period_totals.withdrawals,
         top_holdings: investment_statement.top_holdings(limit: 5),
-        accounts: investment_accounts.to_a
+        accounts: investment_accounts.to_a,
+        gains_by_tax_treatment: build_gains_by_tax_treatment(investment_statement)
       }
+    end
+
+    def build_gains_by_tax_treatment(investment_statement)
+      currency = Current.family.currency
+      # Eager-load account and accountable to avoid N+1 when accessing tax_treatment
+      current_holdings = investment_statement.current_holdings
+        .includes(account: :accountable)
+        .to_a
+
+      # Group holdings by tax treatment (from account)
+      holdings_by_treatment = current_holdings.group_by { |h| h.account.tax_treatment || :taxable }
+
+      # Get sell trades in period with realized gains
+      # Eager-load security, account, and accountable to avoid N+1
+      sell_trades = Current.family.trades
+        .joins(:entry)
+        .where(entries: { date: @period.date_range })
+        .where("trades.qty < 0")
+        .includes(:security, entry: { account: :accountable })
+        .to_a
+
+      # Preload holdings for all accounts that have sell trades to avoid N+1 in realized_gain_loss
+      account_ids = sell_trades.map { |t| t.entry.account_id }.uniq
+      holdings_by_account = Holding
+        .where(account_id: account_ids)
+        .where("date <= ?", @period.date_range.end)
+        .order(date: :desc)
+        .group_by(&:account_id)
+
+      # Inject preloaded holdings into trades for realized_gain_loss calculation
+      sell_trades.each do |trade|
+        trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
+      end
+
+      trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
+
+      # Build metrics per treatment
+      %i[taxable tax_deferred tax_exempt tax_advantaged].each_with_object({}) do |treatment, hash|
+        holdings = holdings_by_treatment[treatment] || []
+        trades = trades_by_treatment[treatment] || []
+
+        # Sum unrealized gains from holdings (only those with known cost basis)
+        unrealized = holdings.sum do |h|
+          trend = h.trend
+          trend ? trend.value : 0
+        end
+
+        # Sum realized gains from sell trades
+        realized = trades.sum do |t|
+          gain = t.realized_gain_loss
+          gain ? gain.value : 0
+        end
+
+        # Only include treatment groups that have some activity
+        next if holdings.empty? && trades.empty?
+
+        hash[treatment] = {
+          holdings: holdings,
+          sell_trades: trades,
+          unrealized_gain: Money.new(unrealized, currency),
+          realized_gain: Money.new(realized, currency),
+          total_gain: Money.new(unrealized + realized, currency)
+        }
+      end
     end
 
     def build_net_worth_metrics

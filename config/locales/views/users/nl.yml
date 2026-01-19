@@ -1,0 +1,17 @@
+---
+nl:
+  users:
+    destroy:
+      success: Uw account is verwijderd.
+    update:
+      email_change_failed: Wijzigen van e-mailadres mislukt.
+      email_change_initiated: Controleer uw nieuwe e-mailadres voor bevestigingsinstructies.
+      success: Uw profiel is bijgewerkt.
+    resend_confirmation_email:
+      success: Een nieuwe bevestigingsmail staat in de wachtrij om te worden verzonden.
+      no_pending_change: Er is momenteel geen e-mailwijziging in behandeling!
+    reset:
+      success: Uw account is gereset. Gegevens worden op de achtergrond verwijderd.
+      unauthorized: U bent niet geautoriseerd om deze actie uit te voeren
+    reset_with_sample_data:
+      success: Uw account is gereset en voorbeeldgegevens worden voorbereid. U zult binnenkort demogegevens zien.
