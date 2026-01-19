@@ -116,6 +116,8 @@ ca:
       settings: Configuració
       tags_label: Etiquetes
       uncategorized: "(sense categoritzar)"
+      loan_payment: Pagament de préstec
+      transfer: Transferència
     toggle_recurring_section: Mostra/Amaga les transaccions recurrents properes
     transaction:
       pending: Pendent
