@@ -91,6 +91,16 @@ class AccountsTest < ApplicationSystemTestCase
     end
   end
 
+  test "can create installment account" do
+    assert_account_created "Installment" do
+      fill_in "account[installment_attributes][installment_cost]", with: 200
+      fill_in "Total Term", with: 6
+      select "Monthly", from: "Payment Period"
+      fill_in "Current Payment Number", with: 0
+      fill_in "Payment Day", with: 15
+    end
+  end
+
   test "can create other liability account" do
     assert_account_created("OtherLiability")
   end
@@ -105,8 +115,16 @@ class AccountsTest < ApplicationSystemTestCase
     end
 
     def assert_account_created(accountable_type, &block)
-      click_link Accountable.from_type(accountable_type).display_name.singularize
-      click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto Loan CreditCard])
+      if accountable_type == "Installment"
+        click_link "Installment"
+        click_link "Enter account balance"
+      elsif accountable_type == "Loan"
+        click_link "Loan"
+        click_link "Enter account balance"
+      else
+        click_link Accountable.from_type(accountable_type).display_name.singularize
+        click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto CreditCard])
+      end
 
       account_name = "[system test] #{accountable_type} Account"
       institution_name = "[system test] Institution"
@@ -114,7 +132,7 @@ class AccountsTest < ApplicationSystemTestCase
       notes = "Test notes for #{accountable_type}"
 
       fill_in "Account name*", with: account_name
-      fill_in "account[balance]", with: 100.99
+      fill_in "account[balance]", with: 100.99 unless accountable_type == "Installment"
       find("summary", text: "Additional details").click
       fill_in "Institution name", with: institution_name
       fill_in "Institution domain", with: institution_domain
@@ -126,7 +144,13 @@ class AccountsTest < ApplicationSystemTestCase
 
       within_testid("account-sidebar-tabs") do
         click_on "All"
-        find("details", text: Accountable.from_type(accountable_type).display_name).click
+        group_label = if accountable_type == "Installment"
+          I18n.t("accounts.types.loan", default: Accountable.from_type("Loan").display_name)
+        else
+          key = accountable_type.underscore
+          I18n.t("accounts.types.#{key}", default: Accountable.from_type(accountable_type).display_name)
+        end
+        find("details", text: group_label).click
         assert_text account_name
       end
 

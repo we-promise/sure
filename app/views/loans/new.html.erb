@@ -1,11 +1,12 @@
 <% if params[:step] == "method_select" %>
   <%= render "accounts/new/method_selector",
-             path: new_loan_path(return_to: params[:return_to]),
+             path: new_loan_path(return_to: params[:return_to], installment: params[:installment]),
              provider_configs: @provider_configs,
              accountable_type: "Loan" %>
 <% else %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: t(".title")) %>
+    <% title = params[:installment].present? ? t("loans.new.installment_title") : t(".title") %>
+    <% dialog.with_header(title: title) %>
     <% dialog.with_body do %>
       <%= render "loans/form", account: @account, url: loans_path %>
     <% end %>

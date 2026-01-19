@@ -3,6 +3,7 @@ en:
   loans:
     edit:
       edit: Edit %{account}
+      installment: Edit installment details
     form:
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
@@ -44,6 +45,7 @@ en:
         historical_note: We'll create %{count} historical transactions
     new:
       title: Enter loan details
+      installment_title: Enter installment details
     overview:
       interest_rate: Interest Rate
       monthly_payment: Monthly Payment
