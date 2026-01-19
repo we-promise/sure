@@ -2,50 +2,113 @@
 ca:
   settings:
     hostings:
-      invite_code_settings:
-        description: Cada nou usuari que s'uneixi a la teva instància de %{product} només ho podrà fer mitjançant un codi d'invitació
-        email_confirmation_description: Quan està activat, els usuaris hauran de confirmar el seu correu electrònic quan el canviïn.
-        email_confirmation_title: Requereix confirmació de correu electrònic
-        generate_tokens: Genera nou codi
-        generated_tokens: Codis generats
-        title: Requereix codi d'invitació per registrar-se
-      show:
-        general: Serveis externs
-        invites: Codis d'invitació
-        title: Autoallotjament
-        danger_zone: Zona perillosa
-        clear_cache: Neteja la memòria cau de dades
-        clear_cache_warning: Netejar la memòria cau de dades eliminarà tots els tipus de canvi, preus de valors, saldos de comptes i altres dades. Això no eliminarà comptes, transaccions, categories ni altres dades de l'usuari.
-        confirm_clear_cache:
-          title: Neteja la memòria cau de dades?
-          body: Segur que vols netejar la memòria cau de dades? Això eliminarà tots els tipus de canvi, preus de valors, saldos de comptes i altres dades. Aquesta acció no es pot desfer.
       brand_fetch_settings:
         description: Introdueix el Client ID proporcionat per Brand Fetch
         label: Client ID
         placeholder: Introdueix aquí el teu Client ID
         title: Brand Fetch
+      clear_cache:
+        cache_cleared: La memòria cau de dades s'ha netejat. Això pot trigar uns instants
+          a completar-se.
+      invite_code_settings:
+        description: Cada nou usuari que s'uneixi a la teva instància de %{product}
+          només ho podrà fer mitjançant un codi d'invitació
+        email_confirmation_description: Quan està activat, els usuaris hauran de confirmar
+          el seu correu electrònic quan el canviïn.
+        email_confirmation_title: Requereix confirmació de correu electrònic
+        generate_tokens: Genera nou codi
+        generated_tokens: Codis generats
+        states:
+          closed: Tancat
+          invite_only: Només per invitació
+          open: Obert
+        title: Requereix codi d'invitació per registrar-se
+      not_authorized: No estàs autoritzat/da per realitzar aquesta acció
       openai_settings:
-        description: Introdueix el token d'accés i, opcionalment, configura un proveïdor OpenAI compatible personalitzat
-        env_configured_message: Configurat correctament mitjançant variables d'entorn.
         access_token_label: Token d'accés
         access_token_placeholder: Introdueix aquí el teu token d'accés
-        uri_base_label: URL base de l'API (opcional)
-        uri_base_placeholder: "https://api.openai.com/v1 (per defecte)"
+        description: Introdueix el token d'accés i, opcionalment, configura un proveïdor
+          OpenAI compatible personalitzat
+        env_configured_message: Configurat correctament mitjançant variables d'entorn.
+        json_mode_auto: Auto (recomanat)
+        json_mode_help: El mode estricte funciona millor amb models de pensament (qwen-thinking,
+          deepseek-reasoner). El mode None funciona millor amb models estàndard (llama, mistral,
+          gpt-oss).
+        json_mode_json_object: JSON Object
+        json_mode_label: Mode JSON
+        json_mode_none: None (millor per models estàndard)
+        json_mode_strict: Estrict (millor per models de pensament)
         model_label: Model (opcional)
-        model_placeholder: "gpt-4.1 (per defecte)"
+        model_placeholder: gpt-4.1 (per defecte)
         title: OpenAI
+        uri_base_label: URL base de l'API (opcional)
+        uri_base_placeholder: https://api.openai.com/v1 (per defecte)
+      provider_selection:
+        description: Tria quin servei utilitzar per obtenir tipus de canvi i preus de
+          valors. Yahoo Finance és gratuït i no requereix clau API. Twelve Data
+          requereix una clau API gratuïta però pot oferir més cobertura de dades.
+        env_configured_message: La selecció de proveïdor està inhabilitada perquè les variables
+          d'entorn (EXCHANGE_RATE_PROVIDER o SECURITIES_PROVIDER) estan configurades. Per habilitar
+          la selecció aquí, elimina aquestes variables d'entorn de la teva configuració.
+        exchange_rate_provider_label: Proveïdor de Tipus de Canvi
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+        securities_provider_label: Proveïdor de Valors (Preus d'Accions)
+        title: Selecció de Proveïdor
+      show:
+        clear_cache: Neteja la memòria cau de dades
+        clear_cache_warning: Netejar la memòria cau de dades eliminarà tots els tipus
+          de canvi, preus de valors, saldos de comptes i altres dades. Això no eliminarà
+          comptes, transaccions, categories ni altres dades de l'usuari.
+        confirm_clear_cache:
+          body: Segur que vols netejar la memòria cau de dades? Això eliminarà tots
+            els tipus de canvi, preus de valors, saldos de comptes i altres dades.
+            Aquesta acció no es pot desfer.
+          title: Neteja la memòria cau de dades?
+        danger_zone: Zona perillosa
+        financial_data_providers: Proveïdors de Dades Financeres
+        general: Serveis externs
+        invites: Codis d'invitació
+        sync_settings: Configuració de Sincronització
+        title: Autoallotjament
+      sync_settings:
+        auto_sync_description: Quan està activat, tots els comptes es sincronitzaran
+          automàticament diàriament a l'hora especificada.
+        auto_sync_label: Activa la sincronització automàtica
+        auto_sync_time_description: Especifica l'hora del dia quan hauria de produir-se
+          la sincronització automàtica.
+        auto_sync_time_label: Hora de sincronització (HH:MM)
+        env_configured_message: Aquesta configuració està inhabilitada perquè una variable
+          d'entorn del proveïdor (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING) està configurada. Elimina
+          per habilitar aquesta configuració.
+        include_pending_description: Quan està activat, les transaccions pendents (no liquidades)
+          s'importaran i es reconciliaran automàticament quan es publiquin. Inhabilita si
+          el teu banc proporciona dades pendents no fiables.
+        include_pending_label: Inclou transaccions pendents
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} crides diàries a l'API utilitzades (%{percentage})"
         description: Introdueix la clau API proporcionada per Twelve Data
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn TWELVE_DATA_API_KEY.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn
+          TWELVE_DATA_API_KEY.
         label: Clau API
         placeholder: Introdueix aquí la teva clau API
         plan: Pla %{plan}
         title: Twelve Data
       update:
         failure: Valor de configuració invàlid
+        invalid_onboarding_state: Estat d'incorporació invàlid
+        invalid_sync_time: Format d'hora de sincronització invàlid. Utilitza el format HH:MM (p. ex.,
+          02:30).
+        scheduler_sync_failed: S'ha desat la configuració, però no s'ha pogut actualitzar el programa de sincronització.
+          Torna-ho a provar o revisa els registres del servidor.
         success: Configuració actualitzada
-      clear_cache:
-        cache_cleared: La memòria cau de dades s'ha netejat. Això pot trigar uns instants a completar-se.
-      not_authorized: No estàs autoritzat/da per realitzar aquesta acció
-
+      yahoo_finance_settings:
+        connection_failed: No s'ha pogut connectar amb Yahoo Finance
+        description: Yahoo Finance ofereix accés gratuït a preus d'accions, tipus de canvi
+          i dades financeres sense requerir clau API.
+        status_active: Yahoo Finance està actiu i funcionant
+        status_inactive: La connexió a Yahoo Finance ha fallat
+        title: Yahoo Finance
+        troubleshooting: Comprova la connexió a Internet i la configuració del tallafocs. És possible que
+          Yahoo Finance estigui temporalment no disponible.

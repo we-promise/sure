@@ -1,5 +1,5 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   validates :name, :balance, :currency, presence: true
 
@@ -40,6 +40,12 @@ class Account < ApplicationRecord
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
+
+  # Writer for subtype that delegates to the accountable
+  # This allows forms to set subtype directly on the account
+  def subtype=(value)
+    accountable&.subtype = value
+  end
 
   accepts_nested_attributes_for :accountable, update_only: true
 

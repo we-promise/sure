@@ -19,4 +19,4 @@ ca:
       in_progress: En curs
       complete: Completat
       failed: Error
-
+      in_progress: En curs

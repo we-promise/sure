@@ -1,0 +1,32 @@
+---
+nl:
+  properties:
+    edit:
+      edit: "%{account} bewerken"
+    form:
+      address_line1: Straatnaam
+      address_line1_placeholder: Hoofdstraat 123
+      area: Woonoppervlakte
+      area_placeholder: '2000'
+      area_unit: Meeteenheid
+      country: Land
+      country_placeholder: NL
+      locality: Plaats
+      locality_placeholder: Amsterdam
+      none: Geen
+      postal_code: Postcode
+      postal_code_placeholder: '1234AB'
+      region: Provincie
+      region_placeholder: Noord-Holland
+      subtype_prompt: Selecteer vastgoedtype
+      year_built: Bouwjaar
+      year_built_placeholder: '2000'
+    new:
+      title: Vastgoedgegevens invoeren
+    overview:
+      living_area: Woonoppervlakte
+      market_value: Marktwaarde
+      purchase_price: Aankoopprijs
+      trend: Trend
+      unknown: Onbekend
+      year_built: Bouwjaar

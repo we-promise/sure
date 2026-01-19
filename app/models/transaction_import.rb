@@ -48,10 +48,12 @@ class TransactionImport < Import
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.notes = row.notes if row.notes.present?
           duplicate_entry.import = self
+          duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
           claimed_entry_ids.add(duplicate_entry.id)
         else
           # Create new transaction (no duplicate found)
+          # Mark as import_locked to protect from provider sync overwrites
           new_transactions << Transaction.new(
             category: category,
             tags: tags,
@@ -62,7 +64,8 @@ class TransactionImport < Import
               name: row.name,
               currency: effective_currency,
               notes: row.notes,
-              import: self
+              import: self,
+              import_locked: true
             )
           )
         end

@@ -14,7 +14,7 @@ en:
         invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
         token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
         create_failed: "Failed to connect: %{message}"
-        unexpected: An unexpected error occurred. Please try again or contact support.
+        unexpected: An unexpected error occurred. Please try again.
     destroy:
       success: SimpleFIN connection will be removed
     update:
@@ -24,7 +24,7 @@ en:
         invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
         token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
         update_failed: "Failed to update connection: %{message}"
-        unexpected: An unexpected error occurred. Please try again or contact support.
+        unexpected: An unexpected error occurred. Please try again.
     edit:
       setup_token:
         label: "SimpleFIN Setup Token:"

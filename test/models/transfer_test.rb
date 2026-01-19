@@ -104,4 +104,24 @@ class TransferTest < ActiveSupport::TestCase
       Transfer.create!(inflow_transaction: inflow_entry2.transaction, outflow_transaction: outflow_entry.transaction)
     end
   end
+
+  test "kind_for_account returns investment_contribution for investment accounts" do
+    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
+  end
+
+  test "kind_for_account returns investment_contribution for crypto accounts" do
+    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:crypto))
+  end
+
+  test "kind_for_account returns loan_payment for loan accounts" do
+    assert_equal "loan_payment", Transfer.kind_for_account(accounts(:loan))
+  end
+
+  test "kind_for_account returns cc_payment for credit card accounts" do
+    assert_equal "cc_payment", Transfer.kind_for_account(accounts(:credit_card))
+  end
+
+  test "kind_for_account returns funds_movement for depository accounts" do
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
+  end
 end

@@ -1,8 +1,14 @@
 class Account::ProviderImportAdapter
-  attr_reader :account
+  attr_reader :account, :skipped_entries
 
   def initialize(account)
     @account = account
+    @skipped_entries = []
+  end
+
+  # Resets skipped entries tracking (call at start of new sync batch)
+  def reset_skipped_entries!
+    @skipped_entries = []
   end
 
   # Imports a transaction from a provider
@@ -18,8 +24,9 @@ class Account::ProviderImportAdapter
   # @param notes [String, nil] Optional transaction notes/memo
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
+  # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -30,6 +37,24 @@ class Account::ProviderImportAdapter
         e.entryable = Transaction.new
       end
 
+      # === TYPE COLLISION CHECK: Must happen before protection check ===
+      # If entry exists but is a different type (e.g., Trade), that's an error.
+      # This prevents external_id collisions across different entryable types.
+      if entry.persisted? && !entry.entryable.is_a?(Transaction)
+        raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
+      end
+
+      # === PROTECTION CHECK: Skip entries that should not be overwritten ===
+      # Check persisted Transaction entries for protection flags before making changes.
+      # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
+      if entry.persisted?
+        skip_reason = determine_skip_reason(entry)
+        if skip_reason
+          record_skip(entry, skip_reason)
+          return entry
+        end
+      end
+
       # If this is a new entry, check for potential duplicates from manual/CSV imports
       # This handles the case where a user manually created or CSV imported a transaction
       # before linking their account to a provider
@@ -37,7 +62,14 @@ class Account::ProviderImportAdapter
       if entry.new_record?
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
         if duplicate
-          # "Claim" the duplicate by updating its external_id and source
+          # Check if duplicate is protected - if so, link but don't modify
+          if duplicate.protected_from_sync?
+            duplicate.update!(external_id: external_id, source: source)
+            record_skip(duplicate, determine_skip_reason(duplicate) || "protected")
+            return duplicate
+          end
+
+          # "Claim" the unprotected duplicate by updating its external_id and source
           # This prevents future duplicate checks from matching it again
           entry = duplicate
           entry.assign_attributes(external_id: external_id, source: source)
@@ -80,11 +112,6 @@ class Account::ProviderImportAdapter
       # Track if this is a new posted transaction (for fuzzy suggestion after save)
       is_new_posted = entry.new_record? && !incoming_pending
 
-      # Validate entryable type matches to prevent external_id collisions
-      if entry.persisted? && !entry.entryable.is_a?(Transaction)
-        raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
-      end
-
       entry.assign_attributes(
         amount: amount,
         currency: currency,
@@ -114,7 +141,34 @@ class Account::ProviderImportAdapter
         entry.transaction.extra = existing.deep_merge(incoming)
         entry.transaction.save!
       end
+
+      # Auto-detect investment activity labels for investment accounts
+      detected_label = investment_activity_label
+      if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
+        detected_label = detect_activity_label(name, amount)
+      end
+
+      # Auto-set kind for internal movements and contributions
+      auto_kind = nil
+      if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
+        auto_kind = "funds_movement"
+      elsif detected_label == "Contribution"
+        auto_kind = "investment_contribution"
+      end
+
+      # Set investment activity label and kind if detected
+      if entry.entryable.is_a?(Transaction)
+        if detected_label.present? && entry.transaction.investment_activity_label.blank?
+          entry.transaction.assign_attributes(investment_activity_label: detected_label)
+        end
+
+        if auto_kind.present?
+          entry.transaction.assign_attributes(kind: auto_kind)
+        end
+      end
+
       entry.save!
+      entry.transaction.save! if entry.transaction.changed?
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
@@ -448,8 +502,9 @@ class Account::ProviderImportAdapter
   # @param name [String, nil] Optional custom name for the trade
   # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
+  # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -486,7 +541,8 @@ class Account::ProviderImportAdapter
         security: security,
         qty: quantity,
         price: price,
-        currency: currency
+        currency: currency,
+        investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       )
 
       entry.assign_attributes(
@@ -752,5 +808,61 @@ class Account::ProviderImportAdapter
         }
       )
     )
+  end
+
+  # Auto-detects investment activity label from transaction name and amount
+  # Only detects extremely obvious cases to maintain high accuracy
+  # Users can always manually adjust the label afterward
+  #
+  # @param name [String] Transaction name/description
+  # @param amount [BigDecimal, Numeric] Transaction amount (positive or negative)
+  # @return [String, nil] Detected activity label or nil if no pattern matches
+  def detect_activity_label(name, amount)
+    return nil if name.blank?
+
+    name_lower = name.downcase.strip
+
+    # Only detect the most obvious patterns - be conservative to avoid false positives
+    # Users can manually adjust labels for edge cases
+    case name_lower
+    when /^dividend\b/, /\bdividend payment\b/, /\bqualified dividend\b/, /\bordinary dividend\b/
+      "Dividend"
+    when /^interest\b/, /\binterest income\b/, /\binterest payment\b/
+      "Interest"
+    when /^fee\b/, /\bmanagement fee\b/, /\badvisory fee\b/, /\btransaction fee\b/
+      "Fee"
+    when /\bemployer match\b/, /\bemployer contribution\b/
+      "Contribution"
+    when /\b401[k\(]/, /\bira contribution\b/, /\broth contribution\b/
+      "Contribution"
+    else
+      nil # Let user categorize manually - default to nil for safety
+    end
+  end
+
+  # Determines why an entry should be skipped during sync.
+  # Returns nil if entry should NOT be skipped.
+  #
+  # @param entry [Entry] The entry to check
+  # @return [String, nil] Skip reason or nil if entry can be synced
+  def determine_skip_reason(entry)
+    return "excluded" if entry.excluded?
+    return "user_modified" if entry.user_modified?
+    return "import_locked" if entry.import_locked?
+    nil
+  end
+
+  # Records a skipped entry for stats collection.
+  #
+  # @param entry [Entry] The entry that was skipped
+  # @param reason [String] Why it was skipped
+  def record_skip(entry, reason)
+    @skipped_entries << {
+      id: entry.id,
+      name: entry.name,
+      reason: reason,
+      external_id: entry.external_id,
+      account_name: entry.account.name
+    }
   end
 end
