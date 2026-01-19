@@ -5,25 +5,25 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @budget = budgets(:one)
 
-    # Create parent category
+    # Create parent category with unique name
     @parent_category = Category.create!(
-      name: "Food & Groceries",
+      name: "Test Food & Groceries #{Time.now.to_f}",
       family: @family,
       color: "#4da568",
       lucide_icon: "utensils",
       classification: "expense"
     )
 
-    # Create subcategories
+    # Create subcategories with unique names
     @subcategory_with_limit = Category.create!(
-      name: "Restaurants",
+      name: "Test Restaurants #{Time.now.to_f}",
       parent: @parent_category,
       family: @family,
       classification: "expense"
     )
 
     @subcategory_inheriting = Category.create!(
-      name: "Groceries",
+      name: "Test Groceries #{Time.now.to_f}",
       parent: @parent_category,
       family: @family,
       classification: "expense"
@@ -93,7 +93,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
   test "max_allocation excludes budgets of inheriting siblings" do
     # Create another inheriting subcategory
     another_inheriting = Category.create!(
-      name: "Coffee",
+      name: "Test Coffee #{Time.now.to_f}",
       parent: @parent_category,
       family: @family,
       classification: "expense"
@@ -112,7 +112,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
 
     # If we add a new subcategory with a limit
     new_subcategory_cat = Category.create!(
-      name: "Fast Food",
+      name: "Test Fast Food #{Time.now.to_f}",
       parent: @parent_category,
       family: @family,
       classification: "expense"
@@ -140,7 +140,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
   test "parent with no subcategories works as before" do
     # Create a standalone parent category without subcategories
     standalone_category = Category.create!(
-      name: "Entertainment",
+      name: "Test Entertainment #{Time.now.to_f}",
       family: @family,
       color: "#a855f7",
       lucide_icon: "drama",
