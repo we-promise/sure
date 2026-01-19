@@ -311,6 +311,7 @@ class Import < ApplicationRecord
 
       if amount_type_inflow_value.blank?
         errors.add(:base, I18n.t("imports.errors.custom_column_requires_inflow"))
+      end
     end
 
     # Common encodings to try when UTF-8 detection fails
