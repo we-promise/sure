@@ -256,6 +256,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_000001) do
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.string "tax_treatment", default: "taxable", null: false
   end
 
   create_table "data_enrichments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
