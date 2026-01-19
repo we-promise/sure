@@ -166,12 +166,19 @@ class Holding < ApplicationRecord
             existing.cost_basis # Keep existing if we can't calculate weighted average
           end
 
-          existing.update!(
+          # Preserve provider tracking from the holding being destroyed
+          # so subsequent syncs can find the merged holding
+          merge_attrs = {
             qty: merged_qty,
             amount: merged_amount,
             price: merged_qty.positive? ? merged_amount / merged_qty : 0,
             cost_basis: merged_cost_basis
-          )
+          }
+          merge_attrs[:external_id] ||= holding.external_id if existing.external_id.blank? && holding.external_id.present?
+          merge_attrs[:provider_security_id] ||= holding.provider_security_id || old_security.id if existing.provider_security_id.blank?
+          merge_attrs[:account_provider_id] ||= holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
+
+          existing.update!(merge_attrs)
           holding.destroy!
         else
           # No collision: update to new security

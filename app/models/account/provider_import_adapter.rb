@@ -331,7 +331,8 @@ class Account::ProviderImportAdapter
           # Fallback path 1b: match by provider_security ticker (for remapped holdings when
           # Security::Resolver returns a different security instance for the same ticker)
           # Scope by account_provider_id to avoid cross-provider overwrites
-          unless holding
+          # Skip if ticker is blank to avoid matching NULL tickers
+          unless holding || security.ticker.blank?
             scope = account.holdings
               .joins("INNER JOIN securities AS ps ON ps.id = holdings.provider_security_id")
               .where(date: date, currency: currency)
