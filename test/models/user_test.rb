@@ -331,4 +331,21 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.valid?
     assert_includes user.errors[:password], "can't be blank"
   end
+
+  # First user role assignment tests
+  test "role_for_new_family_creator returns super_admin when no users exist" do
+    # Delete all users to simulate fresh instance
+    User.destroy_all
+
+    assert_equal :super_admin, User.role_for_new_family_creator
+  end
+
+  test "role_for_new_family_creator returns fallback role when users exist" do
+    # Users exist from fixtures
+    assert User.exists?
+
+    assert_equal :admin, User.role_for_new_family_creator
+    assert_equal :member, User.role_for_new_family_creator(fallback_role: :member)
+    assert_equal "custom_role", User.role_for_new_family_creator(fallback_role: "custom_role")
+  end
 end

@@ -32,6 +32,13 @@ class User < ApplicationRecord
 
   enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
 
+  # Returns the appropriate role for a new user creating a family.
+  # The very first user of an instance becomes super_admin; subsequent users
+  # get the specified fallback role (typically :admin for family creators).
+  def self.role_for_new_family_creator(fallback_role: :admin)
+    User.exists? ? fallback_role : :super_admin
+  end
+
   has_one_attached :profile_image do |attachable|
     attachable.variant :thumbnail, resize_to_fill: [ 300, 300 ], convert: :webp, saver: { quality: 80 }
     attachable.variant :small, resize_to_fill: [ 72, 72 ], convert: :webp, saver: { quality: 80 }, preprocessed: true

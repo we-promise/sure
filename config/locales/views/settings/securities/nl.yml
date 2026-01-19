@@ -1,0 +1,10 @@
+---
+nl:
+  settings:
+    securities:
+      show:
+        disable_mfa: 2FA uitschakelen
+        disable_mfa_confirm: Weet u zeker dat u twee-factor authenticatie wilt uitschakelen? Dit maakt uw account minder veilig.
+        enable_mfa: 2FA inschakelen
+        mfa_description: Voeg een extra beveiligingslaag toe aan uw account door een code van uw authenticatie-app te vereisen bij het inloggen
+        mfa_title: Twee-factor authenticatie

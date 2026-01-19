@@ -1,0 +1,142 @@
+---
+nl:
+  accounts:
+    account:
+      link_lunchflow: Koppel met Lunch Flow
+      link_provider: Koppel met provider
+      unlink_provider: Verbreek verbinding met provider
+      troubleshoot: Problemen oplossen
+    chart:
+      data_not_available: Gegevens niet beschikbaar voor de geselecteerde periode
+    create:
+      success: "%{type} account aangemaakt"
+    destroy:
+      success: "%{type} account gepland voor verwijdering"
+      cannot_delete_linked: "Kan een gekoppeld account niet verwijderen. Koppel het eerst los."
+    empty:
+      empty_message: Voeg een account toe via verbinding, importeren of handmatig invoeren.
+      new_account: Nieuw account
+      no_accounts: Nog geen accounts
+    form:
+      balance: Huidig saldo
+      name_label: Accountnaam
+      name_placeholder: Voorbeeld accountnaam
+      additional_details: Extra details
+      institution_name_label: Naam instelling
+      institution_name_placeholder: bijv. Chase Bank
+      institution_domain_label: Domein instelling
+      institution_domain_placeholder: bijv. chase.com
+      notes_label: Notities
+      notes_placeholder: Sla aanvullende informatie op zoals rekeningnummers, sorteer codes, IBAN, routenummers, enz.
+    index:
+      accounts: Accounts
+      manual_accounts:
+        other_accounts: Andere accounts
+      new_account: Nieuw account
+      sync: Synchroniseer alles
+    sync_all:
+      syncing: "Accounts synchroniseren..."
+    new:
+      import_accounts: Accounts importeren
+      method_selector:
+        connected_entry: Account koppelen
+        connected_entry_eu: EU-account koppelen
+        link_with_provider: "Koppel met %{provider}"
+        lunchflow_entry: Koppel Lunch Flow account
+        manual_entry: Voer accountsaldo in
+        title: Hoe wilt u het toevoegen?
+      title: Wat wilt u toevoegen?
+    show:
+      activity:
+        amount: Bedrag
+        balance: Saldo
+        confirmed: Bevestigd
+        date: Datum
+        entries: vermeldingen
+        entry: vermelding
+        filter: Filter
+        new: Nieuw
+        new_activity: Nieuwe activiteit
+        new_balance: Nieuw saldo
+        new_transaction: Nieuwe transactie
+        no_entries: Geen vermeldingen gevonden
+        pending: In afwachting
+        search:
+          placeholder: Zoek vermeldingen op naam
+        status: Status
+        title: Activiteit
+      chart:
+        balance: Saldo
+        owed: Bedrag verschuldigd
+      menu:
+        confirm_accept: Verwijder "%{name}"
+        confirm_body_html: "<p>Door dit account te verwijderen, wist u de waarde geschiedenis, wat verschillende aspecten van uw totale account beïnvloedt. Deze actie heeft een directe impact op uw netto waarde berekeningen en de account grafieken.</p><br /> <p>Na verwijdering is er geen manier om de account informatie te herstellen omdat u het als een nieuw account moet toevoegen.</p>"
+        confirm_title: Account verwijderen?
+        edit: Bewerken
+        import: Transacties importeren
+        manage: Beheer accounts
+    update:
+      success: "%{type} account bijgewerkt"
+    sidebar:
+      missing_data: Ontbrekende historische gegevens
+      missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, beveiligingsprijzen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountbalansen te berekenen."
+      configure_providers: Configureer hier uw providers.
+      tabs:
+        all: Alle
+        assets: Activa
+        debts: Schulden
+      new_asset: Nieuwe activa
+      new_debt: Nieuwe schuld
+      new_account: Nieuw account
+      new_account_group: "Nieuwe %{account_group}"
+    types:
+      depository: Cash
+      investment: Investering
+      crypto: Crypto
+      property: Eigendom
+      vehicle: Voertuig
+      other_asset: Overige activa
+      credit_card: Creditcard
+      loan: Lening
+      other_liability: Overige verplichting
+    tax_treatments:
+      taxable: Belastbaar
+      tax_deferred: Uitgesteld
+      tax_exempt: Vrijgesteld
+      tax_advantaged: Fiscaal voordeel
+    tax_treatment_descriptions:
+      taxable: Winst belast bij realisatie
+      tax_deferred: Bijdragen aftrekbaar, belast bij opname
+      tax_exempt: Bijdragen na belasting, winst niet belast
+      tax_advantaged: Speciale fiscale voordelen met voorwaarden
+    subtype_regions:
+      us: Verenigde Staten
+      uk: Verenigd Koninkrijk
+      ca: Canada
+      au: Australië
+      eu: Europa
+      generic: Algemeen
+    confirm_unlink:
+      title: Account ontkoppelen van provider?
+      description_html: "U staat op het punt om <strong>%{account_name}</strong> te ontkoppelen van <strong>%{provider_name}</strong>. Dit zal het omzetten naar een handmatig account."
+      warning_title: Wat dit betekent
+      warning_no_sync: Het account zal niet langer automatisch synchroniseren met uw provider
+      warning_manual_updates: U moet handmatig transacties toevoegen en saldi bijwerken
+      warning_transactions_kept: Alle bestaande transacties en saldi blijven behouden
+      warning_can_delete: Na het ontkoppelen kunt u het account indien nodig verwijderen
+      confirm_button: Bevestigen en ontkoppelen
+    unlink:
+      success: "Account succesvol ontkoppeld. Het is nu een handmatig account."
+      not_linked: "Account is niet gekoppeld aan een provider"
+      error: "Het ontkoppelen is mislukt: %{error}"
+      generic_error: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
+    select_provider:
+      title: Selecteer een provider om te verbinden
+      description: "Kies welke provider u wilt gebruiken om %{account_name} te koppelen"
+      already_linked: "Account is al gekoppeld aan een provider"
+      no_providers: "Er zijn momenteel geen providers geconfigureerd"
+
+  email_confirmations:
+    new:
+      invalid_token: Ongeldige of verlopen bevestigingslink.
+      success_login: Uw e-mail is bevestigd. Log in met uw nieuwe e-mailadres.

@@ -76,12 +76,8 @@ pt-BR:
       uploading: Processando linhas
       view: Visualizar
     index:
-      imports: Importações
+      title: Importações
       new: Nova Importação
-      title: Importar/Exportar
-      exports: Exportações
-      new_export: Nova Exportação
-      no_exports: Nenhuma exportação ainda.
     new:
       description: Você pode importar manualmente vários tipos de dados via CSV ou usar um
         de nossos modelos de importação, como o do Mint.

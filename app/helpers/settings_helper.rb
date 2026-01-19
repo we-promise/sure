@@ -20,6 +20,7 @@ module SettingsHelper
     { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
     { name: "Providers", path: :settings_providers_path, condition: :admin_user? },
     { name: "Imports", path: :imports_path, condition: :admin_user? },
+    { name: "Exports", path: :family_exports_path, condition: :admin_user? },
     # More section
     { name: "Guides", path: :settings_guides_path },
     { name: "What's new", path: :changelog_path },

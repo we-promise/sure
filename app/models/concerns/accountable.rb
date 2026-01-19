@@ -31,11 +31,17 @@ module Accountable
     end
 
     # Given a subtype, look up the label for this accountable type
+    # Uses i18n with fallback to hardcoded SUBTYPES values
     def subtype_label_for(subtype, format: :short)
       return nil if subtype.nil?
 
       label_type = format == :long ? :long : :short
-      self::SUBTYPES[subtype]&.fetch(label_type, nil)
+      fallback = self::SUBTYPES.dig(subtype, label_type)
+
+      I18n.t(
+        "#{name.underscore.pluralize}.subtypes.#{subtype}.#{label_type}",
+        default: fallback
+      )
     end
 
     # Convenience method for getting the short label

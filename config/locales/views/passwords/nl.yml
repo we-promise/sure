@@ -1,0 +1,10 @@
+---
+nl:
+  passwords:
+    edit:
+      password: Nieuw wachtwoord
+      password_challenge: Huidig wachtwoord
+      submit: Wachtwoord opnieuw instellen
+      title: Wachtwoord bijwerken
+    update:
+      success: Uw wachtwoord is opnieuw ingesteld.

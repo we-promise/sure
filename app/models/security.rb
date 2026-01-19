@@ -1,6 +1,11 @@
 class Security < ApplicationRecord
   include Provided
 
+  # ISO 10383 MIC codes mapped to user-friendly exchange names
+  # Source: https://www.iso20022.org/market-identifier-codes
+  # Data stored in config/exchanges.yml
+  EXCHANGES = YAML.safe_load_file(Rails.root.join("config", "exchanges.yml")).freeze
+
   before_validation :upcase_symbols
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
@@ -10,6 +15,16 @@ class Security < ApplicationRecord
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
 
   scope :online, -> { where(offline: false) }
+
+  # Returns user-friendly exchange name for a MIC code
+  def self.exchange_name_for(mic)
+    return nil if mic.blank?
+    EXCHANGES.dig(mic.upcase, "name") || mic.upcase
+  end
+
+  def exchange_name
+    self.class.exchange_name_for(exchange_operating_mic)
+  end
 
   def current_price
     @current_price ||= find_or_fetch_price
