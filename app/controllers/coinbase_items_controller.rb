@@ -235,7 +235,7 @@ class CoinbaseItemsController < ApplicationController
   end
 
   def complete_account_setup
-    selected_accounts = params[:selected_accounts] || []
+    selected_accounts = Array(params[:selected_accounts]).reject(&:blank?)
 
     created_accounts = []
 
