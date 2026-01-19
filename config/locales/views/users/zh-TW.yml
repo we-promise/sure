@@ -1,0 +1,17 @@
+---
+zh-TW:
+  users:
+    destroy:
+      success: 您的帳號已刪除。
+    update:
+      email_change_failed: 變更電子郵件地址失敗。
+      email_change_initiated: 請檢查您的新電子郵件信箱以獲取驗證說明。
+      success: 您的個人資料已更新。
+    resend_confirmation_email:
+      success: 新的驗證郵件已排入傳送佇列。
+      no_pending_change: 目前沒有待處理的電子郵件變更請求！
+    reset:
+      success: 您的帳號已重設。資料將在一段時間後於背景進行刪除。
+      unauthorized: 您沒有權限執行此操作。
+    reset_with_sample_data:
+      success: 您的帳號已重設，範例資料正在準備中。您很快就會看到示範資料。

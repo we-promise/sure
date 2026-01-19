@@ -160,7 +160,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert db_prices.all? { |p| p.provisional == false }, "All prices from provider should not be provisional"
   end
 
-  test "marks gap-filled weekend prices as not provisional" do
+  test "marks gap-filled weekend prices as provisional" do
     Security::Price.delete_all
 
     # Find a recent Saturday
@@ -186,7 +186,9 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     ).import_provider_prices
 
     saturday_price = Security::Price.find_by(security: @security, date: saturday)
-    assert_not saturday_price.provisional, "Weekend gap-filled price should not be provisional"
+    # Weekend gap-filled prices are now provisional so they can be fixed
+    # via cascade when the next weekday sync fetches the correct Friday price
+    assert saturday_price.provisional, "Weekend gap-filled price should be provisional"
   end
 
   test "marks gap-filled recent weekday prices as provisional" do
@@ -311,8 +313,107 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_not old_price.provisional, "Old gap-filled price should not be provisional"
   end
 
+  test "provisional weekend prices get fixed via cascade from Friday" do
+    Security::Price.delete_all
+
+    # Find a recent Monday
+    monday = Date.current
+    monday += 1.day until monday.monday?
+    friday = monday - 3.days
+    saturday = monday - 2.days
+    sunday = monday - 1.day
+
+    travel_to monday do
+      # Create provisional weekend prices with WRONG values (simulating stale data)
+      Security::Price.create!(security: @security, date: saturday, price: 50, currency: "USD", provisional: true)
+      Security::Price.create!(security: @security, date: sunday, price: 50, currency: "USD", provisional: true)
+
+      # Provider returns Friday and Monday prices, but NOT weekend (markets closed)
+      provider_response = provider_success_response([
+        OpenStruct.new(security: @security, date: friday, price: 150, currency: "USD"),
+        OpenStruct.new(security: @security, date: monday, price: 155, currency: "USD")
+      ])
+
+      @provider.expects(:fetch_security_prices).returns(provider_response)
+
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: friday,
+        end_date: monday
+      ).import_provider_prices
+
+      # Friday should have real price from provider
+      friday_price = Security::Price.find_by(security: @security, date: friday)
+      assert_equal 150, friday_price.price
+      assert_not friday_price.provisional, "Friday should not be provisional (real price)"
+
+      # Saturday should be gap-filled from Friday (150), not old wrong value (50)
+      saturday_price = Security::Price.find_by(security: @security, date: saturday)
+      assert_equal 150, saturday_price.price, "Saturday should use Friday's price via cascade"
+      assert saturday_price.provisional, "Saturday should be provisional (gap-filled)"
+
+      # Sunday should be gap-filled from Saturday (150)
+      sunday_price = Security::Price.find_by(security: @security, date: sunday)
+      assert_equal 150, sunday_price.price, "Sunday should use Friday's price via cascade"
+      assert sunday_price.provisional, "Sunday should be provisional (gap-filled)"
+
+      # Monday should have real price from provider
+      monday_price = Security::Price.find_by(security: @security, date: monday)
+      assert_equal 155, monday_price.price
+      assert_not monday_price.provisional, "Monday should not be provisional (real price)"
+    end
+  end
+
+  test "uses recent prices for gap-fill when effective_start_date skips old dates" do
+    Security::Price.delete_all
+
+    # Use travel_to to ensure we're on a weekday for consistent test behavior
+    # Find the next weekday if today is a weekend
+    test_date = Date.current
+    test_date += 1.day while test_date.saturday? || test_date.sunday?
+
+    travel_to test_date do
+      # Simulate: old price exists from first trade date (30 days ago) with STALE value
+      old_date = 30.days.ago.to_date
+      stale_price = 50
+
+      # Fully populate DB from old_date through yesterday so effective_start_date = today
+      # Use stale price for old dates, then recent price for recent dates
+      (old_date..1.day.ago.to_date).each do |date|
+        # Use stale price for dates older than lookback window, recent price for recent dates
+        price = date < 7.days.ago.to_date ? stale_price : 150
+        Security::Price.create!(security: @security, date: date, price: price, currency: "USD")
+      end
+
+      # Provider returns yesterday's price (155) - DIFFERENT from DB (150) to prove we use provider
+      # Provider does NOT return today (simulating market closed)
+      provider_response = provider_success_response([
+        OpenStruct.new(security: @security, date: 1.day.ago.to_date, price: 155, currency: "USD")
+      ])
+
+      @provider.expects(:fetch_security_prices).returns(provider_response)
+
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: old_date,
+        end_date: Date.current
+      ).import_provider_prices
+
+      today_price = Security::Price.find_by(security: @security, date: Date.current)
+
+      # effective_start_date should be today (only missing date)
+      # start_price_value should use provider's yesterday (155), not stale old DB price (50)
+      # Today should gap-fill from that recent price
+      assert_equal 155, today_price.price, "Gap-fill should use recent provider price, not stale old price"
+      # Should be provisional since gap-filled for recent weekday
+      assert today_price.provisional, "Current weekday gap-filled price should be provisional"
+    end
+  end
+
   private
     def get_provider_fetch_start_date(start_date)
-      start_date - 5.days
+      start_date - Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
     end
 end

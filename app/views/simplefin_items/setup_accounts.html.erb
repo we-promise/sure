@@ -99,6 +99,29 @@
             </div>
           </div>
         <% end %>
+
+        <% if @stale_simplefin_accounts&.any? %>
+          <!-- Stale Accounts Section -->
+          <div class="border-t border-primary mt-6 pt-6">
+            <div class="bg-warning/10 border border-warning rounded-lg p-4 mb-4">
+              <div class="flex items-start gap-3">
+                <%= icon "alert-triangle", size: "sm", class: "text-warning mt-0.5 flex-shrink-0" %>
+                <div>
+                  <p class="text-sm text-primary font-medium mb-1">
+                    <%= t("simplefin_items.setup_accounts.stale_accounts.title") %>
+                  </p>
+                  <p class="text-xs text-secondary">
+                    <%= t("simplefin_items.setup_accounts.stale_accounts.description") %>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <% @stale_simplefin_accounts.each do |simplefin_account| %>
+              <%= render "stale_account_row", simplefin_account: simplefin_account, target_accounts: @target_accounts %>
+            <% end %>
+          </div>
+        <% end %>
       </div>
 
       <div class="flex gap-3">

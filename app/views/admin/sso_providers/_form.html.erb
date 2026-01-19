@@ -1,0 +1,280 @@
+<%# locals: (sso_provider:) %>
+
+<% if sso_provider.errors.any? %>
+  <div class="bg-destructive/10 border border-destructive rounded-lg p-4 mb-4">
+    <div class="flex">
+      <%= icon "alert-circle", class: "w-5 h-5 text-destructive mr-2 shrink-0" %>
+      <div>
+        <p class="text-sm font-medium text-destructive">
+          <%= pluralize(sso_provider.errors.count, "error") %> prohibited this provider from being saved:
+        </p>
+        <ul class="mt-2 text-sm text-destructive list-disc list-inside">
+          <% sso_provider.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<%= styled_form_with model: [:admin, sso_provider], class: "space-y-6", data: { controller: "admin-sso-form" } do |form| %>
+  <div class="space-y-4">
+    <h3 class="font-medium text-primary">Basic Information</h3>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <%= form.select :strategy,
+          options_for_select([
+            ["OpenID Connect", "openid_connect"],
+            ["SAML 2.0", "saml"],
+            ["Google OAuth2", "google_oauth2"],
+            ["GitHub", "github"]
+          ], sso_provider.strategy),
+          { label: "Strategy" },
+          { data: { action: "change->admin-sso-form#toggleFields" } } %>
+
+      <%= form.text_field :name,
+          label: "Name",
+          placeholder: "e.g., keycloak, authentik",
+          required: true,
+          data: { action: "input->admin-sso-form#updateCallbackUrl" } %>
+    </div>
+    <p class="text-xs text-secondary -mt-2">Unique identifier (lowercase, numbers, underscores only)</p>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <%= form.text_field :label,
+          label: "Button Label",
+          placeholder: "e.g., Sign in with Keycloak",
+          required: true %>
+
+      <div>
+        <%= form.text_field :icon,
+            label: "Icon (optional)",
+            placeholder: "e.g., key, shield" %>
+        <p class="text-xs text-secondary mt-1">Lucide icon name for the login button</p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="space-y-1">
+        <p class="text-sm font-medium text-primary"><%= t("admin.sso_providers.form.enabled_label") %></p>
+        <p class="text-xs text-secondary"><%= t("admin.sso_providers.form.enabled_help") %></p>
+      </div>
+      <%= form.toggle :enabled %>
+    </div>
+  </div>
+
+  <div class="border-t border-primary pt-4 space-y-4">
+    <h3 class="font-medium text-primary">OAuth/OIDC Configuration</h3>
+
+    <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
+      <%= form.text_field :issuer,
+          label: "Issuer URL",
+          placeholder: "https://your-idp.example.com/realms/your-realm",
+          data: { action: "blur->admin-sso-form#validateIssuer" } %>
+      <p class="text-xs text-secondary mt-1">OIDC issuer URL (validates .well-known/openid-configuration)</p>
+    </div>
+
+    <%= form.text_field :client_id,
+        label: "Client ID",
+        placeholder: "your-client-id",
+        required: true %>
+
+    <%= form.password_field :client_secret,
+        label: "Client Secret",
+        placeholder: sso_provider.persisted? ? "••••••••" : "your-client-secret",
+        required: !sso_provider.persisted? %>
+    <% if sso_provider.persisted? %>
+      <p class="text-xs text-secondary -mt-2">Leave blank to keep existing secret</p>
+    <% end %>
+
+    <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
+      <label class="block text-sm font-medium text-primary mb-1">Callback URL</label>
+      <div class="flex items-center gap-2">
+        <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
+              data-admin-sso-form-target="callbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
+        <button type="button"
+                data-action="click->admin-sso-form#copyCallback"
+                class="p-2 text-secondary hover:text-primary shrink-0"
+                title="Copy to clipboard">
+          <%= icon "copy", class: "w-4 h-4" %>
+        </button>
+      </div>
+      <p class="text-xs text-secondary mt-1">Configure this URL in your identity provider</p>
+    </div>
+  </div>
+
+  <div data-saml-field class="border-t border-primary pt-4 space-y-4 <%= "hidden" unless sso_provider.strategy == "saml" %>">
+    <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.saml_configuration") %></h3>
+
+    <div>
+      <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.idp_metadata_url") %></label>
+      <input type="text" name="sso_provider[settings][idp_metadata_url]"
+             value="<%= sso_provider.settings&.dig("idp_metadata_url") %>"
+             class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
+             placeholder="https://idp.example.com/metadata"
+             autocomplete="off">
+      <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.idp_metadata_url_help") %></p>
+    </div>
+
+    <details class="mt-4">
+      <summary class="cursor-pointer text-sm font-medium text-secondary hover:text-primary"><%= t("admin.sso_providers.form.manual_saml_config") %></summary>
+      <div class="mt-3 space-y-3 pl-4 border-l-2 border-secondary/30">
+        <p class="text-xs text-secondary"><%= t("admin.sso_providers.form.manual_saml_help") %></p>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.idp_sso_url") %></label>
+          <input type="text" name="sso_provider[settings][idp_sso_url]"
+                 value="<%= sso_provider.settings&.dig("idp_sso_url") %>"
+                 class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
+                 placeholder="https://idp.example.com/sso"
+                 autocomplete="off">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.idp_slo_url") %></label>
+          <input type="text" name="sso_provider[settings][idp_slo_url]"
+                 value="<%= sso_provider.settings&.dig("idp_slo_url") %>"
+                 class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
+                 placeholder="https://idp.example.com/slo (optional)"
+                 autocomplete="off">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.idp_certificate") %></label>
+          <textarea name="sso_provider[settings][idp_certificate]"
+                    rows="4"
+                    class="w-full px-3 py-2 border border-primary rounded-lg text-sm font-mono"
+                    placeholder="-----BEGIN CERTIFICATE-----"><%= sso_provider.settings&.dig("idp_certificate") %></textarea>
+          <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.idp_certificate_help") %></p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.idp_cert_fingerprint") %></label>
+          <input type="text" name="sso_provider[settings][idp_cert_fingerprint]"
+                 value="<%= sso_provider.settings&.dig("idp_cert_fingerprint") %>"
+                 class="w-full px-3 py-2 border border-primary rounded-lg text-sm font-mono"
+                 placeholder="AB:CD:EF:..."
+                 autocomplete="off">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.name_id_format") %></label>
+          <select name="sso_provider[settings][name_id_format]"
+                  class="w-full px-3 py-2 border border-primary rounded-lg text-sm">
+            <option value="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" <%= "selected" if sso_provider.settings&.dig("name_id_format").blank? || sso_provider.settings&.dig("name_id_format") == "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" %>><%= t("admin.sso_providers.form.name_id_email") %></option>
+            <option value="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent" <%= "selected" if sso_provider.settings&.dig("name_id_format") == "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent" %>><%= t("admin.sso_providers.form.name_id_persistent") %></option>
+            <option value="urn:oasis:names:tc:SAML:2.0:nameid-format:transient" <%= "selected" if sso_provider.settings&.dig("name_id_format") == "urn:oasis:names:tc:SAML:2.0:nameid-format:transient" %>><%= t("admin.sso_providers.form.name_id_transient") %></option>
+            <option value="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified" <%= "selected" if sso_provider.settings&.dig("name_id_format") == "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified" %>><%= t("admin.sso_providers.form.name_id_unspecified") %></option>
+          </select>
+        </div>
+      </div>
+    </details>
+
+    <div>
+      <label class="block text-sm font-medium text-primary mb-1">SP Callback URL (ACS URL)</label>
+      <div class="flex items-center gap-2">
+        <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
+              data-admin-sso-form-target="samlCallbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
+        <button type="button"
+                data-action="click->admin-sso-form#copySamlCallback"
+                class="p-2 text-secondary hover:text-primary shrink-0"
+                title="Copy to clipboard">
+          <%= icon "copy", class: "w-4 h-4" %>
+        </button>
+      </div>
+      <p class="text-xs text-secondary mt-1">Configure this URL as the Assertion Consumer Service URL in your IdP</p>
+    </div>
+  </div>
+
+  <div class="border-t border-primary pt-4 space-y-4">
+    <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.provisioning_title") %></h3>
+
+    <%= form.select "settings[default_role]",
+        options_for_select([
+          [t("admin.sso_providers.form.role_member"), "member"],
+          [t("admin.sso_providers.form.role_admin"), "admin"],
+          [t("admin.sso_providers.form.role_super_admin"), "super_admin"]
+        ], sso_provider.settings&.dig("default_role") || "member"),
+        { label: t("admin.sso_providers.form.default_role_label"), include_blank: false } %>
+    <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.default_role_help") %></p>
+
+    <details class="mt-4">
+      <summary class="cursor-pointer text-sm font-medium text-secondary hover:text-primary"><%= t("admin.sso_providers.form.role_mapping_title") %></summary>
+      <div class="mt-3 space-y-3 pl-4 border-l-2 border-secondary/30">
+        <p class="text-xs text-secondary"><%= t("admin.sso_providers.form.role_mapping_help") %></p>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.super_admin_groups") %></label>
+          <input type="text" name="sso_provider[settings][role_mapping][super_admin]"
+                 value="<%= Array(sso_provider.settings&.dig("role_mapping", "super_admin")).join(", ") %>"
+                 class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
+                 placeholder="Platform-Admins, IdP-Superusers"
+                 autocomplete="off">
+          <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.groups_help") %></p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.admin_groups") %></label>
+          <input type="text" name="sso_provider[settings][role_mapping][admin]"
+                 value="<%= Array(sso_provider.settings&.dig("role_mapping", "admin")).join(", ") %>"
+                 class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
+                 placeholder="Team-Leads, Managers"
+                 autocomplete="off">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.member_groups") %></label>
+          <input type="text" name="sso_provider[settings][role_mapping][member]"
+                 value="<%= Array(sso_provider.settings&.dig("role_mapping", "member")).join(", ") %>"
+                 class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
+                 placeholder="* (all groups)"
+                 autocomplete="off">
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div data-oidc-field class="border-t border-primary pt-4 space-y-4 <%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
+    <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.advanced_title") %></h3>
+
+    <div>
+      <%= form.text_field "settings[scopes]",
+          label: t("admin.sso_providers.form.scopes_label"),
+          value: sso_provider.settings&.dig("scopes"),
+          placeholder: "openid email profile groups" %>
+      <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.scopes_help") %></p>
+    </div>
+
+    <%= form.select "settings[prompt]",
+        options_for_select([
+          [t("admin.sso_providers.form.prompt_default"), ""],
+          [t("admin.sso_providers.form.prompt_login"), "login"],
+          [t("admin.sso_providers.form.prompt_consent"), "consent"],
+          [t("admin.sso_providers.form.prompt_select_account"), "select_account"],
+          [t("admin.sso_providers.form.prompt_none"), "none"]
+        ], sso_provider.settings&.dig("prompt")),
+        { label: t("admin.sso_providers.form.prompt_label"), include_blank: false } %>
+    <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.prompt_help") %></p>
+  </div>
+
+  <div class="flex justify-between items-center gap-3 pt-4 border-t border-primary">
+    <div>
+      <% if sso_provider.persisted? %>
+        <button type="button"
+                data-action="click->admin-sso-form#testConnection"
+                data-admin-sso-form-test-url-value="<%= test_connection_admin_sso_provider_path(sso_provider) %>"
+                class="px-4 py-2 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg">
+          <%= t("admin.sso_providers.form.test_connection") %>
+        </button>
+        <span data-admin-sso-form-target="testResult" class="ml-2 text-sm"></span>
+      <% end %>
+    </div>
+
+    <div class="flex gap-3">
+      <%= link_to "Cancel", admin_sso_providers_path, class: "px-4 py-2 text-sm font-medium text-secondary hover:text-primary" %>
+      <%= form.submit sso_provider.persisted? ? "Update Provider" : "Create Provider",
+          class: "px-4 py-2 bg-primary text-inverse rounded-lg text-sm font-medium hover:bg-primary/90" %>
+    </div>
+  </div>
+<% end %>

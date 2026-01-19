@@ -1,5 +1,6 @@
 require "set"
 class SimplefinItem::Importer
+  include SimplefinNumericHelpers
   class RateLimitedError < StandardError; end
   attr_reader :simplefin_item, :simplefin_provider, :sync
 
@@ -8,6 +9,7 @@ class SimplefinItem::Importer
     @simplefin_provider = simplefin_provider
     @sync = sync
     @enqueued_holdings_job_ids = Set.new
+    @reconciled_account_ids = Set.new  # Debounce pending reconciliation per run
   end
 
   def import
@@ -43,6 +45,11 @@ class SimplefinItem::Importer
         Rails.logger.info "SimplefinItem::Importer - Using REGULAR SYNC (last_synced_at=#{simplefin_item.last_synced_at&.strftime('%Y-%m-%d %H:%M')})"
         import_regular_sync
       end
+
+      # Reset status to good if no auth errors occurred in this sync.
+      # This allows the item to recover automatically when a bank's auth issue is resolved
+      # in SimpleFIN Bridge, without requiring the user to manually reconnect.
+      maybe_clear_requires_update_status
     rescue RateLimitedError => e
       stats["rate_limited"] = true
       stats["rate_limited_at"] = Time.current.iso8601
@@ -117,6 +124,88 @@ class SimplefinItem::Importer
       # Only update balance for already-linked accounts (if any), to avoid creating duplicates in setup.
       if (acct = sfa.current_account)
         adapter = Account::ProviderImportAdapter.new(acct)
+
+        # Normalize balances for SimpleFIN liabilities so immediate UI is correct after discovery
+        bal   = to_decimal(account_data[:balance])
+        avail = to_decimal(account_data[:"available-balance"])
+        observed = bal.nonzero? ? bal : avail
+
+        is_linked_liability = [ "CreditCard", "Loan" ].include?(acct.accountable_type)
+        inferred = begin
+          Simplefin::AccountTypeMapper.infer(
+            name: account_data[:name],
+            holdings: account_data[:holdings],
+            extra: account_data[:extra],
+            balance: bal,
+            available_balance: avail,
+            institution: account_data.dig(:org, :name)
+          )
+        rescue
+          nil
+        end
+        is_mapper_liability = inferred && [ "CreditCard", "Loan" ].include?(inferred.accountable_type)
+        is_liability = is_linked_liability || is_mapper_liability
+
+        normalized = observed
+        if is_liability
+          # Try the overpayment analyzer first (feature-flagged)
+          begin
+            result = SimplefinAccount::Liabilities::OverpaymentAnalyzer
+              .new(sfa, observed_balance: observed)
+              .call
+
+            case result.classification
+            when :credit
+              normalized = -observed.abs
+            when :debt
+              normalized = observed.abs
+            else
+              # Fallback to existing normalization when unknown/disabled
+              begin
+                obs = {
+                  reason: result.reason,
+                  tx_count: result.metrics[:tx_count],
+                  charges_total: result.metrics[:charges_total],
+                  payments_total: result.metrics[:payments_total],
+                  observed: observed.to_s("F")
+                }.compact
+                Rails.logger.info("SimpleFIN overpayment heuristic (balances-only): unknown; falling back #{obs.inspect}")
+              rescue
+                # no-op
+              end
+              both_present = bal.nonzero? && avail.nonzero?
+              if both_present && same_sign?(bal, avail)
+                if bal.positive? && avail.positive?
+                  normalized = -observed.abs
+                elsif bal.negative? && avail.negative?
+                  normalized = observed.abs
+                end
+              else
+                normalized = -observed
+              end
+            end
+          rescue NameError
+            # Analyzer missing; use legacy path
+            both_present = bal.nonzero? && avail.nonzero?
+            if both_present && same_sign?(bal, avail)
+              if bal.positive? && avail.positive?
+                normalized = -observed.abs
+              elsif bal.negative? && avail.negative?
+                normalized = observed.abs
+              end
+            else
+              normalized = -observed
+            end
+          end
+        end
+
+        cash = if acct.accountable_type == "Investment"
+          # Leave investment cash to investment calculators in full run
+          normalized
+        else
+          normalized
+        end
+
         adapter.update_balance(
           balance: account_data[:balance],
           cash_balance: account_data[:"available-balance"],
@@ -237,11 +326,28 @@ class SimplefinItem::Importer
       sync.update_columns(sync_stats: merged) # avoid callbacks/validations during tight loops
     end
 
+    # Reset status to good if no auth errors occurred in this sync.
+    # This allows automatic recovery when a bank's auth issue is resolved in SimpleFIN Bridge.
+    def maybe_clear_requires_update_status
+      return unless simplefin_item.requires_update?
+
+      auth_errors = stats.dig("error_buckets", "auth").to_i
+      if auth_errors.zero?
+        simplefin_item.update!(status: :good)
+        Rails.logger.info(
+          "SimpleFIN: cleared requires_update status for item ##{simplefin_item.id} " \
+          "(no auth errors in this sync)"
+        )
+      end
+    end
+
     def import_with_chunked_history
-      # SimpleFin's actual limit is 60 days (not 365 as documented)
-      # Use 60-day chunks to stay within limits
+      # SimpleFin's actual limit is 60 days per request (not 365 as documented).
+      # SimpleFin typically only provides 60-90 days of history (bank-dependent).
+      # Use adaptive chunking: start with 2 chunks, continue if new data found,
+      # stop after 2 consecutive empty chunks. Max 6 chunks (360 days) for safety.
       chunk_size_days = 60
-      max_requests = 22
+      max_requests = 6  # Down from 22 - SimpleFIN rarely provides >90 days anyway
       current_end_date = Time.current
 
       # Decide how far back to walk:
@@ -255,11 +361,11 @@ class SimplefinItem::Importer
       default_start_date = implied_max_lookback_days.days.ago
       target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
 
-      # Enforce maximum 3-year lookback to respect SimpleFin's actual 60-day limit per request
-      # With 22 requests max: 60 days × 22 = 1,320 days = 3.6 years, so 3 years is safe
-      max_lookback_date = 3.years.ago.beginning_of_day
+      # Enforce maximum 1-year lookback since SimpleFIN rarely provides more than 90 days
+      # This saves unnecessary API calls while still covering edge cases
+      max_lookback_date = 1.year.ago.beginning_of_day
       if target_start_date < max_lookback_date
-        Rails.logger.info "SimpleFin: Limiting sync start date from #{target_start_date.strftime('%Y-%m-%d')} to #{max_lookback_date.strftime('%Y-%m-%d')} due to rate limits"
+        Rails.logger.info "SimpleFin: Limiting sync start date from #{target_start_date.strftime('%Y-%m-%d')} to #{max_lookback_date.strftime('%Y-%m-%d')} (SimpleFIN typically provides 60-90 days max)"
         target_start_date = max_lookback_date
       end
 
@@ -269,8 +375,11 @@ class SimplefinItem::Importer
 
       total_accounts_imported = 0
       chunk_count = 0
+      consecutive_empty_chunks = 0
+      total_new_transactions = 0
+      stopped_early = false
 
-      Rails.logger.info "SimpleFin chunked sync: syncing from #{target_start_date.strftime('%Y-%m-%d')} to #{current_end_date.strftime('%Y-%m-%d')}"
+      Rails.logger.info "SimpleFin chunked sync: syncing from #{target_start_date.strftime('%Y-%m-%d')} to #{current_end_date.strftime('%Y-%m-%d')} (max #{max_requests} chunks)"
 
       # Walk backwards from current_end_date in proper chunks
       chunk_end_date = current_end_date
@@ -294,6 +403,9 @@ class SimplefinItem::Importer
         end
 
         Rails.logger.info "SimpleFin chunked sync: fetching chunk #{chunk_count}/#{max_requests} (#{chunk_start_date.strftime('%Y-%m-%d')} to #{chunk_end_date.strftime('%Y-%m-%d')}) - #{actual_days} days"
+
+        # Count transactions before this chunk
+        pre_chunk_tx_count = count_linked_transactions
 
         accounts_data = fetch_accounts_data(start_date: chunk_start_date, end_date: chunk_end_date)
         return if accounts_data.nil? # Error already handled
@@ -328,6 +440,26 @@ class SimplefinItem::Importer
           end
         end
 
+        # Count new transactions in this chunk (adaptive stopping)
+        post_chunk_tx_count = count_linked_transactions
+        new_txns_in_chunk = [ post_chunk_tx_count - pre_chunk_tx_count, 0 ].max
+        total_new_transactions += new_txns_in_chunk
+
+        Rails.logger.info "SimpleFin chunked sync: chunk #{chunk_count} added #{new_txns_in_chunk} new transactions"
+
+        # Adaptive stopping: if chunk returned no new transactions, increment counter
+        if new_txns_in_chunk.zero?
+          consecutive_empty_chunks += 1
+          # Stop after 2 consecutive empty chunks (allow for gaps in bank data)
+          if consecutive_empty_chunks >= 2
+            Rails.logger.info "SimpleFin chunked sync: stopping early - #{consecutive_empty_chunks} consecutive empty chunks (SimpleFIN likely doesn't have more history)"
+            stopped_early = true
+            break
+          end
+        else
+          consecutive_empty_chunks = 0
+        end
+
         # Stop if we've reached our target start date
         if chunk_start_date <= target_start_date
           Rails.logger.info "SimpleFin chunked sync: reached target start date, stopping"
@@ -338,16 +470,35 @@ class SimplefinItem::Importer
         chunk_end_date = chunk_start_date
       end
 
-      Rails.logger.info "SimpleFin chunked sync completed: #{chunk_count} chunks processed, #{total_accounts_imported} account records imported"
+      # Record chunked history stats for observability
+      stats["chunked_history"] = {
+        "chunks_processed" => chunk_count,
+        "total_new_transactions" => total_new_transactions,
+        "stopped_early" => stopped_early,
+        "reason" => stopped_early ? "no_new_data" : (chunk_count >= max_requests ? "max_chunks" : "reached_target")
+      }
+      persist_stats!
+
+      Rails.logger.info "SimpleFin chunked sync completed: #{chunk_count} chunks processed, #{total_accounts_imported} account records, #{total_new_transactions} new transactions#{stopped_early ? " (stopped early)" : ""}"
+    end
+
+    # Count total transactions in linked SimpleFIN accounts (for adaptive chunking)
+    def count_linked_transactions
+      simplefin_item.simplefin_accounts
+        .select { |sfa| sfa.current_account.present? }
+        .sum { |sfa| sfa.raw_transactions_payload.to_a.size }
     end
 
     def import_regular_sync
       perform_account_discovery
 
       # Step 2: Fetch transactions/holdings using the regular window.
+      # Note: Don't pass explicit `pending:` here - let fetch_accounts_data use the
+      # SIMPLEFIN_INCLUDE_PENDING config. This allows users to disable pending transactions
+      # if their bank's SimpleFIN integration produces duplicates when pending→posted.
       start_date = determine_sync_start_date
       Rails.logger.info "SimplefinItem::Importer - import_regular_sync: last_synced_at=#{simplefin_item.last_synced_at&.strftime('%Y-%m-%d %H:%M')} => start_date=#{start_date&.strftime('%Y-%m-%d')}"
-      accounts_data = fetch_accounts_data(start_date: start_date, pending: true)
+      accounts_data = fetch_accounts_data(start_date: start_date)
       return if accounts_data.nil? # Error already handled
 
       # Store raw payload
@@ -471,9 +622,15 @@ class SimplefinItem::Importer
     # Returns a Hash payload with keys like :accounts, or nil when an error is
     # handled internally via `handle_errors`.
     def fetch_accounts_data(start_date:, end_date: nil, pending: nil)
-      # Determine whether to include pending based on explicit arg or global config.
-      # `Rails.configuration.x.simplefin.include_pending` is ENV-backed.
-      effective_pending = pending.nil? ? Rails.configuration.x.simplefin.include_pending : pending
+      # Determine whether to include pending based on explicit arg, env var, or Setting.
+      # Priority: explicit arg > env var > Setting (allows runtime changes via UI)
+      effective_pending = if !pending.nil?
+        pending
+      elsif ENV["SIMPLEFIN_INCLUDE_PENDING"].present?
+        Rails.configuration.x.simplefin.include_pending
+      else
+        Setting.syncs_include_pending
+      end
 
       # Debug logging to track exactly what's being sent to SimpleFin API
       start_str = start_date.respond_to?(:strftime) ? start_date.strftime("%Y-%m-%d") : "none"
@@ -723,6 +880,15 @@ class SimplefinItem::Importer
         # Post-save side effects
         acct = simplefin_account.current_account
         if acct
+          # Handle pending transaction reconciliation (debounced per run to avoid
+          # repeated scans during chunked history imports)
+          unless @reconciled_account_ids.include?(acct.id)
+            @reconciled_account_ids << acct.id
+            reconcile_and_track_pending_duplicates(acct)
+            exclude_and_track_stale_pending(acct)
+            track_stale_unmatched_pending(acct)
+          end
+
           # Refresh credit attributes when available-balance present
           if acct.accountable_type == "CreditCard" && account_data[:"available-balance"].present?
             begin
@@ -1061,5 +1227,105 @@ class SimplefinItem::Importer
       end.compact
 
       ids.group_by(&:itself).select { |_, v| v.size > 1 }.keys
+    end
+
+    # Reconcile pending transactions that have a matching posted version
+    # Handles duplicates where pending and posted both exist (tip adjustments, etc.)
+    def reconcile_and_track_pending_duplicates(account)
+      reconcile_stats = Entry.reconcile_pending_duplicates(account: account, dry_run: false)
+
+      exact_matches = reconcile_stats[:details].select { |d| d[:match_type] == "exact" }
+      fuzzy_suggestions = reconcile_stats[:details].select { |d| d[:match_type] == "fuzzy_suggestion" }
+
+      if exact_matches.any?
+        stats["pending_reconciled"] = stats.fetch("pending_reconciled", 0) + exact_matches.size
+        stats["pending_reconciled_details"] ||= []
+        exact_matches.each do |detail|
+          stats["pending_reconciled_details"] << {
+            "account_name" => detail[:account],
+            "pending_name" => detail[:pending_name],
+            "posted_name" => detail[:posted_name]
+          }
+        end
+        stats["pending_reconciled_details"] = stats["pending_reconciled_details"].last(50)
+      end
+
+      if fuzzy_suggestions.any?
+        stats["duplicate_suggestions_created"] = stats.fetch("duplicate_suggestions_created", 0) + fuzzy_suggestions.size
+        stats["duplicate_suggestions_details"] ||= []
+        fuzzy_suggestions.each do |detail|
+          stats["duplicate_suggestions_details"] << {
+            "account_name" => detail[:account],
+            "pending_name" => detail[:pending_name],
+            "posted_name" => detail[:posted_name]
+          }
+        end
+        stats["duplicate_suggestions_details"] = stats["duplicate_suggestions_details"].last(50)
+      end
+    rescue => e
+      Rails.logger.warn("SimpleFin: pending reconciliation failed for account #{account.id}: #{e.class} - #{e.message}")
+      record_reconciliation_error("pending_reconciliation", account, e)
+    end
+
+    # Auto-exclude stale pending transactions (>8 days old with no matching posted version)
+    # Prevents orphaned pending transactions from affecting budgets indefinitely
+    def exclude_and_track_stale_pending(account)
+      excluded_count = Entry.auto_exclude_stale_pending(account: account)
+      return unless excluded_count > 0
+
+      stats["stale_pending_excluded"] = stats.fetch("stale_pending_excluded", 0) + excluded_count
+      stats["stale_pending_details"] ||= []
+      stats["stale_pending_details"] << {
+        "account_name" => account.name,
+        "account_id" => account.id,
+        "count" => excluded_count
+      }
+      stats["stale_pending_details"] = stats["stale_pending_details"].last(50)
+    rescue => e
+      Rails.logger.warn("SimpleFin: stale pending cleanup failed for account #{account.id}: #{e.class} - #{e.message}")
+      record_reconciliation_error("stale_pending_cleanup", account, e)
+    end
+
+    # Track stale pending transactions that couldn't be matched (for user awareness)
+    # These are >8 days old, still pending, and have no duplicate suggestion
+    def track_stale_unmatched_pending(account)
+      stale_unmatched = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(excluded: false)
+        .where("entries.date < ?", 8.days.ago.to_date)
+        .where(<<~SQL.squish)
+          (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+          OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        SQL
+        .where(<<~SQL.squish)
+          transactions.extra -> 'potential_posted_match' IS NULL
+        SQL
+        .count
+
+      return unless stale_unmatched > 0
+
+      stats["stale_unmatched_pending"] = stats.fetch("stale_unmatched_pending", 0) + stale_unmatched
+      stats["stale_unmatched_details"] ||= []
+      stats["stale_unmatched_details"] << {
+        "account_name" => account.name,
+        "account_id" => account.id,
+        "count" => stale_unmatched
+      }
+      stats["stale_unmatched_details"] = stats["stale_unmatched_details"].last(50)
+    rescue => e
+      Rails.logger.warn("SimpleFin: stale unmatched tracking failed for account #{account.id}: #{e.class} - #{e.message}")
+      record_reconciliation_error("stale_unmatched_tracking", account, e)
+    end
+
+    # Record reconciliation errors to sync_stats for UI visibility
+    def record_reconciliation_error(context, account, error)
+      stats["reconciliation_errors"] ||= []
+      stats["reconciliation_errors"] << {
+        "context" => context,
+        "account_id" => account.id,
+        "account_name" => account.name,
+        "error" => "#{error.class}: #{error.message}"
+      }
+      stats["reconciliation_errors"] = stats["reconciliation_errors"].last(20)
     end
 end

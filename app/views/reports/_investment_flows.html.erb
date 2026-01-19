@@ -1,0 +1,44 @@
+<%# locals: (investment_flows:) %>
+<div class="space-y-4">
+  <p class="text-sm text-secondary">
+    Track money flowing into and out of your investment accounts through contributions and withdrawals.
+  </p>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Contributions -->
+    <div class="bg-container border border-primary rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon("trending-up", size: "sm", class: "text-green-600") %>
+        <h3 class="text-sm font-medium text-secondary">Contributions</h3>
+      </div>
+      <div class="text-2xl font-semibold" style="color: rgb(34 197 94);">
+        <%= format_money(investment_flows.contributions) %>
+      </div>
+      <p class="text-xs text-secondary mt-1">Money added to investments</p>
+    </div>
+
+    <!-- Withdrawals -->
+    <div class="bg-container border border-primary rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon("trending-down", size: "sm", class: "text-orange-600") %>
+        <h3 class="text-sm font-medium text-secondary">Withdrawals</h3>
+      </div>
+      <div class="text-2xl font-semibold" style="color: rgb(249 115 22);">
+        <%= format_money(investment_flows.withdrawals) %>
+      </div>
+      <p class="text-xs text-secondary mt-1">Money withdrawn from investments</p>
+    </div>
+
+    <!-- Net Flow -->
+    <div class="bg-container border border-primary rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon("arrow-right-left", size: "sm", class: "text-primary") %>
+        <h3 class="text-sm font-medium text-secondary">Net Flow</h3>
+      </div>
+      <div class="text-2xl font-semibold text-primary">
+        <%= format_money(investment_flows.net_flow) %>
+      </div>
+      <p class="text-xs text-secondary mt-1">Total net change</p>
+    </div>
+  </div>
+</div>

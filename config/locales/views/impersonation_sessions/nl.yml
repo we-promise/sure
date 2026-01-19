@@ -1,0 +1,15 @@
+---
+nl:
+  impersonation_sessions:
+    approve:
+      success: Verzoek goedgekeurd
+    complete:
+      success: Sessie voltooid
+    create:
+      success: Verzoek naar gebruiker verzonden. Wachten op goedkeuring.
+    join:
+      success: Sessie gestart
+    leave:
+      success: Sessie verlaten
+    reject:
+      success: Verzoek afgewezen

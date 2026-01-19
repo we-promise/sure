@@ -21,13 +21,15 @@ class TradeImport < Import
           qty: row.qty,
           currency: row.currency.presence || mapped_account.currency,
           price: row.price,
+          investment_activity_label: investment_activity_label_for(row.qty),
           entry: Entry.new(
             account: mapped_account,
             date: row.date_iso,
             amount: row.signed_amount,
             name: row.name,
             currency: row.currency.presence || mapped_account.currency,
-            import: self
+            import: self,
+            import_locked: true  # Protect from provider sync overwrites
           ),
         )
       end
@@ -53,7 +55,7 @@ class TradeImport < Import
   end
 
   def dry_run
-    mappings = { transactions: rows.count }
+    mappings = { transactions: rows_count }
 
     mappings.merge(
       accounts: Import::AccountMapping.for_import(self).creational.count
@@ -76,6 +78,13 @@ class TradeImport < Import
   end
 
   private
+    def investment_activity_label_for(qty)
+      # Set activity label based on quantity signage
+      # Buy trades have positive qty, Sell trades have negative qty
+      return nil if qty.blank? || qty.to_d.zero?
+      qty.to_d.positive? ? "Buy" : "Sell"
+    end
+
     def find_or_create_security(ticker: nil, exchange_operating_mic: nil)
       return nil unless ticker.present?
 

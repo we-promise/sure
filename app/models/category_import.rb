@@ -42,7 +42,7 @@ class CategoryImport < Import
   end
 
   def dry_run
-    { categories: rows.count }
+    { categories: rows_count }
   end
 
   def csv_template

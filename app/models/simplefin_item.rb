@@ -55,6 +55,20 @@ class SimplefinItem < ApplicationRecord
     SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider, sync: sync).import
   end
 
+  # Update the access_url by claiming a new setup token.
+  # This is used when reconnecting an existing SimpleFIN connection.
+  # Unlike create_simplefin_item!, this updates in-place, preserving all account linkages.
+  def update_access_url!(setup_token:)
+    new_access_url = simplefin_provider.claim_access_url(setup_token)
+
+    update!(
+      access_url: new_access_url,
+      status: :good
+    )
+
+    self
+  end
+
   def process_accounts
     # Process accounts linked via BOTH legacy FK and AccountProvider
     # Use direct query to ensure fresh data from DB, bypassing any association cache
@@ -92,14 +106,20 @@ class SimplefinItem < ApplicationRecord
       end
     end
 
+    all_skipped_entries = []
+
     linked.each do |simplefin_account|
       acct = simplefin_account.current_account
       Rails.logger.info "SimplefinItem#process_accounts - Processing: SimplefinAccount id=#{simplefin_account.id} name='#{simplefin_account.name}' -> Account id=#{acct.id} name='#{acct.name}' type=#{acct.accountable_type}"
-      SimplefinAccount::Processor.new(simplefin_account).process
+      processor = SimplefinAccount::Processor.new(simplefin_account)
+      processor.process
+      all_skipped_entries.concat(processor.skipped_entries)
     end
 
-    Rails.logger.info "SimplefinItem#process_accounts END"
+    Rails.logger.info "SimplefinItem#process_accounts END - #{all_skipped_entries.size} entries skipped (protected)"
     Rails.logger.info "=" * 60
+
+    all_skipped_entries
   end
 
   # Repairs stale linkages when user re-adds institution in SimpleFIN.
@@ -271,8 +291,8 @@ class SimplefinItem < ApplicationRecord
     return nil unless latest
 
     # If sync has statistics, use them
-    if latest.sync_stats.present?
-      stats = latest.sync_stats
+    stats = parse_sync_stats(latest.sync_stats)
+    if stats.present?
       total = stats["total_accounts"] || 0
       linked = stats["linked_accounts"] || 0
       unlinked = stats["unlinked_accounts"] || 0
@@ -399,7 +419,68 @@ class SimplefinItem < ApplicationRecord
     issues
   end
 
+  # Get reconciled duplicates count from the last sync
+  # Returns { count: N, message: "..." } or { count: 0 } if none
+  def last_sync_reconciled_status
+    latest_sync = syncs.ordered.first
+    return { count: 0 } unless latest_sync
+
+    stats = parse_sync_stats(latest_sync.sync_stats)
+    count = stats&.dig("pending_reconciled").to_i
+    if count > 0
+      {
+        count: count,
+        message: I18n.t("simplefin_items.reconciled_status.message", count: count)
+      }
+    else
+      { count: 0 }
+    end
+  end
+
+  # Count stale pending transactions (>8 days old) across all linked accounts
+  # Returns { count: N, accounts: [names] } or { count: 0 } if none
+  def stale_pending_status(days: 8)
+    # Get all accounts linked to this SimpleFIN item
+    # Eager-load both association paths to avoid N+1 on current_account method
+    linked_accounts = simplefin_accounts.includes(:account, :linked_account).filter_map(&:current_account)
+    return { count: 0 } if linked_accounts.empty?
+
+    # Batch query to avoid N+1
+    account_ids = linked_accounts.map(&:id)
+    counts_by_account = Entry.stale_pending(days: days)
+      .where(excluded: false)
+      .where(account_id: account_ids)
+      .group(:account_id)
+      .count
+
+    account_counts = linked_accounts
+      .map { |account| { account: account, count: counts_by_account[account.id].to_i } }
+      .select { |ac| ac[:count] > 0 }
+
+    total = account_counts.sum { |ac| ac[:count] }
+    if total > 0
+      {
+        count: total,
+        accounts: account_counts.map { |ac| ac[:account].name },
+        message: I18n.t("simplefin_items.stale_pending_status.message", count: total, days: days)
+      }
+    else
+      { count: 0 }
+    end
+  end
+
   private
+    # Parse sync_stats, handling cases where it might be a raw JSON string
+    # (e.g., from console testing or bypassed serialization)
+    def parse_sync_stats(sync_stats)
+      return nil if sync_stats.blank?
+      return sync_stats if sync_stats.is_a?(Hash)
+
+      if sync_stats.is_a?(String)
+        JSON.parse(sync_stats) rescue nil
+      end
+    end
+
     def remove_simplefin_item
       # SimpleFin doesn't require server-side cleanup like Plaid
       # The access URL just becomes inactive

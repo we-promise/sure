@@ -1,0 +1,8 @@
+---
+zh-TW:
+  password_mailer:
+    password_reset:
+      cta: 重設您的密碼
+      ignore_if_not_requested: 如果您並未提出此請求，可以放心地忽略這封郵件。
+      request_made: 我們收到了重設您 %{product_name} 帳號密碼的請求。請點擊下方連結以進行重設。
+      subject: '%{product_name}：重設您的密碼'

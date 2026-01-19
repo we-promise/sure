@@ -98,6 +98,18 @@ class OidcAccountsControllerTest < ActionController::TestCase
     }
   end
 
+  test "should show new_user page when pending auth exists" do
+    session[:pending_oidc_auth] = new_user_auth
+    get :new_user
+    assert_response :success
+  end
+
+  test "should redirect new_user to login when no pending auth" do
+    get :new_user
+    assert_redirected_to new_session_path
+    assert_equal "No pending OIDC authentication found", flash[:alert]
+  end
+
   test "should show create account option for new user" do
     session[:pending_oidc_auth] = new_user_auth
 
@@ -166,13 +178,41 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_not_nil new_user
     assert_equal new_user_auth["first_name"], new_user.first_name
     assert_equal new_user_auth["last_name"], new_user.last_name
-    assert_equal "admin", new_user.role
+    assert_equal "admin", new_user.role  # Family creators should be admin
 
     # Verify OIDC identity was created
     oidc_identity = new_user.oidc_identities.first
     assert_not_nil oidc_identity
     assert_equal new_user_auth["provider"], oidc_identity.provider
     assert_equal new_user_auth["uid"], oidc_identity.uid
+  end
+
+  test "create_user uses form params for name when provided" do
+    session[:pending_oidc_auth] = new_user_auth
+
+    assert_difference [ "User.count", "OidcIdentity.count" ], 1 do
+      post :create_user, params: {
+        user: { first_name: "Custom", last_name: "Name" }
+      }
+    end
+
+    assert_redirected_to root_path
+
+    new_user = User.find_by(email: new_user_auth["email"])
+    assert_equal "Custom", new_user.first_name
+    assert_equal "Name", new_user.last_name
+  end
+
+  test "create_user falls back to OIDC data when form params are blank" do
+    session[:pending_oidc_auth] = new_user_auth
+
+    post :create_user, params: {
+      user: { first_name: "", last_name: "" }
+    }
+
+    new_user = User.find_by(email: new_user_auth["email"])
+    assert_equal new_user_auth["first_name"], new_user.first_name
+    assert_equal new_user_auth["last_name"], new_user.last_name
   end
 
   test "should create session after OIDC registration" do

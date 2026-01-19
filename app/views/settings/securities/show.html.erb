@@ -44,3 +44,58 @@
     </div>
   </div>
 <% end %>
+
+<% if @oidc_identities.any? || AuthConfig.sso_providers.any? %>
+  <%= settings_section title: t(".sso_title"), subtitle: t(".sso_subtitle") do %>
+    <% if @oidc_identities.any? %>
+      <div class="space-y-2">
+        <% @oidc_identities.each do |identity| %>
+          <div class="flex items-center justify-between bg-container p-4 shadow-border-xs rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 shrink-0 bg-surface rounded-full flex items-center justify-center">
+                <%= icon identity.provider_config&.dig(:icon) || "key", class: "w-5 h-5 text-secondary" %>
+              </div>
+              <div>
+                <p class="font-medium text-primary"><%= identity.provider_config&.dig(:label) || identity.provider.titleize %></p>
+                <p class="text-sm text-secondary"><%= identity.info&.dig("email") || t(".sso_no_email") %></p>
+                <p class="text-xs text-secondary">
+                  <%= t(".sso_last_used") %>:
+                  <%= identity.last_authenticated_at&.to_fs(:short) || t(".sso_never") %>
+                </p>
+              </div>
+            </div>
+            <% if @oidc_identities.count > 1 || Current.user.password_digest.present? %>
+              <%= render DS::Button.new(
+                text: t(".sso_disconnect"),
+                variant: "outline",
+                size: "sm",
+                href: settings_sso_identity_path(identity),
+                method: :delete,
+                confirm: CustomConfirm.new(
+                  title: t(".sso_confirm_title"),
+                  body: t(".sso_confirm_body", provider: identity.provider_config&.dig(:label) || identity.provider.titleize),
+                  btn_text: t(".sso_confirm_button"),
+                  destructive: true
+                )
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+      <% if @oidc_identities.count == 1 && Current.user.password_digest.blank? %>
+        <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div class="flex items-start gap-2">
+            <%= icon "alert-triangle", class: "w-5 h-5 text-amber-600 shrink-0 mt-0.5" %>
+            <p class="text-sm text-amber-800"><%= t(".sso_warning_message") %></p>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="text-center py-6">
+        <%= icon "link", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
+        <p class="text-secondary"><%= t(".sso_no_identities") %></p>
+        <p class="text-sm text-secondary mt-2"><%= t(".sso_connect_hint") %></p>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

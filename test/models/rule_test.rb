@@ -201,4 +201,39 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal business_category, transaction_entry.transaction.category, "Transaction with 'business' in notes should be categorized"
     assert_nil transaction_entry2.transaction.category, "Transaction without 'business' in notes should not be categorized"
   end
+
+  test "total_affected_resource_count deduplicates overlapping rules" do
+    # Create transactions
+    transaction_entry1 = create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 50)
+    transaction_entry2 = create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 100)
+    transaction_entry3 = create_transaction(date: Date.current, account: @account, name: "Target", amount: 75)
+
+    # Rule 1: Match transactions with name "Whole Foods" (matches txn 1 and 2)
+    rule1 = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    # Rule 2: Match transactions with amount > 60 (matches txn 2 and 3)
+    rule2 = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: 60) ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    # Rule 1 affects 2 transactions, Rule 2 affects 2 transactions
+    # But transaction_entry2 is matched by both, so total unique should be 3
+    assert_equal 2, rule1.affected_resource_count
+    assert_equal 2, rule2.affected_resource_count
+    assert_equal 3, Rule.total_affected_resource_count([ rule1, rule2 ])
+  end
+
+  test "total_affected_resource_count returns zero for empty rules" do
+    assert_equal 0, Rule.total_affected_resource_count([])
+  end
 end

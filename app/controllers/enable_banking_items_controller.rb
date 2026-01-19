@@ -150,7 +150,7 @@ class EnableBankingItemsController < ApplicationController
       safe_redirect_to_enable_banking(
         redirect_url,
         fallback_path: settings_providers_path,
-        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again or contact support.")
+        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
     rescue Provider::EnableBanking::EnableBankingError => e
       if e.message.include?("REDIRECT_URI_NOT_ALLOWED")
@@ -227,7 +227,7 @@ class EnableBankingItemsController < ApplicationController
       safe_redirect_to_enable_banking(
         redirect_url,
         fallback_path: settings_providers_path,
-        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again or contact support.")
+        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "Enable Banking reauthorization error: #{e.message}"
@@ -269,13 +269,17 @@ class EnableBankingItemsController < ApplicationController
           end
 
           # Create the internal Account (uses save! internally, will raise on failure)
+          # Skip initial sync - provider sync will handle balance creation with correct currency
           account = Account.create_and_sync(
-            family: Current.family,
-            name: enable_banking_account.name,
-            balance: enable_banking_account.current_balance || 0,
-            currency: enable_banking_account.currency || "EUR",
-            accountable_type: accountable_type,
-            accountable_attributes: {}
+            {
+              family: Current.family,
+              name: enable_banking_account.name,
+              balance: enable_banking_account.current_balance || 0,
+              currency: enable_banking_account.currency || "EUR",
+              accountable_type: accountable_type,
+              accountable_attributes: {}
+            },
+            skip_initial_sync: true
           )
 
           # Link account to enable_banking_account via account_providers

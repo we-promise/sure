@@ -1,0 +1,13 @@
+---
+fr:
+  password_resets:
+    edit:
+      title: Réinitialiser votre mot de passe
+    new:
+      requested: Veuillez vérifier votre boîte mail pour un lien de réinitialisation de votre mot de passe.
+      submit: Réinitialiser votre mot de passe
+      title: Réinitialiser votre mot de passe
+      back: Retour
+    update:
+      invalid_token: Jeton invalide.
+      success: Votre mot de passe a été réinitialisé.

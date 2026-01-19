@@ -1,0 +1,121 @@
+---
+zh-TW:
+  settings:
+    ai_prompts:
+      show:
+        page_title: AI 提示詞
+        openai_label: OpenAI
+        disable_ai: 停用 AI 助手
+        prompt_instructions: 提示詞指令
+        main_system_prompt:
+          title: 主系統提示詞 (System Prompt)
+          subtitle: 定義 AI 助手在所有對話中行為模式的核心指令
+        transaction_categorizer:
+          title: 交易分類器
+          subtitle: AI 會根據您定義的類別自動為交易進行分類
+        merchant_detector:
+          title: 商家偵測器
+          subtitle: AI 會辨識交易資料並自動補全商家資訊
+    billings:
+      show:
+        page_title: 帳單
+        subscription_subtitle: 更新您的訂閱方案與帳單詳情
+        subscription_title: 管理訂閱
+    preferences:
+      show:
+        country: 國家
+        currency: 幣別
+        date_format: 日期格式
+        general_subtitle: 配置您的偏好設定
+        general_title: 一般
+        default_period: 預設時段
+        default_account_order: 預設帳戶排序
+        language: 語言
+        page_title: 偏好設定
+        theme_dark: 深色
+        theme_light: 淺色
+        theme_subtitle: 選擇您偏好的應用程式主題
+        theme_system: 系統設定
+        theme_title: 主題
+        timezone: 時區
+    profiles:
+      destroy:
+        cannot_remove_self: 您無法將自己從帳號中移除。
+        member_removal_failed: 移除成員時發生問題。
+        member_removed: 已成功移除成員。
+        not_authorized: 您沒有移除成員的權限。
+      show:
+        confirm_delete:
+          body: 您確定要永久刪除您的帳號嗎？此操作無法復原。
+          title: 刪除帳號？
+        confirm_reset:
+          body: 您確定要重設帳號嗎？這將刪除您所有的帳戶、類別、商家、標籤及其他資料。此操作無法復原。
+          title: 重設帳號？
+        confirm_reset_with_sample_data:
+          body: 您確定要重設帳號並載入範例資料嗎？這將刪除您現有的資料，並替換為示範資料，讓您可以安全地探索 Sure 的功能。
+          title: 重設帳號並載入範例資料？
+        confirm_remove_invitation:
+          body: 您確定要移除對 %{email} 的邀請嗎？
+          title: 移除邀請
+        confirm_remove_member:
+          body: 您確定要將 %{name} 從您的帳號中移除嗎？
+          title: 移除成員
+        danger_zone_title: 危險區域
+        delete_account: 刪除帳號
+        delete_account_warning: 刪除帳號將永久移除您所有的資料，且無法復原。
+        reset_account: 重設帳號
+        reset_account_warning: 重設帳號將刪除您所有的帳戶、類別、商家、標籤及其他資料，但會保留您的使用者帳號。
+        reset_account_with_sample_data: 重設並預載資料
+        reset_account_with_sample_data_warning: 刪除所有現有資料，並載入全新的範例資料，讓您在預填好的環境中進行探索。
+        email: 電子郵件
+        first_name: 名字
+        household_form_input_placeholder: 輸入家戶名稱
+        household_form_label: 家戶名稱
+        household_subtitle: 邀請家庭成員、伴侶或其他成員加入。受邀者可以登入您的家戶並存取共享帳戶。
+        household_title: 家戶
+        invitation_link: 邀請連結
+        invite_member: 新增成員
+        last_name: 姓氏
+        page_title: 個人資料
+        pending: 待處理
+        profile_subtitle: 自訂您在 %{product_name} 上的顯示方式
+        profile_title: 個人資訊
+        remove_invitation: 移除邀請
+        remove_member: 移除成員
+        save: 儲存
+    securities:
+      show:
+        page_title: 安全性
+    settings_nav:
+      accounts_label: 帳戶管理
+      advanced_section_title: 進階設定
+      ai_prompts_label: AI 提示詞
+      api_key_label: API 金鑰
+      billing_label: 帳單
+      categories_label: 類別
+      feedback_label: 意見回饋
+      general_section_title: 一般
+      imports_label: 匯入/匯出
+      logout: 登出
+      merchants_label: 商家
+      guides_label: 使用指南
+      other_section_title: 更多
+      preferences_label: 偏好設定
+      profile_label: 個人資料
+      recurring_transactions_label: 定期交易
+      rules_label: 自動化規則
+      security_label: 安全性
+      self_hosting_label: 自行代管
+      tags_label: 標籤
+      transactions_section_title: 交易
+      whats_new_label: 最新動態
+      api_keys_label: API 金鑰
+      bank_sync_label: 銀行同步
+    settings_nav_link_large:
+      next: 下一步
+      previous: 返回
+    user_avatar_field:
+      accepted_formats: 僅限 JPG 或 PNG。檔案大小上限為 5MB。
+      choose: 上傳相片
+      choose_label: （選填）
+      change: 變更相片
