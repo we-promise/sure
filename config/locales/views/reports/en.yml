@@ -134,6 +134,12 @@ en:
       value: Value
       return: Return
       accounts: Investment Accounts
+    investment_flows:
+      title: Investment Flows
+      description: Track money flowing into and out of your investment accounts
+      contributions: Contributions
+      withdrawals: Withdrawals
+      net_flow: Net Flow
     google_sheets_instructions:
       title_with_key: "✅ Copy URL for Google Sheets"
       title_no_key: "⚠️ API Key Required"

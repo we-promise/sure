@@ -1,6 +1,6 @@
 <%# locals: (tag:) %>
 
-<div id="<%= dom_id(tag) %>" class="flex justify-between items-center p-4 bg-container">
+<div id="<%= dom_id(tag) %>" class="flex justify-between items-center p-4 bg-container hover:bg-surface-hover">
   <div class="flex w-full items-center gap-2.5">
     <%= render partial: "shared/color_avatar", locals: { name: tag.name, color: tag.color } %>
     <p class="text-primary text-sm truncate">

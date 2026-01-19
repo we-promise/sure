@@ -4,7 +4,7 @@ en:
     authorize:
       authorization_failed: Failed to initiate authorization
       bank_required: Please select a bank.
-      invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
+      invalid_redirect: The authorization URL received is invalid. Please try again.
       redirect_uri_not_allowed: Redirect not allowed. Please configure `%{callback_url}` in your Enable Banking app settings.
       unexpected_error: An unexpected error occurred. Please try again.
     callback:
@@ -36,7 +36,7 @@ en:
     new:
       link_enable_banking_title: Link Enable Banking
     reauthorize:
-      invalid_redirect: The authorization URL received is invalid. Please try again or contact support.
+      invalid_redirect: The authorization URL received is invalid. Please try again.
       reauthorization_failed: Reauthorization failed
     select_bank:
       cancel: Cancel

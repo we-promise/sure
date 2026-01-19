@@ -96,6 +96,10 @@ class IncomeStatement::Totals
           er.to_currency = :target_currency
         )
         WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment', 'investment_contribution')
+          AND (
+            at.investment_activity_label IS NULL
+            OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')
+          )
           AND ae.excluded = false
                     AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
@@ -104,30 +108,14 @@ class IncomeStatement::Totals
     end
 
     def trades_subquery_sql
-      # Get trades for the same family and date range as transactions
-      # Trades without categories appear as "Uncategorized Investments" (separate from regular uncategorized)
+      # Trades are completely excluded from income/expense budgets
+      # Rationale: Trades represent portfolio rebalancing, not cash flow
+      # Example: Selling $10k AAPL to buy MSFT = no net worth change, not an expense
+      # Contributions/withdrawals are tracked separately as Transactions with activity labels
       <<~SQL
-        SELECT
-          c.id as category_id,
-          c.parent_id as parent_category_id,
-          CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(ae.amount * COALESCE(er.rate, 1))) as total,
-          COUNT(ae.id) as entry_count,
-          CASE WHEN t.category_id IS NULL THEN true ELSE false END as is_uncategorized_investment
-        FROM trades t
-        JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Trade'
-        JOIN accounts a ON a.id = ae.account_id
-        LEFT JOIN categories c ON c.id = t.category_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
-        WHERE a.family_id = :family_id
-          AND a.status IN ('draft', 'active')
-          AND ae.excluded = false
-                    AND ae.date BETWEEN :start_date AND :end_date
-        GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END, CASE WHEN t.category_id IS NULL THEN true ELSE false END
+        SELECT NULL as category_id, NULL as parent_category_id, NULL as classification,
+               NULL as total, NULL as entry_count, NULL as is_uncategorized_investment
+        WHERE false
       SQL
     end
 

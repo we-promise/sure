@@ -123,6 +123,9 @@ class ReportsController < ApplicationController
       # Investment metrics
       @investment_metrics = build_investment_metrics
 
+      # Investment flows (contributions/withdrawals)
+      @investment_flows = InvestmentFlowStatement.new(Current.family).period_totals(period: @period)
+
       # Flags for view rendering
       @has_accounts = Current.family.accounts.any?
     end
@@ -159,6 +162,14 @@ class ReportsController < ApplicationController
           partial: "reports/investment_performance",
           locals: { investment_metrics: @investment_metrics },
           visible: @investment_metrics[:has_investments],
+          collapsible: true
+        },
+        {
+          key: "investment_flows",
+          title: "reports.investment_flows.title",
+          partial: "reports/investment_flows",
+          locals: { investment_flows: @investment_flows },
+          visible: @investment_metrics[:has_investments] && (@investment_flows.contributions.amount > 0 || @investment_flows.withdrawals.amount > 0),
           collapsible: true
         },
         {
@@ -345,14 +356,6 @@ class ReportsController < ApplicationController
       # Apply filters
       transactions = apply_transaction_filters(transactions)
 
-      # Get trades in the period (matching income_statement logic)
-      trades = Trade
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
-        .includes(entry: :account, category: [])
-
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
       sort_direction = params[:sort_direction] || "desc"
@@ -368,24 +371,6 @@ class ReportsController < ApplicationController
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
         category_color = transaction.category&.color || Category::UNCATEGORIZED_COLOR
-
-        # Convert to family currency
-        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
-
-        key = [ category_name, type, category_color ]
-        grouped_data[key] ||= { total: 0, count: 0 }
-        grouped_data[key][:count] += 1
-        grouped_data[key][:total] += converted_amount
-      end
-
-      # Process trades
-      trades.each do |trade|
-        entry = trade.entry
-        is_expense = entry.amount > 0
-        type = is_expense ? "expense" : "income"
-        # Use "Other Investments" for trades without category
-        category_name = trade.category&.name || Category.other_investments_name
-        category_color = trade.category&.color || Category::OTHER_INVESTMENTS_COLOR
 
         # Convert to family currency
         converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
@@ -562,14 +547,6 @@ class ReportsController < ApplicationController
 
       transactions = apply_transaction_filters(transactions)
 
-      # Get trades in the period (matching income_statement logic)
-      trades = Trade
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
-        .includes(entry: :account, category: [])
-
       # Group by category, type, and month
       breakdown = {}
       family_currency = Current.family.currency
@@ -580,25 +557,6 @@ class ReportsController < ApplicationController
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
-        month_key = entry.date.beginning_of_month
-
-        # Convert to family currency
-        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
-
-        key = [ category_name, type ]
-        breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
-        breakdown[key][:months][month_key] ||= 0
-        breakdown[key][:months][month_key] += converted_amount
-        breakdown[key][:total] += converted_amount
-      end
-
-      # Process trades
-      trades.each do |trade|
-        entry = trade.entry
-        is_expense = entry.amount > 0
-        type = is_expense ? "expense" : "income"
-        # Use "Other Investments" for trades without category
-        category_name = trade.category&.name || Category.other_investments_name
         month_key = entry.date.beginning_of_month
 
         # Convert to family currency
