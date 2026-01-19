@@ -197,6 +197,8 @@ Rails.application.routes.draw do
     end
 
     member do
+      get :convert_to_trade
+      post :create_trade_from_transaction
       post :mark_as_recurring
       post :merge_duplicate
       post :dismiss_duplicate

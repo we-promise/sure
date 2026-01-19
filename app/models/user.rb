@@ -13,6 +13,7 @@ class User < ApplicationRecord
   has_many :impersonator_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonator_id, dependent: :destroy
   has_many :impersonated_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonated_id, dependent: :destroy
   has_many :oidc_identities, dependent: :destroy
+  has_many :sso_audit_logs, dependent: :nullify
   accepts_nested_attributes_for :family, update_only: true
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -30,6 +31,13 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # Returns the appropriate role for a new user creating a family.
+  # The very first user of an instance becomes super_admin; subsequent users
+  # get the specified fallback role (typically :admin for family creators).
+  def self.role_for_new_family_creator(fallback_role: :admin)
+    User.exists? ? fallback_role : :super_admin
+  end
 
   has_one_attached :profile_image do |attachable|
     attachable.variant :thumbnail, resize_to_fill: [ 300, 300 ], convert: :webp, saver: { quality: 80 }

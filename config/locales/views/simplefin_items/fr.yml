@@ -1,0 +1,47 @@
+---
+fr:
+  simplefin_items:
+    create:
+      success: Connexion SimpleFIN ajoutée avec succès ! Vos comptes apparaîtront sous peu lors de la synchronisation en arrière-plan.
+      errors:
+        blank_token: Veuillez entrer un jeton de configuration SimpleFIN.
+        invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous avez copié le jeton complet depuis SimpleFIN Bridge.
+        token_compromised: Le jeton de configuration est peut-être compromis, expiré ou déjà utilisé. Veuillez en créer un nouveau.
+        create_failed: "Échec de la connexion : %{message}"
+        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
+    destroy:
+      success: La connexion SimpleFIN va être supprimée
+    update:
+      success: Connexion SimpleFIN mise à jour avec succès ! Vos comptes sont en cours de reconnexion.
+      errors:
+        blank_token: Veuillez entrer un jeton de configuration SimpleFIN.
+        invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous avez copié le jeton complet depuis SimpleFIN Bridge.
+        token_compromised: Le jeton de configuration est peut-être compromis, expiré ou déjà utilisé. Veuillez en créer un nouveau.
+        update_failed: "Échec de la mise à jour de la connexion : %{message}"
+        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
+    edit:
+      setup_token:
+        label: "Jeton de configuration SimpleFIN :"
+        placeholder: "Collez votre jeton de configuration SimpleFIN ici..."
+        help_text: "Le jeton doit être une longue chaîne commençant par des lettres et des chiffres"
+    complete_account_setup:
+      success: Les comptes SimpleFIN ont été configurés avec succès ! Vos transactions et positions sont en cours d'importation en arrière-plan.
+    simplefin_item:
+      add_new: Ajouter une nouvelle connexion
+      confirm_accept: Supprimer la connexion
+      confirm_body: Cela supprimera définitivement tous les comptes de ce groupe et toutes les données associées.
+      confirm_title: Supprimer la connexion SimpleFIN ?
+      delete: Supprimer
+      deletion_in_progress: "(suppression en cours...)"
+      error: Une erreur s'est produite lors de la synchronisation des données
+      no_accounts_description: Cette connexion n'a pas encore de comptes synchronisés.
+      no_accounts_title: Aucun compte trouvé
+      requires_update: Nécessite une ré-authentification
+      setup_needed: Nouveaux comptes prêts à être configurés
+      setup_description: Choisissez les types de comptes pour vos comptes SimpleFIN nouvellement importés.
+      setup_action: Configurer les nouveaux comptes
+      status: Dernière synchronisation il y a %{timestamp}
+      status_never: Jamais synchronisé
+      status_with_summary: "Dernière synchronisation il y a %{timestamp} • %{summary}"
+      syncing: Synchronisation...
+      update: Mettre à jour la connexion

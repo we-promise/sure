@@ -243,6 +243,23 @@ class Entry < ApplicationRecord
     external_id.present?
   end
 
+  # Checks if entry should be protected from provider sync overwrites.
+  # This does NOT prevent user from editing - only protects from automated sync.
+  #
+  # @return [Boolean] true if entry should be skipped during provider sync
+  def protected_from_sync?
+    excluded? || user_modified? || import_locked?
+  end
+
+  # Marks entry as user-modified after manual edit.
+  # Called when user edits any field to prevent provider sync from overwriting.
+  #
+  # @return [Boolean] true if successfully marked
+  def mark_user_modified!
+    return true if user_modified?
+    update!(user_modified: true)
+  end
+
   class << self
     def search(params)
       EntrySearch.new(params).build_query(all)
@@ -272,6 +289,7 @@ class Entry < ApplicationRecord
           entry.update! bulk_attributes
 
           entry.lock_saved_attributes!
+          entry.mark_user_modified!
           entry.entryable.lock_attr!(:tag_ids) if entry.transaction? && entry.transaction.tags.any?
         end
       end

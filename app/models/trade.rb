@@ -4,10 +4,13 @@ class Trade < ApplicationRecord
   monetize :price
 
   belongs_to :security
-  belongs_to :category, optional: true
+
+  # Use the same activity labels as Transaction
+  ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
 
   validates :qty, presence: true
   validates :price, :currency, presence: true
+  validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
 
   # Trade types for categorization
   def buy?
@@ -34,5 +37,11 @@ class Trade < ApplicationRecord
     cost_basis = price_money * qty.abs
 
     Trend.new(current: current_value, previous: cost_basis)
+  end
+
+  # Trades are always excluded from expense budgets
+  # They represent portfolio management, not living expenses
+  def excluded_from_budget?
+    true
   end
 end

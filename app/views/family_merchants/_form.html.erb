@@ -21,6 +21,12 @@
       <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
         <%= f.text_field :name, placeholder: t(".name_placeholder"), autofocus: true, required: true, data: { color_avatar_target: "name" } %>
       </div>
+      <% if family_merchant.is_a?(FamilyMerchant) %>
+        <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
+          <%= f.text_field :website_url, placeholder: t(".website_placeholder") %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".website_hint") %></p>
+      <% end %>
     </section>
 
     <section>

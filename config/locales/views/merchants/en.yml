@@ -11,6 +11,8 @@ en:
       title: Edit merchant
     form:
       name_placeholder: Merchant name
+      website_placeholder: Website (e.g., starbucks.com)
+      website_hint: Enter the merchant's website to automatically display their logo
     index:
       empty: No merchants yet
       new: New merchant

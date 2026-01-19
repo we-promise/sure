@@ -3,3 +3,14 @@ en:
   oidc_accounts:
     link:
       account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.
+    new_user:
+      title: Complete Your Account
+      heading: Create Your Account
+      description: Please confirm your details to complete account creation with your %{provider} identity.
+      email_label: Email (from SSO provider)
+      first_name_label: First Name
+      first_name_placeholder: Enter your first name
+      last_name_label: Last Name
+      last_name_placeholder: Enter your last name
+      submit: Create Account
+      cancel: Cancel

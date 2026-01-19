@@ -1,0 +1,212 @@
+---
+es:
+  reports:
+    index:
+      title: Informes
+      subtitle: Información completa sobre tu salud financiera
+      export: Exportar CSV
+      print_report: Imprimir informe 
+      drag_to_reorder: "Arrastra para reordenar la sección"
+      toggle_section: "Mostrar / Ocultar sección"
+      periods:
+        monthly: Mensual
+        quarterly: Trimestral
+        ytd: Año en curso
+        last_6_months: Últimos 6 meses
+        custom: Rango personalizado
+      date_range:
+        from: Desde
+        to: Hasta
+      showing_period: "Mostrando datos desde %{start} hasta %{end}"
+    invalid_date_range: "La fecha de fin no puede ser anterior a la de inicio. Las fechas se han intercambiado."
+    summary:
+      total_income: Ingresos totales
+      total_expenses: Gastos totales
+      net_savings: Ahorro neto
+      budget_performance: Rendimiento del presupuesto
+      vs_previous: vs periodo anterior
+      income_minus_expenses: Ingresos menos gastos
+      of_budget_used: del presupuesto utilizado
+      no_budget_data: No hay datos de presupuesto para este periodo
+    budget_performance:
+      title: Rendimiento del presupuesto
+      spent: Gastado
+      budgeted: Presupuestado
+      remaining: Restante
+      over_by: Exceso de
+      suggested_daily: "%{amount} sugerido por día durante los %{days} días restantes"
+      no_budgets: No hay categorías de presupuesto configuradas para este mes
+      status:
+        good: Correcto
+        warning: Cerca del límite
+        over: Presupuesto excedido
+    trends:
+      title: Tendencias y análisis
+      monthly_breakdown: Desglose mensual
+      month: Mes
+      income: Ingresos
+      expenses: Gastos
+      net: Neto
+      savings_rate: Tasa de ahorro
+      current: actual
+      avg_monthly_income: Media de ingresos mensuales
+      avg_monthly_expenses: Media de gastos mensuales
+      avg_monthly_savings: Media de ahorro mensual
+      no_data: No hay datos de tendencias disponibles
+      spending_patterns: Patrones de gasto
+      weekday_spending: Gasto entre semana
+      weekend_spending: Gasto en fin de semana
+      total: Total
+      avg_per_transaction: Media por transacción
+      transactions: Transacciones
+      insight_title: Análisis
+      insight_higher_weekend: "Gastas un %{percent}% más por transacción los fines de semana que entre semana"
+      insight_higher_weekday: "Gastas un %{percent}% más por transacción entre semana que los fines de semana"
+      insight_similar: "Tu gasto por transacción es similar entre semana y en fin de semana"
+      no_spending_data: No hay datos de gasto disponibles para este periodo
+    empty_state:
+      title: No hay datos disponibles    
+      description: Empieza a registrar tus finanzas añadiendo transacciones o conectando tus cuentas para ver informes completos
+      add_transaction: Añadir transacción
+      add_account: Añadir cuenta
+    transactions_breakdown:
+      title: Desglose de actividad
+      no_transactions: No se ha encontrado actividad para el periodo y filtros seleccionados 
+      filters:
+        title: Filtros
+        category: Categoría
+        account: Cuenta
+        tag: Etiqueta
+        amount_min: Importe mín.
+        amount_max: Importe máx.
+        date_range: Rango de fechas
+        all_categories: Todas las categorías
+        all_accounts: Todas las cuentas
+        all_tags: Todas las etiquetas
+        apply: Aplicar Filtros
+        clear: Limpiar Filtros
+      sort:
+        label: Ordenar por
+        date_desc: Fecha (Más reciente)
+        amount_desc: Importe (de mayor a menor)
+        amount_asc: Importe (de menor a mayor)
+      export:
+        label: Exportar
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Abrir en Google Sheets
+      table:
+        category: Categoría
+        amount: Importe
+        type: Tipo
+        expense: Gasto
+        income: Ingreso
+        uncategorized: Sin categorizar
+        entries:
+          one: Movimiento
+          other: Movimientos
+        percentage: "% del total"
+      pagination:
+        showing:
+          one: Mostrando %{count} movimiento
+          other: Mostrando %{count} movimientos
+        previous: Anterior
+        next: Siguiente
+    net_worth:
+      title: Patrimonio neto
+      current_net_worth: Patrimonio neto actual 
+      period_change: Variación del periodo
+      assets_vs_liabilities: Activos vs Pasivos
+      total_assets: Activos
+      total_liabilities: Pasivos
+      no_assets: Sin activos
+      no_liabilities: Sin pasivos
+    investment_performance:
+      title: Rendimiento de inversiones
+      portfolio_value: Valor de la cartera
+      total_return: Rentabilidad total
+      contributions: Aportaciones del periodo
+      withdrawals: Retiradas del periodo
+      top_holdings: Top activos
+      holding: Activo
+      weight: Peso
+      value: Valor
+      return: Rentabilidad
+      accounts: Cuentas de inversión
+    investment_flows:
+      title: Flujos de inversión
+      description: Controla el dinero que entra y sale de tus cuentas de inversión
+      contributions: Aportaciones
+      withdrawals: Retiradas
+      net_flow: Flujo neto
+    google_sheets_instructions:
+      title_with_key: "✅ Copiar URL para Google Sheets"
+      title_no_key: "⚠️ Se requiere clave API"
+      ready: Tu URL de CSV (con clave API) está lista.
+      steps: "Para importar en Google Sheets:\n1. Crea una nueva hoja de cálculo\n2. En la celda A1, introduce la fórmula que se muestra abajo\n3. Pulsa Enter"
+      security_warning: "Esta URL incluye tu clave API. ¡Mantenla segura!"
+      need_key: Para importar los datos en Google Sheets necesitas una clave API.
+      step1: "Ve a ajustes → Clave API"  
+      step2: "Crea una nueva clave API con permiso de lectura (\"read\")"
+      step3: Copia la clave API
+      step4: "Añádela a esta URL como: ?api_key=TU_CLAVE"
+      example: Ejemplo
+      then_use: Después usa la URL completa con =IMPORTDATA() en Google Sheets.
+      open_sheets: Abrir Google Sheets
+      go_to_api_keys: Ir a Claves API
+      close: Entendido
+    print:
+      document_title: Informe financiero
+      title: Informe financiero
+      generated_on: "Generado el %{date}"
+      # Summary section
+      summary:
+        title: Resumen
+        income: Ingresos
+        expenses: Gastos
+        net_savings: Ahorro neto
+        budget: Presupuesto
+        vs_prior: "%{percent}% respecto al anterior"
+        of_income: "%{percent}% de ingresos"
+        used: utilizado
+      # Net Worth section
+      net_worth:
+        title: Patrimonio neto
+        current_balance: Saldo actual
+        this_period: este periodo
+        assets: Activos
+        liabilities: Pasivos
+        no_liabilities: Sin pasivos
+      # Monthly Trends section
+      trends:
+        title: Tendencias mensuales
+        month: Mes
+        income: Ingresos
+        expenses: Gastos
+        net: Neto
+        savings_rate: Tasa de ahorro
+        average: Media
+        current_month_note: "* Mes actual (datos parciales)"
+      # Investments section
+      investments:
+        title: Inversiones
+        portfolio_value: Valor de la Cartera
+        total_return: Rentabilidad Total
+        contributions: Aportaciones
+        withdrawals: Retiradas
+        this_period: este periodo
+        top_holdings: Top Activos
+        holding: Activo
+        weight: Peso
+        value: Valor
+        return: Rentabilidad
+      # Spending by Category section
+      spending:
+        title: Gasto por categoría
+        income: Ingresos
+        expenses: Gastos
+        category: Categoría
+        amount: Importe
+        percent: "%"
+        more_categories: "+ %{count} más categorías"
