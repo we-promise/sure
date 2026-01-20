@@ -56,6 +56,10 @@ rails:
     AI_DEBUG_MODE: ""
 
 # Database: CloudNativePG (operator chart dependency) and a Cluster CR (optional)
+cloudnative-pg:
+  config:
+    clusterWide: false
+
 cnpg:
   enabled: true  # enable installing the CloudNativePG operator via subchart
   cluster:
