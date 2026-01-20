@@ -679,7 +679,6 @@ class SophtronItemsController < ApplicationController
     # Returns nil on success, or an error message string on failure
     def fetch_sophtron_accounts_from_api
       # Skip if we already have accounts cached
-      existing_count = @sophtron_item.sophtron_accounts.count
       return nil unless @sophtron_item.sophtron_accounts.empty?
 
       # Validate Access key is configured
@@ -743,8 +742,8 @@ class SophtronItemsController < ApplicationController
 
         # Reject absolute URLs with schemes (http:, https:, javascript:, etc.)
         # Only allow relative paths
-        return nil if uri.scheme.present?
-
+        return nil if uri.scheme.present? || uri.host.present?
+        return nil if return_to.start_with?("//")
         # Ensure the path starts with / (is a relative path)
         return nil unless return_to.start_with?("/")
 
