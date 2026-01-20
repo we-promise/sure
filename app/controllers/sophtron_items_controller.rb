@@ -109,14 +109,14 @@ class SophtronItemsController < ApplicationController
       render layout: false
     rescue Provider::Error => e
       Rails.logger.error("Sophtron API error in select_accounts: #{e.message}")
-      @error_message = t(".api_error", message: e.message)
+      @error_message = t(".api_error")
       @return_path = safe_return_to_path
       render partial: "sophtron_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
              layout: false
     rescue StandardError => e
       Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
-      @error_message = t(".unexpected_error", message: e.message)
+      @error_message = t(".unexpected_error")
       @return_path = safe_return_to_path
       render partial: "sophtron_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
@@ -230,7 +230,8 @@ class SophtronItemsController < ApplicationController
       redirect_to new_account_path, alert: t(".link_failed")
     end
   rescue Provider::Error => e
-    redirect_to new_account_path, alert: t(".api_error", message: e.message)
+    redirect_to new_account_path, alert: t(".api_error")
+    Rails.logger.error("Sophtron API error in link_accounts: #{e.message}")
   end
 
   # Fetch available Sophtron accounts to link with an existing account
@@ -275,8 +276,7 @@ class SophtronItemsController < ApplicationController
         sophtron_provider = Provider::SophtronAdapter.build_provider(family: Current.family)
 
         unless sophtron_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_access_key",
-                                                        default: "Sophtron User ID and Access key not found. Please configure it in Provider Settings.")
+          redirect_to settings_providers_path, alert: t(".no_access_key")
           return
         end
 
@@ -392,7 +392,8 @@ class SophtronItemsController < ApplicationController
     redirect_to return_to || accounts_path,
                 notice: t(".success", account_name: @account.name)
   rescue Provider::Error => e
-    redirect_to accounts_path, alert: t(".api_error", message: e.message)
+    Rails.logger.error("Sophtron API error in link_existing_account: #{e.message}")
+    redirect_to accounts_path, alert: t(".api_error")
   end
 
   def new
@@ -401,7 +402,7 @@ class SophtronItemsController < ApplicationController
 
   def create
     @sophtron_item = Current.family.sophtron_items.build(sophtron_params)
-    @sophtron_item.name ||= "Sophtron Connection"
+    @sophtron_item.name ||= t("sophtron_items.defaults.name")
     if @sophtron_item.save
       # Trigger initial sync to fetch accounts
       @sophtron_item.sync_later
@@ -618,13 +619,13 @@ class SophtronItemsController < ApplicationController
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
       Rails.logger.error("Sophtron account setup failed: #{e.class} - #{e.message}")
       Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".creation_failed", error: e.message)
+      flash[:alert] = t(".creation_failed")
       redirect_to accounts_path, status: :see_other
       return
     rescue StandardError => e
       Rails.logger.error("Sophtron account setup failed unexpectedly: #{e.class} - #{e.message}")
       Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".unexpected_error", error: e.message)
+      flash[:alert] = t(".unexpected_error")
       redirect_to accounts_path, status: :see_other
       return
     end
@@ -713,11 +714,11 @@ class SophtronItemsController < ApplicationController
         nil # Success
       rescue Provider::Error => e
         Rails.logger.error("Sophtron API error: #{e.message}")
-        t("sophtron_items.setup_accounts.api_error", message: e.message)
+        t("sophtron_items.setup_accounts.api_error")
       rescue StandardError => e
         Rails.logger.error("Unexpected error fetching Sophtron accounts: #{e.class}: #{e.message}")
         Rails.logger.error(e.backtrace.first(10).join("\n"))
-        t("sophtron_items.setup_accounts.api_error", message: e.message)
+        t("sophtron_items.setup_accounts.api_error")
       end
     end
 

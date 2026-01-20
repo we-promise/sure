@@ -44,7 +44,7 @@ en:
       all_already_linked:
         one: "The selected account (%{names}) is already linked"
         other: "All %{count} selected accounts are already linked: %{names}"
-      api_error: "API error: %{message}"
+      api_error: "API connection error"
       invalid_account_names:
         one: "Cannot link account with blank name"
         other: "Cannot link %{count} accounts with blank names"
@@ -77,16 +77,16 @@ en:
       unlinked: Unlinked
     preload_accounts:
       preload_accounts: preload accounts
-      api_error: "API error: %{message}"
-      unexpected_error: "An unexpected error occurred: %{message}"
+      api_error: "API connection error"
+      unexpected_error: "An unexpected error occurred"
       no_credentials_configured: "Please configure your Sophtron API User ID and Access Key first in Provider Settings."
       no_accounts_found: No accounts found. Please check your API key configuration.
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
     select_accounts:
       accounts_selected: accounts selected
-      api_error: "API error: %{message}"
-      unexpected_error: "An unexpected error occurred: %{message}"
+      api_error: "API connection error"
+      unexpected_error: "An unexpected error occurred"
       cancel: Cancel
       configure_name_in_sophtron: Cannot import - please configure account name in Sophtron
       description: Select the accounts you want to link to your %{product_name} account.
@@ -100,7 +100,7 @@ en:
     select_existing_account:
       account_already_linked: This account is already linked to a provider
       all_accounts_already_linked: All Sophtron accounts are already linked
-      api_error: "API error: %{message}"
+      api_error: "API connection error"
       cancel: Cancel
       configure_name_in_sophtron: Cannot import - please configure account name in Sophtron
       description: Select a Sophtron account to link with this account. Transactions will be synced and deduplicated automatically.
@@ -113,8 +113,8 @@ en:
       title: "Link %{account_name} with Sophtron"
     link_existing_account:
       account_already_linked: This account is already linked to a provider
-      api_error: "API error: %{message}"
-      unexpected_error: "An unexpected error occurred: %{message}"
+      api_error: "API connection error"
+      unexpected_error: "An unexpected error occurred"
       invalid_account_name: Cannot link account with blank name
       sophtron_account_already_linked: This Sophtron account is already linked to another account
       sophtron_account_not_found: Sophtron account not found
@@ -123,8 +123,8 @@ en:
     setup_accounts:
       account_type_label: "Account Type:"
       all_accounts_linked: "All your Sophtron accounts have already been set up."
-      api_error: "API error: %{message}"
-      unexpected_error: "An unexpected error occurred: %{message}"
+      api_error: "API connection error"
+      unexpected_error: "An unexpected error occurred"
       fetch_failed: "Failed to Fetch Accounts"
       no_accounts_to_setup: "No Accounts to Set Up"
       no_access_key: "Sophtron Access key is not configured. Please check your connection settings."
@@ -157,9 +157,9 @@ en:
       title: Set Up Your Sophtron Accounts
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
-      creation_failed: "Failed to create accounts: %{error}"
-      api_error: "API error: %{message}"
-      unexpected_error: "An unexpected error occurred: %{message}"
+      creation_failed: "Failed to create accounts"
+      api_error: "API connection error"
+      unexpected_error: "An unexpected error occurred"
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
     sync:
@@ -211,7 +211,7 @@ en:
           placeholder_edit: "••••••••"
         base_url:
           label: "Base URL"
-          placeholder: "https://api.sophtron.com"
+          placeholder: "https://api.sophtron.com/v2"
       save: "Save Configuration"
       update: "Update Configuration"
       status:
