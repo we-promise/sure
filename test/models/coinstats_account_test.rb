@@ -199,4 +199,95 @@ class CoinstatsAccountTest < ActiveSupport::TestCase
 
     assert_equal [], @coinstats_account.raw_transactions_payload
   end
+
+  # Multi-wallet tests
+  test "account_id is unique per coinstats_item and wallet_address" do
+    @coinstats_account.update!(
+      account_id: "ethereum",
+      wallet_address: "0xAAA123"
+    )
+
+    duplicate = @coinstats_item.coinstats_accounts.build(
+      name: "Duplicate Ethereum",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: "0xAAA123"
+    )
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:account_id], "has already been taken"
+  end
+
+  test "allows same account_id with different wallet_address" do
+    @coinstats_account.update!(
+      account_id: "ethereum",
+      wallet_address: "0xAAA123"
+    )
+
+    different_wallet = @coinstats_item.coinstats_accounts.build(
+      name: "Different Ethereum Wallet",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: "0xBBB456"
+    )
+
+    assert different_wallet.valid?
+  end
+
+  test "allows multiple accounts with nil wallet_address for backwards compatibility" do
+    first_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Legacy Account 1",
+      currency: "USD",
+      account_id: "bitcoin",
+      wallet_address: nil
+    )
+
+    second_account = @coinstats_item.coinstats_accounts.build(
+      name: "Legacy Account 2",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: nil
+    )
+
+    assert second_account.valid?
+    assert second_account.save
+  end
+
+  test "deleting one wallet does not affect other wallets with same token but different address" do
+    # Create two wallets with the same token (ethereum) but different addresses
+    wallet_a = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum Wallet A",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: "0xAAA111",
+      current_balance: 1000.00
+    )
+
+    wallet_b = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum Wallet B",
+      currency: "USD",
+      account_id: "ethereum",
+      wallet_address: "0xBBB222",
+      current_balance: 2000.00
+    )
+
+    # Verify both wallets exist
+    assert_equal 3, @coinstats_item.coinstats_accounts.count # includes @coinstats_account from setup
+
+    # Delete wallet A
+    wallet_a.destroy!
+
+    # Verify only wallet A was deleted, wallet B still exists
+    @coinstats_item.reload
+    assert_equal 2, @coinstats_item.coinstats_accounts.count
+
+    # Verify wallet B is still intact with correct data
+    wallet_b.reload
+    assert_equal "Ethereum Wallet B", wallet_b.name
+    assert_equal "0xBBB222", wallet_b.wallet_address
+    assert_equal BigDecimal("2000.00"), wallet_b.current_balance
+
+    # Verify wallet A no longer exists
+    assert_nil CoinstatsAccount.find_by(id: wallet_a.id)
+  end
 end

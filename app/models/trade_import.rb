@@ -21,14 +21,15 @@ class TradeImport < Import
           qty: row.qty,
           currency: row.currency.presence || mapped_account.currency,
           price: row.price,
-          category: investment_category_for(row.qty, mapped_account.family),
+          investment_activity_label: investment_activity_label_for(row.qty),
           entry: Entry.new(
             account: mapped_account,
             date: row.date_iso,
             amount: row.signed_amount,
             name: row.name,
             currency: row.currency.presence || mapped_account.currency,
-            import: self
+            import: self,
+            import_locked: true  # Protect from provider sync overwrites
           ),
         )
       end
@@ -77,12 +78,11 @@ class TradeImport < Import
   end
 
   private
-    def investment_category_for(qty, family)
-      # Buy trades (positive qty) are categorized as "Savings & Investments"
-      # Sell trades are left uncategorized - users will be prompted to categorize
-      return nil unless qty.to_d.positive?
-
-      family.categories.find_by(name: "Savings & Investments")
+    def investment_activity_label_for(qty)
+      # Set activity label based on quantity signage
+      # Buy trades have positive qty, Sell trades have negative qty
+      return nil if qty.blank? || qty.to_d.zero?
+      qty.to_d.positive? ? "Buy" : "Sell"
     end
 
     def find_or_create_security(ticker: nil, exchange_operating_mic: nil)

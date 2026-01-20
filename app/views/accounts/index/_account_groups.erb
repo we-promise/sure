@@ -11,7 +11,7 @@
         <p class="ml-auto"><%= totals_by_currency(collection: accounts, money_method: :balance_money) %></p>
       <% end %>
     </div>
-    <div class="bg-container rounded-lg shadow-border-xs">
+    <div class="bg-container rounded-lg shadow-border-xs overflow-hidden">
       <% accounts.each_with_index do |account, index| %>
         <%= render "accounts/account", account: account %>
         <% unless index == accounts.count - 1 %>

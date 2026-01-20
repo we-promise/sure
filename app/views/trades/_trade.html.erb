@@ -27,7 +27,7 @@
             </div>
 
             <div class="flex lg:hidden">
-              <%= render "categories/badge_mobile", category: trade.category || trade_category %>
+              <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: trade %>
             </div>
 
             <div class="truncate flex-shrink">
@@ -40,8 +40,8 @@
         </div>
       </div>
 
-      <div class="hidden lg:flex">
-        <%= render "categories/badge", category: trade.category || trade_category %>
+      <div class="hidden lg:flex col-span-2 items-center">
+        <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: trade %>
       </div>
 
       <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
