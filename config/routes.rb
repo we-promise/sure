@@ -29,7 +29,13 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
-  use_doorkeeper
+  use_doorkeeper do
+    controllers tokens: "custom_tokens"
+  end
+
+  # CORS preflight for OAuth endpoints
+  match "/oauth/*path", to: "oauth_cors#options", via: :options
+
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
@@ -301,6 +307,12 @@ Rails.application.routes.draw do
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
 
+      # Health check endpoint (no auth required)
+      get "health", to: "health#show"
+
+      # Current user endpoint
+      get "users/me", to: "users#me"
+
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
       resources :categories, only: [ :index, :show ]
@@ -326,6 +338,9 @@ Rails.application.routes.draw do
         get "test_scope_required", to: "test#scope_required"
         get "test_multiple_scopes_required", to: "test#multiple_scopes_required"
       end
+
+      # Catch-all OPTIONS route for CORS preflight requests
+      match "*path", to: "base#options", via: :options
     end
   end
 

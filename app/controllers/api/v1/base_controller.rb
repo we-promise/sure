@@ -12,6 +12,12 @@ class Api::V1::BaseController < ApplicationController
   # Skip onboarding requirements for API endpoints
   skip_before_action :require_onboarding_and_upgrade
 
+  # Handle OPTIONS preflight requests before authentication
+  before_action :handle_options_request
+
+  # Add CORS headers to all responses
+  after_action :set_cors_headers
+
   # Force JSON format for all API requests
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
@@ -20,6 +26,12 @@ class Api::V1::BaseController < ApplicationController
   before_action :log_api_access
 
 
+
+  # Handle OPTIONS requests for CORS preflight
+  def options
+    set_cors_headers
+    head :no_content
+  end
 
   # Override Doorkeeper's default behavior to return JSON instead of redirecting
   def doorkeeper_unauthorized_render_options(error: nil)
@@ -32,6 +44,22 @@ class Api::V1::BaseController < ApplicationController
   rescue_from ActionController::ParameterMissing, with: :handle_bad_request
 
   private
+
+    # Handle OPTIONS preflight requests for CORS
+    def handle_options_request
+      return unless request.method == "OPTIONS"
+
+      set_cors_headers
+      head :no_content
+    end
+
+    # Set CORS headers for API responses
+    def set_cors_headers
+      response.headers["Access-Control-Allow-Origin"] = "*"
+      response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+      response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Api-Key"
+      response.headers["Access-Control-Max-Age"] = "86400"
+    end
 
     # Force JSON format for all API requests
     def force_json_format

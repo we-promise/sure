@@ -27,12 +27,6 @@ module Api
           return
         end
 
-        # Validate device info
-        unless valid_device_info?
-          render json: { error: "Device information is required" }, status: :bad_request
-          return
-        end
-
         user = User.new(user_signup_params)
 
         # Create family for new user
@@ -45,9 +39,8 @@ module Api
           # Claim invite code if provided
           InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
 
-          # Create device and OAuth token
-          device = create_or_update_device(user)
-          token_response = create_oauth_token_for_device(user, device)
+          # Create OAuth token (with device if provided)
+          token_response = create_oauth_token(user)
 
           render json: token_response.merge(
             user: {
@@ -77,15 +70,8 @@ module Api
             end
           end
 
-          # Validate device info
-          unless valid_device_info?
-            render json: { error: "Device information is required" }, status: :bad_request
-            return
-          end
-
-          # Create device and OAuth token
-          device = create_or_update_device(user)
-          token_response = create_oauth_token_for_device(user, device)
+          # Create OAuth token (with device if provided)
+          token_response = create_oauth_token(user)
 
           render json: token_response.merge(
             user: {
@@ -129,10 +115,12 @@ module Api
         # Revoke old access token
         access_token.revoke
 
-        # Update device last seen
-        user = User.find(access_token.resource_owner_id)
-        device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
-        device&.update_last_seen!
+        # Update device last seen if device info provided
+        if params[:device].present? && params[:device][:device_id].present?
+          user = User.find(access_token.resource_owner_id)
+          device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
+          device&.update_last_seen!
+        end
 
         render json: {
           access_token: new_token.plaintext_token,
@@ -182,7 +170,18 @@ module Api
           device
         end
 
-        def create_oauth_token_for_device(user, device)
+        # Create OAuth token - with device tracking if device info provided, otherwise without
+        def create_oauth_token(user)
+          if valid_device_info?
+            create_oauth_token_with_device(user)
+          else
+            create_oauth_token_without_device(user)
+          end
+        end
+
+        def create_oauth_token_with_device(user)
+          device = create_or_update_device(user)
+
           # Create OAuth application for this device if needed
           oauth_app = device.create_oauth_application!
 
@@ -192,6 +191,32 @@ module Api
           # Create new access token with 30-day expiration
           access_token = Doorkeeper::AccessToken.create!(
             application: oauth_app,
+            resource_owner_id: user.id,
+            expires_in: 30.days.to_i,
+            scopes: "read_write",
+            use_refresh_token: true
+          )
+
+          {
+            access_token: access_token.plaintext_token,
+            refresh_token: access_token.plaintext_refresh_token,
+            token_type: "Bearer",
+            expires_in: access_token.expires_in,
+            created_at: access_token.created_at.to_i
+          }
+        end
+
+        def create_oauth_token_without_device(user)
+          # Find or create a default web application for non-device logins
+          web_app = Doorkeeper::Application.find_or_create_by!(name: "Web Client") do |app|
+            app.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+            app.scopes = "read_write"
+            app.confidential = false
+          end
+
+          # Create access token with the web application
+          access_token = Doorkeeper::AccessToken.create!(
+            application: web_app,
             resource_owner_id: user.id,
             expires_in: 30.days.to_i,
             scopes: "read_write",
