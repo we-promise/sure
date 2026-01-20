@@ -38,7 +38,7 @@ class BalanceSheet::ClassificationGroup
                    .map { |accountable, account_rows| build_account_group(accountable, account_rows) }
 
     if loan_accounts
-      installment_accounts, standard_loans = loan_accounts.partition(&:installment)
+      installment_accounts, standard_loans = loan_accounts.partition(&:installment_subtype?)
       groups << build_account_group(Loan, standard_loans) if standard_loans.any?
       groups << build_account_group(Loan, installment_accounts, name_key: "installment") if installment_accounts.any?
     end

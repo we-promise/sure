@@ -113,6 +113,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "New Installment", created_account.name
     assert_equal "USD", created_account.currency
+    assert_equal "installment", created_account.subtype
     assert_equal 2, created_account.installment.current_term
     assert_equal "monthly", created_account.installment.payment_period
     assert_equal created_account.installment.calculate_current_balance, created_account.balance
@@ -151,6 +152,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     installment_account.reload
 
     assert_equal "Updated Installment", installment_account.name
+    assert_equal "installment", installment_account.subtype
     assert_equal 3, installment_account.installment.current_term
     assert_equal 250, installment_account.installment.installment_cost
     assert_equal installment_account.installment.calculate_current_balance, installment_account.balance

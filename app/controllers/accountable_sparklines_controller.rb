@@ -29,12 +29,8 @@ class AccountableSparklinesController < ApplicationController
 
       def account_ids
         scope = family.accounts.visible.where(accountable_type: @accountable.name)
-        scope = installment_mode? ? scope.where(id: installment_account_ids) : scope.where.not(id: installment_account_ids)
+        scope = installment_mode? ? scope.where(subtype: "installment") : scope.where.not(subtype: "installment")
         scope.pluck(:id)
-      end
-
-      def installment_account_ids
-        @installment_account_ids ||= family.accounts.joins(:installment).pluck(:id)
       end
 
       def installment_mode?

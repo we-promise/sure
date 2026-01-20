@@ -22,6 +22,11 @@ class LoansController < ApplicationController
     end
   end
 
+  def new
+    super
+    @provider_configs = [] if installment_mode?
+  end
+
   private
 
     def create_with_installment
@@ -111,9 +116,14 @@ class LoansController < ApplicationController
 
     def ensure_installment_account_params
       merged_params = account_params.to_h.deep_symbolize_keys
+      merged_params[:subtype] = "installment"
       merged_params[:currency] = merged_params[:currency].presence || Current.family.currency
       merged_params[:accountable_attributes] ||= {}
       merged_params
+    end
+
+    def installment_mode?
+      params[:installment].present?
     end
 
     def installment_params

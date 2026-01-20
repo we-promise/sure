@@ -269,12 +269,24 @@ class Account < ApplicationRecord
 
   # Get short version of the subtype label
   def short_subtype_label
+    return installment_label if installment_subtype?
+
     accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
   end
 
   # Get long version of the subtype label
   def long_subtype_label
+    return installment_label if installment_subtype?
+
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
+  end
+
+  def installment_subtype?
+    subtype == "installment"
+  end
+
+  def installment_label
+    I18n.t("accounts.types.installment", default: "Installment")
   end
 
   # The balance type determines which "component" of balance is being tracked.
