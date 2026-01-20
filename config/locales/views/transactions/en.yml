@@ -31,6 +31,7 @@ en:
         balances, and cannot be undone.
       delete_title: Delete transaction
       details: Details
+      attachments: Attachments
       exclude: Exclude
       exclude_description: Excluded transactions will be removed from budgeting calculations and reports.
       activity_type: Activity Type

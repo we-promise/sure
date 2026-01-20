@@ -1,0 +1,67 @@
+<div class="pb-4">
+  <!-- Upload Form -->
+  <%= form_with url: transaction_attachments_path(transaction), 
+        method: :post, 
+        multipart: true, 
+        local: true,
+        class: "mb-4",
+        data: { controller: "attachment-upload" } do |form| %>
+    <div class="space-y-3">
+      <div>
+        <%= form.file_field :attachments, 
+              multiple: true, 
+              class: "block w-full text-sm border border-primary rounded-lg p-2 bg-container",
+              data: { attachment_upload_target: "fileInput" } %>
+        <p class="text-xs text-secondary mt-1">Select one or more files to attach</p>
+      </div>
+
+      <%= form.submit "Upload", 
+            class: "btn btn--primary btn--sm",
+            data: { attachment_upload_target: "submitButton" } %>
+    </div>
+  <% end %>
+
+  <!-- Attachments List -->
+  <% if transaction.attachments.any? %>
+    <div class="space-y-2">
+      <h4 class="text-sm font-medium text-primary">Files (<%= transaction.attachments.count %>)</h4>
+      <div class="space-y-2">
+        <% transaction.attachments.each do |attachment| %>
+          <div class="flex items-center justify-between p-3 border border-primary rounded-lg bg-container">
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <% if attachment.image? %>
+                  <%= icon "image", size: "sm", color: "secondary" %>
+                <% else %>
+                  <%= icon "file", size: "sm", color: "secondary" %>
+                <% end %>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-primary truncate"><%= attachment.filename %></p>
+                <p class="text-xs text-secondary"><%= number_to_human_size(attachment.byte_size) %></p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <%= link_to transaction_attachment_path(transaction, attachment),
+                    class: "btn btn--outline btn--xs" do %>
+                <%= icon "download", size: "xs" %>
+                <span class="sr-only">Download</span>
+              <% end %>
+
+              <%= link_to transaction_attachment_path(transaction, attachment),
+                    method: :delete,
+                    confirm: "Are you sure you want to delete this attachment?",
+                    class: "btn btn--outline-destructive btn--xs" do %>
+                <%= icon "trash-2", size: "xs" %>
+                <span class="sr-only">Delete</span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <p class="text-sm text-secondary">No attachments yet</p>
+  <% end %>
+</div>
