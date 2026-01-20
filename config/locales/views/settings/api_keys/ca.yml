@@ -1,76 +1,125 @@
 ---
 ca:
   settings:
-    api_keys_controller:
-      success: "La teva clau API s'ha creat correctament"
-      revoked_successfully: "La clau API s'ha revocat correctament"
-      revoke_failed: "No s'ha pogut revocar la clau API"
-      scope_descriptions:
-        read_accounts: "Veure comptes"
-        read_transactions: "Veure transaccions"
-        read_balances: "Veure saldos"
-        write_transactions: "Crear transaccions"
     api_keys:
-      show:
-        title: "Gestió de claus API"
-      no_api_key:
-        title: "Clau API"
-        description: "Obtingues accés programàtic a les teves dades de Maybe amb una clau API segura."
-        what_you_can_do: "Què pots fer amb l'API:"
-        feature_1: "Accedeix a les teves dades de compte programàticament"
-        feature_2: "Construeix integracions i aplicacions personalitzades"
-        feature_3: "Automatitza la recuperació i anàlisi de dades"
-        security_note_title: "Seguretat primer"
-        security_note: "La teva clau API tindrà permisos restringits segons els escopos seleccionats. Només pots tenir una clau API activa alhora."
-        create_api_key: "Crea clau API"
-      current_api_key:
-        title: "La teva clau API"
-        description: "La teva clau API activa està llesta per utilitzar. Mantén-la segura i no la comparteixis mai públicament."
-        active: "Activa"
-        key_name: "Nom"
-        created_at: "Creat"
-        last_used: "Últim ús"
-        expires: "Caduca"
-        ago: "fa"
-        never_used: "Mai utilitzada"
-        never_expires: "No caduca mai"
-        permissions: "Permisos"
-        usage_instructions_title: "Com utilitzar la teva clau API"
-        usage_instructions: "Inclou la teva clau API a la capçalera X-Api-Key quan facis peticions a l'API de Maybe:"
-        regenerate_key: "Crea nova clau"
-        revoke_key: "Revoca clau"
-        revoke_confirmation: "Segur que vols revocar aquesta clau API? Aquesta acció no es pot desfer i desactivarà immediatament totes les aplicacions que utilitzin aquesta clau."
-      new:
-        title: "Crea clau API"
-        create_new_key: "Crea nova clau API"
-        description: "Configura la teva nova clau API amb un nom descriptiu i els permisos adequats."
-        name_label: "Nom de la clau API"
-        name_placeholder: "p. ex., App Producció, Tauler d'Anàlisi"
-        name_help: "Tria un nom descriptiu per identificar la finalitat d'aquesta clau."
-        permissions_label: "Permisos"
-        permissions_help: "Selecciona els permisos que necessita la teva clau API. Sempre pots crear una nova clau amb permisos diferents."
-        scope_details:
-          read_accounts: "Veure informació de compte, saldos i dades a nivell de compte"
-          read_transactions: "Veure dades de transaccions, categories i detalls de transaccions"
-          read_balances: "Veure dades històriques de saldo i tendències de valor de compte"
-          write_transactions: "Crear i actualitzar registres de transaccions (pròximament)"
-        security_warning_title: "Avís de seguretat important"
-        security_warning: "La teva clau API només es mostrarà una vegada després de la creació. Desa-la de manera segura i no la comparteixis mai públicament. Si la perds, hauràs de crear-ne una de nova."
-        create_key: "Crea clau API"
-        cancel: "Cancel·la"
       created:
-        title: "Clau API creada"
-        success_title: "Clau API creada correctament"
-        success_description: "La teva nova clau API està llesta per utilitzar. Assegura't de copiar-la ara, ja que no la podràs tornar a veure."
-        your_api_key: "La teva clau API"
-        key_name: "Nom"
-        permissions: "Permisos"
+        continue: Continua a la configuració de claus API
+        copy_key: Copia la clau API
+        critical_warning_1: Aquesta és l'única vegada que veuràs la teva clau API
+          en text pla.
+        critical_warning_2: Copia-la i desa-la de manera segura al teu gestor de contrasenyes
+          o aplicació.
+        critical_warning_3: Si perds aquesta clau, hauràs de crear-ne una de nova.
         critical_warning_title: "⚠️ Crític: Desa la teva clau API ara"
-        critical_warning_1: "Aquesta és l'única vegada que veuràs la teva clau API en text pla."
-        critical_warning_2: "Copia-la i desa-la de manera segura al teu gestor de contrasenyes o aplicació."
-        critical_warning_3: "Si perds aquesta clau, hauràs de crear-ne una de nova."
-        usage_instructions_title: "Guia ràpida"
-        usage_instructions: "Utilitza la teva clau API incloent-la a la capçalera X-Api-Key:"
-        copy_key: "Copia la clau API"
-        continue: "Continua a la configuració de claus API"
-
+        key_name: Nom
+        permissions: Permisos
+        success_description: La teva nova clau API està llesta per utilitzar. Assegura't
+          de copiar-la ara, ja que no la podràs tornar a veure.
+        success_title: Clau API creada correctament
+        title: Clau API creada
+        usage_instructions: 'Utilitza la teva clau API incloent-la a la capçalera
+          X-Api-Key:'
+        usage_instructions_title: Guia ràpida
+        your_api_key: La teva clau API
+      current_api_key:
+        active: Activa
+        ago: fa
+        created_at: Creat
+        description: La teva clau API activa està llesta per utilitzar. Mantén-la
+          segura i no la comparteixis mai públicament.
+        expires: Caduca
+        key_name: Nom
+        last_used: Últim ús
+        never_expires: No caduca mai
+        never_used: Mai utilitzada
+        permissions: Permisos
+        regenerate_key: Crea nova clau
+        revoke_confirmation: Segur que vols revocar aquesta clau API? Aquesta acció
+          no es pot desfer i desactivarà immediatament totes les aplicacions que utilitzin
+          aquesta clau.
+        revoke_key: Revoca clau
+        title: La teva clau API
+        usage_instructions: 'Inclou la teva clau API a la capçalera X-Api-Key quan
+          facis peticions a l''API de Maybe:'
+        usage_instructions_title: Com utilitzar la teva clau API
+      new:
+        cancel: Cancel·la
+        create_key: Crea clau API
+        create_new_key: Crea nova clau API
+        description: Configura la teva nova clau API amb un nom descriptiu i els permisos
+          adequats.
+        name_help: Tria un nom descriptiu per identificar la finalitat d'aquesta clau.
+        name_label: Nom de la clau API
+        name_placeholder: p. ex., App Producció, Tauler d'Anàlisi
+        permissions_help: Selecciona els permisos que necessita la teva clau API.
+          Sempre pots crear una nova clau amb permisos diferents.
+        permissions_label: Permisos
+        scope_details:
+          read_accounts: Veure informació de compte, saldos i dades a nivell de compte
+          read_balances: Veure dades històriques de saldo i tendències de valor de
+            compte
+          read_transactions: Veure dades de transaccions, categories i detalls de
+            transaccions
+          write_transactions: Crear i actualitzar registres de transaccions (pròximament)
+        security_warning: La teva clau API només es mostrarà una vegada després de
+          la creació. Desa-la de manera segura i no la comparteixis mai públicament.
+          Si la perds, hauràs de crear-ne una de nova.
+        security_warning_title: Avís de seguretat important
+        title: Crea clau API
+      no_api_key:
+        create_api_key: Crea clau API
+        description: Obtingues accés programàtic a les teves dades de Maybe amb una
+          clau API segura.
+        feature_1: Accedeix a les teves dades de compte programàticament
+        feature_2: Construeix integracions i aplicacions personalitzades
+        feature_3: Automatitza la recuperació i anàlisi de dades
+        security_note: La teva clau API tindrà permisos restringits segons els àmbits
+          seleccionats. Només pots tenir una clau API activa alhora.
+        security_note_title: Seguretat primer
+        title: Clau API
+        what_you_can_do: 'Què pots fer amb l''API:'
+      show:
+        current_api_key:
+          active: Actiu
+          ago: fa
+          created_at: Creat
+          description: La teva clau API activa està llesta per utilitzar. Mantén-la
+            segura i no la comparteixis mai públicament.
+          expires: Caduca
+          key_name: Nom
+          last_used: Últim ús
+          never_expires: No caduca mai
+          never_used: Mai utilitzada
+          permissions: Permisos
+          regenerate_key: Crea nova clau
+          revoke_confirmation: Segur que vols revocar aquesta clau API? Aquesta acció
+            no es pot desfer i desactivarà immediatament totes les aplicacions que utilitzin
+            aquesta clau.
+          revoke_key: Revoca clau
+          title: La teva clau API
+          usage_instructions: 'Inclou la teva clau API a la capçalera X-Api-Key quan
+            facis peticions a l''API de Maybe:'
+          usage_instructions_title: Com utilitzar la teva clau API
+        no_api_key:
+          create_api_key: Crea clau API
+          description: Obtingues accés programàtic a les teves dades de Maybe amb una
+            clau API segura.
+          feature_1: Accedeix a les teves dades de compte programàticament
+          feature_2: Construeix integracions i aplicacions personalitzades
+          feature_3: Automatitza la recuperació i anàlisi de dades
+          heading: Accedeix a les teves dades de compte programàticament
+          security_note: La teva clau API tindrà permisos restringits segons els àmbits
+            seleccionats. Només pots tenir una clau API activa alhora.
+          security_note_title: Seguretat primer
+          title: Clau API
+          what_you_can_do: 'Què pots fer amb l''API:'
+        title: Gestió de claus API
+    api_keys_controller:
+      revoke_failed: No s'ha pogut revocar la clau API
+      revoked_successfully: La clau API s'ha revocat correctament
+      scope_descriptions:
+        read_accounts: Veure comptes
+        read_balances: Veure saldos
+        read_transactions: Veure transaccions
+        write_transactions: Crear transaccions
+      success: La teva clau API s'ha creat correctament

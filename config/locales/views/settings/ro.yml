@@ -98,7 +98,8 @@ ro:
       categories_label: Categorii
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Import/Export
+      imports_label: Importuri
+      exports_label: Exporturi
       logout: Logout
       merchants_label: Comercianți
       guides_label: Ghiduri

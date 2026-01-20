@@ -1,1 +1,85 @@
-<%= render "list", exports: @exports %>
+<%= settings_section title: t(".title") do %>
+  <div class="space-y-4">
+    <% if @exports.empty? %>
+      <p class="text-sm text-primary text-center py-4 mb-1 font-medium"><%= t(".no_exports") %></p>
+    <% else %>
+      <div class="bg-container rounded-lg shadow-border-xs">
+        <% @exports.each do |export| %>
+          <div class="flex items-center justify-between mx-4 py-4">
+            <div class="flex items-center gap-2 mb-1">
+              <div>
+                <p class="text-sm font-medium text-primary"><%= t("family_exports.list.export_from", date: l(export.created_at, format: :long)) %></p>
+                <p class="text-xs text-secondary"><%= export.filename %></p>
+              </div>
+
+              <% if export.processing? || export.pending? %>
+                <span class="px-1 py text-xs rounded-full bg-gray-500/5 text-secondary border border-alpha-black-50">
+                  <%= t("family_exports.list.in_progress") %>
+                </span>
+              <% elsif export.completed? %>
+                <span class="px-1 py text-xs rounded-full bg-green-500/5 text-green-500 border border-alpha-black-50">
+                  <%= t("family_exports.list.complete") %>
+                </span>
+              <% elsif export.failed? %>
+                <span class="px-1 py text-xs rounded-full bg-red-500/5 text-red-500 border border-alpha-black-50">
+                  <%= t("family_exports.list.failed") %>
+                </span>
+              <% end %>
+            </div>
+
+            <% if export.processing? || export.pending? %>
+              <div class="flex items-center gap-2 text-secondary">
+                <div class="animate-spin h-4 w-4 border-2 border-secondary border-t-transparent rounded-full"></div>
+                <span class="text-sm"><%= t("family_exports.exporting") %></span>
+              </div>
+            <% elsif export.completed? %>
+              <div class="flex items-center gap-2">
+                <%= button_to family_export_path(export),
+                    method: :delete,
+                    class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
+                    data: {
+                      turbo_confirm: t("family_exports.delete_confirmation")
+                    } do %>
+                  <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
+                <% end %>
+
+                <%= link_to download_family_export_path(export),
+                    class: "flex items-center gap-2 text-primary hover:text-primary-hover" do %>
+                  <%= icon "download", class: "w-5 h-5" %>
+                <% end %>
+              </div>
+            <% elsif export.failed? %>
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 text-destructive">
+                  <%= icon "alert-circle", class: "w-4 h-4" %>
+                </div>
+
+                <%= button_to family_export_path(export),
+                    method: :delete,
+                    class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
+                    data: {
+                      turbo_confirm: t("family_exports.delete_failed_confirmation")
+                    } do %>
+                  <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <% if @pagy.pages > 1 %>
+        <div class="mt-4">
+          <%= render "shared/pagination", pagy: @pagy %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%= link_to new_family_export_path,
+        class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
+        data: { turbo_frame: :modal } do %>
+      <%= icon("plus") %>
+      <%= t(".new") %>
+    <% end %>
+  </div>
+<% end %>

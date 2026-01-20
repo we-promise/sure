@@ -74,5 +74,31 @@ class Investment < ApplicationRecord
     def region_label_for(region)
       I18n.t("accounts.subtype_regions.#{region || 'generic'}")
     end
+
+    # Maps currency codes to regions for prioritizing user's likely region
+    CURRENCY_REGION_MAP = {
+      "USD" => "us",
+      "GBP" => "uk",
+      "CAD" => "ca",
+      "AUD" => "au",
+      "EUR" => "eu",
+      "CHF" => "eu"
+    }.freeze
+
+    # Returns subtypes grouped by region for use with grouped_options_for_select
+    # Optionally accepts currency to prioritize user's region first
+    def subtypes_grouped_for_select(currency: nil)
+      user_region = CURRENCY_REGION_MAP[currency]
+      grouped = SUBTYPES.group_by { |_, v| v[:region] }
+
+      # Build region order: user's region first (if known), then Generic, then others
+      other_regions = %w[us uk ca au eu] - [ user_region ].compact
+      region_order = [ user_region, nil, *other_regions ].compact.uniq
+
+      region_order.filter_map do |region|
+        next unless grouped[region]
+        [ region_label_for(region), grouped[region].map { |k, v| [ v[:long], k ] } ]
+      end
+    end
   end
 end
