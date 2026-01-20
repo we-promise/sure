@@ -77,6 +77,7 @@ gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
 gem "webauthn", "~> 3.0"
+gem "webpush", "~> 1.1"
 gem "activerecord-import"
 gem "rubyzip", "~> 2.3"
 
