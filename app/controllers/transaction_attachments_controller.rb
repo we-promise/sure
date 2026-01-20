@@ -7,18 +7,25 @@ class TransactionAttachmentsController < ApplicationController
   end
 
   def create
-    @attachment = @transaction.attachments.attach(attachment_params)
+    attachments = attachment_params
 
-    if @attachment
-      redirect_back_or_to transaction_path(@transaction), notice: "Attachment uploaded successfully"
+    if attachments.present?
+      @transaction.attachments.attach(attachments)
+      count = attachments.is_a?(Array) ? attachments.length : 1
+      message = count == 1 ? "Attachment uploaded successfully" : "#{count} attachments uploaded successfully"
+      redirect_back_or_to transaction_path(@transaction), notice: message
     else
-      redirect_back_or_to transaction_path(@transaction), alert: "Failed to upload attachment"
+      redirect_back_or_to transaction_path(@transaction), alert: "No files selected for upload"
     end
+  rescue => e
+    redirect_back_or_to transaction_path(@transaction), alert: "Failed to upload attachment: #{e.message}"
   end
 
   def destroy
     @attachment.purge
     redirect_back_or_to transaction_path(@transaction), notice: "Attachment deleted successfully"
+  rescue => e
+    redirect_back_or_to transaction_path(@transaction), alert: "Failed to delete attachment: #{e.message}"
   end
 
   private
@@ -32,6 +39,6 @@ class TransactionAttachmentsController < ApplicationController
     end
 
     def attachment_params
-      params.require(:attachment)
+      params[:attachments] || params[:attachment]
     end
 end
