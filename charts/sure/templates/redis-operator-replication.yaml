@@ -25,12 +25,11 @@ spec:
     redisSecret:
       name: {{ include "sure.redisSecretName" . }}
       key: {{ include "sure.redisPasswordKey" . }}
-    {{- if .Values.redisOperator.sentinel.enabled }}
-    env:
-      - name: REDIS_SENTINEL_HOSTS
-        value: {{ include "sure.redisSentinelHosts" . }}
-      - name: REDIS_SENTINEL_MASTER
-        value: {{ include "sure.redisSentinelMaster" . }}
+    {{- if .Values.redisOperator.sentinel.enabled}}
+    sentinel:
+      size: {{ .Values.redisOperator.replicas | default 3 }}
+      image: {{ printf "%s:%s" $imgRepo $imgTag | quote }}
+      imagePullPolicy: IfNotPresent
     {{- end }}
     {{- with $workloadResources }}
     resources:
