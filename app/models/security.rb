@@ -3,129 +3,8 @@ class Security < ApplicationRecord
 
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes
-  EXCHANGE_NAMES = {
-    # United States - NASDAQ family (Operating MIC: XNAS)
-    "XNAS" => "NASDAQ",
-    "XNGS" => "NASDAQ",       # Global Select Market
-    "XNMS" => "NASDAQ",       # Global Market
-    "XNCM" => "NASDAQ",       # Capital Market
-    "XBOS" => "NASDAQ BX",
-    "XPSX" => "NASDAQ PSX",
-    "XNDQ" => "NASDAQ Options",
-
-    # United States - NYSE family (Operating MIC: XNYS)
-    "XNYS" => "NYSE",
-    "ARCX" => "NYSE Arca",
-    "XASE" => "NYSE American",  # Formerly AMEX
-    "XCHI" => "NYSE Chicago",
-    "XCIS" => "NYSE National",
-    "AMXO" => "NYSE American Options",
-    "ARCO" => "NYSE Arca Options",
-
-    # United States - OTC Markets (Operating MIC: OTCM)
-    "OTCM" => "OTC Markets",
-    "PINX" => "OTC Pink",
-    "OTCQ" => "OTCQX",
-    "OTCB" => "OTCQB",
-    "PSGM" => "OTC Grey",
-
-    # United States - Other
-    "XCBO" => "CBOE",
-    "XCME" => "CME",
-    "XCBT" => "CBOT",
-    "XNYM" => "NYMEX",
-    "BATS" => "CBOE BZX",
-    "EDGX" => "CBOE EDGX",
-    "IEXG" => "IEX",
-    "MEMX" => "MEMX",
-
-    # United Kingdom
-    "XLON" => "London Stock Exchange",
-    "XLME" => "London Metal Exchange",
-
-    # Germany
-    "XETR" => "Xetra",
-    "XFRA" => "Frankfurt",
-    "XSTU" => "Stuttgart",
-    "XMUN" => "Munich",
-    "XBER" => "Berlin",
-    "XHAM" => "Hamburg",
-    "XDUS" => "Düsseldorf",
-    "XHAN" => "Hannover",
-
-    # Euronext
-    "XPAR" => "Euronext Paris",
-    "XAMS" => "Euronext Amsterdam",
-    "XBRU" => "Euronext Brussels",
-    "XLIS" => "Euronext Lisbon",
-    "XDUB" => "Euronext Dublin",
-    "XOSL" => "Euronext Oslo",
-    "XMIL" => "Euronext Milan",
-
-    # Other Europe
-    "XSWX" => "SIX Swiss",
-    "XVTX" => "SIX Swiss",
-    "XMAD" => "BME Madrid",
-    "XWBO" => "Vienna",
-    "XCSE" => "Copenhagen",
-    "XHEL" => "Helsinki",
-    "XSTO" => "Stockholm",
-    "XICE" => "Iceland",
-    "XPRA" => "Prague",
-    "XWAR" => "Warsaw",
-    "XATH" => "Athens",
-    "XIST" => "Istanbul",
-
-    # Canada
-    "XTSE" => "Toronto",
-    "XTSX" => "TSX Venture",
-    "XCNQ" => "CSE",
-    "NEOE" => "NEO",
-
-    # Australia & New Zealand
-    "XASX" => "ASX",
-    "XNZE" => "NZX",
-
-    # Asia - Japan
-    "XTKS" => "Tokyo",
-    "XJPX" => "Japan Exchange",
-    "XOSE" => "Osaka",
-    "XNGO" => "Nagoya",
-    "XSAP" => "Sapporo",
-    "XFKA" => "Fukuoka",
-
-    # Asia - China
-    "XSHG" => "Shanghai",
-    "XSHE" => "Shenzhen",
-    "XHKG" => "Hong Kong",
-
-    # Asia - Other
-    "XKRX" => "Korea Exchange",
-    "XKOS" => "KOSDAQ",
-    "XTAI" => "Taiwan",
-    "XSES" => "Singapore",
-    "XBKK" => "Thailand",
-    "XIDX" => "Indonesia",
-    "XKLS" => "Malaysia",
-    "XPHS" => "Philippines",
-    "XBOM" => "BSE India",
-    "XNSE" => "NSE India",
-
-    # Latin America
-    "XMEX" => "Mexico",
-    "XBUE" => "Buenos Aires",
-    "XBOG" => "Colombia",
-    "XSGO" => "Santiago",
-    "BVMF" => "B3 Brazil",
-    "XLIM" => "Lima",
-
-    # Middle East & Africa
-    "XTAE" => "Tel Aviv",
-    "XDFM" => "Dubai",
-    "XADS" => "Abu Dhabi",
-    "XSAU" => "Saudi (Tadawul)",
-    "XJSE" => "Johannesburg"
-  }.freeze
+  # Data stored in config/exchanges.yml
+  EXCHANGES = YAML.safe_load_file(Rails.root.join("config", "exchanges.yml")).freeze
 
   before_validation :upcase_symbols
 
@@ -140,7 +19,7 @@ class Security < ApplicationRecord
   # Returns user-friendly exchange name for a MIC code
   def self.exchange_name_for(mic)
     return nil if mic.blank?
-    EXCHANGE_NAMES[mic.upcase] || mic.upcase
+    EXCHANGES.dig(mic.upcase, "name") || mic.upcase
   end
 
   def exchange_name

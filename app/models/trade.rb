@@ -4,6 +4,7 @@ class Trade < ApplicationRecord
   monetize :price
 
   belongs_to :security
+  belongs_to :category, optional: true
 
   # Use the same activity labels as Transaction
   ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze

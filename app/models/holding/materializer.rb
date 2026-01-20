@@ -16,6 +16,14 @@ class Holding::Materializer
       purge_stale_holdings
     end
 
+    # Clean up calculated holdings for securities that now have provider-sourced holdings
+    # This prevents duplicates when a manually-entered account gets linked to a provider
+    cleanup_calculated_holdings_for_provider_securities
+
+    # Reload holdings association to clear any cached stale data
+    # This ensures subsequent Balance calculations see the fresh holdings
+    account.holdings.reload
+
     @holdings
   end
 
@@ -39,6 +47,9 @@ class Holding::Materializer
       holdings_to_upsert_without_cost = []
 
       @holdings.each do |holding|
+        # Skip securities that have provider-sourced holdings - don't overwrite provider data
+        next if provider_sourced_security_ids.include?(holding.security_id)
+
         key = holding_key(holding)
         existing = existing_holdings_map[key]
 
@@ -98,12 +109,35 @@ class Holding::Materializer
       # Load holdings that might affect reconciliation:
       # - Locked holdings (must preserve their cost_basis)
       # - Holdings with a source (need to check priority)
-      # - Provider-sourced holdings (must not be overwritten by calculated holdings)
+      # - Provider-sourced holdings (must not be overwritten)
       account.holdings
         .where(cost_basis_locked: true)
         .or(account.holdings.where.not(cost_basis_source: nil))
         .or(account.holdings.where.not(account_provider_id: nil))
         .index_by { |h| holding_key(h) }
+    end
+
+    # Get security IDs that have provider-sourced holdings (any date)
+    # These should be preserved and not overwritten by calculated holdings
+    def provider_sourced_security_ids
+      @provider_sourced_security_ids ||= account.holdings
+        .where.not(account_provider_id: nil)
+        .distinct
+        .pluck(:security_id)
+    end
+
+    # Remove calculated holdings (account_provider_id IS NULL) for securities
+    # that now have provider-sourced holdings. This prevents duplicates when
+    # a manually-entered account gets linked to a provider.
+    def cleanup_calculated_holdings_for_provider_securities
+      return if provider_sourced_security_ids.empty?
+
+      deleted_count = account.holdings
+        .where(account_provider_id: nil)
+        .where(security_id: provider_sourced_security_ids)
+        .delete_all
+
+      Rails.logger.info("Cleaned up #{deleted_count} calculated holdings for provider-sourced securities") if deleted_count > 0
     end
 
     def holding_key(holding)
@@ -113,15 +147,16 @@ class Holding::Materializer
     def purge_stale_holdings
       portfolio_security_ids = account.entries.trades.map { |entry| entry.entryable.security_id }.uniq
 
-      # Never delete provider-sourced holdings (they have authoritative data from Coinbase, SimpleFIN, etc.)
-      purgeable_holdings = account.holdings.where(account_provider_id: nil)
-
-      # If there are no securities in the portfolio, delete all non-provider holdings
+      # Never delete provider-sourced holdings - they're authoritative from the provider
+      # If there are no securities in the portfolio, only delete non-provider holdings
       if portfolio_security_ids.empty?
-        Rails.logger.info("Clearing all non-provider holdings (no securities)")
-        purgeable_holdings.delete_all
+        Rails.logger.info("Clearing non-provider holdings (no securities from trades)")
+        account.holdings.where(account_provider_id: nil).delete_all
       else
-        deleted_count = purgeable_holdings.delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
+        # Keep provider holdings and holdings for known securities within date range
+        deleted_count = account.holdings
+          .where(account_provider_id: nil)
+          .delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
         Rails.logger.info("Purged #{deleted_count} stale holdings") if deleted_count > 0
       end
     end

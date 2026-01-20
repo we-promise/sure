@@ -21,7 +21,7 @@ class TransactionsController < ApplicationController
                          :transfer_as_inflow, :transfer_as_outflow
                        )
 
-    @pagy, @transactions = pagy(base_scope, limit: per_page)
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
     # Load projected recurring transactions for next month
     @projected_recurring = Current.family.recurring_transactions
@@ -281,10 +281,6 @@ class TransactionsController < ApplicationController
   end
 
   private
-    def per_page
-      params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
-    end
-
     def needs_rule_notification?(transaction)
       return false if Current.user.rule_prompts_disabled
 
