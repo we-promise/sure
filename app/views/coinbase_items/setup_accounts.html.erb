@@ -38,27 +38,29 @@
             <p class="text-secondary"><%= t(".no_accounts") %></p>
           </div>
         <% else %>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm text-secondary">
-              <%= t(".accounts_count", count: @coinbase_accounts.count) %>
-            </span>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox"
-                     id="coinbase-select-all"
-                     onchange="document.querySelectorAll('#coinbase-setup-form input[name=\'selected_accounts[]\']').forEach(cb => cb.checked = this.checked)"
-                     class="checkbox checkbox--dark">
-              <span class="text-secondary"><%= t(".select_all") %></span>
-            </label>
-          </div>
+          <div data-controller="select-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-secondary">
+                <%= t(".accounts_count", count: @coinbase_accounts.count) %>
+              </span>
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox"
+                       id="coinbase-select-all"
+                       data-action="change->select-all#toggle"
+                       class="checkbox checkbox--dark">
+                <span class="text-secondary"><%= t(".select_all") %></span>
+              </label>
+            </div>
 
-          <div class="space-y-2 max-h-96 overflow-y-auto">
-            <% @coinbase_accounts.each do |coinbase_account| %>
-              <label for="cb_<%= coinbase_account.id %>" class="flex items-center gap-3 p-3 border border-primary rounded-lg hover:bg-surface transition-colors cursor-pointer">
-                <%= check_box_tag "selected_accounts[]",
-                                  coinbase_account.id,
-                                  false,
-                                  id: "cb_#{coinbase_account.id}",
-                                  class: "checkbox checkbox--dark" %>
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+              <% @coinbase_accounts.each do |coinbase_account| %>
+                <label for="cb_<%= coinbase_account.id %>" class="flex items-center gap-3 p-3 border border-primary rounded-lg hover:bg-surface transition-colors cursor-pointer">
+                  <%= check_box_tag "selected_accounts[]",
+                                    coinbase_account.id,
+                                    false,
+                                    id: "cb_#{coinbase_account.id}",
+                                    class: "checkbox checkbox--dark",
+                                    data: { select_all_target: "checkbox" } %>
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-primary truncate">
                     <%= coinbase_account.name %>
@@ -77,6 +79,7 @@
                 </div>
               </label>
             <% end %>
+            </div>
           </div>
         <% end %>
       </div>

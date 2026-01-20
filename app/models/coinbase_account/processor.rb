@@ -184,7 +184,7 @@ class CoinbaseAccount::Processor
       notes_parts << txn_data.dig("details", "subtitle") if txn_data.dig("details", "subtitle").present?
       # Add payment method info from buy/sell details
       payment_method = txn_data.dig(txn_type, "payment_method_name")
-      notes_parts << "Paid via #{payment_method}" if payment_method.present?
+      notes_parts << I18n.t("coinbase.processor.paid_via", method: payment_method) if payment_method.present?
       notes = notes_parts.join(" - ").presence
 
       # Check if trade already exists by external_id

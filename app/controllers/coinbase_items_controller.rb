@@ -17,7 +17,7 @@ class CoinbaseItemsController < ApplicationController
 
   def create
     @coinbase_item = Current.family.coinbase_items.build(coinbase_item_params)
-    @coinbase_item.name ||= "Coinbase"
+    @coinbase_item.name ||= t(".default_name")
 
     if @coinbase_item.save
       # Set default institution metadata

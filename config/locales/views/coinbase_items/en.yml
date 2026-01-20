@@ -2,6 +2,7 @@
 en:
   coinbase_items:
     create:
+      default_name: Coinbase
       success: Successfully connected to Coinbase! Your accounts are being synced.
     update:
       success: Successfully updated Coinbase configuration.
