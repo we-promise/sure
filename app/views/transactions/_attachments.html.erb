@@ -1,6 +1,6 @@
 <div class="pb-4">
   <!-- Upload Form -->
-  <%= form_with url: transaction_attachments_path(transaction),
+  <%= styled_form_with url: transaction_attachments_path(transaction),
         method: :post,
         multipart: true,
         local: true,
@@ -15,7 +15,7 @@
         <%= form.file_field :attachments,
               multiple: true,
               accept: Transaction::ALLOWED_CONTENT_TYPES.join(','),
-              class: "block w-full text-sm border border-primary rounded-lg p-2 bg-container",
+              class: "block w-full text-sm border border-primary rounded-lg p-2 bg-container text-primary file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-surface-inset file:text-primary hover:file:bg-surface-inset-hover cursor-pointer",
               data: { attachment_upload_target: "fileInput" } %>
         <p class="text-xs text-secondary mt-1">
           Select up to <%= Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %> files 
@@ -26,9 +26,12 @@
         </p>
       </div>
 
-      <%= form.submit "Upload", 
-            class: "btn btn--primary btn--sm",
-            data: { attachment_upload_target: "submitButton" } %>
+      <%= render DS::Button.new(
+            text: "Upload",
+            variant: :primary,
+            size: :sm,
+            data: { attachment_upload_target: "submitButton" }
+          ) %>
     </div>
   <% end %>
 
@@ -54,19 +57,22 @@
             </div>
 
             <div class="flex items-center gap-2">
-              <%= link_to transaction_attachment_path(transaction, attachment),
-                    class: "btn btn--outline btn--xs" do %>
-                <%= icon "download", size: "xs" %>
-                <span class="sr-only">Download</span>
-              <% end %>
+              <%= render DS::Link.new(
+                    href: transaction_attachment_path(transaction, attachment),
+                    variant: :outline,
+                    size: :sm,
+                    icon: "download",
+                    text: ""
+                  ) %>
 
-              <%= link_to transaction_attachment_path(transaction, attachment),
+              <%= render DS::Button.new(
+                    href: transaction_attachment_path(transaction, attachment),
                     method: :delete,
-                    confirm: "Are you sure you want to delete this attachment?",
-                    class: "btn btn--outline-destructive btn--xs" do %>
-                <%= icon "trash-2", size: "xs" %>
-                <span class="sr-only">Delete</span>
-              <% end %>
+                    variant: :outline_destructive,
+                    size: :sm,
+                    icon: "trash-2",
+                    confirm: CustomConfirm.for_resource_deletion("attachment")
+                  ) %>
             </div>
           </div>
         <% end %>
