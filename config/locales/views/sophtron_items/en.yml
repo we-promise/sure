@@ -1,6 +1,8 @@
 ---
 en:
   sophtron_items:
+    defaults:
+      name: Sophtron Connection
     new:
       title: Connect Sophtron
       user_id: User ID
@@ -53,6 +55,10 @@ en:
       success:
         one: "Successfully linked %{count} account"
         other: "Successfully linked %{count} accounts"
+      no_credentials_configured: "Please configure your Sophtron API User ID and Access Key first in Provider Settings."
+      no_accounts_found: No accounts found. Please check your API key configuration.
+      no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
+      no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
     sophtron_item:
       accounts_need_setup: Accounts need setup
       delete: Delete connection
@@ -69,6 +75,14 @@ en:
       syncing: Syncing...
       total: Total
       unlinked: Unlinked
+    preload_accounts:
+      preload_accounts: preload accounts
+      api_error: "API error: %{message}"
+      unexpected_error: "An unexpected error occurred: %{message}"
+      no_credentials_configured: "Please configure your Sophtron API User ID and Access Key first in Provider Settings."
+      no_accounts_found: No accounts found. Please check your API key configuration.
+      no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
+      no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
     select_accounts:
       accounts_selected: accounts selected
       api_error: "API error: %{message}"
@@ -80,6 +94,7 @@ en:
       no_accounts_found: No accounts found. Please check your API key configuration.
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
+      no_credentials_configured: "Please configure your Sophtron API User ID and Access Key first in Provider Settings."
       no_name_placeholder: "(No name)"
       title: Select Sophtron Accounts
     select_existing_account:
@@ -143,6 +158,8 @@ en:
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       creation_failed: "Failed to create accounts: %{error}"
+      api_error: "API error: %{message}"
+      unexpected_error: "An unexpected error occurred: %{message}"
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
     sync:

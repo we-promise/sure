@@ -14,7 +14,7 @@ class SophtronItemsController < ApplicationController
     begin
       # Check if family has credentials
       unless Current.family.has_sophtron_credentials?
-        render json: { success: false, error: "no_credentials", has_accounts: false }
+        render json: { success: false, error: "no_credentials_configured", has_accounts: false }
         return
       end
 
@@ -46,11 +46,11 @@ class SophtronItemsController < ApplicationController
     rescue Provider::Error => e
       Rails.logger.error("Sophtron preload error: #{e.message}")
       # API error (bad key, network issue, etc) - keep button visible, show error when clicked
-      render json: { success: false, error: "api_error", error_message: e.message, has_accounts: nil }
+      render json: { success: false, error: "api_error", error_message: t(".api_error"), has_accounts: nil }
     rescue StandardError => e
       Rails.logger.error("Unexpected error preloading Sophtron accounts: #{e.class}: #{e.message}")
       # Unexpected error - keep button visible, show error when clicked
-      render json: { success: false, error: "unexpected_error", error_message: e.message, has_accounts: nil }
+      render json: { success: false, error: "unexpected_error", error_message: t(".unexpected_error"), has_accounts: nil }
     end
   end
 
@@ -65,8 +65,7 @@ class SophtronItemsController < ApplicationController
         else
           # Redirect for regular requests
           redirect_to settings_providers_path,
-                     alert: t(".no_credentials_configured",
-                            default: "Please configure your Sophtron API key first in Provider Settings.")
+                     alert: t(".no_credentials_configured")
         end
         return
       end
@@ -81,8 +80,7 @@ class SophtronItemsController < ApplicationController
         sophtron_provider = Provider::SophtronAdapter.build_provider(family: Current.family)
 
         unless sophtron_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_access_key",
-                                                        default: "Sophtron access key not found. Please configure it in Provider Settings.")
+          redirect_to settings_providers_path, alert: t(".no_access_key")
           return
         end
 
@@ -139,7 +137,7 @@ class SophtronItemsController < ApplicationController
 
     # Create or find sophtron_item for this family
     sophtron_item = Current.family.sophtron_items.first_or_create!(
-      name: "Sophtron Connection"
+      name: t("sophtron_items.defaults.name")
     )
 
     # Fetch account details from API
@@ -626,7 +624,7 @@ class SophtronItemsController < ApplicationController
     rescue StandardError => e
       Rails.logger.error("Sophtron account setup failed unexpectedly: #{e.class} - #{e.message}")
       Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".creation_failed", error: "An unexpected error occurred")
+      flash[:alert] = t(".unexpected_error", error: e.message)
       redirect_to accounts_path, status: :see_other
       return
     end
