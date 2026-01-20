@@ -1,6 +1,12 @@
 ---
 zh-TW:
   family_exports:
+    access_denied: 存取被拒絕
+    create:
+      success: 匯出已開始。您很快就能下載它。
+    destroy:
+      success: 匯出已成功刪除
+    export_not_ready: 匯出尚未準備好下載
     list:
       complete: 已完成
       failed: 已失敗

@@ -28,7 +28,9 @@ class Family::SyncerTest < ActiveSupport::TestCase
     assert_equal "completed", family_sync.reload.status
   end
 
-  test "only applies active rules during post-sync" do
+  test "only applies active rules during sync" do
+    family_sync = syncs(:family)
+
     # Create an active rule
     active_rule = @family.rules.create!(
       resource_type: "transaction",
@@ -52,9 +54,14 @@ class Family::SyncerTest < ActiveSupport::TestCase
     active_rule.expects(:apply_later).once
     disabled_rule.expects(:apply_later).never
 
-    # Stub transfer matching to avoid side effects
-    @family.stubs(:auto_match_transfers!)
+    # Mock the account and plaid item syncs to avoid side effects
+    Account.any_instance.stubs(:sync_later)
+    PlaidItem.any_instance.stubs(:sync_later)
+    SimplefinItem.any_instance.stubs(:sync_later)
+    LunchflowItem.any_instance.stubs(:sync_later)
+    EnableBankingItem.any_instance.stubs(:sync_later)
 
+    syncer.perform_sync(family_sync)
     syncer.perform_post_sync
   end
 end

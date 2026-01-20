@@ -50,7 +50,7 @@
   </div>
   <div class="flex items-center gap-4">
     <%= select_tag :per_page,
-                   options_for_select(["10", "20", "30", "50"], pagy.limit),
+                   options_for_select(["10", "20", "30", "50", "100"], pagy.limit),
                    data: { controller: "selectable-link" },
                    class: "py-1.5 pr-8 text-sm text-primary font-medium bg-container-inset border border-secondary rounded-lg focus:border-secondary focus:ring-secondary focus-visible:ring-secondary" %>
   </div>

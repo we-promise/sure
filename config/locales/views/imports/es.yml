@@ -62,12 +62,8 @@ es:
       uploading: Procesando filas
       view: Ver
     index:
-      imports: Importaciones
+      title: Importaciones
       new: Nueva importación
-      title: Importar/Exportar
-      exports: Exportaciones
-      new_export: Nueva exportación
-      no_exports: Aún no hay exportaciones.
     new:
       description: Puedes importar manualmente varios tipos de datos mediante CSV o usar una de nuestras plantillas de importación como Mint.
       import_accounts: Importar cuentas

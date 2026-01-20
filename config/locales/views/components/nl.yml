@@ -1,0 +1,61 @@
+---
+nl:
+  provider_sync_summary:
+    title: Synchronisatie samenvatting
+    last_sync: "Laatste sync: %{time_ago} geleden"
+    accounts:
+      title: Accounts
+      total: "Totaal: %{count}"
+      linked: "Gekoppeld: %{count}"
+      unlinked: "Niet gekoppeld: %{count}"
+      institutions: "Instellingen: %{count}"
+    transactions:
+      title: Transacties
+      seen: "Gezien: %{count}"
+      imported: "Geïmporteerd: %{count}"
+      updated: "Bijgewerkt: %{count}"
+      skipped: "Overgeslagen: %{count}"
+      protected:
+        one: "%{count} item beschermd (niet overschreven)"
+        other: "%{count} items beschermd (niet overschreven)"
+      view_protected: Beschermde items bekijken
+    skip_reasons:
+      excluded: Uitgesloten
+      user_modified: Gebruiker aangepast
+      import_locked: CSV import
+      protected: Beschermd
+    holdings:
+      title: Bezittingen
+      found: "Gevonden: %{count}"
+      processed: "Verwerkt: %{count}"
+    health:
+      title: Status
+      view_error_details: Foutdetails bekijken
+      rate_limited: "Snelheidslimiet bereikt %{time_ago} geleden"
+      recently: recent
+      errors: "Fouten: %{count}"
+      pending_reconciled:
+        one: "%{count} dubbele pending transactie afgestemd"
+        other: "%{count} dubbele pending transacties afgestemd"
+      view_reconciled: Afgestemde transacties bekijken
+      duplicate_suggestions:
+        one: "%{count} mogelijk duplicaat moet worden beoordeeld"
+        other: "%{count} mogelijke duplicaten moeten worden beoordeeld"
+      view_duplicate_suggestions: Voorgestelde duplicaten bekijken
+      stale_pending:
+        one: "%{count} verlopen pending transactie (uitgesloten van budgetten)"
+        other: "%{count} verlopen pending transacties (uitgesloten van budgetten)"
+      view_stale_pending: Betrokken accounts bekijken
+      stale_pending_count:
+        one: "%{count} transactie"
+        other: "%{count} transacties"
+      stale_unmatched:
+        one: "%{count} pending transactie moet handmatig worden beoordeeld"
+        other: "%{count} pending transacties moeten handmatig worden beoordeeld"
+      view_stale_unmatched: Transacties bekijken die beoordeling nodig hebben
+      stale_unmatched_count:
+        one: "%{count} transactie"
+        other: "%{count} transacties"
+      data_warnings: "Datawaarschuwingen: %{count}"
+      notices: "Mededelingen: %{count}"
+      view_data_quality: Datakwaliteit details bekijken

@@ -8,13 +8,13 @@
         <%= combobox_security.name.presence || combobox_security.symbol %>
       </span>
       <span class="text-xs text-secondary">
-        <%= "#{combobox_security.symbol} (#{combobox_security.exchange_operating_mic})" %>
+        <%= t("securities.combobox.exchange_label", symbol: combobox_security.symbol, exchange: combobox_security.exchange_name) %>
       </span>
     </div>
     <% if combobox_security.country_code.present? %>
       <div class="flex items-center bg-container-inset rounded-sm px-1.5 py-1 gap-1">
         <%= image_tag("https://hatscripts.github.io/circle-flags/flags/#{combobox_security.country_code.downcase}.svg",
-                      class: "h-4 rounded-sm", # h-3 (12px) matches text-xs, w-5 for 3:5 aspect ratio
+                      class: "h-4 rounded-sm",
                       alt: "#{combobox_security.country_code.upcase} flag",
                       title: combobox_security.country_code.upcase) %>
         <span class="text-xs text-secondary">

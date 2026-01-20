@@ -1,0 +1,5 @@
+---
+ca:
+  oidc_accounts:
+    link:
+      account_creation_disabled: La creació de comptes nous mitjançant inici de sessió únic està inhabilitada. Contacta amb un administrador per crear el teu compte.

@@ -3,36 +3,10 @@ ca:
   settings:
     securities:
       show:
-        password_title: Contrasenya
-        password_subtitle: Canvia la contrasenya del teu compte
-        current_password: Contrasenya actual
-        new_password: Nova contrasenya
-        confirm_password: Confirma la nova contrasenya
-        update_password: Actualitza la contrasenya
         disable_mfa: Desactiva 2FA
-        disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos? Això farà que el teu compte sigui menys segur.
+        disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos?
+          Això farà que el teu compte sigui menys segur.
         enable_mfa: Activa 2FA
-        mfa_description: Afegeix una capa extra de seguretat al teu compte requerint un codi de la teva app d'autenticació en iniciar sessió
+        mfa_description: Afegeix una capa extra de seguretat al teu compte requerint
+          un codi de la teva app d'autenticació en iniciar sessió
         mfa_title: Autenticació en dos passos
-        passkeys_title: Passkeys
-        passkeys_description: Inicia sessió amb la teva empremta digital, cara o clau de seguretat
-        add_passkey: Afegir Passkey
-        remove_passkey: Eliminar
-        remove_passkey_confirm_title: Eliminar Passkey?
-        remove_passkey_confirm_body: Segur que vols eliminar aquesta passkey? Ja no podràs iniciar sessió amb ella.
-        no_passkeys: Encara no hi ha passkeys registrades.
-        passkey_name_placeholder: "ex., MacBook Pro, iPhone"
-        passkey_added: "Afegida el %{date}"
-        passkey_last_used: "Última vegada usada fa %{date}"
-      update:
-        success: Contrasenya actualitzada correctament.
-        invalid_current_password: La contrasenya actual és incorrecta.
-  passkeys:
-    destroy:
-      success: Passkey eliminada correctament.
-  passkey_sessions:
-    options:
-      no_passkeys: No hi ha passkeys registrades per a aquest compte.
-    create:
-      invalid_session: Sessió invàlida. Si us plau, torna-ho a provar.
-      passkey_not_found: Passkey no trobada.
