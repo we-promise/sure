@@ -130,32 +130,6 @@ en:
       subtype_messages:
         credit_card: "Credit cards will be automatically set up as credit card accounts."
         other_asset: "No additional options needed for Other Assets."
-      subtypes:
-        depository:
-          checking: Checking
-          savings: Savings
-          hsa: Health Savings Account
-          cd: Certificate of Deposit
-          money_market: Money Market
-        investment:
-          brokerage: Brokerage
-          pension: Pension
-          retirement: Retirement
-          "401k": "401(k)"
-          roth_401k: "Roth 401(k)"
-          "403b": "403(b)"
-          tsp: Thrift Savings Plan
-          "529_plan": "529 Plan"
-          hsa: Health Savings Account
-          mutual_fund: Mutual Fund
-          ira: Traditional IRA
-          roth_ira: Roth IRA
-          angel: Angel
-        loan:
-          mortgage: Mortgage
-          student: Student Loan
-          auto: Auto Loan
-          other: Other Loan
       balance: Balance
       cancel: Cancel
       choose_account_type: "Choose the correct account type for each Sophtron account:"

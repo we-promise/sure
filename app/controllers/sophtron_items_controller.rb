@@ -520,38 +520,36 @@ class SophtronItemsController < ApplicationController
     # Add "Skip" option at the beginning
     @account_type_options = [ [ t(".account_types.skip"), "skip" ] ] + all_account_type_options
 
-    # Helper to translate subtype options
-    translate_subtypes = ->(type_key, subtypes_hash) {
-      subtypes_hash.keys.map { |k| [ t(".subtypes.#{type_key}.#{k}"), k ] }
-    }
-
-    # Subtype options for each account type (only include supported types)
-    all_subtype_options = {
+    # Subtype options for each account type
+    @subtype_options = {
       "Depository" => {
-        label: t(".subtype_labels.depository"),
-        options: translate_subtypes.call("depository", Depository::SUBTYPES)
+        label: "Account Subtype:",
+        options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
       },
       "CreditCard" => {
-        label: t(".subtype_labels.credit_card"),
+        label: "",
         options: [],
-        message: t(".subtype_messages.credit_card")
+        message: "Credit cards will be automatically set up as credit card accounts."
       },
       "Investment" => {
-        label: t(".subtype_labels.investment"),
-        options: translate_subtypes.call("investment", Investment::SUBTYPES)
+        label: "Investment Type:",
+        options: Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
       },
       "Loan" => {
-        label: t(".subtype_labels.loan"),
-        options: translate_subtypes.call("loan", Loan::SUBTYPES)
+        label: "Loan Type:",
+        options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+      },
+      "Crypto" => {
+        label: nil,
+        options: [],
+        message: "Crypto accounts track cryptocurrency holdings."
       },
       "OtherAsset" => {
-        label: t(".subtype_labels.other_asset").presence,
+        label: nil,
         options: [],
-        message: t(".subtype_messages.other_asset")
+        message: "No additional options needed for Other Assets."
       }
     }
-
-    @subtype_options = all_subtype_options.slice(*supported_types)
   end
 
   def complete_account_setup
