@@ -25,6 +25,11 @@ spec:
     redisSecret:
       name: {{ include "sure.redisSecretName" . }}
       key: {{ include "sure.redisPasswordKey" . }}
+    env:
+      - name: REDIS_SENTINEL_HOSTS
+        value: {{ include "sure.redisSentinelHosts" . }}
+      - name: REDIS_SENTINEL_MASTER
+        value: {{ include "sure.redisSentinelMaster" . }}
     {{- with $workloadResources }}
     resources:
       {{- toYaml . | nindent 6 }}
