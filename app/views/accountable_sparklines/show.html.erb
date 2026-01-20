@@ -4,8 +4,9 @@
       <%= render "shared/sparkline", id: dom_id(@accountable, :sparkline_chart), series: @series %>
     </div>
 
-    <%= tag.p @series.trend.percent_formatted,
-                style: "color: #{@series.trend.color}",
-                class: "font-mono text-right text-xs font-medium text-primary" %>
+    <% trend = @series&.trend %>
+    <%= tag.p trend ? trend.percent_formatted : "--",
+                style: trend ? "color: #{trend.color}" : nil,
+                class: class_names("font-mono text-right text-xs font-medium", trend ? "text-primary" : "text-secondary") %>
   </div>
 <% end %>
