@@ -62,12 +62,14 @@ class CoinbaseItemTest < ActiveSupport::TestCase
   end
 
   test "scopes work correctly" do
+    # Use explicit timestamp to ensure deterministic ordering
     item_for_deletion = CoinbaseItem.create!(
       family: @family,
       name: "Delete Me",
-      api_key: "key",
-      api_secret: "secret",
-      scheduled_for_deletion: true
+      api_key: "test_key",
+      api_secret: "test_secret",
+      scheduled_for_deletion: true,
+      created_at: 1.day.ago
     )
 
     active_items = @family.coinbase_items.active
@@ -76,8 +78,8 @@ class CoinbaseItemTest < ActiveSupport::TestCase
     assert_includes active_items, @coinbase_item
     refute_includes active_items, item_for_deletion
 
-    assert_equal [ @coinbase_item, item_for_deletion ].sort_by(&:created_at).reverse,
-                 ordered_items.to_a
+    # ordered scope sorts by created_at desc, so newer (@coinbase_item) comes first
+    assert_equal [ @coinbase_item, item_for_deletion ], ordered_items.to_a
   end
 
   test "credentials_configured? returns true when both keys present" do
