@@ -10,10 +10,28 @@ class TransactionAttachmentsController < ApplicationController
     attachments = attachment_params
 
     if attachments.present?
+      # Check attachment count limit before attaching
+      current_count = @transaction.attachments.count
+      new_count = attachments.is_a?(Array) ? attachments.length : 1
+
+      if current_count + new_count > Transaction::MAX_ATTACHMENTS_PER_TRANSACTION
+        redirect_back_or_to transaction_path(@transaction),
+          alert: "Cannot exceed #{Transaction::MAX_ATTACHMENTS_PER_TRANSACTION} attachments per transaction"
+        return
+      end
+
       @transaction.attachments.attach(attachments)
-      count = attachments.is_a?(Array) ? attachments.length : 1
-      message = count == 1 ? "Attachment uploaded successfully" : "#{count} attachments uploaded successfully"
-      redirect_back_or_to transaction_path(@transaction), notice: message
+
+      if @transaction.valid?
+        count = new_count
+        message = count == 1 ? "Attachment uploaded successfully" : "#{count} attachments uploaded successfully"
+        redirect_back_or_to transaction_path(@transaction), notice: message
+      else
+        # Remove invalid attachments
+        @transaction.attachments.last(new_count).each(&:purge)
+        error_messages = @transaction.errors.full_messages_for(:attachments).join(", ")
+        redirect_back_or_to transaction_path(@transaction), alert: error_messages
+      end
     else
       redirect_back_or_to transaction_path(@transaction), alert: "No files selected for upload"
     end

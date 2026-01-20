@@ -1,18 +1,29 @@
 <div class="pb-4">
   <!-- Upload Form -->
-  <%= form_with url: transaction_attachments_path(transaction), 
-        method: :post, 
-        multipart: true, 
+  <%= form_with url: transaction_attachments_path(transaction),
+        method: :post,
+        multipart: true,
         local: true,
         class: "mb-4",
-        data: { controller: "attachment-upload" } do |form| %>
+        data: {
+          controller: "attachment-upload",
+          attachment_upload_max_files_value: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION - transaction.attachments.count,
+          attachment_upload_max_size_value: Transaction::MAX_ATTACHMENT_SIZE
+        } do |form| %>
     <div class="space-y-3">
       <div>
-        <%= form.file_field :attachments, 
-              multiple: true, 
+        <%= form.file_field :attachments,
+              multiple: true,
+              accept: Transaction::ALLOWED_CONTENT_TYPES.join(','),
               class: "block w-full text-sm border border-primary rounded-lg p-2 bg-container",
               data: { attachment_upload_target: "fileInput" } %>
-        <p class="text-xs text-secondary mt-1">Select one or more files to attach</p>
+        <p class="text-xs text-secondary mt-1">
+          Select up to <%= Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %> files 
+          (images or PDFs, max <%= Transaction::MAX_ATTACHMENT_SIZE / 1.megabyte %>MB each)
+          <% if transaction.attachments.any? %>
+            • <%= transaction.attachments.count %> of <%= Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %> used
+          <% end %>
+        </p>
       </div>
 
       <%= form.submit "Upload", 

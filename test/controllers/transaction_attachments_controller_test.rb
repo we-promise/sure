@@ -8,7 +8,7 @@ class TransactionAttachmentsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should upload attachment to transaction" do
-    file = fixture_file_upload("test.txt", "text/plain")
+    file = fixture_file_upload("test.txt", "application/pdf")
 
     assert_difference "@transaction.attachments.count", 1 do
       post transaction_attachments_path(@transaction), params: { attachment: file }
@@ -19,11 +19,11 @@ class TransactionAttachmentsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should upload multiple attachments to transaction" do
-    file1 = fixture_file_upload("test.txt", "text/plain")
-    file2 = fixture_file_upload("test.txt", "text/plain")
+    file1 = fixture_file_upload("test.txt", "application/pdf")
+    file2 = fixture_file_upload("test.txt", "image/jpeg")
 
     assert_difference "@transaction.attachments.count", 2 do
-      post transaction_attachments_path(@transaction), params: { attachments: [file1, file2] }
+      post transaction_attachments_path(@transaction), params: { attachments: [ file1, file2 ] }
     end
 
     assert_redirected_to transaction_path(@transaction)
@@ -39,11 +39,42 @@ class TransactionAttachmentsControllerTest < ActionDispatch::IntegrationTest
     assert_match "No files selected for upload", flash[:alert]
   end
 
+  test "should reject unsupported file types" do
+    file = fixture_file_upload("test.txt", "text/plain")
+
+    assert_no_difference "@transaction.attachments.count" do
+      post transaction_attachments_path(@transaction), params: { attachment: file }
+    end
+
+    assert_redirected_to transaction_path(@transaction)
+    assert_match "unsupported format", flash[:alert]
+  end
+
+  test "should reject exceeding attachment count limit" do
+    # Fill up to the limit
+    (Transaction::MAX_ATTACHMENTS_PER_TRANSACTION).times do |i|
+      @transaction.attachments.attach(
+        io: StringIO.new("content #{i}"),
+        filename: "file#{i}.pdf",
+        content_type: "application/pdf"
+      )
+    end
+
+    file = fixture_file_upload("test.txt", "application/pdf")
+
+    assert_no_difference "@transaction.attachments.count" do
+      post transaction_attachments_path(@transaction), params: { attachment: file }
+    end
+
+    assert_redirected_to transaction_path(@transaction)
+    assert_match "Cannot exceed #{Transaction::MAX_ATTACHMENTS_PER_TRANSACTION} attachments", flash[:alert]
+  end
+
   test "should show attachment for authorized user" do
     @transaction.attachments.attach(
       io: StringIO.new("test content"),
-      filename: "test.txt",
-      content_type: "text/plain"
+      filename: "test.pdf",
+      content_type: "application/pdf"
     )
 
     attachment = @transaction.attachments.first
@@ -55,8 +86,8 @@ class TransactionAttachmentsControllerTest < ActionDispatch::IntegrationTest
   test "should delete attachment" do
     @transaction.attachments.attach(
       io: StringIO.new("test content"),
-      filename: "test.txt",
-      content_type: "text/plain"
+      filename: "test.pdf",
+      content_type: "application/pdf"
     )
 
     attachment = @transaction.attachments.first
