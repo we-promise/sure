@@ -9,8 +9,8 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     @coinbase_item = CoinbaseItem.create!(
       family: @family,
       name: "Test Coinbase",
-      api_key: "test_api_key",
-      api_secret: "dGVzdF9zZWNyZXQ="
+      api_key: "test_key",
+      api_secret: "test_secret"
     )
   end
 
@@ -104,8 +104,8 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     other_item = CoinbaseItem.create!(
       family: other_family,
       name: "Other Coinbase",
-      api_key: "other_key",
-      api_secret: "b3RoZXJfc2VjcmV0"
+      api_key: "other_test_key",
+      api_secret: "other_test_secret"
     )
 
     get setup_accounts_coinbase_item_url(other_item)

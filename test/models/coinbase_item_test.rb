@@ -6,8 +6,8 @@ class CoinbaseItemTest < ActiveSupport::TestCase
     @coinbase_item = CoinbaseItem.create!(
       family: @family,
       name: "Test Coinbase Connection",
-      api_key: "test_api_key_123",
-      api_secret: "dGVzdF9zZWNyZXRfa2V5XzEyMw=="
+      api_key: "test_key",
+      api_secret: "test_secret"
     )
   end
 
