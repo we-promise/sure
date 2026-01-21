@@ -20,10 +20,10 @@ es:
         merchant_detector:
           title: Detector de Comerciantes
           subtitle: La IA identifica y enriquece los datos de transacciones con información de comerciantes
-    billings:
+    payments:
       show:
-        page_title: Facturación
-        subscription_subtitle: Actualiza tu suscripción y detalles de facturación
+        page_title: Pago
+        subscription_subtitle: Actualiza tu suscripción y detalles de pago
         subscription_title: Gestionar suscripción
     preferences:
       show:
@@ -95,7 +95,7 @@ es:
       advanced_section_title: Avanzado
       ai_prompts_label: Indicaciones de IA
       api_key_label: Clave API
-      billing_label: Facturación
+      payment_label: Pago
       categories_label: Categorías
       feedback_label: Comentarios
       general_section_title: General

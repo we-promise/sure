@@ -20,10 +20,10 @@ zh-TW:
         merchant_detector:
           title: 商家偵測器
           subtitle: AI 會辨識交易資料並自動補全商家資訊
-    billings:
+    payments:
       show:
-        page_title: 帳單
-        subscription_subtitle: 更新您的訂閱方案與帳單詳情
+        page_title: 付款
+        subscription_subtitle: 更新您的訂閱方案與付款詳情
         subscription_title: 管理訂閱
     preferences:
       show:
@@ -95,7 +95,7 @@ zh-TW:
       advanced_section_title: 進階設定
       ai_prompts_label: AI 提示詞
       api_key_label: API 金鑰
-      billing_label: 帳單
+      payment_label: 付款
       categories_label: 類別
       feedback_label: 意見回饋
       general_section_title: 一般

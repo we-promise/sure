@@ -5,7 +5,7 @@
     <div class="flex w-full items-center gap-2.5">
       <% if family_merchant.logo_url %>
         <div class="w-8 h-8 rounded-full flex justify-center items-center">
-          <%= image_tag family_merchant.logo_url, class: "w-8 h-8 rounded-full" %>
+          <%= image_tag Setting.transform_brand_fetch_url(family_merchant.logo_url), class: "w-8 h-8 rounded-full" %>
         </div>
       <% else %>
         <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
