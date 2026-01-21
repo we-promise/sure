@@ -15,8 +15,10 @@ class TransactionAttachmentsController < ApplicationController
       new_count = attachments.is_a?(Array) ? attachments.length : 1
 
       if current_count + new_count > Transaction::MAX_ATTACHMENTS_PER_TRANSACTION
-        redirect_back_or_to transaction_path(@transaction),
-          alert: "Cannot exceed #{Transaction::MAX_ATTACHMENTS_PER_TRANSACTION} attachments per transaction"
+        respond_to do |format|
+          format.html { redirect_back_or_to transaction_path(@transaction), alert: "Cannot exceed #{Transaction::MAX_ATTACHMENTS_PER_TRANSACTION} attachments per transaction" }
+          format.turbo_stream { flash.now[:alert] = "Cannot exceed #{Transaction::MAX_ATTACHMENTS_PER_TRANSACTION} attachments per transaction" }
+        end
         return
       end
 
@@ -25,25 +27,45 @@ class TransactionAttachmentsController < ApplicationController
       if @transaction.valid?
         count = new_count
         message = count == 1 ? "Attachment uploaded successfully" : "#{count} attachments uploaded successfully"
-        redirect_back_or_to transaction_path(@transaction), notice: message
+        respond_to do |format|
+          format.html { redirect_back_or_to transaction_path(@transaction), notice: message }
+          format.turbo_stream { flash.now[:notice] = message }
+        end
       else
         # Remove invalid attachments
         @transaction.attachments.last(new_count).each(&:purge)
         error_messages = @transaction.errors.full_messages_for(:attachments).join(", ")
-        redirect_back_or_to transaction_path(@transaction), alert: error_messages
+        respond_to do |format|
+          format.html { redirect_back_or_to transaction_path(@transaction), alert: error_messages }
+          format.turbo_stream { flash.now[:alert] = error_messages }
+        end
       end
     else
-      redirect_back_or_to transaction_path(@transaction), alert: "No files selected for upload"
+      respond_to do |format|
+        format.html { redirect_back_or_to transaction_path(@transaction), alert: "No files selected for upload" }
+        format.turbo_stream { flash.now[:alert] = "No files selected for upload" }
+      end
     end
   rescue => e
-    redirect_back_or_to transaction_path(@transaction), alert: "Failed to upload attachment: #{e.message}"
+    respond_to do |format|
+      format.html { redirect_back_or_to transaction_path(@transaction), alert: "Failed to upload attachment: #{e.message}" }
+      format.turbo_stream { flash.now[:alert] = "Failed to upload attachment: #{e.message}" }
+    end
   end
 
   def destroy
     @attachment.purge
-    redirect_back_or_to transaction_path(@transaction), notice: "Attachment deleted successfully"
+    message = "Attachment deleted successfully"
+    respond_to do |format|
+      format.html { redirect_back_or_to transaction_path(@transaction), notice: message }
+      format.turbo_stream { flash.now[:notice] = message }
+    end
   rescue => e
-    redirect_back_or_to transaction_path(@transaction), alert: "Failed to delete attachment: #{e.message}"
+    message = "Failed to delete attachment: #{e.message}"
+    respond_to do |format|
+      format.html { redirect_back_or_to transaction_path(@transaction), alert: message }
+      format.turbo_stream { flash.now[:alert] = message }
+    end
   end
 
   private
