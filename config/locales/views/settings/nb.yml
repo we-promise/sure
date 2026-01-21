@@ -1,5 +1,9 @@
 ---
 nb:
+  views:
+    settings:
+      payments:
+        renewal: "Bidraget ditt fortsetter den %{date}."
   settings:
     billings:
       show:

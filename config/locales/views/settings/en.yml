@@ -1,5 +1,9 @@
 ---
 en:
+  views:
+    settings:
+      payments:
+        renewal: "Your contribution continues on %{date}."
   settings:
     ai_prompts:
       show:

@@ -1,5 +1,9 @@
 ---
 ca:
+  views:
+    settings:
+      payments:
+        renewal: "La teva contribució continua el %{date}."
   settings:
     ai_prompts:
       show:

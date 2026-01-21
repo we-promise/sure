@@ -1,5 +1,9 @@
 ---
 zh-TW:
+  views:
+    settings:
+      payments:
+        renewal: "您的貢獻將於 %{date} 繼續。"
   settings:
     ai_prompts:
       show:

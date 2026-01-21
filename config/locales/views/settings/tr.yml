@@ -1,5 +1,9 @@
 ---
 tr:
+  views:
+    settings:
+      payments:
+        renewal: "Katkınız %{date} tarihinde devam edecek."
   settings:
     billings:
       show:

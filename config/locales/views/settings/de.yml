@@ -1,4 +1,8 @@
 de:
+  views:
+    settings:
+      payments:
+        renewal: "Ihr Beitrag wird fortgesetzt am %{date}."
   settings:
     ai_prompts:
       show:
