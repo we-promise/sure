@@ -2,4 +2,5 @@ nl:
   subscriptions:
     self_hosted_alert: "%{product_name} is niet beschikbaar in zelfgehoste modus."
     upgrade:
+      contribute_and_support_sure: "Bijdragen en Sure ondersteunen"
       redirect_to_stripe: "In de volgende stap wordt u doorgestuurd naar Stripe, dat creditcards voor ons verwerkt."

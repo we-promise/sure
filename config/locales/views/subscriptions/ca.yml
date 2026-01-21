@@ -3,4 +3,5 @@ ca:
   subscriptions:
     self_hosted_alert: "%{product_name} no està disponible en mode autoallotjat."
     upgrade:
+      contribute_and_support_sure: "Contribuir i donar suport a Sure"
       redirect_to_stripe: "En el proper pas, se us redirigirà a Stripe, que gestiona les targetes de crèdit per nosaltres."

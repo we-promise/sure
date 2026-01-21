@@ -3,4 +3,5 @@ ro:
   subscriptions:
     self_hosted_alert: "%{product_name} nu este disponibil în modul self-hosted."
     upgrade:
+      contribute_and_support_sure: "Contribuie și sprijină Sure"
       redirect_to_stripe: "În pasul următor, veți fi redirecționat către Stripe, care procesează cardurile de credit pentru noi."

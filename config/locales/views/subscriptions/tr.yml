@@ -3,4 +3,5 @@ tr:
   subscriptions:
     self_hosted_alert: "%{product_name} kendi sunucunda barındırılan modda kullanılamaz."
     upgrade:
+      contribute_and_support_sure: "Katkıda bulun ve Sure'u destekle"
       redirect_to_stripe: "Bir sonraki adımda, kredi kartlarını bizim için işleyen Stripe'a yönlendirileceksiniz."

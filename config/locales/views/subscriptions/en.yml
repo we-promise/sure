@@ -2,4 +2,5 @@ en:
   subscriptions:
     self_hosted_alert: "%{product_name} is not available in self-hosted mode."
     upgrade:
+      contribute_and_support_sure: "Contribute and support Sure"
       redirect_to_stripe: "In the next step, you'll be redirected to Stripe which handles credit cards for us."

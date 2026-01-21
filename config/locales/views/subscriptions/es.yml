@@ -3,4 +3,5 @@ es:
   subscriptions:
     self_hosted_alert: "%{product_name} no está disponible en modo autoalojado."
     upgrade:
+      contribute_and_support_sure: "Contribuir y apoyar a Sure"
       redirect_to_stripe: "En el siguiente paso, serás redirigido a Stripe, que gestiona las tarjetas de crédito por nosotros."
