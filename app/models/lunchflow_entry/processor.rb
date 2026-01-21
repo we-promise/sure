@@ -62,7 +62,26 @@ class LunchflowEntry::Processor
 
     def external_id
       id = data[:id].presence
-      raise ArgumentError, "Lunchflow transaction missing required field 'id'" unless id
+      
+      # For pending transactions, Lunchflow may return blank/nil IDs
+      # Generate a stable temporary ID based on transaction attributes
+      if id.blank?
+        # Create a deterministic hash from key transaction attributes
+        # This ensures the same pending transaction gets the same ID across syncs
+        attributes = [
+          data[:accountId],
+          data[:amount],
+          data[:currency],
+          data[:date],
+          data[:merchant],
+          data[:description]
+        ].compact.join("|")
+        
+        temp_id = Digest::MD5.hexdigest(attributes)
+        Rails.logger.debug "Lunchflow: Generated temporary ID #{temp_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
+        return "lunchflow_pending_#{temp_id}"
+      end
+      
       "lunchflow_#{id}"
     end
 
