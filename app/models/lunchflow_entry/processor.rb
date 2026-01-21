@@ -3,7 +3,7 @@ require "digest/md5"
 class LunchflowEntry::Processor
   include CurrencyNormalizable
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
-  # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
+  # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
   def initialize(lunchflow_transaction, lunchflow_account:)
     @lunchflow_transaction = lunchflow_transaction
     @lunchflow_account = lunchflow_account
@@ -26,7 +26,8 @@ class LunchflowEntry::Processor
         name: name,
         source: "lunchflow",
         merchant: merchant,
-        notes: notes
+        notes: notes,
+        extra: extra_metadata
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -140,5 +141,19 @@ class LunchflowEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Lunchflow transaction date '#{data[:date]}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{data[:date].inspect}"
+    end
+
+    # Build extra metadata hash with pending status
+    # Lunchflow API field: isPending (boolean)
+    def extra_metadata
+      metadata = {}
+
+      # Store pending status from Lunchflow API when present
+      if data.key?(:isPending) || data.key?("isPending")
+        is_pending = data[:isPending] || data["isPending"]
+        metadata[:lunchflow] = { pending: ActiveModel::Type::Boolean.new.cast(is_pending) }
+      end
+
+      metadata
     end
 end
