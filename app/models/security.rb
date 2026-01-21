@@ -76,11 +76,10 @@ class Security < ApplicationRecord
     end
 
     def should_generate_logo?
-      logo_url.blank? && Setting.brand_fetch_client_id.present? && ticker.present?
+      logo_url.blank? && brandfetch_icon_url.present?
     end
 
     def generate_logo_url_from_brandfetch
-      size = Setting.brand_fetch_logo_size
-      self.logo_url = "https://cdn.brandfetch.io/#{ticker}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
+      self.logo_url = brandfetch_icon_url
     end
 end
