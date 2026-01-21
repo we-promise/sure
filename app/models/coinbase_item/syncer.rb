@@ -1,6 +1,8 @@
 # Orchestrates the sync process for a Coinbase connection.
 # Imports data, processes accounts, and schedules account syncs.
 class CoinbaseItem::Syncer
+  include SyncStats::Collector
+
   attr_reader :coinbase_item
 
   # @param coinbase_item [CoinbaseItem] Item to sync
@@ -25,16 +27,12 @@ class CoinbaseItem::Syncer
 
     # Phase 3: Check account setup status and collect sync statistics
     sync.update!(status_text: I18n.t("coinbase_item.syncer.checking_configuration")) if sync.respond_to?(:status_text)
-    total_accounts = coinbase_item.coinbase_accounts.count
 
-    linked_accounts = coinbase_item.coinbase_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
+    # Use SyncStats::Collector for consistent stats (checks current_account.present? by default)
+    collect_setup_stats(sync, provider_accounts: coinbase_item.coinbase_accounts.to_a)
+
     unlinked_accounts = coinbase_item.coinbase_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
-
-    sync_stats = {
-      total_accounts: total_accounts,
-      linked_accounts: linked_accounts.count,
-      unlinked_accounts: unlinked_accounts.count
-    }
+    linked_accounts = coinbase_item.coinbase_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
     if unlinked_accounts.any?
       coinbase_item.update!(pending_account_setup: true)
@@ -55,10 +53,10 @@ class CoinbaseItem::Syncer
         window_start_date: sync.window_start_date,
         window_end_date: sync.window_end_date
       )
-    end
 
-    if sync.respond_to?(:sync_stats)
-      sync.update!(sync_stats: sync_stats)
+      # Phase 6: Collect trade statistics
+      account_ids = linked_accounts.map { |ca| ca.current_account&.id }.compact
+      collect_transaction_stats(sync, account_ids: account_ids, source: "coinbase") if account_ids.any?
     end
   end
 
