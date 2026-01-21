@@ -27,6 +27,7 @@ en:
         currency: Currency
         date_format: Date format
         month_start_day: Budget month start day
+        month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
         general_subtitle: Configure your preferences
         general_title: General
         default_period: Default Period

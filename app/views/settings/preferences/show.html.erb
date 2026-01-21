@@ -30,6 +30,10 @@
             { label: t(".month_start_day") },
             { data: { auto_submit_form_target: "auto" } } %>
 
+        <% if @user.family.uses_custom_month_start? %>
+          <p class="text-xs italic pl-2 text-warning"><%= t(".month_start_day_warning") %></p>
+        <% end %>
+
         <%= form.select :default_period,
             Period.all.map { |period| [ period.label, period.key ] },
             { label: t(".default_period") },
