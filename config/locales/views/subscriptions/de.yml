@@ -2,3 +2,5 @@
 de:
   subscriptions:
     self_hosted_alert: "%{product_name} ist im Self-Hosting-Modus nicht verfügbar."
+    upgrade:
+      redirect_to_stripe: "Im nächsten Schritt werden Sie zu Stripe weitergeleitet, das Kreditkarten für uns verwaltet."

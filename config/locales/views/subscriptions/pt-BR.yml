@@ -2,3 +2,5 @@
 pt-BR:
   subscriptions:
     self_hosted_alert: "%{product_name} não está disponível no modo self-hosted."
+    upgrade:
+      redirect_to_stripe: "Na próxima etapa, você será redirecionado para o Stripe, que processa cartões de crédito para nós."

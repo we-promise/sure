@@ -2,3 +2,5 @@
 zh-TW:
   subscriptions:
     self_hosted_alert: "在自行代管模式下不支援 %{product_name}。"
+    upgrade:
+      redirect_to_stripe: "在下一步中，您將被重新導向到 Stripe，它為我們處理信用卡。"

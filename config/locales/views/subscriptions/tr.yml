@@ -2,3 +2,5 @@
 tr:
   subscriptions:
     self_hosted_alert: "%{product_name} kendi sunucunda barındırılan modda kullanılamaz."
+    upgrade:
+      redirect_to_stripe: "Bir sonraki adımda, kredi kartlarını bizim için işleyen Stripe'a yönlendirileceksiniz."

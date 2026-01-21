@@ -2,3 +2,5 @@
 nb:
   subscriptions:
     self_hosted_alert: "%{product_name} er ikke tilgjengelig i selvhostet modus."
+    upgrade:
+      redirect_to_stripe: "I neste trinn vil du bli omdirigert til Stripe, som håndterer kredittkort for oss."
