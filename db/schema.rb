@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_21_101345) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -49,8 +49,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
-    t.jsonb "holdings_snapshot_data"
-    t.datetime "holdings_snapshot_at"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -214,7 +212,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "wallet_address"
-    t.index [ :coinstats_item_id, :account_id, :wallet_address ], name: "index_coinstats_accounts_on_item_account_and_wallet", unique: true
+    t.index ["coinstats_item_id", "account_id", "wallet_address"], name: "index_coinstats_accounts_on_item_account_and_wallet", unique: true
     t.index ["coinstats_item_id"], name: "index_coinstats_accounts_on_coinstats_item_id"
   end
 
@@ -614,8 +612,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
-    t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
+    t.integer "rows_to_skip", default: 0, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -736,6 +734,46 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.index ["provider_merchant_id", "source"], name: "index_merchants_on_provider_merchant_id_and_source", unique: true, where: "((provider_merchant_id IS NOT NULL) AND ((type)::text = 'ProviderMerchant'::text))"
     t.index ["source", "name"], name: "index_merchants_on_source_and_name", unique: true, where: "((type)::text = 'ProviderMerchant'::text)"
     t.index ["type"], name: "index_merchants_on_type"
+  end
+
+  create_table "mercury_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "mercury_item_id", null: false
+    t.string "name"
+    t.string "account_id"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_mercury_accounts_on_account_id"
+    t.index ["mercury_item_id"], name: "index_mercury_accounts_on_mercury_item_id"
+  end
+
+  create_table "mercury_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "token"
+    t.string "base_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_mercury_items_on_family_id"
+    t.index ["status"], name: "index_mercury_items_on_status"
   end
 
   create_table "messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1185,15 +1223,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
-    t.decimal "realized_gain", precision: 19, scale: 4
-    t.decimal "cost_basis_amount", precision: 19, scale: 4
-    t.string "cost_basis_currency"
-    t.integer "holding_period_days"
-    t.string "realized_gain_confidence"
-    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
-    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1323,6 +1354,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"
+  add_foreign_key "mercury_accounts", "mercury_items"
+  add_foreign_key "mercury_items", "families"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"

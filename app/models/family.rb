@@ -1,4 +1,5 @@
 class Family < ApplicationRecord
+  include MercuryConnectable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable, CoinstatsConnectable
 
   DATE_FORMATS = [
