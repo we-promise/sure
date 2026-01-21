@@ -17,3 +17,7 @@ nl:
       footer:
         privacy_policy: Privacybeleid
         terms_of_service: Servicevoorwaarden
+    trial:
+      open_demo: Open demo
+      data_deleted_in_days: Gegevens worden over %{days} dagen verwijderd
+      contribute: Bijdragen
