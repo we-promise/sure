@@ -215,17 +215,26 @@ class LunchflowItem::Importer
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
             # Build set of existing transaction IDs for efficient lookup
+            # Note: Only include transactions with valid IDs. Blank/nil IDs should not be used for deduplication
+            # as multiple transactions can have missing IDs (especially pending transactions)
             existing_ids = existing_transactions.map do |tx|
               tx.with_indifferent_access[:id]
-            end.to_set
+            end.compact.reject(&:blank?).to_set
 
             # Filter to ONLY truly new transactions (skip duplicates)
-            # Transactions are immutable on the bank side, so we don't need to update them
+            # For transactions WITH IDs: skip if ID already exists (true duplicates)
+            # For transactions WITHOUT IDs: always include them (can't deduplicate without an ID)
+            # Note: Pending transactions may update from pending→posted, but we treat them as immutable snapshots
             new_transactions = transactions_data[:transactions].select do |tx|
               next false unless tx.is_a?(Hash)
 
               tx_id = tx.with_indifferent_access[:id]
-              tx_id.present? && !existing_ids.include?(tx_id)
+              
+              # If no ID, always include (can't determine if duplicate)
+              next true if tx_id.blank?
+              
+              # If has ID, only include if not already stored
+              !existing_ids.include?(tx_id)
             end
 
             if new_transactions.any?
