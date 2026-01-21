@@ -150,13 +150,15 @@ class Account::ProviderImportAdapter
 
       # Auto-set kind for internal movements and contributions
       auto_kind = nil
+      auto_category = nil
       if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
         auto_kind = "funds_movement"
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
+        auto_category = account.family.investment_contributions_category
       end
 
-      # Set investment activity label and kind if detected
+      # Set investment activity label, kind, and category if detected
       if entry.entryable.is_a?(Transaction)
         if detected_label.present? && entry.transaction.investment_activity_label.blank?
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
@@ -164,6 +166,10 @@ class Account::ProviderImportAdapter
 
         if auto_kind.present?
           entry.transaction.assign_attributes(kind: auto_kind)
+        end
+
+        if auto_category.present? && entry.transaction.category_id.blank?
+          entry.transaction.assign_attributes(category: auto_category)
         end
       end
 

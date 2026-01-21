@@ -59,6 +59,7 @@ en:
         new_activity: New activity
         new_balance: New balance
         new_transaction: New transaction
+        new_transfer: New transfer
         no_entries: No entries found
         pending: Pending
         search:

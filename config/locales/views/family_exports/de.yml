@@ -13,9 +13,19 @@ de:
     index:
       title: Exporte
       new: Neuer Export
-      no_exports: Noch keine Exporte vorhanden.
-    list:
-      export_from: "Export vom %{date}"
-      in_progress: Wird ausgeführt
-      complete: Abgeschlossen
-      failed: Fehlgeschlagen
+    table:
+      title: Exporte
+      header:
+        date: Datum
+        filename: Dateiname
+        status: Status
+        actions: Aktionen
+      row:
+        status:
+          in_progress: Wird ausgeführt
+          complete: Abgeschlossen
+          failed: Fehlgeschlagen
+        actions:
+          delete: Löschen
+          download: Herunterladen
+      empty: Noch keine Exporte vorhanden.

@@ -79,6 +79,12 @@ class Family < ApplicationRecord
     @income_statement ||= IncomeStatement.new(self)
   end
 
+  # Returns the Investment Contributions category for this family, or nil if not found.
+  # This is a bootstrapped category used for auto-categorizing transfers to investment accounts.
+  def investment_contributions_category
+    categories.find_by(name: Category.investment_contributions_name)
+  end
+
   def investment_statement
     @investment_statement ||= InvestmentStatement.new(self)
   end

@@ -35,8 +35,8 @@ class IncomeStatement::CategoryStats
           SELECT
             c.id as category_id,
             date_trunc(:interval, ae.date) as period,
-            CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-            SUM(ae.amount * COALESCE(er.rate, 1)) as total
+            CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+            SUM(CASE WHEN t.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END) as total
           FROM transactions t
           JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
           JOIN accounts a ON a.id = ae.account_id
@@ -47,11 +47,11 @@ class IncomeStatement::CategoryStats
             er.to_currency = :target_currency
           )
           WHERE a.family_id = :family_id
-            AND t.kind NOT IN ('funds_movement', 'one_time', 'cc_payment', 'investment_contribution')
+            AND t.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
             AND ae.excluded = false
             AND (t.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
             AND (t.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
-          GROUP BY c.id, period, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          GROUP BY c.id, period, CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         )
         SELECT
           category_id,

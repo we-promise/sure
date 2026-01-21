@@ -6,7 +6,7 @@
       <% if pagy.prev %>
         <%= link_to pagy_url_for(pagy, pagy.prev),
               data: { turbo_frame: :_top },
-              class: "inline-flex items-center p-2 text-sm font-medium text-secondary bg-container-inset hover:border-secondary hover:text-secondary" do %>
+              class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
           <%= icon("chevron-left") %>
         <% end %>
       <% else %>

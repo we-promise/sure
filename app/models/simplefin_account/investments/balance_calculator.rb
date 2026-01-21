@@ -1,22 +1,6 @@
 # SimpleFin Investment balance calculator
 # SimpleFin provides clear balance and holdings data, so calculations are simpler than Plaid
 class SimplefinAccount::Investments::BalanceCalculator
-  # Common money market fund tickers that should be treated as cash equivalents
-  # These are settlement funds that users consider "cash available to invest"
-  MONEY_MARKET_TICKERS = %w[
-    VMFXX VMMXX VMRXX VUSXX
-    SPAXX FDRXX SPRXX FZFXX FDLXX
-    SWVXX SNVXX SNOXX
-    TTTXX PRTXX
-  ].freeze
-
-  # Patterns that indicate money market funds (case-insensitive)
-  MONEY_MARKET_PATTERNS = [
-    /money\s*market/i,
-    /settlement\s*fund/i,
-    /cash\s*reserve/i
-  ].freeze
-
   def initialize(simplefin_account)
     @simplefin_account = simplefin_account
   end
@@ -67,11 +51,19 @@ class SimplefinAccount::Investments::BalanceCalculator
       symbol = holding["symbol"].to_s.upcase.strip
       description = holding["description"].to_s
 
-      # Check known money market tickers
-      return true if MONEY_MARKET_TICKERS.include?(symbol)
+      # Check known money market tickers (configured in config/initializers/simplefin.rb)
+      return true if money_market_tickers.include?(symbol)
 
       # Check description patterns
-      MONEY_MARKET_PATTERNS.any? { |pattern| description.match?(pattern) }
+      money_market_patterns.any? { |pattern| description.match?(pattern) }
+    end
+
+    def money_market_tickers
+      Rails.configuration.x.simplefin.money_market_tickers || []
+    end
+
+    def money_market_patterns
+      Rails.configuration.x.simplefin.money_market_patterns || []
     end
 
     def parse_market_value(market_value)

@@ -13,9 +13,19 @@ nb:
     index:
       title: Eksporter
       new: Ny Eksport
-      no_exports: Ingen eksporter ennå.
-    list:
-      export_from: "Eksport fra %{date}"
-      in_progress: Pågår
-      complete: Fullført
-      failed: Mislykket
+    table:
+      title: Eksporter
+      header:
+        date: Dato
+        filename: Filnavn
+        status: Status
+        actions: Handlinger
+      row:
+        status:
+          in_progress: Pågår
+          complete: Fullført
+          failed: Mislykket
+        actions:
+          delete: Slett
+          download: Laste ned
+      empty: Ingen eksporter ennå.
