@@ -21,6 +21,8 @@ class Provider::Mercury
     )
 
     handle_response(response)
+  rescue MercuryError
+    raise
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "Mercury API: GET /accounts failed: #{e.class}: #{e.message}"
     raise MercuryError.new("Exception during GET request: #{e.message}", :request_failed)
@@ -40,6 +42,8 @@ class Provider::Mercury
     )
 
     handle_response(response)
+  rescue MercuryError
+    raise
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "Mercury API: GET #{path} failed: #{e.class}: #{e.message}"
     raise MercuryError.new("Exception during GET request: #{e.message}", :request_failed)
@@ -82,6 +86,8 @@ class Provider::Mercury
     )
 
     handle_response(response)
+  rescue MercuryError
+    raise
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "Mercury API: GET #{path} failed: #{e.class}: #{e.message}"
     raise MercuryError.new("Exception during GET request: #{e.message}", :request_failed)
@@ -108,7 +114,9 @@ class Provider::Mercury
         Rails.logger.error "Mercury API: Bad request - #{response.body}"
         raise MercuryError.new("Bad request to Mercury API: #{response.body}", :bad_request)
       when 401
-        raise MercuryError.new("Invalid API token", :unauthorized)
+        # Parse the error response for more specific messages
+        error_message = parse_error_message(response.body)
+        raise MercuryError.new(error_message, :unauthorized)
       when 403
         raise MercuryError.new("Access forbidden - check your API token permissions", :access_forbidden)
       when 404
@@ -119,6 +127,23 @@ class Provider::Mercury
         Rails.logger.error "Mercury API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
         raise MercuryError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
       end
+    end
+
+    def parse_error_message(body)
+      parsed = JSON.parse(body, symbolize_names: true)
+      errors = parsed[:errors] || {}
+
+      case errors[:errorCode]
+      when "ipNotWhitelisted"
+        ip = errors[:ip] || "unknown"
+        "IP address not whitelisted (#{ip}). Add your IP to the API token's whitelist in Mercury dashboard."
+      when "noTokenInDBButMaybeMalformed"
+        "Invalid token format. Make sure to include the 'secret-token:' prefix."
+      else
+        errors[:message] || "Invalid API token"
+      end
+    rescue JSON::ParserError
+      "Invalid API token"
     end
 
     class MercuryError < StandardError
