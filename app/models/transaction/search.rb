@@ -83,7 +83,7 @@ class Transaction::Search
       family.id,
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
       family.entries_cache_version,
-      family.tax_advantaged_account_ids.sort.hash # changes when tax-advantaged accounts change
+      Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json) # stable across processes
     ].join("/")
   end
 

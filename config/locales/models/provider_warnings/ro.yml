@@ -1,4 +1,4 @@
 ---
 ro:
   provider_warnings:
-    limited_investment_data: "Investment data from this provider is limited. Activity labels (Buy, Sell, Dividend) are not available, which may affect budget accuracy. Consider creating rules to exclude or categorize investment transactions."
+    limited_investment_data: "Datele de investiții de la acest furnizor sunt limitate. Etichetele de activitate (Cumpărare, Vânzare, Dividend) nu sunt disponibile, ceea ce poate afecta acuratețea bugetului. Luați în considerare crearea de reguli pentru a exclude sau categoriza tranzacțiile de investiții."
