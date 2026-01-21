@@ -15,10 +15,10 @@ de:
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
-    billings:
+    payments:
       show:
-        page_title: Abrechnung
-        subscription_subtitle: Aktualisiere dein Abonnement und deine Rechnungsdetails
+        page_title: Zahlung
+        subscription_subtitle: Aktualisiere dein Abonnement und deine Zahlungsdetails
         subscription_title: Abonnement verwalten
     preferences:
       show:
@@ -90,7 +90,7 @@ de:
       advanced_section_title: Erweitert
       ai_prompts_label: KI-Eingabeaufforderungen
       api_key_label: API-Schlüssel
-      billing_label: Abrechnung
+      payment_label: Zahlung
       categories_label: Kategorien
       feedback_label: Feedback
       general_section_title: Allgemein

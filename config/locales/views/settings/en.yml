@@ -16,10 +16,10 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
-    billings:
+    payments:
       show:
-        page_title: Billing
-        subscription_subtitle: Update your subscription and billing details
+        page_title: Payment
+        subscription_subtitle: Update your subscription and payment details
         subscription_title: Manage subscription
     preferences:
       show:
@@ -111,7 +111,7 @@ en:
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
       api_key_label: API Key
-      billing_label: Billing
+      payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback
       general_section_title: General

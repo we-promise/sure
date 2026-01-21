@@ -16,10 +16,10 @@ pt-BR:
         merchant_detector:
           title: Detector de Estabelecimentos
           subtitle: A IA identifica e enriquece dados de transações com informações do estabelecimento
-    billings:
+    payments:
       show:
-        page_title: Cobrança
-        subscription_subtitle: Atualize sua assinatura e detalhes de cobrança
+        page_title: Pagamento
+        subscription_subtitle: Atualize sua assinatura e detalhes de pagamento
         subscription_title: Gerenciar assinatura
     preferences:
       show:
@@ -86,7 +86,7 @@ pt-BR:
     settings_nav:
       accounts_label: Contas
       api_key_label: Chave da API
-      billing_label: Cobrança
+      payment_label: Pagamento
       categories_label: Categorias
       feedback_label: Feedback
       general_section_title: Geral

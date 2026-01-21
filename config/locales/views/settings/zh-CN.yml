@@ -16,10 +16,10 @@ zh-CN:
         transaction_categorizer:
           subtitle: AI 根据您定义的分类自动为交易进行分类
           title: 交易分类器
-    billings:
+    payments:
       show:
-        page_title: 账单管理
-        subscription_subtitle: 更新订阅与账单信息
+        page_title: 付款管理
+        subscription_subtitle: 更新订阅与付款信息
         subscription_title: 管理订阅
     hostings:
       ensure_admin:
@@ -96,7 +96,7 @@ zh-CN:
       api_key_label: API 密钥
       api_keys_label: API 密钥
       bank_sync_label: 银行同步
-      billing_label: 账单管理
+      payment_label: 付款管理
       categories_label: 分类管理
       feedback_label: 意见反馈
       general_section_title: 通用设置
