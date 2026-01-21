@@ -5,6 +5,7 @@ class TransfersController < ApplicationController
 
   def new
     @transfer = Transfer.new
+    @from_account_id = params[:from_account_id]
   end
 
   def show

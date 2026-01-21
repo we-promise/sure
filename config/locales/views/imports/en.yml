@@ -69,22 +69,30 @@ en:
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
   imports:
-    empty:
-      message: No imports yet.
-      new: New Import
-    import:
-      complete: Complete
-      delete: Delete
-      failed: Failed
-      in_progress: In progress
-      label: "%{type}: %{datetime}"
-      revert_failed: Revert failed
-      reverting: Reverting
-      uploading: Processing rows
-      view: View
     index:
       title: Imports
       new: New Import
+    table:
+      title: Imports
+      header:
+        date: Date
+        operation: Operation
+        status: Status
+        actions: Actions
+      row:
+        status:
+          in_progress: In progress
+          uploading: Processing rows
+          reverting: Reverting
+          revert_failed: Revert failed
+          complete: Complete
+          failed: Failed
+        actions:
+          revert: Revert
+          confirm_revert: This will delete transactions that were imported, but you will still be able to review and re-import your data at any time.
+          delete: Delete
+          view: View
+      empty: No imports yet.
     new:
       description: You can manually import various types of data via CSV or use one
         of our import templates like Mint.

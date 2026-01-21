@@ -13,10 +13,19 @@ ca:
     index:
       title: Exportacions
       new: Nova exportació
-      no_exports: Encara no hi ha exportacions.
-    list:
-      export_from: "Exportació del %{date}"
-      in_progress: En curs
-      complete: Completat
-      failed: Error
-      in_progress: En curs
+    table:
+      title: Exportacions
+      header:
+        date: Data
+        filename: Nom del fitxer
+        status: Estat
+        actions: Accions
+      row:
+        status:
+          in_progress: En curs
+          complete: Completat
+          failed: Error
+        actions:
+          delete: Elimina
+          download: Descarregar
+      empty: Encara no hi ha exportacions.

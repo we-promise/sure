@@ -27,16 +27,23 @@ class Transfer::Creator
 
     def outflow_transaction
       name = "#{name_prefix} to #{destination_account.name}"
+      kind = outflow_transaction_kind
 
       Transaction.new(
-        kind: outflow_transaction_kind,
+        kind: kind,
+        category: (investment_contributions_category if kind == "investment_contribution"),
         entry: source_account.entries.build(
           amount: amount.abs,
           currency: source_account.currency,
           date: date,
           name: name,
+          user_modified: true, # Protect from provider sync claiming this entry
         )
       )
+    end
+
+    def investment_contributions_category
+      source_account.family.investment_contributions_category
     end
 
     def inflow_transaction
@@ -49,6 +56,7 @@ class Transfer::Creator
           currency: destination_account.currency,
           date: date,
           name: name,
+          user_modified: true, # Protect from provider sync claiming this entry
         )
       )
     end
@@ -70,9 +78,19 @@ class Transfer::Creator
         "loan_payment"
       elsif destination_account.liability?
         "cc_payment"
+      elsif destination_is_investment? && !source_is_investment?
+        "investment_contribution"
       else
         "funds_movement"
       end
+    end
+
+    def destination_is_investment?
+      destination_account.investment? || destination_account.crypto?
+    end
+
+    def source_is_investment?
+      source_account.investment? || source_account.crypto?
     end
 
     def name_prefix
