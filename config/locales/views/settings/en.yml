@@ -19,8 +19,8 @@ en:
     billings:
       show:
         page_title: Billing
-        subscription_subtitle: Update your subscription and billing details
-        subscription_title: Manage subscription
+        subscription_subtitle: Update your credit card details
+        subscription_title: Manage contributions
     preferences:
       show:
         country: Country

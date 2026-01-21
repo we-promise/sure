@@ -5,7 +5,7 @@ class SubscriptionsController < ApplicationController
   # Upgrade page for unsubscribed users
   def upgrade
     if Current.family.subscription&.active?
-      redirect_to root_path, notice: "You are already subscribed."
+      redirect_to root_path, notice: "You are already contributing. Thank you!"
     else
       @plan = params[:plan] || "annual"
       render layout: "onboardings"
