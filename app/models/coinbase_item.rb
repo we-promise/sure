@@ -13,9 +13,10 @@ class CoinbaseItem < ApplicationRecord
   end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
+  # api_key uses deterministic encryption for querying, api_secret uses standard encryption
   if encryption_ready?
     encrypts :api_key, deterministic: true
-    encrypts :api_secret, deterministic: true
+    encrypts :api_secret
   end
 
   validates :name, presence: true
