@@ -51,7 +51,7 @@
                          method: :patch,
                          data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
       <%= form.toggle :brand_fetch_high_res_logos,
-                      checked: ENV["BRAND_FETCH_HIGH_RES_LOGOS"] == "true" || Setting.brand_fetch_high_res_logos,
+                      checked: ENV["BRAND_FETCH_HIGH_RES_LOGOS"].present? ? ENV["BRAND_FETCH_HIGH_RES_LOGOS"] == "true" : Setting.brand_fetch_high_res_logos,
                       disabled: ENV["BRAND_FETCH_HIGH_RES_LOGOS"].present?,
                       data: { auto_submit_form_target: "auto" } %>
     <% end %>
