@@ -85,6 +85,31 @@ class Family < ApplicationRecord
     categories.find_by(name: Category.investment_contributions_name)
   end
 
+  # Returns account IDs for tax-advantaged accounts (401k, IRA, HSA, etc.)
+  # Used to exclude these accounts from budget/cashflow calculations.
+  # Tax-advantaged accounts are retirement savings, not daily expenses.
+  def tax_advantaged_account_ids
+    @tax_advantaged_account_ids ||= begin
+      # Investment accounts derive tax_treatment from subtype
+      tax_advantaged_subtypes = Investment::SUBTYPES.select do |_, meta|
+        meta[:tax_treatment].in?(%i[tax_deferred tax_exempt tax_advantaged])
+      end.keys
+
+      investment_ids = accounts
+        .joins("INNER JOIN investments ON investments.id = accounts.accountable_id AND accounts.accountable_type = 'Investment'")
+        .where(investments: { subtype: tax_advantaged_subtypes })
+        .pluck(:id)
+
+      # Crypto accounts have an explicit tax_treatment column
+      crypto_ids = accounts
+        .joins("INNER JOIN cryptos ON cryptos.id = accounts.accountable_id AND accounts.accountable_type = 'Crypto'")
+        .where(cryptos: { tax_treatment: %w[tax_deferred tax_exempt] })
+        .pluck(:id)
+
+      investment_ids + crypto_ids
+    end
+  end
+
   def investment_statement
     @investment_statement ||= InvestmentStatement.new(self)
   end

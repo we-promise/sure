@@ -69,6 +69,9 @@ class SimplefinItem::Syncer
         collect_skip_stats(sync, skipped_entries: skipped_entries)
       end
 
+      # Warn about limited investment data for investment/crypto accounts
+      collect_investment_data_quality_warning(sync, linked_simplefin_accounts)
+
       sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
       simplefin_item.schedule_account_syncs(
         parent_sync: sync,
@@ -223,6 +226,26 @@ class SimplefinItem::Syncer
         "window_start" => window_start,
         "window_end" => window_end
       }
+    end
+
+    # Collects a data quality warning if any linked accounts are investment or crypto accounts.
+    # SimpleFIN cannot provide activity labels (Buy, Sell, Dividend, etc.) for investment transactions,
+    # which may affect budget accuracy.
+    def collect_investment_data_quality_warning(sync, linked_simplefin_accounts)
+      investment_accounts = linked_simplefin_accounts.select do |sfa|
+        account = sfa.current_account
+        account&.accountable_type.in?(%w[Investment Crypto])
+      end
+
+      return if investment_accounts.empty?
+
+      collect_data_quality_stats(sync,
+        warnings: investment_accounts.size,
+        details: [ {
+          message: I18n.t("provider_warnings.limited_investment_data"),
+          severity: "warning"
+        } ]
+      )
     end
 
     def mark_failed(sync, error)
