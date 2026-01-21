@@ -91,8 +91,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
       tags 'Transactions'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-                description: 'API key with read scope'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
@@ -170,8 +168,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-                description: 'API key with write scope'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -253,8 +249,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
   end
 
   path '/api/v1/transactions/{id}' do
-    parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-              description: 'API key'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Transaction ID'
 
     get 'Retrieve a transaction' do

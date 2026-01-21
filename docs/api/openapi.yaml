@@ -605,12 +605,6 @@ paths:
       security:
       - apiKeyAuth: []
       parameters:
-      - name: X-Api-Key
-        in: header
-        required: true
-        schema:
-          type: string
-        description: API key with read scope
       - name: page
         in: query
         required: false
@@ -654,12 +648,6 @@ paths:
                 "$ref": "#/components/schemas/CategoryCollection"
   "/api/v1/categories/{id}":
     parameters:
-    - name: X-Api-Key
-      in: header
-      required: true
-      schema:
-        type: string
-      description: API key with read scope
     - name: id
       in: path
       required: true
@@ -692,13 +680,6 @@ paths:
       - Chats
       security:
       - apiKeyAuth: []
-      parameters:
-      - name: X-Api-Key
-        in: header
-        required: true
-        schema:
-          type: string
-        description: API key with read scope
       responses:
         '200':
           description: chats listed
@@ -718,13 +699,7 @@ paths:
       - Chats
       security:
       - apiKeyAuth: []
-      parameters:
-      - name: X-Api-Key
-        in: header
-        required: true
-        schema:
-          type: string
-        description: API key with write scope
+      parameters: []
       responses:
         '201':
           description: chat created
@@ -758,12 +733,6 @@ paths:
         required: true
   "/api/v1/chats/{id}":
     parameters:
-    - name: X-Api-Key
-      in: header
-      required: true
-      schema:
-        type: string
-      description: API key with read scope
     - name: id
       in: path
       required: true
@@ -838,12 +807,6 @@ paths:
           description: chat not found
   "/api/v1/chats/{chat_id}/messages":
     parameters:
-    - name: X-Api-Key
-      in: header
-      required: true
-      schema:
-        type: string
-      description: API key with write scope
     - name: chat_id
       in: path
       required: true
@@ -891,12 +854,6 @@ paths:
         required: true
   "/api/v1/chats/{chat_id}/messages/retry":
     parameters:
-    - name: X-Api-Key
-      in: header
-      required: true
-      schema:
-        type: string
-      description: API key with write scope
     - name: chat_id
       in: path
       required: true
@@ -937,12 +894,6 @@ paths:
       security:
       - apiKeyAuth: []
       parameters:
-      - name: X-Api-Key
-        in: header
-        required: true
-        schema:
-          type: string
-        description: API key with read scope
       - name: page
         in: query
         required: false
@@ -995,13 +946,7 @@ paths:
       - Imports
       security:
       - apiKeyAuth: []
-      parameters:
-      - name: X-Api-Key
-        in: header
-        required: true
-        schema:
-          type: string
-        description: API key with write scope
+      parameters: []
       responses:
         '201':
           description: import created
@@ -1086,12 +1031,6 @@ paths:
         required: true
   "/api/v1/imports/{id}":
     parameters:
-    - name: X-Api-Key
-      in: header
-      required: true
-      schema:
-        type: string
-      description: API key with read scope
     - name: id
       in: path
       required: true
@@ -1127,12 +1066,6 @@ paths:
       security:
       - apiKeyAuth: []
       parameters:
-      - name: X-Api-Key
-        in: header
-        required: true
-        schema:
-          type: string
-        description: API key with read scope
       - name: page
         in: query
         required: false
@@ -1249,13 +1182,7 @@ paths:
       - Transactions
       security:
       - apiKeyAuth: []
-      parameters:
-      - name: X-Api-Key
-        in: header
-        required: true
-        schema:
-          type: string
-        description: API key with write scope
+      parameters: []
       responses:
         '201':
           description: transaction created
@@ -1333,12 +1260,6 @@ paths:
         required: true
   "/api/v1/transactions/{id}":
     parameters:
-    - name: X-Api-Key
-      in: header
-      required: true
-      schema:
-        type: string
-      description: API key
     - name: id
       in: path
       required: true

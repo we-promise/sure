@@ -79,8 +79,6 @@ RSpec.describe 'API V1 Chats', type: :request do
       tags 'Chats'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-                description: 'API key with read scope'
 
       response '200', 'chats listed' do
         schema '$ref' => '#/components/schemas/ChatCollection'
@@ -113,8 +111,6 @@ RSpec.describe 'API V1 Chats', type: :request do
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-                description: 'API key with write scope'
       parameter name: :chat_params, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -154,8 +150,6 @@ RSpec.describe 'API V1 Chats', type: :request do
   end
 
   path '/api/v1/chats/{id}' do
-    parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-              description: 'API key with read scope'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Chat ID'
 
     get 'Retrieve a chat' do
@@ -246,8 +240,6 @@ RSpec.describe 'API V1 Chats', type: :request do
   end
 
   path '/api/v1/chats/{chat_id}/messages' do
-    parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-              description: 'API key with write scope'
     parameter name: :chat_id, in: :path, type: :string, required: true, description: 'Chat ID'
 
     post 'Create a message' do
@@ -302,8 +294,6 @@ RSpec.describe 'API V1 Chats', type: :request do
   end
 
   path '/api/v1/chats/{chat_id}/messages/retry' do
-    parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-              description: 'API key with write scope'
     parameter name: :chat_id, in: :path, type: :string, required: true, description: 'Chat ID'
 
     post 'Retry the last assistant response' do

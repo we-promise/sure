@@ -66,8 +66,6 @@ RSpec.describe 'API V1 Categories', type: :request do
       tags 'Categories'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-                description: 'API key with read scope'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
@@ -134,8 +132,6 @@ RSpec.describe 'API V1 Categories', type: :request do
   end
 
   path '/api/v1/categories/{id}' do
-    parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-              description: 'API key with read scope'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Category ID'
 
     get 'Retrieve a category' do

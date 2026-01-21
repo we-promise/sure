@@ -67,8 +67,6 @@ RSpec.describe 'API V1 Imports', type: :request do
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-                description: 'API key with read scope'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
@@ -123,8 +121,6 @@ RSpec.describe 'API V1 Imports', type: :request do
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-                description: 'API key with write scope'
 
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
@@ -231,8 +227,6 @@ RSpec.describe 'API V1 Imports', type: :request do
   end
 
   path '/api/v1/imports/{id}' do
-    parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
-              description: 'API key with read scope'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
