@@ -32,13 +32,13 @@
     </turbo-frame>
   <% end %>
 
-  <%= settings_section title: "CoinStats", collapsible: true, open: false do %>
+  <%= settings_section title: "CoinStats (beta)", collapsible: true, open: false do %>
     <turbo-frame id="coinstats-providers-panel">
       <%= render "settings/providers/coinstats_panel" %>
     </turbo-frame>
   <% end %>
 
-  <%= settings_section title: t(".coinbase_title"), collapsible: true, open: false do %>
+  <%= settings_section title: "#{t('.coinbase_title')} (beta)", collapsible: true, open: false do %>
     <turbo-frame id="coinbase-providers-panel">
       <%= render "settings/providers/coinbase_panel" %>
     </turbo-frame>
