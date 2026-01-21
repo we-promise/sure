@@ -1,7 +1,9 @@
 class Budget < ApplicationRecord
   include Monetizable
 
-  PARAM_DATE_FORMAT = "%b-%Y"
+  # Using ISO format to support custom month start days
+  PARAM_DATE_FORMAT = "%Y-%m-%d"
+  LEGACY_PARAM_DATE_FORMAT = "%b-%Y"
 
   belongs_to :family
 
@@ -19,24 +21,47 @@ class Budget < ApplicationRecord
       date.strftime(PARAM_DATE_FORMAT).downcase
     end
 
-    def param_to_date(param)
-      Date.strptime(param, PARAM_DATE_FORMAT).beginning_of_month
+    def param_to_date(param, family: nil)
+      # Try new format first (YYYY-MM-DD)
+      Date.strptime(param, PARAM_DATE_FORMAT)
+    rescue Date::Error
+      # Fall back to legacy format (mon-YYYY) for backwards compatibility
+      date = Date.strptime(param, LEGACY_PARAM_DATE_FORMAT)
+      if family&.uses_custom_month_start?
+        # Legacy format "feb-2026" means budget starting on Feb 15 (if month_start_day=15)
+        Date.new(date.year, date.month, family.month_start_day)
+      else
+        date.beginning_of_month
+      end
     end
 
-    def budget_date_valid?(date, family:)
-      beginning_of_month = date.beginning_of_month
+    def budget_date_valid?(start_date, family:)
+      oldest_valid = oldest_valid_budget_date(family)
+      if family.uses_custom_month_start?
+        latest_valid = family.custom_month_end_for(Date.current)
+      else
+        latest_valid = Date.current.end_of_month
+      end
 
-      beginning_of_month >= oldest_valid_budget_date(family) && beginning_of_month <= Date.current.end_of_month
+      start_date >= oldest_valid && start_date <= latest_valid
     end
 
     def find_or_bootstrap(family, start_date:)
-      return nil unless budget_date_valid?(start_date, family: family)
+      if family.uses_custom_month_start?
+        budget_start = family.custom_month_start_for(start_date)
+        budget_end = family.custom_month_end_for(start_date)
+      else
+        budget_start = start_date.beginning_of_month
+        budget_end = start_date.end_of_month
+      end
+
+      return nil unless budget_date_valid?(budget_start, family: family)
 
       Budget.transaction do
         budget = Budget.find_or_create_by!(
           family: family,
-          start_date: start_date.beginning_of_month,
-          end_date: start_date.end_of_month
+          start_date: budget_start,
+          end_date: budget_end
         ) do |b|
           b.currency = family.currency
         end
@@ -95,7 +120,11 @@ class Budget < ApplicationRecord
   end
 
   def name
-    start_date.strftime("%B %Y")
+    if family.uses_custom_month_start?
+      "#{start_date.strftime('%b %d')} - #{end_date.strftime('%b %d, %Y')}"
+    else
+      start_date.strftime("%B %Y")
+    end
   end
 
   def initialized?
@@ -111,23 +140,28 @@ class Budget < ApplicationRecord
   end
 
   def current?
-    start_date == Date.today.beginning_of_month && end_date == Date.today.end_of_month
+    if family.uses_custom_month_start?
+      start_date == family.custom_month_start_for(Date.current) &&
+        end_date == family.custom_month_end_for(Date.current)
+    else
+      start_date == Date.current.beginning_of_month && end_date == Date.current.end_of_month
+    end
   end
 
   def previous_budget_param
-    previous_date = start_date - 1.month
-    return nil unless self.class.budget_date_valid?(previous_date, family: family)
+    previous_start = start_date - 1.month
+    return nil unless self.class.budget_date_valid?(previous_start, family: family)
 
-    self.class.date_to_param(previous_date)
+    self.class.date_to_param(previous_start)
   end
 
   def next_budget_param
     return nil if current?
 
-    next_date = start_date + 1.month
-    return nil unless self.class.budget_date_valid?(next_date, family: family)
+    next_start = start_date + 1.month
+    return nil unless self.class.budget_date_valid?(next_start, family: family)
 
-    self.class.date_to_param(next_date)
+    self.class.date_to_param(next_start)
   end
 
   def to_donut_segments_json

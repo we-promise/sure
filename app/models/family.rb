@@ -39,6 +39,7 @@ class Family < ApplicationRecord
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
+  validates :month_start_day, inclusion: { in: 1..28 }
 
   def assigned_merchants
     merchant_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
@@ -137,5 +138,31 @@ class Family < ApplicationRecord
 
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
+  end
+
+  def custom_month_start_for(date)
+    if date.day >= month_start_day
+      Date.new(date.year, date.month, month_start_day)
+    else
+      prev_month = date - 1.month
+      Date.new(prev_month.year, prev_month.month, month_start_day)
+    end
+  end
+
+  def custom_month_end_for(date)
+    start_date = custom_month_start_for(date)
+    # The end date is the day before the next month's start
+    (start_date + 1.month) - 1.day
+  end
+
+  def current_custom_month_period
+    Period.custom(
+      start_date: custom_month_start_for(Date.current),
+      end_date: [ custom_month_end_for(Date.current), Date.current ].min
+    )
+  end
+
+  def uses_custom_month_start?
+    month_start_day != 1
   end
 end

@@ -26,6 +26,7 @@ en:
         country: Country
         currency: Currency
         date_format: Date format
+        month_start_day: Budget month start day
         general_subtitle: Configure your preferences
         general_title: General
         default_period: Default Period

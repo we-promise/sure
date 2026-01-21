@@ -85,4 +85,73 @@ class BudgetTest < ActiveSupport::TestCase
 
     assert_not_nil budget.previous_budget_param
   end
+
+  test "find_or_bootstrap uses custom month boundaries when family has custom month_start_day" do
+    @family.update!(month_start_day: 15)
+
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.new(2026, 2, 20))
+
+    assert_equal Date.new(2026, 2, 15), budget.start_date
+    assert_equal Date.new(2026, 3, 14), budget.end_date
+  end
+
+  test "find_or_bootstrap uses calendar month boundaries when month_start_day is 1" do
+    @family.update!(month_start_day: 1)
+
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.new(2026, 2, 20))
+
+    assert_equal Date.new(2026, 2, 1), budget.start_date
+    assert_equal Date.new(2026, 2, 28), budget.end_date
+  end
+
+  test "current? returns true for custom month budget when dates match" do
+    @family.update!(month_start_day: 15)
+
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+
+    assert budget.current?
+  end
+
+  test "name shows date range for custom month budgets" do
+    @family.update!(month_start_day: 15)
+
+    budget = Budget.create!(
+      family: @family,
+      start_date: Date.new(2026, 2, 15),
+      end_date: Date.new(2026, 3, 14),
+      currency: "USD"
+    )
+
+    assert_equal "Feb 15 - Mar 14, 2026", budget.name
+  end
+
+  test "name shows month year for calendar month budgets" do
+    @family.update!(month_start_day: 1)
+
+    budget = Budget.create!(
+      family: @family,
+      start_date: Date.new(2026, 2, 1),
+      end_date: Date.new(2026, 2, 28),
+      currency: "USD"
+    )
+
+    assert_equal "February 2026", budget.name
+  end
+
+  test "param_to_date handles ISO format" do
+    date = Budget.param_to_date("2026-02-15", family: @family)
+    assert_equal Date.new(2026, 2, 15), date
+  end
+
+  test "param_to_date handles legacy format with calendar month" do
+    @family.update!(month_start_day: 1)
+    date = Budget.param_to_date("feb-2026", family: @family)
+    assert_equal Date.new(2026, 2, 1), date
+  end
+
+  test "param_to_date handles legacy format with custom month start" do
+    @family.update!(month_start_day: 15)
+    date = Budget.param_to_date("feb-2026", family: @family)
+    assert_equal Date.new(2026, 2, 15), date
+  end
 end
