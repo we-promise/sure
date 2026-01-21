@@ -96,7 +96,7 @@ class AccountsTest < ApplicationSystemTestCase
       fill_in "account[installment_attributes][installment_cost]", with: 200
       fill_in "Total Term", with: 6
       select "Monthly", from: "Payment Period"
-      fill_in "Current Payment Number", with: 0
+      fill_in "Current Term", with: 0
       fill_in "Payment Day", with: 15
     end
   end
