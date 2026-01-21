@@ -183,14 +183,22 @@ class LunchflowItem::Importer
 
     def fetch_and_store_transactions(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date}"
+      include_pending = Rails.configuration.x.lunchflow.include_pending
+
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date} (include_pending=#{include_pending})"
 
       begin
         # Fetch transactions
         transactions_data = lunchflow_provider.get_account_transactions(
           lunchflow_account.account_id,
-          start_date: start_date
+          start_date: start_date,
+          include_pending: include_pending
         )
+
+        # Optional: Debug logging
+        if Rails.configuration.x.lunchflow.debug_raw
+          Rails.logger.debug "Lunchflow raw response: #{transactions_data.to_json}"
+        end
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
