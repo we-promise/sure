@@ -73,7 +73,13 @@ class Security < ApplicationRecord
     end
 
     def should_generate_logo?
-      logo_url.blank? && brandfetch_icon_url.present?
+      url = brandfetch_icon_url
+      return false unless url.present?
+
+      return true if logo_url.blank?
+      return false unless logo_url.include?("cdn.brandfetch.io")
+
+      website_url_changed? || ticker_changed?
     end
 
     def generate_logo_url_from_brandfetch
