@@ -22,7 +22,7 @@ en:
           subtitle: AI identifies and enriches transaction data with merchant information
     payments:
       show:
-        page_title: Billing
+        page_title: Payments
         subscription_subtitle: Update your credit card details
         subscription_title: Manage contributions
     preferences:

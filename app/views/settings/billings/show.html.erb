@@ -15,8 +15,8 @@
             <p class="text-primary">
               <span>Currently on the <span class="font-medium"><%= @family.subscription.name %></span>.</span>
 
-              <% if @family.next_billing_date %>
-                <span><%= t("views.settings.payments.renewal", date: l(@family.next_billing_date, format: :long)) %></span>
+              <% if @family.next_payment_date %>
+                <span><%= t("views.settings.payments.renewal", date: l(@family.next_payment_date, format: :long)) %></span>
               <% end %>
             </p>
           <% elsif @family.trialing? %>
