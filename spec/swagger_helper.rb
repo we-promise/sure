@@ -25,10 +25,11 @@ RSpec.configure do |config|
       ],
       components: {
         securitySchemes: {
-          bearerAuth: {
-            type: :http,
-            scheme: :bearer,
-            bearerFormat: :JWT
+          apiKeyAuth: {
+            type: :apiKey,
+            name: 'X-Api-Key',
+            in: :header,
+            description: 'API key for authentication. Generate one from your account settings.'
           }
         },
         schemas: {

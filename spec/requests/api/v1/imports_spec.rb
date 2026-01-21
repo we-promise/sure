@@ -20,25 +20,18 @@ RSpec.describe 'API V1 Imports', type: :request do
     )
   end
 
-  let(:oauth_application) do
-    Doorkeeper::Application.create!(
-      name: 'API Docs',
-      redirect_uri: 'https://example.com/callback',
-      scopes: 'read read_write'
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'web'
     )
   end
 
-  let(:access_token) do
-    Doorkeeper::AccessToken.create!(
-      application: oauth_application,
-      resource_owner_id: user.id,
-      scopes: 'read_write',
-      expires_in: 2.hours,
-      token: SecureRandom.hex(32)
-    )
-  end
-
-  let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
     Account.create!(
@@ -72,10 +65,10 @@ RSpec.describe 'API V1 Imports', type: :request do
     get 'List imports' do
       description 'List all imports for the user\'s family with pagination and filtering.'
       tags 'Imports'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with read scope'
+      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
+                description: 'API key with read scope'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
@@ -127,11 +120,11 @@ RSpec.describe 'API V1 Imports', type: :request do
     post 'Create import' do
       description 'Create a new import from raw CSV content.'
       tags 'Imports'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with write scope'
+      parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
+                description: 'API key with write scope'
 
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
@@ -238,14 +231,14 @@ RSpec.describe 'API V1 Imports', type: :request do
   end
 
   path '/api/v1/imports/{id}' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token with read scope'
+    parameter name: :'X-Api-Key', in: :header, required: true, schema: { type: :string },
+              description: 'API key with read scope'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
       description 'Retrieve detailed information about a specific import, including configuration and row statistics.'
       tags 'Imports'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { pending_import.id }

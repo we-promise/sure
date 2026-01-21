@@ -11,10 +11,11 @@ servers:
   description: Local development
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      name: X-Api-Key
+      in: header
+      description: API key for authentication. Generate one from your account settings.
   schemas:
     Pagination:
       type: object
@@ -602,14 +603,14 @@ paths:
       tags:
       - Categories
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
+      - name: X-Api-Key
         in: header
         required: true
         schema:
           type: string
-        description: Bearer token with read scope
+        description: API key with read scope
       - name: page
         in: query
         required: false
@@ -653,12 +654,12 @@ paths:
                 "$ref": "#/components/schemas/CategoryCollection"
   "/api/v1/categories/{id}":
     parameters:
-    - name: Authorization
+    - name: X-Api-Key
       in: header
       required: true
       schema:
         type: string
-      description: Bearer token with read scope
+      description: API key with read scope
     - name: id
       in: path
       required: true
@@ -670,7 +671,7 @@ paths:
       tags:
       - Categories
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: subcategory retrieved with parent
@@ -690,14 +691,14 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
+      - name: X-Api-Key
         in: header
         required: true
         schema:
           type: string
-        description: Bearer token with read scope
+        description: API key with read scope
       responses:
         '200':
           description: chats listed
@@ -716,14 +717,14 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
+      - name: X-Api-Key
         in: header
         required: true
         schema:
           type: string
-        description: Bearer token with write scope
+        description: API key with write scope
       responses:
         '201':
           description: chat created
@@ -757,12 +758,12 @@ paths:
         required: true
   "/api/v1/chats/{id}":
     parameters:
-    - name: Authorization
+    - name: X-Api-Key
       in: header
       required: true
       schema:
         type: string
-      description: Bearer token with read scope
+      description: API key with read scope
     - name: id
       in: path
       required: true
@@ -774,7 +775,7 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: chat retrieved
@@ -793,7 +794,7 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '200':
@@ -829,7 +830,7 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '204':
           description: chat deleted
@@ -837,12 +838,12 @@ paths:
           description: chat not found
   "/api/v1/chats/{chat_id}/messages":
     parameters:
-    - name: Authorization
+    - name: X-Api-Key
       in: header
       required: true
       schema:
         type: string
-      description: Bearer token with write scope
+      description: API key with write scope
     - name: chat_id
       in: path
       required: true
@@ -854,7 +855,7 @@ paths:
       tags:
       - Chat Messages
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '201':
@@ -890,12 +891,12 @@ paths:
         required: true
   "/api/v1/chats/{chat_id}/messages/retry":
     parameters:
-    - name: Authorization
+    - name: X-Api-Key
       in: header
       required: true
       schema:
         type: string
-      description: Bearer token with write scope
+      description: API key with write scope
     - name: chat_id
       in: path
       required: true
@@ -907,7 +908,7 @@ paths:
       tags:
       - Chat Messages
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '202':
           description: retry started
@@ -934,14 +935,14 @@ paths:
       tags:
       - Imports
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
+      - name: X-Api-Key
         in: header
         required: true
         schema:
           type: string
-        description: Bearer token with read scope
+        description: API key with read scope
       - name: page
         in: query
         required: false
@@ -993,14 +994,14 @@ paths:
       tags:
       - Imports
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
+      - name: X-Api-Key
         in: header
         required: true
         schema:
           type: string
-        description: Bearer token with write scope
+        description: API key with write scope
       responses:
         '201':
           description: import created
@@ -1085,12 +1086,12 @@ paths:
         required: true
   "/api/v1/imports/{id}":
     parameters:
-    - name: Authorization
+    - name: X-Api-Key
       in: header
       required: true
       schema:
         type: string
-      description: Bearer token with read scope
+      description: API key with read scope
     - name: id
       in: path
       required: true
@@ -1104,7 +1105,7 @@ paths:
       tags:
       - Imports
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: import retrieved
@@ -1124,14 +1125,14 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
+      - name: X-Api-Key
         in: header
         required: true
         schema:
           type: string
-        description: Bearer token with read scope
+        description: API key with read scope
       - name: page
         in: query
         required: false
@@ -1247,14 +1248,14 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
+      - name: X-Api-Key
         in: header
         required: true
         schema:
           type: string
-        description: Bearer token with write scope
+        description: API key with write scope
       responses:
         '201':
           description: transaction created
@@ -1332,12 +1333,12 @@ paths:
         required: true
   "/api/v1/transactions/{id}":
     parameters:
-    - name: Authorization
+    - name: X-Api-Key
       in: header
       required: true
       schema:
         type: string
-      description: Bearer token
+      description: API key
     - name: id
       in: path
       required: true
@@ -1349,7 +1350,7 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: transaction retrieved
@@ -1368,7 +1369,7 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '200':
@@ -1431,7 +1432,7 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: transaction deleted
