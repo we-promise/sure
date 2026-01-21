@@ -223,6 +223,41 @@ components:
           type: string
         account_type:
           type: string
+    AccountDetail:
+      type: object
+      required:
+      - id
+      - name
+      - balance
+      - currency
+      - classification
+      - account_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        balance:
+          type: string
+        currency:
+          type: string
+        classification:
+          type: string
+        account_type:
+          type: string
+    AccountCollection:
+      type: object
+      required:
+      - accounts
+      - pagination
+      properties:
+        accounts:
+          type: array
+          items:
+            "$ref": "#/components/schemas/AccountDetail"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Category:
       type: object
       required:
@@ -329,6 +364,32 @@ components:
           type: string
         color:
           type: string
+    TagDetail:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TagCollection:
+      type: array
+      items:
+        "$ref": "#/components/schemas/TagDetail"
     Transfer:
       type: object
       required:
@@ -597,6 +658,33 @@ components:
         data:
           "$ref": "#/components/schemas/ImportDetail"
 paths:
+  "/api/v1/accounts":
+    get:
+      summary: List accounts
+      tags:
+      - Accounts
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: accounts paginated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountCollection"
   "/api/v1/categories":
     get:
       summary: List categories
@@ -1058,6 +1146,133 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/tags":
+    get:
+      summary: List tags
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: tags listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagCollection"
+    post:
+      summary: Create tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: tag created with auto-assigned color
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagDetail"
+        '422':
+          description: validation error - missing name
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Tag name (required)
+                    color:
+                      type: string
+                      description: Hex color code (optional, auto-assigned if not
+                        provided)
+                  required:
+                  - name
+              required:
+              - tag
+        required: true
+  "/api/v1/tags/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Tag ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: tag retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagDetail"
+        '404':
+          description: tag not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: tag updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagDetail"
+        '404':
+          description: tag not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    color:
+                      type: string
+        required: true
+    delete:
+      summary: Delete a tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      responses:
+        '204':
+          description: tag deleted
+        '404':
+          description: tag not found
   "/api/v1/transactions":
     get:
       summary: List transactions
