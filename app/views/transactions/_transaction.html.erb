@@ -21,7 +21,7 @@
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
+                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
                     class: "w-9 h-9 rounded-full",
                     loading: "lazy" %>
               <% else %>
@@ -38,7 +38,7 @@
             <div class="flex md:hidden items-center gap-1 col-span-2 relative">
               <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
+                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
                     class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
                     loading: "lazy" %>
               <% end %>

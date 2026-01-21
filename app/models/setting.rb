@@ -11,6 +11,23 @@ class Setting < RailsSettings::Base
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
+  field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
+
+  BRAND_FETCH_LOGO_SIZE_STANDARD = 40
+  BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
+  BRAND_FETCH_URL_PATTERN = %r{(https://cdn\.brandfetch\.io/[^/]+/icon/fallback/lettermark/)w/\d+/h/\d+(\?c=.+)}
+
+  def self.brand_fetch_logo_size
+    brand_fetch_high_res_logos ? BRAND_FETCH_LOGO_SIZE_HIGH_RES : BRAND_FETCH_LOGO_SIZE_STANDARD
+  end
+
+  # Transforms a stored Brandfetch URL to use the current logo size setting
+  def self.transform_brand_fetch_url(url)
+    return url unless url.present? && url.match?(BRAND_FETCH_URL_PATTERN)
+
+    size = brand_fetch_logo_size
+    url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+  end
 
   # Provider selection
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")

@@ -42,13 +42,15 @@ class Security < ApplicationRecord
     )
   end
 
-  def brandfetch_icon_url(width: 40, height: 40)
+  def brandfetch_icon_url(width: nil, height: nil)
     return nil unless Setting.brand_fetch_client_id.present? && website_url.present?
 
     domain = extract_domain(website_url)
     return nil unless domain.present?
 
-    "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{width}/h/#{height}?c=#{Setting.brand_fetch_client_id}"
+    w = width || Setting.brand_fetch_logo_size
+    h = height || Setting.brand_fetch_logo_size
+    "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{w}/h/#{h}?c=#{Setting.brand_fetch_client_id}"
   end
 
   private
