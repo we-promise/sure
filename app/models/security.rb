@@ -49,11 +49,8 @@ class Security < ApplicationRecord
     w = width || Setting.brand_fetch_logo_size
     h = height || Setting.brand_fetch_logo_size
 
-    identifier = if website_url.present?
-      extract_domain(website_url)
-    elsif ticker.present?
-      ticker
-    end
+    identifier = extract_domain(website_url) if website_url.present?
+    identifier ||= ticker
 
     return nil unless identifier.present?
 
