@@ -7,6 +7,7 @@ class Security < ApplicationRecord
   EXCHANGES = YAML.safe_load_file(Rails.root.join("config", "exchanges.yml")).freeze
 
   before_validation :upcase_symbols
+  before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
@@ -43,14 +44,20 @@ class Security < ApplicationRecord
   end
 
   def brandfetch_icon_url(width: nil, height: nil)
-    return nil unless Setting.brand_fetch_client_id.present? && website_url.present?
-
-    domain = extract_domain(website_url)
-    return nil unless domain.present?
+    return nil unless Setting.brand_fetch_client_id.present?
 
     w = width || Setting.brand_fetch_logo_size
     h = height || Setting.brand_fetch_logo_size
-    "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{w}/h/#{h}?c=#{Setting.brand_fetch_client_id}"
+
+    identifier = if website_url.present?
+      extract_domain(website_url)
+    elsif ticker.present?
+      ticker
+    end
+
+    return nil unless identifier.present?
+
+    "https://cdn.brandfetch.io/#{identifier}/icon/fallback/lettermark/w/#{w}/h/#{h}?c=#{Setting.brand_fetch_client_id}"
   end
 
   private
@@ -66,5 +73,14 @@ class Security < ApplicationRecord
     def upcase_symbols
       self.ticker = ticker.upcase
       self.exchange_operating_mic = exchange_operating_mic.upcase if exchange_operating_mic.present?
+    end
+
+    def should_generate_logo?
+      logo_url.blank? && Setting.brand_fetch_client_id.present? && ticker.present?
+    end
+
+    def generate_logo_url_from_brandfetch
+      size = Setting.brand_fetch_logo_size
+      self.logo_url = "https://cdn.brandfetch.io/#{ticker}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
     end
 end
