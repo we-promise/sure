@@ -39,7 +39,7 @@ class CreateMercuryItemsAndAccounts < ActiveRecord::Migration[7.2]
 
       # Account identification
       t.string :name
-      t.string :account_id
+      t.string :account_id, null: false
 
       # Account details
       t.string :currency
@@ -56,6 +56,6 @@ class CreateMercuryItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :mercury_accounts, :account_id
+    add_index :mercury_accounts, :account_id, unique: true
   end
 end

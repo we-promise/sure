@@ -739,7 +739,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_21_101345) do
   create_table "mercury_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "mercury_item_id", null: false
     t.string "name"
-    t.string "account_id"
+    t.string "account_id", null: false
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
     t.string "account_status"
@@ -750,7 +750,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_21_101345) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_mercury_accounts_on_account_id"
+    t.index ["account_id"], name: "index_mercury_accounts_on_account_id", unique: true
     t.index ["mercury_item_id"], name: "index_mercury_accounts_on_mercury_item_id"
   end
 
