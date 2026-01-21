@@ -16,8 +16,9 @@ class CoinbaseItem::Syncer
     # Phase 1: Check credentials are configured
     sync.update!(status_text: I18n.t("coinbase_item.syncer.checking_credentials")) if sync.respond_to?(:status_text)
     unless coinbase_item.credentials_configured?
-      sync.update!(status_text: I18n.t("coinbase_item.syncer.credentials_invalid")) if sync.respond_to?(:status_text)
+      error_message = I18n.t("coinbase_item.syncer.credentials_invalid")
       coinbase_item.update!(status: :requires_update)
+      mark_failed(sync, error_message)
       return
     end
 
@@ -64,4 +65,28 @@ class CoinbaseItem::Syncer
   def perform_post_sync
     # no-op
   end
+
+  private
+    # Marks the sync as failed with an error message.
+    # Mirrors SimplefinItem::Syncer#mark_failed for consistent failure handling.
+    #
+    # @param sync [Sync] The sync record to mark as failed
+    # @param error_message [String] The error message to record
+    def mark_failed(sync, error_message)
+      if sync.respond_to?(:status) && sync.status.to_s == "completed"
+        Rails.logger.warn("CoinbaseItem::Syncer#mark_failed called after completion: #{error_message}")
+        return
+      end
+
+      sync.start! if sync.respond_to?(:may_start?) && sync.may_start?
+
+      if sync.respond_to?(:may_fail?) && sync.may_fail?
+        sync.fail!
+      elsif sync.respond_to?(:status)
+        sync.update!(status: :failed)
+      end
+
+      sync.update!(error: error_message) if sync.respond_to?(:error)
+      sync.update!(status_text: error_message) if sync.respond_to?(:status_text)
+    end
 end

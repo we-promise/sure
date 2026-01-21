@@ -138,10 +138,10 @@ class CoinbaseItemTest < ActiveSupport::TestCase
   end
 
   test "sync_status_summary with no accounts" do
-    assert_equal "No accounts found", @coinbase_item.sync_status_summary
+    assert_equal I18n.t("coinbase_items.coinbase_item.sync_status.no_accounts"), @coinbase_item.sync_status_summary
   end
 
-  test "sync_status_summary with linked accounts" do
+  test "sync_status_summary with one linked account" do
     coinbase_account = @coinbase_item.coinbase_accounts.create!(
       name: "BTC Wallet",
       account_id: "btc_123",
@@ -158,6 +158,70 @@ class CoinbaseItemTest < ActiveSupport::TestCase
     )
     AccountProvider.create!(account: account, provider: coinbase_account)
 
-    assert_equal "1 account synced", @coinbase_item.sync_status_summary
+    assert_equal I18n.t("coinbase_items.coinbase_item.sync_status.all_synced", count: 1), @coinbase_item.sync_status_summary
+  end
+
+  test "sync_status_summary with multiple linked accounts" do
+    # Create first account
+    coinbase_account1 = @coinbase_item.coinbase_accounts.create!(
+      name: "BTC Wallet",
+      account_id: "btc_123",
+      currency: "BTC",
+      current_balance: 1.0
+    )
+    account1 = Account.create!(
+      family: @family,
+      name: "Coinbase BTC",
+      balance: 50000,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    AccountProvider.create!(account: account1, provider: coinbase_account1)
+
+    # Create second account
+    coinbase_account2 = @coinbase_item.coinbase_accounts.create!(
+      name: "ETH Wallet",
+      account_id: "eth_456",
+      currency: "ETH",
+      current_balance: 10.0
+    )
+    account2 = Account.create!(
+      family: @family,
+      name: "Coinbase ETH",
+      balance: 25000,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    AccountProvider.create!(account: account2, provider: coinbase_account2)
+
+    assert_equal I18n.t("coinbase_items.coinbase_item.sync_status.all_synced", count: 2), @coinbase_item.sync_status_summary
+  end
+
+  test "sync_status_summary with partial setup" do
+    # Create linked account
+    coinbase_account1 = @coinbase_item.coinbase_accounts.create!(
+      name: "BTC Wallet",
+      account_id: "btc_123",
+      currency: "BTC",
+      current_balance: 1.0
+    )
+    account = Account.create!(
+      family: @family,
+      name: "Coinbase BTC",
+      balance: 50000,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    AccountProvider.create!(account: account, provider: coinbase_account1)
+
+    # Create unlinked account
+    @coinbase_item.coinbase_accounts.create!(
+      name: "ETH Wallet",
+      account_id: "eth_456",
+      currency: "ETH",
+      current_balance: 10.0
+    )
+
+    assert_equal I18n.t("coinbase_items.coinbase_item.sync_status.partial_sync", linked_count: 1, unlinked_count: 1), @coinbase_item.sync_status_summary
   end
 end

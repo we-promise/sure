@@ -124,11 +124,11 @@ class CoinbaseItem < ApplicationRecord
     unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
-      "No accounts found"
+      I18n.t("coinbase_items.coinbase_item.sync_status.no_accounts")
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("coinbase_items.coinbase_item.sync_status.all_synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t("coinbase_items.coinbase_item.sync_status.partial_sync", linked_count: linked_count, unlinked_count: unlinked_count)
     end
   end
 

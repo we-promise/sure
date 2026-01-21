@@ -31,6 +31,12 @@ en:
       syncing: Syncing...
       reconnect: Credentials need updating
       deletion_in_progress: Deleting...
+      sync_status:
+        no_accounts: No accounts found
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
       status: "Last synced %{timestamp} ago"
       status_with_summary: "Last synced %{timestamp} ago - %{summary}"
       status_never: Never synced
