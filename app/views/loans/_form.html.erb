@@ -14,7 +14,7 @@
   <div class="grow space-y-2">
     <% if installment_mode %>
       <%# Account Name %>
-      <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label"), id: "account_name_installment" %>
+      <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
       <%= render "shared/ruler", classes: "my-2" %>
       <%# Installment-specific fields %>
       <%= form.fields_for :installment_attributes, account.installment || account.build_installment do |inst_form| %>
