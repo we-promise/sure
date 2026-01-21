@@ -417,6 +417,13 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "Created locale file: #{locale_path}", :green
   end
 
+  def update_source_enums
+    # Add the new provider to the source enum in ProviderMerchant and DataEnrichment
+    # These enums track which provider created a merchant or enrichment record
+    update_source_enum("app/models/provider_merchant.rb")
+    update_source_enum("app/models/data_enrichment.rb")
+  end
+
   def show_summary
     say "\n" + "=" * 80, :green
     say "Successfully generated per-family provider: #{class_name}", :green
@@ -480,6 +487,33 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   end
 
   private
+
+    def update_source_enum(model_path)
+      return unless File.exist?(model_path)
+
+      content = File.read(model_path)
+      model_name = File.basename(model_path, ".rb").camelize
+
+      # Check if provider is already in the enum
+      if content.include?("#{file_name}: \"#{file_name}\"")
+        say "#{model_name} source enum already includes #{file_name}", :skip
+        return
+      end
+
+      # Find the enum :source line and add the new provider
+      # Pattern: enum :source, { key: "value", ... }
+      if content =~ /(enum :source, \{[^}]+)(})/
+        # Insert the new provider before the closing brace
+        updated_content = content.sub(
+          /(enum :source, \{[^}]+)(})/,
+          "\\1, #{file_name}: \"#{file_name}\"\\2"
+        )
+        File.write(model_path, updated_content)
+        say "Added #{file_name} to #{model_name} source enum", :green
+      else
+        say "Could not find source enum in #{model_name}", :yellow
+      end
+    end
 
     def add_accounts_controller_sync_stats_map(controller_path)
       content = File.read(controller_path)
