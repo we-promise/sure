@@ -7,6 +7,10 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @other_family_user = users(:empty)
 
+    # Verify cross-family isolation setup is correct
+    assert_not_equal @user.family_id, @other_family_user.family_id,
+      "Test setup error: @other_family_user must belong to a different family"
+
     @oauth_app = Doorkeeper::Application.create!(
       name: "Test App",
       redirect_uri: "https://example.com/callback",
@@ -16,6 +20,12 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     @access_token = Doorkeeper::AccessToken.create!(
       application: @oauth_app,
       resource_owner_id: @user.id,
+      scopes: "read"
+    )
+
+    @other_family_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @other_family_user.id,
       scopes: "read"
     )
 
