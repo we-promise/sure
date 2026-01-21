@@ -23,12 +23,6 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
       scopes: "read"
     )
 
-    @other_family_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @other_family_user.id,
-      scopes: "read"
-    )
-
     @merchant = @user.family.merchants.first || @user.family.merchants.create!(
       name: "Test Merchant"
     )
