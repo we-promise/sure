@@ -14,16 +14,10 @@ export default class extends Controller {
   }
 
   restore() {
-    const reset = () => {
-      if (this.originalDraggable === undefined) return;
-      this.originalDraggable
-        ? this.element.setAttribute("draggable", this.originalDraggable)
-        : this.element.removeAttribute("draggable");
-      this.originalDraggable = undefined;
-    };
-
-    ["pointerup", "pointercancel", "keyup"].forEach(e =>
-      window.addEventListener(e, reset, { once: true })
-    );
+    if (this.originalDraggable === undefined) return;
+    this.originalDraggable
+      ? this.element.setAttribute("draggable", this.originalDraggable)
+      : this.element.removeAttribute("draggable");
+    this.originalDraggable = undefined;
   }
 }
