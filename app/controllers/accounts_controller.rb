@@ -248,7 +248,8 @@ class AccountsController < ApplicationController
       @mercury_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
-        
+      end
+
       # Coinbase sync stats
       @coinbase_sync_stats_map = {}
       @coinbase_unlinked_count_map = {}
