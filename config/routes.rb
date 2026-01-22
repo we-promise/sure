@@ -17,7 +17,7 @@ Rails.application.routes.draw do
       post :complete_account_setup
     end
   end
-  
+
   resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -33,7 +33,7 @@ Rails.application.routes.draw do
       post :complete_account_setup
     end
   end
-  
+
   # CoinStats routes
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
