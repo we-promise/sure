@@ -82,6 +82,22 @@ class Installment::CreatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "historical transactions are created as funds_movement" do
+    installment = @loan_account.create_installment!(
+      installment_cost: 200,
+      total_term: 3,
+      current_term: 2,
+      payment_period: "monthly",
+      first_payment_date: 3.months.ago.to_date,
+    )
+
+    Installment::Creator.new(installment).call
+
+    @loan_account.transactions.each do |transaction|
+      assert_equal "funds_movement", transaction.kind
+    end
+  end
+
   test "creates recurring transaction when source_account_id provided" do
     installment = @loan_account.create_installment!(
       installment_cost: 200,

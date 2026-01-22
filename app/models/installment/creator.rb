@@ -29,7 +29,8 @@ class Installment::Creator
           extra: {
             "installment_id" => installment.id.to_s,
             "installment_payment_number" => payment_info[:payment_number]
-          }
+          },
+          kind: "funds_movement"
         )
 
         account.entries.create!(
