@@ -12,6 +12,7 @@ class AccountsController < ApplicationController
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
     @mercury_items = family.mercury_items.ordered.includes(:syncs, :mercury_accounts)
+    @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -152,7 +153,9 @@ class AccountsController < ApplicationController
     )
 
     # Build available providers list with paths resolved for this specific account
-    @available_providers = provider_configs.map do |config|
+    # Filter out providers that don't support linking to existing accounts
+    @available_providers = provider_configs.filter_map do |config|
+      next unless config[:existing_account_path].present?
       {
         name: config[:name],
         key: config[:key],
@@ -245,6 +248,20 @@ class AccountsController < ApplicationController
       @mercury_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+        
+      # Coinbase sync stats
+      @coinbase_sync_stats_map = {}
+      @coinbase_unlinked_count_map = {}
+      @coinbase_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @coinbase_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+
+        # Count unlinked accounts
+        count = item.coinbase_accounts
+          .left_joins(:account_provider)
+          .where(account_providers: { id: nil })
+          .count
+        @coinbase_unlinked_count_map[item.id] = count
       end
     end
 end

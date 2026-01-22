@@ -2,3 +2,13 @@
 zh-TW:
   subscriptions:
     self_hosted_alert: "在自行代管模式下不支援 %{product_name}。"
+    upgrade:
+      contribute_and_support_sure: "貢獻並支持 Sure"
+      cta: "繼續支持此程式碼庫的開發！"
+      header:
+        support: "支持"
+        sure: "Sure"
+        today: "今天"
+      redirect_to_stripe: "在下一步中，您將被重新導向到 Stripe，它為我們處理信用卡。"
+      trialing: "您的資料將在 %{days} 天後刪除"
+      trial_over: "您的試用期已結束"

@@ -25,10 +25,11 @@ RSpec.configure do |config|
       ],
       components: {
         securitySchemes: {
-          bearerAuth: {
-            type: :http,
-            scheme: :bearer,
-            bearerFormat: :JWT
+          apiKeyAuth: {
+            type: :apiKey,
+            name: 'X-Api-Key',
+            in: :header,
+            description: 'API key for authentication. Generate one from your account settings.'
           }
         },
         schemas: {
@@ -171,6 +172,29 @@ RSpec.configure do |config|
               account_type: { type: :string }
             }
           },
+          AccountDetail: {
+            type: :object,
+            required: %w[id name balance currency classification account_type],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              balance: { type: :string },
+              currency: { type: :string },
+              classification: { type: :string },
+              account_type: { type: :string }
+            }
+          },
+          AccountCollection: {
+            type: :object,
+            required: %w[accounts pagination],
+            properties: {
+              accounts: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/AccountDetail' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Category: {
             type: :object,
             required: %w[id name classification color icon],
@@ -232,6 +256,21 @@ RSpec.configure do |config|
               name: { type: :string },
               color: { type: :string }
             }
+          },
+          TagDetail: {
+            type: :object,
+            required: %w[id name color created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              color: { type: :string },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          TagCollection: {
+            type: :array,
+            items: { '$ref' => '#/components/schemas/TagDetail' }
           },
           Transfer: {
             type: :object,

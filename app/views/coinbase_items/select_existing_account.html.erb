@@ -1,0 +1,43 @@
+<%# Modal: Link an existing manual account to a Coinbase account %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <% if @available_coinbase_accounts.blank? %>
+        <div class="p-4 text-sm text-secondary">
+          <p class="mb-2"><%= t(".no_accounts_found") %></p>
+          <ul class="list-disc list-inside space-y-1">
+            <li><%= t(".wait_for_sync") %></li>
+            <li><%= t(".check_provider_health") %></li>
+          </ul>
+        </div>
+      <% else %>
+        <%= form_with url: link_existing_account_coinbase_items_path, method: :post, class: "space-y-4" do %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <div class="space-y-2 max-h-64 overflow-auto">
+            <% @available_coinbase_accounts.each do |ca| %>
+              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+                <%= radio_button_tag :coinbase_account_id, ca.id, false %>
+                <div class="flex flex-col">
+                  <span class="text-sm text-primary font-medium"><%= ca.name.presence || ca.account_id %></span>
+                  <span class="text-xs text-secondary">
+                    <%= ca.currency %> &bull; <%= t(".balance") %>: <%= number_with_delimiter(ca.current_balance || 0, delimiter: ",") %>
+                  </span>
+                  <% if ca.current_account.present? %>
+                    <span class="text-xs text-secondary"><%= t(".currently_linked_to", account_name: ca.current_account.name) %></span>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <%= render DS::Button.new(text: t(".link"), variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: t(".cancel"), variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

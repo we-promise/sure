@@ -5,7 +5,7 @@ class SubscriptionsController < ApplicationController
   # Upgrade page for unsubscribed users
   def upgrade
     if Current.family.subscription&.active?
-      redirect_to root_path, notice: "You are already subscribed."
+      redirect_to root_path, notice: "You are already contributing. Thank you!"
     else
       @plan = params[:plan] || "annual"
       render layout: "onboardings"
@@ -16,7 +16,7 @@ class SubscriptionsController < ApplicationController
     checkout_session = stripe.create_checkout_session(
       plan: params[:plan],
       family_id: Current.family.id,
-      family_email: Current.family.billing_email,
+      family_email: Current.family.payment_email,
       success_url: success_subscription_url + "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: upgrade_subscription_url
     )
@@ -37,9 +37,9 @@ class SubscriptionsController < ApplicationController
   end
 
   def show
-    portal_session_url = stripe.create_billing_portal_session_url(
+    portal_session_url = stripe.create_payment_portal_session_url(
       customer_id: Current.family.stripe_customer_id,
-      return_url: settings_billing_url
+      return_url: settings_payment_url
     )
 
     redirect_to portal_session_url, allow_other_host: true, status: :see_other

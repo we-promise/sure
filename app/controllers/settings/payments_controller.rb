@@ -1,4 +1,4 @@
-class Settings::BillingsController < ApplicationController
+class Settings::PaymentsController < ApplicationController
   layout "settings"
 
   def show

@@ -58,6 +58,7 @@ en:
         new: New
         new_activity: New activity
         new_balance: New balance
+        new_trade: New trade
         new_transaction: New transaction
         new_transfer: New transfer
         no_entries: No entries found
@@ -79,6 +80,8 @@ en:
         confirm_title: Delete account?
         edit: Edit
         import: Import transactions
+        import_trades: Import trades
+        import_transactions: Import transactions
         manage: Manage accounts
     update:
       success: "%{type} account updated"

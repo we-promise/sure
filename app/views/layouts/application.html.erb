@@ -91,12 +91,12 @@
             <div class="px-4 py-3 space-y-4 bg-container shadow-border-xs rounded-xl">
               <div class="flex items-start justify-between">
                 <div>
-                  <p class="text-sm font-medium text-primary">Free trial</p>
-                  <p class="text-sm text-secondary"><%= Current.family.days_left_in_trial %> days remaining</p>
+                  <p class="text-sm font-medium text-primary"><%= t("layouts.trial.open_demo") %></p>
+                  <p class="text-sm text-secondary"><%= t("layouts.trial.data_deleted_in_days", days: Current.family.days_left_in_trial) %></p>
                 </div>
 
                 <%= render DS::Link.new(
-                  text: "Upgrade",
+                  text: t("layouts.trial.contribute"),
                   href: upgrade_subscription_path,
                 ) %>
               </div>

@@ -8,7 +8,8 @@
 } %>
 
 <% if account.institution_domain.present? && Setting.brand_fetch_client_id.present? %>
-  <%= image_tag "https://cdn.brandfetch.io/#{account.institution_domain}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}", class: "shrink-0 rounded-full #{size_classes[size]}" %>
+  <% logo_size = Setting.brand_fetch_logo_size %>
+  <%= image_tag "https://cdn.brandfetch.io/#{account.institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}", class: "shrink-0 rounded-full #{size_classes[size]}" %>
 <% elsif account.logo_url.present? %>
   <%= image_tag account.logo_url, class: "shrink-0 rounded-full #{size_classes[size]}", loading: "lazy" %>
 <% elsif account.logo.attached? %>
