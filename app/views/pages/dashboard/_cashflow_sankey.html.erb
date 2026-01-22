@@ -20,9 +20,9 @@
     </div>
 
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]", data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
-      <% dialog.with_header(title: "Cashflow", hide_close_icon: false) %>
+      <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title"), hide_close_icon: false) %>
       <% dialog.with_body do %>
-        <div class="w-full" style="height: 85vh; min-height: 45rem;">
+        <div class="w-full h-[85vh] min-h-[45rem]">
           <div
             data-controller="sankey-chart"
             data-sankey-chart-data-value="<%= sankey_data.to_json %>"
