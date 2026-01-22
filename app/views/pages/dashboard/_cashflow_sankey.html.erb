@@ -19,7 +19,7 @@
         class="w-full h-full"></div>
     </div>
 
-    <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "full", disable_frame: true) do |dialog| %>
+    <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]") do |dialog| %>
       <% dialog.with_header(title: "Cashflow", hide_close_icon: false) %>
       <% dialog.with_body do %>
         <div class="w-full" style="height: 85vh; min-height: 45rem;">

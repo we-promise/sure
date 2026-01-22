@@ -33,7 +33,7 @@ class DS::Dialog < DesignSystemComponent
     end
   end
 
-  attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :opts
+  attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :content_class, :opts
 
   VARIANTS = %w[modal drawer].freeze
   WIDTHS = {
@@ -43,13 +43,14 @@ class DS::Dialog < DesignSystemComponent
     full: "lg:max-w-full"
   }.freeze
 
-  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, **opts)
+  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, content_class: nil, **opts)
     @variant = variant.to_sym
     @auto_open = auto_open
     @reload_on_close = reload_on_close
     @width = width.to_sym
     @frame = frame
     @disable_frame = disable_frame
+    @content_class = content_class
     @opts = opts
   end
 
@@ -91,7 +92,8 @@ class DS::Dialog < DesignSystemComponent
 
     class_names(
       "flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full overflow-hidden",
-      variant_classes
+      variant_classes,
+      content_class
     )
   end
 

@@ -202,8 +202,3 @@
 .turbo-progress-bar {
   margin-top: env(safe-area-inset-top);
 }
-
-#cashflow-expanded-dialog [data-ds--dialog-target="content"] {
-  width: 96vw;
-  max-width: 1650px;
-}
