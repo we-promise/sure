@@ -215,10 +215,23 @@ class SnaptradeItemsController < ApplicationController
       # Trigger sync to process the newly linked accounts
       # Always queue the sync - if one is running, this will run after it finishes
       @snaptrade_item.sync_later
-      redirect_to accounts_path, notice: t(".success", count: linked_count, default: "Successfully linked #{linked_count} account(s).")
+
+      if errors.any?
+        # Partial success - some linked, some failed
+        redirect_to accounts_path, notice: t(".partial_success", linked: linked_count, failed: errors.size,
+                                              default: "Linked #{linked_count} account(s). #{errors.size} failed to link.")
+      else
+        redirect_to accounts_path, notice: t(".success", count: linked_count, default: "Successfully linked #{linked_count} account(s).")
+      end
     else
-      redirect_to setup_accounts_snaptrade_item_path(@snaptrade_item),
-                  alert: t(".no_accounts", default: "No accounts were selected for linking.")
+      if errors.any?
+        # All failed
+        redirect_to setup_accounts_snaptrade_item_path(@snaptrade_item),
+                    alert: t(".link_failed", default: "Failed to link accounts: %{errors}", errors: errors.first)
+      else
+        redirect_to setup_accounts_snaptrade_item_path(@snaptrade_item),
+                    alert: t(".no_accounts", default: "No accounts were selected for linking.")
+      end
     end
   end
 

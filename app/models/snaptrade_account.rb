@@ -1,5 +1,6 @@
 class SnaptradeAccount < ApplicationRecord
   include CurrencyNormalizable
+  include SnaptradeAccount::DataHelpers
 
   belongs_to :snaptrade_item
 
@@ -60,7 +61,7 @@ class SnaptradeAccount < ApplicationRecord
   def upsert_from_snaptrade!(account_data)
     # Deep convert SDK objects to hashes - .to_h only does top level,
     # so we use JSON round-trip to get nested objects as hashes too
-    data = deep_convert_to_hash(account_data)
+    data = sdk_object_to_hash(account_data)
     data = data.with_indifferent_access
 
     # Extract meta data
@@ -118,7 +119,7 @@ class SnaptradeAccount < ApplicationRecord
   # and is set by upsert_from_snaptrade! from the balance.total field.
   def upsert_balances!(balances_data)
     # Deep convert each balance entry to ensure we have hashes
-    data = Array(balances_data).map { |b| deep_convert_to_hash(b).with_indifferent_access }
+    data = Array(balances_data).map { |b| sdk_object_to_hash(b).with_indifferent_access }
 
     Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}"
 
@@ -159,23 +160,6 @@ class SnaptradeAccount < ApplicationRecord
         authorization_id: snaptrade_authorization_id,
         account_id: id
       )
-    end
-
-    # Deep convert SDK objects to nested hashes
-    # The SnapTrade SDK returns objects that only convert the top level with .to_h
-    # We use JSON round-trip to ensure all nested objects become hashes
-    def deep_convert_to_hash(obj)
-      return obj if obj.is_a?(Hash)
-
-      if obj.respond_to?(:to_json)
-        JSON.parse(obj.to_json)
-      elsif obj.respond_to?(:to_h)
-        obj.to_h
-      else
-        obj
-      end
-    rescue JSON::ParserError, TypeError
-      obj.respond_to?(:to_h) ? obj.to_h : {}
     end
 
     def log_invalid_currency(currency_value)

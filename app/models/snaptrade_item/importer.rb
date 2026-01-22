@@ -1,5 +1,6 @@
 class SnaptradeItem::Importer
   include SyncStats::Collector
+  include SnaptradeAccount::DataHelpers
 
   attr_reader :snaptrade_item, :snaptrade_provider, :sync
 
@@ -52,22 +53,6 @@ class SnaptradeItem::Importer
   end
 
   private
-
-    # Convert SnapTrade SDK objects to hashes
-    # SDK objects don't have to_h but do have to_json
-    def sdk_object_to_hash(obj)
-      return obj if obj.is_a?(Hash)
-
-      if obj.respond_to?(:to_json)
-        JSON.parse(obj.to_json)
-      elsif obj.respond_to?(:to_h)
-        obj.to_h
-      else
-        obj
-      end
-    rescue JSON::ParserError, TypeError
-      obj.respond_to?(:to_h) ? obj.to_h : {}
-    end
 
     # Extract activities array from API response
     # get_account_activities returns a paginated object with .data accessor

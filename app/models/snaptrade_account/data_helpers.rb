@@ -3,6 +3,23 @@ module SnaptradeAccount::DataHelpers
 
   private
 
+    # Convert SnapTrade SDK objects to hashes
+    # SDK objects don't have proper to_h but do have to_json
+    # Uses JSON round-trip to ensure all nested objects become hashes
+    def sdk_object_to_hash(obj)
+      return obj if obj.is_a?(Hash)
+
+      if obj.respond_to?(:to_json)
+        JSON.parse(obj.to_json)
+      elsif obj.respond_to?(:to_h)
+        obj.to_h
+      else
+        obj
+      end
+    rescue JSON::ParserError, TypeError
+      obj.respond_to?(:to_h) ? obj.to_h : {}
+    end
+
     def parse_decimal(value)
       return nil if value.nil?
 

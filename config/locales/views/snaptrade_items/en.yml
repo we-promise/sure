@@ -16,6 +16,8 @@ en:
       success:
         one: "Successfully linked %{count} account."
         other: "Successfully linked %{count} accounts."
+      partial_success: "Linked %{linked} account(s). %{failed} failed to link."
+      link_failed: "Failed to link accounts: %{errors}"
       no_accounts: "No accounts were selected for linking."
     preload_accounts:
       not_configured: "SnapTrade is not configured."

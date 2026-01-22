@@ -8,6 +8,8 @@
 #   SnaptradeActivitiesFetchJob.perform_later(snaptrade_account, start_date: 5.years.ago.to_date)
 #
 class SnaptradeActivitiesFetchJob < ApplicationJob
+  include SnaptradeAccount::DataHelpers
+
   queue_as :default
 
   # Prevent concurrent jobs for the same account - only one fetch at a time
@@ -113,20 +115,6 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
       # Convert SDK objects to hashes
       activities.map { |a| sdk_object_to_hash(a) }
-    end
-
-    def sdk_object_to_hash(obj)
-      return obj if obj.is_a?(Hash)
-
-      if obj.respond_to?(:to_json)
-        JSON.parse(obj.to_json)
-      elsif obj.respond_to?(:to_h)
-        obj.to_h
-      else
-        obj
-      end
-    rescue JSON::ParserError, TypeError
-      obj.respond_to?(:to_h) ? obj.to_h : {}
     end
 
     # Merge activities, deduplicating by ID
