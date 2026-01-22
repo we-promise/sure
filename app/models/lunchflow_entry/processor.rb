@@ -77,12 +77,38 @@ class LunchflowEntry::Processor
           data[:description]
         ].compact.join("|")
 
-        temp_id = Digest::MD5.hexdigest(attributes)
-        Rails.logger.debug "Lunchflow: Generated temporary ID #{temp_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
-        return "lunchflow_pending_#{temp_id}"
+        base_temp_id = Digest::MD5.hexdigest(attributes)
+        temp_id_with_prefix = "lunchflow_pending_#{base_temp_id}"
+
+        # Handle collisions: if this external_id already exists for this account,
+        # append a counter to make it unique. This prevents multiple pending transactions
+        # with identical attributes (e.g., two same-day Uber rides) from colliding.
+        # We check both the account's entries and the current raw payload being processed.
+        final_id = temp_id_with_prefix
+        counter = 1
+
+        while entry_exists_with_external_id?(final_id)
+          final_id = "#{temp_id_with_prefix}_#{counter}"
+          counter += 1
+        end
+
+        if counter > 1
+          Rails.logger.debug "Lunchflow: Collision detected, using #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
+        else
+          Rails.logger.debug "Lunchflow: Generated temporary ID #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
+        end
+
+        return final_id
       end
 
       "lunchflow_#{id}"
+    end
+
+    def entry_exists_with_external_id?(external_id)
+      return false unless account.present?
+
+      # Check if an entry with this external_id already exists in the account
+      account.entries.exists?(external_id: external_id, source: "lunchflow")
     end
 
     def name
