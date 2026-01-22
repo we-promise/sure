@@ -13,7 +13,11 @@
 
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".original_principal") do %>
-    <%= format_money account.loan.original_balance %>
+    <% if account.installment.present? %>
+      <%= format_money account.installment.calculate_original_balance, currency: account.currency %>
+    <% else %>
+      <%= format_money account.loan.original_balance %>
+    <% end %>
   <% end %>
 
   <%= summary_card title: t(".remaining_principal") do %>
@@ -29,7 +33,9 @@
   <% end %>
 
   <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
+    <% if account.installment.present? %>
+      <%= format_money(account.installment.installment_cost, currency: account.currency) %>
+    <% elsif account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
       <%= t(".not_applicable") %>
     <% elsif account.loan.rate_type == 'fixed' && account.loan.monthly_payment.present? %>
       <%= format_money(account.loan.monthly_payment) %>
