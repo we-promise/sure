@@ -3,6 +3,7 @@ en:
   loans:
     edit:
       edit: Edit %{account}
+      installment: Edit installment details
     form:
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
@@ -18,7 +19,7 @@ en:
         cost_help: Amount you pay each payment period
         total_term_label: Total Term
         total_term_help: Total number of payments in the plan
-        current_term_label: Current Payment Number
+        current_term_label: Current Term
         current_term_help: Which payment you're currently on (0 if not started)
         payment_period_label: Payment Period
         payment_period_help: How often you make payments
@@ -44,6 +45,7 @@ en:
         historical_note: We'll create %{count} historical transactions
     new:
       title: Enter loan details
+      installment_title: Enter installment details
     overview:
       interest_rate: Interest Rate
       monthly_payment: Monthly Payment

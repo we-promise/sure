@@ -1,0 +1,8 @@
+{
+  "setup-worktree": [
+    "bundle install",
+    "npm install",
+    "cp $ROOT_WORKTREE_PATH/.env .env",
+    "cp $ROOT_WORKTREE_PATH/.env.local .env.local"
+  ]
+}

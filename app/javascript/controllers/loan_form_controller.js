@@ -2,10 +2,6 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = [
-    "generalTab",
-    "installmentTab",
-    "generalFields",
-    "installmentFields",
     "installmentCost",
     "totalTerm",
     "currentTerm",
@@ -16,67 +12,23 @@ export default class extends Controller {
     "firstPaymentDate",
     "firstPaymentDateDisplay"
   ]
-  static values = { activeTab: String }
 
   connect() {
-    this.activeTabValue = this.activeTabValue || "general"
-    this.showActiveTab()
+    this.calculateBalance()
+    this.syncFirstPaymentDateDisplay()
   }
 
-  showGeneral() {
-    this.activeTabValue = "general"
-    this.showActiveTab()
-  }
-
-  showInstallment() {
-    this.activeTabValue = "installment"
-    this.showActiveTab()
-  }
-
-  showActiveTab() {
-    // Toggle tab button styles
-    if (this.activeTabValue === "general") {
-      this.generalTabTarget.classList.add("bg-container", "text-primary", "shadow-sm")
-      this.generalTabTarget.classList.remove("text-subdued", "hover:bg-container")
-      this.installmentTabTarget.classList.remove("bg-container", "text-primary", "shadow-sm")
-      this.installmentTabTarget.classList.add("text-subdued", "hover:bg-container")
-
-      // Show/hide field sections
-      this.generalFieldsTarget.classList.remove("hidden")
-      this.installmentFieldsTarget.classList.add("hidden")
-
-      // Toggle required validation: enable for General, disable for Installment
-      this.enableRequiredFields(this.generalFieldsTarget)
-      this.disableRequiredFields(this.installmentFieldsTarget)
-    } else {
-      this.installmentTabTarget.classList.add("bg-container", "text-primary", "shadow-sm")
-      this.installmentTabTarget.classList.remove("text-subdued", "hover:bg-container")
-      this.generalTabTarget.classList.remove("bg-container", "text-primary", "shadow-sm")
-      this.generalTabTarget.classList.add("text-subdued", "hover:bg-container")
-
-      this.generalFieldsTarget.classList.add("hidden")
-      this.installmentFieldsTarget.classList.remove("hidden")
-
-      // Toggle required validation: enable for Installment, disable for General
-      this.enableRequiredFields(this.installmentFieldsTarget)
-      this.disableRequiredFields(this.generalFieldsTarget)
+  syncFirstPaymentDateDisplay() {
+    if (!this.hasFirstPaymentDateTarget || !this.hasFirstPaymentDateDisplayTarget) {
+      return
     }
-  }
 
-  // Disable required validation on all inputs within container
-  disableRequiredFields(container) {
-    container.querySelectorAll("[required]").forEach(field => {
-      field.dataset.wasRequired = "true"
-      field.removeAttribute("required")
-    })
-  }
+    if (this.firstPaymentDateTarget.value) {
+      this.firstPaymentDateDisplayTarget.value = this.firstPaymentDateTarget.value
+      return
+    }
 
-  // Re-enable required validation on inputs that were previously required
-  enableRequiredFields(container) {
-    container.querySelectorAll("[data-was-required]").forEach(field => {
-      field.setAttribute("required", "required")
-      delete field.dataset.wasRequired
-    })
+    this.calculateFirstPaymentDate()
   }
 
   calculateBalance() {
@@ -85,10 +37,19 @@ export default class extends Controller {
       return
     }
 
-    const costValue = this.installmentCostTarget.value.replace(/[^0-9.]/g, "")
+    const rawCost = this.installmentCostTarget.value.trim()
+    const rawTotalTerm = this.totalTermTarget.value.trim()
+    const rawCurrentTerm = this.currentTermTarget.value.trim()
+
+    if (!rawCost && !rawTotalTerm && !rawCurrentTerm) {
+      this.clearCalculatedBalances()
+      return
+    }
+
+    const costValue = rawCost.replace(/[^0-9.]/g, "")
     const cost = parseFloat(costValue) || 0
-    const totalTerm = parseInt(this.totalTermTarget.value) || 0
-    const currentTerm = parseInt(this.currentTermTarget.value) || 0
+    const totalTerm = parseInt(rawTotalTerm) || 0
+    const currentTerm = parseInt(rawCurrentTerm) || 0
 
     const originalBalance = cost * totalTerm
     const currentBalance = cost * (totalTerm - currentTerm)
@@ -99,6 +60,15 @@ export default class extends Controller {
     }
     if (this.hasOriginalBalanceTarget) {
       this.originalBalanceTarget.value = originalBalance.toFixed(2)
+    }
+  }
+
+  clearCalculatedBalances() {
+    if (this.hasCurrentBalanceTarget) {
+      this.currentBalanceTarget.value = ""
+    }
+    if (this.hasOriginalBalanceTarget) {
+      this.originalBalanceTarget.value = ""
     }
   }
 

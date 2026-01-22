@@ -2,63 +2,19 @@
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
 <% end %>
-<%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false, controller: "loan-form" }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+<% installment_mode = params[:installment].present? || account.installment.present? %>
+<% form_data = { turbo: false } %>
+<% form_data[:controller] = "loan-form" if installment_mode %>
+<%= styled_form_with model: account, url: url, scope: :account, data: form_data, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
   <%= form.hidden_field :accountable_type %>
   <%= form.hidden_field :return_to, value: params[:return_to] %>
-  <%# Tab Switcher - directly under title %>
-  <fieldset class="bg-surface-inset rounded-lg p-1 grid grid-cols-2 gap-x-2">
-    <button type="button"
-            data-loan-form-target="generalTab"
-            data-action="click->loan-form#showGeneral"
-      class="px-4 py-2 rounded-lg text-sm font-medium bg-container text-primary shadow-sm">
-      <%= t("loans.form.tabs.general") %>
-    </button>
-    <button type="button"
-            data-loan-form-target="installmentTab"
-            data-action="click->loan-form#showInstallment"
-      class="px-4 py-2 rounded-lg text-sm font-medium text-subdued hover:bg-container">
-      <%= t("loans.form.tabs.installment") %>
-    </button>
-  </fieldset>
+  <% if installment_mode %>
+    <%= form.hidden_field :currency, value: account.currency.presence || Current.family.currency %>
+  <% end %>
   <div class="grow space-y-2">
-    <%# ==================== GENERAL TAB ==================== %>
-    <div data-loan-form-target="generalFields" class="space-y-2">
+    <% if installment_mode %>
       <%# Account Name %>
       <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
-      <%# Balance (for non-linked accounts) %>
-      <% unless account.linked? %>
-        <%= form.money_field :balance, label: t("accounts.form.balance"), required: true, default_currency: Current.family.currency %>
-      <% end %>
-      <%= render "shared/ruler", classes: "my-2" %>
-      <%# Loan-specific fields %>
-      <%= form.fields_for :accountable do |loan_form| %>
-        <div class="flex items-center gap-2">
-          <%= loan_form.money_field :initial_balance,
-                                   label: t("loans.form.initial_balance"),
-                                   default_currency: Current.family.currency,
-                                   required: true %>
-        </div>
-        <div class="flex items-center gap-2">
-          <%= loan_form.number_field :interest_rate,
-                                   label: t("loans.form.interest_rate"),
-                                   placeholder: t("loans.form.interest_rate_placeholder"),
-                                   min: 0,
-                                   step: 0.005 %>
-          <%= loan_form.select :rate_type,
-                             [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
-                             { label: t("loans.form.rate_type") } %>
-        </div>
-        <div class="flex items-center gap-2">
-          <%= loan_form.number_field :term_months,
-                                   label: t("loans.form.term_months"),
-                                   placeholder: t("loans.form.term_months_placeholder") %>
-        </div>
-      <% end %>
-    </div>
-    <%# ==================== INSTALLMENT TAB ==================== %>
-    <div data-loan-form-target="installmentFields" class="hidden space-y-2">
-      <%# Account Name %>
-      <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label"), id: "account_name_installment" %>
       <%= render "shared/ruler", classes: "my-2" %>
       <%# Installment-specific fields %>
       <%= form.fields_for :installment_attributes, account.installment || account.build_installment do |inst_form| %>
@@ -154,7 +110,39 @@
                               include_blank: t("loans.form.installment.source_account_blank")
                             } %>
       <% end %>
-    </div>
+    <% else %>
+      <%# Account Name %>
+      <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
+      <%# Balance (for non-linked accounts) %>
+      <% unless account.linked? %>
+        <%= form.money_field :balance, label: t("accounts.form.balance"), required: true, default_currency: Current.family.currency %>
+      <% end %>
+      <%= render "shared/ruler", classes: "my-2" %>
+      <%# Loan-specific fields %>
+      <%= form.fields_for :accountable do |loan_form| %>
+        <div class="flex items-center gap-2">
+          <%= loan_form.money_field :initial_balance,
+                                   label: t("loans.form.initial_balance"),
+                                   default_currency: Current.family.currency,
+                                   required: true %>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= loan_form.number_field :interest_rate,
+                                   label: t("loans.form.interest_rate"),
+                                   placeholder: t("loans.form.interest_rate_placeholder"),
+                                   min: 0,
+                                   step: 0.005 %>
+          <%= loan_form.select :rate_type,
+                             [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
+                             { label: t("loans.form.rate_type") } %>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= loan_form.number_field :term_months,
+                                   label: t("loans.form.term_months"),
+                                   placeholder: t("loans.form.term_months_placeholder") %>
+        </div>
+      <% end %>
+    <% end %>
     <%# Additional Details (collapsed) %>
     <details class="group">
       <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">

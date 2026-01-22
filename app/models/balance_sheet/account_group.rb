@@ -3,14 +3,15 @@ class BalanceSheet::AccountGroup
 
   monetize :total, as: :total_money
 
-  attr_reader :name, :color, :accountable_type, :accounts
+  attr_reader :name, :color, :accountable_type, :accounts, :group_key
 
-  def initialize(name:, color:, accountable_type:, accounts:, classification_group:)
+  def initialize(name:, color:, accountable_type:, accounts:, classification_group:, group_key: nil)
     @name = name
     @color = color
     @accountable_type = accountable_type
     @accounts = accounts
     @classification_group = classification_group
+    @group_key = group_key || accountable_type.to_s.underscore
   end
 
   # A stable DOM id for this group.
@@ -30,7 +31,7 @@ class BalanceSheet::AccountGroup
   end
 
   def key
-    accountable_type.to_s.underscore
+    group_key
   end
 
   def total
