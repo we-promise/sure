@@ -26,11 +26,17 @@ class SnaptradeAccount::ActivitiesProcessor
     "JOURNAL" => "Other",
     "CASH" => "Contribution",     # Cash deposit (non-retirement)
     "CORP_ACTION" => "Other",     # Corporate action
-    "OTHER" => "Other"
+    "OTHER" => "Other",
+    # Option activity types
+    "OPTION_BUY" => "Buy",        # Buy to open/close option
+    "OPTION_SELL" => "Sell",      # Sell to open/close option
+    "EXERCISED" => "Other",       # Option exercised
+    "EXPIRED" => "Other",         # Option expired worthless
+    "ASSIGNED" => "Other"         # Option assignment
   }.freeze
 
   # Activity types that result in Trade records (involves securities)
-  TRADE_TYPES = %w[BUY SELL REI REINVEST].freeze
+  TRADE_TYPES = %w[BUY SELL REI REINVEST OPTION_BUY OPTION_SELL EXERCISED ASSIGNED].freeze
 
   # Activity types that result in Transaction records (cash movements)
   CASH_TYPES = %w[DIVIDEND DIV CONTRIBUTION WITHDRAWAL TRANSFER_IN TRANSFER_OUT TRANSFER INTEREST FEE TAX CASH].freeze

@@ -45,7 +45,7 @@ en:
       subtitle: "Select which brokerage accounts to link"
       syncing: "Fetching your accounts..."
       loading: "Fetching accounts from SnapTrade..."
-      loading_hint: "This page will auto-refresh while loading."
+      loading_hint: "Click Refresh to check for accounts."
       refresh: "Refresh"
       info_title: "SnapTrade Investment Data"
       info_holdings: "Holdings with current prices and quantities"
