@@ -297,6 +297,7 @@ Rails.application.routes.draw do
       resources :accounts, only: [ :index, :show ]
       resources :categories, only: [ :index, :show ]
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
       post :sync, to: "sync#create"
