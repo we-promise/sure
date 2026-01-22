@@ -12,9 +12,15 @@ configured_item:
   scheduled_for_deletion: false
   pending_account_setup: false
 
-unconfigured_item:
+# Item with credentials but not yet registered with SnapTrade
+# (user_id and user_secret are blank - represents state after saving credentials
+# but before connecting to SnapTrade portal)
+pending_registration_item:
   family: empty
-  name: "Pending Setup"
+  name: "Pending Registration"
+  client_id: "pending_client_id"
+  consumer_key: "pending_consumer_key"
+  # snaptrade_user_id and snaptrade_user_secret intentionally blank
   status: good
   scheduled_for_deletion: false
   pending_account_setup: true
