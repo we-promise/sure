@@ -29,8 +29,8 @@ class Installments::OverviewComponent < ViewComponent::Base
   end
 
   # Returns the remaining balance
-  def remaining
-    installment.calculate_current_balance
+  def remaining_principal_money
+    installment.remaining_principal_money
   end
 
   # Returns the currency for the installment (from account)

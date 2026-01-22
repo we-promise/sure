@@ -257,6 +257,10 @@ class Account < ApplicationRecord
     installment ? installment.calculate_current_balance : balance
   end
 
+  def remaining_principal_money
+    installment ? installment.remaining_principal_money : balance_money
+  end
+
   # Returns the synced balance from bank providers (Plaid/SimpleFIN)
   def bank_balance
     balance

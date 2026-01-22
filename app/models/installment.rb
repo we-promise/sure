@@ -55,6 +55,10 @@ class Installment < ApplicationRecord
     payments_remaining_count * installment_cost
   end
 
+  def remaining_principal_money
+    Money.new(calculate_current_balance, currency)
+  end
+
   # Generate the full payment schedule from first to last payment
   def generate_payment_schedule
     schedule = []

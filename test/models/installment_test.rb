@@ -128,6 +128,18 @@ class InstallmentTest < ActiveSupport::TestCase
     assert_equal 1200, installment.calculate_current_balance
   end
 
+  test "remaining_principal_money wraps the calculated balance" do
+    installment = @account.create_installment!(
+      installment_cost: 200,
+      total_term: 6,
+      current_term: 0,
+      payment_period: "monthly",
+      first_payment_date: Date.current,
+    )
+
+    assert_equal Money.new(installment.calculate_current_balance, "USD"), installment.remaining_principal_money
+  end
+
   test "calculate_current_balance returns remaining balance based on schedule" do
     # Started 6 months ago, currently on payment 3 of 6
     installment = @account.create_installment!(

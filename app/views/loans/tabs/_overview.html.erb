@@ -1,16 +1,10 @@
 <%# locals: (account:) %>
-
 <% if account.installment.present? %>
   <div class="space-y-6 mb-6">
     <%# Installment Overview %>
     <%= render Installments::OverviewComponent.new(installment: account.installment) %>
-
-
-
-
   </div>
 <% end %>
-
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".original_principal") do %>
     <% if account.installment.present? %>
@@ -19,11 +13,9 @@
       <%= format_money account.loan.original_balance %>
     <% end %>
   <% end %>
-
   <%= summary_card title: t(".remaining_principal") do %>
-    <%= format_money account.balance_money %>
+    <%= format_money account.remaining_principal_money %>
   <% end %>
-
   <%= summary_card title: t(".interest_rate") do %>
     <% if account.loan.interest_rate.present? %>
       <%= number_to_percentage(account.loan.interest_rate, precision: 3) %>
@@ -31,7 +23,6 @@
       <%= t(".unknown") %>
     <% end %>
   <% end %>
-
   <%= summary_card title: t(".monthly_payment") do %>
     <% if account.installment.present? %>
       <%= format_money(account.installment.installment_cost, currency: account.currency) %>
@@ -43,7 +34,6 @@
       <%= t(".unknown") %>
     <% end %>
   <% end %>
-
   <%= summary_card title: t(".term") do %>
     <% if account.installment.present? %>
       <%= pluralize(account.installment.total_term, account.installment.payment_period.chomp('ly').tr('_', '-')) %>
@@ -57,12 +47,10 @@
       <%= t(".unknown") %>
     <% end %>
   <% end %>
-
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
   <% end %>
 </div>
-
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(
     text: "Edit loan details",
