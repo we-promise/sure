@@ -54,6 +54,8 @@ class Account < ApplicationRecord
     if value == "installment"
       write_attribute(:subtype, value)
     else
+      # Clear accounts.subtype to ensure getter delegates to accountable
+      write_attribute(:subtype, nil)
       accountable&.subtype = value
     end
   end
