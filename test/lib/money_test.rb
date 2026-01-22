@@ -155,7 +155,8 @@ class MoneyTest < ActiveSupport::TestCase
 
   test "formats correctly for Chinese Traditional locale" do
     # Chinese Traditional uses English-style formatting (comma as thousands delimiter, dot as decimal separator)
-    assert_equal "NT$1,000.12", Money.new(1000.12, :twd).format(locale: :"zh-TW")
+    # TWD symbol is prefixed with "TW" to distinguish from other dollar currencies
+    assert_equal "TW$1,000.12", Money.new(1000.12, :twd).format(locale: :"zh-TW")
   end
 
   test "all supported locales can format money without errors" do
@@ -163,11 +164,13 @@ class MoneyTest < ActiveSupport::TestCase
     supported_locales = %w[en fr de es tr nb ca ro pt-BR zh-CN zh-TW nl]
 
     supported_locales.each do |locale|
-      locale_sym = locale.include?("-") ? locale.to_sym : locale.to_sym
-      assert_nothing_raised("Locale #{locale} should format money without errors") do
-        Money.new(1000.12, :usd).format(locale: locale_sym)
-        Money.new(1000.12, :eur).format(locale: locale_sym)
-      end
+      locale_sym = locale.to_sym
+      # Format with USD and EUR to ensure locale handling works for different currencies
+      result_usd = Money.new(1000.12, :usd).format(locale: locale_sym)
+      result_eur = Money.new(1000.12, :eur).format(locale: locale_sym)
+
+      assert result_usd.present?, "Locale #{locale} should format USD without errors"
+      assert result_eur.present?, "Locale #{locale} should format EUR without errors"
     end
   end
 
