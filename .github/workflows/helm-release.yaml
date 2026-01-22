@@ -1,4 +1,4 @@
-name: Release Helm Chart (WIP)
+name: Release Helm Chart
 
 on:
   push:
@@ -6,7 +6,14 @@ on:
       - main
     paths:
       - 'charts/**'
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Chart version (leave empty for nightly)'
+        required: false
+        type: string
 
 jobs:
   release:
@@ -32,17 +39,36 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-      - name: Generate nightly version
+      - name: Determine release type and version
         id: version
         run: |
-          # Generate version like: 0.0.0-nightly.20251213.173045
-          VERSION="0.0.0-nightly.$(date -u +'%Y%m%d.%H%M%S')"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Generated version: $VERSION"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # Tagged release - extract version from tag (strip 'v' prefix)
+            TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "version=$TAG_VERSION" >> $GITHUB_OUTPUT
+            echo "release_type=tagged" >> $GITHUB_OUTPUT
+            echo "is_prerelease=$([[ "$TAG_VERSION" == *alpha* || "$TAG_VERSION" == *beta* || "$TAG_VERSION" == *rc* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "Tagged release: $TAG_VERSION"
+          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+            # Manual dispatch with version specified
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "release_type=manual" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Manual release: ${{ github.event.inputs.version }}"
+          else
+            # Nightly release
+            VERSION="0.0.0-nightly.$(date -u +'%Y%m%d.%H%M%S')"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "release_type=nightly" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Nightly release: $VERSION"
+          fi
 
       - name: Update Chart.yaml version
         run: |
           sed -i "s/^version:.*/version: ${{ steps.version.outputs.version }}/" charts/sure/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.version }}\"/" charts/sure/Chart.yaml
+          echo "Updated Chart.yaml:"
           cat charts/sure/Chart.yaml
 
       - name: Add Helm repositories
@@ -56,9 +82,21 @@ jobs:
           helm dependency build charts/sure
 
       - name: Package chart
+        id: package
         run: |
           mkdir -p .cr-release-packages
           helm package charts/sure -d .cr-release-packages
+          CHART_PACKAGE=$(ls .cr-release-packages/*.tgz)
+          echo "chart_package=$CHART_PACKAGE" >> $GITHUB_OUTPUT
+          echo "chart_filename=$(basename $CHART_PACKAGE)" >> $GITHUB_OUTPUT
+          echo "Packaged chart: $CHART_PACKAGE"
+
+      - name: Upload chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart-${{ steps.version.outputs.version }}
+          path: ${{ steps.package.outputs.chart_package }}
+          retention-days: 90
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -66,22 +104,90 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      - name: Update index and push
+      - name: Update Helm repository index
         env:
           GIT_USER_NAME: ${{ github.actor }}
           GIT_USER_EMAIL: ${{ github.actor }}@users.noreply.github.com
         run: |
-          # Copy packaged chart
-          cp .cr-release-packages/*.tgz gh-pages/
+          # Copy packaged chart to gh-pages
+          cp ${{ steps.package.outputs.chart_package }} gh-pages/
 
-          # Update index
-          helm repo index gh-pages --url https://we-promise.github.io/sure --merge gh-pages/index.yaml
+          # Update index.yaml
+          if [ -f gh-pages/index.yaml ]; then
+            helm repo index gh-pages --url https://we-promise.github.io/sure --merge gh-pages/index.yaml
+          else
+            helm repo index gh-pages --url https://we-promise.github.io/sure
+          fi
 
-          # Push to gh-pages
-          git config --global credential.helper cache
+          # Commit and push to gh-pages
           cd gh-pages
           git config user.name "$GIT_USER_NAME"
           git config user.email "$GIT_USER_EMAIL"
           git add .
-          git commit -m "Release nightly: ${{ steps.version.outputs.version }}"
-          git push
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Release Helm chart: ${{ steps.version.outputs.version }}"
+
+            # Push with retry logic
+            attempts=0
+            until git push origin gh-pages; do
+              attempts=$((attempts + 1))
+              if [[ $attempts -ge 4 ]]; then
+                echo "ERROR: Failed to push after 4 attempts." >&2
+                exit 1
+              fi
+              delay=$((2 ** attempts))
+              echo "Push failed (attempt $attempts). Retrying in ${delay} seconds..."
+              sleep ${delay}
+              git pull --rebase origin gh-pages
+            done
+          fi
+
+      - name: Create or update GitHub Release
+        if: steps.version.outputs.release_type == 'tagged'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+          files: |
+            ${{ steps.package.outputs.chart_package }}
+          body: |
+            ## Helm Chart
+
+            The Helm chart for this release is available:
+
+            ### Install from Helm Repository
+
+            ```bash
+            helm repo add sure https://we-promise.github.io/sure
+            helm repo update
+            helm install sure sure/sure --version ${{ steps.version.outputs.version }}
+            ```
+
+            ### Download Chart Package
+
+            Download the `${{ steps.package.outputs.chart_filename }}` asset below.
+          append_body: true
+          fail_on_unmatched_files: false
+
+      - name: Summary
+        run: |
+          echo "## Helm Chart Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Type**: ${{ steps.version.outputs.release_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Chart Package**: ${{ steps.package.outputs.chart_filename }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Helm Repository" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The chart is now available at: https://we-promise.github.io/sure" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "helm repo add sure https://we-promise.github.io/sure" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo update" >> $GITHUB_STEP_SUMMARY
+          echo "helm search repo sure" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
