@@ -76,12 +76,18 @@ class LoansController < ApplicationController
         end
 
         installment = @account.installment || @account.build_installment
-        installment.update!(installment_data.except(:source_account_id))
-
-        remove_installment_activity(installment)
-
+        schedule_affecting_fields = %w[installment_cost total_term current_term payment_period first_payment_date]
         source_account_id = installment_data[:source_account_id].presence
-        Installment::Creator.new(installment, source_account_id: source_account_id).call
+
+        installment.assign_attributes(installment_data.except(:source_account_id))
+        schedule_changed = schedule_affecting_fields.any? { |field| installment.send("#{field}_changed?") }
+
+        installment.save!
+
+        if schedule_changed
+          remove_installment_activity(installment)
+          Installment::Creator.new(installment, source_account_id: source_account_id).call
+        end
 
         @account.lock_saved_attributes!
       end
