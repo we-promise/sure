@@ -165,8 +165,7 @@ class CoinstatsEntry::Processor
         BigDecimal("0")
       end
 
-      # Convert from USD to family's currency
-      converted_amount = convert_to_family_currency(parsed_amount.abs)
+      absolute_amount = parsed_amount.abs
 
       # App convention: negative amount = income (inflow), positive amount = expense (outflow)
       # coinData.count is negative for outgoing transactions
@@ -174,10 +173,10 @@ class CoinstatsEntry::Processor
 
       if coin_count.to_f < 0 || outgoing_transaction_type?
         # Outgoing transaction = expense = positive
-        converted_amount
+        absolute_amount
       else
         # Incoming transaction = income = negative
-        -converted_amount
+        -absolute_amount
       end
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse CoinStats transaction amount: #{usd_value.inspect} - #{e.message}"
@@ -190,40 +189,8 @@ class CoinstatsEntry::Processor
     end
 
     def currency
-      # Use family's currency instead of USD
-      family_currency
-    end
-
-    def family_currency
-      @family_currency ||= coinstats_account.coinstats_item.family.currency
-    end
-
-    # Converts a USD amount to the family's currency using exchange rates.
-    # @param usd_amount [BigDecimal] Amount in USD
-    # @return [BigDecimal] Converted amount in target currency
-    # @note If conversion fails, returns USD amount but logs error - this may cause
-    #       data inconsistency as the amount will be labeled with family currency
-    def convert_to_family_currency(usd_amount)
-      return BigDecimal("0") if usd_amount.zero?
-      return usd_amount if family_currency.to_s.upcase == "USD"
-
-      # Try to get exchange rate without fallback first to detect missing rates
-      transaction_date = date rescue Date.current
-      exchange_rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: family_currency, date: transaction_date)
-
-      if exchange_rate.present?
-        Money.new(usd_amount, "USD")
-             .exchange_to(family_currency, date: transaction_date)
-             .amount
-      else
-        # No exchange rate available - log error and use USD amount
-        # WARNING: This creates data inconsistency (USD amount labeled as family currency)
-        Rails.logger.error "CoinstatsEntry::Processor - No exchange rate found for USD->#{family_currency} on #{transaction_date}, using unconverted USD amount. This may cause incorrect transaction display."
-        usd_amount
-      end
-    rescue => e
-      Rails.logger.error "CoinstatsEntry::Processor - Currency conversion failed (#{e.message}), using unconverted USD amount. This may cause incorrect transaction display."
-      usd_amount
+      # CoinStats values are always in USD
+      "USD"
     end
 
     def date
