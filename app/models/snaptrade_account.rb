@@ -9,8 +9,8 @@ class SnaptradeAccount < ApplicationRecord
 
   validates :name, :currency, presence: true
 
-  # Clean up SnapTrade connection when account is destroyed
-  before_destroy :delete_snaptrade_connection
+  # Enqueue cleanup job after destruction to avoid blocking transaction with API call
+  after_destroy :enqueue_connection_cleanup
 
   # Helper to get the linked Sure account
   def current_account
@@ -148,46 +148,16 @@ class SnaptradeAccount < ApplicationRecord
 
   private
 
-    # Delete the SnapTrade brokerage connection to free up connection slots
-    # Only deletes if this is the last account using this authorization
-    def delete_snaptrade_connection
+    # Enqueue a background job to clean up the SnapTrade connection
+    # This runs asynchronously after the record is destroyed to avoid
+    # blocking the DB transaction with an external API call
+    def enqueue_connection_cleanup
       return unless snaptrade_authorization_id.present?
 
-      # Check if other accounts share this authorization (multiple accounts per connection)
-      other_accounts_with_same_auth = snaptrade_item.snaptrade_accounts
-        .where(snaptrade_authorization_id: snaptrade_authorization_id)
-        .where.not(id: id)
-
-      if other_accounts_with_same_auth.exists?
-        Rails.logger.info(
-          "SnaptradeAccount##{id}: Skipping connection deletion - other accounts share authorization #{snaptrade_authorization_id}"
-        )
-        return
-      end
-
-      # Delete the connection from SnapTrade API
-      provider = snaptrade_provider
-      credentials = snaptrade_credentials
-
-      return unless provider && credentials
-
-      Rails.logger.info(
-        "SnaptradeAccount##{id}: Deleting SnapTrade connection #{snaptrade_authorization_id}"
-      )
-
-      provider.delete_connection(
-        user_id: credentials[:user_id],
-        user_secret: credentials[:user_secret],
-        authorization_id: snaptrade_authorization_id
-      )
-
-      Rails.logger.info(
-        "SnaptradeAccount##{id}: Successfully deleted SnapTrade connection #{snaptrade_authorization_id}"
-      )
-    rescue => e
-      # Log but don't prevent account deletion - the connection may already be gone
-      Rails.logger.warn(
-        "SnaptradeAccount##{id}: Failed to delete SnapTrade connection #{snaptrade_authorization_id}: #{e.class} - #{e.message}"
+      SnaptradeConnectionCleanupJob.perform_later(
+        snaptrade_item_id: snaptrade_item_id,
+        authorization_id: snaptrade_authorization_id,
+        account_id: id
       )
     end
 

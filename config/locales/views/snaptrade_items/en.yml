@@ -117,6 +117,22 @@ en:
       connected_brokerages: "Connected:"
 
   snaptrade_item:
+    sync_status:
+      no_accounts: "No accounts found"
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: "No institutions connected"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    brokerage_summary:
+      none: "No brokerages connected"
+      count:
+        one: "%{count} brokerage"
+        other: "%{count} brokerages"
     syncer:
       discovering: "Discovering accounts..."
       importing: "Importing accounts from SnapTrade..."

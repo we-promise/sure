@@ -122,11 +122,11 @@ class SnaptradeItem < ApplicationRecord
     unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
-      "No accounts found"
+      I18n.t("snaptrade_item.sync_status.no_accounts")
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("snaptrade_item.sync_status.synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t("snaptrade_item.sync_status.synced_with_setup", linked: linked_count, unlinked: unlinked_count)
     end
   end
 
@@ -157,11 +157,11 @@ class SnaptradeItem < ApplicationRecord
     institutions = connected_institutions
     case institutions.count
     when 0
-      "No institutions connected"
+      I18n.t("snaptrade_item.institution_summary.none")
     when 1
-      institutions.first["name"] || institutions.first["institution_name"] || "1 institution"
+      institutions.first["name"] || institutions.first["institution_name"] || I18n.t("snaptrade_item.institution_summary.count", count: 1)
     else
-      "#{institutions.count} institutions"
+      I18n.t("snaptrade_item.institution_summary.count", count: institutions.count)
     end
   end
 
@@ -205,11 +205,11 @@ class SnaptradeItem < ApplicationRecord
     brokerages = connected_brokerages
     case brokerages.count
     when 0
-      "No brokerages connected"
+      I18n.t("snaptrade_item.brokerage_summary.none")
     when 1
       brokerages.first
     else
-      "#{brokerages.count} brokerages"
+      I18n.t("snaptrade_item.brokerage_summary.count", count: brokerages.count)
     end
   end
 end
