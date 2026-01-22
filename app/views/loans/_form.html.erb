@@ -101,14 +101,6 @@
                                  default_currency: Current.family.currency,
                                  disabled: true,
                                  data: { loan_form_target: "originalBalance" } %>
-        <%# Source Account (optional) %>
-        <%= inst_form.select :source_account_id,
-                            options_from_collection_for_select(Current.family.accounts.assets.visible, :id, :name),
-                            {
-                              label: t("loans.form.installment.source_account_label"),
-                              help_text: t("loans.form.installment.source_account_help"),
-                              include_blank: t("loans.form.installment.source_account_blank")
-                            } %>
       <% end %>
     <% else %>
       <%# Account Name %>
