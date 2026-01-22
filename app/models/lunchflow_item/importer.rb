@@ -1,4 +1,6 @@
 class LunchflowItem::Importer
+  include LunchflowTransactionHash
+
   attr_reader :lunchflow_item, :lunchflow_provider
 
   def initialize(lunchflow_item, lunchflow_provider:)
@@ -215,26 +217,38 @@ class LunchflowItem::Importer
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
             # Build set of existing transaction IDs for efficient lookup
-            # Note: Only include transactions with valid IDs. Blank/nil IDs should not be used for deduplication
-            # as multiple transactions can have missing IDs (especially pending transactions)
+            # For transactions with IDs: use the ID directly
+            # For transactions without IDs (blank/nil): use content hash to prevent duplicate storage
             existing_ids = existing_transactions.map do |tx|
-              tx.with_indifferent_access[:id]
-            end.compact.reject(&:blank?).to_set
+              tx_with_access = tx.with_indifferent_access
+              tx_id = tx_with_access[:id]
+
+              if tx_id.blank?
+                # Generate content hash for blank-ID transactions to detect duplicates
+                content_hash_for_transaction(tx_with_access)
+              else
+                tx_id
+              end
+            end.compact.to_set
 
             # Filter to ONLY truly new transactions (skip duplicates)
             # For transactions WITH IDs: skip if ID already exists (true duplicates)
-            # For transactions WITHOUT IDs: always include them (can't deduplicate without an ID)
+            # For transactions WITHOUT IDs: skip if content hash exists (prevents unbounded growth)
             # Note: Pending transactions may update from pending→posted, but we treat them as immutable snapshots
             new_transactions = transactions_data[:transactions].select do |tx|
               next false unless tx.is_a?(Hash)
 
-              tx_id = tx.with_indifferent_access[:id]
-              
-              # If no ID, always include (can't determine if duplicate)
-              next true if tx_id.blank?
-              
-              # If has ID, only include if not already stored
-              !existing_ids.include?(tx_id)
+              tx_with_access = tx.with_indifferent_access
+              tx_id = tx_with_access[:id]
+
+              if tx_id.blank?
+                # Use content hash to detect if we've already stored this exact transaction
+                content_hash = content_hash_for_transaction(tx_with_access)
+                !existing_ids.include?(content_hash)
+              else
+                # If has ID, only include if not already stored
+                !existing_ids.include?(tx_id)
+              end
             end
 
             if new_transactions.any?

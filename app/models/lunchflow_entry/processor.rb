@@ -2,6 +2,8 @@ require "digest/md5"
 
 class LunchflowEntry::Processor
   include CurrencyNormalizable
+  include LunchflowTransactionHash
+
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
   # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
   def initialize(lunchflow_transaction, lunchflow_account:)
@@ -68,16 +70,7 @@ class LunchflowEntry::Processor
       if id.blank?
         # Create a deterministic hash from key transaction attributes
         # This ensures the same pending transaction gets the same ID across syncs
-        attributes = [
-          data[:accountId],
-          data[:amount],
-          data[:currency],
-          data[:date],
-          data[:merchant],
-          data[:description]
-        ].compact.join("|")
-
-        base_temp_id = Digest::MD5.hexdigest(attributes)
+        base_temp_id = content_hash_for_transaction(data)
         temp_id_with_prefix = "lunchflow_pending_#{base_temp_id}"
 
         # Handle collisions: if this external_id already exists for this account,
