@@ -63,9 +63,34 @@ module Money::Formatting
         return { delimiter: ".", separator: ",", format: "%u %n" }
       end
 
+      # Turkish locale: symbol after number with space, comma as decimal separator
+      if locale_sym == :tr
+        return { delimiter: ".", separator: ",", format: "%n %u" }
+      end
+
+      # Norwegian Bokmål locale: symbol after number with space, comma as decimal separator, space as thousands delimiter
+      if locale_sym == :nb
+        return { delimiter: " ", separator: ",", format: "%n %u" }
+      end
+
+      # Catalan locale: symbol after number with space, comma as decimal separator
+      if locale_sym == :ca
+        return { delimiter: ".", separator: ",", format: "%n %u" }
+      end
+
+      # Romanian locale: symbol after number with space, comma as decimal separator
+      if locale_sym == :ro
+        return { delimiter: ".", separator: ",", format: "%n %u" }
+      end
+
+      # Dutch locale: symbol before number with space, comma as decimal separator
+      if locale_sym == :nl
+        return { delimiter: ".", separator: ",", format: "%u %n" }
+      end
+
       # Currency-specific overrides for remaining locales
       case [ currency.iso_code, locale_sym ]
-      when [ "EUR", :nl ], [ "EUR", :pt ]
+      when [ "EUR", :pt ]
         { delimiter: ".", separator: ",", format: "%u %n" }
       when [ "EUR", :en ], [ "EUR", :en_IE ]
         { delimiter: ",", separator: "." }

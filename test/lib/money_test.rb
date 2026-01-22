@@ -119,6 +119,58 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "1 000,12 €", Money.new(1000.12, :eur).format(locale: :pl)
   end
 
+  test "formats correctly for Turkish locale" do
+    # Turkish uses dot as thousands delimiter, comma as decimal separator, symbol after number
+    assert_equal "1.000,12 ₺", Money.new(1000.12, :try).format(locale: :tr)
+    assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :tr)
+  end
+
+  test "formats correctly for Norwegian Bokmål locale" do
+    # Norwegian uses space as thousands delimiter, comma as decimal separator, symbol after number
+    assert_equal "1 000,12 kr", Money.new(1000.12, :nok).format(locale: :nb)
+    assert_equal "1 000,12 €", Money.new(1000.12, :eur).format(locale: :nb)
+  end
+
+  test "formats correctly for Catalan locale" do
+    # Catalan uses dot as thousands delimiter, comma as decimal separator, symbol after number
+    assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :ca)
+  end
+
+  test "formats correctly for Romanian locale" do
+    # Romanian uses dot as thousands delimiter, comma as decimal separator, symbol after number
+    assert_equal "1.000,12 Lei", Money.new(1000.12, :ron).format(locale: :ro)
+    assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :ro)
+  end
+
+  test "formats correctly for Dutch locale" do
+    # Dutch uses dot as thousands delimiter, comma as decimal separator, symbol before number
+    assert_equal "€ 1.000,12", Money.new(1000.12, :eur).format(locale: :nl)
+    assert_equal "$ 1.000,12", Money.new(1000.12, :usd).format(locale: :nl)
+  end
+
+  test "formats correctly for Chinese Simplified locale" do
+    # Chinese Simplified uses English-style formatting (comma as thousands delimiter, dot as decimal separator)
+    assert_equal "¥1,000.12", Money.new(1000.12, :cny).format(locale: :"zh-CN")
+  end
+
+  test "formats correctly for Chinese Traditional locale" do
+    # Chinese Traditional uses English-style formatting (comma as thousands delimiter, dot as decimal separator)
+    assert_equal "NT$1,000.12", Money.new(1000.12, :twd).format(locale: :"zh-TW")
+  end
+
+  test "all supported locales can format money without errors" do
+    # Ensure all supported locales from LanguagesHelper::SUPPORTED_LOCALES work
+    supported_locales = %w[en fr de es tr nb ca ro pt-BR zh-CN zh-TW nl]
+
+    supported_locales.each do |locale|
+      locale_sym = locale.include?("-") ? locale.to_sym : locale.to_sym
+      assert_nothing_raised("Locale #{locale} should format money without errors") do
+        Money.new(1000.12, :usd).format(locale: locale_sym)
+        Money.new(1000.12, :eur).format(locale: locale_sym)
+      end
+    end
+  end
+
   test "converts currency when rate available" do
     ExchangeRate.expects(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1.2))
 
