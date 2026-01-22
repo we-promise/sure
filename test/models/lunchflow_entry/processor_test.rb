@@ -3,7 +3,6 @@ require "test_helper"
 class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
   setup do
     @family = families(:empty)
-    @user = @family.users.first
     @lunchflow_item = LunchflowItem.create!(
       name: "Test Lunchflow Connection",
       api_key: "test_key",
