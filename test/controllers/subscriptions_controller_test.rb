@@ -73,4 +73,23 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert @family.subscription.active?
     assert_equal "Welcome to Sure!  Your subscription has been created.", flash[:notice]
   end
+
+  test "show action returns forbidden when family has no stripe_customer_id" do
+    assert_nil @family.stripe_customer_id
+
+    get subscription_path
+    assert_response :forbidden
+  end
+
+  test "show action redirects to stripe portal when family has stripe_customer_id" do
+    @family.update!(stripe_customer_id: "cus_test123")
+
+    @mock_stripe.expects(:create_payment_portal_session_url).with(
+      customer_id: "cus_test123",
+      return_url: settings_payment_url
+    ).returns("https://billing.stripe.com/session/test")
+
+    get subscription_path
+    assert_redirected_to "https://billing.stripe.com/session/test"
+  end
 end

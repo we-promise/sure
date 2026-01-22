@@ -41,6 +41,10 @@ module Family::Subscribeable
     subscription&.active?
   end
 
+  def can_manage_subscription?
+    stripe_customer_id.present?
+  end
+
   def needs_subscription?
     subscription.nil? && !self_hoster?
   end

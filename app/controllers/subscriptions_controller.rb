@@ -2,6 +2,9 @@ class SubscriptionsController < ApplicationController
   # Disables subscriptions for self hosted instances
   guard_feature if: -> { self_hosted? }
 
+  # Disables Stripe portal for users without stripe_customer_id (demo users, manually created users)
+  guard_feature unless: -> { Current.family.can_manage_subscription? }, only: :show
+
   # Upgrade page for unsubscribed users
   def upgrade
     if Current.family.subscription&.active?
