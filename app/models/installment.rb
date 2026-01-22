@@ -1,6 +1,9 @@
 class Installment < ApplicationRecord
   belongs_to :account
 
+  after_create :ensure_account_subtype
+  after_destroy :clear_account_subtype
+
   delegate :currency, to: :account
 
   # Virtual attributes (used during creation, not persisted)
@@ -100,6 +103,16 @@ class Installment < ApplicationRecord
   end
 
   private
+
+    def ensure_account_subtype
+      return if account.subtype == "installment"
+
+      account.update!(subtype: "installment")
+    end
+
+    def clear_account_subtype
+      account.update_column(:subtype, nil)
+    end
 
     def advance_date(date)
       case payment_period

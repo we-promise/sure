@@ -106,6 +106,7 @@ en:
       other_asset: Other Asset
       credit_card: Credit Card
       loan: Loan
+      installment: Installment
       other_liability: Other Liability
     tax_treatments:
       taxable: Taxable

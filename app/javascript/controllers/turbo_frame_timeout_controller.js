@@ -5,16 +5,31 @@ export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
   connect() {
-    this.timeoutId = setTimeout(() => {
-      this.handleTimeout()
-    }, this.timeoutValue)
+    this.startTimeout = this.startTimeout.bind(this)
+    this.clearTimeout = this.clearTimeout.bind(this)
 
-    // Listen for successful frame loads to clear timeout
-    this.element.addEventListener("turbo:frame-load", this.clearTimeout.bind(this))
+    this.element.addEventListener("turbo:before-fetch-request", this.startTimeout)
+    this.element.addEventListener("turbo:frame-load", this.clearTimeout)
+    this.element.addEventListener("turbo:frame-missing", this.clearTimeout)
+    this.element.addEventListener("turbo:frame-error", this.clearTimeout)
   }
 
   disconnect() {
+    this.element.removeEventListener("turbo:before-fetch-request", this.startTimeout)
+    this.element.removeEventListener("turbo:frame-load", this.clearTimeout)
+    this.element.removeEventListener("turbo:frame-missing", this.clearTimeout)
+    this.element.removeEventListener("turbo:frame-error", this.clearTimeout)
     this.clearTimeout()
+  }
+
+  startTimeout() {
+    if (this.timeoutId) {
+      return
+    }
+
+    this.timeoutId = setTimeout(() => {
+      this.handleTimeout()
+    }, this.timeoutValue)
   }
 
   clearTimeout() {

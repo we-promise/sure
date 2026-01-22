@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_19_005756) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_20_121500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1242,17 +1242,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_19_005756) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
-    t.uuid "category_id"
-    t.decimal "realized_gain", precision: 19, scale: 4
-    t.decimal "cost_basis_amount", precision: 19, scale: 4
-    t.string "cost_basis_currency"
-    t.integer "holding_period_days"
-    t.string "realized_gain_confidence"
-    t.string "realized_gain_currency"
     t.string "investment_activity_label"
-    t.index ["category_id"], name: "index_trades_on_category_id"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
-    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 

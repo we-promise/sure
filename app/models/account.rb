@@ -40,12 +40,24 @@ class Account < ApplicationRecord
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
-  delegate :subtype, to: :accountable, allow_nil: true
+
+  # Reader for subtype: check accounts.subtype first (for "installment"),
+  # then fall back to accountable.subtype
+  def subtype
+    read_attribute(:subtype) || accountable&.subtype
+  end
 
   # Writer for subtype that delegates to the accountable
   # This allows forms to set subtype directly on the account
+  # Special case: "installment" is stored on the accounts table for SQL queries
   def subtype=(value)
-    accountable&.subtype = value
+    if value == "installment"
+      write_attribute(:subtype, value)
+    else
+      # Clear accounts.subtype to ensure getter delegates to accountable
+      write_attribute(:subtype, nil)
+      accountable&.subtype = value
+    end
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
@@ -297,11 +309,15 @@ class Account < ApplicationRecord
 
   # Get short version of the subtype label
   def short_subtype_label
+    return installment_label if installment_subtype?
+
     accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
   end
 
   # Get long version of the subtype label
   def long_subtype_label
+    return installment_label if installment_subtype?
+
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
   end
 
@@ -311,6 +327,14 @@ class Account < ApplicationRecord
     return true if investment?
     return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
     false
+  end
+
+  def installment_subtype?
+    read_attribute(:subtype) == "installment"
+  end
+
+  def installment_label
+    I18n.t("accounts.types.installment", default: "Installment")
   end
 
   # The balance type determines which "component" of balance is being tracked.
