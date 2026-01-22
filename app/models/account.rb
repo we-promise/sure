@@ -40,12 +40,22 @@ class Account < ApplicationRecord
   has_one_attached :logo
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
-  delegate :subtype, to: :accountable, allow_nil: true
+
+  # Reader for subtype: check accounts.subtype first (for "installment"),
+  # then fall back to accountable.subtype
+  def subtype
+    read_attribute(:subtype) || accountable&.subtype
+  end
 
   # Writer for subtype that delegates to the accountable
   # This allows forms to set subtype directly on the account
+  # Special case: "installment" is stored on the accounts table for SQL queries
   def subtype=(value)
-    accountable&.subtype = value
+    if value == "installment"
+      write_attribute(:subtype, value)
+    else
+      accountable&.subtype = value
+    end
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
@@ -282,7 +292,7 @@ class Account < ApplicationRecord
   end
 
   def installment_subtype?
-    subtype == "installment"
+    read_attribute(:subtype) == "installment"
   end
 
   def installment_label
