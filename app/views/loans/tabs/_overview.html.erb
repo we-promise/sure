@@ -5,32 +5,9 @@
     <%# Installment Overview %>
     <%= render Installments::OverviewComponent.new(installment: account.installment) %>
 
-    <%# Payment Schedule %>
-    <div class="mt-6">
-      <%= render Installments::PaymentScheduleComponent.new(installment: account.installment) %>
-    </div>
 
-    <%# Balance Comparison %>
-    <div class="mt-6 p-4 bg-surface rounded-lg border border-surface-inset">
-      <h3 class="text-sm font-medium mb-2 text-primary"><%= t("installments.balance_comparison.title") %></h3>
-      <div class="space-y-2">
-        <div class="flex justify-between">
-          <span class="text-secondary"><%= t("installments.balance_comparison.calculated") %></span>
-          <span class="font-medium text-primary"><%= format_money(account.installment.calculate_current_balance, currency: account.currency) %></span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-secondary"><%= t("installments.balance_comparison.bank") %></span>
-          <span class="font-medium text-primary"><%= format_money(account.balance_money) %></span>
-        </div>
-        <% balance_diff = (account.installment.calculate_current_balance - account.balance).abs %>
-        <% if balance_diff > 1 %>
-          <div class="text-xs text-yellow-700 flex items-start gap-1 mt-2 p-2 bg-yellow-50 rounded">
-            <%= icon("info", size: "sm", class: "mt-0.5 flex-shrink-0") %>
-            <span><%= t("installments.balance_comparison.mismatch_info") %></span>
-          </div>
-        <% end %>
-      </div>
-    </div>
+
+
   </div>
 <% end %>
 
