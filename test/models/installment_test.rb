@@ -415,4 +415,25 @@ class InstallmentTest < ActiveSupport::TestCase
 
     assert_equal "USD", installment.currency
   end
+
+  test "installment payment transactions use loan_payment kind for report inclusion" do
+    installment = @account.create_installment!(
+      installment_cost: 100,
+      total_term: 12,
+      current_term: 6,
+      first_payment_date: 6.months.ago.to_date,
+      payment_period: "monthly"
+    )
+
+    Installment::Creator.new(installment).call
+
+    transactions = @account.transactions.where("extra->>'installment_id' = ?", installment.id.to_s)
+
+    assert transactions.any?, "Expected installment transactions to be created"
+    assert transactions.all?(&:loan_payment?), "Expected all transactions to be loan_payment kind"
+
+    # Verify these would be included in reports (not in exclusion list)
+    excluded_kinds = %w[funds_movement one_time cc_payment]
+    assert transactions.none? { |t| excluded_kinds.include?(t.kind) }
+  end
 end
