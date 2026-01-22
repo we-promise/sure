@@ -149,7 +149,7 @@ en:
         coinbase_title: Coinbase
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
-        step1_html: Go to <a href="https://www.coinbase.com/settings/api" target="_blank" class="text-primary underline">Coinbase API Settings</a>
+        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Coinbase API Settings</a>
         step2: Create a new API key with read-only permissions (view accounts, view transactions)
         step3: Copy your API key and API secret and paste them below
         api_key_label: API Key

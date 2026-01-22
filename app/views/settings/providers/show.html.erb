@@ -8,11 +8,15 @@
   </div>
 
   <% @provider_configurations.each do |config| %>
-    <% next if config.provider_key.to_s.casecmp("simplefin").zero? %>
     <%= settings_section title: config.provider_key.titleize, collapsible: true, open: false do %>
       <%= render "settings/providers/provider_form", configuration: config %>
     <% end %>
   <% end %>
+
+  <%# Providers below are hardcoded because they manage Family-scoped connections                 %>
+  <%# (via their own models like SimplefinItem, LunchflowItem, etc.) rather than global settings. %>
+  <%# They require custom UI for connection management, status display, and sync actions.         %>
+  <%# The controller excludes them from @provider_configurations (see prepare_show_context).      %>
 
   <%= settings_section title: "Lunch Flow", collapsible: true, open: false do %>
     <turbo-frame id="lunchflow-providers-panel">
@@ -37,8 +41,8 @@
       <%= render "settings/providers/coinstats_panel" %>
     </turbo-frame>
   <% end %>
-      
-  <%= settings_section title: "#{t('.coinbase_title')} (beta)", collapsible: true, open: false do %>
+
+  <%= settings_section title: "Coinbase (beta)", collapsible: true, open: false do %>
     <turbo-frame id="coinbase-providers-panel">
       <%= render "settings/providers/coinbase_panel" %>
     </turbo-frame>
