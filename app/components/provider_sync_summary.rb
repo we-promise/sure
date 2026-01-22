@@ -102,6 +102,19 @@ class ProviderSyncSummary < ViewComponent::Base
     stats.key?("holdings_processed") ? holdings_processed : holdings_found
   end
 
+  # Trades statistics (investment activities like buy/sell)
+  def trades_imported
+    stats["trades_imported"].to_i
+  end
+
+  def trades_skipped
+    stats["trades_skipped"].to_i
+  end
+
+  def has_trades_stats?
+    stats.key?("trades_imported") || stats.key?("trades_skipped")
+  end
+
   # Returns the CSS color class for a data quality detail severity
   # @param severity [String] The severity level ("warning", "error", or other)
   # @return [String] The Tailwind CSS class for the color

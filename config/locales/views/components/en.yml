@@ -28,6 +28,10 @@ en:
       title: Holdings
       found: "Found: %{count}"
       processed: "Processed: %{count}"
+    trades:
+      title: Trades
+      imported: "Imported: %{count}"
+      skipped: "Skipped: %{count}"
     health:
       title: Health
       view_error_details: View error details

@@ -12,6 +12,7 @@ class AccountsController < ApplicationController
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
     @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
+    @snaptrade_items = family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts)
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -111,8 +112,15 @@ class AccountsController < ApplicationController
           Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
         end
 
-        # Capture SimplefinAccount before clearing FK (so we can destroy it)
+        # Capture provider accounts before clearing links (so we can destroy them)
         simplefin_account_to_destroy = @account.simplefin_account
+
+        # Capture SnaptradeAccounts linked via AccountProvider
+        # Destroying them will trigger delete_snaptrade_connection callback to free connection slots
+        snaptrade_accounts_to_destroy = @account.account_providers
+          .where(provider_type: "SnaptradeAccount")
+          .map { |ap| SnaptradeAccount.find_by(id: ap.provider_id) }
+          .compact
 
         # Remove new system links (account_providers join table)
         @account.account_providers.destroy_all
@@ -126,6 +134,11 @@ class AccountsController < ApplicationController
         # - SimplefinAccount only caches API data which is regenerated on reconnect
         # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
         simplefin_account_to_destroy&.destroy!
+
+        # Destroy SnaptradeAccount records to free up SnapTrade connection slots
+        # The before_destroy callback will delete the connection from SnapTrade API
+        # if no other accounts share the same authorization
+        snaptrade_accounts_to_destroy.each(&:destroy!)
       end
 
       redirect_to accounts_path, notice: t("accounts.unlink.success")

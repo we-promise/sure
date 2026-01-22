@@ -1,5 +1,5 @@
 class Family < ApplicationRecord
-  include CoinbaseConnectable
+  include CoinbaseConnectable, SnaptradeConnectable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable, CoinstatsConnectable
 
   DATE_FORMATS = [

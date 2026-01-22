@@ -47,4 +47,10 @@
       <%= render "settings/providers/coinbase_panel" %>
     </turbo-frame>
   <% end %>
+
+  <%= settings_section title: "SnapTrade (beta)", collapsible: true, open: false do %>
+    <turbo-frame id="snaptrade-providers-panel">
+      <%= render "settings/providers/snaptrade_panel" %>
+    </turbo-frame>
+  <% end %>
 </div>

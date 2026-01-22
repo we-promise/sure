@@ -81,6 +81,19 @@
       </div>
     <% end %>
 
+    <%# Trades section - shown if provider collects trades stats (investment activities) %>
+    <% if has_trades_stats? %>
+      <div>
+        <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.trades.title") %></h4>
+        <div class="flex items-center gap-3 flex-wrap">
+          <span><%= t("provider_sync_summary.trades.imported", count: trades_imported) %></span>
+          <% if trades_skipped > 0 %>
+            <span><%= t("provider_sync_summary.trades.skipped", count: trades_skipped) %></span>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
     <%# Health section - always shown %>
     <div>
       <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.health.title") %></h4>

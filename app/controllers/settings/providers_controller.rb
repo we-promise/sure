@@ -126,7 +126,8 @@ class Settings::ProvidersController < ApplicationController
         config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
         config.provider_key.to_s.casecmp("enable_banking").zero? || \
         config.provider_key.to_s.casecmp("coinstats").zero? || \
-        config.provider_key.to_s.casecmp("coinbase").zero?
+        config.provider_key.to_s.casecmp("coinbase").zero? || \
+        config.provider_key.to_s.casecmp("snaptrade").zero?
       end
 
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
@@ -135,5 +136,6 @@ class Settings::ProvidersController < ApplicationController
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
+      @snaptrade_items = Current.family.snaptrade_items.ordered
     end
 end
