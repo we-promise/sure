@@ -11,6 +11,7 @@ class AccountsController < ApplicationController
     @lunchflow_items = family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts)
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
+    @mercury_items = family.mercury_items.ordered.includes(:syncs, :mercury_accounts)
     @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
     @snaptrade_items = family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts)
 
@@ -253,6 +254,13 @@ class AccountsController < ApplicationController
       @coinstats_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Mercury sync stats
+      @mercury_sync_stats_map = {}
+      @mercury_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Coinbase sync stats

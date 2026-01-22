@@ -51,9 +51,9 @@ class SubscriptionsController < ApplicationController
 
     if checkout_result.success?
       Current.family.start_subscription!(checkout_result.subscription_id)
-      redirect_to root_path, notice: "Welcome to Sure!  Your subscription has been created."
+      redirect_to root_path, notice: "Welcome to Sure!  Your contribution is appreciated."
     else
-      redirect_to root_path, alert: "Something went wrong processing your subscription. Please contact us to get this fixed."
+      redirect_to root_path, alert: "Something went wrong processing your contribution. Please try again."
     end
   end
 

@@ -13,7 +13,7 @@
         <div class="text-sm space-y-1">
           <% if @family.has_active_subscription? %>
             <p class="text-primary">
-              <span>Currently on the <span class="font-medium"><%= @family.subscription.name %></span>.</span>
+              <span>Currently on the <span class="font-medium"><%= @family.subscription.name %></span>.</span> <br />
 
               <% if @family.next_payment_date %>
                 <span><%= t("views.settings.payments.renewal", date: l(@family.next_payment_date, format: :long)) %></span>
