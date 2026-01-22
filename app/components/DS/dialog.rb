@@ -105,8 +105,7 @@ class DS::Dialog < DesignSystemComponent
     data[:controller] = [ "DS--dialog", "hotkey", data[:controller] ].compact.join(" ")
     data[:DS__dialog_auto_open_value] = auto_open
     data[:DS__dialog_reload_on_close_value] = reload_on_close
-    data[:DS__dialog_disable_click_outside_value] = disable_click_outside
-    data[:action] = [ "mousedown->DS--dialog#clickOutside", data[:action] ].compact.join(" ")
+    data[:action] = [ "click->DS--dialog#clickOutside", data[:action] ].compact.join(" ")
     data[:hotkey] = "esc:DS--dialog#close"
     merged_opts[:data] = data
 

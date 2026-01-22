@@ -362,11 +362,14 @@ export default class extends Controller {
       : `${this.#formatCurrency(value)} (${percentage || 0}%)`;
 
     const isInDialog = !!this.element.closest("dialog");
+    const x = isInDialog ? event.clientX : event.pageX;
+    const y = isInDialog ? event.clientY : event.pageY;
+
     this.tooltip
       .html(content)
       .style("position", isInDialog ? "fixed" : "absolute")
-      .style("left", `${event.pageX + 10}px`)
-      .style("top", `${event.pageY - 10}px`)
+      .style("left", `${x + 10}px`)
+      .style("top", `${y - 10}px`)
       .transition()
       .duration(100)
       .style("opacity", 1);
@@ -374,9 +377,13 @@ export default class extends Controller {
 
   #updateTooltipPosition(event) {
     if (this.tooltip) {
+      const isInDialog = !!this.element.closest("dialog");
+      const x = isInDialog ? event.clientX : event.pageX;
+      const y = isInDialog ? event.clientY : event.pageY;
+
       this.tooltip
-        ?.style("left", `${event.pageX + 10}px`)
-        .style("top", `${event.pageY - 10}px`);
+        ?.style("left", `${x + 10}px`)
+        .style("top", `${y - 10}px`);
     }
   }
 

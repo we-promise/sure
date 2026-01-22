@@ -5,23 +5,25 @@ export default class extends Controller {
     const dialog = this.element.querySelector("dialog");
     if (!dialog) return;
 
-    // Capture the current draggable state only if it hasn't been captured yet
-    if (this.originalDraggable === undefined) {
+    if (typeof this.originalDraggable === "undefined") {
       this.originalDraggable = this.element.getAttribute("draggable");
     }
-
-    // Disable dragging on the section while dialog is open
     this.element.setAttribute("draggable", "false");
 
     dialog.showModal();
   }
 
   restore() {
-    if (this.originalDraggable) {
-      this.element.setAttribute("draggable", this.originalDraggable);
-    } else {
-      this.element.removeAttribute("draggable");
-    }
-    this.originalDraggable = undefined;
+    const reset = () => {
+      if (this.originalDraggable === undefined) return;
+      this.originalDraggable
+        ? this.element.setAttribute("draggable", this.originalDraggable)
+        : this.element.removeAttribute("draggable");
+      this.originalDraggable = undefined;
+    };
+
+    ["pointerup", "pointercancel", "keyup"].forEach(e =>
+      window.addEventListener(e, reset, { once: true })
+    );
   }
 }
