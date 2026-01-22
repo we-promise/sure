@@ -88,7 +88,7 @@ en:
     snaptrade:
       description: "SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard, Schwab, Robinhood, etc.) and provides full trade history with activity labels and cost basis."
       setup_title: "Setup instructions:"
-      step_1: "Create an account at dashboard.snaptrade.com"
+      step_1_html: "Create an account at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
       step_2: "Copy your Client ID and Consumer Key from the dashboard"
       step_3: "Enter your credentials below and click Save"
       step_4: "Go to the Accounts page and use 'Connect another brokerage' to link your investment accounts"

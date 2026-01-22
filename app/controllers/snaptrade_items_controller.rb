@@ -213,7 +213,8 @@ class SnaptradeItemsController < ApplicationController
 
     if linked_count > 0
       # Trigger sync to process the newly linked accounts
-      @snaptrade_item.sync_later unless @snaptrade_item.syncing?
+      # Always queue the sync - if one is running, this will run after it finishes
+      @snaptrade_item.sync_later
       redirect_to accounts_path, notice: t(".success", count: linked_count, default: "Successfully linked #{linked_count} account(s).")
     else
       redirect_to setup_accounts_snaptrade_item_path(@snaptrade_item),

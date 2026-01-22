@@ -41,9 +41,12 @@ class SnaptradeAccount::ActivitiesProcessor
 
   def process
     activities_data = @snaptrade_account.raw_activities_payload
-    return if activities_data.blank?
+    return { trades: 0, transactions: 0 } if activities_data.blank?
 
     Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Processing #{activities_data.size} activities"
+
+    @trades_count = 0
+    @transactions_count = 0
 
     activities_data.each do |activity_data|
       process_activity(activity_data.with_indifferent_access)
@@ -51,6 +54,8 @@ class SnaptradeAccount::ActivitiesProcessor
       Rails.logger.error "SnaptradeAccount::ActivitiesProcessor - Failed to process activity: #{e.message}"
       Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
     end
+
+    { trades: @trades_count, transactions: @transactions_count }
   end
 
   private
@@ -168,7 +173,7 @@ class SnaptradeAccount::ActivitiesProcessor
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing trade: #{ticker} qty=#{quantity} price=#{price} date=#{activity_date}"
 
-      import_adapter.import_trade(
+      result = import_adapter.import_trade(
         external_id: external_id,
         security: security,
         quantity: quantity,
@@ -180,6 +185,7 @@ class SnaptradeAccount::ActivitiesProcessor
         source: "snaptrade",
         activity_label: label_from_type(activity_type)
       )
+      @trades_count += 1 if result
     end
 
     def process_cash_activity(data, activity_type, external_id)
@@ -212,7 +218,7 @@ class SnaptradeAccount::ActivitiesProcessor
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing cash activity: type=#{activity_type} amount=#{amount} date=#{activity_date}"
 
-      import_adapter.import_transaction(
+      result = import_adapter.import_transaction(
         external_id: external_id,
         amount: amount,
         currency: currency,
@@ -221,6 +227,7 @@ class SnaptradeAccount::ActivitiesProcessor
         source: "snaptrade",
         investment_activity_label: label_from_type(activity_type)
       )
+      @transactions_count += 1 if result
     end
 
     def normalize_cash_amount(amount, activity_type)

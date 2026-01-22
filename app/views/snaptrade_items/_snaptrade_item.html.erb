@@ -116,10 +116,12 @@
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
         <% stats = snaptrade_item.syncs.ordered.first&.sync_stats || {} %>
+        <% activities_pending = snaptrade_item.snaptrade_accounts.any?(&:activities_fetch_pending) %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
           provider_item: snaptrade_item,
-          institutions_count: snaptrade_item.snaptrade_accounts.map(&:brokerage_name).uniq.compact.size
+          institutions_count: snaptrade_item.snaptrade_accounts.map(&:brokerage_name).uniq.compact.size,
+          activities_pending: activities_pending
         ) %>
 
         <% if unlinked_count > 0 %>

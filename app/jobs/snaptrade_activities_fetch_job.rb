@@ -70,13 +70,23 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
         "SnaptradeActivitiesFetchJob - Max retries reached for account #{snaptrade_account.id}, " \
         "no activities fetched. This may be normal for new/empty accounts."
       )
+
+      # Clear the pending flag even if no activities were found
+      # Otherwise the account stays stuck in "syncing" state forever
+      snaptrade_account.update!(activities_fetch_pending: false)
+      snaptrade_account.snaptrade_item.broadcast_sync_complete
     end
   rescue Provider::Snaptrade::AuthenticationError => e
     Rails.logger.error("SnaptradeActivitiesFetchJob - Auth error for account #{snaptrade_account.id}: #{e.message}")
+    snaptrade_account.update!(activities_fetch_pending: false)
     snaptrade_account.snaptrade_item.update!(status: :requires_update)
+    snaptrade_account.snaptrade_item.broadcast_sync_complete
   rescue => e
     Rails.logger.error("SnaptradeActivitiesFetchJob - Error for account #{snaptrade_account.id}: #{e.message}")
     Rails.logger.error(e.backtrace.first(5).join("\n")) if e.backtrace
+    # Clear pending flag on error to avoid stuck syncing state
+    snaptrade_account.update!(activities_fetch_pending: false) rescue nil
+    snaptrade_account.snaptrade_item.broadcast_sync_complete rescue nil
   end
 
   private
@@ -147,10 +157,15 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
       return unless account.present?
 
       processor = SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account)
-      processor.process
+      result = processor.process
 
       # Clear the pending flag since activities have been processed
       snaptrade_account.update!(activities_fetch_pending: false)
+
+      # Update the sync stats with the activity counts
+      # This ensures the sync summary shows accurate numbers even when
+      # activities are fetched asynchronously after the main sync
+      update_sync_stats(snaptrade_account, result)
 
       # Trigger UI refresh so new entries appear in the activity feed
       # This is critical for fresh account connections where activities are fetched
@@ -167,5 +182,29 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
       Rails.logger.error(
         "SnaptradeActivitiesFetchJob - Failed to process activities for account #{snaptrade_account.id}: #{e.message}"
       )
+    end
+
+    def update_sync_stats(snaptrade_account, result)
+      return unless result.is_a?(Hash)
+
+      # Find the most recent sync for this SnapTrade item
+      sync = snaptrade_account.snaptrade_item.syncs.ordered.first
+      return unless sync&.respond_to?(:sync_stats)
+
+      # Update the stats with the activity counts
+      current_stats = sync.sync_stats || {}
+      updated_stats = current_stats.merge(
+        "trades_imported" => (current_stats["trades_imported"] || 0) + (result[:trades] || 0),
+        "tx_seen" => (current_stats["tx_seen"] || 0) + (result[:transactions] || 0),
+        "tx_imported" => (current_stats["tx_imported"] || 0) + (result[:transactions] || 0)
+      )
+
+      sync.update_columns(sync_stats: updated_stats)
+
+      Rails.logger.info(
+        "SnaptradeActivitiesFetchJob - Updated sync stats: trades=#{result[:trades]}, transactions=#{result[:transactions]}"
+      )
+    rescue => e
+      Rails.logger.error("SnaptradeActivitiesFetchJob - Failed to update sync stats: #{e.message}")
     end
 end

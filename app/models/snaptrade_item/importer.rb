@@ -30,13 +30,17 @@ class SnaptradeItem::Importer
     # Step 1: Fetch and store all accounts
     import_accounts(credentials)
 
-    # Step 2: For each account, fetch holdings and activities
+    # Step 2: For LINKED accounts only, fetch holdings and activities
+    # Unlinked accounts just need basic info (name, balance) for the setup modal
     # Query directly to avoid any association caching issues
-    accounts_to_process = SnaptradeAccount.where(snaptrade_item_id: snaptrade_item.id)
-    Rails.logger.info "SnaptradeItem::Importer - Found #{accounts_to_process.count} accounts to process"
+    linked_accounts = SnaptradeAccount
+      .where(snaptrade_item_id: snaptrade_item.id)
+      .joins(:account_provider)
 
-    accounts_to_process.each do |snaptrade_account|
-      Rails.logger.info "SnaptradeItem::Importer - Processing account #{snaptrade_account.id} (#{snaptrade_account.snaptrade_account_id})"
+    Rails.logger.info "SnaptradeItem::Importer - Found #{linked_accounts.count} linked accounts to process"
+
+    linked_accounts.each do |snaptrade_account|
+      Rails.logger.info "SnaptradeItem::Importer - Processing linked account #{snaptrade_account.id} (#{snaptrade_account.snaptrade_account_id})"
       import_account_data(snaptrade_account, credentials)
     end
 
@@ -246,19 +250,9 @@ class SnaptradeItem::Importer
             start_date: start_date
           )
 
-          # Mark the account as having pending activities so UI knows to wait
+          # Mark the account as having pending activities
+          # The background job will clear this flag when done
           snaptrade_account.update!(activities_fetch_pending: true)
-
-          # Add warning to sync stats so user knows activities are still being fetched
-          if sync
-            collect_data_quality_stats(sync,
-              warnings: 1,
-              details: [ {
-                message: I18n.t("snaptrade_item.syncer.activities_fetching_async"),
-                severity: "info"
-              } ]
-            )
-          end
         end
       end
 
@@ -337,13 +331,15 @@ class SnaptradeItem::Importer
           end
         end
 
-        # Merge with existing activities
-        existing = snaptrade_account.raw_activities_payload || []
-        merged = merge_activities(existing, all_activities)
+        # Only save if we actually got new activities
+        # Don't upsert empty arrays as this sets last_activities_sync incorrectly
+        if all_activities.any?
+          existing = snaptrade_account.raw_activities_payload || []
+          merged = merge_activities(existing, all_activities)
+          snaptrade_account.upsert_activities_snapshot!(merged)
+          stats["activities_found"] = stats.fetch("activities_found", 0) + all_activities.size
+        end
 
-        snaptrade_account.upsert_activities_snapshot!(merged)
-
-        stats["activities_found"] = stats.fetch("activities_found", 0) + all_activities.size
         all_activities.size
       rescue => e
         Rails.logger.error "SnaptradeItem::Importer - Failed to fetch activities: #{e.class} - #{e.message}"
