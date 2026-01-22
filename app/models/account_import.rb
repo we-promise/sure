@@ -21,7 +21,11 @@ class AccountImport < Import
 
         # Parse date if provided, otherwise use default
         balance_date = if row.date.present?
-          Date.strptime(row.date, date_format)
+          begin
+            Date.strptime(row.date, date_format)
+          rescue ArgumentError => e
+            raise OpeningBalanceError, "Invalid date format for '#{row.date}': #{e.message}"
+          end
         else
           nil
         end
