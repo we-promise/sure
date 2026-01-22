@@ -43,15 +43,15 @@
                 </td>
                 <td class="px-2 py-3">
                   <% if export.processing? || export.pending? %>
-                    <%= render 'shared/badge' do %>
+                    <%= render "shared/badge" do %>
                       <%= t("family_exports.table.row.status.in_progress") %>
                     <% end %>
                   <% elsif export.completed? %>
-                    <%= render 'shared/badge', color: 'success' do %>
+                    <%= render "shared/badge", color: "success" do %>
                       <%= t("family_exports.table.row.status.complete") %>
                     <% end %>
                   <% elsif export.failed? %>
-                    <%= render 'shared/badge', color: 'error' do %>
+                    <%= render "shared/badge", color: "error" do %>
                       <%= t("family_exports.table.row.status.failed") %>
                     <% end %>
                   <% end %>

@@ -8,13 +8,13 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     Provider::Factory.ensure_adapters_loaded
   end
 
-  test "cannot access when self hosting is disabled" do
+  test "can access when self hosting is disabled (managed mode)" do
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     get settings_providers_url
-    assert_response :forbidden
+    assert_response :success
 
     patch settings_providers_url, params: { setting: { plaid_client_id: "test123" } }
-    assert_response :forbidden
+    assert_redirected_to settings_providers_url
   end
 
   test "should get show when self hosting is enabled" do

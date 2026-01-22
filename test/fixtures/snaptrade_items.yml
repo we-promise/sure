@@ -1,0 +1,20 @@
+# Minimal fixtures for SnapTrade items
+# Per CLAUDE.md: Keep fixtures minimal (2-3 per model for base cases)
+
+configured_item:
+  family: dylan_family
+  name: "SnapTrade Connection"
+  client_id: "test_client_id"
+  consumer_key: "test_consumer_key"
+  snaptrade_user_id: "user_123"
+  snaptrade_user_secret: "secret_abc"
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: false
+
+unconfigured_item:
+  family: empty
+  name: "Pending Setup"
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: true

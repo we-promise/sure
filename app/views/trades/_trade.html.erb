@@ -8,9 +8,9 @@
       <div class="col-span-8 flex items-center gap-4">
         <%= check_box_tag dom_id(entry, "selection"),
                         class: "checkbox checkbox--light hidden lg:block",
-                        data: { 
-                          id: entry.id, 
-                          "bulk-select-target": "row", 
+                        data: {
+                          id: entry.id,
+                          "bulk-select-target": "row",
                           action: "bulk-select#toggleRowSelection",
                           checkbox_toggle_target: "selectionEntry"
                         } %>

@@ -1,0 +1,130 @@
+<%# locals: (mercury_item:) %>
+
+<%= tag.div id: dom_id(mercury_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
+          <% if mercury_item.logo.attached? %>
+            <%= image_tag mercury_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
+          <% else %>
+            <div class="flex items-center justify-center">
+              <%= tag.p mercury_item.name.first.upcase, class: "text-blue-600 text-xs font-medium" %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p mercury_item.name, class: "font-medium text-primary" %>
+            <% if mercury_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <% if mercury_item.accounts.any? %>
+            <p class="text-xs text-secondary">
+              <%= mercury_item.institution_summary %>
+            </p>
+          <% end %>
+          <% if mercury_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif mercury_item.sync_error.present? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= render DS::Tooltip.new(text: mercury_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
+              <%= tag.span t(".error"), class: "text-destructive" %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if mercury_item.last_synced_at %>
+                <% if mercury_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(mercury_item.last_synced_at), summary: mercury_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(mercury_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if Rails.env.development? %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_mercury_item_path(mercury_item)
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: mercury_item_path(mercury_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(mercury_item.name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+
+    <% unless mercury_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if mercury_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: mercury_item.accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@mercury_sync_stats_map) && @mercury_sync_stats_map
+             @mercury_sync_stats_map[mercury_item.id] || {}
+           else
+             mercury_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: mercury_item,
+          institutions_count: mercury_item.connected_institutions.size
+        ) %>
+
+        <%# Use model methods for consistent counts %>
+        <% unlinked_count = mercury_item.unlinked_accounts_count %>
+        <% linked_count = mercury_item.linked_accounts_count %>
+        <% total_count = mercury_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked_count, total: total_count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_mercury_item_path(mercury_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif mercury_item.accounts.empty? && total_count == 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_mercury_item_path(mercury_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

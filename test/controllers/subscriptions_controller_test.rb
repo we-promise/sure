@@ -71,6 +71,6 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     get success_subscription_url(session_id: "test-session-id")
 
     assert @family.subscription.active?
-    assert_equal "Welcome to Sure!  Your subscription has been created.", flash[:notice]
+    assert_equal "Welcome to Sure!  Your contribution is appreciated.", flash[:notice]
   end
 end

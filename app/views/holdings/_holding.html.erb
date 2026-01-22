@@ -41,7 +41,7 @@
       <% else %>
         <%= tag.p "--", class: "text-secondary" %>
       <% end %>
-      <%= tag.p t(".shares", qty: number_with_precision(holding.qty, precision: 1)), class: "font-normal text-secondary" %>
+      <%= tag.p t(".shares", qty: format_quantity(holding.qty)), class: "font-normal text-secondary" %>
     </div>
 
     <div class="col-span-2 text-right">

@@ -1,0 +1,34 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "Mercury Setup Required") %>
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <div class="flex items-start gap-3">
+          <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
+          <div class="text-sm text-secondary">
+            <p class="font-medium text-primary mb-2">API Token Not Configured</p>
+            <p>Before you can link Mercury accounts, you need to configure your Mercury API token.</p>
+          </div>
+        </div>
+
+        <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+          <p class="font-medium text-primary">Setup Steps:</p>
+          <ol class="list-decimal list-inside space-y-1 text-secondary">
+            <li>Go to <strong>Settings > Providers</strong></li>
+            <li>Find the <strong>Mercury</strong> section</li>
+            <li>Enter your Mercury API token</li>
+            <li>Return here to link your accounts</li>
+          </ol>
+        </div>
+
+        <div class="mt-4">
+          <%= link_to settings_providers_path,
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors",
+                      data: { turbo: false } do %>
+            Go to Provider Settings
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
