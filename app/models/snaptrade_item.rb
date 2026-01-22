@@ -13,11 +13,13 @@ class SnaptradeItem < ApplicationRecord
   end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
+  # client_id/consumer_key use deterministic encryption (may need querying)
+  # snaptrade_user_secret uses non-deterministic (more secure for pure secrets)
   # Note: snaptrade_user_id is not encrypted as it's just an identifier, not a secret
   if encryption_ready?
     encrypts :client_id, deterministic: true
     encrypts :consumer_key, deterministic: true
-    encrypts :snaptrade_user_secret, deterministic: true
+    encrypts :snaptrade_user_secret
   end
 
   validates :name, presence: true
