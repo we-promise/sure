@@ -6,7 +6,7 @@ module SettingsHelper
     { name: "Preferences", path: :settings_preferences_path },
     { name: "Profile Info", path: :settings_profile_path },
     { name: "Security", path: :settings_security_path },
-    { name: "Billing", path: :settings_billing_path, condition: :not_self_hosted? },
+    { name: "Payment", path: :settings_payment_path, condition: :not_self_hosted? },
     # Transactions section
     { name: "Categories", path: :categories_path },
     { name: "Tags", path: :tags_path },
@@ -20,6 +20,7 @@ module SettingsHelper
     { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
     { name: "Providers", path: :settings_providers_path, condition: :admin_user? },
     { name: "Imports", path: :imports_path, condition: :admin_user? },
+    { name: "Exports", path: :family_exports_path, condition: :admin_user? },
     # More section
     { name: "Guides", path: :settings_guides_path },
     { name: "What's new", path: :changelog_path },

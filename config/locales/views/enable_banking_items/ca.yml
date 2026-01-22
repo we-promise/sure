@@ -1,0 +1,53 @@
+---
+ca:
+  enable_banking_items:
+    authorize:
+      authorization_failed: No s'ha pogut iniciar l'autorització
+      bank_required: Si us plau, selecciona un banc.
+      invalid_redirect: L'URL d'autorització rebuta no és vàlida. Si us plau, torna-ho
+        a provar o contacta amb l'assistència.
+      redirect_uri_not_allowed: Redirecció no permesa. Si us plau, configura `%{callback_url}`
+        a la configuració de l'aplicació Enable Banking.
+      unexpected_error: S'ha produït un error inesperat. Si us plau, torna-ho a provar.
+    callback:
+      authorization_error: L'autorització ha fallat
+      invalid_callback: Paràmetres de callback no vàlids.
+      item_not_found: Connexió no trobada.
+      session_failed: No s'ha pogut completar l'autorització
+      success: S'ha connectat correctament amb el teu banc. Les teves comptes s'estan sincronitzant.
+      unexpected_error: S'ha produït un error inesperat. Si us plau, torna-ho a provar.
+    complete_account_setup:
+      all_skipped: S'han omès tots els comptes. Pots configurar-los més tard a la pàgina
+        de comptes.
+      no_accounts: No hi ha comptes disponibles per configurar.
+      success: S'han creat correctament %{count} comptes!
+    create:
+      success: La configuració d'Enable Banking s'ha fet amb èxit.
+    destroy:
+      success: La connexió d'Enable Banking s'ha posat a la cua per a l'eliminació.
+    link_accounts:
+      already_linked: Els comptes seleccionats ja estan vinculats.
+      link_failed: No s'ha pogut vincular els comptes
+      no_accounts_selected: No s'han seleccionat comptes.
+      no_session: No hi ha connexió activa d'Enable Banking. Si us plau, connecta't a un banc primer.
+      success: S'han vinculat correctament %{count} comptes.
+    link_existing_account:
+      errors:
+        invalid_enable_banking_account: S'ha seleccionat un compte d'Enable Banking no vàlid
+        only_manual: Només es poden vincular comptes manuals
+      success: Compte vinculat correctament a Enable Banking
+    new:
+      link_enable_banking_title: Vincula Enable Banking
+    reauthorize:
+      invalid_redirect: L'URL d'autorització rebuta no és vàlida. Si us plau, torna-ho
+        a provar o contacta amb l'assistència.
+      reauthorization_failed: La reautorització ha fallat
+    select_bank:
+      cancel: Cancel·la
+      check_country: Si us plau, revisa els teus codis de país.
+      credentials_required: Si us plau, configura les teves credencials d'Enable Banking primer.
+      description: Selecciona el banc al qual vols connectar els teus comptes.
+      no_banks: No hi ha bancs disponibles per aquest país/regió.
+      title: Selecciona el teu banc
+    update:
+      success: La configuració d'Enable Banking s'ha actualitzat.

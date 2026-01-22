@@ -28,15 +28,22 @@
     <% end %>
 
     <%# Transactions section - shown if provider collects transaction stats %>
-    <% if has_transaction_stats? %>
+    <% if has_transaction_stats? || activities_pending? %>
       <div>
         <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.transactions.title") %></h4>
-        <div class="flex items-center gap-3 flex-wrap">
-          <span><%= t("provider_sync_summary.transactions.seen", count: tx_seen) %></span>
-          <span><%= t("provider_sync_summary.transactions.imported", count: tx_imported) %></span>
-          <span><%= t("provider_sync_summary.transactions.updated", count: tx_updated) %></span>
-          <span><%= t("provider_sync_summary.transactions.skipped", count: tx_skipped) %></span>
-        </div>
+        <% if activities_pending? && !has_transaction_stats? %>
+          <div class="flex items-center gap-2">
+            <%= helpers.icon "loader-circle", size: "sm", class: "animate-spin text-secondary" %>
+            <span class="text-secondary"><%= t("provider_sync_summary.transactions.fetching") %></span>
+          </div>
+        <% else %>
+          <div class="flex items-center gap-3 flex-wrap">
+            <span><%= t("provider_sync_summary.transactions.seen", count: tx_seen) %></span>
+            <span><%= t("provider_sync_summary.transactions.imported", count: tx_imported) %></span>
+            <span><%= t("provider_sync_summary.transactions.updated", count: tx_updated) %></span>
+            <span><%= t("provider_sync_summary.transactions.skipped", count: tx_skipped) %></span>
+          </div>
+        <% end %>
 
         <%# Protected entries detail - shown when entries were skipped due to protection %>
         <% if has_skipped_entries? %>
@@ -78,6 +85,26 @@
         <div class="flex items-center gap-3">
           <span><%= t("provider_sync_summary.holdings.#{holdings_label_key}", count: holdings_count) %></span>
         </div>
+      </div>
+    <% end %>
+
+    <%# Trades section - shown if provider collects trades stats (investment activities) %>
+    <% if has_trades_stats? || activities_pending? %>
+      <div>
+        <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.trades.title") %></h4>
+        <% if activities_pending? && !has_trades_stats? %>
+          <div class="flex items-center gap-2">
+            <%= helpers.icon "loader-circle", size: "sm", class: "animate-spin text-secondary" %>
+            <span class="text-secondary"><%= t("provider_sync_summary.trades.fetching") %></span>
+          </div>
+        <% else %>
+          <div class="flex items-center gap-3 flex-wrap">
+            <span><%= t("provider_sync_summary.trades.imported", count: trades_imported) %></span>
+            <% if trades_skipped > 0 %>
+              <span><%= t("provider_sync_summary.trades.skipped", count: trades_skipped) %></span>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     <% end %>
 

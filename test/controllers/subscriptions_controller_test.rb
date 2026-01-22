@@ -44,7 +44,7 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     @mock_stripe.expects(:create_checkout_session).with(
       plan: "monthly",
       family_id: @family.id,
-      family_email: @family.billing_email,
+      family_email: @family.payment_email,
       success_url: success_subscription_url + "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: upgrade_subscription_url
     ).returns(
@@ -71,6 +71,6 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     get success_subscription_url(session_id: "test-session-id")
 
     assert @family.subscription.active?
-    assert_equal "Welcome to Sure!  Your subscription has been created.", flash[:notice]
+    assert_equal "Welcome to Sure!  Your contribution is appreciated.", flash[:notice]
   end
 end

@@ -89,12 +89,19 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(200.00, "USD"), @amzn.avg_cost
   end
 
-  test "avg_cost treats zero cost_basis as unknown" do
+  test "avg_cost treats zero cost_basis as unknown when not locked" do
     # Some providers return 0 when they don't have cost basis data
     # This should be treated as "unknown" (return nil), not as $0 cost
-    @amzn.update!(cost_basis: 0)
+    @amzn.update!(cost_basis: 0, cost_basis_locked: false)
 
     assert_nil @amzn.avg_cost
+  end
+
+  test "avg_cost returns zero cost_basis when locked (e.g., airdrops)" do
+    # User-set $0 cost basis is valid for airdrops and should be honored
+    @amzn.update!(cost_basis: 0, cost_basis_source: "manual", cost_basis_locked: true)
+
+    assert_equal Money.new(0, "USD"), @amzn.avg_cost
   end
 
   test "trend returns nil when cost basis is unknown" do

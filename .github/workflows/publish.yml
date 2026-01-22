@@ -322,7 +322,7 @@ jobs:
           body: |
             ## Mobile Debug Builds
 
-            This release includes debug builds of the mobile applications:
+            This release includes debug builds of the mobile applications.  Download from the `Assets` area below.
 
             - **Android APK**: Debug build for testing on Android devices
             - **iOS Build**: Unsigned iOS build (requires code signing for installation)

@@ -47,10 +47,14 @@ class Holding < ApplicationRecord
   # otherwise falls back to calculating from trades. Returns nil when cost
   # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
-    # Use stored cost_basis if available and positive (eliminates N+1 queries)
-    # Note: cost_basis of 0 is treated as "unknown" since providers sometimes
-    # return 0 when they don't have the data
-    return Money.new(cost_basis, currency) if cost_basis.present? && cost_basis.positive?
+    # Use stored cost_basis if available (eliminates N+1 queries)
+    # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+    # - Otherwise require positive since providers sometimes return 0 when unknown
+    if cost_basis.present?
+      if cost_basis_locked? || cost_basis.positive?
+        return Money.new(cost_basis, currency)
+      end
+    end
 
     # Fallback to calculation for holdings without pre-computed cost_basis
     calculate_avg_cost
@@ -249,7 +253,7 @@ class Holding < ApplicationRecord
   private
     def calculate_trend
       return nil unless amount_money
-      return nil unless avg_cost # Can't calculate trend without cost basis
+      return nil if avg_cost.nil? # Can't calculate trend without cost basis (0 is valid for airdrops)
 
       start_amount = qty * avg_cost
 

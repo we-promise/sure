@@ -44,26 +44,30 @@ ro:
         instructions_5: Fără virgule, fără simboluri monetare și fără paranteze în numere.
         title: Importă-ți datele
   imports:
-    empty:
-      message: Nu există încă importuri.
-      new: Import nou
-    import:
-      complete: Finalizat
-      delete: Șterge
-      failed: Eșuat
-      in_progress: În curs
-      label: "%{type}: %{datetime}"
-      revert_failed: Anulare eșuată
-      reverting: Se anulează
-      uploading: Se procesează rândurile
-      view: Vezi
     index:
-      imports: Importuri
+      title: Importuri
       new: Import nou
-      title: Import/Export
-      exports: Exporturi
-      new_export: Export nou
-      no_exports: Nu există încă exporturi.
+    table:
+      title: Importuri
+      header:
+        date: Data
+        operation: Operațiune
+        status: Stare
+        actions: Acțiuni
+      row:
+        status:
+          in_progress: În curs
+          uploading: Se procesează rândurile
+          reverting: Se anulează
+          revert_failed: Anulare eșuată
+          complete: Finalizat
+          failed: Eșuat
+        actions:
+          revert: Reveni
+          confirm_revert: Aceasta operațiune va șterge tranzacțiile importate, dar veți putea în continuare să revizuiți și să reimportați datele în orice moment.
+          delete: Șterge
+          view: Vezi
+      empty: Nu există încă importuri.
     new:
       description: Poți importa manual diverse tipuri de date prin CSV sau poți folosi unul dintre șabloanele noastre de import, cum ar fi Mint.
       import_accounts: Importă conturi

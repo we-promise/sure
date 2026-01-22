@@ -318,17 +318,110 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       # Add section before the last closing div (at end of file)
       section_content = <<~ERB
 
-  <%%= settings_section title: "#{class_name}", collapsible: true, open: false do %>
+  <%= settings_section title: "#{class_name}", collapsible: true, open: false do %>
     <turbo-frame id="#{file_name}-providers-panel">
-      <%%= render "settings/providers/#{file_name}_panel" %>
+      <%= render "settings/providers/#{file_name}_panel" %>
     </turbo-frame>
-  <%% end %>
+  <% end %>
       ERB
 
       # Insert before the final </div> at the end of file
       insert_into_file view_path, section_content, before: /^<\/div>\s*\z/
       say "Added #{class_name} section to providers view", :green
     end
+  end
+
+  def update_accounts_controller
+    controller_path = "app/controllers/accounts_controller.rb"
+    return unless File.exist?(controller_path)
+
+    content = File.read(controller_path)
+    items_var = "@#{file_name}_items"
+
+    # Check if already added
+    if content.include?(items_var)
+      say "Accounts controller already has #{items_var}", :skip
+      return
+    end
+
+    # Add to index action - find the last @*_items line and insert after it
+    lines = content.lines
+    last_items_index = nil
+    lines.each_with_index do |line, index|
+      if line =~ /@\w+_items = family\.\w+_items\.ordered/
+        last_items_index = index
+      end
+    end
+
+    if last_items_index
+      indentation = lines[last_items_index][/^\s*/]
+      new_line = "#{indentation}#{items_var} = family.#{file_name}_items.ordered.includes(:syncs, :#{file_name}_accounts)\n"
+      lines.insert(last_items_index + 1, new_line)
+      File.write(controller_path, lines.join)
+      say "Added #{items_var} to accounts controller index", :green
+    else
+      say "Could not find @*_items assignments in accounts controller", :yellow
+    end
+
+    # Add sync stats map
+    add_accounts_controller_sync_stats_map(controller_path)
+  end
+
+  def update_accounts_index_view
+    view_path = "app/views/accounts/index.html.erb"
+    return unless File.exist?(view_path)
+
+    content = File.read(view_path)
+    items_var = "@#{file_name}_items"
+
+    if content.include?(items_var)
+      say "Accounts index view already has #{class_name} section", :skip
+      return
+    end
+
+    # Add to empty check - find the existing pattern and append our check
+    content = content.gsub(
+      /@coinstats_items\.empty\? %>/,
+      "@coinstats_items.empty? && #{items_var}.empty? %>"
+    )
+
+    # Add provider section before manual_accounts
+    section = <<~ERB
+
+    <% if #{items_var}.any? %>
+      <%= render #{items_var}.sort_by(&:created_at) %>
+    <% end %>
+
+    ERB
+
+    content = content.gsub(
+      /<% if @manual_accounts\.any\? %>/,
+      "#{section.strip}\n\n    <% if @manual_accounts.any? %>"
+    )
+
+    File.write(view_path, content)
+    say "Added #{class_name} section to accounts index view", :green
+  end
+
+  def create_locale_file
+    locale_dir = "config/locales/views/#{file_name}_items"
+    locale_path = "#{locale_dir}/en.yml"
+
+    if File.exist?(locale_path)
+      say "Locale file already exists: #{locale_path}", :skip
+      return
+    end
+
+    FileUtils.mkdir_p(locale_dir)
+    template "locale.en.yml.tt", locale_path
+    say "Created locale file: #{locale_path}", :green
+  end
+
+  def update_source_enums
+    # Add the new provider to the source enum in ProviderMerchant and DataEnrichment
+    # These enums track which provider created a merchant or enrichment record
+    update_source_enum("app/models/provider_merchant.rb")
+    update_source_enum("app/models/data_enrichment.rb")
   end
 
   def show_summary
@@ -394,6 +487,77 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   end
 
   private
+
+    def update_source_enum(model_path)
+      return unless File.exist?(model_path)
+
+      content = File.read(model_path)
+      model_name = File.basename(model_path, ".rb").camelize
+
+      # Check if provider is already in the enum
+      if content.include?("#{file_name}: \"#{file_name}\"")
+        say "#{model_name} source enum already includes #{file_name}", :skip
+        return
+      end
+
+      # Find the enum :source line and add the new provider
+      # Pattern: enum :source, { key: "value", ... }
+      if content =~ /(enum :source, \{[^}]+)(})/
+        # Insert the new provider before the closing brace
+        updated_content = content.sub(
+          /(enum :source, \{[^}]+)(})/,
+          "\\1, #{file_name}: \"#{file_name}\"\\2"
+        )
+        File.write(model_path, updated_content)
+        say "Added #{file_name} to #{model_name} source enum", :green
+      else
+        say "Could not find source enum in #{model_name}", :yellow
+      end
+    end
+
+    def add_accounts_controller_sync_stats_map(controller_path)
+      content = File.read(controller_path)
+      stats_var = "@#{file_name}_sync_stats_map"
+
+      if content.include?(stats_var)
+        say "Accounts controller already has #{stats_var}", :skip
+        return
+      end
+
+      # Find the build_sync_stats_maps method and add our stats map before the closing 'end'
+      sync_stats_block = <<~RUBY
+
+      # #{class_name} sync stats
+      #{stats_var} = {}
+      @#{file_name}_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        #{stats_var}[item.id] = latest_sync&.sync_stats || {}
+      end
+      RUBY
+
+      lines = content.lines
+      method_start = nil
+      method_end = nil
+      indent_level = 0
+
+      lines.each_with_index do |line, index|
+        if line.include?("def build_sync_stats_maps")
+          method_start = index
+          indent_level = line[/^\s*/].length
+        elsif method_start && line =~ /^#{' ' * indent_level}end\s*$/
+          method_end = index
+          break
+        end
+      end
+
+      if method_end
+        lines.insert(method_end, sync_stats_block)
+        File.write(controller_path, lines.join)
+        say "Added #{stats_var} to build_sync_stats_maps", :green
+      else
+        say "Could not find build_sync_stats_maps method end", :yellow
+      end
+    end
 
     def table_name
       "#{file_name}_items"

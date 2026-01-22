@@ -36,6 +36,13 @@
             <% end %>
           <% end %>
         <% end %>
+
+        <% menu.with_item(
+            variant: "link",
+            text: t("accounts.show.activity.new_transfer"),
+            icon: "arrow-right-left",
+            href: new_transfer_path(from_account_id: account.id),
+            data: { turbo_frame: :modal }) %>
       <% end %>
     </div>
 

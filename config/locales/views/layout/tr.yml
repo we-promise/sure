@@ -17,3 +17,7 @@ tr:
       footer:
         privacy_policy: Gizlilik Politikası
         terms_of_service: Hizmet Şartları
+    trial:
+      open_demo: Açık demo
+      data_deleted_in_days: Veriler %{days} gün içinde silinecek
+      contribute: Katkıda bulun

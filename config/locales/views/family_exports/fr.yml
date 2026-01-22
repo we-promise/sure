@@ -1,7 +1,31 @@
 ---
 fr:
   family_exports:
-    list:
-      in_progress: En cours
-      complete: Terminé
-      failed: Échoué
+    access_denied: Accès refusé
+    create:
+      success: L'exportation a commencé. Vous pourrez bientôt la télécharger.
+    delete_confirmation: Êtes-vous sûr de vouloir supprimer cette exportation ? Cette action est irréversible.
+    delete_failed_confirmation: Êtes-vous sûr de vouloir supprimer cette exportation qui a échoué ?
+    destroy:
+      success: Exportation supprimée avec succès
+    export_not_ready: Exportation non prête pour le téléchargement
+    exporting: Exporte...
+    index:
+      title: Exportations
+      new: Nouvelle exportation
+    table:
+      title: Exportations
+      header:
+        date: Date
+        filename: Nom de fichier
+        status: Statut
+        actions: Actions
+      row:
+        status:
+          in_progress: En cours
+          complete: Terminé
+          failed: Échoué
+        actions:
+          delete: Supprimer
+          download: Télécharger
+      empty: Aucune exportation pour l'instant.
