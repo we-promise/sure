@@ -1,7 +1,31 @@
 ---
 ro:
   family_exports:
-    list:
-      in_progress: În curs de desfășurare
-      complete: Finalizat
-      failed: Eșuat
+    access_denied: Acces interzis
+    create:
+      success: Export început. Veți putea să-l descărcați în curând.
+    delete_confirmation: Sigur doriți să ștergeți acest export? Această acțiune nu poate fi anulată.
+    delete_failed_confirmation: Sigur doriți să ștergeți acest export eșuat?
+    destroy:
+      success: Export șters cu succes
+    export_not_ready: Exportul nu este gata pentru descărcare
+    exporting: Se exportă...
+    index:
+      title: Exporturi
+      new: Export nou
+    table:
+      title: Exporturi
+      header:
+        date: Data
+        filename: Nume de fișier
+        status: Stare
+        actions: Acțiuni
+      row:
+        status:
+          in_progress: În curs de desfășurare
+          complete: Finalizat
+          failed: Eșuat
+        actions:
+          delete: Șterge
+          download: Descărcare
+      empty: Nu există încă exporturi.

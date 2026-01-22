@@ -115,9 +115,13 @@ en:
       security_label: Security
       security_prompt: Select a security...
       security_custom: "+ Enter custom ticker"
-      security_hint: Select from your holdings or enter a custom ticker
+      security_not_listed_hint: Don't see your security? Select "Enter custom ticker" at the bottom of the list.
       ticker_placeholder: AAPL
-      ticker_hint: Enter the stock/ETF ticker symbol
+      ticker_hint: Enter the stock/ETF ticker symbol (e.g., AAPL, MSFT)
+      ticker_search_placeholder: Search for a ticker...
+      ticker_search_hint: Search by ticker symbol or company name, or type a custom ticker
+      price_mismatch_title: Price may not match
+      price_mismatch_message: "Your price (%{entered_price}/share) differs significantly from %{ticker}'s current market price (%{market_price}). If this seems wrong, you may have selected the wrong security — try using \"Enter custom ticker\" to specify the correct one."
       quantity_label: Quantity (Shares)
       quantity_placeholder: e.g. 20
       quantity_hint: Number of shares traded

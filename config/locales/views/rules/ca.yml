@@ -1,25 +1,42 @@
 ---
 ca:
   rules:
+    actions:
+      value_placeholder: Introdueix un valor
+    apply_all:
+      ai_cost_message: Això utilitzarà IA per categoritzar fins a %{transactions} transaccions.
+      ai_cost_title: Estimació de Cost d'IA
+      button: Aplica Totes
+      confirm_button: Confirma i Aplica Totes
+      confirm_message: Estàs a punt d'aplicar %{count} regles que afecten %{transactions}
+        transaccions úniques. Confirma si vols continuar.
+      confirm_title: Aplica Totes les Regles
+      cost_unavailable_model: Estimació de cost no disponible per al model "%{model}".
+      cost_unavailable_no_provider: Estimació de cost no disponible (no hi ha proveïdor LLM configurat).
+      cost_warning: Pots tenir costos, comprova amb el proveïdor del model per als
+        preus més actualitzats.
+      estimated_cost: 'Cost estimat: ~$%{cost}'
+      success: Totes les regles s'han posat a cua per a execució
+      view_usage: Veure l'historial d'ús
     no_action: Sense acció
     recent_runs:
-      title: Execucions Recents
-      description: Visualitza l'historial d'execució de les teves regles incloent l'estat d'èxit/fallada i els recomptes de transaccions.
-      unnamed_rule: Regla Sense Nom
       columns:
         date_time: Data/Hora
         execution_type: Tipus
-        status: Estat
         rule_name: Nom de la Regla
+        status: Estat
         transactions_counts:
-          queued: En Cua
-          processed: Processades
           modified: Modificades
+          processed: Processades
+          queued: En Cua
+      description: Visualitza l'historial d'execució de les teves regles incloent
+        l'estat d'èxit/fallada i els recomptes de transaccions.
       execution_types:
         manual: Manual
         scheduled: Programada
       statuses:
+        failed: Fallada
         pending: Pendent
         success: Èxit
-        failed: Fallada
-
+      title: Execucions Recents
+      unnamed_rule: Regla Sense Nom

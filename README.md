@@ -75,7 +75,9 @@ bin/dev
 rake demo_data:default
 ```
 
-Visit http://localhost:3000 to view the app. You can log in with these demo credentials (from the DB seed):
+Visit http://localhost:3000 to view the app.
+
+If you loaded the optional demo data, log in with these credentials:
 
 - Email: `user@example.com`
 - Password: `Password1!`

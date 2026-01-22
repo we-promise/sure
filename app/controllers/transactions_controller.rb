@@ -21,7 +21,7 @@ class TransactionsController < ApplicationController
                          :transfer_as_inflow, :transfer_as_outflow
                        )
 
-    @pagy, @transactions = pagy(base_scope, limit: per_page)
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
     # Load projected recurring transactions for next month
     @projected_recurring = Current.family.recurring_transactions
@@ -281,10 +281,6 @@ class TransactionsController < ApplicationController
   end
 
   private
-    def per_page
-      params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
-    end
-
     def needs_rule_notification?(transaction)
       return false if Current.user.rule_prompts_disabled
 
@@ -365,18 +361,30 @@ class TransactionsController < ApplicationController
     # Helper methods for convert_to_trade
 
     def resolve_security_for_conversion
+      user_country = Current.family.country
+
       if params[:security_id] == "__custom__"
-        ticker = params[:custom_ticker].presence
-        unless ticker.present?
+        # User selected "Enter custom ticker" - check for combobox selection or manual entry
+        if params[:ticker].present?
+          # Combobox selection: format is "SYMBOL|EXCHANGE"
+          ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
+          Security::Resolver.new(
+            ticker_symbol.strip,
+            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+            country_code: user_country
+          ).resolve
+        elsif params[:custom_ticker].present?
+          # Manual entry from combobox's name_when_new or fallback text field
+          Security::Resolver.new(
+            params[:custom_ticker].strip,
+            exchange_operating_mic: params[:exchange_operating_mic].presence,
+            country_code: user_country
+          ).resolve
+        else
           flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
           redirect_back_or_to transactions_path
           return nil
         end
-
-        Security::Resolver.new(
-          ticker.strip,
-          exchange_operating_mic: params[:exchange_operating_mic].presence
-        ).resolve
       elsif params[:security_id].present?
         found = Security.find_by(id: params[:security_id])
         unless found
@@ -386,9 +394,19 @@ class TransactionsController < ApplicationController
         end
         found
       elsif params[:ticker].present?
+        # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE"
+        ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
         Security::Resolver.new(
-          params[:ticker].strip,
-          exchange_operating_mic: params[:exchange_operating_mic].presence
+          ticker_symbol.strip,
+          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+          country_code: user_country
+        ).resolve
+      elsif params[:custom_ticker].present?
+        # Manual entry from combobox's name_when_new (no existing holdings path)
+        Security::Resolver.new(
+          params[:custom_ticker].strip,
+          exchange_operating_mic: params[:exchange_operating_mic].presence,
+          country_code: user_country
         ).resolve
       end.tap do |security|
         if security.nil? && !performed?

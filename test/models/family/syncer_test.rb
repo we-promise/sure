@@ -62,5 +62,6 @@ class Family::SyncerTest < ActiveSupport::TestCase
     EnableBankingItem.any_instance.stubs(:sync_later)
 
     syncer.perform_sync(family_sync)
+    syncer.perform_post_sync
   end
 end

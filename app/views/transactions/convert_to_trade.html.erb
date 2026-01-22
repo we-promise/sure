@@ -3,14 +3,6 @@
   # otherwise determine default based on amount sign
   # Negative amount (money going out) = Buy, Positive (money coming in) = Sell
   default_label = params[:activity_label].presence || (@entry.amount > 0 ? "Sell" : "Buy")
-
-  # Get unique securities from account holdings for ticker suggestions
-  account_securities = @entry.account.holdings
-    .includes(:security)
-    .where.not(security: nil)
-    .map(&:security)
-    .uniq(&:ticker)
-    .sort_by(&:ticker)
 %>
 
 <%= render DS::Dialog.new(variant: "modal", reload_on_close: true) do |dialog| %>
@@ -20,7 +12,7 @@
   <% end %>
 
   <% dialog.with_body do %>
-    <%= form_with url: create_trade_from_transaction_transaction_path(@transaction), method: :post, class: "space-y-4", data: { controller: "convert-to-trade", turbo_frame: "_top" } do |f| %>
+    <%= form_with url: create_trade_from_transaction_transaction_path(@transaction), method: :post, class: "space-y-4", data: { controller: "convert-to-trade", turbo_frame: "_top", convert_to_trade_amount_cents_value: (@entry.amount_money.abs.amount * 100).to_i, convert_to_trade_currency_value: @entry.currency } do |f| %>
       <!-- Pre-filled Transaction Info (Read-only) -->
       <div class="space-y-2 p-3 bg-surface-inset rounded-lg border border-primary">
         <div class="text-sm">
@@ -41,39 +33,72 @@
       <div class="space-y-4">
         <div class="space-y-1">
           <%= f.label :security_id, t(".security_label"), class: "font-medium text-sm text-primary block" %>
-          <% if account_securities.any? %>
-            <%= f.select :security_id,
-                  options_for_select(
-                    [[t(".security_prompt"), ""]] +
-                    account_securities.map { |s| ["#{s.ticker}#{s.name.present? ? " - #{s.name.truncate(30)}" : ""}", s.id] } +
-                    [[t(".security_custom"), "__custom__"]],
-                    nil
-                  ),
-                  {},
-                  {
-                    class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
-                    data: {
-                      action: "change->convert-to-trade#toggleCustomTicker",
-                      convert_to_trade_target: "tickerSelect"
-                    }
-                  } %>
-            <div class="hidden mt-2" data-convert-to-trade-target="customWrapper">
-              <%= f.text_field :custom_ticker,
+          <% if Security.provider.present? %>
+            <%# Always use searchable combobox when provider available - prevents picking wrong similar tickers %>
+            <div class="form-field combobox" style="--hw-handle-width: 0; --hw-handle-image: none;">
+              <%= f.combobox :ticker,
+                          securities_path(country_code: Current.family.country),
+                          name_when_new: "custom_ticker",
+                          placeholder: t(".ticker_search_placeholder"),
+                          required: true %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".ticker_search_hint") %></p>
+          <% else %>
+            <%# No provider: show existing holdings dropdown with custom option %>
+            <%
+              # Get unique securities from account holdings for dropdown
+              account_securities = @entry.account.holdings
+                .includes(:security)
+                .where.not(security: nil)
+                .map(&:security)
+                .uniq(&:ticker)
+                .sort_by(&:ticker)
+
+              # Build options with price data for validation
+              security_options_with_prices = account_securities.map do |s|
+                price = s.current_price
+                price_display = price ? " (#{format_money(price)})" : ""
+                label = "#{s.ticker}#{price_display}"
+                label += " - #{s.name.truncate(25)}" if s.name.present?
+                price_cents = price ? (price.amount * 100).to_i : nil
+                [label, s.id, { "data-price-cents" => price_cents, "data-ticker" => s.ticker }]
+              end
+            %>
+            <% if account_securities.any? %>
+              <%= f.select :security_id,
+                    options_for_select(
+                      [[t(".security_prompt"), ""]] +
+                      security_options_with_prices +
+                      [[t(".security_custom"), "__custom__"]],
+                      nil
+                    ),
+                    {},
+                    {
+                      class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                      data: {
+                        action: "change->convert-to-trade#toggleCustomTicker change->convert-to-trade#validatePrice",
+                        convert_to_trade_target: "tickerSelect"
+                      }
+                    } %>
+              <p class="text-xs text-secondary mt-1"><%= t(".security_not_listed_hint") %></p>
+              <div class="hidden mt-2" data-convert-to-trade-target="customWrapper">
+                <%= f.text_field :custom_ticker,
+                      placeholder: t(".ticker_placeholder"),
+                      class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                      pattern: "[A-Za-z0-9.:-]{1,20}",
+                      title: t(".ticker_hint"),
+                      data: { convert_to_trade_target: "customField" } %>
+                <p class="text-xs text-secondary mt-1"><%= t(".ticker_hint") %></p>
+              </div>
+            <% else %>
+              <%= f.text_field :ticker,
                     placeholder: t(".ticker_placeholder"),
+                    required: true,
                     class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
                     pattern: "[A-Za-z0-9.:-]{1,20}",
-                    title: t(".ticker_hint"),
-                    data: { convert_to_trade_target: "customField" } %>
-            </div>
-            <p class="text-xs text-secondary"><%= t(".security_hint") %></p>
-          <% else %>
-            <%= f.text_field :ticker,
-                  placeholder: t(".ticker_placeholder"),
-                  required: true,
-                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
-                  pattern: "[A-Za-z0-9.:-]{1,20}",
-                  title: t(".ticker_hint") %>
-            <p class="text-xs text-secondary"><%= t(".ticker_hint") %></p>
+                    title: t(".ticker_hint") %>
+              <p class="text-xs text-secondary"><%= t(".ticker_hint") %></p>
+            <% end %>
           <% end %>
         </div>
 
@@ -83,7 +108,11 @@
             <%= f.number_field :qty,
                   step: "any",
                   placeholder: t(".quantity_placeholder"),
-                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" %>
+                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                  data: {
+                    action: "input->convert-to-trade#validatePrice",
+                    convert_to_trade_target: "qtyField"
+                  } %>
             <p class="text-xs text-secondary"><%= t(".quantity_hint") %></p>
           </div>
 
@@ -93,8 +122,23 @@
                   step: "0.0001",
                   min: "0",
                   placeholder: t(".price_placeholder"),
-                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container" %>
+                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                  data: {
+                    action: "input->convert-to-trade#validatePrice",
+                    convert_to_trade_target: "priceField"
+                  } %>
             <p class="text-xs text-secondary"><%= t(".price_hint", currency: @entry.currency) %></p>
+          </div>
+        </div>
+
+        <!-- Price mismatch warning -->
+        <div class="hidden p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg" data-convert-to-trade-target="priceWarning">
+          <div class="flex items-start gap-2">
+            <%= icon "alert-triangle", size: "sm", class: "text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" %>
+            <div class="text-sm">
+              <p class="font-medium text-yellow-800 dark:text-yellow-200"><%= t(".price_mismatch_title") %></p>
+              <p class="text-yellow-700 dark:text-yellow-300" data-convert-to-trade-target="priceWarningMessage"></p>
+            </div>
           </div>
         </div>
 
@@ -112,15 +156,18 @@
           <p class="text-xs text-secondary"><%= t(".trade_type_hint") %></p>
         </div>
 
-        <div class="space-y-1">
-          <%= f.label :exchange_operating_mic, t(".exchange_label"), class: "font-medium text-sm text-primary block" %>
-          <%= f.text_field :exchange_operating_mic,
-                placeholder: t(".exchange_placeholder"),
-                class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
-                pattern: "[A-Z]{4}",
-                title: t(".exchange_hint") %>
-          <p class="text-xs text-secondary"><%= t(".exchange_hint") %></p>
-        </div>
+        <%# Only show exchange field when no provider - combobox selections already include exchange %>
+        <% unless Security.provider.present? %>
+          <div class="space-y-1">
+            <%= f.label :exchange_operating_mic, t(".exchange_label"), class: "font-medium text-sm text-primary block" %>
+            <%= f.text_field :exchange_operating_mic,
+                  placeholder: t(".exchange_placeholder"),
+                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
+                  pattern: "[A-Z]{4}",
+                  title: t(".exchange_hint") %>
+            <p class="text-xs text-secondary"><%= t(".exchange_hint") %></p>
+          </div>
+        <% end %>
       </div>
 
       <div class="flex justify-end gap-3 pt-4 border-t border-primary">

@@ -1,7 +1,31 @@
 ---
 de:
   family_exports:
-    list:
-      in_progress: Wird ausgeführt
-      complete: Abgeschlossen
-      failed: Fehlgeschlagen
+    access_denied: Zugriff verweigert
+    create:
+      success: Export gestartet. Sie können ihn in Kürze herunterladen.
+    delete_confirmation: Möchten Sie diesen Export wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+    delete_failed_confirmation: Möchten Sie diesen fehlgeschlagenen Export wirklich löschen?
+    destroy:
+      success: Export erfolgreich gelöscht
+    export_not_ready: Export noch nicht zum Download bereit
+    exporting: Wird exportiert...
+    index:
+      title: Exporte
+      new: Neuer Export
+    table:
+      title: Exporte
+      header:
+        date: Datum
+        filename: Dateiname
+        status: Status
+        actions: Aktionen
+      row:
+        status:
+          in_progress: Wird ausgeführt
+          complete: Abgeschlossen
+          failed: Fehlgeschlagen
+        actions:
+          delete: Löschen
+          download: Herunterladen
+      empty: Noch keine Exporte vorhanden.

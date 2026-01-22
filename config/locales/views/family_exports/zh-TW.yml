@@ -1,7 +1,25 @@
 ---
 zh-TW:
   family_exports:
-    list:
-      complete: 已完成
-      failed: 已失敗
-      in_progress: 進行中
+    access_denied: 存取被拒絕
+    create:
+      success: 匯出已開始。您很快就能下載它。
+    destroy:
+      success: 匯出已成功刪除
+    export_not_ready: 匯出尚未準備好下載
+    table:
+      title: 匯出
+      header:
+        date: 日期
+        filename: 檔案名稱
+        status: 狀態
+        actions: 操作
+      row:
+        status:
+          in_progress: 進行中
+          complete: 已完成
+          failed: 已失敗
+        actions:
+          delete: 刪除
+          download: 下載
+      empty: 目前尚無匯出記錄。

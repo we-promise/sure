@@ -1,0 +1,21 @@
+---
+nl:
+  activerecord:
+    attributes:
+      account:
+        balance: Saldo
+        currency: Valuta
+        family: Familie
+        family_id: Familie
+        name: Naam
+        subtype: Subtype
+    models:
+      account: Account
+      account/credit: Creditcard
+      account/depository: Bankrekening
+      account/investment: Belegging
+      account/loan: Lening
+      account/other_asset: Overige Activa
+      account/other_liability: Overige Verplichtingen
+      account/property: Onroerend Goed
+      account/vehicle: Voertuig

@@ -1,4 +1,5 @@
 class Family < ApplicationRecord
+  include CoinbaseConnectable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable, CoinstatsConnectable
 
   DATE_FORMATS = [
@@ -77,6 +78,12 @@ class Family < ApplicationRecord
 
   def income_statement
     @income_statement ||= IncomeStatement.new(self)
+  end
+
+  # Returns the Investment Contributions category for this family, or nil if not found.
+  # This is a bootstrapped category used for auto-categorizing transfers to investment accounts.
+  def investment_contributions_category
+    categories.find_by(name: Category.investment_contributions_name)
   end
 
   def investment_statement

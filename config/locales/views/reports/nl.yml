@@ -1,0 +1,212 @@
+---
+nl:
+  reports:
+    index:
+      title: Rapporten
+      subtitle: Uitgebreid inzicht in uw financiële gezondheid
+      export: CSV exporteren
+      print_report: Rapport afdrukken
+      drag_to_reorder: "Sleep om sectie te herschikken"
+      toggle_section: "Zichtbaarheid sectie wijzigen"
+      periods:
+        monthly: Maandelijks
+        quarterly: Per kwartaal
+        ytd: Jaar tot nu toe
+        last_6_months: Laatste 6 maanden
+        custom: Aangepast bereik
+      date_range:
+        from: Van
+        to: Tot
+      showing_period: "Gegevens weergegeven van %{start} tot %{end}"
+    invalid_date_range: "Einddatum kan niet vóór de startdatum liggen. De datums zijn omgewisseld."
+    summary:
+      total_income: Totaal inkomen
+      total_expenses: Totale uitgaven
+      net_savings: Netto besparingen
+      budget_performance: Budget prestatie
+      vs_previous: vs vorige periode
+      income_minus_expenses: Inkomen minus uitgaven
+      of_budget_used: van budget gebruikt
+      no_budget_data: Geen budgetgegevens voor deze periode
+    budget_performance:
+      title: Budget prestatie
+      spent: Uitgegeven
+      budgeted: Gebudgetteerd
+      remaining: Resterend
+      over_by: Over met
+      suggested_daily: "%{amount} voorgesteld per dag voor %{days} resterende dagen"
+      no_budgets: Geen budgetcategorieën ingesteld voor deze maand
+      status:
+        good: Op schema
+        warning: Bijna limiet
+        over: Budget overschreden
+    trends:
+      title: Trends & inzichten
+      monthly_breakdown: Maandelijkse uitsplitsing
+      month: Maand
+      income: Inkomen
+      expenses: Uitgaven
+      net: Netto
+      savings_rate: Spaarpercentage
+      current: huidig
+      avg_monthly_income: Gem. maandelijks inkomen
+      avg_monthly_expenses: Gem. maandelijkse uitgaven
+      avg_monthly_savings: Gem. maandelijkse besparingen
+      no_data: Geen trendgegevens beschikbaar
+      spending_patterns: Bestedingspatronen
+      weekday_spending: Weekdagbestedingen
+      weekend_spending: Weekendbestedingen
+      total: Totaal
+      avg_per_transaction: Gem. per transactie
+      transactions: Transacties
+      insight_title: Inzicht
+      insight_higher_weekend: "U geeft %{percent}% meer uit per transactie in het weekend dan doordeweeks"
+      insight_higher_weekday: "U geeft %{percent}% meer uit per transactie doordeweeks dan in het weekend"
+      insight_similar: "Uw uitgaven per transactie zijn vergelijkbaar op weekdagen en in het weekend"
+      no_spending_data: Geen bestedingsgegevens beschikbaar voor deze periode
+    empty_state:
+      title: Geen gegevens beschikbaar
+      description: Begin met het bijhouden van uw financiën door transacties toe te voegen of uw accounts te verbinden om uitgebreide rapporten te zien
+      add_transaction: Transactie toevoegen
+      add_account: Account toevoegen
+    transactions_breakdown:
+      title: Activiteitenoverzicht
+      no_transactions: Geen activiteit gevonden voor de geselecteerde periode en filters
+      filters:
+        title: Filters
+        category: Categorie
+        account: Account
+        tag: Tag
+        amount_min: Min. bedrag
+        amount_max: Max. bedrag
+        date_range: Datumbereik
+        all_categories: Alle categorieën
+        all_accounts: Alle accounts
+        all_tags: Alle tags
+        apply: Filters toepassen
+        clear: Filters wissen
+      sort:
+        label: Sorteren op
+        date_desc: Datum (nieuwste)
+        amount_desc: Bedrag (hoog naar laag)
+        amount_asc: Bedrag (laag naar hoog)
+      export:
+        label: Exporteren
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Openen in Google Sheets
+      table:
+        category: Categorie
+        amount: Bedrag
+        type: Type
+        expense: Uitgaven
+        income: Inkomen
+        uncategorized: Ongecategoriseerd
+        entries:
+          one: item
+          other: items
+        percentage: "% van totaal"
+      pagination:
+        showing:
+          one: "%{count} item weergegeven"
+          other: "%{count} items weergegeven"
+        previous: Vorige
+        next: Volgende
+    net_worth:
+      title: Netto vermogen
+      current_net_worth: Huidig netto vermogen
+      period_change: Periode wijziging
+      assets_vs_liabilities: Activa vs passiva
+      total_assets: Activa
+      total_liabilities: Passiva
+      no_assets: Geen activa
+      no_liabilities: Geen passiva
+    investment_performance:
+      title: Investeringsprestatie
+      portfolio_value: Portfolio waarde
+      total_return: Totaal rendement
+      contributions: Periode stortingen
+      withdrawals: Periode opnames
+      top_holdings: Top bezittingen
+      holding: Bezit
+      weight: Gewicht
+      value: Waarde
+      return: Rendement
+      accounts: Beleggingsrekeningen
+    investment_flows:
+      title: Investeringsstromen
+      description: Volg geld dat in en uit uw beleggingsrekeningen stroomt
+      contributions: Stortingen
+      withdrawals: Opnames
+      net_flow: Netto stroom
+    google_sheets_instructions:
+      title_with_key: "✅ Kopieer URL voor Google Sheets"
+      title_no_key: "⚠️ API Key vereist"
+      ready: Uw CSV URL (met API Key) is klaar.
+      steps: "Om te importeren in Google Sheets:\n1. Maak een nieuwe Google Sheet\n2. Voer in cel A1 de onderstaande formule in\n3. Druk op Enter"
+      security_warning: "Deze URL bevat uw API Key. Houd deze veilig!"
+      need_key: Om gegevens te importeren in Google Sheets heeft u een API Key nodig.
+      step1: "Ga naar Instellingen → API Keys"
+      step2: "Maak een nieuwe API Key aan met \"lezen\" permissie"
+      step3: Kopieer de API Key
+      step4: "Voeg deze toe aan de URL als: ?api_key=UW_KEY"
+      example: Voorbeeld
+      then_use: Gebruik dan de volledige URL met =IMPORTDATA() in Google Sheets.
+      open_sheets: Google Sheets openen
+      go_to_api_keys: Ga naar API Keys
+      close: Begrepen
+    print:
+      document_title: Financieel rapport
+      title: Financieel rapport
+      generated_on: "Gegenereerd %{date}"
+      # Summary section
+      summary:
+        title: Samenvatting
+        income: Inkomen
+        expenses: Uitgaven
+        net_savings: Netto besparingen
+        budget: Budget
+        vs_prior: "%{percent}% vs vorige"
+        of_income: "%{percent}% van inkomen"
+        used: gebruikt
+      # Net Worth section
+      net_worth:
+        title: Netto vermogen
+        current_balance: Huidig saldo
+        this_period: deze periode
+        assets: Activa
+        liabilities: Passiva
+        no_liabilities: Geen passiva
+      # Monthly Trends section
+      trends:
+        title: Maandelijkse trends
+        month: Maand
+        income: Inkomen
+        expenses: Uitgaven
+        net: Netto
+        savings_rate: Spaarpercentage
+        average: Gemiddelde
+        current_month_note: "* Huidige maand (partiële gegevens)"
+      # Investments section
+      investments:
+        title: Investeringen
+        portfolio_value: Portfolio waarde
+        total_return: Totaal rendement
+        contributions: Stortingen
+        withdrawals: Opnames
+        this_period: deze periode
+        top_holdings: Top bezittingen
+        holding: Bezit
+        weight: Gewicht
+        value: Waarde
+        return: Rendement
+      # Spending by Category section
+      spending:
+        title: Uitgaven per categorie
+        income: Inkomen
+        expenses: Uitgaven
+        category: Categorie
+        amount: Bedrag
+        percent: "%"
+        more_categories: "+ %{count} meer categorieën"

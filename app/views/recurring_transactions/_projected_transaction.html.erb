@@ -6,7 +6,7 @@
       <%= content_tag :div, class: ["flex items-center gap-2"] do %>
         <% if recurring_transaction.merchant.present? %>
           <% if recurring_transaction.merchant.logo_url.present? %>
-            <%= image_tag recurring_transaction.merchant.logo_url,
+            <%= image_tag Setting.transform_brand_fetch_url(recurring_transaction.merchant.logo_url),
                 class: "w-6 h-6 rounded-full",
                 loading: "lazy" %>
           <% else %>
