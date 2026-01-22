@@ -62,7 +62,7 @@ class LunchflowEntry::Processor
 
     def external_id
       id = data[:id].presence
-      
+
       # For pending transactions, Lunchflow may return blank/nil IDs
       # Generate a stable temporary ID based on transaction attributes
       if id.blank?
@@ -76,12 +76,12 @@ class LunchflowEntry::Processor
           data[:merchant],
           data[:description]
         ].compact.join("|")
-        
+
         temp_id = Digest::MD5.hexdigest(attributes)
         Rails.logger.debug "Lunchflow: Generated temporary ID #{temp_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
         return "lunchflow_pending_#{temp_id}"
       end
-      
+
       "lunchflow_#{id}"
     end
 
@@ -168,9 +168,8 @@ class LunchflowEntry::Processor
       metadata = {}
 
       # Store pending status from Lunchflow API when present
-      if data.key?(:isPending) || data.key?("isPending")
-        is_pending = data[:isPending] || data["isPending"]
-        metadata[:lunchflow] = { pending: ActiveModel::Type::Boolean.new.cast(is_pending) }
+      if data.key?(:isPending)
+        metadata[:lunchflow] = { pending: ActiveModel::Type::Boolean.new.cast(data[:isPending]) }
       end
 
       metadata
