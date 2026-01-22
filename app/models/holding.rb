@@ -181,6 +181,7 @@ class Holding < ApplicationRecord
           merge_attrs[:external_id] ||= holding.external_id if existing.external_id.blank? && holding.external_id.present?
           merge_attrs[:provider_security_id] ||= holding.provider_security_id || old_security.id if existing.provider_security_id.blank?
           merge_attrs[:account_provider_id] ||= holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
+          merge_attrs[:security_locked] = true # Lock merged holding to prevent provider overwrites
 
           existing.update!(merge_attrs)
           holding.destroy!

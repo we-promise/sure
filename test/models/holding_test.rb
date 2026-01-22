@@ -359,6 +359,9 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 5 + amzn_qty, existing_goog.qty
     assert_equal 500 + amzn_amount, existing_goog.amount
 
+    # Merged holding should be locked to prevent provider overwrites
+    assert existing_goog.security_locked, "Merged holding should be locked"
+
     # No holdings should remain for the old AMZN security
     assert_equal 0, @account.holdings.where(security: amzn_security).count
   end
