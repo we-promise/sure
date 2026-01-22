@@ -34,6 +34,8 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
     unless provider && credentials
       Rails.logger.error("SnaptradeActivitiesFetchJob - No provider/credentials for account #{snaptrade_account.id}")
+      snaptrade_account.update!(activities_fetch_pending: false)
+      snaptrade_account.snaptrade_item.broadcast_sync_complete
       return
     end
 
@@ -154,7 +156,11 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
     def process_activities(snaptrade_account)
       account = snaptrade_account.current_account
-      return unless account.present?
+      unless account.present?
+        snaptrade_account.update!(activities_fetch_pending: false)
+        snaptrade_account.snaptrade_item.broadcast_sync_complete
+        return
+      end
 
       processor = SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account)
       result = processor.process

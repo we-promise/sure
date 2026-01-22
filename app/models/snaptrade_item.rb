@@ -16,6 +16,7 @@ class SnaptradeItem < ApplicationRecord
   if encryption_ready?
     encrypts :client_id, deterministic: true
     encrypts :consumer_key, deterministic: true
+    encrypts :snaptrade_user_id, deterministic: true
     encrypts :snaptrade_user_secret, deterministic: true
   end
 
@@ -29,7 +30,7 @@ class SnaptradeItem < ApplicationRecord
   has_one_attached :logo
 
   has_many :snaptrade_accounts, dependent: :destroy
-  has_many :accounts, through: :snaptrade_accounts
+  has_many :linked_accounts, through: :snaptrade_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
@@ -146,7 +147,7 @@ class SnaptradeItem < ApplicationRecord
   end
 
   def connected_institutions
-    snaptrade_accounts.includes(:account)
+    snaptrade_accounts
                   .where.not(institution_metadata: nil)
                   .map { |acc| acc.institution_metadata }
                   .uniq { |inst| inst["name"] || inst["institution_name"] }

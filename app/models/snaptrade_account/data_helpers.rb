@@ -65,9 +65,10 @@ module SnaptradeAccount::DataHelpers
         exchange_mic: extract_exchange(symbol_data),
         country_code: extract_country_code(symbol_data)
       )
-    rescue ActiveRecord::RecordInvalid => e
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+      # Handle race condition - another process may have created it
       Rails.logger.error "Failed to create security #{ticker}: #{e.message}"
-      nil
+      Security.find_by(ticker: ticker) # Retry find in case of race condition
     end
 
     def extract_security_name(symbol_data, fallback_ticker)

@@ -136,6 +136,6 @@ class Settings::ProvidersController < ApplicationController
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
-      @snaptrade_items = Current.family.snaptrade_items.ordered
+      @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
     end
 end

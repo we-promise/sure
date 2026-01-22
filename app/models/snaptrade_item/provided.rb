@@ -95,7 +95,7 @@ module SnaptradeItem::Provided
   end
 
   # Verify that the stored user actually exists in SnapTrade
-  # Returns false if user doesn't exist or credentials are invalid
+  # Returns false if user doesn't exist, credentials are invalid, or verification fails
   def verify_user_exists?
     return false unless snaptrade_user_id.present?
 
@@ -112,9 +112,9 @@ module SnaptradeItem::Provided
     Rails.logger.warn "SnapTrade: User verification failed - #{e.message}"
     false
   rescue Provider::Snaptrade::ApiError => e
-    # Other API errors might be transient - log but assume user exists
-    Rails.logger.warn "SnapTrade: User verification error (assuming exists) - #{e.message}"
-    true
+    # Return false on API errors - caller can retry registration if needed
+    Rails.logger.warn "SnapTrade: User verification error - #{e.message}"
+    false
   end
 
   # Get the connection portal URL for linking brokerages

@@ -86,7 +86,6 @@
       <% else %>
         <%= form_with url: complete_account_setup_snaptrade_item_path(@snaptrade_item),
                       method: :post,
-                      local: true,
                       data: {
                         controller: "loading-button",
                         action: "submit->loading-button#showLoading",
@@ -133,6 +132,7 @@
                            name="sync_start_dates[<%= snaptrade_account.id %>]"
                            value="<%= snaptrade_account.sync_start_date %>"
                            onclick="event.stopPropagation();"
+                           autocomplete="off"
                            class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary">
                     <p class="text-xs text-secondary mt-1">
                       <%= t("snaptrade_items.setup_accounts.sync_start_date_help", default: "Leave blank for all available history") %>

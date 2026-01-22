@@ -92,7 +92,7 @@
     <% if has_trades_stats? || activities_pending? %>
       <div>
         <h4 class="text-primary font-medium mb-1"><%= t("provider_sync_summary.trades.title") %></h4>
-        <% if activities_pending? %>
+        <% if activities_pending? && !has_trades_stats? %>
           <div class="flex items-center gap-2">
             <%= helpers.icon "loader-circle", size: "sm", class: "animate-spin text-secondary" %>
             <span class="text-secondary"><%= t("provider_sync_summary.trades.fetching") %></span>

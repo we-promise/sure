@@ -86,6 +86,8 @@ en:
 
   providers:
     snaptrade:
+      name: "SnapTrade"
+      connection_description: "Connect to your brokerage via SnapTrade (25+ brokers supported)"
       description: "SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard, Schwab, Robinhood, etc.) and provides full trade history with activity labels and cost basis."
       setup_title: "Setup instructions:"
       step_1_html: "Create an account at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"

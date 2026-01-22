@@ -155,6 +155,11 @@ class SnaptradeAccount::ActivitiesProcessor
         parse_decimal(data[:trade_value]) || parse_decimal(data["trade_value"])
       end
 
+      if amount.nil?
+        Rails.logger.warn "SnaptradeAccount::ActivitiesProcessor - Skipping trade without amount: #{external_id}"
+        return
+      end
+
       # Get the activity date
       activity_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"]) ||
                       parse_date(data[:trade_date]) || parse_date(data["trade_date"]) || Date.current

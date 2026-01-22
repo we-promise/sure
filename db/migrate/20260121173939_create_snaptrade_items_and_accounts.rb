@@ -1,7 +1,7 @@
 class CreateSnaptradeItemsAndAccounts < ActiveRecord::Migration[7.2]
   def change
     # Create provider items table (stores per-family connection credentials)
-    create_table :snaptrade_items, id: :uuid do |t|
+    create_table :snaptrade_items, id: :uuid, if_not_exists: true do |t|
       t.references :family, null: false, foreign_key: true, type: :uuid
       t.string :name
 
@@ -34,10 +34,10 @@ class CreateSnaptradeItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :snaptrade_items, :status
+    add_index :snaptrade_items, :status unless index_exists?(:snaptrade_items, :status)
 
     # Create provider accounts table (stores individual account data from provider)
-    create_table :snaptrade_accounts, id: :uuid do |t|
+    create_table :snaptrade_accounts, id: :uuid, if_not_exists: true do |t|
       t.references :snaptrade_item, null: false, foreign_key: true, type: :uuid
 
       # Account identification
@@ -72,6 +72,8 @@ class CreateSnaptradeItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :snaptrade_accounts, :snaptrade_account_id, unique: true
+    unless index_exists?(:snaptrade_accounts, :snaptrade_account_id)
+      add_index :snaptrade_accounts, :snaptrade_account_id, unique: true
+    end
   end
 end

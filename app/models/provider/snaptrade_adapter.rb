@@ -17,8 +17,8 @@ class Provider::SnaptradeAdapter < Provider::Base
 
     [ {
       key: "snaptrade",
-      name: "SnapTrade",
-      description: "Connect to your brokerage via SnapTrade (25+ brokers supported)",
+      name: I18n.t("providers.snaptrade.name"),
+      description: I18n.t("providers.snaptrade.connection_description"),
       can_connect: true,
       new_account_path: ->(accountable_type, return_to) {
         Rails.application.routes.url_helpers.select_accounts_snaptrade_items_path(

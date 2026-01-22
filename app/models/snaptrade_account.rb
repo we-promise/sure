@@ -83,7 +83,7 @@ class SnaptradeAccount < ApplicationRecord
       account_number: data[:number],
       name: data[:name] || "#{institution_name} Account",
       brokerage_name: institution_name,
-      currency: parse_currency(total_balance[:currency]) || "USD",
+      currency: extract_currency_code(total_balance[:currency]) || "USD",
       account_type: meta_data[:type] || data[:raw_type],
       account_status: data[:status],
       current_balance: total_balance[:amount],
@@ -210,5 +210,19 @@ class SnaptradeAccount < ApplicationRecord
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for SnapTrade account #{id}, defaulting to USD")
+    end
+
+    # Extract currency code from either a string or a currency object (hash with :code key)
+    # SnapTrade API may return currency as either format depending on the endpoint
+    def extract_currency_code(currency_value)
+      return nil if currency_value.blank?
+
+      if currency_value.is_a?(Hash)
+        # Currency object: { code: "USD", id: "..." }
+        currency_value[:code] || currency_value["code"]
+      else
+        # String: "USD"
+        parse_currency(currency_value)
+      end
     end
 end

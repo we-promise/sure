@@ -6,6 +6,8 @@ class SnaptradeAccount::HoldingsProcessor
   end
 
   def process
+    return unless account.present?
+
     holdings_data = @snaptrade_account.raw_holdings_payload
     return if holdings_data.blank?
 
@@ -123,6 +125,8 @@ class SnaptradeAccount::HoldingsProcessor
 
       # Store per-share cost, not total cost (cost_basis is per-share across the codebase)
       cost_basis = parse_decimal(avg_cost)
+      return if cost_basis.nil?
+
       holding.update!(
         cost_basis: cost_basis,
         cost_basis_source: "provider"

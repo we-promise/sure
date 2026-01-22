@@ -133,12 +133,12 @@ class SnaptradeItemsController < ApplicationController
   def callback
     # SnapTrade redirects back after user connects their brokerage
     # The connection is already established - we just need to sync to get the accounts
-    # Use item_id from callback URL if provided, otherwise fall back to first item
-    snaptrade_item = if params[:item_id].present?
-      Current.family.snaptrade_items.find_by(id: params[:item_id])
-    else
-      Current.family.snaptrade_items.first
+    unless params[:item_id].present?
+      redirect_to settings_providers_path, alert: t(".no_item")
+      return
     end
+
+    snaptrade_item = Current.family.snaptrade_items.find_by(id: params[:item_id])
 
     if snaptrade_item
       # Trigger a sync to fetch the newly connected accounts
@@ -306,9 +306,7 @@ class SnaptradeItemsController < ApplicationController
         :name,
         :sync_start_date,
         :client_id,
-        :consumer_key,
-        :snaptrade_user_id,
-        :snaptrade_user_secret
+        :consumer_key
       )
     end
 

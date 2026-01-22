@@ -230,8 +230,10 @@ class SnaptradeItem::Importer
         Rails.logger.info "SnaptradeItem::Importer - Incremental activities fetch from #{start_date} (existing: #{existing_count})"
         fetch_all_activities(snaptrade_account, credentials, start_date: start_date)
       else
-        # Full history - use user's sync_start_date if set, otherwise first_transaction_date or 5 years ago
-        start_date = user_sync_start || first_tx_date || 5.years.ago.to_date
+        # Full history - use user's sync_start_date if set, otherwise first_transaction_date
+        # Default to MAX_ACTIVITY_CHUNKS years ago to match chunk size
+        default_start = (MAX_ACTIVITY_CHUNKS * ACTIVITY_CHUNK_DAYS).days.ago.to_date
+        start_date = user_sync_start || first_tx_date || default_start
         Rails.logger.info "SnaptradeItem::Importer - Full history fetch from #{start_date} (user_sync_start: #{user_sync_start || 'none'}, first_tx_date: #{first_tx_date || 'unknown'}, existing: #{existing_count})"
 
         # Try to fetch activities synchronously first
