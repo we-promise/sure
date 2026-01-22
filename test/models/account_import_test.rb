@@ -99,13 +99,13 @@ class AccountImportTest < ActiveSupport::TestCase
 
     # Verify accounts were created with correct dates
     accounts = @import.accounts.order(:name)
-    
+
     checking_account = accounts.find { |a| a.name == "Main Checking" }
     savings_account = accounts.find { |a| a.name == "Savings Account" }
-    
+
     checking_valuation = checking_account.valuations.opening_anchor.first
     savings_valuation = savings_account.valuations.opening_anchor.first
-    
+
     assert_equal Date.parse("2024-01-15"), checking_valuation.entry.date
     assert_equal Date.parse("2024-02-01"), savings_valuation.entry.date
   end
@@ -144,7 +144,7 @@ class AccountImportTest < ActiveSupport::TestCase
     # Verify account was created with default date (2 years ago or 1 day before oldest entry)
     account = @import.accounts.first
     valuation = account.valuations.opening_anchor.first
-    
+
     # Default date should be 2 years ago when there are no other entries
     expected_default_date = 2.years.ago.to_date
     assert_equal expected_default_date, valuation.entry.date

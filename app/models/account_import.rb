@@ -18,14 +18,14 @@ class AccountImport < Import
         account.save!
 
         manager = Account::OpeningBalanceManager.new(account)
-        
+
         # Parse date if provided, otherwise use default
         balance_date = if row.date.present?
           Date.strptime(row.date, date_format)
         else
           nil
         end
-        
+
         result = manager.set_opening_balance(balance: row.amount.to_d, date: balance_date)
 
         # Re-raise since we should never have an error here
