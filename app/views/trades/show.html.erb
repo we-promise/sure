@@ -20,8 +20,8 @@
 
           <div class="flex items-center gap-2">
             <%= f.select :nature,
-                          [["Buy", "outflow"], ["Sell", "inflow"]],
-                          { container_class: "w-1/3", label: "Type", selected: @entry.amount.negative? ? "inflow" : "outflow" },
+                          [[t(".buy"), "outflow"], [t(".sell"), "inflow"]],
+                          { container_class: "w-1/3", label: t(".type_label"), selected: @entry.amount.negative? ? "outflow" : "inflow" },
                           { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? } %>
 
             <%= f.fields_for :entryable do |ef| %>

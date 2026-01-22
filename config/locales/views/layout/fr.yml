@@ -17,3 +17,7 @@ fr:
       footer:
         privacy_policy: Politique de confidentialité
         terms_of_service: Conditions d'utilisation
+    trial:
+      open_demo: Démo ouverte
+      data_deleted_in_days: Les données seront supprimées dans %{days} jours
+      contribute: Contribuer

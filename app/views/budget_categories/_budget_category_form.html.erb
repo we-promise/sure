@@ -18,12 +18,13 @@
           <span class="text-secondary text-sm mr-2"><%= currency.symbol %></span>
           <%= f.number_field :budgeted_spending,
                             class: "form-field__input text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            placeholder: "0",
+                            placeholder: budget_category.subcategory? ? "Shared" : "0",
                             step: currency.step,
                             id: dom_id(budget_category, :budgeted_spending),
                             min: 0,
                             max: budget_category.max_allocation,
-                            data: { auto_submit_form_target: "auto" } %>
+                            data: { auto_submit_form_target: "auto" },
+                            title: budget_category.subcategory? ? "Leave empty to share parent's budget" : nil %>
         </div>
       </div>
     <% end %>

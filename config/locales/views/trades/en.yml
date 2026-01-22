@@ -24,6 +24,7 @@ en:
       title: New transaction
     show:
       additional: Additional
+      buy: Buy
       category_label: Category
       cost_per_share_label: Cost per Share
       date_label: Date
@@ -37,4 +38,6 @@ en:
       note_label: Note
       note_placeholder: Add any additional notes here...
       quantity_label: Quantity
+      sell: Sell
       settings: Settings
+      type_label: Type

@@ -126,7 +126,8 @@ class Settings::ProvidersController < ApplicationController
         config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
         config.provider_key.to_s.casecmp("enable_banking").zero?  || \
         config.provider_key.to_s.casecmp("sophtron").zero? || \
-        config.provider_key.to_s.casecmp("coinstats").zero?
+        config.provider_key.to_s.casecmp("coinstats").zero? || \
+        config.provider_key.to_s.casecmp("coinbase").zero?
       end
 
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
@@ -136,5 +137,6 @@ class Settings::ProvidersController < ApplicationController
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
+      @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
     end
 end

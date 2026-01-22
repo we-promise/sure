@@ -76,8 +76,10 @@
                 <tr>
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
-                      <% if holding.security.logo_url.present? %>
-                        <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                      <% if holding.security.brandfetch_icon_url.present? %>
+                        <img src="<%= holding.security.brandfetch_icon_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                      <% elsif holding.security.logo_url.present? %>
+                        <img src="<%= Setting.transform_brand_fetch_url(holding.security.logo_url) %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
                       <% else %>
                         <div class="w-6 h-6 rounded-full bg-container flex items-center justify-center text-xs font-medium text-secondary">
                           <%= holding.ticker[0..1] %>
