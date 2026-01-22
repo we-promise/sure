@@ -161,4 +161,47 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to installment_account
     assert_equal "Loan account updated", flash[:notice]
   end
+
+  test "updating only account name on installment account does not regenerate activity" do
+    installment_account = accounts(:loan)
+    source_account = accounts(:depository)
+    installment_account.create_installment!(
+      installment_cost: 150,
+      total_term: 8,
+      current_term: 1,
+      payment_period: "monthly",
+      first_payment_date: 2.months.ago.to_date
+    )
+
+    # First, create the installment activity with a source account so recurring transaction is created
+    Installment::Creator.new(installment_account.installment, source_account_id: source_account.id).call
+    initial_recurring_transaction = RecurringTransaction.find_by(installment_id: installment_account.installment.id)
+    assert initial_recurring_transaction, "Should have created a recurring transaction"
+
+    # Update only the account name (same installment values)
+    assert_no_difference "RecurringTransaction.count" do
+      patch loan_path(installment_account), params: {
+        account: {
+          name: "Renamed Installment Account",
+          currency: "USD",
+          installment_attributes: {
+            installment_cost: 150,
+            total_term: 8,
+            current_term: 1,
+            payment_period: "monthly",
+            first_payment_date: 2.months.ago.to_date.to_s
+          }
+        }
+      }
+    end
+
+    installment_account.reload
+
+    assert_equal "Renamed Installment Account", installment_account.name
+    # Verify the same recurring transaction still exists (not deleted and recreated)
+    assert_equal initial_recurring_transaction.id, RecurringTransaction.find_by(installment_id: installment_account.installment.id).id
+
+    assert_redirected_to installment_account
+    assert_equal "Loan account updated", flash[:notice]
+  end
 end
