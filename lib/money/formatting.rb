@@ -53,6 +53,11 @@ module Money::Formatting
         return { delimiter: ".", separator: ",", format: "%n %u" }
       end
 
+      # Polish locale: symbol after number with space, comma as decimal separator, space as thousands delimiter
+      if locale_sym == :pl
+        return { delimiter: " ", separator: ",", format: "%n %u" }
+      end
+
       # Portuguese (Brazil) locale: symbol before, comma as decimal separator
       if locale_sym == :"pt-BR"
         return { delimiter: ".", separator: ",", format: "%u %n" }

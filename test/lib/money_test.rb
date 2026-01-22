@@ -113,6 +113,12 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "R$ 1.000,12", Money.new(1000.12, :brl).format(locale: :"pt-BR")
   end
 
+  test "formats correctly for Polish locale" do
+    # Polish uses space as thousands delimiter, comma as decimal separator, symbol after number
+    assert_equal "1 000,12 zł", Money.new(1000.12, :pln).format(locale: :pl)
+    assert_equal "1 000,12 €", Money.new(1000.12, :eur).format(locale: :pl)
+  end
+
   test "converts currency when rate available" do
     ExchangeRate.expects(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1.2))
 
