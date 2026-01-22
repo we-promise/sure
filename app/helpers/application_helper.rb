@@ -73,7 +73,12 @@ module ApplicationHelper
   def format_money(number_or_money, options = {})
     return nil unless number_or_money
 
-    Money.new(number_or_money).format(options)
+    if number_or_money.is_a?(Money)
+      number_or_money.format(options)
+    else
+      currency = options[:currency] || Money.default_currency
+      Money.new(number_or_money, currency).format(options.except(:currency))
+    end
   end
 
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
