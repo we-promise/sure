@@ -105,10 +105,9 @@ class LoansController < ApplicationController
                       .where("transactions.extra ->> 'installment_id' = ?", installment.id.to_s)
 
       entry_ids = entries.pluck(:id)
-      transaction_ids = entries.pluck(:entryable_id)
 
+      # Entry has dependent: :destroy on entryable, so destroying entries cascades to transactions
       Entry.where(id: entry_ids).destroy_all
-      Transaction.where(id: transaction_ids).destroy_all if transaction_ids.any?
       RecurringTransaction.where(installment_id: installment.id).destroy_all
     end
 
