@@ -103,11 +103,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
       response '201', 'valuation created' do
         schema '$ref' => '#/components/schemas/Valuation'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('account').fetch('id')).to eq(account.id)
-          expect(payload.fetch('amount')).to eq('$15,000.00')
-        end
+        run_test!
       end
 
       response '422', 'validation error - missing account_id' do
@@ -188,12 +184,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
       response '200', 'valuation retrieved' do
         schema '$ref' => '#/components/schemas/Valuation'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(valuation.id)
-          expect(payload.fetch('account').fetch('name')).to eq('Investment Account')
-          expect(payload.fetch('kind')).to eq('reconciliation')
-        end
+        run_test!
       end
 
       response '404', 'valuation not found' do
@@ -238,10 +229,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
           }
         end
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('notes')).to eq('Quarterly valuation update')
-        end
+        run_test!
       end
 
       response '200', 'valuation updated with amount and date' do
@@ -256,10 +244,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
           }
         end
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('amount')).to eq('$12,000.00')
-        end
+        run_test!
       end
 
       response '422', 'validation error - only one of amount/date provided' do

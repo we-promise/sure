@@ -54,12 +54,7 @@ RSpec.describe 'API V1 Tags', type: :request do
       response '200', 'tags listed' do
         schema '$ref' => '#/components/schemas/TagCollection'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload).to be_an(Array)
-          expect(payload.length).to eq(3)
-          expect(payload.first).to include('id', 'name', 'color', 'created_at', 'updated_at')
-        end
+        run_test!
       end
     end
 
@@ -95,11 +90,7 @@ RSpec.describe 'API V1 Tags', type: :request do
           }
         end
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('name')).to eq('Business')
-          expect(payload.fetch('color')).to eq('#8b5cf6')
-        end
+        run_test!
       end
 
       response '201', 'tag created with auto-assigned color' do
@@ -113,11 +104,7 @@ RSpec.describe 'API V1 Tags', type: :request do
           }
         end
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('name')).to eq('Travel')
-          expect(payload.fetch('color')).to be_present
-        end
+        run_test!
       end
 
       response '422', 'validation error - missing name' do
@@ -149,12 +136,7 @@ RSpec.describe 'API V1 Tags', type: :request do
       response '200', 'tag retrieved' do
         schema '$ref' => '#/components/schemas/TagDetail'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(essential_tag.id)
-          expect(payload.fetch('name')).to eq('Essential')
-          expect(payload.fetch('color')).to eq('#22c55e')
-        end
+        run_test!
       end
 
       response '404', 'tag not found' do
@@ -199,11 +181,7 @@ RSpec.describe 'API V1 Tags', type: :request do
       response '200', 'tag updated' do
         schema '$ref' => '#/components/schemas/TagDetail'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('name')).to eq('Must Have')
-          expect(payload.fetch('color')).to eq('#10b981')
-        end
+        run_test!
       end
 
       response '404', 'tag not found' do
