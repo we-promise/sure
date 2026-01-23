@@ -149,17 +149,19 @@ class Holding < ApplicationRecord
     old_security = security
 
     transaction do
-      # Find dates where the new security already has holdings (collision dates)
-      collision_dates = account.holdings
+      # Find (date, currency) pairs where the new security already has holdings (collision keys)
+      # Currency must match to merge - can't combine holdings denominated in different currencies
+      collision_keys = account.holdings
         .where(security: new_security)
         .where(date: account.holdings.where(security: old_security).select(:date))
-        .pluck(:date)
+        .pluck(:date, :currency)
+        .to_set
 
       # Process each holding for the old security
       account.holdings.where(security: old_security).find_each do |holding|
-        if collision_dates.include?(holding.date)
-          # Collision: merge into existing holding for new_security
-          existing = account.holdings.find_by!(security: new_security, date: holding.date)
+        if collision_keys.include?([ holding.date, holding.currency ])
+          # Collision: merge into existing holding for new_security (same date AND currency)
+          existing = account.holdings.find_by!(security: new_security, date: holding.date, currency: holding.currency)
           merged_qty = existing.qty + holding.qty
           merged_amount = existing.amount + holding.amount
 
