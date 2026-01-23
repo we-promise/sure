@@ -1259,6 +1259,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_22_160000) do
     t.datetime "trial_ends_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "cancel_at_period_end", default: false, null: false
     t.index ["family_id"], name: "index_subscriptions_on_family_id", unique: true
   end
 
