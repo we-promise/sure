@@ -1623,7 +1623,7 @@ paths:
       tags:
       - Valuations
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
       - name: Authorization
         in: header
@@ -1699,7 +1699,7 @@ paths:
       tags:
       - Valuations
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: valuation retrieved
@@ -1718,7 +1718,7 @@ paths:
       tags:
       - Valuations
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '200':
