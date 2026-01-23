@@ -94,6 +94,11 @@ en:
       setup_needed: "Accounts need setup"
       setup_description: "Some accounts from SnapTrade need to be linked to Sure accounts."
       setup_action: "Setup Accounts"
+      setup_accounts_menu: "Set Up Accounts"
+      manage_connections: "Manage Connections"
+      more_accounts_available:
+        one: "%{count} more account available to set up"
+        other: "%{count} more accounts available to set up"
       no_accounts_title: "No accounts discovered"
       no_accounts_description: "Connect a brokerage to import your investment accounts."
 
