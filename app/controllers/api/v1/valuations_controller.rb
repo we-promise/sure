@@ -47,34 +47,47 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
     account = current_resource_owner.family.accounts.find(valuation_account_id)
 
-    result = account.create_reconciliation(
-      balance: valuation_params[:amount],
-      date: valuation_params[:date]
-    )
+    create_success = false
+    error_payload = nil
 
-    if result.success?
+    ActiveRecord::Base.transaction do
+      result = account.create_reconciliation(
+        balance: valuation_params[:amount],
+        date: valuation_params[:date]
+      )
+
+      unless result.success?
+        error_payload = {
+          error: "validation_failed",
+          message: "Valuation could not be created",
+          errors: [ result.error_message ]
+        }
+        raise ActiveRecord::Rollback
+      end
+
       @entry = account.entries.valuations.find_by!(date: valuation_params[:date])
       @valuation = @entry.entryable
 
       if valuation_params[:notes].present?
         unless @entry.update(notes: valuation_params[:notes])
-          render json: {
+          error_payload = {
             error: "validation_failed",
             message: "Valuation could not be created",
             errors: @entry.errors.full_messages
-          }, status: :unprocessable_entity
-          return
+          }
+          raise ActiveRecord::Rollback
         end
       end
 
-      render :show, status: :created
-    else
-      render json: {
-        error: "validation_failed",
-        message: "Valuation could not be created",
-        errors: [ result.error_message ]
-      }, status: :unprocessable_entity
+      create_success = true
     end
+
+    unless create_success
+      render json: error_payload, status: :unprocessable_entity
+      return
+    end
+
+    render :show, status: :created
 
   rescue ActiveRecord::RecordNotFound
     render json: {
