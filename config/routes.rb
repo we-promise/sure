@@ -49,6 +49,9 @@ Rails.application.routes.draw do
       get :connect
       get :setup_accounts
       post :complete_account_setup
+      get :connections
+      delete :delete_connection
+      delete :delete_orphaned_user
     end
   end
 

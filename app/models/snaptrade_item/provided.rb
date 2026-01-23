@@ -131,4 +131,47 @@ module SnaptradeItem::Provided
       broker: broker
     )
   end
+
+  # Fetch all brokerage connections from SnapTrade API
+  # Returns array of connection objects
+  def fetch_connections
+    return [] unless credentials_configured? && user_registered?
+
+    provider = snaptrade_provider
+    creds = snaptrade_credentials
+    provider.list_connections(user_id: creds[:user_id], user_secret: creds[:user_secret])
+  rescue Provider::Snaptrade::ApiError => e
+    Rails.logger.error "SnaptradeItem #{id} - Failed to list connections: #{e.message}"
+    raise
+  end
+
+  # List all SnapTrade users registered under this client ID
+  def list_all_users
+    return [] unless credentials_configured?
+
+    snaptrade_provider.list_users
+  rescue Provider::Snaptrade::ApiError => e
+    Rails.logger.error "SnaptradeItem #{id} - Failed to list users: #{e.message}"
+    []
+  end
+
+  # Find orphaned SnapTrade users (registered but not current user)
+  def orphaned_users
+    return [] unless credentials_configured? && user_registered?
+
+    all_users = list_all_users
+    all_users.reject { |uid| uid == snaptrade_user_id }
+  end
+
+  # Delete an orphaned SnapTrade user and all their connections
+  def delete_orphaned_user(user_id)
+    return false unless credentials_configured?
+    return false if user_id == snaptrade_user_id # Don't delete current user
+
+    snaptrade_provider.delete_user(user_id: user_id)
+    true
+  rescue Provider::Snaptrade::ApiError => e
+    Rails.logger.error "SnaptradeItem #{id} - Failed to delete orphaned user #{user_id}: #{e.message}"
+    false
+  end
 end

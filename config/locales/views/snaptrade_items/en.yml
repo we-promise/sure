@@ -39,6 +39,12 @@ en:
       success: "Successfully linked to SnapTrade account."
       failed: "Failed to link account: %{message}"
       not_found: "Account not found."
+    delete_connection:
+      success: "Connection deleted successfully. One slot freed up."
+      failed: "Failed to delete connection: %{message}"
+    delete_orphaned_user:
+      success: "Orphaned registration deleted successfully."
+      failed: "Failed to delete orphaned registration."
     setup_accounts:
       title: "Set Up SnapTrade Accounts"
       header: "Set Up Your SnapTrade Accounts"
@@ -117,6 +123,29 @@ en:
       setup_accounts_button: "Setup Accounts"
       connect_button: "Connect Brokerage"
       connected_brokerages: "Connected:"
+      manage_connections: "Manage Connections"
+      connection_limit_info: "SnapTrade free tier allows 5 brokerage connections. Delete unused connections to free up slots."
+      loading_connections: "Loading connections..."
+      connections_error: "Failed to load connections: %{message}"
+      accounts_count:
+        one: "%{count} account"
+        other: "%{count} accounts"
+      orphaned_connection: "Orphaned connection (not synced locally)"
+      needs_linking: "needs linking"
+      no_connections: "No brokerage connections found."
+      delete_connection: "Delete"
+      delete_connection_title: "Delete Brokerage Connection?"
+      delete_connection_body: "This will permanently remove the %{brokerage} connection from SnapTrade. All accounts from this brokerage will be unlinked. You'll need to reconnect to sync these accounts again."
+      delete_connection_confirm: "Delete Connection"
+      orphaned_users_title:
+        one: "%{count} orphaned registration"
+        other: "%{count} orphaned registrations"
+      orphaned_users_description: "These are previous SnapTrade user registrations that are using your connection slots. Delete them to free up slots."
+      orphaned_user: "Orphaned Registration"
+      delete_orphaned_user: "Delete"
+      delete_orphaned_user_title: "Delete Orphaned Registration?"
+      delete_orphaned_user_body: "This will permanently delete this orphaned SnapTrade user and all their brokerage connections, freeing up connection slots."
+      delete_orphaned_user_confirm: "Delete Registration"
 
   snaptrade_item:
     sync_status:
