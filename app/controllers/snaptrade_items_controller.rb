@@ -17,7 +17,7 @@ class SnaptradeItemsController < ApplicationController
 
   def create
     @snaptrade_item = Current.family.snaptrade_items.build(snaptrade_item_params)
-    @snaptrade_item.name ||= "SnapTrade Connection"
+    @snaptrade_item.name ||= t("snaptrade_items.default_name")
 
     if @snaptrade_item.save
       # Register user with SnapTrade after saving credentials
@@ -251,7 +251,7 @@ class SnaptradeItemsController < ApplicationController
     authorization_id = params[:authorization_id]
 
     if authorization_id.blank?
-      redirect_to settings_providers_path, alert: t(".failed", message: "Missing authorization ID")
+      redirect_to settings_providers_path, alert: t(".failed", message: t(".missing_authorization_id"))
       return
     end
 

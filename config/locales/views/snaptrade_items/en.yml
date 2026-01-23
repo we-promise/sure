@@ -1,5 +1,6 @@
 en:
   snaptrade_items:
+    default_name: "SnapTrade Connection"
     create:
       success: "Successfully configured SnapTrade."
     update:
@@ -44,6 +45,7 @@ en:
     delete_connection:
       success: "Connection deleted successfully. One slot freed up."
       failed: "Failed to delete connection: %{message}"
+      missing_authorization_id: "Missing authorization ID"
     delete_orphaned_user:
       success: "Orphaned registration deleted successfully."
       failed: "Failed to delete orphaned registration."
