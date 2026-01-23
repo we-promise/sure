@@ -128,6 +128,18 @@ class InstallmentTest < ActiveSupport::TestCase
     assert_equal 1200, installment.calculate_current_balance
   end
 
+  test "remaining_principal_money wraps the calculated balance" do
+    installment = @account.create_installment!(
+      installment_cost: 200,
+      total_term: 6,
+      current_term: 0,
+      payment_period: "monthly",
+      first_payment_date: Date.current,
+    )
+
+    assert_equal Money.new(installment.calculate_current_balance, "USD"), installment.remaining_principal_money
+  end
+
   test "calculate_current_balance returns remaining balance based on schedule" do
     # Started 6 months ago, currently on payment 3 of 6
     installment = @account.create_installment!(
@@ -402,5 +414,26 @@ class InstallmentTest < ActiveSupport::TestCase
     )
 
     assert_equal "USD", installment.currency
+  end
+
+  test "installment payment transactions use loan_payment kind for report inclusion" do
+    installment = @account.create_installment!(
+      installment_cost: 100,
+      total_term: 12,
+      current_term: 6,
+      first_payment_date: Date.current,
+      payment_period: "monthly"
+    )
+
+    Installment::Creator.new(installment).call
+
+    transactions = @account.transactions.where("extra->>'installment_id' = ?", installment.id.to_s)
+
+    assert transactions.any?, "Expected installment transactions to be created"
+    assert transactions.all?(&:loan_payment?), "Expected all transactions to be loan_payment kind"
+
+    # Verify these would be included in reports (not in exclusion list)
+    excluded_kinds = %w[funds_movement one_time cc_payment]
+    assert transactions.none? { |t| excluded_kinds.include?(t.kind) }
   end
 end

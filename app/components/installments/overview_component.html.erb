@@ -11,7 +11,6 @@
       <div class="bg-green-600 h-2 rounded-full transition-all" style="width: <%= progress_percentage %>%"></div>
     </div>
   </div>
-
   <%# Next Payment %>
   <% if installment.next_payment_date && !installment.completed? %>
     <div class="flex justify-between items-center py-2 border-t border-surface-inset">
@@ -22,7 +21,6 @@
       </div>
     </div>
   <% end %>
-
   <%# Breakdown %>
   <div class="border-t border-surface-inset pt-4 space-y-2">
     <div class="flex justify-between">
@@ -31,10 +29,9 @@
     </div>
     <div class="flex justify-between">
       <span class="text-secondary"><%= t("installments.overview.remaining") %></span>
-      <span class="font-medium text-primary"><%= helpers.format_money(remaining, currency: currency) %></span>
+      <span class="font-medium text-primary"><%= helpers.format_money(remaining_principal_money) %></span>
     </div>
   </div>
-
   <%# Edit Button %>
   <%= link_to edit_loan_path(installment.account),
               class: "btn btn-secondary w-full mt-4 inline-flex items-center justify-center",
