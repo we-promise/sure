@@ -47,7 +47,12 @@ x-rails-env: &rails_env
   DB_HOST: db
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
+  # AI Provider Configuration (OpenAI or Ollama)
+  # For OpenAI: Set OPENAI_ACCESS_TOKEN to your API key
+  # For Ollama: Set OPENAI_ACCESS_TOKEN=ollama, OPENAI_URI_BASE=http://host.docker.internal:11434/v1
   OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN:-}
+  OPENAI_URI_BASE: ${OPENAI_URI_BASE:-}
+  OPENAI_MODEL: ${OPENAI_MODEL:-}
   # Add any additional env vars from your .env file here or use env_file
 
 services:
