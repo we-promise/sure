@@ -50,9 +50,9 @@ x-rails-env: &rails_env
   # AI Provider Configuration (OpenAI or Ollama)
   # For OpenAI: Set OPENAI_ACCESS_TOKEN to your API key
   # For Ollama: Set OPENAI_ACCESS_TOKEN=ollama, OPENAI_URI_BASE=http://host.docker.internal:11434/v1
-  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN:-}
-  OPENAI_URI_BASE: ${OPENAI_URI_BASE:-}
-  OPENAI_MODEL: ${OPENAI_MODEL:-}
+  OPENAI_ACCESS_TOKEN: ollama
+  OPENAI_URI_BASE: http://host.docker.internal:11434/v1
+  OPENAI_MODEL: llama3.1:8b
   # Add any additional env vars from your .env file here or use env_file
 
 services:

@@ -1,0 +1,118 @@
+# ===========================================================================
+# Local Docker Compose - Build Your Own Image
+# ===========================================================================
+#
+# This file builds the Sure application from source and runs it locally
+# with persistent storage for PostgreSQL, Redis, and app data.
+#
+# Usage:
+#   ./scripts/docker-start.sh    # Build and start all services
+#   ./scripts/docker-stop.sh     # Stop all services
+#   ./scripts/docker-reset.sh    # Reset database (destructive)
+#
+# ===========================================================================
+
+x-db-env: &db_env
+  POSTGRES_USER: ${POSTGRES_USER:-sure_local}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure_local_password}
+  POSTGRES_DB: ${POSTGRES_DB:-sure_local}
+
+x-rails-env: &rails_env
+  <<: *db_env
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13}
+  SELF_HOSTED: "true"
+  RAILS_FORCE_SSL: "false"
+  RAILS_ASSUME_SSL: "false"
+  RAILS_ENV: "production"
+  DB_HOST: db
+  DB_PORT: 5432
+  REDIS_URL: redis://redis:6379/1
+  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN:-}
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sure:local
+    container_name: sure-web
+    volumes:
+      - app-storage:/rails/storage
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      <<: *rails_env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sure_local_net
+
+  worker:
+    image: sure:local
+    container_name: sure-worker
+    command: bundle exec sidekiq
+    volumes:
+      - app-storage:/rails/storage
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *rails_env
+    networks:
+      - sure_local_net
+
+  db:
+    image: postgres:16
+    container_name: sure-db
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      <<: *db_env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - sure_local_net
+
+  redis:
+    image: redis:latest
+    container_name: sure-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6379:6379"
+    networks:
+      - sure_local_net
+
+volumes:
+  app-storage:
+    name: sure_app_storage
+  postgres-data:
+    name: sure_postgres_data
+  redis-data:
+    name: sure_redis_data
+
+networks:
+  sure_local_net:
+    driver: bridge
+    name: sure_local_net
