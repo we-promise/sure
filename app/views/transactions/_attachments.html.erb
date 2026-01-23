@@ -16,7 +16,10 @@
               multiple: true,
               accept: Transaction::ALLOWED_CONTENT_TYPES.join(','),
               class: "block w-full text-sm border border-primary rounded-lg p-2 bg-container text-primary file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-surface-inset file:text-primary hover:file:bg-surface-inset-hover cursor-pointer",
-              data: { attachment_upload_target: "fileInput" } %>
+              data: {
+                attachment_upload_target: "fileInput",
+                action: "change->attachment-upload#updateSubmitButton"
+              } %>
         <p class="text-xs text-secondary mt-1">
           <%= t(".select_up_to",
                 count: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION,

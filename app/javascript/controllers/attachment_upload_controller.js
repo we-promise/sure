@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-export default class extends Controller {
+export default class AttachmentUploadController extends Controller {
   static targets = ["fileInput", "submitButton"]
   static values = {
     maxFiles: Number,
@@ -9,10 +9,6 @@ export default class extends Controller {
 
   connect() {
     this.updateSubmitButton()
-  }
-
-  fileInputTargetConnected() {
-    this.fileInputTarget.addEventListener("change", this.updateSubmitButton.bind(this))
   }
 
   updateSubmitButton() {
