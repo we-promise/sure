@@ -51,8 +51,7 @@ class Installment < ApplicationRecord
   def calculate_current_balance
     return calculate_original_balance if current_term.zero?
 
-    effective_term = [ current_term, payments_scheduled_to_date ].max
-    payments_remaining_count = [ total_term - effective_term, 0 ].max
+    payments_remaining_count = [ total_term - payments_scheduled_to_date, 0 ].max
     payments_remaining_count * installment_cost
   end
 
