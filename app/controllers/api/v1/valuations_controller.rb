@@ -103,6 +103,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       end
 
       update_success = false
+      error_payload = nil
 
       ActiveRecord::Base.transaction do
         result = @entry.account.update_reconciliation(
@@ -112,11 +113,11 @@ class Api::V1::ValuationsController < Api::V1::BaseController
         )
 
         unless result.success?
-          render json: {
+          error_payload = {
             error: "validation_failed",
             message: "Valuation could not be updated",
             errors: [ result.error_message ]
-          }, status: :unprocessable_entity
+          }
           raise ActiveRecord::Rollback
         end
 
@@ -124,6 +125,11 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
         if valuation_params[:notes].present?
           unless @entry.update(notes: valuation_params[:notes])
+            error_payload = {
+              error: "validation_failed",
+              message: "Valuation could not be updated",
+              errors: @entry.errors.full_messages
+            }
             raise ActiveRecord::Rollback
           end
         end
@@ -132,12 +138,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       end
 
       unless update_success
-        @entry.reload
-        render json: {
-          error: "validation_failed",
-          message: "Valuation could not be updated",
-          errors: @entry.errors.full_messages
-        }, status: :unprocessable_entity
+        render json: error_payload, status: :unprocessable_entity
         return
       end
 
