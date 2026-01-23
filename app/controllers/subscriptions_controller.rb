@@ -1,6 +1,6 @@
 class SubscriptionsController < ApplicationController
   # Disables subscriptions for self hosted instances
-  guard_feature if: -> { self_hosted? }
+  before_action :guard_self_hosted, if: -> { self_hosted? }
 
   # Disables Stripe portal for users without stripe_customer_id (demo users, manually created users)
   guard_feature unless: -> { Current.family.can_manage_subscription? }, only: :show
@@ -61,6 +61,10 @@ class SubscriptionsController < ApplicationController
   end
 
   private
+    def guard_self_hosted
+      render plain: "Feature disabled: subscriptions are not available in self-hosted mode", status: :forbidden
+    end
+
     def stripe
       @stripe ||= Provider::Registry.get_provider(:stripe)
     end

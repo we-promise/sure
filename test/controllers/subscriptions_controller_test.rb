@@ -11,9 +11,10 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "disabled for self hosted users" do
-    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    post subscription_path
-    assert_response :forbidden
+    with_self_hosting do
+      post subscription_path
+      assert_response :forbidden
+    end
   end
 
   # Trial subscriptions are managed internally and do NOT go through Stripe
