@@ -27,7 +27,7 @@
   </div>
 <% end %>
 
-<div class="w-full space-y-6 pb-24" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
+<div class="w-full space-y-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
   <% if Current.family.accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <% next unless section[:visible] %>
@@ -35,7 +35,7 @@
         class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
         data-dashboard-sortable-target="section"
         data-section-key="<%= section[:key] %>"
-        data-controller="dashboard-section"
+        data-controller="dashboard-section<%= ' cashflow-expand' if section[:key] == 'cashflow_sankey' %>"
         data-dashboard-section-section-key-value="<%= section[:key] %>"
         data-dashboard-section-collapsed-value="<%= Current.user.dashboard_section_collapsed?(section[:key]) %>"
         draggable="true"
@@ -65,12 +65,23 @@
               <%= t(section[:title]) %>
             </h2>
           </div>
-          <button
-            type="button"
-            class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
-            aria-label="<%= t("pages.dashboard.drag_to_reorder") %>">
-            <%= icon("grip-vertical", size: "sm") %>
-          </button>
+          <div class="flex items-center gap-1">
+            <% if section[:key] == "cashflow_sankey" && section[:locals][:sankey_data][:links].present? %>
+              <button
+                type="button"
+                class="text-secondary hover:text-primary transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 flex items-center justify-center w-5 h-5 ml-auto lg:ml-0"
+                data-action="click->cashflow-expand#open"
+                aria-label="<%= t("global.expand") %>">
+                <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
+              </button>
+            <% end %>
+            <button
+              type="button"
+              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100 hidden lg:block"
+              aria-label="<%= t("pages.dashboard.drag_to_reorder") %>">
+              <%= icon("grip-vertical", size: "sm") %>
+            </button>
+          </div>
         </div>
         <div class="py-4" data-dashboard-section-target="content">
           <%= render partial: section[:partial], locals: section[:locals] %>

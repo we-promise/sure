@@ -105,6 +105,32 @@ module SyncStats
       holdings_stats
     end
 
+    # Collects trades statistics (investment activities like buy/sell).
+    #
+    # @param sync [Sync] The sync record to update
+    # @param account_ids [Array<String>] The account IDs to count trades for
+    # @param source [String] The trade source (e.g., "snaptrade", "plaid")
+    # @param window_start [Time, nil] Start of the sync window (defaults to sync.created_at or 30 minutes ago)
+    # @param window_end [Time, nil] End of the sync window (defaults to Time.current)
+    # @return [Hash] The trades stats that were collected
+    def collect_trades_stats(sync, account_ids:, source:, window_start: nil, window_end: nil)
+      return {} unless sync.respond_to?(:sync_stats)
+      return {} if account_ids.empty?
+
+      window_start ||= sync.created_at || 30.minutes.ago
+      window_end ||= Time.current
+
+      trade_scope = Entry.where(account_id: account_ids, source: source, entryable_type: "Trade")
+      trades_imported = trade_scope.where(created_at: window_start..window_end).count
+
+      trades_stats = {
+        "trades_imported" => trades_imported
+      }
+
+      merge_sync_stats(sync, trades_stats)
+      trades_stats
+    end
+
     # Collects health/error statistics.
     #
     # @param sync [Sync] The sync record to update
@@ -178,6 +204,37 @@ module SyncStats
       return unless sync.respond_to?(:sync_stats)
 
       sync.update!(sync_stats: { "cleared_at" => Time.current.iso8601 })
+    end
+
+    # Collects statistics about entries that were skipped during sync.
+    # Skipped entries are those protected from sync overwrites (user-modified,
+    # import-locked, excluded, or converted to different types).
+    #
+    # @param sync [Sync] The sync record to update
+    # @param skipped_entries [Array<Hash>] Array of skipped entry info with :id, :name, :reason, :account_name
+    # @return [Hash] The skip stats that were collected
+    def collect_skip_stats(sync, skipped_entries:)
+      return {} unless sync.respond_to?(:sync_stats)
+      return {} if skipped_entries.blank?
+
+      # Group by reason for summary breakdown
+      by_reason = skipped_entries.group_by { |e| e[:reason] }
+
+      skip_stats = {
+        "tx_skipped" => skipped_entries.size,
+        "skip_summary" => by_reason.transform_values(&:size),
+        "skip_details" => skipped_entries.first(20).map do |e|
+          {
+            "entry_id" => e[:id].to_s,
+            "name" => e[:name],
+            "reason" => e[:reason],
+            "account_name" => e[:account_name]
+          }
+        end
+      }
+
+      merge_sync_stats(sync, skip_stats)
+      skip_stats
     end
 
     private

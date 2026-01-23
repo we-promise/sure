@@ -1,0 +1,16 @@
+---
+nl:
+  oidc_accounts:
+    link:
+      account_creation_disabled: Nieuwe accountaanmaak via single sign-on is uitgeschakeld. Neem contact op met een beheerder om uw account aan te maken.
+    new_user:
+      title: Voltooi uw account
+      heading: Account aanmaken
+      description: Bevestig uw gegevens om het aanmaken van uw account met uw %{provider} identiteit te voltooien.
+      email_label: E-mail (van SSO-provider)
+      first_name_label: Voornaam
+      first_name_placeholder: Voer uw voornaam in
+      last_name_label: Achternaam
+      last_name_placeholder: Voer uw achternaam in
+      submit: Account aanmaken
+      cancel: Annuleren

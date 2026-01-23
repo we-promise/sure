@@ -1,6 +1,6 @@
-<%# locals: (transaction:) %>
+<%# locals: (transaction:, variant:) %>
 
-<div id="<%= dom_id(transaction, "category_menu") %>">
+<div id="<%= dom_id(transaction, "category_menu_#{variant}") %>">
   <% if transaction.transfer&.categorizable? || transaction.transfer.nil? %>
     <%= render "categories/menu", transaction: transaction %>
   <% else %>

@@ -11,6 +11,9 @@ class AccountsController < ApplicationController
     @lunchflow_items = family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts)
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
+    @mercury_items = family.mercury_items.ordered.includes(:syncs, :mercury_accounts)
+    @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
+    @snaptrade_items = family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts)
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -38,7 +41,7 @@ class AccountsController < ApplicationController
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological
 
-    @pagy, @entries = pagy(entries, limit: params[:per_page] || "10")
+    @pagy, @entries = pagy(entries, limit: safe_per_page)
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
@@ -110,8 +113,15 @@ class AccountsController < ApplicationController
           Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
         end
 
-        # Capture SimplefinAccount before clearing FK (so we can destroy it)
+        # Capture provider accounts before clearing links (so we can destroy them)
         simplefin_account_to_destroy = @account.simplefin_account
+
+        # Capture SnaptradeAccounts linked via AccountProvider
+        # Destroying them will trigger delete_snaptrade_connection callback to free connection slots
+        snaptrade_accounts_to_destroy = @account.account_providers
+          .where(provider_type: "SnaptradeAccount")
+          .map { |ap| SnaptradeAccount.find_by(id: ap.provider_id) }
+          .compact
 
         # Remove new system links (account_providers join table)
         @account.account_providers.destroy_all
@@ -125,6 +135,11 @@ class AccountsController < ApplicationController
         # - SimplefinAccount only caches API data which is regenerated on reconnect
         # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
         simplefin_account_to_destroy&.destroy!
+
+        # Destroy SnaptradeAccount records to free up SnapTrade connection slots
+        # The before_destroy callback will delete the connection from SnapTrade API
+        # if no other accounts share the same authorization
+        snaptrade_accounts_to_destroy.each(&:destroy!)
       end
 
       redirect_to accounts_path, notice: t("accounts.unlink.success")
@@ -151,7 +166,9 @@ class AccountsController < ApplicationController
     )
 
     # Build available providers list with paths resolved for this specific account
-    @available_providers = provider_configs.map do |config|
+    # Filter out providers that don't support linking to existing accounts
+    @available_providers = provider_configs.filter_map do |config|
+      next unless config[:existing_account_path].present?
       {
         name: config[:name],
         key: config[:key],
@@ -237,6 +254,28 @@ class AccountsController < ApplicationController
       @coinstats_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Mercury sync stats
+      @mercury_sync_stats_map = {}
+      @mercury_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Coinbase sync stats
+      @coinbase_sync_stats_map = {}
+      @coinbase_unlinked_count_map = {}
+      @coinbase_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @coinbase_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+
+        # Count unlinked accounts
+        count = item.coinbase_accounts
+          .left_joins(:account_provider)
+          .where(account_providers: { id: nil })
+          .count
+        @coinbase_unlinked_count_map[item.id] = count
       end
     end
 end

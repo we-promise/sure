@@ -1,0 +1,73 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>Visit <a href="https://mercury.com" target="_blank" rel="noopener noreferrer" class="link">Mercury</a> and log in to your account</li>
+      <li>Go to Settings > Developer > API Tokens</li>
+      <li>Create a new API token with "Read Only" access</li>
+      <li><strong>Important:</strong> Add your server's IP address to the token's whitelist</li>
+      <li>Copy the <strong>full token</strong> (including the <code>secret-token:</code> prefix) and paste it below</li>
+      <li>After a successful connection, go to the Accounts tab to set up new accounts</li>
+    </ol>
+
+    <p class="text-primary font-medium">Field descriptions:</p>
+    <ul>
+      <li><strong>API Token:</strong> Your full Mercury API token including the <code>secret-token:</code> prefix (required)</li>
+      <li><strong>Base URL:</strong> Mercury API URL (optional, defaults to https://api.mercury.com/api/v1)</li>
+    </ul>
+
+    <p class="text-sm text-muted-foreground mt-2">
+      <strong>Note:</strong> For sandbox testing, use <code>https://api-sandbox.mercury.com/api/v1</code> as the Base URL.
+      Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard.
+    </p>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <%
+    # Get or initialize a mercury_item for this family
+    # - If family has an item WITH credentials, use it (for updates)
+    # - If family has an item WITHOUT credentials, use it (to add credentials)
+    # - If family has no items at all, create a new one
+    mercury_item = Current.family.mercury_items.first_or_initialize(name: "Mercury Connection")
+    is_new_record = mercury_item.new_record?
+  %>
+
+  <%= styled_form_with model: mercury_item,
+                       url: is_new_record ? mercury_items_path : mercury_item_path(mercury_item),
+                       scope: :mercury_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :token,
+                        label: "Token",
+                        placeholder: is_new_record ? "Paste token here" : "Enter new token to update",
+                        type: :password %>
+
+    <%= form.text_field :base_url,
+                        label: "Base Url (Optional)",
+                        placeholder: "https://api.mercury.com/api/v1 (default)",
+                        value: mercury_item.base_url %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:mercury_items] || @mercury_items || Current.family.mercury_items.where.not(token: [nil, ""]) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured</p>
+    <% end %>
+  </div>
+</div>

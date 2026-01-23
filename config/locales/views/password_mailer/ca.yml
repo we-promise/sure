@@ -3,7 +3,8 @@ ca:
   password_mailer:
     password_reset:
       cta: Restableix la contrasenya
-      ignore_if_not_requested: Si no has fet aquesta sol·licitud, pots ignorar aquest correu electrònic.
-      request_made: S'ha sol·licitat restablir la contrasenya de %{product_name}. Fes clic a l'enllaç per restablir-la.
-      subject: '%{product_name}: Restableix la contrasenya'
-
+      ignore_if_not_requested: Si no has fet aquesta sol·licitud, pots ignorar aquest
+        correu electrònic.
+      request_made: S'ha sol·licitat restablir la contrasenya de %{product_name}.
+        Fes clic a l'enllaç per restablir-la.
+      subject: "%{product_name}: Restableix la contrasenya"

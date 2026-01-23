@@ -1,0 +1,13 @@
+---
+nl:
+  category:
+    deletions:
+      create:
+        success: Transactiecategorie succesvol verwijderd
+      new:
+        category: Categorie
+        delete_and_leave_uncategorized: Verwijder "%{category_name}" en laat ongesorteerd
+        delete_and_recategorize: Verwijder "%{category_name}" en wijs nieuwe categorie toe
+        delete_category: Categorie verwijderen?
+        explanation: Door deze categorie te verwijderen, worden alle transacties met de categorie "%{category_name}" ongesorteerd. In plaats van ze ongesorteerd te laten, kunt u hieronder ook een nieuwe categorie toewijzen.
+        replacement_category_prompt: Selecteer categorie

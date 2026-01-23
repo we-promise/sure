@@ -1,5 +1,9 @@
 ---
 en:
+  views:
+    settings:
+      payments:
+        renewal: "Your contribution continues on %{date}."
   settings:
     ai_prompts:
       show:
@@ -16,11 +20,11 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
-    billings:
+    payments:
       show:
-        page_title: Billing
-        subscription_subtitle: Update your subscription and billing details
-        subscription_title: Manage subscription
+        page_title: Payments
+        subscription_subtitle: Update your credit card details
+        subscription_title: Manage contributions
     preferences:
       show:
         country: Country
@@ -111,11 +115,12 @@ en:
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
       api_key_label: API Key
-      billing_label: Billing
+      payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Import/Export
+      imports_label: Imports
+      exports_label: Exports
       logout: Logout
       merchants_label: Merchants
       guides_label: Guides
@@ -139,3 +144,21 @@ en:
       choose: Upload photo
       choose_label: (optional)
       change: Change photo
+    providers:
+      show:
+        coinbase_title: Coinbase
+      coinbase_panel:
+        setup_instructions: "To connect Coinbase:"
+        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Coinbase API Settings</a>
+        step2: Create a new API key with read-only permissions (view accounts, view transactions)
+        step3: Copy your API key and API secret and paste them below
+        api_key_label: API Key
+        api_key_placeholder: Enter your Coinbase API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Enter your Coinbase API secret
+        connect_button: Connect Coinbase
+        syncing: Syncing...
+        sync: Sync
+        disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
+        status_connected: Coinbase is connected and syncing your crypto holdings.
+        status_not_connected: Not connected. Enter your API credentials above to get started.

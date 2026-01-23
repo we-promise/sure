@@ -2,6 +2,59 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :mercury_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+      get :callback
+    end
+
+    member do
+      post :sync
+      get :connect
+      get :setup_accounts
+      post :complete_account_setup
+      get :connections
+      delete :delete_connection
+      delete :delete_orphaned_user
+    end
+  end
+
   # CoinStats routes
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
@@ -99,7 +152,7 @@ Rails.application.routes.draw do
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
     end
-    resource :billing, only: :show
+    resource :payment, only: :show
     resource :security, only: :show
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
@@ -197,6 +250,8 @@ Rails.application.routes.draw do
     end
 
     member do
+      get :convert_to_trade
+      post :create_trade_from_transaction
       post :mark_as_recurring
       post :merge_duplicate
       post :dismiss_duplicate
@@ -296,6 +351,9 @@ Rails.application.routes.draw do
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
       resources :categories, only: [ :index, :show ]
+      resources :merchants, only: %i[index show]
+      resources :tags, only: %i[index show create update destroy]
+
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]

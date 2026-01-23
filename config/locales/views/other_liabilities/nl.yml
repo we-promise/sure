@@ -1,0 +1,7 @@
+---
+nl:
+  other_liabilities:
+    edit:
+      edit: "%{account} bewerken"
+    new:
+      title: Voer verplichtingsgegevens in

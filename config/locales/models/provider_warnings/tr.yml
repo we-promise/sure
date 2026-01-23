@@ -1,0 +1,4 @@
+---
+tr:
+  provider_warnings:
+    limited_investment_data: "Bu sağlayıcıdan alınan yatırım verileri sınırlıdır. İşlem etiketleri (Al, Sat, Temettü) mevcut olmadığından bütçe doğruluğu etkilenebilir. Yatırım işlemlerini hariç tutmak veya kategorize etmek için kurallar oluşturmayı düşünün."

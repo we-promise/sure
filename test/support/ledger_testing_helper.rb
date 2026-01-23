@@ -77,7 +77,8 @@ module LedgerTestingHelper
           qty: entry_data[:qty],
           security: security,
           price: entry_data[:price],
-          currency: currency
+          currency: currency,
+          investment_activity_label: entry_data[:qty] > 0 ? "Buy" : "Sell"
         )
 
         created_account.entries.create!(
