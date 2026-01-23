@@ -57,7 +57,14 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       @valuation = @entry.entryable
 
       if valuation_params[:notes].present?
-        @entry.update!(notes: valuation_params[:notes])
+        unless @entry.update(notes: valuation_params[:notes])
+          render json: {
+            error: "validation_failed",
+            message: "Valuation could not be created",
+            errors: @entry.errors.full_messages
+          }, status: :unprocessable_entity
+          return
+        end
       end
 
       render :show, status: :created
@@ -95,29 +102,57 @@ class Api::V1::ValuationsController < Api::V1::BaseController
         return
       end
 
-      result = @entry.account.update_reconciliation(
-        @entry,
-        balance: valuation_params[:amount],
-        date: valuation_params[:date]
-      )
+      update_success = false
 
-      if result.success?
-        @entry.reload
-        if valuation_params[:notes].present?
-          @entry.update!(notes: valuation_params[:notes])
+      ActiveRecord::Base.transaction do
+        result = @entry.account.update_reconciliation(
+          @entry,
+          balance: valuation_params[:amount],
+          date: valuation_params[:date]
+        )
+
+        unless result.success?
+          render json: {
+            error: "validation_failed",
+            message: "Valuation could not be updated",
+            errors: [ result.error_message ]
+          }, status: :unprocessable_entity
+          raise ActiveRecord::Rollback
         end
-        @valuation = @entry.entryable
-        render :show
-      else
+
+        @entry.reload
+
+        if valuation_params[:notes].present?
+          unless @entry.update(notes: valuation_params[:notes])
+            raise ActiveRecord::Rollback
+          end
+        end
+
+        update_success = true
+      end
+
+      unless update_success
+        @entry.reload
         render json: {
           error: "validation_failed",
           message: "Valuation could not be updated",
-          errors: [ result.error_message ]
+          errors: @entry.errors.full_messages
         }, status: :unprocessable_entity
+        return
       end
+
+      @valuation = @entry.entryable
+      render :show
     else
       if valuation_params[:notes].present?
-        @entry.update!(notes: valuation_params[:notes])
+        unless @entry.update(notes: valuation_params[:notes])
+          render json: {
+            error: "validation_failed",
+            message: "Valuation could not be updated",
+            errors: @entry.errors.full_messages
+          }, status: :unprocessable_entity
+          return
+        end
       end
       @entry.reload
       @valuation = @entry.entryable
