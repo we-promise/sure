@@ -4,6 +4,7 @@ en:
     settings:
       payments:
         renewal: "Your contribution continues on %{date}."
+        cancellation: "Your contribution ends on %{date}."
   settings:
     ai_prompts:
       show:
