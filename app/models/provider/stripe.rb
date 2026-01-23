@@ -56,7 +56,7 @@ class Provider::Stripe
     CheckoutSessionResult.new(success?: false, subscription_id: nil)
   end
 
-  def create_billing_portal_session_url(customer_id:, return_url:)
+  def create_payment_portal_session_url(customer_id:, return_url:)
     client.v1.billing_portal.sessions.create(
       customer: customer_id,
       return_url: return_url

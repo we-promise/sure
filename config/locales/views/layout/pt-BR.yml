@@ -1,6 +1,13 @@
 ---
 pt-BR:
   layouts:
+    application:
+      nav:
+        assistant: Assistente
+        budgets: Orçamentos
+        home: Início
+        reports: Relatórios
+        transactions: Transações
     auth.sign_up:
       existing_account: Já tem uma conta?
       no_account: Novo no %{product_name}?
@@ -10,3 +17,7 @@ pt-BR:
       footer:
         privacy_policy: Política de Privacidade
         terms_of_service: Termos de Serviço
+    trial:
+      open_demo: Demo aberta
+      data_deleted_in_days: Os dados serão excluídos em %{days} dias
+      contribute: Contribuir

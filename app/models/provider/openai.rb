@@ -339,19 +339,23 @@ class Provider::Openai < Provider
       if function_results.any?
         # Build assistant message with tool_calls
         tool_calls = function_results.map do |fn_result|
+          # Convert arguments to JSON string if it's not already a string
+          arguments = fn_result[:arguments]
+          arguments_str = arguments.is_a?(String) ? arguments : arguments.to_json
+
           {
             id: fn_result[:call_id],
             type: "function",
             function: {
               name: fn_result[:name],
-              arguments: fn_result[:arguments]
+              arguments: arguments_str
             }
           }
         end
 
         messages << {
           role: "assistant",
-          content: nil,
+          content: "",  # Some OpenAI-compatible APIs require string, not null
           tool_calls: tool_calls
         }
 
@@ -410,7 +414,8 @@ class Provider::Openai < Provider
         name: name,
         input: input,
         session_id: session_id,
-        user_id: user_identifier
+        user_id: user_identifier,
+        environment: Rails.env
       )
     rescue => e
       Rails.logger.warn("Langfuse trace creation failed: #{e.message}")

@@ -1,0 +1,7 @@
+---
+zh-CN:
+  other_liabilities:
+    edit:
+      edit: 编辑%{account}
+    new:
+      title: 请输入负债详情

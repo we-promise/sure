@@ -1,0 +1,7 @@
+---
+ca:
+  models:
+    category:
+      other_investments: Altres inversions
+      uncategorized: Sense categoria
+      investment_contributions: Contribucions d'inversió

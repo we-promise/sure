@@ -4,6 +4,47 @@
   <% end %>
 
   <% dialog.with_body do %>
+    <%# Potential duplicate alert %>
+    <% if @entry.transaction.has_potential_duplicate? %>
+      <% potential_match = @entry.transaction.potential_duplicate_entry %>
+      <% if potential_match %>
+        <div class="mx-4 my-3 p-4 rounded-lg border border-warning bg-warning/5">
+          <div class="flex items-start gap-3">
+            <%= icon "alert-triangle", size: "md", color: "warning" %>
+            <div class="flex-1 space-y-2">
+              <h4 class="text-sm font-medium text-primary"><%= t("transactions.show.potential_duplicate_title") %></h4>
+              <p class="text-sm text-secondary"><%= t("transactions.show.potential_duplicate_description") %></p>
+
+              <div class="mt-3 p-3 rounded bg-container border border-primary">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-primary"><%= potential_match.name %></p>
+                    <p class="text-xs text-secondary"><%= potential_match.date.strftime("%b %d, %Y") %> • <%= potential_match.account.name %></p>
+                  </div>
+                  <p class="text-sm font-medium <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
+                    <%= format_money(-potential_match.amount_money) %>
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 mt-3">
+                <%= button_to t("transactions.show.merge_duplicate"),
+                    merge_duplicate_transaction_path(@entry.transaction),
+                    method: :post,
+                    class: "btn btn--primary btn--sm",
+                    data: { turbo_frame: "_top" } %>
+                <%= button_to t("transactions.show.keep_both"),
+                    dismiss_duplicate_transaction_path(@entry.transaction),
+                    method: :post,
+                    class: "btn btn--outline btn--sm",
+                    data: { turbo_frame: "_top" } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4">
         <%= styled_form_with model: @entry,
@@ -69,7 +110,7 @@
             <%= f.fields_for :entryable do |ef| %>
 
               <%= ef.collection_select :merchant_id,
-                    [@entry.transaction.merchant, *Current.family.merchants.alphabetically].compact,
+                    Current.family.available_merchants.alphabetically,
                     :id, :name,
                     { include_blank: t(".none"),
                       label: t(".merchant_label"),
@@ -153,14 +194,41 @@
               data: { controller: "auto-submit-form" } do |f| %>
           <div class="flex cursor-pointer items-center gap-4 justify-between">
             <div class="text-sm space-y-1">
-              <h4 class="text-primary">Exclude</h4>
-              <p class="text-secondary">Excluded transactions will be removed from budgeting calculations and reports.</p>
+              <h4 class="text-primary"><%= t(".exclude") %></h4>
+              <p class="text-secondary"><%= t(".exclude_description") %></p>
             </div>
 
             <%= f.toggle :excluded, { data: { auto_submit_form_target: "auto" } } %>
           </div>
         <% end %>
       </div>
+
+      <% if @entry.account.investment? || @entry.account.crypto? %>
+        <div class="pb-4">
+          <%= styled_form_with model: @entry,
+                url: transaction_path(@entry),
+                class: "p-3",
+                data: { controller: "auto-submit-form" } do |f| %>
+            <%= f.fields_for :entryable do |ef| %>
+              <div class="flex cursor-pointer items-center gap-4 justify-between">
+                <div class="text-sm space-y-1">
+                  <h4 class="text-primary"><%= t(".activity_type") %></h4>
+                  <p class="text-secondary"><%= t(".activity_type_description") %></p>
+                </div>
+
+                <%= ef.select :investment_activity_label,
+                      options_for_select(
+                        [["—", nil]] + Transaction::ACTIVITY_LABELS.map { |l| [t("transactions.activity_labels.#{l.parameterize(separator: '_')}"), l] },
+                        @entry.entryable.investment_activity_label
+                      ),
+                      { label: false },
+                      { class: "form-field__input border border-secondary rounded-lg px-3 py-1.5 max-w-40 text-sm",
+                        data: { auto_submit_form_target: "auto" } } %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
 
       <div class="pb-4">
         <%= styled_form_with model: @entry,
@@ -170,8 +238,8 @@
           <%= f.fields_for :entryable do |ef| %>
             <div class="flex cursor-pointer items-center gap-4 justify-between">
               <div class="text-sm space-y-1">
-                <h4 class="text-primary">One-time <%= @entry.amount.negative? ? "Income" : "Expense" %></h4>
-                <p class="text-secondary">One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.</p>
+                <h4 class="text-primary"><%= t(".one_time_title", type: @entry.amount.negative? ? t("transactions.form.income") : t("transactions.form.expense")) %></h4>
+                <p class="text-secondary"><%= t(".one_time_description") %></p>
               </div>
 
               <%= ef.toggle :kind, {
@@ -196,6 +264,25 @@
             frame: :modal
           ) %>
         </div>
+
+        <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
+        <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
+          <div class="flex items-center justify-between gap-2 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary">Convert to Security Trade</h4>
+              <p class="text-secondary">Convert this transaction into a security trade (buy/sell) by providing ticker, shares, and price.</p>
+            </div>
+
+            <%= render DS::Button.new(
+              text: "Convert",
+              variant: "outline",
+              icon: "arrow-right-left",
+              href: convert_to_trade_transaction_path(@entry.transaction),
+              method: :get,
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
 
         <!-- Mark as Recurring Form -->
         <div class="flex items-center justify-between gap-2 p-3">

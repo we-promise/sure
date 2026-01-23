@@ -9,6 +9,7 @@ ca:
         delete_and_leave_uncategorized: Elimina "%{category_name}" i deixa sense categoritzar
         delete_and_recategorize: Elimina "%{category_name}" i assigna una nova categoria
         delete_category: Vols eliminar la categoria?
-        explanation: En eliminar aquesta categoria, totes les transaccions que tinguin la categoria "%{category_name}" quedaran sense categoritzar. En comptes de deixar-les sense categoria, pots assignar-ne una de nova a continuació.
+        explanation: En eliminar aquesta categoria, totes les transaccions que tinguin
+          la categoria "%{category_name}" quedaran sense categoritzar. En comptes
+          de deixar-les sense categoria, pots assignar-ne una de nova a continuació.
         replacement_category_prompt: Selecciona una categoria
-

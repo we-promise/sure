@@ -7,19 +7,30 @@
     <div class="grid grid-cols-12 items-center <%= entry.excluded ? "text-gray-400 bg-gray-25" : "text-primary" %> text-sm font-medium p-4">
       <div class="col-span-8 flex items-center gap-4">
         <%= check_box_tag dom_id(entry, "selection"),
-                        class: "checkbox checkbox--light",
-                        data: { id: entry.id, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection" } %>
+                        class: "checkbox checkbox--light hidden lg:block",
+                        data: {
+                          id: entry.id,
+                          "bulk-select-target": "row",
+                          action: "bulk-select#toggleRowSelection",
+                          checkbox_toggle_target: "selectionEntry"
+                        } %>
 
         <div class="max-w-full">
-          <%= tag.div class: ["flex items-center gap-2"] do %>
-            <%= render DS::FilledIcon.new(
-              variant: :text,
-              text: entry.name,
-              size: "sm",
-              rounded: true
-            ) %>
+          <%= tag.div class: ["flex items-center gap-2 min-w-0"] do %>
+            <div class="hidden lg:flex">
+              <%= render DS::FilledIcon.new(
+                variant: :text,
+                text: entry.name,
+                size: "sm",
+                rounded: true
+              ) %>
+            </div>
 
-            <div class="truncate">
+            <div class="flex lg:hidden">
+              <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: trade %>
+            </div>
+
+            <div class="truncate flex-shrink">
               <%= link_to entry.name,
                         entry_path(entry),
                         data: { turbo_frame: "drawer", turbo_prefetch: false },
@@ -29,11 +40,11 @@
         </div>
       </div>
 
-      <div class="col-span-2 flex items-center">
-        <%= render "categories/badge", category: trade_category %>
+      <div class="hidden lg:flex col-span-2 items-center">
+        <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: trade %>
       </div>
 
-      <div class="col-span-2 justify-self-end font-medium text-sm">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
         <%= content_tag :p,
                     format_money(-entry.amount_money),
                     class: ["text-green-600": entry.amount.negative?] %>

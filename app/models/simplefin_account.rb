@@ -23,12 +23,17 @@ class SimplefinAccount < ApplicationRecord
     acct = current_account
     return nil unless acct
 
-    AccountProvider
+    provider = AccountProvider
       .find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: id)
-      .tap do |provider|
-        provider.account = acct
-        provider.save!
+      .tap do |p|
+        p.account = acct
+        p.save!
       end
+
+    # Reload the association so future accesses don't return stale/nil value
+    reload_account_provider
+
+    provider
   rescue => e
     Rails.logger.warn("SimplefinAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
     nil
@@ -80,7 +85,7 @@ class SimplefinAccount < ApplicationRecord
     end
 
     def parse_currency(currency_value)
-      return "USD" if currency_value.nil?
+      return "USD" if currency_value.blank?
 
       # SimpleFin currency can be a 3-letter code or a URL for custom currencies
       if currency_value.start_with?("http")

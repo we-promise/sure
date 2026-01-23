@@ -1,0 +1,4 @@
+---
+zh-CN:
+  provider_warnings:
+    limited_investment_data: "此提供商的投资数据有限。活动标签（买入、卖出、股息）不可用，这可能会影响预算准确性。请考虑创建规则以排除或分类投资交易。"

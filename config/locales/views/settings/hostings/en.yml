@@ -17,6 +17,7 @@ en:
       show:
         general: General Settings
         financial_data_providers: Financial Data Providers
+        sync_settings: Sync Settings
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
@@ -39,6 +40,8 @@ en:
         label: Client ID
         placeholder: Enter your Client ID here
         title: Brand Fetch Settings
+        high_res_label: Enable high-resolution logos
+        high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -74,6 +77,16 @@ en:
         failure: Invalid setting value
         success: Settings updated
         invalid_onboarding_state: Invalid onboarding state
+        invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
+        scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action
+      sync_settings:
+        auto_sync_label: Enable automatic sync
+        auto_sync_description: When enabled, all accounts will be automatically synced daily at the specified time.
+        auto_sync_time_label: Sync time (HH:MM)
+        auto_sync_time_description: Specify the time of day when automatic sync should occur.
+        include_pending_label: Include pending transactions
+        include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
+        env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

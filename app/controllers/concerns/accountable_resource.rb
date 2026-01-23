@@ -27,7 +27,7 @@ module AccountableResource
     @q = params.fetch(:q, {}).permit(:search)
     entries = @account.entries.search(@q).reverse_chronological
 
-    @pagy, @entries = pagy(entries, limit: params[:per_page] || "10")
+    @pagy, @entries = pagy(entries, limit: safe_per_page(10))
   end
 
   def edit
@@ -86,6 +86,7 @@ module AccountableResource
     def account_params
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
+        :institution_name, :institution_domain, :notes,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

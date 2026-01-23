@@ -15,7 +15,14 @@ class PlaidEntry::Processor
       name: name,
       source: "plaid",
       category_id: matched_category&.id,
-      merchant: merchant
+      merchant: merchant,
+      pending_transaction_id: pending_transaction_id, # Plaid's linking ID for pending→posted
+      extra: {
+        plaid: {
+          pending: plaid_transaction["pending"],
+          pending_transaction_id: pending_transaction_id # Also store for reference
+        }
+      }
     )
   end
 
@@ -48,6 +55,12 @@ class PlaidEntry::Processor
 
     def date
       plaid_transaction["date"]
+    end
+
+    # Plaid provides this linking ID when a posted transaction matches a pending one
+    # This is the most reliable way to reconcile pending→posted
+    def pending_transaction_id
+      plaid_transaction["pending_transaction_id"]
     end
 
     def detailed_category

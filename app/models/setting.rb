@@ -11,10 +11,51 @@ class Setting < RailsSettings::Base
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
+  field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
+
+  BRAND_FETCH_LOGO_SIZE_STANDARD = 40
+  BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
+  BRAND_FETCH_URL_PATTERN = %r{(https://cdn\.brandfetch\.io/[^/]+/icon/fallback/lettermark/)w/\d+/h/\d+(\?c=.+)}
+
+  def self.brand_fetch_logo_size
+    brand_fetch_high_res_logos ? BRAND_FETCH_LOGO_SIZE_HIGH_RES : BRAND_FETCH_LOGO_SIZE_STANDARD
+  end
+
+  # Transforms a stored Brandfetch URL to use the current logo size setting
+  def self.transform_brand_fetch_url(url)
+    return url unless url.present? && url.match?(BRAND_FETCH_URL_PATTERN)
+
+    size = brand_fetch_logo_size
+    url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+  end
 
   # Provider selection
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
+
+  # Sync settings - check both provider env vars for default
+  # Only defaults to true if neither provider explicitly disables pending
+  SYNCS_INCLUDE_PENDING_DEFAULT = begin
+    simplefin = ENV.fetch("SIMPLEFIN_INCLUDE_PENDING", "1") == "1"
+    plaid = ENV.fetch("PLAID_INCLUDE_PENDING", "1") == "1"
+    simplefin && plaid
+  end
+  field :syncs_include_pending, type: :boolean, default: SYNCS_INCLUDE_PENDING_DEFAULT
+  field :auto_sync_enabled, type: :boolean, default: ENV.fetch("AUTO_SYNC_ENABLED", "1") == "1"
+  field :auto_sync_time, type: :string, default: ENV.fetch("AUTO_SYNC_TIME", "02:22")
+  field :auto_sync_timezone, type: :string, default: ENV.fetch("AUTO_SYNC_TIMEZONE", "UTC")
+
+  AUTO_SYNC_TIME_FORMAT = /\A([01]?\d|2[0-3]):([0-5]\d)\z/
+
+  def self.valid_auto_sync_time?(time_str)
+    return false if time_str.blank?
+    AUTO_SYNC_TIME_FORMAT.match?(time_str.to_s.strip)
+  end
+
+  def self.valid_auto_sync_timezone?(timezone_str)
+    return false if timezone_str.blank?
+    ActiveSupport::TimeZone[timezone_str].present?
+  end
 
   # Dynamic fields are now stored as individual entries with "dynamic:" prefix
   # This prevents race conditions and ensures each field is independently managed

@@ -21,25 +21,18 @@ RSpec.describe 'API V1 Chats', type: :request do
     )
   end
 
-  let(:oauth_application) do
-    Doorkeeper::Application.create!(
-      name: 'API Docs',
-      redirect_uri: 'https://example.com/callback',
-      scopes: 'read read_write'
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'web'
     )
   end
 
-  let(:access_token) do
-    Doorkeeper::AccessToken.create!(
-      application: oauth_application,
-      resource_owner_id: user.id,
-      scopes: 'read_write',
-      expires_in: 2.hours,
-      token: SecureRandom.hex(32)
-    )
-  end
-
-  let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:'X-Api-Key') { api_key.plain_key }
 
   let!(:chat) do
     user.chats.create!(title: 'Budget planning').tap do |record|
@@ -84,10 +77,8 @@ RSpec.describe 'API V1 Chats', type: :request do
   path '/api/v1/chats' do
     get 'List chats' do
       tags 'Chats'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with read scope'
 
       response '200', 'chats listed' do
         schema '$ref' => '#/components/schemas/ChatCollection'
@@ -117,11 +108,9 @@ RSpec.describe 'API V1 Chats', type: :request do
 
     post 'Create chat' do
       tags 'Chats'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with write scope'
       parameter name: :chat_params, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -161,13 +150,11 @@ RSpec.describe 'API V1 Chats', type: :request do
   end
 
   path '/api/v1/chats/{id}' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token with read scope'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Chat ID'
 
     get 'Retrieve a chat' do
       tags 'Chats'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { chat.id }
@@ -192,7 +179,7 @@ RSpec.describe 'API V1 Chats', type: :request do
 
     patch 'Update a chat' do
       tags 'Chats'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
 
@@ -235,7 +222,7 @@ RSpec.describe 'API V1 Chats', type: :request do
 
     delete 'Delete a chat' do
       tags 'Chats'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { another_chat.id }
@@ -253,13 +240,11 @@ RSpec.describe 'API V1 Chats', type: :request do
   end
 
   path '/api/v1/chats/{chat_id}/messages' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token with write scope'
     parameter name: :chat_id, in: :path, type: :string, required: true, description: 'Chat ID'
 
     post 'Create a message' do
       tags 'Chat Messages'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
 
@@ -309,13 +294,11 @@ RSpec.describe 'API V1 Chats', type: :request do
   end
 
   path '/api/v1/chats/{chat_id}/messages/retry' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token with write scope'
     parameter name: :chat_id, in: :path, type: :string, required: true, description: 'Chat ID'
 
     post 'Retry the last assistant response' do
       tags 'Chat Messages'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:chat_id) { chat.id }

@@ -2,8 +2,8 @@ apiVersion: v2
 name: sure
 description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq) on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
 type: application
-version: 1.0.0
-appVersion: "0.6.5"
+version: 0.6.7-alpha
+appVersion: "0.6.7-alpha"
 
 kubeVersion: ">=1.25.0-0"
 
@@ -24,11 +24,11 @@ maintainers:
 # Users must `helm repo add` the below repositories before installing this chart.
 dependencies:
   - name: cloudnative-pg
-    version: "0.22.0"
+    version: "~0.27"
     repository: "https://cloudnative-pg.github.io/charts"
     condition: cnpg.enabled
   - name: redis-operator
     alias: redisOperator
-    version: "~0.21.0"
+    version: "~0.23.0"
     repository: "https://ot-container-kit.github.io/helm-charts"
     condition: redisOperator.enabled

@@ -1,4 +1,6 @@
 class LunchflowItem::Importer
+  include LunchflowTransactionHash
+
   attr_reader :lunchflow_item, :lunchflow_provider
 
   def initialize(lunchflow_item, lunchflow_provider:)
@@ -183,14 +185,22 @@ class LunchflowItem::Importer
 
     def fetch_and_store_transactions(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date}"
+      include_pending = Rails.configuration.x.lunchflow.include_pending
+
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date} (include_pending=#{include_pending})"
 
       begin
         # Fetch transactions
         transactions_data = lunchflow_provider.get_account_transactions(
           lunchflow_account.account_id,
-          start_date: start_date
+          start_date: start_date,
+          include_pending: include_pending
         )
+
+        # Optional: Debug logging
+        if Rails.configuration.x.lunchflow.debug_raw
+          Rails.logger.debug "Lunchflow raw response: #{transactions_data.to_json}"
+        end
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
@@ -207,17 +217,38 @@ class LunchflowItem::Importer
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
             # Build set of existing transaction IDs for efficient lookup
+            # For transactions with IDs: use the ID directly
+            # For transactions without IDs (blank/nil): use content hash to prevent duplicate storage
             existing_ids = existing_transactions.map do |tx|
-              tx.with_indifferent_access[:id]
-            end.to_set
+              tx_with_access = tx.with_indifferent_access
+              tx_id = tx_with_access[:id]
+
+              if tx_id.blank?
+                # Generate content hash for blank-ID transactions to detect duplicates
+                content_hash_for_transaction(tx_with_access)
+              else
+                tx_id
+              end
+            end.compact.to_set
 
             # Filter to ONLY truly new transactions (skip duplicates)
-            # Transactions are immutable on the bank side, so we don't need to update them
+            # For transactions WITH IDs: skip if ID already exists (true duplicates)
+            # For transactions WITHOUT IDs: skip if content hash exists (prevents unbounded growth)
+            # Note: Pending transactions may update from pending→posted, but we treat them as immutable snapshots
             new_transactions = transactions_data[:transactions].select do |tx|
               next false unless tx.is_a?(Hash)
 
-              tx_id = tx.with_indifferent_access[:id]
-              tx_id.present? && !existing_ids.include?(tx_id)
+              tx_with_access = tx.with_indifferent_access
+              tx_id = tx_with_access[:id]
+
+              if tx_id.blank?
+                # Use content hash to detect if we've already stored this exact transaction
+                content_hash = content_hash_for_transaction(tx_with_access)
+                !existing_ids.include?(content_hash)
+              else
+                # If has ID, only include if not already stored
+                !existing_ids.include?(tx_id)
+              end
             end
 
             if new_transactions.any?
@@ -240,6 +271,14 @@ class LunchflowItem::Importer
         rescue => e
           # Log but don't fail transaction import if balance fetch fails
           Rails.logger.warn "LunchflowItem::Importer - Failed to update balance for account #{lunchflow_account.account_id}: #{e.message}"
+        end
+
+        # Fetch holdings for investment/crypto accounts
+        begin
+          fetch_and_store_holdings(lunchflow_account)
+        rescue => e
+          # Log but don't fail sync if holdings fetch fails
+          Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
         { success: true, transactions_count: transactions_count }
@@ -296,6 +335,53 @@ class LunchflowItem::Importer
       rescue => e
         Rails.logger.error "LunchflowItem::Importer - Unexpected error updating balance for account #{lunchflow_account.id}: #{e.class} - #{e.message}"
         # Don't fail if balance update fails
+      end
+    end
+
+    def fetch_and_store_holdings(lunchflow_account)
+      # Only fetch holdings for investment/crypto accounts
+      account = lunchflow_account.current_account
+      return unless account.present?
+      return unless [ "Investment", "Crypto" ].include?(account.accountable_type)
+
+      # Skip if holdings are not supported for this account
+      unless lunchflow_account.holdings_supported?
+        Rails.logger.debug "LunchflowItem::Importer - Skipping holdings fetch for account #{lunchflow_account.account_id} (holdings not supported)"
+        return
+      end
+
+      Rails.logger.info "LunchflowItem::Importer - Fetching holdings for account #{lunchflow_account.account_id}"
+
+      begin
+        holdings_data = lunchflow_provider.get_account_holdings(lunchflow_account.account_id)
+
+        # Validate response structure
+        unless holdings_data.is_a?(Hash)
+          Rails.logger.error "LunchflowItem::Importer - Invalid holdings_data format for account #{lunchflow_account.account_id}"
+          return
+        end
+
+        # Check if holdings are not supported (501 response)
+        if holdings_data[:holdings_not_supported]
+          Rails.logger.info "LunchflowItem::Importer - Holdings not supported for account #{lunchflow_account.account_id}, disabling future requests"
+          lunchflow_account.update!(holdings_supported: false)
+          return
+        end
+
+        # Store holdings payload for processing
+        holdings_array = holdings_data[:holdings] || []
+        Rails.logger.info "LunchflowItem::Importer - Fetched #{holdings_array.count} holdings for account #{lunchflow_account.account_id}"
+
+        lunchflow_account.update!(raw_holdings_payload: holdings_array)
+      rescue Provider::Lunchflow::LunchflowError => e
+        Rails.logger.error "LunchflowItem::Importer - Lunchflow API error fetching holdings for account #{lunchflow_account.id}: #{e.message}"
+        # Don't fail if holdings fetch fails
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.error "LunchflowItem::Importer - Failed to save holdings for account #{lunchflow_account.id}: #{e.message}"
+        # Don't fail if holdings save fails
+      rescue => e
+        Rails.logger.error "LunchflowItem::Importer - Unexpected error fetching holdings for account #{lunchflow_account.id}: #{e.class} - #{e.message}"
+        # Don't fail if holdings fetch fails
       end
     end
 

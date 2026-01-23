@@ -1,6 +1,7 @@
 ---
 en:
   transactions:
+    unknown_name: Unknown transaction
     form:
       account: Account
       account_prompt: Select an Account
@@ -30,19 +31,60 @@ en:
         balances, and cannot be undone.
       delete_title: Delete transaction
       details: Details
-      mark_recurring: Mark as Recurring
-      mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
-      mark_recurring_title: Recurring Transaction
-      merchant_label: Merchant
-      name_label: Name
-      nature: Type
-      none: "(none)"
-      note_label: Notes
-      note_placeholder: Enter a note
-      overview: Overview
-      settings: Settings
-      tags_label: Tags
-      uncategorized: "(uncategorized)"
+      exclude: Exclude
+      exclude_description: Excluded transactions will be removed from budgeting calculations and reports.
+      activity_type: Activity Type
+      activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
+      one_time_title: One-time %{type}
+      one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
+      convert_to_trade_title: Convert to Security Trade
+      convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
+      convert_to_trade_button: Convert to Trade
+    activity_labels:
+      buy: Buy
+      sell: Sell
+      sweep_in: Sweep In
+      sweep_out: Sweep Out
+      dividend: Dividend
+      reinvestment: Reinvestment
+      interest: Interest
+      fee: Fee
+      transfer: Transfer
+      contribution: Contribution
+      withdrawal: Withdrawal
+      exchange: Exchange
+      other: Other
+    mark_recurring: Mark as Recurring
+    mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
+    mark_recurring_title: Recurring Transaction
+    merchant_label: Merchant
+    name_label: Name
+    nature: Type
+    none: "(none)"
+    note_label: Notes
+    note_placeholder: Enter a note
+    overview: Overview
+    settings: Settings
+    tags_label: Tags
+    uncategorized: "(uncategorized)"
+    potential_duplicate_title: Possible duplicate detected
+    potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
+    merge_duplicate: Yes, merge them
+    keep_both: No, keep both
+    transaction:
+      pending: Pending
+      pending_tooltip: Pending transaction — may change when posted
+      activity_type_tooltip: Investment activity type
+      possible_duplicate: Duplicate?
+      potential_duplicate_tooltip: This may be a duplicate of another transaction
+      review_recommended: Review
+      review_recommended_tooltip: Large amount difference — review recommended to check if this is a duplicate
+    merge_duplicate:
+      success: Transactions merged successfully
+      failure: Could not merge transactions
+    dismiss_duplicate:
+      success: Kept as separate transactions
+      failure: Could not dismiss duplicate suggestion
     header:
       edit_categories: Edit categories
       edit_imports: Edit imports
@@ -54,6 +96,58 @@ en:
       transactions: transactions
       import: Import
     toggle_recurring_section: Toggle upcoming recurring transactions
+    search:
+      filters:
+        account: Account
+        date: Date
+        type: Type
+        status: Status
+        amount: Amount
+        category: Category
+        tag: Tag
+        merchant: Merchant
+    convert_to_trade:
+      title: Convert to Security Trade
+      description: Convert this transaction into a trade with security details
+      date_label: "Date:"
+      account_label: "Account:"
+      amount_label: "Amount:"
+      security_label: Security
+      security_prompt: Select a security...
+      security_custom: "+ Enter custom ticker"
+      security_not_listed_hint: Don't see your security? Select "Enter custom ticker" at the bottom of the list.
+      ticker_placeholder: AAPL
+      ticker_hint: Enter the stock/ETF ticker symbol (e.g., AAPL, MSFT)
+      ticker_search_placeholder: Search for a ticker...
+      ticker_search_hint: Search by ticker symbol or company name, or type a custom ticker
+      price_mismatch_title: Price may not match
+      price_mismatch_message: "Your price (%{entered_price}/share) differs significantly from %{ticker}'s current market price (%{market_price}). If this seems wrong, you may have selected the wrong security — try using \"Enter custom ticker\" to specify the correct one."
+      quantity_label: Quantity (Shares)
+      quantity_placeholder: e.g. 20
+      quantity_hint: Number of shares traded
+      price_label: Price per Share
+      price_placeholder: e.g. 52.15
+      price_hint: Price per share (%{currency})
+      qty_or_price_hint: Enter at least qty OR price. The other will be calculated from the transaction amount (%{amount}).
+      trade_type_label: Trade Type
+      trade_type_hint: Buy or Sell shares of a security
+      exchange_label: Exchange (Optional)
+      exchange_placeholder: XNAS
+      exchange_hint: Leave blank to auto-detect
+      cancel: Cancel
+      submit: Convert to Trade
+      success: Transaction converted to trade
+      conversion_note: "Converted from transaction: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Only transactions in investment accounts can be converted to trades
+        already_converted: This transaction has already been converted or excluded
+        enter_ticker: Please enter a ticker symbol
+        security_not_found: Selected security no longer exists. Please select another.
+        select_security: Please select or enter a security
+        enter_qty_or_price: Please enter either quantity or price per share. The other will be calculated from the transaction amount.
+        invalid_qty_or_price: Invalid quantity or price. Please enter valid positive values.
+        conversion_failed: "Failed to convert transaction: %{error}"
+        unexpected_error: "Unexpected error during conversion: %{error}"
     searches:
       filters:
         amount_filter:
@@ -67,10 +161,15 @@ en:
           on_or_after: on or after %{date}
           on_or_before: on or before %{date}
           transfer: Transfer
+          confirmed: Confirmed
+          pending: Pending
         type_filter:
           expense: Expense
           income: Income
           transfer: Transfer
+        status_filter:
+          confirmed: Confirmed
+          pending: Pending
       menu:
         account_filter: Account
         amount_filter: Amount
@@ -80,9 +179,12 @@ en:
         clear_filters: Clear filters
         date_filter: Date
         merchant_filter: Merchant
+        status_filter: Status
         tag_filter: Tag
         type_filter: Type
       search:
         equal_to: equal to
         greater_than: greater than
         less_than: less than
+      form:
+        toggle_selection_checkboxes: Toggle all checkboxes

@@ -10,8 +10,13 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 25%
+      {{- if and .Values.web.strategy .Values.web.strategy.rollingUpdate }}
+      maxUnavailable: {{ .Values.web.strategy.rollingUpdate.maxUnavailable | default 1 }}
+      maxSurge: {{ .Values.web.strategy.rollingUpdate.maxSurge | default 0 }}
+      {{- else }}
+      maxUnavailable: 1
+      maxSurge: 0
+      {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/component: web

@@ -365,4 +365,49 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal 0, totals.count
     assert_equal Money.new(0, "USD"), totals.expense_money
   end
+
+  test "search matches entries name OR notes with ILIKE" do
+    # Transaction with matching text in name only
+    name_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Grocery Store"
+    )
+
+    # Transaction with matching text in notes only
+    notes_match = create_transaction(
+      account: @checking_account,
+      amount: 50,
+      kind: "standard",
+      name: "Credit Card Payment",
+      notes: "Payment of 50 USD at Grocery Mart on 2026-11-01"
+    )
+
+    # Transaction with no matching text
+    no_match = create_transaction(
+      account: @checking_account,
+      amount: 75,
+      kind: "standard",
+      name: "Gas station",
+      notes: "Fuel refill"
+    )
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "grocery" }
+    )
+
+    results = search.transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should match name
+    assert_includes result_ids, name_match.entryable.id
+
+    # Should match notes
+    assert_includes result_ids, notes_match.entryable.id
+
+    # Should not match unrelated transactions
+    assert_not_includes result_ids, no_match.entryable.id
+  end
 end

@@ -42,7 +42,7 @@ class CategoryImport < Import
   end
 
   def dry_run
-    { categories: rows.count }
+    { categories: rows_count }
   end
 
   def csv_template
@@ -59,19 +59,52 @@ class CategoryImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
+    validate_required_headers!
+
+    name_header = header_for("name")
+    color_header = header_for("color")
+    parent_header = header_for("parent_category", "parent category")
+    classification_header = header_for("classification")
+    icon_header = header_for("lucide_icon", "lucide icon", "icon")
+
     csv_rows.each do |row|
       rows.create!(
-        name: row["name"].to_s.strip,
-        category_color: row["color"].to_s.strip,
-        category_parent: row["parent_category"].to_s.strip,
-        category_classification: row["classification"].to_s.strip,
-        category_icon: (row["lucide_icon"].presence || row["icon"]).to_s.strip,
+        name: row[name_header].to_s.strip,
+        category_color: row[color_header].to_s.strip,
+        category_parent: row[parent_header].to_s.strip,
+        category_classification: row[classification_header].to_s.strip,
+        category_icon: row[icon_header].to_s.strip,
         currency: default_currency
       )
     end
   end
 
   private
+    def validate_required_headers!
+      missing_headers = required_column_keys.map(&:to_s).reject { |key| header_for(key).present? }
+      return if missing_headers.empty?
+
+      errors.add(:base, "Missing required columns: #{missing_headers.join(', ')}")
+      raise ActiveRecord::RecordInvalid.new(self)
+    end
+
+    def header_for(*candidates)
+      candidates.each do |candidate|
+        normalized = normalize_header(candidate)
+        header = normalized_headers[normalized]
+        return header if header.present?
+      end
+
+      nil
+    end
+
+    def normalized_headers
+      @normalized_headers ||= csv_headers.to_h { |header| [ normalize_header(header), header ] }
+    end
+
+    def normalize_header(header)
+      header.to_s.strip.downcase.gsub(/\*/, "").gsub(/[\s-]+/, "_")
+    end
 
     def ensure_placeholder_category(name)
       trimmed_name = name.to_s.strip

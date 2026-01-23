@@ -1,5 +1,7 @@
 class User < ApplicationRecord
-  has_secure_password
+  # Allow nil password for SSO-only users (JIT provisioning).
+  # Custom validation ensures password is present for non-SSO registration.
+  has_secure_password validations: false
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
@@ -11,18 +13,31 @@ class User < ApplicationRecord
   has_many :impersonator_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonator_id, dependent: :destroy
   has_many :impersonated_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonated_id, dependent: :destroy
   has_many :oidc_identities, dependent: :destroy
+  has_many :sso_audit_logs, dependent: :nullify
   accepts_nested_attributes_for :family, update_only: true
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
   validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
+
+  # Password is required on create unless the user is being created via SSO JIT.
+  # SSO JIT users have password_digest = nil and authenticate via OIDC only.
+  validates :password, presence: true, on: :create, unless: :skip_password_validation?
+  validates :password, length: { minimum: 8 }, allow_nil: true
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
 
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # Returns the appropriate role for a new user creating a family.
+  # The very first user of an instance becomes super_admin; subsequent users
+  # get the specified fallback role (typically :admin for family creators).
+  def self.role_for_new_family_creator(fallback_role: :admin)
+    User.exists? ? fallback_role : :super_admin
+  end
 
   has_one_attached :profile_image do |attachable|
     attachable.variant :thumbnail, resize_to_fill: [ 300, 300 ], convert: :webp, saver: { quality: 80 }
@@ -103,6 +118,20 @@ class User < ApplicationRecord
   def ai_enabled?
     ai_enabled && ai_available?
   end
+
+  # SSO-only users have OIDC identities but no local password.
+  # They cannot use password reset or local login.
+  def sso_only?
+    password_digest.nil? && oidc_identities.exists?
+  end
+
+  # Check if user has a local password set (can authenticate locally)
+  def has_local_password?
+    password_digest.present?
+  end
+
+  # Attribute to skip password validation during SSO JIT provisioning
+  attr_accessor :skip_password_validation
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
@@ -258,6 +287,10 @@ class User < ApplicationRecord
   end
 
   private
+    def skip_password_validation?
+      skip_password_validation == true
+    end
+
     def default_dashboard_section_order
       %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end

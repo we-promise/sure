@@ -3,7 +3,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("trending-up", class: "w-5 h-5 text-success") %>
+        <%= icon("trending-up", size: "sm") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.total_income") %>
         </h3>
@@ -18,12 +18,12 @@
       <% if metrics[:income_change] %>
         <div class="flex items-center gap-1.5">
           <% if metrics[:income_change] >= 0 %>
-            <%= icon("arrow-up", class: "w-4 h-4 text-success") %>
+            <%= icon("arrow-up", size: "sm") %>
             <span class="text-sm font-medium text-success">
               +<%= metrics[:income_change] %>%
             </span>
           <% else %>
-            <%= icon("arrow-down", class: "w-4 h-4 text-destructive") %>
+            <%= icon("arrow-down", size: "sm") %>
             <span class="text-sm font-medium text-destructive">
               <%= metrics[:income_change] %>%
             </span>
@@ -40,7 +40,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("trending-down", class: "w-5 h-5 text-destructive") %>
+        <%= icon("trending-down", class: "w-5 h-5") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.total_expenses") %>
         </h3>
@@ -77,7 +77,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("piggy-bank", class: "w-5 h-5 text-primary") %>
+        <%= icon("piggy-bank", class: "w-5 h-5") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.net_savings") %>
         </h3>
@@ -99,7 +99,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("gauge", class: "w-5 h-5 text-primary") %>
+        <%= icon("gauge", class: "w-5 h-5") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.budget_performance") %>
         </h3>

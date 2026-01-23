@@ -6,7 +6,7 @@
     <% if budget_category.initialized? %>
       <%# Category Header with Status Badge %>
       <div class="flex items-center lg:justify-between gap-2 mb-3">
-        <div class="h-9 w-9 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center" 
+        <div class="h-9 w-9 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center"
               style="
                 background-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent);
                 border-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent);
@@ -65,6 +65,9 @@
           <span class="text-sm text-secondary"><%= t("reports.budget_performance.budgeted") %>:</span>
           <span class="font-medium text-primary">
             <%= format_money(budget_category.budgeted_spending_money) %>
+            <% if budget_category.inherits_parent_budget? %>
+              <span class="text-xs text-subdued">(<%= t("reports.budget_performance.shared") %>)</span>
+            <% end %>
           </span>
         </div>
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">

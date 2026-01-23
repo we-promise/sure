@@ -1,20 +1,21 @@
 class PagesController < ApplicationController
   include Periodable
 
-  skip_authentication only: :redis_configuration_error
+  skip_authentication only: %i[redis_configuration_error privacy terms]
 
   def dashboard
     @balance_sheet = Current.family.balance_sheet
+    @investment_statement = Current.family.investment_statement
     @accounts = Current.family.accounts.visible.with_attached_logo
 
     family_currency = Current.family.currency
 
-    # Use the same period for all widgets (set by Periodable concern)
+    # Use IncomeStatement for all cashflow data (now includes categorized trades)
     income_totals = Current.family.income_statement.income_totals(period: @period)
     expense_totals = Current.family.income_statement.expense_totals(period: @period)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
-    @outflows_data = build_outflows_donut_data(expense_totals, family_currency)
+    @outflows_data = build_outflows_donut_data(expense_totals)
 
     @dashboard_sections = build_dashboard_sections
 
@@ -54,6 +55,14 @@ class PagesController < ApplicationController
     render layout: "blank"
   end
 
+  def privacy
+    render layout: "blank"
+  end
+
+  def terms
+    render layout: "blank"
+  end
+
   private
     def preferences_params
       prefs = params.require(:preferences)
@@ -79,6 +88,14 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/outflows_donut",
           locals: { outflows_data: @outflows_data, period: @period },
           visible: Current.family.accounts.any? && @outflows_data[:categories].present?,
+          collapsible: true
+        },
+        {
+          key: "investment_summary",
+          title: "pages.dashboard.investment_summary.title",
+          partial: "pages/dashboard/investment_summary",
+          locals: { investment_statement: @investment_statement, period: @period },
+          visible: Current.family.accounts.any? && @investment_statement.investment_accounts.any?,
           collapsible: true
         },
         {
@@ -117,12 +134,11 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(income_totals, expense_totals, currency_symbol)
+    def build_cashflow_sankey_data(income_totals, expense_totals, currency)
       nodes = []
       links = []
-      node_indices = {} # Memoize node indices by a unique key: "type_categoryid"
+      node_indices = {}
 
-      # Helper to add/find node and return its index
       add_node = ->(unique_key, display_name, value, percentage, color) {
         node_indices[unique_key] ||= begin
           nodes << { name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
@@ -130,93 +146,51 @@ class PagesController < ApplicationController
         end
       }
 
-      total_income_val = income_totals.total.to_f.round(2)
-      total_expense_val = expense_totals.total.to_f.round(2)
+      total_income = income_totals.total.to_f.round(2)
+      total_expense = expense_totals.total.to_f.round(2)
 
-      # --- Create Central Cash Flow Node ---
-      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income_val, 0, "var(--color-success)")
+      # Central Cash Flow node
+      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income, 100.0, "var(--color-success)")
 
-      # --- Process Income Side (Top-level categories only) ---
-      income_totals.category_totals.each do |ct|
-        # Skip subcategories – only include root income categories
-        next if ct.category.parent_id.present?
+      # Process income categories (flow: subcategory -> parent -> cash_flow)
+      process_category_totals(
+        category_totals: income_totals.category_totals,
+        total: total_income,
+        prefix: "income",
+        default_color: Category::UNCATEGORIZED_COLOR,
+        add_node: add_node,
+        links: links,
+        cash_flow_idx: cash_flow_idx,
+        flow_direction: :inbound
+      )
 
-        val = ct.total.to_f.round(2)
-        next if val.zero?
+      # Process expense categories (flow: cash_flow -> parent -> subcategory)
+      process_category_totals(
+        category_totals: expense_totals.category_totals,
+        total: total_expense,
+        prefix: "expense",
+        default_color: Category::UNCATEGORIZED_COLOR,
+        add_node: add_node,
+        links: links,
+        cash_flow_idx: cash_flow_idx,
+        flow_direction: :outbound
+      )
 
-        percentage_of_total_income = total_income_val.zero? ? 0 : (val / total_income_val * 100).round(1)
-
-        node_display_name = ct.category.name
-        node_color = ct.category.color.presence || Category::COLORS.sample
-
-        current_cat_idx = add_node.call(
-          "income_#{ct.category.id}",
-          node_display_name,
-          val,
-          percentage_of_total_income,
-          node_color
-        )
-
-        links << {
-          source: current_cat_idx,
-          target: cash_flow_idx,
-          value: val,
-          color: node_color,
-          percentage: percentage_of_total_income
-        }
+      # Surplus/Deficit
+      net = (total_income - total_expense).round(2)
+      if net.positive?
+        percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
+        idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
+        links << { source: cash_flow_idx, target: idx, value: net, color: "var(--color-success)", percentage: percentage }
       end
 
-      # --- Process Expense Side (Top-level categories only) ---
-      expense_totals.category_totals.each do |ct|
-        # Skip subcategories – only include root expense categories to keep Sankey shallow
-        next if ct.category.parent_id.present?
-
-        val = ct.total.to_f.round(2)
-        next if val.zero?
-
-        percentage_of_total_expense = total_expense_val.zero? ? 0 : (val / total_expense_val * 100).round(1)
-
-        node_display_name = ct.category.name
-        node_color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
-
-        current_cat_idx = add_node.call(
-          "expense_#{ct.category.id}",
-          node_display_name,
-          val,
-          percentage_of_total_expense,
-          node_color
-        )
-
-        links << {
-          source: cash_flow_idx,
-          target: current_cat_idx,
-          value: val,
-          color: node_color,
-          percentage: percentage_of_total_expense
-        }
-      end
-
-      # --- Process Surplus ---
-      leftover = (total_income_val - total_expense_val).round(2)
-      if leftover.positive?
-        percentage_of_total_income_for_surplus = total_income_val.zero? ? 0 : (leftover / total_income_val * 100).round(1)
-        surplus_idx = add_node.call("surplus_node", "Surplus", leftover, percentage_of_total_income_for_surplus, "var(--color-success)")
-        links << { source: cash_flow_idx, target: surplus_idx, value: leftover, color: "var(--color-success)", percentage: percentage_of_total_income_for_surplus }
-      end
-
-      # Update Cash Flow and Income node percentages (relative to total income)
-      if node_indices["cash_flow_node"]
-        nodes[node_indices["cash_flow_node"]][:percentage] = 100.0
-      end
-      # No primary income node anymore, percentages are on individual income cats relative to total_income_val
-
-      { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency_symbol).symbol }
+      { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency).symbol }
     end
 
-    def build_outflows_donut_data(expense_totals, family_currency)
+    def build_outflows_donut_data(expense_totals)
+      currency_symbol = Money::Currency.new(expense_totals.currency).symbol
       total = expense_totals.total
 
-      # Only include top-level categories with non-zero amounts
       categories = expense_totals.category_totals
         .reject { |ct| ct.category.parent_id.present? || ct.total.zero? }
         .sort_by { |ct| -ct.total }
@@ -228,10 +202,70 @@ class PagesController < ApplicationController
             currency: ct.currency,
             percentage: ct.weight.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
-            icon: ct.category.lucide_icon
+            icon: ct.category.lucide_icon,
+            clickable: !ct.category.other_investments?
           }
         end
 
-      { categories: categories, total: total.to_f.round(2), currency: family_currency, currency_symbol: Money::Currency.new(family_currency).symbol }
+      { categories: categories, total: total.to_f.round(2), currency: expense_totals.currency, currency_symbol: currency_symbol }
+    end
+
+    # Processes category totals for sankey diagram, handling parent/subcategory relationships.
+    # flow_direction: :inbound (subcategory -> parent -> cash_flow) for income
+    #                 :outbound (cash_flow -> parent -> subcategory) for expenses
+    def process_category_totals(category_totals:, total:, prefix:, default_color:, add_node:, links:, cash_flow_idx:, flow_direction:)
+      # Build lookup of subcategories by parent_id
+      subcategories_by_parent = category_totals
+        .select { |ct| ct.category.parent_id.present? && ct.total.to_f > 0 }
+        .group_by { |ct| ct.category.parent_id }
+
+      category_totals.each do |ct|
+        next if ct.category.parent_id.present? # Skip subcategories in first pass
+
+        val = ct.total.to_f.round(2)
+        next if val.zero?
+
+        percentage = total.zero? ? 0 : (val / total * 100).round(1)
+        color = ct.category.color.presence || default_color
+        node_key = "#{prefix}_#{ct.category.id || ct.category.name}"
+
+        subs = subcategories_by_parent[ct.category.id] || []
+
+        if subs.any?
+          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+
+          # Link parent to/from cash flow based on direction
+          if flow_direction == :inbound
+            links << { source: parent_idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
+          else
+            links << { source: cash_flow_idx, target: parent_idx, value: val, color: color, percentage: percentage }
+          end
+
+          # Add subcategory nodes
+          subs.each do |sub_ct|
+            sub_val = sub_ct.total.to_f.round(2)
+            sub_pct = val.zero? ? 0 : (sub_val / val * 100).round(1)
+            sub_color = sub_ct.category.color.presence || color
+            sub_key = "#{prefix}_sub_#{sub_ct.category.id}"
+            sub_idx = add_node.call(sub_key, sub_ct.category.name, sub_val, sub_pct, sub_color)
+
+            # Link subcategory to/from parent based on direction
+            if flow_direction == :inbound
+              links << { source: sub_idx, target: parent_idx, value: sub_val, color: sub_color, percentage: sub_pct }
+            else
+              links << { source: parent_idx, target: sub_idx, value: sub_val, color: sub_color, percentage: sub_pct }
+            end
+          end
+        else
+          # No subcategories, link directly to/from cash flow
+          idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+
+          if flow_direction == :inbound
+            links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
+          else
+            links << { source: cash_flow_idx, target: idx, value: val, color: color, percentage: percentage }
+          end
+        end
+      end
     end
 end

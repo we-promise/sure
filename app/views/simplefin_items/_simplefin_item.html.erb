@@ -16,9 +16,31 @@
           <% end %>
         </div>
 
+        <%# Compute unlinked count early for badge display %>
+        <% header_unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
+             @simplefin_unlinked_count_map[simplefin_item.id] || 0
+           else
+             begin
+               simplefin_item.simplefin_accounts
+                 .left_joins(:account, :account_provider)
+                 .where(accounts: { id: nil }, account_providers: { id: nil })
+                 .count
+             rescue => e
+               0
+             end
+           end %>
+
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
             <%= tag.p simplefin_item.name, class: "font-medium text-primary" %>
+            <% if header_unlinked_count.to_i > 0 %>
+              <%= link_to setup_accounts_simplefin_item_path(simplefin_item),
+                          data: { turbo_frame: :modal },
+                          class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors" do %>
+                <%= icon "alert-circle", size: "xs" %>
+                <span><%= header_unlinked_count %> <%= header_unlinked_count == 1 ? "account" : "accounts" %> need setup</span>
+              <% end %>
+            <% end %>
             <% if simplefin_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
@@ -77,6 +99,30 @@
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
               <%= tag.span t(".requires_update") %>
             </div>
+          <% elsif (stale_status = simplefin_item.stale_sync_status)[:stale] %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-circle", size: "sm", color: "warning" %>
+              <%= tag.span stale_status[:message], class: "text-sm" %>
+            </div>
+          <% elsif (pending_status = simplefin_item.stale_pending_status)[:count] > 0 %>
+            <div class="text-secondary">
+              <div class="flex items-center gap-1">
+                <%= icon "clock", size: "sm", color: "secondary" %>
+                <%= tag.span pending_status[:message], class: "text-sm" %>
+                <span class="text-xs text-tertiary"><%= t(".stale_pending_note") %></span>
+              </div>
+              <% if pending_status[:accounts]&.any? %>
+                <div class="text-xs text-tertiary ml-5">
+                  <%= t(".stale_pending_accounts", accounts: pending_status[:accounts].join(", ")) %>
+                </div>
+              <% end %>
+            </div>
+          <% elsif (reconciled_status = simplefin_item.last_sync_reconciled_status)[:count] > 0 %>
+            <div class="text-success flex items-center gap-1">
+              <%= icon "check-circle", size: "sm", color: "success" %>
+              <%= tag.span reconciled_status[:message], class: "text-sm" %>
+              <span class="text-xs text-tertiary"><%= t(".reconciled_details_note") %></span>
+            </div>
           <% elsif simplefin_item.rate_limited_message.present? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "clock", size: "sm", color: "warning" %>
@@ -90,7 +136,7 @@
           <% elsif duplicate_only_errors %>
             <div class="text-secondary flex items-center gap-1">
               <%= icon "info", size: "sm" %>
-              <%= tag.span "Some accounts were skipped as duplicates — use ‘Link existing accounts’ to merge.", class: "text-secondary" %>
+              <%= tag.span t(".duplicate_accounts_skipped"), class: "text-secondary" %>
             </div>
           <% else %>
             <p class="text-secondary">
@@ -125,8 +171,6 @@
           ) %>
         <% end %>
 
-
-
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
             variant: "button",
@@ -146,67 +190,20 @@
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
         <% end %>
 
-
-        <%# Sync summary (collapsible) %>
-        <% stats = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {} %>
-        <% if stats.present? %>
-          <details class="group bg-surface rounded-lg border border-surface-inset/50">
-            <summary class="flex items-center justify-between gap-2 p-3 cursor-pointer">
-              <div class="flex items-center gap-2">
-                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
-                <span class="text-sm text-primary font-medium">Sync summary</span>
-              </div>
-              <div class="flex items-center gap-2 text-xs text-secondary">
-                <% if simplefin_item.last_synced_at %>
-                  <span>Last sync: <%= time_ago_in_words(simplefin_item.last_synced_at) %> ago</span>
-                <% end %>
-              </div>
-            </summary>
-            <div class="p-3 text-sm text-secondary grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <h4 class="text-primary font-medium mb-1">Accounts</h4>
-                <div class="flex items-center gap-3">
-                  <span>Total: <%= stats["total_accounts"].to_i %></span>
-                  <span>Linked: <%= stats["linked_accounts"].to_i %></span>
-                  <span>Unlinked: <%= stats["unlinked_accounts"].to_i %></span>
-                  <% institutions = simplefin_item.connected_institutions %>
-                  <span>Institutions: <%= institutions.size %></span>
-                </div>
-              </div>
-              <div>
-                <h4 class="text-primary font-medium mb-1">Transactions</h4>
-                <div class="flex items-center gap-3">
-                  <span>Seen: <%= stats["tx_seen"].to_i %></span>
-                  <span>Imported: <%= stats["tx_imported"].to_i %></span>
-                  <span>Updated: <%= stats["tx_updated"].to_i %></span>
-                  <span>Skipped: <%= stats["tx_skipped"].to_i %></span>
-                </div>
-              </div>
-              <div>
-                <h4 class="text-primary font-medium mb-1">Holdings</h4>
-                <div class="flex items-center gap-3">
-                  <span>Processed: <%= stats["holdings_processed"].to_i %></span>
-                </div>
-              </div>
-              <div>
-                <h4 class="text-primary font-medium mb-1">Health</h4>
-                <div class="flex items-center gap-3">
-                  <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
-                    <% ts = stats["rate_limited_at"] %>
-                    <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
-                    <span class="text-warning">Rate limited <%= ago ? "(#{ago} ago)" : "recently" %></span>
-                  <% end %>
-                  <% total_errors = stats["total_errors"].to_i %>
-                  <% if total_errors > 0 %>
-                    <span class="text-destructive">Errors: <%= total_errors %></span>
-                  <% else %>
-                    <span>Errors: 0</span>
-                  <% end %>
-                </div>
-              </div>
-            </div>
-          </details>
-        <% end %>
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component
+            Prefer controller-provided map; fallback to latest sync stats so Turbo broadcasts
+            can render the summary without requiring a full page refresh. %>
+        <% stats = if defined?(@simplefin_sync_stats_map) && @simplefin_sync_stats_map
+             @simplefin_sync_stats_map[simplefin_item.id] || {}
+           else
+             # `latest_sync` is private on Syncable; access via association for broadcast renders.
+             simplefin_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: simplefin_item,
+          institutions_count: simplefin_item.connected_institutions.size
+        ) %>
 
         <%# Compute unlinked SimpleFin accounts (no legacy account and no AccountProvider link)
            # Prefer controller-provided map; fallback to a local query so the card stays accurate after Turbo broadcasts %>

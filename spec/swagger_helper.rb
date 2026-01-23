@@ -15,7 +15,7 @@ RSpec.configure do |config|
       },
       servers: [
         {
-          url: 'https://api.sure.app',
+          url: 'https://app.sure.am',
           description: 'Production'
         },
         {
@@ -25,10 +25,11 @@ RSpec.configure do |config|
       ],
       components: {
         securitySchemes: {
-          bearerAuth: {
-            type: :http,
-            scheme: :bearer,
-            bearerFormat: :JWT
+          apiKeyAuth: {
+            type: :apiKey,
+            name: 'X-Api-Key',
+            in: :header,
+            description: 'API key for authentication. Generate one from your account settings.'
           }
         },
         schemas: {
@@ -171,6 +172,29 @@ RSpec.configure do |config|
               account_type: { type: :string }
             }
           },
+          AccountDetail: {
+            type: :object,
+            required: %w[id name balance currency classification account_type],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              balance: { type: :string },
+              currency: { type: :string },
+              classification: { type: :string },
+              account_type: { type: :string }
+            }
+          },
+          AccountCollection: {
+            type: :object,
+            required: %w[accounts pagination],
+            properties: {
+              accounts: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/AccountDetail' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Category: {
             type: :object,
             required: %w[id name classification color icon],
@@ -233,6 +257,21 @@ RSpec.configure do |config|
               color: { type: :string }
             }
           },
+          TagDetail: {
+            type: :object,
+            required: %w[id name color created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              color: { type: :string },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          TagCollection: {
+            type: :array,
+            items: { '$ref' => '#/components/schemas/TagDetail' }
+          },
           Transfer: {
             type: :object,
             required: %w[id amount currency],
@@ -282,6 +321,86 @@ RSpec.configure do |config|
             required: %w[message],
             properties: {
               message: { type: :string }
+            }
+          },
+          ImportConfiguration: {
+            type: :object,
+            properties: {
+              date_col_label: { type: :string, nullable: true },
+              amount_col_label: { type: :string, nullable: true },
+              name_col_label: { type: :string, nullable: true },
+              category_col_label: { type: :string, nullable: true },
+              tags_col_label: { type: :string, nullable: true },
+              notes_col_label: { type: :string, nullable: true },
+              account_col_label: { type: :string, nullable: true },
+              date_format: { type: :string, nullable: true },
+              number_format: { type: :string, nullable: true },
+              signage_convention: { type: :string, nullable: true }
+            }
+          },
+          ImportStats: {
+            type: :object,
+            properties: {
+              rows_count: { type: :integer, minimum: 0 },
+              valid_rows_count: { type: :integer, minimum: 0, nullable: true }
+            }
+          },
+          ImportSummary: {
+            type: :object,
+            required: %w[id type status created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport] },
+              status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' },
+              account_id: { type: :string, format: :uuid, nullable: true },
+              rows_count: { type: :integer, minimum: 0 },
+              error: { type: :string, nullable: true }
+            }
+          },
+          ImportDetail: {
+            type: :object,
+            required: %w[id type status created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport] },
+              status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' },
+              account_id: { type: :string, format: :uuid, nullable: true },
+              error: { type: :string, nullable: true },
+              configuration: { '$ref' => '#/components/schemas/ImportConfiguration' },
+              stats: { '$ref' => '#/components/schemas/ImportStats' }
+            }
+          },
+          ImportCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ImportSummary' }
+              },
+              meta: {
+                type: :object,
+                required: %w[current_page total_pages total_count per_page],
+                properties: {
+                  current_page: { type: :integer, minimum: 1 },
+                  next_page: { type: :integer, nullable: true },
+                  prev_page: { type: :integer, nullable: true },
+                  total_pages: { type: :integer, minimum: 0 },
+                  total_count: { type: :integer, minimum: 0 },
+                  per_page: { type: :integer, minimum: 1 }
+                }
+              }
+            }
+          },
+          ImportResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { '$ref' => '#/components/schemas/ImportDetail' }
             }
           }
         }

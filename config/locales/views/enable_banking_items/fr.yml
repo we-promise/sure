@@ -1,0 +1,49 @@
+---
+fr:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Échec de l'initiation de l'autorisation
+      bank_required: Veuillez sélectionner une banque.
+      invalid_redirect: L'URL d'autorisation reçue est invalide. Veuillez réessayer.
+      redirect_uri_not_allowed: Redirection non autorisée. Veuillez configurer `%{callback_url}` dans les paramètres de votre application Enable Banking.
+      unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer.
+    callback:
+      authorization_error: Échec de l'autorisation
+      invalid_callback: Paramètres de rappel invalides.
+      item_not_found: Connexion introuvable.
+      session_failed: Impossible de terminer l'autorisation
+      success: Connexion réussie à votre banque. Vos comptes sont en cours de synchronisation.
+      unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer.
+    complete_account_setup:
+      all_skipped: Tous les comptes ont été ignorés. Vous pouvez les configurer plus tard sur la page des comptes.
+      no_accounts: Aucun compte disponible à configurer.
+      success: "%{count} compte(s) créé(s) avec succès !"
+    create:
+      success: Configuration d'Enable Banking réussie.
+    destroy:
+      success: La connexion Enable Banking a été mise en file d'attente pour suppression.
+    link_accounts:
+      already_linked: Les comptes sélectionnés sont déjà liés.
+      link_failed: Échec de la liaison des comptes
+      no_accounts_selected: Aucun compte sélectionné.
+      no_session: Aucune connexion Enable Banking active. Veuillez d'abord vous connecter à une banque.
+      success: "%{count} compte(s) lié(s) avec succès."
+    link_existing_account:
+      success: Compte lié avec succès à Enable Banking
+      errors:
+        only_manual: Seuls les comptes manuels peuvent être liés
+        invalid_enable_banking_account: Compte Enable Banking sélectionné invalide
+    new:
+      link_enable_banking_title: Lier Enable Banking
+    reauthorize:
+      invalid_redirect: L'URL d'autorisation reçue est invalide. Veuillez réessayer.
+      reauthorization_failed: Échec de la réautorisation
+    select_bank:
+      cancel: Annuler
+      check_country: Veuillez vérifier les paramètres de votre code pays.
+      credentials_required: Veuillez d'abord configurer vos identifiants Enable Banking.
+      description: Sélectionnez la banque que vous souhaitez connecter à vos comptes.
+      no_banks: Aucune banque disponible pour ce pays/région.
+      title: Sélectionnez votre banque
+    update:
+      success: Configuration d'Enable Banking mise à jour.

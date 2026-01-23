@@ -2,7 +2,12 @@
 
 <%= render DS::Menu.new(variant: "button") do |menu| %>
   <% menu.with_button do %>
-    <% render partial: "categories/badge", locals: { category: transaction.category } %>
+    <div class="hidden lg:flex">
+      <%= render partial: "categories/badge", locals: { category: transaction.category } %>
+    </div>
+    <div class="flex lg:hidden">
+      <%= render partial: "categories/badge_mobile", locals: { category: transaction.category } %>
+    </div>
   <% end %>
 
   <% menu.with_custom_content do %>

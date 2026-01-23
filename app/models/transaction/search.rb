@@ -6,6 +6,7 @@ class Transaction::Search
   attribute :amount, :string
   attribute :amount_operator, :string
   attribute :types, array: true
+  attribute :status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -30,6 +31,7 @@ class Transaction::Search
       query = apply_active_accounts_filter(query, active_accounts_only)
       query = apply_category_filter(query, categories)
       query = apply_type_filter(query, types)
+      query = apply_status_filter(query, status)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
       query = EntrySearch.apply_search_filter(query, search)
@@ -42,13 +44,21 @@ class Transaction::Search
   end
 
   # Computes totals for the specific search
+  # Note: Excludes tax-advantaged accounts (401k, IRA, etc.) from totals calculation
+  # because those transactions are retirement savings, not daily income/expenses.
   def totals
     @totals ||= begin
       Rails.cache.fetch("transaction_search_totals/#{cache_key_base}") do
-        result = transactions_scope
+        scope = transactions_scope
+
+        # Exclude tax-advantaged accounts from totals calculation
+        tax_advantaged_ids = family.tax_advantaged_account_ids
+        scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
+
+        result = scope
                   .select(
-                    "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
-                    "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                    "COALESCE(SUM(CASE WHEN transactions.kind = 'investment_contribution' THEN ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                    "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
                     "COUNT(entries.id) as transactions_count"
                   )
                   .joins(
@@ -72,7 +82,8 @@ class Transaction::Search
     [
       family.id,
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
-      family.entries_cache_version
+      family.entries_cache_version,
+      Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json) # stable across processes
     ].join("/")
   end
 
@@ -123,8 +134,11 @@ class Transaction::Search
       return query if types.sort == [ "expense", "income", "transfer" ]
 
       transfer_condition = "transactions.kind IN ('funds_movement', 'cc_payment', 'loan_payment')"
-      expense_condition = "entries.amount >= 0"
-      income_condition = "entries.amount <= 0"
+      # investment_contribution is always an expense regardless of amount sign
+      # (handles both manual outflows and provider-imported inflows like 401k contributions)
+      investment_contribution_condition = "transactions.kind = 'investment_contribution'"
+      expense_condition = "(entries.amount >= 0 OR #{investment_contribution_condition})"
+      income_condition = "(entries.amount <= 0 AND NOT #{investment_contribution_condition})"
 
       condition = case types.sort
       when [ "transfer" ]
@@ -152,5 +166,29 @@ class Transaction::Search
     def apply_tag_filter(query, tags)
       return query unless tags.present?
       query.joins(:tags).where(tags: { name: tags })
+    end
+
+    def apply_status_filter(query, statuses)
+      return query unless statuses.present?
+      return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
+
+      pending_condition = <<~SQL.squish
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      SQL
+
+      confirmed_condition = <<~SQL.squish
+        (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
+        AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
+      SQL
+
+      case statuses.sort
+      when [ "pending" ]
+        query.where(pending_condition)
+      when [ "confirmed" ]
+        query.where(confirmed_condition)
+      else
+        query
+      end
     end
 end
