@@ -13,6 +13,13 @@ export default class extends Controller {
     if (params.get(this.paramValue) === "1") {
       this.element.open = true;
 
+      // Clean up the URL param after opening
+      params.delete(this.paramValue);
+      const newUrl = params.toString()
+        ? `${window.location.pathname}?${params.toString()}${window.location.hash}`
+        : `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState({}, "", newUrl);
+
       // Scroll into view after opening
       requestAnimationFrame(() => {
         this.element.scrollIntoView({ behavior: "smooth", block: "start" });
