@@ -136,7 +136,12 @@ class Demo::Generator
       if family_count > 50
         raise "Too much data to clear efficiently (#{family_count} families). Run 'rails db:reset' instead."
       end
-      Demo::DataCleaner.new.destroy_everything!
+
+      begin
+        Demo::DataCleaner.new.destroy_everything!
+      rescue SecurityError => e
+        abort e.message
+      end
     end
 
     def ensure_admin_user!(family, email)
