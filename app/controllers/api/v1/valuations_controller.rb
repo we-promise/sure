@@ -98,25 +98,25 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
   private
 
-  def set_entry
-    @entry = current_resource_owner.family.entries.find(params[:id])
-    @valuation = @entry.entryable
-  rescue ActiveRecord::RecordNotFound
-    render json: {
-      error: "not_found",
-      message: "Valuation not found"
-    }, status: :not_found
-  end
+    def set_entry
+      @entry = current_resource_owner.family.entries.find(params[:id])
+      @valuation = @entry.entryable
+    rescue ActiveRecord::RecordNotFound
+      render json: {
+        error: "not_found",
+        message: "Valuation not found"
+      }, status: :not_found
+    end
 
-  def ensure_read_scope
-    authorize_scope!(:read)
-  end
+    def ensure_read_scope
+      authorize_scope!(:read)
+    end
 
-  def ensure_write_scope
-    authorize_scope!(:write)
-  end
+    def ensure_write_scope
+      authorize_scope!(:write)
+    end
 
-  def valuation_params
-    params.require(:valuation).permit(:account_id, :amount, :date, :notes)
-  end
+    def valuation_params
+      params.require(:valuation).permit(:account_id, :amount, :date, :notes)
+    end
 end

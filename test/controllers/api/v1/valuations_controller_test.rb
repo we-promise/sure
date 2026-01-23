@@ -205,7 +205,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  def api_headers(api_key)
-    { "X-Api-Key" => api_key.display_key }
-  end
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.display_key }
+    end
 end
