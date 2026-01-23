@@ -39,6 +39,8 @@ en:
       success: "Successfully linked to SnapTrade account."
       failed: "Failed to link account: %{message}"
       not_found: "Account not found."
+    connections:
+      unknown_brokerage: "Unknown Brokerage"
     delete_connection:
       success: "Connection deleted successfully. One slot freed up."
       failed: "Failed to delete connection: %{message}"

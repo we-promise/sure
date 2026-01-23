@@ -250,6 +250,11 @@ class SnaptradeItemsController < ApplicationController
   def delete_connection
     authorization_id = params[:authorization_id]
 
+    if authorization_id.blank?
+      redirect_to settings_providers_path, alert: t(".failed", message: "Missing authorization ID")
+      return
+    end
+
     # Delete all local SnaptradeAccounts for this connection (triggers cleanup job)
     accounts_deleted = @snaptrade_item.snaptrade_accounts
       .where(snaptrade_authorization_id: authorization_id)
@@ -408,7 +413,7 @@ class SnaptradeItemsController < ApplicationController
 
         result[:connections] << {
           authorization_id: auth_id,
-          brokerage_name: api_conn.brokerage&.name || "Unknown Brokerage",
+          brokerage_name: api_conn.brokerage&.name || I18n.t("snaptrade_items.connections.unknown_brokerage"),
           brokerage_slug: api_conn.brokerage&.slug,
           accounts: local_accts.map { |acct|
             { id: acct.id, name: acct.name, linked: acct.account_provider.present? }
