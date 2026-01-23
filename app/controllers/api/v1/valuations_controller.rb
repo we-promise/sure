@@ -18,6 +18,33 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   end
 
   def create
+    unless valuation_account_id.present?
+      render json: {
+        error: "validation_failed",
+        message: "Account ID is required",
+        errors: [ "Account ID is required" ]
+      }, status: :unprocessable_entity
+      return
+    end
+
+    unless valuation_params[:amount].present?
+      render json: {
+        error: "validation_failed",
+        message: "Amount is required",
+        errors: [ "Amount is required" ]
+      }, status: :unprocessable_entity
+      return
+    end
+
+    unless valuation_params[:date].present?
+      render json: {
+        error: "validation_failed",
+        message: "Date is required",
+        errors: [ "Date is required" ]
+      }, status: :unprocessable_entity
+      return
+    end
+
     account = current_resource_owner.family.accounts.find(valuation_account_id)
 
     result = account.create_reconciliation(
@@ -26,7 +53,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
     )
 
     if result.success?
-      @entry = account.entries.valuations.find_by(date: valuation_params[:date])
+      @entry = account.entries.valuations.find_by!(date: valuation_params[:date])
       @valuation = @entry.entryable
 
       if valuation_params[:notes].present?
@@ -45,7 +72,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   rescue ActiveRecord::RecordNotFound
     render json: {
       error: "not_found",
-      message: "Account not found"
+      message: "Account or valuation entry not found"
     }, status: :not_found
   rescue => e
     Rails.logger.error "ValuationsController#create error: #{e.message}"
@@ -58,11 +85,16 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   end
 
   def update
-    if valuation_params[:notes].present?
-      @entry.update!(notes: valuation_params[:notes])
-    end
+    if valuation_params[:date].present? || valuation_params[:amount].present?
+      unless valuation_params[:date].present? && valuation_params[:amount].present?
+        render json: {
+          error: "validation_failed",
+          message: "Both amount and date are required when updating reconciliation",
+          errors: [ "Amount and date must both be provided" ]
+        }, status: :unprocessable_entity
+        return
+      end
 
-    if valuation_params[:date].present? && valuation_params[:amount].present?
       result = @entry.account.update_reconciliation(
         @entry,
         balance: valuation_params[:amount],
@@ -71,6 +103,9 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
       if result.success?
         @entry.reload
+        if valuation_params[:notes].present?
+          @entry.update!(notes: valuation_params[:notes])
+        end
         @valuation = @entry.entryable
         render :show
       else
@@ -81,6 +116,9 @@ class Api::V1::ValuationsController < Api::V1::BaseController
         }, status: :unprocessable_entity
       end
     else
+      if valuation_params[:notes].present?
+        @entry.update!(notes: valuation_params[:notes])
+      end
       @entry.reload
       @valuation = @entry.entryable
       render :show
@@ -99,7 +137,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   private
 
     def set_entry
-      @entry = current_resource_owner.family.entries.find(params[:id])
+      @entry = current_resource_owner.family.entries.where(entryable_type: "Valuation").find(params[:id])
       @valuation = @entry.entryable
     rescue ActiveRecord::RecordNotFound
       render json: {
