@@ -83,19 +83,50 @@ class TransactionAttachmentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
-  test "should delete attachment" do
-    @transaction.attachments.attach(
-      io: StringIO.new("test content"),
-      filename: "test.pdf",
-      content_type: "application/pdf"
-    )
+  test "should upload attachment via turbo_stream" do
+    file = fixture_file_upload("test.txt", "application/pdf")
 
+    assert_difference "@transaction.attachments.count", 1 do
+      post transaction_attachments_path(@transaction), params: { attachment: file }, as: :turbo_stream
+    end
+
+    assert_response :success
+    assert_match(/turbo-stream action="replace" target="transaction_attachments_#{@transaction.id}"/, response.body)
+    assert_match(/turbo-stream action="append" target="notification-tray"/, response.body)
+    assert_match("Attachment uploaded successfully", response.body)
+  end
+
+  test "should show attachment inline" do
+    @transaction.attachments.attach(io: StringIO.new("test"), filename: "test.pdf", content_type: "application/pdf")
+    attachment = @transaction.attachments.first
+
+    get transaction_attachment_path(@transaction, attachment, disposition: :inline)
+
+    assert_response :redirect
+    assert_match(/disposition=inline/, response.redirect_url)
+  end
+
+  test "should show attachment as download" do
+    @transaction.attachments.attach(io: StringIO.new("test"), filename: "test.pdf", content_type: "application/pdf")
+    attachment = @transaction.attachments.first
+
+    get transaction_attachment_path(@transaction, attachment, disposition: :attachment)
+
+    assert_response :redirect
+    assert_match(/disposition=attachment/, response.redirect_url)
+  end
+
+  test "should delete attachment via turbo_stream" do
+    @transaction.attachments.attach(io: StringIO.new("test"), filename: "test.pdf", content_type: "application/pdf")
     attachment = @transaction.attachments.first
 
     assert_difference "@transaction.attachments.count", -1 do
-      delete transaction_attachment_path(@transaction, attachment)
+      delete transaction_attachment_path(@transaction, attachment), as: :turbo_stream
     end
 
-    assert_redirected_to transaction_path(@transaction)
+    assert_response :success
+    assert_match(/turbo-stream action="replace" target="transaction_attachments_#{@transaction.id}"/, response.body)
+    assert_match(/turbo-stream action="append" target="notification-tray"/, response.body)
+    assert_match("Attachment deleted successfully", response.body)
   end
 end
