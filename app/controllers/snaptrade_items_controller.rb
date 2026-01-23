@@ -262,6 +262,7 @@ class SnaptradeItemsController < ApplicationController
       .size
 
     # If no local accounts existed (orphan), delete directly from API
+    api_deletion_failed = false
     if accounts_deleted == 0
       provider = @snaptrade_item.snaptrade_provider
       creds = @snaptrade_item.snaptrade_credentials
@@ -274,15 +275,30 @@ class SnaptradeItemsController < ApplicationController
         )
       else
         Rails.logger.warn "SnapTrade: Cannot delete orphaned connection #{authorization_id} - missing credentials"
+        api_deletion_failed = true
       end
     end
 
     respond_to do |format|
-      format.html { redirect_to settings_providers_path, notice: t(".success") }
-      format.turbo_stream { render turbo_stream: turbo_stream.remove("connection_#{authorization_id}") }
+      if api_deletion_failed
+        format.html { redirect_to settings_providers_path, alert: t(".api_deletion_failed") }
+        format.turbo_stream do
+          flash.now[:alert] = t(".api_deletion_failed")
+          render turbo_stream: flash_notification_stream_items
+        end
+      else
+        format.html { redirect_to settings_providers_path, notice: t(".success") }
+        format.turbo_stream { render turbo_stream: turbo_stream.remove("connection_#{authorization_id}") }
+      end
     end
   rescue Provider::Snaptrade::ApiError => e
-    redirect_to settings_providers_path, alert: t(".failed", message: e.message)
+    respond_to do |format|
+      format.html { redirect_to settings_providers_path, alert: t(".failed", message: e.message) }
+      format.turbo_stream do
+        flash.now[:alert] = t(".failed", message: e.message)
+        render turbo_stream: flash_notification_stream_items
+      end
+    end
   end
 
   # Delete an orphaned SnapTrade user (and all their connections)
@@ -291,7 +307,13 @@ class SnaptradeItemsController < ApplicationController
 
     # Security: verify this is actually an orphaned user
     unless @snaptrade_item.orphaned_users.include?(user_id)
-      redirect_to settings_providers_path, alert: t(".failed")
+      respond_to do |format|
+        format.html { redirect_to settings_providers_path, alert: t(".failed") }
+        format.turbo_stream do
+          flash.now[:alert] = t(".failed")
+          render turbo_stream: flash_notification_stream_items
+        end
+      end
       return
     end
 
@@ -301,8 +323,13 @@ class SnaptradeItemsController < ApplicationController
         format.turbo_stream { render turbo_stream: turbo_stream.remove("orphaned_user_#{user_id.parameterize}") }
       end
     else
-      # Redirect for both formats - Turbo will follow the redirect
-      redirect_to settings_providers_path, alert: t(".failed")
+      respond_to do |format|
+        format.html { redirect_to settings_providers_path, alert: t(".failed") }
+        format.turbo_stream do
+          flash.now[:alert] = t(".failed")
+          render turbo_stream: flash_notification_stream_items
+        end
+      end
     end
   end
 

@@ -46,6 +46,7 @@ en:
       success: "Connection deleted successfully. One slot freed up."
       failed: "Failed to delete connection: %{message}"
       missing_authorization_id: "Missing authorization ID"
+      api_deletion_failed: "Could not delete connection from SnapTrade - missing credentials. The connection may still exist in your SnapTrade account."
     delete_orphaned_user:
       success: "Orphaned registration deleted successfully."
       failed: "Failed to delete orphaned registration."
