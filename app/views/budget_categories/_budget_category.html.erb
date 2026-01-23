@@ -65,11 +65,11 @@
           <span class="text-sm text-secondary"><%= t("reports.budget_performance.budgeted") %>:</span>
           <span class="font-medium text-primary">
             <%= format_money(budget_category.budgeted_spending_money) %>
-            <% if budget_category.inherits_parent_budget? %>
-              <span class="text-xs text-subdued">(<%= t("reports.budget_performance.shared") %>)</span>
-            <% end %>
           </span>
         </div>
+        <% if budget_category.inherits_parent_budget? %>
+          <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-500/10 text-secondary"><%= t("reports.budget_performance.shared") %></span>
+        <% end %>
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
           <% if budget_category.available_to_spend >= 0 %>
             <span class="text-sm text-secondary"><%= t("reports.budget_performance.remaining") %>:</span>
