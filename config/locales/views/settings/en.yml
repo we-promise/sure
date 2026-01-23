@@ -3,8 +3,8 @@ en:
   views:
     settings:
       payments:
-        renewal: "Your contribution continues on %{date}."
-        cancellation: "Your contribution ends on %{date}."
+        renewal: "Your next payment will be on %{date}."
+        cancellation: "Your contributions ends on %{date}."
   settings:
     ai_prompts:
       show:

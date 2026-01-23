@@ -3,7 +3,7 @@ pt-BR:
   views:
     settings:
       payments:
-        renewal: "Sua contribuição continua em %{date}."
+        renewal: "Seu próximo pagamento será em %{date}."
   settings:
     ai_prompts:
       show:

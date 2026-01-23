@@ -2,7 +2,7 @@ de:
   views:
     settings:
       payments:
-        renewal: "Ihr Beitrag wird fortgesetzt am %{date}."
+        renewal: "Ihre nächste Zahlung erfolgt am %{date}."
   settings:
     ai_prompts:
       show:

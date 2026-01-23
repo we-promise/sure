@@ -3,7 +3,7 @@ nl:
   views:
     settings:
       payments:
-        renewal: "Uw bijdrage wordt voortgezet op %{date}."
+        renewal: "Uw volgende betaling is op %{date}."
   settings:
     ai_prompts:
       show:

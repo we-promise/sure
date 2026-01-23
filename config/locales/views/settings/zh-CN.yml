@@ -3,7 +3,7 @@ zh-CN:
   views:
     settings:
       payments:
-        renewal: "您的贡献将在 %{date} 继续。"
+        renewal: "您的下次付款日期为 %{date}。"
   settings:
     ai_prompts:
       show:

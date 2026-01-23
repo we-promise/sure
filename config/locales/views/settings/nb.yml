@@ -3,7 +3,7 @@ nb:
   views:
     settings:
       payments:
-        renewal: "Bidraget ditt fortsetter den %{date}."
+        renewal: "Din neste betaling vil være den %{date}."
   settings:
     payments:
       show:

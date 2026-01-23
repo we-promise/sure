@@ -3,7 +3,7 @@ ro:
   views:
     settings:
       payments:
-        renewal: "Contribuția ta continuă pe %{date}."
+        renewal: "Următoarea ta plată va fi pe %{date}."
   settings:
     ai_prompts:
       show:
