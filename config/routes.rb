@@ -450,8 +450,10 @@ Rails.application.routes.draw do
 
   get "imports/:import_id/upload/sample_csv", to: "import/uploads#sample_csv", as: :import_upload_sample_csv
 
-  get "privacy", to: "pages#privacy"
-  get "terms", to: "pages#terms"
+  privacy_url = ENV["LEGAL_PRIVACY_URL"].presence
+  terms_url = ENV["LEGAL_TERMS_URL"].presence
+  get "privacy", to: privacy_url ? redirect(privacy_url) : "pages#privacy"
+  get "terms", to: terms_url ? redirect(terms_url) : "pages#terms"
 
   # Admin namespace for super admin functionality
   namespace :admin do
