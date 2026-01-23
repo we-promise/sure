@@ -17,8 +17,8 @@ class TransactionAttachmentsController < ApplicationController
 
       if current_count + new_count > Transaction::MAX_ATTACHMENTS_PER_TRANSACTION
         respond_to do |format|
-          format.html { redirect_back_or_to transaction_path(@transaction), alert: "Cannot exceed #{Transaction::MAX_ATTACHMENTS_PER_TRANSACTION} attachments per transaction" }
-          format.turbo_stream { flash.now[:alert] = "Cannot exceed #{Transaction::MAX_ATTACHMENTS_PER_TRANSACTION} attachments per transaction" }
+          format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.cannot_exceed", count: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION) }
+          format.turbo_stream { flash.now[:alert] = t("transactions.attachments.cannot_exceed", count: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION) }
         end
         return
       end
@@ -27,7 +27,7 @@ class TransactionAttachmentsController < ApplicationController
 
       if @transaction.valid?
         count = new_count
-        message = count == 1 ? "Attachment uploaded successfully" : "#{count} attachments uploaded successfully"
+        message = count == 1 ? t("transactions.attachments.uploaded_one") : t("transactions.attachments.uploaded_many", count: count)
         respond_to do |format|
           format.html { redirect_back_or_to transaction_path(@transaction), notice: message }
           format.turbo_stream { flash.now[:notice] = message }
@@ -37,35 +37,36 @@ class TransactionAttachmentsController < ApplicationController
         @transaction.attachments.last(new_count).each(&:purge)
         error_messages = @transaction.errors.full_messages_for(:attachments).join(", ")
         respond_to do |format|
-          format.html { redirect_back_or_to transaction_path(@transaction), alert: error_messages }
-          format.turbo_stream { flash.now[:alert] = error_messages }
+          format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.failed_upload", error: error_messages) }
+          format.turbo_stream { flash.now[:alert] = t("transactions.attachments.failed_upload", error: error_messages) }
         end
       end
     else
       respond_to do |format|
-        format.html { redirect_back_or_to transaction_path(@transaction), alert: "No files selected for upload" }
-        format.turbo_stream { flash.now[:alert] = "No files selected for upload" }
+        format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.no_files_selected") }
+        format.turbo_stream { flash.now[:alert] = t("transactions.attachments.no_files_selected") }
       end
     end
   rescue => e
+    logger.error "#{e.class}: #{e.message}\n#{e.backtrace.join("\n")}"
     respond_to do |format|
-      format.html { redirect_back_or_to transaction_path(@transaction), alert: "Failed to upload attachment: #{e.message}" }
-      format.turbo_stream { flash.now[:alert] = "Failed to upload attachment: #{e.message}" }
+      format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.upload_failed") }
+      format.turbo_stream { flash.now[:alert] = t("transactions.attachments.upload_failed") }
     end
   end
 
   def destroy
     @attachment.purge
-    message = "Attachment deleted successfully"
+    message = t("transactions.attachments.attachment_deleted")
     respond_to do |format|
       format.html { redirect_back_or_to transaction_path(@transaction), notice: message }
       format.turbo_stream { flash.now[:notice] = message }
     end
   rescue => e
-    message = "Failed to delete attachment: #{e.message}"
+    logger.error "#{e.class}: #{e.message}\n#{e.backtrace.join("\n")}"
     respond_to do |format|
-      format.html { redirect_back_or_to transaction_path(@transaction), alert: message }
-      format.turbo_stream { flash.now[:alert] = message }
+      format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.delete_failed") }
+      format.turbo_stream { flash.now[:alert] = t("transactions.attachments.delete_failed") }
     end
   end
 

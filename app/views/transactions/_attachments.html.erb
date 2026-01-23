@@ -18,16 +18,15 @@
               class: "block w-full text-sm border border-primary rounded-lg p-2 bg-container text-primary file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-surface-inset file:text-primary hover:file:bg-surface-inset-hover cursor-pointer",
               data: { attachment_upload_target: "fileInput" } %>
         <p class="text-xs text-secondary mt-1">
-          Select up to <%= Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %> files 
-          (images or PDFs, max <%= Transaction::MAX_ATTACHMENT_SIZE / 1.megabyte %>MB each)
-          <% if transaction.attachments.any? %>
-            • <%= transaction.attachments.count %> of <%= Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %> used
-          <% end %>
+          <%= t(".select_up_to",
+                count: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION,
+                size: Transaction::MAX_ATTACHMENT_SIZE / 1.megabyte,
+                used: transaction.attachments.count) %>
         </p>
       </div>
 
       <%= render DS::Button.new(
-            text: "Upload",
+            text: t(".upload"),
             variant: :primary,
             size: :sm,
             data: { attachment_upload_target: "submitButton" }
@@ -38,7 +37,7 @@
   <!-- Attachments List -->
   <% if transaction.attachments.any? %>
     <div class="space-y-2">
-      <h4 class="text-sm font-medium text-primary">Files (<%= transaction.attachments.count %>)</h4>
+      <h4 class="text-sm font-medium text-primary"><%= t(".files", count: transaction.attachments.count) %></h4>
       <div class="space-y-2">
         <% transaction.attachments.each do |attachment| %>
           <div class="flex items-center justify-between p-3 border border-primary rounded-lg bg-container">
@@ -89,6 +88,6 @@
       </div>
     </div>
   <% else %>
-    <p class="text-sm text-secondary">No attachments yet</p>
+    <p class="text-sm text-secondary"><%= t(".no_attachments") %></p>
   <% end %>
 </div>

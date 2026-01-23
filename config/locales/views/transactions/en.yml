@@ -188,3 +188,19 @@ en:
         less_than: less than
       form:
         toggle_selection_checkboxes: Toggle all checkboxes
+    attachments:
+      cannot_exceed: "Cannot exceed %{count} attachments per transaction"
+      uploaded_one: "Attachment uploaded successfully"
+      uploaded_many: "%{count} attachments uploaded successfully"
+      failed_upload: "Failed to upload attachment: %{error}"
+      no_files_selected: "No files selected for upload"
+      attachment_deleted: "Attachment deleted successfully"
+      failed_delete: "Failed to delete attachment: %{error}"
+      upload_failed: "Failed to upload attachment. Please try again or contact support."
+      delete_failed: "Failed to delete attachment. Please try again or contact support."
+      upload: "Upload"
+      no_attachments: "No attachments yet"
+      select_up_to: "Select up to %{count} files (images or PDFs, max %{size}MB each) • %{used} of %{count} used"
+      files:
+        one: "File (1)"
+        other: "Files (%{count})"
