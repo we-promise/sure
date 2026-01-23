@@ -23,7 +23,7 @@ class TransactionAttachmentsController < ApplicationController
         return
       end
 
-      @transaction.attachments.attach(attachments)
+      attachment_proxy = @transaction.attachments.attach(attachments)
 
       if @transaction.valid?
         count = new_count
@@ -34,7 +34,7 @@ class TransactionAttachmentsController < ApplicationController
         end
       else
         # Remove invalid attachments
-        @transaction.attachments.last(new_count).each(&:purge)
+        Array(attachment_proxy).each(&:purge)
         error_messages = @transaction.errors.full_messages_for(:attachments).join(", ")
         respond_to do |format|
           format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.failed_upload", error: error_messages) }
