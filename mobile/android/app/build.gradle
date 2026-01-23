@@ -1,0 +1,73 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+def hasKeystore = false
+if (keystorePropertiesFile.exists()) {
+    try {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+        hasKeystore = keystoreProperties['storeFile'] != null &&
+                     keystoreProperties['keyAlias'] != null &&
+                     keystoreProperties['keyPassword'] != null &&
+                     keystoreProperties['storePassword'] != null &&
+                     file(keystoreProperties['storeFile']).exists()
+    } catch (Exception e) {
+        println("Warning: Failed to load key.properties: ${e.message}")
+    }
+}
+
+android {
+    namespace "am.sure.mobile"
+    compileSdk = 36
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    if (hasKeystore) {
+        signingConfigs {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+    }
+
+    defaultConfig {
+        applicationId "am.sure.mobile"
+        minSdkVersion 24
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+}

@@ -129,4 +129,49 @@ class AccountProviderTest < ActiveSupport::TestCase
     assert_equal "plaid", plaid_provider.provider_name
     assert_equal "simplefin", simplefin_provider.provider_name
   end
+
+  test "destroying account_provider does not destroy non-coinstats provider accounts" do
+    provider = AccountProvider.create!(
+      account: @account,
+      provider: @plaid_account
+    )
+
+    plaid_account_id = @plaid_account.id
+
+    assert PlaidAccount.exists?(plaid_account_id)
+
+    provider.destroy!
+
+    # Non-CoinStats provider accounts should remain (can enter "needs setup" state)
+    assert PlaidAccount.exists?(plaid_account_id)
+  end
+
+  test "destroying account_provider destroys coinstats provider account" do
+    coinstats_item = CoinstatsItem.create!(
+      family: @family,
+      name: "Test CoinStats",
+      api_key: "test_key"
+    )
+
+    coinstats_account = CoinstatsAccount.create!(
+      coinstats_item: coinstats_item,
+      name: "Test Wallet",
+      currency: "USD",
+      current_balance: 1000
+    )
+
+    provider = AccountProvider.create!(
+      account: @account,
+      provider: coinstats_account
+    )
+
+    coinstats_account_id = coinstats_account.id
+
+    assert CoinstatsAccount.exists?(coinstats_account_id)
+
+    provider.destroy!
+
+    # CoinStats provider accounts should be destroyed to avoid orphaned records
+    assert_not CoinstatsAccount.exists?(coinstats_account_id)
+  end
 end

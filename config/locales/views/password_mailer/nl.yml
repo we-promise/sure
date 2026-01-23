@@ -1,0 +1,8 @@
+---
+nl:
+  password_mailer:
+    password_reset:
+      cta: Wachtwoord opnieuw instellen
+      ignore_if_not_requested: Als u dit verzoek niet heeft gedaan, kunt u deze e-mail negeren.
+      request_made: Er is een verzoek gedaan om uw %{product_name} wachtwoord opnieuw in te stellen. Klik op de link om het opnieuw in te stellen.
+      subject: "%{product_name}: Wachtwoord opnieuw instellen"

@@ -1,0 +1,95 @@
+---
+fr:
+  import:
+    cleans:
+      show:
+        description: Modifiez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
+        errors_notice: Vous avez des erreurs dans vos données. Survolez l'erreur pour voir les détails.
+        errors_notice_mobile: Vous avez des erreurs dans vos données. Cliquez sur l'icône d'aide de l'erreur pour voir les détails.
+        title: Nettoyez vos données
+    configurations:
+      update:
+        success: Importation configurée avec succès.
+      category_import:
+        button_label: Continuer
+        description: Téléversez un fichier CSV simple (comme celui que nous générons lorsque vous exportez vos données). Nous mapperons automatiquement les colonnes pour vous.
+        instructions: Sélectionnez continuer pour analyser votre CSV et passer à l'étape de nettoyage.
+      mint_import:
+        date_format_label: Format de date
+      rule_import:
+        description: Configurez votre importation de règles. Les règles seront créées ou mises à jour en fonction des données CSV.
+        process_button: Traiter les règles
+        process_help: Cliquez sur le bouton ci-dessous pour traiter votre CSV et générer les lignes de règles.
+      show:
+        description: Sélectionnez les colonnes qui correspondent à chaque champ dans votre CSV.
+        title: Configurez votre importation
+      trade_import:
+        date_format_label: Format de date
+      transaction_import:
+        date_format_label: Format de date
+        rows_to_skip_label: Ignorer les n premières lignes
+    confirms:
+      mappings:
+        create_account: Créer un compte
+        csv_mapping_label: "%{mapping} dans le CSV"
+        sure_mapping_label: "%{mapping} dans %{product_name}"
+        no_accounts: Vous n'avez pas encore de comptes. Veuillez créer un compte que nous pouvons utiliser pour les lignes non affectées de votre CSV ou retournez à l'étape Nettoyer et fournissez un nom de compte que nous pouvons utiliser.
+        rows_label: Lignes
+        unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées ?
+      show:
+        account_mapping_description: Affectez tous les comptes de votre fichier importé aux comptes existants. Vous pouvez également ajouter de nouveaux comptes ou les laisser sans catégorie.
+        account_mapping_title: Attribuez vos comptes
+        account_type_mapping_description: Affectez tous les types de comptes importés dans votre fichier
+        account_type_mapping_title: Attribuez vos types de comptes
+        category_mapping_description: Affectez toutes les catégories importées dans votre fichier aux catégories existantes. Vous pouvez également ajouter de nouvelles catégories ou les laisser non catégorisées.
+        category_mapping_title: Attribuez vos catégories
+        tag_mapping_description: Affectez toutes les étiquettes importées dans votre fichier aux étiquettes existantes. Vous pouvez également ajouter de nouvelles étiquettes ou les laisser non catégorisées.
+        tag_mapping_title: Attribuez vos étiquettes
+    uploads:
+      show:
+        description: Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
+        instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
+        instructions_2: Votre CSV doit avoir une ligne d'en-tête
+        instructions_3: Vous pouvez nommer vos colonnes comme vous le souhaitez. Vous les associerez à un stade ultérieur.
+        instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
+        instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
+        title: Importez vos données
+  imports:
+    index:
+      imports: Imports
+      new: Nouvelle importation
+    table:
+      title: Imports
+      header:
+        date: Date
+        operation: Opération
+        status: Statut
+        actions: Actions
+      row:
+        status:
+          in_progress: En cours
+          uploading: Traitement des lignes
+          reverting: Annulation en cours
+          revert_failed: Annulation échouée
+          complete: Terminé
+          failed: Échoué
+        actions:
+          revert: Revenir
+          confirm_revert: Cette opération supprimera les transactions importées, mais vous pourrez toujours consulter et réimporter vos données à tout moment.
+          delete: Supprimer
+          view: Afficher
+      empty: Aucune importation pour l'instant.
+    new:
+      description: Vous pouvez manuellement importer divers types de données via CSV ou utiliser un des modèles d'importation que nous proposons comme Mint.
+      import_accounts: Importer les comptes
+      import_categories: Importer les catégories
+      import_mint: Importer depuis Mint
+      import_portfolio: Importer les investissements
+      import_rules: Importer les règles
+      import_transactions: Importer les transactions
+      resume: Reprendre %{type}
+      sources: Sources
+      title: Nouvelle importation CSV
+    ready:
+      description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
+      title: Confirmez vos données d'importation

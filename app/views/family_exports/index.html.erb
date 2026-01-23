@@ -1,1 +1,137 @@
-<%= render "list", exports: @exports %>
+<%= settings_section title: t(".title") do %>
+  <div class="space-y-4">
+    <% has_processing = @exports.any? { |e| e.pending? || e.processing? } %>
+    <%= turbo_frame_tag "family_exports",
+        data: has_processing ? {
+          controller: "polling",
+          polling_url_value: family_exports_path,
+          polling_interval_value: 3000
+        } : {} do %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+          <p>
+            <%= t("family_exports.table.title") %>
+          </p>
+          <span class="text-subdued">&middot;</span>
+          <p><%= @pagy.count %></p>
+        </div>
+
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <% if @exports.any? %>
+            <table class="w-full overflow-x-auto">
+              <thead>
+                <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                  <th class="px-2 py-3 text-left min-w-44">
+                    <%= t("family_exports.table.header.date") %>
+                  </th>
+                  <th class="px-2 py-3 text-left min-w-64">
+                    <%= t("family_exports.table.header.filename") %>
+                  </th>
+                  <th class="px-2 py-3 text-left min-w-24">
+                    <%= t("family_exports.table.header.status") %>
+                  </th>
+                  <th class="px-2 py-3 text-right min-w-20">
+                    <%= t("family_exports.table.header.actions") %>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+              <% @exports.ordered.each do |export| %>
+                <tr class="border-b border-subdued hover:bg-surface-hover">
+                  <td class="px-2 py-3">
+                    <span class="text-sm text-secondary">
+                      <%= l(export.created_at, format: :long) %>
+                    </span>
+                  </td>
+                  <td class="px-2 py-3">
+                    <span class="text-xs text-secondary truncate">
+                      <%= export.filename %>
+                    </span>
+                  </td>
+                  <td class="px-2 py-3">
+                    <% if export.processing? || export.pending? %>
+                      <%= render "shared/badge" do %>
+                        <%= t("family_exports.table.row.status.in_progress") %>
+                      <% end %>
+                    <% elsif export.completed? %>
+                      <%= render "shared/badge", color: "success" do %>
+                        <%= t("family_exports.table.row.status.complete") %>
+                      <% end %>
+                    <% elsif export.failed? %>
+                      <%= render "shared/badge", color: "error" do %>
+                        <%= t("family_exports.table.row.status.failed") %>
+                      <% end %>
+                    <% end %>
+                  </td>
+                  <td class="px-2 py-3 text-right">
+                    <% if export.processing? || export.pending? %>
+                      <div class="flex items-center justify-end gap-2 text-secondary">
+                        <div class="animate-spin h-4 w-4 border-2 border-secondary border-t-transparent rounded-full"></div>
+                        <span class="text-sm"><%= t("family_exports.exporting") %></span>
+                      </div>
+                    <% elsif export.completed? %>
+                      <div class="flex items-center gap-2 justify-end">
+                        <%= button_to family_export_path(export),
+                                      method: :delete,
+                                      class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
+                                      aria: { label: t("family_exports.table.row.actions.delete") },
+                                      data: {
+                                        turbo_confirm: t("family_exports.delete_confirmation"),
+                                        turbo_frame: "_top"
+                                      } do %>
+                          <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
+                        <% end %>
+
+                        <%= link_to download_family_export_path(export),
+                                    class: "flex items-center gap-2 text-primary hover:text-primary-hover",
+                                    aria: { label: t("family_exports.table.row.actions.download") },
+                                    data: { turbo_frame: "_top" } do %>
+                          <%= icon "download", class: "w-5 h-5" %>
+                        <% end %>
+                      </div>
+                    <% elsif export.failed? %>
+                      <div class="flex items-center gap-2 justify-end">
+                        <div class="flex items-center gap-2 text-destructive">
+                          <%= icon "alert-circle", class: "w-4 h-4" %>
+                        </div>
+
+                        <%= button_to family_export_path(export),
+                                      method: :delete,
+                                      class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
+                                      aria: { label: t("family_exports.table.row.actions.delete") },
+                                      data: {
+                                        turbo_confirm: t("family_exports.delete_failed_confirmation"),
+                                        turbo_frame: "_top"
+                                      } do %>
+                          <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+              </tbody>
+            </table>
+          <% else %>
+            <p class="text-sm text-secondary text-center py-8 font-medium">
+              <%= t("family_exports.table.empty") %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <% if @pagy.pages > 1 %>
+        <div class="mt-4">
+          <%= render "shared/pagination", pagy: @pagy %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%= link_to new_family_export_path,
+                class: "bg-container-inset inline-flex items-center justify-center gap-2 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full font-medium text-primary text-sm text-center",
+                data: { turbo_frame: :modal } do %>
+      <%= icon("plus") %>
+      <%= t(".new") %>
+    <% end %>
+  </div>
+<% end %>

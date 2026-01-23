@@ -8,7 +8,7 @@ nav_sections = [
       { label: t(".preferences_label"), path: settings_preferences_path, icon: "bolt" },
       { label: t(".profile_label"), path: settings_profile_path, icon: "circle-user" },
       { label: t(".security_label"), path: settings_security_path, icon: "shield-check" },
-      { label: t(".billing_label"), path: settings_billing_path, icon: "circle-dollar-sign", if: !self_hosted? }
+      { label: t(".payment_label"), path: settings_payment_path, icon: "circle-dollar-sign", if: !self_hosted? && Current.family.can_manage_subscription? }
     ]
   },
   {
@@ -30,7 +30,10 @@ nav_sections = [
         { label: t(".api_keys_label"), path: settings_api_key_path, icon: "key" },
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
         { label: "Providers", path: settings_providers_path, icon: "plug" },
-        { label: t(".imports_label"), path: imports_path, icon: "download" }
+        { label: t(".imports_label"), path: imports_path, icon: "download" },
+        { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
+        { label: "SSO Providers", path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
+        { label: "Users", path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
       ]
     } : nil
   ),

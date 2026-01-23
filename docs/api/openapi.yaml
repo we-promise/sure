@@ -5,16 +5,17 @@ info:
   version: v1
   description: OpenAPI documentation generated from executable request specs.
 servers:
-- url: https://api.sure.app
+- url: https://app.sure.am
   description: Production
 - url: http://localhost:3000
   description: Local development
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      name: X-Api-Key
+      in: header
+      description: API key for authentication. Generate one from your account settings.
   schemas:
     Pagination:
       type: object
@@ -222,6 +223,41 @@ components:
           type: string
         account_type:
           type: string
+    AccountDetail:
+      type: object
+      required:
+      - id
+      - name
+      - balance
+      - currency
+      - classification
+      - account_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        balance:
+          type: string
+        currency:
+          type: string
+        classification:
+          type: string
+        account_type:
+          type: string
+    AccountCollection:
+      type: object
+      required:
+      - accounts
+      - pagination
+      properties:
+        accounts:
+          type: array
+          items:
+            "$ref": "#/components/schemas/AccountDetail"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Category:
       type: object
       required:
@@ -328,6 +364,32 @@ components:
           type: string
         color:
           type: string
+    TagDetail:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TagCollection:
+      type: array
+      items:
+        "$ref": "#/components/schemas/TagDetail"
     Transfer:
       type: object
       required:
@@ -416,21 +478,221 @@ components:
       properties:
         message:
           type: string
+    ImportConfiguration:
+      type: object
+      properties:
+        date_col_label:
+          type: string
+          nullable: true
+        amount_col_label:
+          type: string
+          nullable: true
+        name_col_label:
+          type: string
+          nullable: true
+        category_col_label:
+          type: string
+          nullable: true
+        tags_col_label:
+          type: string
+          nullable: true
+        notes_col_label:
+          type: string
+          nullable: true
+        account_col_label:
+          type: string
+          nullable: true
+        date_format:
+          type: string
+          nullable: true
+        number_format:
+          type: string
+          nullable: true
+        signage_convention:
+          type: string
+          nullable: true
+    ImportStats:
+      type: object
+      properties:
+        rows_count:
+          type: integer
+          minimum: 0
+        valid_rows_count:
+          type: integer
+          minimum: 0
+          nullable: true
+    ImportSummary:
+      type: object
+      required:
+      - id
+      - type
+      - status
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - TransactionImport
+          - TradeImport
+          - AccountImport
+          - MintImport
+          - CategoryImport
+          - RuleImport
+        status:
+          type: string
+          enum:
+          - pending
+          - complete
+          - importing
+          - reverting
+          - revert_failed
+          - failed
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        account_id:
+          type: string
+          format: uuid
+          nullable: true
+        rows_count:
+          type: integer
+          minimum: 0
+        error:
+          type: string
+          nullable: true
+    ImportDetail:
+      type: object
+      required:
+      - id
+      - type
+      - status
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - TransactionImport
+          - TradeImport
+          - AccountImport
+          - MintImport
+          - CategoryImport
+          - RuleImport
+        status:
+          type: string
+          enum:
+          - pending
+          - complete
+          - importing
+          - reverting
+          - revert_failed
+          - failed
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        account_id:
+          type: string
+          format: uuid
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        configuration:
+          "$ref": "#/components/schemas/ImportConfiguration"
+        stats:
+          "$ref": "#/components/schemas/ImportStats"
+    ImportCollection:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ImportSummary"
+        meta:
+          type: object
+          required:
+          - current_page
+          - total_pages
+          - total_count
+          - per_page
+          properties:
+            current_page:
+              type: integer
+              minimum: 1
+            next_page:
+              type: integer
+              nullable: true
+            prev_page:
+              type: integer
+              nullable: true
+            total_pages:
+              type: integer
+              minimum: 0
+            total_count:
+              type: integer
+              minimum: 0
+            per_page:
+              type: integer
+              minimum: 1
+    ImportResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/ImportDetail"
 paths:
+  "/api/v1/accounts":
+    get:
+      summary: List accounts
+      tags:
+      - Accounts
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: accounts paginated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountCollection"
   "/api/v1/categories":
     get:
       summary: List categories
       tags:
       - Categories
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
-        description: Bearer token with read scope
       - name: page
         in: query
         required: false
@@ -474,12 +736,6 @@ paths:
                 "$ref": "#/components/schemas/CategoryCollection"
   "/api/v1/categories/{id}":
     parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token with read scope
     - name: id
       in: path
       required: true
@@ -491,7 +747,7 @@ paths:
       tags:
       - Categories
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: subcategory retrieved with parent
@@ -511,14 +767,7 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
-      parameters:
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
-        description: Bearer token with read scope
+      - apiKeyAuth: []
       responses:
         '200':
           description: chats listed
@@ -537,14 +786,8 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
-      parameters:
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
-        description: Bearer token with write scope
+      - apiKeyAuth: []
+      parameters: []
       responses:
         '201':
           description: chat created
@@ -578,12 +821,6 @@ paths:
         required: true
   "/api/v1/chats/{id}":
     parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token with read scope
     - name: id
       in: path
       required: true
@@ -595,7 +832,7 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: chat retrieved
@@ -614,7 +851,7 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '200':
@@ -650,7 +887,7 @@ paths:
       tags:
       - Chats
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '204':
           description: chat deleted
@@ -658,12 +895,6 @@ paths:
           description: chat not found
   "/api/v1/chats/{chat_id}/messages":
     parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token with write scope
     - name: chat_id
       in: path
       required: true
@@ -675,7 +906,7 @@ paths:
       tags:
       - Chat Messages
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '201':
@@ -711,12 +942,6 @@ paths:
         required: true
   "/api/v1/chats/{chat_id}/messages/retry":
     parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token with write scope
     - name: chat_id
       in: path
       required: true
@@ -728,7 +953,7 @@ paths:
       tags:
       - Chat Messages
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '202':
           description: retry started
@@ -748,20 +973,314 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/imports":
+    get:
+      summary: List imports
+      description: List all imports for the user's family with pagination and filtering.
+      tags:
+      - Imports
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: Filter by status
+        schema:
+          type: string
+          enum:
+          - pending
+          - complete
+          - importing
+          - reverting
+          - revert_failed
+          - failed
+      - name: type
+        in: query
+        required: false
+        description: Filter by import type
+        schema:
+          type: string
+          enum:
+          - TransactionImport
+          - TradeImport
+          - AccountImport
+          - MintImport
+          - CategoryImport
+          - RuleImport
+      responses:
+        '200':
+          description: imports filtered by type
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportCollection"
+    post:
+      summary: Create import
+      description: Create a new import from raw CSV content.
+      tags:
+      - Imports
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: import created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportResponse"
+        '422':
+          description: validation error - file too large
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                raw_file_content:
+                  type: string
+                  description: The raw CSV content as a string
+                type:
+                  type: string
+                  enum:
+                  - TransactionImport
+                  - TradeImport
+                  - AccountImport
+                  - MintImport
+                  - CategoryImport
+                  - RuleImport
+                  description: Import type (defaults to TransactionImport)
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account ID to import into
+                publish:
+                  type: string
+                  description: Set to "true" to automatically queue for processing
+                    if configuration is valid
+                date_col_label:
+                  type: string
+                  description: Header name for the date column
+                amount_col_label:
+                  type: string
+                  description: Header name for the amount column
+                name_col_label:
+                  type: string
+                  description: Header name for the transaction name column
+                category_col_label:
+                  type: string
+                  description: Header name for the category column
+                tags_col_label:
+                  type: string
+                  description: Header name for the tags column
+                notes_col_label:
+                  type: string
+                  description: Header name for the notes column
+                date_format:
+                  type: string
+                  description: Date format pattern (e.g., "%m/%d/%Y")
+                number_format:
+                  type: string
+                  enum:
+                  - '1,234.56'
+                  - 1.234,56
+                  - 1 234,56
+                  - '1,234'
+                  description: Number format for parsing amounts
+                signage_convention:
+                  type: string
+                  enum:
+                  - inflows_positive
+                  - inflows_negative
+                  description: How to interpret positive/negative amounts
+                col_sep:
+                  type: string
+                  enum:
+                  - ","
+                  - ";"
+                  description: Column separator
+        required: true
+  "/api/v1/imports/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Import ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve an import
+      description: Retrieve detailed information about a specific import, including
+        configuration and row statistics.
+      tags:
+      - Imports
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: import retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportResponse"
+        '404':
+          description: import not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/tags":
+    get:
+      summary: List tags
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: tags listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagCollection"
+    post:
+      summary: Create tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: tag created with auto-assigned color
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagDetail"
+        '422':
+          description: validation error - missing name
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Tag name (required)
+                    color:
+                      type: string
+                      description: Hex color code (optional, auto-assigned if not
+                        provided)
+                  required:
+                  - name
+              required:
+              - tag
+        required: true
+  "/api/v1/tags/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Tag ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: tag retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagDetail"
+        '404':
+          description: tag not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: tag updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TagDetail"
+        '404':
+          description: tag not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    color:
+                      type: string
+        required: true
+    delete:
+      summary: Delete a tag
+      tags:
+      - Tags
+      security:
+      - apiKeyAuth: []
+      responses:
+        '204':
+          description: tag deleted
+        '404':
+          description: tag not found
   "/api/v1/transactions":
     get:
       summary: List transactions
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters:
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
-        description: Bearer token with read scope
       - name: page
         in: query
         required: false
@@ -877,14 +1396,8 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
-      parameters:
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
-        description: Bearer token with write scope
+      - apiKeyAuth: []
+      parameters: []
       responses:
         '201':
           description: transaction created
@@ -962,12 +1475,6 @@ paths:
         required: true
   "/api/v1/transactions/{id}":
     parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token
     - name: id
       in: path
       required: true
@@ -979,7 +1486,7 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: transaction retrieved
@@ -998,7 +1505,7 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       parameters: []
       responses:
         '200':
@@ -1061,7 +1568,7 @@ paths:
       tags:
       - Transactions
       security:
-      - bearerAuth: []
+      - apiKeyAuth: []
       responses:
         '200':
           description: transaction deleted

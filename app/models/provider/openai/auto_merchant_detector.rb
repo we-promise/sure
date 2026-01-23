@@ -491,7 +491,9 @@ class Provider::Openai::AutoMerchantDetector
     # Format transactions in a simpler, more readable way for smaller LLMs
     def format_transactions_simply
       transactions.map do |t|
-        "- ID: #{t[:id]}, Description: \"#{t[:name] || t[:description]}\""
+        parts = [ t[:merchant], t[:description] ].compact.reject(&:blank?)
+        combined = parts.join(" - ")
+        "- ID: #{t[:id]}, Description: \"#{combined}\""
       end.join("\n")
     end
 end

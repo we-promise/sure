@@ -21,7 +21,7 @@
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
+                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
                     class: "w-9 h-9 rounded-full",
                     loading: "lazy" %>
               <% else %>
@@ -36,9 +36,9 @@
               <% end %>
             </div>
             <div class="flex md:hidden items-center gap-1 col-span-2 relative">
-              <%= render "transactions/transaction_category", transaction: transaction %>
+              <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
+                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
                     class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
                     loading: "lazy" %>
               <% end %>
@@ -80,10 +80,25 @@
 
                     <%# Pending indicator %>
                     <% if transaction.pending? %>
-                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="Pending — may change when posted">
+                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
                         <%= icon "clock", size: "sm", color: "current" %>
-                        Pending
+                        <%= t("transactions.transaction.pending") %>
                       </span>
+                    <% end %>
+
+                    <%# Potential duplicate indicator - different styling for low vs medium confidence %>
+                    <% if transaction.has_potential_duplicate? %>
+                      <% if transaction.low_confidence_duplicate? %>
+                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t("transactions.transaction.review_recommended_tooltip") %>">
+                          <%= icon "help-circle", size: "sm", color: "current" %>
+                          <%= t("transactions.transaction.review_recommended") %>
+                        </span>
+                      <% else %>
+                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-warning bg-warning/10 text-warning" title="<%= t("transactions.transaction.potential_duplicate_tooltip") %>">
+                          <%= icon "alert-triangle", size: "sm", color: "current" %>
+                          <%= t("transactions.transaction.possible_duplicate") %>
+                        </span>
+                      <% end %>
                     <% end %>
 
                     <% if transaction.transfer.present? %>
@@ -122,7 +137,12 @@
       </div>
 
       <div class="hidden md:flex items-center gap-1 col-span-2">
-        <%= render "transactions/transaction_category", transaction: transaction %>
+        <% if entry.account.investment? && !transaction.transfer? %>
+          <%# For investment accounts, show activity label instead of category %>
+          <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: transaction %>
+        <% else %>
+          <%= render "transactions/transaction_category", transaction: transaction, variant: "desktop" %>
+        <% end %>
       </div>
 
       <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">

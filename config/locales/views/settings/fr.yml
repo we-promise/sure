@@ -1,0 +1,142 @@
+---
+fr:
+  views:
+    settings:
+      payments:
+        renewal: "Votre contribution se poursuit le %{date}."
+  settings:
+    ai_prompts:
+      show:
+        page_title: Prompts IA
+        openai_label: OpenAI
+        disable_ai: Désactiver l'assistant IA
+        prompt_instructions: Instructions pour les prompts
+        main_system_prompt:
+          title: Prompt Système Principal
+          subtitle: Instructions fondamentales qui définissent le comportement de l'assistant AI dans toutes les conversations de chat
+        transaction_categorizer:
+          title: Catégorisation des transactions
+          subtitle: L'IA catégorise automatiquement vos transactions en fonction de vos catégories définies
+        merchant_detector:
+          title: Détection du vendeur
+          subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le vendeur
+    payments:
+      show:
+        page_title: Paiement
+        subscription_subtitle: Mettez à jour votre abonnement et vos détails de paiement
+        subscription_title: Gérer l'abonnement
+    preferences:
+      show:
+        country: Pays
+        currency: Devise
+        date_format: Format de date
+        general_subtitle: Configurez vos préférences
+        general_title: Général
+        default_period: Période par défaut
+        default_account_order: Ordre d'affichage des comptes par défaut
+        language: Langue
+        page_title: Préférences
+        theme_dark: Sombre
+        theme_light: Clair
+        theme_subtitle: Choisissez un thème préféré pour l'application
+        theme_system: Système
+        theme_title: Thème
+        timezone: Fuseau horaire
+    profiles:
+      destroy:
+        cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.
+        member_removal_failed: Il y a eu un problème lors de la suppression du membre.
+        member_removed: Le membre a été supprimé avec succès.
+        not_authorized: Vous n'êtes pas autorisé à supprimer les membres.
+      show:
+        confirm_delete:
+          body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
+          title: Supprimer le compte?
+        confirm_reset:
+          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, vendeurs, étiquettes et autres données. Cette action ne peut pas être annulée.
+          title: Réinitialiser le compte?
+        confirm_reset_with_sample_data:
+          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
+          title: Réinitialiser le compte et charger des données d'exemple ?
+        confirm_remove_invitation:
+          body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email}?
+          title: Supprimer l'invitation
+        confirm_remove_member:
+          body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte?
+          title: Supprimer le membre
+        danger_zone_title: Zone dangereuse
+        delete_account: Supprimer le compte
+        delete_account_warning: La suppression de votre compte entraînera la suppression permanente de toutes vos données et ne pourra pas être annulée.
+        reset_account: Réinitialiser le compte
+        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, vendeurs, étiquettes et autres données, mais gardera votre compte utilisateur intact.
+        reset_account_with_sample_data: Réinitialiser et précharger
+        reset_account_with_sample_data_warning: Supprime toutes vos données existantes puis charge des données d'exemple afin que vous puissiez explorer avec un environnement pré-rempli.
+        email: E-mail
+        first_name: Prénom
+        household_form_input_placeholder: Entrez le nom du foyer
+        household_form_label: Nom du foyer
+        household_subtitle: Invitez des membres de la famille, des partenaires et d'autres personnes. Les personnes invitées peuvent se connecter à votre foyer et accéder aux comptes partagés.
+        household_title: Foyer
+        invitation_link: Lien d'invitation
+        invite_member: Ajouter un membre
+        last_name: Nom de famille
+        page_title: Informations du profil
+        pending: En attente
+        profile_subtitle: Personnalisez l'apparence de votre profil sur %{product_name}
+        profile_title: Personnel
+        remove_invitation: Supprimer l'invitation
+        remove_member: Supprimer le membre
+        save: Enregistrer
+    securities:
+      show:
+        page_title: Sécurité
+        mfa_title: Authentification à deux facteurs
+        mfa_description: Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code de votre application d'authentification lors de la connexion
+        enable_mfa: Activer 2FA
+        disable_mfa: Désactiver 2FA
+        disable_mfa_confirm: Êtes-vous sûr(e) de vouloir désactiver l'authentification à deux facteurs ?
+        sso_title: Comptes connectés
+        sso_subtitle: Gérez vos connexions de compte à authentification unique
+        sso_disconnect: Déconnecter
+        sso_last_used: Dernière utilisation
+        sso_never: Jamais
+        sso_no_email: Pas d'email
+        sso_no_identities: Aucun compte SSO connecté
+        sso_connect_hint: Déconnectez-vous et connectez-vous avec un fournisseur SSO pour connecter un compte.
+        sso_confirm_title: Déconnecter le compte ?
+        sso_confirm_body: Êtes-vous sûr(e) de vouloir déconnecter votre compte %{provider} ? Vous pourrez le reconnecter ultérieurement en vous connectant avec ce fournisseur.
+        sso_confirm_button: Déconnecter
+        sso_warning_message: C'est votre seule méthode de connexion. Vous devriez définir un mot de passe dans vos paramètres de sécurité avant de déconnecter, sinon vous pourriez être bloqué(e) hors de votre compte.
+    settings_nav:
+      accounts_label: Comptes
+      advanced_section_title: Avancé
+      ai_prompts_label: Prompts IA
+      api_key_label: Clé API
+      payment_label: Paiement
+      categories_label: Catégories
+      feedback_label: Retour d'information
+      general_section_title: Général
+      imports_label: Importer/Exporter
+      logout: Se déconnecter
+      merchants_label: Vendeurs
+      guides_label: Guides
+      other_section_title: Plus
+      preferences_label: Préférences
+      profile_label: Informations du profil
+      recurring_transactions_label: Récurrentes
+      rules_label: Règles
+      security_label: Sécurité
+      self_hosting_label: Auto-hébergement
+      tags_label: Étiquettes
+      transactions_section_title: Transactions
+      whats_new_label: Dernières nouvelles
+      api_keys_label: Clés API
+      bank_sync_label: Synchronisation de la banque
+    settings_nav_link_large:
+      next: Suivant
+      previous: Précédent
+    user_avatar_field:
+      accepted_formats: JPG ou PNG. 5MB max.
+      choose: Charger une photo
+      choose_label: (facultatif)
+      change: Changer de photo

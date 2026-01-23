@@ -3,9 +3,11 @@ require "digest/md5"
 class SimplefinEntry::Processor
   include CurrencyNormalizable
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
-  def initialize(simplefin_transaction, simplefin_account:)
+  # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
+  def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)
     @simplefin_transaction = simplefin_transaction
     @simplefin_account = simplefin_account
+    @shared_import_adapter = import_adapter
   end
 
   def process
@@ -34,12 +36,31 @@ class SimplefinEntry::Processor
       # Include provider-supplied extra hash if present
       sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
 
-      # Pending detection: honor provider flag or infer from missing/zero posted with present transacted_at
-      posted_val = data[:posted]
-      posted_missing = posted_val.blank? || posted_val == 0 || posted_val == "0"
-      if ActiveModel::Type::Boolean.new.cast(data[:pending]) || (posted_missing && data[:transacted_at].present?)
+      # Pending detection: explicit flag OR inferred from posted=0 + transacted_at
+      # SimpleFIN indicates pending via:
+      # 1. pending: true (explicit flag)
+      # 2. posted=0 (epoch zero) + transacted_at present (implicit - some banks use this pattern)
+      #
+      # Note: We only infer from posted=0, NOT from posted=nil/blank, because some providers
+      # don't supply posted dates even for settled transactions (would cause false positives).
+      # We always set the key (true or false) to ensure deep_merge overwrites any stale value
+      is_pending = if ActiveModel::Type::Boolean.new.cast(data[:pending])
+        true
+      else
+        # Infer pending ONLY when posted is explicitly 0 (epoch) AND transacted_at is present
+        # posted=nil/blank is NOT treated as pending (some providers omit posted for settled txns)
+        posted_val = data[:posted]
+        transacted_val = data[:transacted_at]
+        posted_is_epoch_zero = posted_val.present? && posted_val.to_i.zero?
+        transacted_present = transacted_val.present? && transacted_val.to_i > 0
+        posted_is_epoch_zero && transacted_present
+      end
+
+      if is_pending
         sf["pending"] = true
         Rails.logger.debug("SimpleFIN: flagged pending transaction #{external_id}")
+      else
+        sf["pending"] = false
       end
 
       # FX metadata: when tx currency differs from account currency
@@ -57,7 +78,8 @@ class SimplefinEntry::Processor
     end
 
     def import_adapter
-      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+      # Use shared adapter if provided, otherwise create new one
+      @import_adapter ||= @shared_import_adapter || Account::ProviderImportAdapter.new(account)
     end
 
     def account
@@ -87,7 +109,7 @@ class SimplefinEntry::Processor
       elsif description.present?
         description
       else
-        data[:memo] || "Unknown transaction"
+        data[:memo] || I18n.t("transactions.unknown_name")
       end
     end
 
@@ -142,7 +164,7 @@ class SimplefinEntry::Processor
 
     def posted_date
       val = data[:posted]
-      # Treat 0 / "0" as missing to avoid Unix epoch 1970-01-01 for pendings
+      # Treat 0 / "0" as missing to avoid Unix epoch 1970-01-01
       return nil if val == 0 || val == "0"
       Simplefin::DateUtils.parse_provider_date(val)
     end

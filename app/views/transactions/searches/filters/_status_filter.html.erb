@@ -1,0 +1,26 @@
+<%# locals: (form:) %>
+
+<div class="p-2 space-y-3">
+  <div class="flex items-center gap-3" data-filter-name="confirmed">
+    <%= form.check_box :status,
+                           {
+                             multiple: true,
+                             checked: @q[:status]&.include?("confirmed"),
+                             class: "checkbox checkbox--light"
+                           },
+                           "confirmed",
+                           nil %>
+    <%= form.label :status, t(".confirmed"), value: "confirmed", class: "text-sm text-primary" %>
+  </div>
+  <div class="flex items-center gap-3" data-filter-name="pending">
+    <%= form.check_box :status,
+                           {
+                             multiple: true,
+                             checked: @q[:status]&.include?("pending"),
+                             class: "checkbox checkbox--light"
+                           },
+                           "pending",
+                           nil %>
+    <%= form.label :status, t(".pending"), value: "pending", class: "text-sm text-primary" %>
+  </div>
+</div>

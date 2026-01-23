@@ -1,4 +1,5 @@
 class Family < ApplicationRecord
+  include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable
 
   DATE_FORMATS = [
@@ -45,6 +46,16 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
+  def available_merchants
+    assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
+    recently_unlinked_ids = FamilyMerchantAssociation
+      .where(family: self)
+      .recently_unlinked
+      .pluck(:merchant_id)
+    family_merchant_ids = merchants.pluck(:id)
+    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+  end
+
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
@@ -67,6 +78,41 @@ class Family < ApplicationRecord
 
   def income_statement
     @income_statement ||= IncomeStatement.new(self)
+  end
+
+  # Returns the Investment Contributions category for this family, or nil if not found.
+  # This is a bootstrapped category used for auto-categorizing transfers to investment accounts.
+  def investment_contributions_category
+    categories.find_by(name: Category.investment_contributions_name)
+  end
+
+  # Returns account IDs for tax-advantaged accounts (401k, IRA, HSA, etc.)
+  # Used to exclude these accounts from budget/cashflow calculations.
+  # Tax-advantaged accounts are retirement savings, not daily expenses.
+  def tax_advantaged_account_ids
+    @tax_advantaged_account_ids ||= begin
+      # Investment accounts derive tax_treatment from subtype
+      tax_advantaged_subtypes = Investment::SUBTYPES.select do |_, meta|
+        meta[:tax_treatment].in?(%i[tax_deferred tax_exempt tax_advantaged])
+      end.keys
+
+      investment_ids = accounts
+        .joins("INNER JOIN investments ON investments.id = accounts.accountable_id AND accounts.accountable_type = 'Investment'")
+        .where(investments: { subtype: tax_advantaged_subtypes })
+        .pluck(:id)
+
+      # Crypto accounts have an explicit tax_treatment column
+      crypto_ids = accounts
+        .joins("INNER JOIN cryptos ON cryptos.id = accounts.accountable_id AND accounts.accountable_type = 'Crypto'")
+        .where(cryptos: { tax_treatment: %w[tax_deferred tax_exempt] })
+        .pluck(:id)
+
+      investment_ids + crypto_ids
+    end
+  end
+
+  def investment_statement
+    @investment_statement ||= InvestmentStatement.new(self)
   end
 
   def eu?

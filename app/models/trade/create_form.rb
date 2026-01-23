@@ -41,7 +41,8 @@ class Trade::CreateForm
           qty: signed_qty,
           price: price,
           currency: currency,
-          security: security
+          security: security,
+          investment_activity_label: type.capitalize # "buy" → "Buy", "sell" → "Sell"
         )
       )
 

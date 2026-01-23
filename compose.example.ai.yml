@@ -42,16 +42,18 @@ x-rails-env: &rails_env
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
   AI_DEBUG_MODE: "true" # Useful for debugging, set to "false" in production
-# Ollama using OpenAI API compatible endpoints
+  # Ollama using OpenAI API compatible endpoints
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
-  OPENAI_MODEL: llama3.1:8b   # Note: Use tool-enabled model
+  OPENAI_MODEL: llama3.1:8b # Note: Use tool-enabled model
   OPENAI_URI_BASE: http://ollama:11434/v1
-# NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
-#  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
+  # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
+  #  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
 
 services:
   # Note: You still have to download models manually using the ollama CLI or via Open WebUI
   ollama:
+    profiles:
+      - ai
     volumes:
       - ollama:/root/.ollama
     container_name: ollama
@@ -75,6 +77,8 @@ services:
     #           capabilities: [ gpu ]
 
   ollama-webui:
+    profiles:
+      - ai
     image: ghcr.io/open-webui/open-webui
     container_name: ollama-webui
     volumes:
@@ -98,7 +102,7 @@ services:
       - sure_net
 
   web:
-    image: ghcr.io/we-promise/sure:latest
+    image: ghcr.io/we-promise/sure:stable
     volumes:
       - app-storage:/rails/storage
     ports:
@@ -115,7 +119,7 @@ services:
       - sure_net
 
   worker:
-    image: ghcr.io/we-promise/sure:latest
+    image: ghcr.io/we-promise/sure:stable
     command: bundle exec sidekiq
     volumes:
       - app-storage:/rails/storage
@@ -142,6 +146,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - sure_net
+
+  backup:
+    profiles:
+      - backup
+    image: prodrigestivill/postgres-backup-local
+    restart: unless-stopped
+    volumes:
+      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=${POSTGRES_DB:-sure_production}
+      - POSTGRES_USER=${POSTGRES_USER:-sure_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password}
+      - SCHEDULE=@daily # Runs once a day at midnight
+      - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
+      - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups
+      - BACKUP_KEEP_MONTHS=6 # Keeps 6 monthly backups
+    depends_on:
+      - db
     networks:
       - sure_net
 

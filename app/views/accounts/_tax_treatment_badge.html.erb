@@ -1,0 +1,17 @@
+<%# locals: (account:) %>
+<%
+  treatment = account.tax_treatment
+  badge_classes = case treatment
+  when :tax_exempt
+    "bg-green-500/10 text-green-600 theme-dark:text-green-400"
+  when :tax_deferred
+    "bg-blue-500/10 text-blue-600 theme-dark:text-blue-400"
+  when :tax_advantaged
+    "bg-purple-500/10 text-purple-600 theme-dark:text-purple-400"
+  else
+    "bg-gray-500/10 text-secondary"
+  end
+%>
+<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= badge_classes %>" title="<%= t("accounts.tax_treatment_descriptions.#{treatment}") %>">
+  <%= account.tax_treatment_label %>
+</span>

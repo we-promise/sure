@@ -20,7 +20,7 @@ class RulesController < ApplicationController
                           .recent
                           .includes(:rule)
 
-    @pagy, @recent_runs = pagy(recent_runs_scope, limit: params[:per_page] || 20, page_param: :runs_page)
+    @pagy, @recent_runs = pagy(recent_runs_scope, limit: safe_per_page, page_param: :runs_page)
 
     render layout: "settings"
   end
@@ -102,6 +102,30 @@ class RulesController < ApplicationController
   def destroy_all
     Current.family.rules.destroy_all
     redirect_to rules_path, notice: "All rules deleted"
+  end
+
+  def confirm_all
+    @rules = Current.family.rules
+    @total_affected_count = Rule.total_affected_resource_count(@rules)
+
+    # Compute AI cost estimation if any rule has auto_categorize action
+    if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } }
+      llm_provider = Provider::Registry.get_provider(:openai)
+
+      if llm_provider
+        @selected_model = Provider::Openai.effective_model
+        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
+          transaction_count: @total_affected_count,
+          category_count: Current.family.categories.count,
+          model: @selected_model
+        )
+      end
+    end
+  end
+
+  def apply_all
+    ApplyAllRulesJob.perform_later(Current.family)
+    redirect_back_or_to rules_path, notice: t("rules.apply_all.success")
   end
 
   private

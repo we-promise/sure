@@ -1,0 +1,120 @@
+---
+zh-TW:
+  accounts:
+    account:
+      link_lunchflow: 連結 Lunch Flow
+      link_provider: 連結服務提供商
+      unlink_provider: 解除服務提供商連結
+      troubleshoot: 疑難排解
+    chart:
+      data_not_available: 所選時段內無資料
+    create:
+      success: "%{type} 帳戶已建立"
+    destroy:
+      success: "%{type} 帳戶已排定刪除"
+      cannot_delete_linked: "無法刪除已連結的帳戶。請先解除連結。"
+    empty:
+      empty_message: 請透過連線、匯入或手動輸入來新增帳戶。
+      new_account: 新增帳戶
+      no_accounts: 尚無帳戶
+    form:
+      balance: 目前餘額
+      name_label: 帳戶名稱
+      name_placeholder: 例如：薪資帳戶
+      additional_details: 額外詳細資訊
+      institution_name_label: 金融機構名稱
+      institution_name_placeholder: 例如：玉山銀行
+      institution_domain_label: 機構網域
+      institution_domain_placeholder: e.g., esunbank.com.tw
+      notes_label: 備註
+      notes_placeholder: 儲存額外資訊，例如帳號、分行代碼、IBAN、銀行轉帳號碼 (Routing numbers) 等。
+    index:
+      accounts: 帳戶管理
+      manual_accounts:
+        other_accounts: 其他帳戶
+      new_account: 新增帳戶
+      sync: 全部同步
+    sync_all:
+      syncing: "正在同步帳戶..."
+    new:
+      import_accounts: 匯入帳戶
+      method_selector:
+        connected_entry: 連結帳戶
+        connected_entry_eu: 連結歐盟 (EU) 帳戶
+        link_with_provider: "與 %{provider} 連結"
+        lunchflow_entry: 連結 Lunch Flow 帳戶
+        manual_entry: 輸入帳戶餘額
+        title: 您想如何新增？
+      title: 您想新增什麼內容？
+    show:
+      activity:
+        amount: 金額
+        balance: 餘額
+        date: 日期
+        entries: 筆紀錄
+        entry: 筆紀錄
+        new: 新增
+        new_balance: 新餘額
+        new_transaction: 新增交易
+        no_entries: 找不到任何紀錄
+        search:
+          placeholder: 以名稱搜尋紀錄
+        title: 活動紀錄
+      chart:
+        balance: 餘額
+        owed: 欠款金額
+      menu:
+        confirm_accept: 刪除「%{name}」
+        confirm_body_html: "<p>刪除此帳戶將會抹除其價值歷史紀錄，並影響您帳戶的各個層面。這將直接影響您的淨值計算和帳戶圖表。</p><br /> <p>刪除後將無法還原帳戶資訊，若需找回則必須重新新增為新帳戶。</p>"
+        confirm_title: 確定要刪除帳戶嗎？
+        edit: 編輯
+        import: 匯入交易
+        manage: 管理帳戶
+    update:
+      success: "%{type} 帳戶已更新"
+    sidebar:
+      missing_data: 缺少歷史資料
+      missing_data_description: "%{product} 使用第三方提供商來獲取歷史匯率、證券價格等資訊。這些資料是用於計算準確歷史帳戶餘額所必需的。"
+      configure_providers: 在此設定您的提供商。
+      tabs:
+        all: 全部
+        assets: 資產
+        debts: 負債
+      new_asset: 新增資產
+      new_debt: 新增負債
+      new_account: 新增帳戶
+      new_account_group: "新增 %{account_group}"
+    types:
+      depository: 現金/存款
+      investment: 投資
+      crypto: 加密貨幣
+      property: 不動產/房產
+      vehicle: 車輛
+      other_asset: 其他資產
+      credit_card: 信用卡
+      loan: 貸款
+      other_liability: 其他負債
+    confirm_unlink:
+      title: 解除帳戶與提供商的連結？
+      description_html: "您即將解除 <strong>%{account_name}</strong> 與 <strong>%{provider_name}</strong> 的連結。這會將其轉換為手動管理的帳戶。"
+      warning_title: 這代表什麼
+      warning_no_sync: 帳戶將不再與您的銀行自動同步
+      warning_manual_updates: 您將需要手動新增交易並更新餘額
+      warning_transactions_kept: 所有現有的交易和餘額紀錄將會保留
+      warning_can_delete: 解除連結後，您將可以根據需要刪除該帳戶
+      confirm_button: 確認並解除連結
+    unlink:
+      success: "帳戶連結已成功解除。現在這是一個手動管理的帳戶。"
+      not_linked: "帳戶未與任何提供商連結"
+      error: "解除連結失敗：%{error}"
+      generic_error: "發生預期之外的錯誤。請再試一次。"
+    select_provider:
+      title: 選擇要連結的提供商
+      description: "選擇您想用來連結 %{account_name} 的提供商"
+      already_linked: "帳戶已經與提供商連結"
+      no_providers: "目前未設定任何提供商"
+
+  email_confirmations:
+    new:
+      invalid_token: 無效或已過期的驗證連結。
+      success_login: 您的電子郵件已通過驗證。請使用新的電子郵件地址登入。

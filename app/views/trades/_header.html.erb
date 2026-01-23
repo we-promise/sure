@@ -3,12 +3,12 @@
 <div id="<%= dom_id(entry, :header) %>">
   <%= tag.header class: "mb-4 space-y-1" do %>
     <span class="text-secondary text-sm">
-      <%= entry.amount.negative? ? t(".sell") : t(".buy") %>
+      <%= entry.amount.negative? ? t(".buy") : t(".sell") %>
     </span>
 
     <div class="flex items-center gap-4">
       <h3 class="font-medium">
-        <span class="text-2xl">
+        <span class="text-2xl text-primary">
           <%= format_money entry.amount_money %>
         </span>
 

@@ -6,4 +6,5 @@ ca:
         entry:
           attributes:
             base:
-              invalid_sell_quantity: no pots vendre %{sell_qty} accions de %{ticker} perquè només en tens %{current_qty}
+              invalid_sell_quantity: no pots vendre %{sell_qty} accions de %{ticker}
+                perquè només en tens %{current_qty}

@@ -1,0 +1,313 @@
+# ISO 10383 MIC codes mapped to user-friendly exchange names
+# Source: https://www.iso20022.org/market-identifier-codes
+#
+# Format:
+#   MIC_CODE:
+#     name: Display Name
+#     country: ISO 3166-1 alpha-2 country code (optional, for future use)
+
+# United States - NASDAQ family (Operating MIC: XNAS)
+XNAS:
+  name: NASDAQ
+  country: US
+XNGS:
+  name: NASDAQ
+  country: US
+XNMS:
+  name: NASDAQ
+  country: US
+XNCM:
+  name: NASDAQ
+  country: US
+XBOS:
+  name: NASDAQ BX
+  country: US
+XPSX:
+  name: NASDAQ PSX
+  country: US
+XNDQ:
+  name: NASDAQ Options
+  country: US
+
+# United States - NYSE family (Operating MIC: XNYS)
+XNYS:
+  name: NYSE
+  country: US
+ARCX:
+  name: NYSE Arca
+  country: US
+XASE:
+  name: NYSE American
+  country: US
+XCHI:
+  name: NYSE Chicago
+  country: US
+XCIS:
+  name: NYSE National
+  country: US
+AMXO:
+  name: NYSE American Options
+  country: US
+ARCO:
+  name: NYSE Arca Options
+  country: US
+
+# United States - OTC Markets (Operating MIC: OTCM)
+OTCM:
+  name: OTC Markets
+  country: US
+PINX:
+  name: OTC Pink
+  country: US
+OTCQ:
+  name: OTCQX
+  country: US
+OTCB:
+  name: OTCQB
+  country: US
+PSGM:
+  name: OTC Grey
+  country: US
+
+# United States - Other
+XCBO:
+  name: CBOE
+  country: US
+XCME:
+  name: CME
+  country: US
+XCBT:
+  name: CBOT
+  country: US
+XNYM:
+  name: NYMEX
+  country: US
+BATS:
+  name: CBOE BZX
+  country: US
+EDGX:
+  name: CBOE EDGX
+  country: US
+IEXG:
+  name: IEX
+  country: US
+MEMX:
+  name: MEMX
+  country: US
+
+# United Kingdom
+XLON:
+  name: London Stock Exchange
+  country: GB
+XLME:
+  name: London Metal Exchange
+  country: GB
+
+# Germany
+XETR:
+  name: Xetra
+  country: DE
+XFRA:
+  name: Frankfurt
+  country: DE
+XSTU:
+  name: Stuttgart
+  country: DE
+XMUN:
+  name: Munich
+  country: DE
+XBER:
+  name: Berlin
+  country: DE
+XHAM:
+  name: Hamburg
+  country: DE
+XDUS:
+  name: Düsseldorf
+  country: DE
+XHAN:
+  name: Hannover
+  country: DE
+
+# Euronext
+XPAR:
+  name: Euronext Paris
+  country: FR
+XAMS:
+  name: Euronext Amsterdam
+  country: NL
+XBRU:
+  name: Euronext Brussels
+  country: BE
+XLIS:
+  name: Euronext Lisbon
+  country: PT
+XDUB:
+  name: Euronext Dublin
+  country: IE
+XOSL:
+  name: Euronext Oslo
+  country: "NO"
+XMIL:
+  name: Euronext Milan
+  country: IT
+
+# Other Europe
+XSWX:
+  name: SIX Swiss
+  country: CH
+XVTX:
+  name: SIX Swiss
+  country: CH
+XMAD:
+  name: BME Madrid
+  country: ES
+XWBO:
+  name: Vienna
+  country: AT
+XCSE:
+  name: Copenhagen
+  country: DK
+XHEL:
+  name: Helsinki
+  country: FI
+XSTO:
+  name: Stockholm
+  country: SE
+XICE:
+  name: Iceland
+  country: IS
+XPRA:
+  name: Prague
+  country: CZ
+XWAR:
+  name: Warsaw
+  country: PL
+XATH:
+  name: Athens
+  country: GR
+XIST:
+  name: Istanbul
+  country: TR
+
+# Canada
+XTSE:
+  name: Toronto
+  country: CA
+XTSX:
+  name: TSX Venture
+  country: CA
+XCNQ:
+  name: CSE
+  country: CA
+NEOE:
+  name: NEO
+  country: CA
+
+# Australia & New Zealand
+XASX:
+  name: ASX
+  country: AU
+XNZE:
+  name: NZX
+  country: NZ
+
+# Asia - Japan
+XTKS:
+  name: Tokyo
+  country: JP
+XJPX:
+  name: Japan Exchange
+  country: JP
+XOSE:
+  name: Osaka
+  country: JP
+XNGO:
+  name: Nagoya
+  country: JP
+XSAP:
+  name: Sapporo
+  country: JP
+XFKA:
+  name: Fukuoka
+  country: JP
+
+# Asia - China
+XSHG:
+  name: Shanghai
+  country: CN
+XSHE:
+  name: Shenzhen
+  country: CN
+XHKG:
+  name: Hong Kong
+  country: HK
+
+# Asia - Other
+XKRX:
+  name: Korea Exchange
+  country: KR
+XKOS:
+  name: KOSDAQ
+  country: KR
+XTAI:
+  name: Taiwan
+  country: TW
+XSES:
+  name: Singapore
+  country: SG
+XBKK:
+  name: Thailand
+  country: TH
+XIDX:
+  name: Indonesia
+  country: ID
+XKLS:
+  name: Malaysia
+  country: MY
+XPHS:
+  name: Philippines
+  country: PH
+XBOM:
+  name: BSE India
+  country: IN
+XNSE:
+  name: NSE India
+  country: IN
+
+# Latin America
+XMEX:
+  name: Mexico
+  country: MX
+XBUE:
+  name: Buenos Aires
+  country: AR
+XBOG:
+  name: Colombia
+  country: CO
+XSGO:
+  name: Santiago
+  country: CL
+BVMF:
+  name: B3 Brazil
+  country: BR
+XLIM:
+  name: Lima
+  country: PE
+
+# Middle East & Africa
+XTAE:
+  name: Tel Aviv
+  country: IL
+XDFM:
+  name: Dubai
+  country: AE
+XADS:
+  name: Abu Dhabi
+  country: AE
+XSAU:
+  name: Saudi (Tadawul)
+  country: SA
+XJSE:
+  name: Johannesburg
+  country: ZA

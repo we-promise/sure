@@ -1,4 +1,6 @@
 class SimplefinItem::Syncer
+  include SyncStats::Collector
+
   attr_reader :simplefin_item
 
   def initialize(simplefin_item)
@@ -10,7 +12,11 @@ class SimplefinItem::Syncer
     # can review and manually link accounts first. This mirrors the historical flow
     # users expect: initial 7-day balances snapshot, then full chunked history after linking.
     begin
-      if simplefin_item.simplefin_accounts.joins(:account).count == 0
+      # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
+      # the new AccountProvider system. An account is "linked" if either association exists.
+      total_linked = simplefin_item.simplefin_accounts.count { |sfa| sfa.current_account.present? }
+
+      if total_linked == 0
         sync.update!(status_text: "Discovering accounts (balances only)...") if sync.respond_to?(:status_text)
         # Pre-mark the sync as balances_only for runtime only (no persistence)
         begin
@@ -52,10 +58,19 @@ class SimplefinItem::Syncer
     finalize_setup_counts(sync)
 
     # Process transactions/holdings only for linked accounts
-    linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
-    if linked_accounts.any?
+    # Check both legacy FK and AccountProvider associations
+    linked_simplefin_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
+    if linked_simplefin_accounts.any?
       sync.update!(status_text: "Processing transactions and holdings...") if sync.respond_to?(:status_text)
-      simplefin_item.process_accounts
+      skipped_entries = simplefin_item.process_accounts
+
+      # Collect skip stats for protected entries (user-modified, import-locked, etc.)
+      if skipped_entries.any?
+        collect_skip_stats(sync, skipped_entries: skipped_entries)
+      end
+
+      # Warn about limited investment data for investment/crypto accounts
+      collect_investment_data_quality_warning(sync, linked_simplefin_accounts)
 
       sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
       simplefin_item.schedule_account_syncs(
@@ -77,7 +92,11 @@ class SimplefinItem::Syncer
     def finalize_setup_counts(sync)
       sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
       total_accounts = simplefin_item.simplefin_accounts.count
-      linked_accounts = simplefin_item.simplefin_accounts.joins(:account)
+
+      # Count linked accounts using both legacy FK and AccountProvider associations
+      linked_count = simplefin_item.simplefin_accounts.count { |sfa| sfa.current_account.present? }
+
+      # Unlinked = no legacy FK AND no AccountProvider
       unlinked_accounts = simplefin_item.simplefin_accounts
         .left_joins(:account, :account_provider)
         .where(accounts: { id: nil }, account_providers: { id: nil })
@@ -93,7 +112,7 @@ class SimplefinItem::Syncer
         existing = (sync.sync_stats || {})
         setup_stats = {
           "total_accounts" => total_accounts,
-          "linked_accounts" => linked_accounts.count,
+          "linked_accounts" => linked_count,
           "unlinked_accounts" => unlinked_accounts.count
         }
         sync.update!(sync_stats: existing.merge(setup_stats))
@@ -185,7 +204,8 @@ class SimplefinItem::Syncer
       window_start = sync.created_at || 30.minutes.ago
       window_end   = Time.current
 
-      account_ids = simplefin_item.simplefin_accounts.joins(:account).pluck("accounts.id")
+      # Get account IDs via BOTH legacy FK and AccountProvider to ensure we capture all linked accounts
+      account_ids = simplefin_item.simplefin_accounts.filter_map { |sfa| sfa.current_account&.id }
       return {} if account_ids.empty?
 
       tx_scope = Entry.where(account_id: account_ids, source: "simplefin", entryable_type: "Transaction")
@@ -193,17 +213,39 @@ class SimplefinItem::Syncer
       tx_updated  = tx_scope.where(updated_at: window_start..window_end).where.not(created_at: window_start..window_end).count
       tx_seen     = tx_imported + tx_updated
 
-      holdings_scope = Holding.where(account_id: account_ids)
-      holdings_processed = holdings_scope.where(created_at: window_start..window_end).count
+      # Count holdings from raw_holdings_payload (what the sync found) rather than
+      # the database. Holdings are applied asynchronously via SimplefinHoldingsApplyJob,
+      # so database counts would always be 0 at this point.
+      holdings_found = simplefin_item.simplefin_accounts.sum { |sfa| Array(sfa.raw_holdings_payload).size }
 
       {
         "tx_imported" => tx_imported,
         "tx_updated" => tx_updated,
         "tx_seen" => tx_seen,
-        "holdings_processed" => holdings_processed,
+        "holdings_found" => holdings_found,
         "window_start" => window_start,
         "window_end" => window_end
       }
+    end
+
+    # Collects a data quality warning if any linked accounts are investment or crypto accounts.
+    # SimpleFIN cannot provide activity labels (Buy, Sell, Dividend, etc.) for investment transactions,
+    # which may affect budget accuracy.
+    def collect_investment_data_quality_warning(sync, linked_simplefin_accounts)
+      investment_accounts = linked_simplefin_accounts.select do |sfa|
+        account = sfa.current_account
+        account&.accountable_type.in?(%w[Investment Crypto])
+      end
+
+      return if investment_accounts.empty?
+
+      collect_data_quality_stats(sync,
+        warnings: investment_accounts.size,
+        details: [ {
+          message: I18n.t("provider_warnings.limited_investment_data"),
+          severity: "warning"
+        } ]
+      )
     end
 
     def mark_failed(sync, error)

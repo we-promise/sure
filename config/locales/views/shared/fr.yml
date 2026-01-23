@@ -1,0 +1,26 @@
+---
+fr:
+  breadcrumbs:
+    home: Accueil
+    dashboard: Tableau de bord
+    accounts: Comptes
+    merchants: Marchands
+    categories: Catégories
+    tags: Étiquettes
+    rules: Règles
+    transactions: Transactions
+    budgets: Budgets
+    imports: Importations
+    chats: Assistant
+  shared:
+    confirm_modal:
+      accept: Confirmer
+      body_html: "<p>Vous ne pourrez pas annuler cette action</p>"
+      cancel: Annuler
+      title: Êtes-vous sûr ?
+    money_field:
+      label: Montant
+    syncing_notice:
+      syncing: Synchronisation des données de compte...
+    trend_change:
+      no_change: "pas de changement"
