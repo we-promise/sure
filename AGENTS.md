@@ -34,6 +34,17 @@
 - Never commit secrets. Start from `.env.local.example`; use `.env.local` for development only.
 - Run `bin/brakeman` before major PRs. Prefer environment variables over hard-coded values.
 
+## API Development Guidelines
+
+### OpenAPI Documentation (MANDATORY)
+When adding or modifying API endpoints in `app/controllers/api/v1/`, you **MUST** create or update corresponding OpenAPI request specs for **DOCUMENTATION ONLY**:
+
+1. **Location**: `spec/requests/api/v1/{resource}_spec.rb`
+2. **Framework**: RSpec with rswag for OpenAPI generation
+3. **Schemas**: Define reusable schemas in `spec/swagger_helper.rb`
+4. **Generated Docs**: `docs/api/openapi.yaml`
+5. **Regenerate**: Run `bundle exec rake rswag:specs:swaggerize` after changes
+
 ## Providers: Pending Transactions and FX Metadata (SimpleFIN/Plaid)
 
 - Pending detection

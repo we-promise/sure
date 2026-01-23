@@ -82,6 +82,7 @@ The application provides both internal and external APIs:
 - External API: `/api/v1/` namespace with Doorkeeper OAuth and API key authentication
 - API responses use Jbuilder templates for JSON rendering
 - Rate limiting via Rack Attack with configurable limits per API key
+- **OpenAPI Documentation**: All API endpoints MUST have corresponding OpenAPI specs in `spec/requests/api/` using rswag. See `docs/api/openapi.yaml` for the generated documentation.
 
 ### Sync & Import System
 Two primary data ingestion methods:
@@ -164,6 +165,7 @@ Sidekiq handles asynchronous tasks:
 - Test helpers in `test/support/` for common scenarios
 - Only test critical code paths that significantly increase confidence
 - Write tests as you go, when required
+- **API Endpoints require OpenAPI specs** in `spec/requests/api/` for documentation purposes ONLY, not test (uses RSpec + rswag)
 
 ### Performance Considerations
 - Database queries optimized with proper indexes
@@ -324,3 +326,39 @@ end
 - Use `mocha` gem
 - Prefer `OpenStruct` for mock instances
 - Only mock what's necessary
+
+## API Development Guidelines
+
+### OpenAPI Documentation (MANDATORY)
+When adding or modifying API endpoints in `app/controllers/api/v1/`, you **MUST** create or update corresponding OpenAPI request specs:
+
+1. **Location**: `spec/requests/api/v1/{resource}_spec.rb`
+2. **Framework**: RSpec with rswag for OpenAPI generation
+3. **Schemas**: Define reusable schemas in `spec/swagger_helper.rb`
+4. **Generated Docs**: `docs/api/openapi.yaml`
+
+**Example structure for a new API endpoint:**
+```ruby
+# spec/requests/api/v1/widgets_spec.rb
+require 'swagger_helper'
+
+RSpec.describe 'API V1 Widgets', type: :request do
+  path '/api/v1/widgets' do
+    get 'List widgets' do
+      tags 'Widgets'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+      
+      response '200', 'widgets listed' do
+        schema '$ref' => '#/components/schemas/WidgetCollection'
+        run_test!
+      end
+    end
+  end
+end
+```
+
+**Regenerate OpenAPI docs after changes:**
+```bash
+bundle exec rake rswag:specs:swaggerize
+```
