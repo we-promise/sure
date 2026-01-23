@@ -68,7 +68,7 @@
           </span>
         </div>
         <% if budget_category.inherits_parent_budget? %>
-          <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-500/10 text-secondary"><%= t("reports.budget_performance.shared") %></span>
+          <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-500/10 text-secondary -ml-2"><%= t("reports.budget_performance.shared") %></span>
         <% end %>
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
           <% if budget_category.available_to_spend >= 0 %>
