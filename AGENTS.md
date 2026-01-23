@@ -43,7 +43,7 @@ When adding or modifying API endpoints in `app/controllers/api/v1/`, you **MUST*
 2. **Framework**: RSpec with rswag for OpenAPI generation
 3. **Schemas**: Define reusable schemas in `spec/swagger_helper.rb`
 4. **Generated Docs**: `docs/api/openapi.yaml`
-5. **Regenerate**: Run `bundle exec rake rswag:specs:swaggerize` after changes
+5. **Regenerate**: Run `RAILS_ENV=test bundle exec rake rswag:specs:swaggerize` after changes
 
 ## Providers: Pending Transactions and FX Metadata (SimpleFIN/Plaid/Lunchflow)
 

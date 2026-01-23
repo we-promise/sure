@@ -360,5 +360,5 @@ end
 
 **Regenerate OpenAPI docs after changes:**
 ```bash
-bundle exec rake rswag:specs:swaggerize
+RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
 ```
