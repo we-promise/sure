@@ -29,7 +29,7 @@ class PagesController < ApplicationController
   def intro
     @breadcrumbs = [ [ "Home", chats_path ], [ "Intro", nil ] ]
   end
-  
+
   def update_preferences
     if Current.user.update_dashboard_preferences(preferences_params)
       head :ok

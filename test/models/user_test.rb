@@ -167,6 +167,8 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.show_sidebar?
     assert_not user.show_ai_sidebar?
     assert user.ai_enabled?
+  end
+
   test "update_dashboard_preferences handles concurrent updates atomically" do
     @user.update!(preferences: {})
 
