@@ -421,7 +421,7 @@ class InstallmentTest < ActiveSupport::TestCase
       installment_cost: 100,
       total_term: 12,
       current_term: 6,
-      first_payment_date: 6.months.ago.to_date,
+      first_payment_date: Date.current,
       payment_period: "monthly"
     )
 

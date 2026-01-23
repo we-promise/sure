@@ -19,7 +19,21 @@ class Installment::CreatorTest < ActiveSupport::TestCase
     )
   end
 
-  test "generates correct number of historical transactions" do
+  test "generates correct number of historical transactions for future dates" do
+    installment = @loan_account.create_installment!(
+      installment_cost: 200,
+      total_term: 6,
+      current_term: 3,
+      payment_period: "monthly",
+      first_payment_date: Date.current,
+    )
+
+    assert_difference "@loan_account.transactions.count", 3 do
+      Installment::Creator.new(installment).call
+    end
+  end
+
+  test "does not generate historical transactions for past dates" do
     installment = @loan_account.create_installment!(
       installment_cost: 200,
       total_term: 6,
@@ -28,7 +42,7 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       first_payment_date: 6.months.ago.to_date,
     )
 
-    assert_difference "@loan_account.transactions.count", 3 do
+    assert_no_difference "@loan_account.transactions.count" do
       Installment::Creator.new(installment).call
     end
   end
@@ -48,21 +62,22 @@ class Installment::CreatorTest < ActiveSupport::TestCase
   end
 
   test "historical transactions have correct dates based on payment schedule" do
+    first_payment = Date.current
     installment = @loan_account.create_installment!(
       installment_cost: 200,
       total_term: 3,
       current_term: 3,
       payment_period: "monthly",
-      first_payment_date: Date.new(2024, 1, 15),
+      first_payment_date: first_payment,
     )
 
     Installment::Creator.new(installment).call
 
     transactions = @loan_account.transactions.order("entries.date")
     assert_equal 3, transactions.count
-    assert_equal Date.new(2024, 1, 15), transactions.first.entry.date
-    assert_equal Date.new(2024, 2, 15), transactions.second.entry.date
-    assert_equal Date.new(2024, 3, 15), transactions.third.entry.date
+    assert_equal first_payment, transactions.first.entry.date
+    assert_equal first_payment + 1.month, transactions.second.entry.date
+    assert_equal first_payment + 2.months, transactions.third.entry.date
   end
 
   test "historical transactions are linked to installment via extra" do
@@ -71,30 +86,32 @@ class Installment::CreatorTest < ActiveSupport::TestCase
       total_term: 3,
       current_term: 2,
       payment_period: "monthly",
-      first_payment_date: 3.months.ago.to_date,
+      first_payment_date: Date.current,
     )
 
     Installment::Creator.new(installment).call
 
+    assert @loan_account.transactions.count > 0, "Expected transactions to be created"
     @loan_account.transactions.each do |transaction|
       assert_equal installment.id.to_s, transaction.extra["installment_id"]
       assert transaction.extra["installment_payment_number"].present?
     end
   end
 
-  test "historical transactions are created as funds_movement" do
+  test "historical transactions are created as loan_payment" do
     installment = @loan_account.create_installment!(
       installment_cost: 200,
       total_term: 3,
       current_term: 2,
       payment_period: "monthly",
-      first_payment_date: 3.months.ago.to_date,
+      first_payment_date: Date.current,
     )
 
     Installment::Creator.new(installment).call
 
+    assert @loan_account.transactions.count > 0, "Expected transactions to be created"
     @loan_account.transactions.each do |transaction|
-      assert_equal "funds_movement", transaction.kind
+      assert_equal "loan_payment", transaction.kind
     end
   end
 

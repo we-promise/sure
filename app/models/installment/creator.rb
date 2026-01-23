@@ -22,9 +22,13 @@ class Installment::Creator
 
       schedule = installment.generate_payment_schedule
       account = installment.account
+      today = Date.current
 
-      # Create transactions for payments 1 through current_term
+      # Create transactions for payments 1 through current_term, but only for today or future dates
       schedule.first(installment.current_term).each do |payment_info|
+        # Skip past payments - don't auto-create transactions for dates before today
+        next if payment_info[:date] < today
+
         transaction = Transaction.create!(
           extra: {
             "installment_id" => installment.id.to_s,
