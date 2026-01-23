@@ -156,6 +156,24 @@ class InstallmentTest < ActiveSupport::TestCase
     assert_equal expected_remaining, installment.calculate_current_balance
   end
 
+  test "calculate_current_balance respects current_term if it's beyond scheduled progress" do
+    # Creation: first_payment_date is tomorrow, but user says they're on payment 1
+    # Normally scheduled would be 0, but current_term is 1.
+    installment = @account.create_installment!(
+      installment_cost: 200,
+      total_term: 6,
+      current_term: 1,
+      payment_period: "monthly",
+      first_payment_date: 1.day.from_now.to_date
+    )
+
+    assert_equal 0, installment.payments_scheduled_to_date
+    assert_equal 1, installment.current_term
+
+    # Balance should be (6 - 1) * 200 = 1000, NOT 1200
+    assert_equal 1000, installment.calculate_current_balance
+  end
+
   test "calculate_current_balance returns 0 when all payments scheduled" do
     installment = @account.create_installment!(
       installment_cost: 200,
