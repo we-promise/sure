@@ -25,6 +25,8 @@ class Loan < ApplicationRecord
   end
 
   def original_balance
+    return Money.new(initial_balance, account.currency) if initial_balance.present?
+
     Money.new(account.first_valuation_amount, account.currency)
   end
 

@@ -98,8 +98,17 @@ class Account < ApplicationRecord
       transaction do
         account.save!
 
+        # For Loans, we want the opening balance to match the current balance provided by the user,
+        # not necessarily the original loan amount (initial_balance).
+        # However, for other account types, initial_balance might be the intended opening balance.
+        opening_balance = if account.loan?
+          account.balance
+        else
+          initial_balance || account.balance
+        end
+
         manager = Account::OpeningBalanceManager.new(account)
-        result = manager.set_opening_balance(balance: initial_balance || account.balance)
+        result = manager.set_opening_balance(balance: opening_balance)
         raise result.error if result.error
       end
 
