@@ -74,6 +74,7 @@
       <% if item.user_registered? %>
         <details class="group mt-4"
                  data-controller="lazy-load"
+                 data-action="toggle->lazy-load#toggled"
                  data-lazy-load-url-value="<%= connections_snaptrade_item_path(item) %>">
           <summary class="flex items-center justify-end gap-1 cursor-pointer text-sm text-secondary hover:text-primary list-none [&::-webkit-details-marker]:hidden">
             <%= t("providers.snaptrade.manage_connections") %>

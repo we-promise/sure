@@ -2,32 +2,27 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="lazy-load"
 // Used with <details> elements to lazy-load content when expanded
+// Use data-action="toggle->lazy-load#toggled" on the <details> element
 export default class extends Controller {
   static targets = ["content", "loading", "frame"];
   static values = { url: String, loaded: Boolean };
 
   connect() {
-    this.boundHandleToggle = this.handleToggle.bind(this);
-    this.element.addEventListener("toggle", this.boundHandleToggle);
-
     // If already open on connect (browser restored state), load immediately
     if (this.element.open && !this.loadedValue) {
       this.load();
     }
   }
 
-  disconnect() {
-    this.element.removeEventListener("toggle", this.boundHandleToggle);
-  }
-
-  handleToggle() {
+  toggled() {
     if (this.element.open && !this.loadedValue) {
       this.load();
     }
   }
 
   async load() {
-    if (this.loadedValue) return;
+    if (this.loadedValue || this.loading) return;
+    this.loading = true;
 
     try {
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -56,6 +51,8 @@ export default class extends Controller {
     } catch (error) {
       console.error("Lazy load error:", error);
       this.showError("Network error");
+    } finally {
+      this.loading = false;
     }
   }
 

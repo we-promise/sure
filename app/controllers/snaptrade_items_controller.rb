@@ -260,11 +260,16 @@ class SnaptradeItemsController < ApplicationController
     if accounts_deleted == 0
       provider = @snaptrade_item.snaptrade_provider
       creds = @snaptrade_item.snaptrade_credentials
-      provider.delete_connection(
-        user_id: creds[:user_id],
-        user_secret: creds[:user_secret],
-        authorization_id: authorization_id
-      )
+
+      if provider && creds&.dig(:user_id) && creds&.dig(:user_secret)
+        provider.delete_connection(
+          user_id: creds[:user_id],
+          user_secret: creds[:user_secret],
+          authorization_id: authorization_id
+        )
+      else
+        Rails.logger.warn "SnapTrade: Cannot delete orphaned connection #{authorization_id} - missing credentials"
+      end
     end
 
     respond_to do |format|
@@ -291,10 +296,8 @@ class SnaptradeItemsController < ApplicationController
         format.turbo_stream { render turbo_stream: turbo_stream.remove("orphaned_user_#{user_id.parameterize}") }
       end
     else
-      respond_to do |format|
-        format.html { redirect_to settings_providers_path, alert: t(".failed") }
-        format.turbo_stream { redirect_to settings_providers_path, alert: t(".failed") }
-      end
+      # Redirect for both formats - Turbo will follow the redirect
+      redirect_to settings_providers_path, alert: t(".failed")
     end
   end
 
