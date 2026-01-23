@@ -155,7 +155,8 @@ module LanguagesHelper
 
   # Locales with complete/extensive translations
   SUPPORTED_LOCALES = [
-    "en",   # English - 62 translation files
+    "en",   # English - 71 translation files
+    "fr",   # French - 61 translation files
     "de",   # German - 62 translation files
     "es",   # Spanish - 61 translation files
     "tr",   # Turkish - 58 translation files
@@ -164,7 +165,8 @@ module LanguagesHelper
     "ro",   # Romanian - 62 translation files
     "pt-BR", # Brazilian Portuguese - 60 translation files
     "zh-CN", # Chinese (Simplified) - 59 translation files
-    "zh-TW"  # Chinese (Traditional) - 63 translation files
+    "zh-TW",  # Chinese (Traditional) - 63 translation files
+    "nl"   # Dutch - 73 translation files
   ].freeze
 
   COUNTRY_MAPPING = {

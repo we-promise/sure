@@ -1,4 +1,14 @@
 class PlaidAccount < ApplicationRecord
+  include Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+    encrypts :raw_investments_payload
+    encrypts :raw_liabilities_payload
+  end
+
   belongs_to :plaid_item
 
   # Legacy association via foreign key (will be removed after migration)

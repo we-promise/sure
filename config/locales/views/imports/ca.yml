@@ -3,13 +3,27 @@ ca:
   import:
     cleans:
       show:
-        description: Edita les teves dades a la taula de sota. Les cel·les vermelles són invàlides.
-        errors_notice: Hi ha errors a les teves dades. Passa el cursor per sobre de l'error per veure'n els detalls.
-        errors_notice_mobile: Hi ha errors a les teves dades. Toca la icona d'error per veure'n els detalls.
+        description: Edita les teves dades a la taula de sota. Les cel·les vermelles
+          són invàlides.
+        errors_notice: Hi ha errors a les teves dades. Passa el cursor per sobre de
+          l'error per veure'n els detalls.
+        errors_notice_mobile: Hi ha errors a les teves dades. Toca la icona d'error
+          per veure'n els detalls.
         title: Neteja les teves dades
     configurations:
+      category_import:
+        button_label: Continua
+        description: Puja un fitxer CSV senzill (com el que generem quan exportes
+          les teves dades). Automàticament maparem les columnes per tu.
+        instructions: Selecciona continuar per analitzar el teu CSV i passar al pas de neteja.
       mint_import:
         date_format_label: Format de data
+      rule_import:
+        description: Configura la teva importació de regles. Es crearan o actualitzaran
+          regles basades en les dades del CSV.
+        process_button: Processa regles
+        process_help: Clica el botó de sota per processar el teu CSV i generar files
+          de regles.
       show:
         description: Selecciona les columnes que corresponen a cada camp del teu CSV.
         title: Configura la teva importació
@@ -21,59 +35,78 @@ ca:
       mappings:
         create_account: Crea un compte
         csv_mapping_label: "%{mapping} al CSV"
-        sure_mapping_label: "%{mapping} a %{product_name}"
-        no_accounts: Encara no tens cap compte. Crea un compte que puguem utilitzar per a les files (sense assignar) del teu CSV o torna al pas de Neteja i proporciona un nom de compte que puguem utilitzar.
+        no_accounts: Encara no tens cap compte. Crea un compte que puguem utilitzar
+          per a les files (sense assignar) del teu CSV o torna al pas de Neteja i
+          proporciona un nom de compte que puguem utilitzar.
         rows_label: Files
+        sure_mapping_label: "%{mapping} a %{product_name}"
         unassigned_account: Necessites crear un nou compte per a les files sense assignar?
       show:
-        account_mapping_description: Assigna tots els comptes del teu fitxer importat als comptes existents de Maybe. També pots afegir nous comptes o deixar-los sense categoria.
+        account_mapping_description: Assigna tots els comptes del teu fitxer importat
+          als comptes existents de Maybe. També pots afegir nous comptes o deixar-los
+          sense categoria.
         account_mapping_title: Assigna els teus comptes
-        account_type_mapping_description: Assigna tots els tipus de compte del teu fitxer importat als de Maybe
+        account_type_mapping_description: Assigna tots els tipus de compte del teu
+          fitxer importat als de Maybe
         account_type_mapping_title: Assigna els teus tipus de compte
-        category_mapping_description: Assigna totes les categories del teu fitxer importat a les categories existents de Maybe. També pots afegir-ne de noves o deixar-les sense categoria.
+        category_mapping_description: Assigna totes les categories del teu fitxer
+          importat a les categories existents de Maybe. També pots afegir-ne de noves
+          o deixar-les sense categoria.
         category_mapping_title: Assigna les teves categories
-        tag_mapping_description: Assigna totes les etiquetes del teu fitxer importat a les etiquetes existents de Maybe. També pots afegir-ne de noves o deixar-les sense categoria.
+        tag_mapping_description: Assigna totes les etiquetes del teu fitxer importat
+          a les etiquetes existents de Maybe. També pots afegir-ne de noves o deixar-les
+          sense categoria.
         tag_mapping_title: Assigna les teves etiquetes
     uploads:
       show:
-        description: Enganxa o puja el teu fitxer CSV a continuació. Revisa les instruccions de la taula abans de començar.
-        instructions_1: A sota hi ha un exemple de CSV amb columnes disponibles per importar.
+        description: Enganxa o puja el teu fitxer CSV a continuació. Revisa les instruccions
+          de la taula abans de començar.
+        instructions_1: A sota hi ha un exemple de CSV amb columnes disponibles per
+          importar.
         instructions_2: El teu CSV ha de tenir una fila d'encapçalament
-        instructions_3: Pots posar el nom que vulguis a les columnes. Les maparàs en un pas posterior.
+        instructions_3: Pots posar el nom que vulguis a les columnes. Les maparàs
+          en un pas posterior.
         instructions_4: Les columnes marcades amb un asterisc (*) són obligatòries.
         instructions_5: Sense comes, símbols de moneda ni parèntesis als números.
         title: Importa les teves dades
   imports:
-    empty:
-      message: Encara no hi ha importacions.
-      new: Nova importació
-    import:
-      complete: Completat
-      delete: Elimina
-      failed: Error
-      in_progress: En curs
-      label: "%{type}: %{datetime}"
-      revert_failed: Reversió fallida
-      reverting: Revertint
-      uploading: Processant files
-      view: Veure
     index:
-      imports: Importacions
+      title: Importacions
       new: Nova importació
-      title: Importa/Exporta
-      exports: Exportacions
-      new_export: Nova exportació
-      no_exports: Encara no hi ha exportacions.
+    table:
+      title: Imports
+      header:
+        date: Data
+        operation: Operació
+        status: Estat
+        actions: Accions
+      row:
+        status:
+          in_progress: En curs
+          uploading: Processant files
+          reverting: Revertint
+          revert_failed: Reversió fallida
+          complete: Completat
+          failed: Error
+        actions:
+          revert: Revertir
+          confirm_revert: Això suprimirà les transaccions que s'han importat, però encara podràs revisar i tornar a importar les teves dades en qualsevol moment.
+          delete: Elimina
+          view: Veure
+      empty: Encara no hi ha importacions.
     new:
-      description: Pots importar manualment diversos tipus de dades via CSV o utilitzar una de les nostres plantilles d'importació com Mint.
+      description: Pots importar manualment diversos tipus de dades via CSV o utilitzar
+        una de les nostres plantilles d'importació com Mint.
       import_accounts: Importa comptes
+      import_categories: Importa categories
       import_mint: Importa des de Mint
       import_portfolio: Importa inversions
+      import_rules: Importa regles
       import_transactions: Importa transaccions
       resume: Reprèn %{type}
       sources: Fonts
       title: Nova importació CSV
     ready:
-      description: Aquí tens un resum dels nous elements que s'afegiran al teu compte un cop publiquis aquesta importació.
+      description: Aquí tens un resum dels nous elements que s'afegiran al teu compte
+        un cop publiquis aquesta importació.
       title: Confirma les teves dades d'importació
-

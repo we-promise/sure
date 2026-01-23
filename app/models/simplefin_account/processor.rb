@@ -1,9 +1,10 @@
 class SimplefinAccount::Processor
   include SimplefinNumericHelpers
-  attr_reader :simplefin_account
+  attr_reader :simplefin_account, :skipped_entries
 
   def initialize(simplefin_account)
     @simplefin_account = simplefin_account
+    @skipped_entries = []
   end
 
   # Each step represents different SimpleFin data processing
@@ -46,7 +47,9 @@ class SimplefinAccount::Processor
       avail = to_decimal(simplefin_account.available_balance)
 
       # Choose an observed value prioritizing posted balance first
-      observed = bal.nonzero? ? bal : avail
+      # Use available_balance only when current_balance is truly missing (nil),
+      # not when it's explicitly zero (e.g., dormant credit card with no debt)
+      observed = simplefin_account.current_balance.nil? ? avail : bal
 
       # Determine if this should be treated as a liability for normalization
       is_linked_liability = [ "CreditCard", "Loan" ].include?(account.accountable_type)
@@ -142,7 +145,9 @@ class SimplefinAccount::Processor
     end
 
     def process_transactions
-      SimplefinAccount::Transactions::Processor.new(simplefin_account).process
+      processor = SimplefinAccount::Transactions::Processor.new(simplefin_account)
+      processor.process
+      @skipped_entries.concat(processor.skipped_entries)
     rescue => e
       report_exception(e, "transactions")
     end

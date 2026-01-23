@@ -79,7 +79,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
 
     trade_date = 10.days.ago.to_date
-    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "USD")
+    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
 
     account.entries.create!(
       name: "Buy AAPL",
@@ -129,7 +129,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     security = Security.create!(ticker: "INVALID", exchange_operating_mic: "XNAS")
 
     trade_date = 10.days.ago.to_date
-    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "USD")
+    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
 
     account.entries.create!(
       name: "Buy INVALID",

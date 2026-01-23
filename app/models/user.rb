@@ -1,7 +1,26 @@
 class User < ApplicationRecord
+  include Encryptable
+
   # Allow nil password for SSO-only users (JIT provisioning).
   # Custom validation ensures password is present for non-SSO registration.
   has_secure_password validations: false
+
+  # Encrypt sensitive fields if ActiveRecord encryption is configured
+  if encryption_ready?
+    # MFA secrets
+    encrypts :otp_secret, deterministic: true
+    # Note: otp_backup_codes is a PostgreSQL array column which doesn't support
+    # AR encryption. To encrypt it, a migration would be needed to change the
+    # column type from array to text/jsonb.
+
+    # PII - emails (deterministic for lookups, downcase for case-insensitive)
+    encrypts :email, deterministic: true, downcase: true
+    encrypts :unconfirmed_email, deterministic: true, downcase: true
+
+    # PII - names (non-deterministic for maximum security)
+    encrypts :first_name
+    encrypts :last_name
+  end
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
@@ -13,6 +32,7 @@ class User < ApplicationRecord
   has_many :impersonator_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonator_id, dependent: :destroy
   has_many :impersonated_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonated_id, dependent: :destroy
   has_many :oidc_identities, dependent: :destroy
+  has_many :sso_audit_logs, dependent: :nullify
   accepts_nested_attributes_for :family, update_only: true
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -33,6 +53,13 @@ class User < ApplicationRecord
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
 
   before_validation :apply_ui_layout_defaults, on: :create
+
+  # Returns the appropriate role for a new user creating a family.
+  # The very first user of an instance becomes super_admin; subsequent users
+  # get the specified fallback role (typically :admin for family creators).
+  def self.role_for_new_family_creator(fallback_role: :admin)
+    User.exists? ? fallback_role : :super_admin
+  end
 
   has_one_attached :profile_image do |attachable|
     attachable.variant :thumbnail, resize_to_fill: [ 300, 300 ], convert: :webp, saver: { quality: 80 }
@@ -342,7 +369,7 @@ class User < ApplicationRecord
       if (index = otp_backup_codes.index(code))
         remaining_codes = otp_backup_codes.dup
         remaining_codes.delete_at(index)
-        update_column(:otp_backup_codes, remaining_codes)
+        update!(otp_backup_codes: remaining_codes)
         true
       else
         false

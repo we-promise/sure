@@ -1,0 +1,4 @@
+---
+en:
+  provider_warnings:
+    limited_investment_data: "Investment data from this provider is limited. Activity labels (Buy, Sell, Dividend) are not available, which may affect budget accuracy. Consider creating rules to exclude or categorize investment transactions."

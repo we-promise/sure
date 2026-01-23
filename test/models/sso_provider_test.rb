@@ -80,6 +80,8 @@ class SsoProviderTest < ActiveSupport::TestCase
   end
 
   test "encrypts client_secret" do
+    skip "Encryption not configured" unless SsoProvider.encryption_ready?
+
     provider = SsoProvider.create!(
       strategy: "openid_connect",
       name: "encrypted_test",

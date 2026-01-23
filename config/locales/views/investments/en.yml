@@ -10,6 +10,115 @@ en:
       title: Enter account balance
     show:
       chart_title: Total value
+    subtypes:
+      # United States
+      brokerage:
+        short: Brokerage
+        long: Brokerage
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: Traditional IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529 Plan
+        long: 529 Education Savings Plan
+      hsa:
+        short: HSA
+        long: Health Savings Account
+      ugma:
+        short: UGMA
+        long: UGMA Custodial Account
+      utma:
+        short: UTMA
+        long: UTMA Custodial Account
+      # United Kingdom
+      isa:
+        short: ISA
+        long: Individual Savings Account
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension
+      workplace_pension_uk:
+        short: Pension
+        long: Workplace Pension
+      # Canada
+      rrsp:
+        short: RRSP
+        long: Registered Retirement Savings Plan
+      tfsa:
+        short: TFSA
+        long: Tax-Free Savings Account
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund
+      # Australia
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund
+      # Europe
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pillar 3a
+        long: Private Pension (Pillar 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      # Generic
+      pension:
+        short: Pension
+        long: Pension
+      retirement:
+        short: Retirement
+        long: Retirement Account
+      mutual_fund:
+        short: Mutual Fund
+        long: Mutual Fund
+      angel:
+        short: Angel
+        long: Angel Investment
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Other
+        long: Other Investment
     value_tooltip:
       cash: Cash
       holdings: Holdings

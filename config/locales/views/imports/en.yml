@@ -10,6 +10,8 @@ en:
           details.
         title: Clean your data
     configurations:
+      update:
+        success: Import configured successfully.
       category_import:
         button_label: Continue
         description: Upload a simple CSV file (like the one we generate when you
@@ -29,6 +31,7 @@ en:
         date_format_label: Date format
       transaction_import:
         date_format_label: Date format
+        rows_to_skip_label: Skip first n rows
     confirms:
       mappings:
         create_account: Create account
@@ -66,26 +69,30 @@ en:
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
   imports:
-    empty:
-      message: No imports yet.
-      new: New Import
-    import:
-      complete: Complete
-      delete: Delete
-      failed: Failed
-      in_progress: In progress
-      label: "%{type}: %{datetime}"
-      revert_failed: Revert failed
-      reverting: Reverting
-      uploading: Processing rows
-      view: View
     index:
-      imports: Imports
+      title: Imports
       new: New Import
-      title: Import/Export
-      exports: Exports
-      new_export: New Export
-      no_exports: No exports yet.
+    table:
+      title: Imports
+      header:
+        date: Date
+        operation: Operation
+        status: Status
+        actions: Actions
+      row:
+        status:
+          in_progress: In progress
+          uploading: Processing rows
+          reverting: Reverting
+          revert_failed: Revert failed
+          complete: Complete
+          failed: Failed
+        actions:
+          revert: Revert
+          confirm_revert: This will delete transactions that were imported, but you will still be able to review and re-import your data at any time.
+          delete: Delete
+          view: View
+      empty: No imports yet.
     new:
       description: You can manually import various types of data via CSV or use one
         of our import templates like Mint.
@@ -102,3 +109,5 @@ en:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
+    errors:
+      custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"

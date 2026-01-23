@@ -41,7 +41,8 @@ module EntriesTestHelper
       qty: qty,
       security: security,
       price: trade_price,
-      currency: currency
+      currency: currency,
+      investment_activity_label: qty > 0 ? "Buy" : "Sell"
 
     account.entries.create! \
       name: "Trade",

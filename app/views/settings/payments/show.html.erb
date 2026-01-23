@@ -1,0 +1,65 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<%= settings_section title: t(".subscription_title"), subtitle: t(".subscription_subtitle") do %>
+  <div class="space-y-4">
+    <div class="p-3 shadow-border-xs bg-container rounded-lg flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <%= render DS::FilledIcon.new(
+          icon: "gem",
+          rounded: true,
+          size: "lg"
+        ) %>
+
+        <div class="text-sm space-y-1">
+          <% if @family.has_active_subscription? %>
+            <p class="text-primary">
+              <span>Currently on the <span class="font-medium"><%= @family.subscription.name %></span>.</span> <br />
+
+              <% if @family.next_payment_date %>
+                <% if @family.subscription_pending_cancellation? %>
+                  <span><%= t("views.settings.payments.cancellation", date: l(@family.next_payment_date, format: :long)) %></span>
+                <% else %>
+                  <span><%= t("views.settings.payments.renewal", date: l(@family.next_payment_date, format: :long)) %></span>
+                <% end %>
+              <% end %>
+            </p>
+          <% elsif @family.trialing? %>
+            <p class="text-primary">
+              Currently using the open demo of <%= product_name %> <br />
+              <span class="text-secondary">
+                (Data will be deleted in <%= @family.days_left_in_trial %> days)
+              </span>
+            </p>
+          <% else %>
+            <p class="text-primary">You are currently <span class="font-medium">not contributing</span></p>
+            <p class="text-secondary">Contributions to <%= product_name %> will show here.</p>
+          <% end %>
+        </div>
+      </div>
+
+      <% if @family.has_active_subscription? %>
+        <%= render DS::Link.new(
+          text: "Manage",
+          icon: "external-link",
+          variant: "primary",
+          icon_position: "right",
+          href: subscription_path,
+          rel: "noopener"
+        ) %>
+      <% else %>
+        <%= render DS::Link.new(
+          text: "Choose level",
+          variant: "primary",
+          icon: "plus",
+          icon_position: "right",
+          href: upgrade_subscription_path(view: "upgrade"),
+          rel: "noopener") %>
+      <% end %>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <%= image_tag "stripe-logo.svg", class: "w-5 h-5 shrink-0" %>
+      <p class="text-secondary text-sm">Payment via Stripe</p>
+    </div>
+  </div>
+<% end %>

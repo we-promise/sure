@@ -1219,6 +1219,41 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "preserves transaction tags when re-importing existing transaction" do
+    tag = Tag.create!(name: "Salary", family: @family)
+
+    # Create initial transaction
+    entry = @adapter.import_transaction(
+      external_id: "plaid_tag_test",
+      amount: 1000.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Paycheck",
+      source: "plaid"
+    )
+
+    # Add tag to the transaction (simulating user or rule action)
+    entry.transaction.tags << tag
+    entry.transaction.save!
+    assert_equal [ tag ], entry.transaction.reload.tags
+
+    # Re-import the same transaction with updated data
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "plaid_tag_test",
+        amount: 1000.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Updated Paycheck Name",
+        source: "plaid"
+      )
+
+      assert_equal entry.id, updated_entry.id
+      # Tags should be preserved
+      assert_equal [ tag ], updated_entry.transaction.reload.tags
+    end
+  end
+
   test "Plaid pending_transaction_id takes priority over amount matching" do
     # Create TWO pending transactions with same amount
     pending1 = @adapter.import_transaction(

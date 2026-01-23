@@ -1,0 +1,128 @@
+---
+ca:
+  admin:
+    sso_providers:
+      create:
+        success: El proveïdor SSO s'ha creat correctament.
+      destroy:
+        confirm: Estàs segur que vols eliminar aquest proveïdor? Aquesta acció no es
+          pot desfer.
+        success: El proveïdor SSO s'ha eliminat correctament.
+      edit:
+        description: Actualitza la configuració per a %{label}
+        title: Edita el proveïdor SSO
+      form:
+        admin_groups: Grups d'administradors
+        advanced_title: Configuració OIDC avançada
+        basic_information: Informació bàsica
+        cancel: Cancel·la
+        client_id_help: ID del client OAuth del teu proveïdor d'identitat
+        client_id_label: ID del client
+        client_id_placeholder: el-teu-id-client
+        client_secret_help: Secret del client OAuth (xifrat a la base de dades)
+        client_secret_help_existing: " - deixa en blanc per mantenir l'existent"
+        client_secret_label: Secret del client
+        client_secret_placeholder_existing: "••••••••••••••••"
+        client_secret_placeholder_new: el-teu-secret-client
+        copy_button: Copia
+        default_role_help: Rol assignat als usuaris creats mitjançant aprovisionament
+          de comptes SSO just-in-time (JIT). Per defecte és Membre.
+        default_role_label: Rol per defecte per a nous usuaris
+        enabled_help: Els usuaris poden iniciar sessió amb aquest proveïdor quan està
+          habilitat
+        enabled_label: Habilita aquest proveïdor
+        errors_title: "%{count} error ha prohibit que aquest proveïdor s' desa:"
+        groups_help: Llista separada per comes dels noms de grups del IdP. Usa * per coincidir
+          amb tots els grups.
+        icon_help: Nom de la icona Lucide (opcional)
+        icon_label: Icona
+        icon_placeholder: p. ex., key, google, github
+        idp_cert_fingerprint: Emprempta del certificat (alternativa)
+        idp_certificate: Certificat del IdP
+        idp_certificate_help: Certificat X.509 en format PEM. Obligatori si no s'utilitza
+          l'URL de metadades.
+        idp_metadata_url: URL de metadades del IdP
+        idp_metadata_url_help: URL a les metadades SAML del teu IdP. Si es proporciona,
+          altres configuracions SAML es configuraran automàticament.
+        idp_slo_url: URL SLO del IdP (opcional)
+        idp_sso_url: URL SSO del IdP
+        issuer_help: URL emisor OIDC (validarà el punt final .well-known/openid-configuration)
+        issuer_label: Emisor
+        issuer_placeholder: https://accounts.google.com
+        label_help: Text del botó que es mostra als usuaris
+        label_label: Etiqueta
+        label_placeholder: p. ex., Inicia sessió amb Keycloak
+        manual_saml_config: Configuració manual (si no s'utilitza l'URL de metadades)
+        manual_saml_help: Només utilitza aquesta configuració si el teu IdP no proporciona
+          una URL de metadades.
+        member_groups: Grups de membres
+        name_help: Identificador únic (només minúscules, números, subratllats)
+        name_id_email: Adreça de correu electrònic (per defecte)
+        name_id_format: Format NameID
+        name_id_persistent: Persistent
+        name_id_transient: Transient
+        name_id_unspecified: No especificat
+        name_label: Nom
+        name_placeholder: p. ex., openid_connect, keycloak, authentik
+        oauth_configuration: Configuració OAuth/OIDC
+        prompt_consent: Força consentiment (autoritzar de nou)
+        prompt_default: Per defecte (decideix el IdP)
+        prompt_help: Controla com el IdP demana a l'usuari durant l'autenticació.
+        prompt_label: Prompt d'autenticació
+        prompt_login: Força inici de sessió (torna a autenticar)
+        prompt_none: Sense prompt (autenticació silenciosa)
+        prompt_select_account: Selecció de compte (triar compte)
+        provisioning_title: Proveïment d'usuaris
+        redirect_uri_help: URL de callback per configurar al teu proveïdor d'identitat
+        redirect_uri_label: URI de redirecció
+        redirect_uri_placeholder: https://teudomini.com/auth/openid_connect/callback
+        role_admin: Administrador
+        role_mapping_help: Mapa els grups/claims del IdP als rols de l'aplicació. Als usuaris
+          se'ls assigna el rol més alt que coincideix. Deixa en blanc per utilitzar el rol per defecte
+          de dalt.
+        role_mapping_title: Mapa de grups a rols (Opcional)
+        role_member: Membre
+        role_super_admin: Super administrador
+        saml_configuration: Configuració SAML
+        scopes_help: Llista separada per espais d'àmbits OIDC. Deixa en blanc per defecte
+          (openid email profile). Afegeix 'groups' per recuperar claims de grup.
+        scopes_label: Àmbits personalitzats
+        strategy_help: L'estratègia d'autenticació a utilitzar
+        strategy_label: Estratègia
+        submit: Desa el proveïdor
+        super_admin_groups: Grups de super administradors
+        test_connection: Prova la connexió
+      index:
+        add_provider: Afegeix proveïdor
+        description: Gestiona proveïdors d'autenticació d'inici de sessió únic per a la teva instància
+        env_configured: Entorn/YAML
+        legacy_providers_notice: Aquests proveïdors estan configurats mitjançant variables
+          d'entorn o YAML i no es poden gestionar mitjançant aquesta interfície. Per gestionar-los
+          aquí, migrant-los a proveïdors basats en base de dades activant AUTH_PROVIDERS_SOURCE=db
+          i recreant-los a la interfície d'usuari.
+        legacy_providers_title: Proveïdors configurats a l'entorn
+        no_providers_message: Comença afegint el teu primer proveïdor SSO.
+        no_providers_title: No hi ha proveïdors SSO
+        note: Els canvis als proveïdors SSO requereixen un reinici del servidor per fer efecte.
+          Alternativament, activa la bandera de característica AUTH_PROVIDERS_SOURCE=db per carregar
+          proveïdors de la base de dades de manera dinàmica.
+        table:
+          actions: Accions
+          disabled: Desactivat
+          enabled: Actiu
+          issuer: Emisor
+          name: Nom
+          status: Estat
+          strategy: Estratègia
+        title: Proveïdors SSO
+      new:
+        description: Configura un nou proveïdor d'autenticació d'inici de sessió únic
+        title: Afegeix proveïdor SSO
+      toggle:
+        confirm_disable: Estàs segur que vols desactivar aquest proveïdor?
+        confirm_enable: Estàs segur que vols activar aquest proveïdor?
+        success_disabled: El proveïdor SSO s'ha desactivat correctament.
+        success_enabled: El proveïdor SSO s'ha activat correctament.
+      update:
+        success: El proveïdor SSO s'ha actualitzat correctament.
+    unauthorized: No estàs autoritzat a accedir a aquesta àrea.
