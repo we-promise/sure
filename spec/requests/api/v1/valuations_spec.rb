@@ -68,7 +68,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
   path '/api/v1/valuations' do
     post 'Create valuation' do
       tags 'Valuations'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
       parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
@@ -180,7 +180,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
     get 'Retrieve a valuation' do
       tags 'Valuations'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { valuation_id }
@@ -207,7 +207,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
     patch 'Update a valuation' do
       tags 'Valuations'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
 
