@@ -40,4 +40,19 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     # The monkey patch raises ActiveRecord::RecordNotFound which rails converts to 404
     assert_response :not_found
   end
+
+  test "user cannot access variants from a different family" do
+    # Attach an image to test variants
+    file = File.open(Rails.root.join("test/fixtures/files/square-placeholder.png"))
+    @transaction_a.attachments.attach(io: file, filename: "test.png", content_type: "image/png")
+    attachment = @transaction_a.attachments.last
+    variant = attachment.variant(resize_to_limit: [ 100, 100 ]).processed
+
+    sign_in @user_b
+
+    # Straight to the representation URL
+    get rails_representation_path(variant)
+
+    assert_response :not_found
+  end
 end
