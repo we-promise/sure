@@ -2,8 +2,10 @@ require "digest/md5"
 
 class LunchflowEntry::Processor
   include CurrencyNormalizable
+  include LunchflowTransactionHash
+
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
-  # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
+  # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
   def initialize(lunchflow_transaction, lunchflow_account:)
     @lunchflow_transaction = lunchflow_transaction
     @lunchflow_account = lunchflow_account
@@ -26,7 +28,8 @@ class LunchflowEntry::Processor
         name: name,
         source: "lunchflow",
         merchant: merchant,
-        notes: notes
+        notes: notes,
+        extra: extra_metadata
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -61,8 +64,44 @@ class LunchflowEntry::Processor
 
     def external_id
       id = data[:id].presence
-      raise ArgumentError, "Lunchflow transaction missing required field 'id'" unless id
+
+      # For pending transactions, Lunchflow may return blank/nil IDs
+      # Generate a stable temporary ID based on transaction attributes
+      if id.blank?
+        # Create a deterministic hash from key transaction attributes
+        # This ensures the same pending transaction gets the same ID across syncs
+        base_temp_id = content_hash_for_transaction(data)
+        temp_id_with_prefix = "lunchflow_pending_#{base_temp_id}"
+
+        # Handle collisions: if this external_id already exists for this account,
+        # append a counter to make it unique. This prevents multiple pending transactions
+        # with identical attributes (e.g., two same-day Uber rides) from colliding.
+        # We check both the account's entries and the current raw payload being processed.
+        final_id = temp_id_with_prefix
+        counter = 1
+
+        while entry_exists_with_external_id?(final_id)
+          final_id = "#{temp_id_with_prefix}_#{counter}"
+          counter += 1
+        end
+
+        if counter > 1
+          Rails.logger.debug "Lunchflow: Collision detected, using #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
+        else
+          Rails.logger.debug "Lunchflow: Generated temporary ID #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
+        end
+
+        return final_id
+      end
+
       "lunchflow_#{id}"
+    end
+
+    def entry_exists_with_external_id?(external_id)
+      return false unless account.present?
+
+      # Check if an entry with this external_id already exists in the account
+      account.entries.exists?(external_id: external_id, source: "lunchflow")
     end
 
     def name
@@ -140,5 +179,18 @@ class LunchflowEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Lunchflow transaction date '#{data[:date]}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{data[:date].inspect}"
+    end
+
+    # Build extra metadata hash with pending status
+    # Lunchflow API field: isPending (boolean)
+    def extra_metadata
+      metadata = {}
+
+      # Store pending status from Lunchflow API when present
+      if data.key?(:isPending)
+        metadata[:lunchflow] = { pending: ActiveModel::Type::Boolean.new.cast(data[:isPending]) }
+      end
+
+      metadata
     end
 end

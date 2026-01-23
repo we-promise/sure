@@ -1,0 +1,5 @@
+---
+ca:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} t'ha convidat a unir-te al seu grup familiar a %{product_name}!"

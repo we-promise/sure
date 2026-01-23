@@ -1,0 +1,6 @@
+checking_account:
+  mercury_item: one
+  account_id: "merc_acc_checking_1"
+  name: "Mercury Checking"
+  currency: USD
+  current_balance: 10000.00

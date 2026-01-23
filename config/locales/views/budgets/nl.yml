@@ -1,0 +1,6 @@
+nl:
+  budgets:
+    show:
+      tabs:
+        actual: "Actueel"
+        budgeted: "Begroot"

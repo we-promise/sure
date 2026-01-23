@@ -1,5 +1,9 @@
 ---
 ro:
+  views:
+    settings:
+      payments:
+        renewal: "Contribuția ta continuă pe %{date}."
   settings:
     ai_prompts:
       show:
@@ -16,10 +20,10 @@ ro:
         merchant_detector:
           title: Detector de comercianți
           subtitle: AI identifică și îmbogățește datele tranzacțiilor cu informații despre comercianți
-    billings:
+    payments:
       show:
-        page_title: Facturare
-        subscription_subtitle: Actualizează-ți abonamentul și detaliile de facturare
+        page_title: Plată
+        subscription_subtitle: Actualizează-ți abonamentul și detaliile de plată
         subscription_title: Gestionează abonamentul
     preferences:
       show:
@@ -94,11 +98,12 @@ ro:
       advanced_section_title: Avansat
       ai_prompts_label: Prompturi AI
       api_key_label: Cheie API
-      billing_label: Facturare
+      payment_label: Plată
       categories_label: Categorii
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Import/Export
+      imports_label: Importuri
+      exports_label: Exporturi
       logout: Logout
       merchants_label: Comercianți
       guides_label: Ghiduri

@@ -6,9 +6,12 @@ ca:
         trend:
           attributes:
             current:
-              must_be_of_the_same_type_as_previous: ha de ser del mateix tipus que l'anterior
-              must_be_of_type_money_numeric_or_nil: ha de ser de tipus Money, numèric o nil
+              must_be_of_the_same_type_as_previous: ha de ser del mateix tipus que
+                l'anterior
+              must_be_of_type_money_numeric_or_nil: ha de ser de tipus Money, numèric
+                o nil
             previous:
-              must_be_of_the_same_type_as_current: ha de ser del mateix tipus que l'actual
-              must_be_of_type_money_numeric_or_nil: ha de ser de tipus Money, numèric o nil
-
+              must_be_of_the_same_type_as_current: ha de ser del mateix tipus que
+                l'actual
+              must_be_of_type_money_numeric_or_nil: ha de ser de tipus Money, numèric
+                o nil

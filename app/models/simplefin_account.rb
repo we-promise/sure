@@ -32,12 +32,17 @@ class SimplefinAccount < ApplicationRecord
     acct = current_account
     return nil unless acct
 
-    AccountProvider
+    provider = AccountProvider
       .find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: id)
-      .tap do |provider|
-        provider.account = acct
-        provider.save!
+      .tap do |p|
+        p.account = acct
+        p.save!
       end
+
+    # Reload the association so future accesses don't return stale/nil value
+    reload_account_provider
+
+    provider
   rescue => e
     Rails.logger.warn("SimplefinAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
     nil

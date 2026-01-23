@@ -24,8 +24,10 @@
         </div>
 
         <div class="bg-container rounded-lg shadow-border-xs">
-          <%= render "holdings/cash", account: @account %>
-          <%= render "shared/ruler" %>
+          <% if @account.cash_balance.to_d > 0 %>
+            <%= render "holdings/cash", account: @account %>
+            <%= render "shared/ruler" %>
+          <% end %>
 
           <% if @account.current_holdings.any? %>
             <%= render partial: "holdings/holding",

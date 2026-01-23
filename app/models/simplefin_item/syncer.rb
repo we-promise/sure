@@ -1,4 +1,6 @@
 class SimplefinItem::Syncer
+  include SyncStats::Collector
+
   attr_reader :simplefin_item
 
   def initialize(simplefin_item)
@@ -12,11 +14,7 @@ class SimplefinItem::Syncer
     begin
       # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
       # the new AccountProvider system. An account is "linked" if either association exists.
-      linked_via_legacy = simplefin_item.simplefin_accounts.joins(:account).count
-      linked_via_provider = simplefin_item.simplefin_accounts.joins(:account_provider).count
-      total_linked = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }.count
-
-      Rails.logger.info("SimplefinItem::Syncer - linked check: legacy=#{linked_via_legacy}, provider=#{linked_via_provider}, total=#{total_linked}")
+      total_linked = simplefin_item.simplefin_accounts.count { |sfa| sfa.current_account.present? }
 
       if total_linked == 0
         sync.update!(status_text: "Discovering accounts (balances only)...") if sync.respond_to?(:status_text)
@@ -64,7 +62,15 @@ class SimplefinItem::Syncer
     linked_simplefin_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
     if linked_simplefin_accounts.any?
       sync.update!(status_text: "Processing transactions and holdings...") if sync.respond_to?(:status_text)
-      simplefin_item.process_accounts
+      skipped_entries = simplefin_item.process_accounts
+
+      # Collect skip stats for protected entries (user-modified, import-locked, etc.)
+      if skipped_entries.any?
+        collect_skip_stats(sync, skipped_entries: skipped_entries)
+      end
+
+      # Warn about limited investment data for investment/crypto accounts
+      collect_investment_data_quality_warning(sync, linked_simplefin_accounts)
 
       sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
       simplefin_item.schedule_account_syncs(
@@ -220,6 +226,26 @@ class SimplefinItem::Syncer
         "window_start" => window_start,
         "window_end" => window_end
       }
+    end
+
+    # Collects a data quality warning if any linked accounts are investment or crypto accounts.
+    # SimpleFIN cannot provide activity labels (Buy, Sell, Dividend, etc.) for investment transactions,
+    # which may affect budget accuracy.
+    def collect_investment_data_quality_warning(sync, linked_simplefin_accounts)
+      investment_accounts = linked_simplefin_accounts.select do |sfa|
+        account = sfa.current_account
+        account&.accountable_type.in?(%w[Investment Crypto])
+      end
+
+      return if investment_accounts.empty?
+
+      collect_data_quality_stats(sync,
+        warnings: investment_accounts.size,
+        details: [ {
+          message: I18n.t("provider_warnings.limited_investment_data"),
+          severity: "warning"
+        } ]
+      )
     end
 
     def mark_failed(sync, error)

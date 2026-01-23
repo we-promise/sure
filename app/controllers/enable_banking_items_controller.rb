@@ -150,7 +150,7 @@ class EnableBankingItemsController < ApplicationController
       safe_redirect_to_enable_banking(
         redirect_url,
         fallback_path: settings_providers_path,
-        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again or contact support.")
+        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
     rescue Provider::EnableBanking::EnableBankingError => e
       if e.message.include?("REDIRECT_URI_NOT_ALLOWED")
@@ -227,7 +227,7 @@ class EnableBankingItemsController < ApplicationController
       safe_redirect_to_enable_banking(
         redirect_url,
         fallback_path: settings_providers_path,
-        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again or contact support.")
+        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "Enable Banking reauthorization error: #{e.message}"

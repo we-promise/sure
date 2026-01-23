@@ -99,14 +99,20 @@ class SimplefinItem < ApplicationRecord
       end
     end
 
+    all_skipped_entries = []
+
     linked.each do |simplefin_account|
       acct = simplefin_account.current_account
       Rails.logger.info "SimplefinItem#process_accounts - Processing: SimplefinAccount id=#{simplefin_account.id} name='#{simplefin_account.name}' -> Account id=#{acct.id} name='#{acct.name}' type=#{acct.accountable_type}"
-      SimplefinAccount::Processor.new(simplefin_account).process
+      processor = SimplefinAccount::Processor.new(simplefin_account)
+      processor.process
+      all_skipped_entries.concat(processor.skipped_entries)
     end
 
-    Rails.logger.info "SimplefinItem#process_accounts END"
+    Rails.logger.info "SimplefinItem#process_accounts END - #{all_skipped_entries.size} entries skipped (protected)"
     Rails.logger.info "=" * 60
+
+    all_skipped_entries
   end
 
   # Repairs stale linkages when user re-adds institution in SimpleFIN.

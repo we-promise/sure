@@ -2,3 +2,13 @@
 zh-CN:
   subscriptions:
     self_hosted_alert: "%{product_name} 在自托管模式下不可用。"
+    upgrade:
+      contribute_and_support_sure: "贡献并支持 Sure"
+      cta: "继续支持此代码库的开发！"
+      header:
+        support: "支持"
+        sure: "Sure"
+        today: "今天"
+      redirect_to_stripe: "在下一步中，您将被重定向到 Stripe，它为我们处理信用卡。"
+      trialing: "您的数据将在 %{days} 天后删除"
+      trial_over: "您的试用期已结束"

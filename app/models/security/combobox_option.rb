@@ -7,7 +7,16 @@ class Security::ComboboxOption
     "#{symbol}|#{exchange_operating_mic}"
   end
 
+  def exchange_name
+    Security.exchange_name_for(exchange_operating_mic)
+  end
+
   def to_combobox_display
-    "#{symbol} - #{name} (#{exchange_operating_mic})"
+    I18n.t(
+      "securities.combobox.display",
+      symbol: symbol,
+      name: name,
+      exchange: exchange_name
+    )
   end
 end

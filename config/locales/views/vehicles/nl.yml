@@ -1,0 +1,25 @@
+---
+nl:
+  vehicles:
+    edit:
+      edit: "%{account} bewerken"
+    form:
+      make: Merk
+      make_placeholder: Toyota
+      mileage: Kilometerstand
+      mileage_placeholder: '15000'
+      mileage_unit: Eenheid
+      model: Model
+      model_placeholder: Camry
+      year: Jaar
+      year_placeholder: '2023'
+    new:
+      title: Voer voertuiggegevens in
+    overview:
+      current_price: Huidige prijs
+      make_model: Merk & Model
+      mileage: Kilometerstand
+      purchase_price: Aankoopprijs
+      trend: Trend
+      unknown: Onbekend
+      year: Jaar
