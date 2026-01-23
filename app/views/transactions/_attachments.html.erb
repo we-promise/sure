@@ -58,11 +58,21 @@
 
             <div class="flex items-center gap-2">
               <%= render DS::Link.new(
-                    href: transaction_attachment_path(transaction, attachment),
+                    href: transaction_attachment_path(transaction, attachment, disposition: :inline),
+                    variant: :outline,
+                    size: :sm,
+                    icon: "eye",
+                    text: "",
+                    target: "_blank"
+                  ) %>
+
+              <%= render DS::Link.new(
+                    href: transaction_attachment_path(transaction, attachment, disposition: :attachment),
                     variant: :outline,
                     size: :sm,
                     icon: "download",
-                    text: ""
+                    text: "",
+                    data: { turbo: false }
                   ) %>
 
               <%= render DS::Button.new(

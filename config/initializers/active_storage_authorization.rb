@@ -2,6 +2,7 @@
 Rails.application.config.to_prepare do
   # Monkey patch Active Storage to check authorization for transaction attachments
   ActiveStorage::Blobs::RedirectController.class_eval do
+    include Authentication
     before_action :authorize_transaction_attachment, if: :transaction_attachment?
 
     private
@@ -27,6 +28,7 @@ Rails.application.config.to_prepare do
   end
 
   ActiveStorage::Blobs::ProxyController.class_eval do
+    include Authentication
     before_action :authorize_transaction_attachment, if: :transaction_attachment?
 
     private

@@ -3,7 +3,8 @@ class TransactionAttachmentsController < ApplicationController
   before_action :set_attachment, only: [ :show, :destroy ]
 
   def show
-    redirect_to @attachment.url
+    disposition = params[:disposition] == "attachment" ? "attachment" : "inline"
+    redirect_to rails_blob_url(@attachment, disposition: disposition)
   end
 
   def create
