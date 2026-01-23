@@ -18,7 +18,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   end
 
   def create
-    account = current_resource_owner.family.accounts.find(valuation_params[:account_id])
+    account = current_resource_owner.family.accounts.find(valuation_account_id)
 
     result = account.create_reconciliation(
       balance: valuation_params[:amount],
@@ -116,7 +116,11 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
+    def valuation_account_id
+      params.dig(:valuation, :account_id)
+    end
+
     def valuation_params
-      params.require(:valuation).permit(:account_id, :amount, :date, :notes)
+      params.require(:valuation).permit(:amount, :date, :notes)
     end
 end
