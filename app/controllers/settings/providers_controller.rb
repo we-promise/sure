@@ -13,14 +13,6 @@ class Settings::ProvidersController < ApplicationController
   rescue ActiveRecord::Encryption::Errors::Configuration => e
     Rails.logger.error("Active Record Encryption not configured: #{e.message}")
     @encryption_error = true
-    @provider_configurations = []
-    @simplefin_items = []
-    @lunchflow_items = []
-    @enable_banking_items = []
-    @coinstats_items = []
-    @mercury_items = []
-    @coinbase_items = []
-    @snaptrade_items = []
   end
 
   def update
