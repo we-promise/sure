@@ -117,6 +117,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
       update_success = false
       error_payload = nil
+      updated_entry = nil
 
       ActiveRecord::Base.transaction do
         result = @entry.account.update_reconciliation(
@@ -134,14 +135,14 @@ class Api::V1::ValuationsController < Api::V1::BaseController
           raise ActiveRecord::Rollback
         end
 
-        @entry.reload
+        updated_entry = @entry.account.entries.valuations.find_by!(date: valuation_params[:date])
 
         if valuation_params.key?(:notes)
-          unless @entry.update(notes: valuation_params[:notes])
+          unless updated_entry.update(notes: valuation_params[:notes])
             error_payload = {
               error: "validation_failed",
               message: "Valuation could not be updated",
-              errors: @entry.errors.full_messages
+              errors: updated_entry.errors.full_messages
             }
             raise ActiveRecord::Rollback
           end
@@ -155,6 +156,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
         return
       end
 
+      @entry = updated_entry
       @valuation = @entry.entryable
       render :show
     else
