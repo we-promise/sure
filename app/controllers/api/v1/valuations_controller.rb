@@ -68,7 +68,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       @entry = account.entries.valuations.find_by!(date: valuation_params[:date])
       @valuation = @entry.entryable
 
-      if valuation_params[:notes].present?
+      if valuation_params.key?(:notes)
         unless @entry.update(notes: valuation_params[:notes])
           error_payload = {
             error: "validation_failed",
@@ -136,7 +136,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
         @entry.reload
 
-        if valuation_params[:notes].present?
+        if valuation_params.key?(:notes)
           unless @entry.update(notes: valuation_params[:notes])
             error_payload = {
               error: "validation_failed",
@@ -158,7 +158,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       @valuation = @entry.entryable
       render :show
     else
-      if valuation_params[:notes].present?
+      if valuation_params.key?(:notes)
         unless @entry.update(notes: valuation_params[:notes])
           render json: {
             error: "validation_failed",
