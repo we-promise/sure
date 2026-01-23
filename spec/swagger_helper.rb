@@ -316,6 +316,21 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          Valuation: {
+            type: :object,
+            required: %w[id date amount currency kind account created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              currency: { type: :string },
+              notes: { type: :string, nullable: true },
+              kind: { type: :string },
+              account: { '$ref' => '#/components/schemas/Account' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
           DeleteResponse: {
             type: :object,
             required: %w[message],

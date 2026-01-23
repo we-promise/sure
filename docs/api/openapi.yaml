@@ -471,6 +471,41 @@ components:
             "$ref": "#/components/schemas/Transaction"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    Valuation:
+      type: object
+      required:
+      - id
+      - date
+      - amount
+      - currency
+      - kind
+      - account
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        currency:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        kind:
+          type: string
+        account:
+          "$ref": "#/components/schemas/Account"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     DeleteResponse:
       type: object
       required:
@@ -1582,3 +1617,145 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/valuations":
+    post:
+      summary: Create valuation
+      tags:
+      - Valuations
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Bearer token with write scope
+      responses:
+        '201':
+          description: valuation created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Valuation"
+        '422':
+          description: validation error - missing date
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                valuation:
+                  type: object
+                  properties:
+                    account_id:
+                      type: string
+                      format: uuid
+                      description: Account ID (required)
+                    amount:
+                      type: number
+                      description: Valuation amount (required)
+                    date:
+                      type: string
+                      format: date
+                      description: Valuation date (required)
+                    notes:
+                      type: string
+                      description: Additional notes
+                  required:
+                  - account_id
+                  - amount
+                  - date
+              required:
+              - valuation
+        required: true
+  "/api/v1/valuations/{id}":
+    parameters:
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Bearer token
+    - name: id
+      in: path
+      required: true
+      description: Valuation ID (entry ID)
+      schema:
+        type: string
+    get:
+      summary: Retrieve a valuation
+      tags:
+      - Valuations
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: valuation retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Valuation"
+        '404':
+          description: valuation not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a valuation
+      tags:
+      - Valuations
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: valuation updated with amount and date
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Valuation"
+        '422':
+          description: validation error - only one of amount/date provided
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: valuation not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                valuation:
+                  type: object
+                  properties:
+                    amount:
+                      type: number
+                      description: New valuation amount (must provide with date)
+                    date:
+                      type: string
+                      format: date
+                      description: New valuation date (must provide with amount)
+                    notes:
+                      type: string
+                      description: Additional notes
+        required: true
