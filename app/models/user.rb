@@ -1,7 +1,26 @@
 class User < ApplicationRecord
+  include Encryptable
+
   # Allow nil password for SSO-only users (JIT provisioning).
   # Custom validation ensures password is present for non-SSO registration.
   has_secure_password validations: false
+
+  # Encrypt sensitive fields if ActiveRecord encryption is configured
+  if encryption_ready?
+    # MFA secrets
+    encrypts :otp_secret, deterministic: true
+    # Note: otp_backup_codes is a PostgreSQL array column which doesn't support
+    # AR encryption. To encrypt it, a migration would be needed to change the
+    # column type from array to text/jsonb.
+
+    # PII - emails (deterministic for lookups, downcase for case-insensitive)
+    encrypts :email, deterministic: true, downcase: true
+    encrypts :unconfirmed_email, deterministic: true, downcase: true
+
+    # PII - names (non-deterministic for maximum security)
+    encrypts :first_name
+    encrypts :last_name
+  end
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
@@ -31,6 +50,13 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # Returns the appropriate role for a new user creating a family.
+  # The very first user of an instance becomes super_admin; subsequent users
+  # get the specified fallback role (typically :admin for family creators).
+  def self.role_for_new_family_creator(fallback_role: :admin)
+    User.exists? ? fallback_role : :super_admin
+  end
 
   has_one_attached :profile_image do |attachable|
     attachable.variant :thumbnail, resize_to_fill: [ 300, 300 ], convert: :webp, saver: { quality: 80 }
@@ -325,7 +351,7 @@ class User < ApplicationRecord
       if (index = otp_backup_codes.index(code))
         remaining_codes = otp_backup_codes.dup
         remaining_codes.delete_at(index)
-        update_column(:otp_backup_codes, remaining_codes)
+        update!(otp_backup_codes: remaining_codes)
         true
       else
         false

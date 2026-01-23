@@ -1,5 +1,5 @@
 class HoldingsController < ApplicationController
-  before_action :set_holding, only: %i[show update destroy unlock_cost_basis]
+  before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security]
 
   def index
     @account = Current.family.accounts.find(params[:account_id])
@@ -44,6 +44,48 @@ class HoldingsController < ApplicationController
     respond_to do |format|
       format.html { redirect_back_or_to account_path(@holding.account) }
       format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account)) }
+    end
+  end
+
+  def remap_security
+    # Combobox returns "TICKER|EXCHANGE" format
+    ticker, exchange = params[:security_id].to_s.split("|")
+
+    # Validate ticker is present (form has required: true, but can be bypassed)
+    if ticker.blank?
+      flash[:alert] = t(".security_not_found")
+      redirect_to account_path(@holding.account, tab: "holdings")
+      return
+    end
+
+    new_security = Security::Resolver.new(
+      ticker,
+      exchange_operating_mic: exchange,
+      country_code: Current.family.country
+    ).resolve
+
+    if new_security.nil?
+      flash[:alert] = t(".security_not_found")
+      redirect_to account_path(@holding.account, tab: "holdings")
+      return
+    end
+
+    @holding.remap_security!(new_security)
+    flash[:notice] = t(".success")
+
+    respond_to do |format|
+      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
+      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
+    end
+  end
+
+  def reset_security
+    @holding.reset_security_to_provider!
+    flash[:notice] = t(".success")
+
+    respond_to do |format|
+      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
+      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
     end
   end
 

@@ -14,14 +14,13 @@
 
     <%# Export Options %>
     <div class="flex items-center gap-2">
-      <span class="text-sm text-secondary"><%= t("reports.transactions_breakdown.export.label") %>:</span>
       <%= link_to export_transactions_reports_path(base_params.merge(format: :csv)),
-                  class: "inline-flex items-center gap-1 text-sm px-3 py-1 bg-surface-inset text-secondary hover:bg-surface-hover rounded-lg" do %>
+                  class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" do %>
         <%= icon("download", class: "w-3 h-3") %>
         <span><%= t("reports.transactions_breakdown.export.csv") %></span>
       <% end %>
       <%= link_to google_sheets_instructions_reports_path(base_params),
-                  class: "inline-flex items-center gap-1 text-sm px-3 py-1 bg-surface-inset text-secondary hover:bg-surface-hover rounded-lg",
+                  class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover",
                   data: { turbo_frame: "modal" } do %>
         <%= icon("external-link", class: "w-3 h-3") %>
         <span><%= t("reports.transactions_breakdown.export.google_sheets") %></span>
@@ -54,119 +53,33 @@
     <div class="space-y-8">
       <%# Income Section %>
       <% if income_groups.any? %>
-        <div>
-          <h3 class="text-base font-semibold text-success mb-4 flex items-center gap-2">
-            <%= icon("trending-up", class: "w-5 h-5") %>
-            <%= t("reports.transactions_breakdown.table.income") %>
-            <span class="text-sm font-normal text-tertiary">(<%= Money.new(income_total, Current.family.currency).format %>)</span>
-          </h3>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-tertiary">
-                  <th class="text-left py-3 pr-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.category") %></th>
-                  <th class="text-right py-3 px-4 font-medium text-secondary">
-                    <%= link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do %>
-                      <%= t("reports.transactions_breakdown.table.amount") %>
-                      <% if current_sort_by == "amount" %>
-                        <%= icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") %>
-                      <% end %>
-                    <% end %>
-                  </th>
-                  <th class="text-right py-3 pl-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.percentage") %></th>
-                </tr>
-              </thead>
-              <tbody>
-                <% income_groups.each do |group| %>
-                  <% percentage = income_total.zero? ? 0 : (group[:total].to_f / income_total * 100).round(1) %>
-                  <tr class="border-b border-tertiary hover:bg-surface-inset">
-                    <td class="py-3 pr-4">
-                      <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: <%= group[:category_color] %>"></span>
-                        <span class="font-medium text-primary"><%= group[:category_name] %></span>
-                        <span class="text-xs text-tertiary whitespace-nowrap">(<%= t("reports.transactions_breakdown.table.entries", count: group[:count]) %>)</span>
-                      </div>
-                    </td>
-                    <td class="py-3 px-4 text-right">
-                      <span class="font-semibold text-success">
-                        <%= Money.new(group[:total], Current.family.currency).format %>
-                      </span>
-                    </td>
-                    <td class="py-3 pl-4 text-right">
-                      <span class="text-sm text-secondary">
-                        <%= percentage %>%
-                      </span>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <%= render "reports/breakdown_table",
+              groups: income_groups,
+              total: income_total,
+              type: :income,
+              amount_sort_params: amount_sort_params,
+              current_sort_by: current_sort_by,
+              current_sort_direction: current_sort_direction %>
       <% end %>
 
       <%# Expenses Section %>
       <% if expense_groups.any? %>
-        <div>
-          <h3 class="text-base font-semibold text-destructive mb-4 flex items-center gap-2">
-            <%= icon("trending-down", class: "w-5 h-5") %>
-            <%= t("reports.transactions_breakdown.table.expense") %>
-            <span class="text-sm font-normal text-tertiary">(<%= Money.new(expense_total, Current.family.currency).format %>)</span>
-          </h3>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-tertiary">
-                  <th class="text-left py-3 pr-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.category") %></th>
-                  <th class="text-right py-3 px-4 font-medium text-secondary">
-                    <%= link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do %>
-                      <%= t("reports.transactions_breakdown.table.amount") %>
-                      <% if current_sort_by == "amount" %>
-                        <%= icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") %>
-                      <% end %>
-                    <% end %>
-                  </th>
-                  <th class="text-right py-3 pl-4 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.percentage") %></th>
-                </tr>
-              </thead>
-              <tbody>
-                <% expense_groups.each do |group| %>
-                  <% percentage = expense_total.zero? ? 0 : (group[:total].to_f / expense_total * 100).round(1) %>
-                  <tr class="border-b border-tertiary hover:bg-surface-inset">
-                    <td class="py-3 pr-4">
-                      <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: <%= group[:category_color] %>"></span>
-                        <span class="font-medium text-primary"><%= group[:category_name] %></span>
-                        <span class="text-xs text-tertiary whitespace-nowrap">(<%= t("reports.transactions_breakdown.table.entries", count: group[:count]) %>)</span>
-                      </div>
-                    </td>
-                    <td class="py-3 px-4 text-right">
-                      <span class="font-semibold text-destructive">
-                        <%= Money.new(group[:total], Current.family.currency).format %>
-                      </span>
-                    </td>
-                    <td class="py-3 pl-4 text-right">
-                      <span class="text-sm text-secondary">
-                        <%= percentage %>%
-                      </span>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <%= render "reports/breakdown_table",
+              groups: expense_groups,
+              total: expense_total,
+              type: :expense,
+              amount_sort_params: amount_sort_params,
+              current_sort_by: current_sort_by,
+              current_sort_direction: current_sort_direction %>
       <% end %>
     </div>
 
     <%# Summary Stats %>
-    <div class="mt-4 text-sm text-secondary">
+    <div class="mt-4 text-xs text-subdued">
       <%= t("reports.transactions_breakdown.pagination.showing", count: transactions.sum { |g| g[:count] }) %>
     </div>
   <% else %>
-    <div class="text-center py-8 text-tertiary">
+    <div class="text-center py-8 text-subdued">
       <%= t("reports.transactions_breakdown.no_transactions") %>
     </div>
   <% end %>

@@ -2,6 +2,59 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :mercury_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+      get :callback
+    end
+
+    member do
+      post :sync
+      get :connect
+      get :setup_accounts
+      post :complete_account_setup
+      get :connections
+      delete :delete_connection
+      delete :delete_orphaned_user
+    end
+  end
+
   # CoinStats routes
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
@@ -99,7 +152,7 @@ Rails.application.routes.draw do
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
     end
-    resource :billing, only: :show
+    resource :payment, only: :show
     resource :security, only: :show
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
@@ -174,6 +227,8 @@ Rails.application.routes.draw do
   resources :holdings, only: %i[index new show update destroy] do
     member do
       post :unlock_cost_basis
+      patch :remap_security
+      post :reset_security
     end
   end
   resources :trades, only: %i[show new create update destroy]
@@ -197,6 +252,8 @@ Rails.application.routes.draw do
     end
 
     member do
+      get :convert_to_trade
+      post :create_trade_from_transaction
       post :mark_as_recurring
       post :merge_duplicate
       post :dismiss_duplicate
@@ -395,8 +452,10 @@ Rails.application.routes.draw do
 
   get "imports/:import_id/upload/sample_csv", to: "import/uploads#sample_csv", as: :import_upload_sample_csv
 
-  get "privacy", to: redirect("about:blank")
-  get "terms", to: redirect("about:blank")
+  privacy_url = ENV["LEGAL_PRIVACY_URL"].presence
+  terms_url = ENV["LEGAL_TERMS_URL"].presence
+  get "privacy", to: privacy_url ? redirect(privacy_url) : "pages#privacy"
+  get "terms", to: terms_url ? redirect(terms_url) : "pages#terms"
 
   # Admin namespace for super admin functionality
   namespace :admin do

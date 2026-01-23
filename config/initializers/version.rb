@@ -19,7 +19,7 @@ module Sure
         if version_file.exist?
           version_file.read.strip
         else
-          "0.6.7-alpha.11"
+          "0.6.7-alpha.16"
         end
       end
   end

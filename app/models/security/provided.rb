@@ -21,7 +21,7 @@ module Security::Provided
       response = provider.search_securities(symbol, **params)
 
       if response.success?
-        response.data.map do |provider_security|
+        securities = response.data.map do |provider_security|
           # Need to map to domain model so Combobox can display via to_combobox_option
           Security.new(
             ticker: provider_security.symbol,
@@ -30,6 +30,19 @@ module Security::Provided
             exchange_operating_mic: provider_security.exchange_operating_mic,
             country_code: provider_security.country_code
           )
+        end
+
+        # Sort results to prioritize user's country if provided
+        if country_code.present?
+          user_country = country_code.upcase
+          securities.sort_by do |s|
+            [
+              s.country_code&.upcase == user_country ? 0 : 1, # User's country first
+              s.ticker.upcase == symbol.upcase ? 0 : 1        # Exact ticker match second
+            ]
+          end
+        else
+          securities
         end
       else
         []
@@ -41,6 +54,9 @@ module Security::Provided
     price = prices.find_by(date: date)
 
     return price if price.present?
+
+    # Don't fetch prices for offline securities (e.g., custom tickers from SimpleFIN)
+    return nil if offline?
 
     # Make sure we have a data provider before fetching
     return nil unless provider.present?

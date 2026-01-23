@@ -1,0 +1,26 @@
+---
+ca:
+  admin:
+    users:
+      index:
+        description: Gestiona els rols d'usuari per a la teva instància. Els super administradors poden accedir
+          a la configuració de proveïdors SSO i la gestió d'usuaris.
+        no_users: No s'han trobat usuaris.
+        role_descriptions:
+          admin: Administrador familiar. Pot accedir a configuracions avançades com claus API,
+            importacions i prompts d'IA.
+          member: Accés bàsic d'usuari. Pot gestionar els seus propis comptes, transaccions
+            i configuracions.
+          super_admin: Administrador d'instància. Pot gestionar proveïdors SSO, rols d'usuari
+            i personificar usuaris per suport.
+        role_descriptions_title: Descripcions de rols
+        roles:
+          admin: Administrador
+          member: Membre
+          super_admin: Super administrador
+        section_title: Usuaris
+        title: Gestió d'usuaris
+        you: "(Tu)"
+      update:
+        failure: No s'ha pogut actualitzar el rol d'usuari.
+        success: El rol d'usuari s'ha actualitzat correctament.

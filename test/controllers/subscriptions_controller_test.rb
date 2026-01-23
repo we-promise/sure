@@ -11,9 +11,10 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "disabled for self hosted users" do
-    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    post subscription_path
-    assert_response :forbidden
+    with_self_hosting do
+      post subscription_path
+      assert_response :forbidden
+    end
   end
 
   # Trial subscriptions are managed internally and do NOT go through Stripe
@@ -44,7 +45,7 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     @mock_stripe.expects(:create_checkout_session).with(
       plan: "monthly",
       family_id: @family.id,
-      family_email: @family.billing_email,
+      family_email: @family.payment_email,
       success_url: success_subscription_url + "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: upgrade_subscription_url
     ).returns(
@@ -71,6 +72,25 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     get success_subscription_url(session_id: "test-session-id")
 
     assert @family.subscription.active?
-    assert_equal "Welcome to Sure!  Your subscription has been created.", flash[:notice]
+    assert_equal "Welcome to Sure!  Your contribution is appreciated.", flash[:notice]
+  end
+
+  test "show action returns forbidden when family has no stripe_customer_id" do
+    assert_nil @family.stripe_customer_id
+
+    get subscription_path
+    assert_response :forbidden
+  end
+
+  test "show action redirects to stripe portal when family has stripe_customer_id" do
+    @family.update!(stripe_customer_id: "cus_test123")
+
+    @mock_stripe.expects(:create_payment_portal_session_url).with(
+      customer_id: "cus_test123",
+      return_url: settings_payment_url
+    ).returns("https://billing.stripe.com/session/test")
+
+    get subscription_path
+    assert_redirected_to "https://billing.stripe.com/session/test"
   end
 end

@@ -2,14 +2,12 @@
 
 <% if investment_metrics[:has_investments] %>
   <div class="space-y-6">
-    <h3 class="text-lg font-medium text-primary"><%= t("reports.investment_performance.title") %></h3>
-
     <%# Investment Summary Cards %>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <%# Portfolio Value Card %>
       <div class="bg-container-inset rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <%= icon("briefcase", class: "w-4 h-4 text-secondary") %>
+        <div class="flex items-center gap-2 mb-3">
+          <%= icon("briefcase", size: "sm") %>
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.portfolio_value") %></span>
         </div>
         <p class="text-xl font-semibold text-primary">
@@ -19,8 +17,8 @@
 
       <%# Total Return Card %>
       <div class="bg-container-inset rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <%= icon("trending-up", class: "w-4 h-4 text-secondary") %>
+        <div class="flex items-center gap-2 mb-3">
+          <%= icon("trending-up", size: "sm") %>
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.total_return") %></span>
         </div>
         <% if investment_metrics[:unrealized_trend] %>
@@ -29,14 +27,14 @@
             (<%= investment_metrics[:unrealized_trend].percent_formatted %>)
           </p>
         <% else %>
-          <p class="text-xl font-semibold text-secondary">-</p>
+          <p class="text-xl font-semibold text-secondary"><%= t("reports.investment_performance.no_data") %></p>
         <% end %>
       </div>
 
       <%# Period Contributions Card %>
       <div class="bg-container-inset rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <%= icon("arrow-down-to-line", class: "w-4 h-4 text-secondary") %>
+        <div class="flex items-center gap-2 mb-3">
+          <%= icon("arrow-down-to-line", size: "sm") %>
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.contributions") %></span>
         </div>
         <p class="text-xl font-semibold text-primary">
@@ -46,8 +44,8 @@
 
       <%# Period Withdrawals Card %>
       <div class="bg-container-inset rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <%= icon("arrow-up-from-line", class: "w-4 h-4 text-secondary") %>
+        <div class="flex items-center gap-2 mb-3">
+          <%= icon("arrow-up-from-line", size: "sm") %>
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.withdrawals") %></span>
         </div>
         <p class="text-xl font-semibold text-primary">
@@ -59,55 +57,135 @@
     <%# Top Holdings Table %>
     <% if investment_metrics[:top_holdings].any? %>
       <div class="space-y-3">
-        <h4 class="text-sm font-medium text-secondary uppercase"><%= t("reports.investment_performance.top_holdings") %></h4>
+        <h4 class="text-lg font-medium"><%= t("reports.investment_performance.top_holdings") %></h4>
 
-        <div class="bg-container-inset rounded-lg overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-container">
-              <tr class="text-left text-secondary uppercase text-xs">
-                <th class="px-4 py-3 font-medium"><%= t("reports.investment_performance.holding") %></th>
-                <th class="px-4 py-3 font-medium text-right"><%= t("reports.investment_performance.weight") %></th>
-                <th class="px-4 py-3 font-medium text-right"><%= t("reports.investment_performance.value") %></th>
-                <th class="px-4 py-3 font-medium text-right"><%= t("reports.investment_performance.return") %></th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-primary">
-              <% investment_metrics[:top_holdings].each do |holding| %>
-                <tr>
-                  <td class="px-4 py-3">
-                    <div class="flex items-center gap-3">
-                      <% if holding.security.logo_url.present? %>
-                        <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
-                      <% else %>
-                        <div class="w-6 h-6 rounded-full bg-container flex items-center justify-center text-xs font-medium text-secondary">
-                          <%= holding.ticker[0..1] %>
+        <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+          <div class="grid grid-cols-4 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
+            <div class="font-medium text-secondary"><%= t("reports.investment_performance.holding") %></div>
+            <div class="text-right font-medium text-secondary"><%= t("reports.investment_performance.weight") %></div>
+            <div class="text-right font-medium text-secondary"><%= t("reports.investment_performance.value") %></div>
+            <div class="text-right font-medium text-secondary"><%= t("reports.investment_performance.return") %></div>
+          </div>
+          <div class="bg-container rounded-lg shadow-border-xs">
+            <% investment_metrics[:top_holdings].each_with_index do |holding, idx| %>
+              <div class="grid grid-cols-4 items-center text-secondary text-sm py-3 px-4 lg:px-6">
+                <div class="flex items-center gap-3">
+                  <% if holding.security.brandfetch_icon_url.present? %>
+                    <img src="<%= holding.security.brandfetch_icon_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                  <% elsif holding.security.logo_url.present? %>
+                    <img src="<%= Setting.transform_brand_fetch_url(holding.security.logo_url) %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                  <% else %>
+                    <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
+                      <%= holding.ticker[0..1] %>
+                    </div>
+                  <% end %>
+                  <div>
+                    <p class="font-medium text-primary"><%= holding.ticker %></p>
+                    <p class="text-xs text-secondary"><%= truncate(holding.name, length: 25) %></p>
+                  </div>
+                </div>
+                <div class="text-right text-secondary"><%= number_to_percentage(holding.weight || 0, precision: 1) %></div>
+                <div class="text-right font-medium text-primary"><%= format_money(holding.amount_money) %></div>
+                <div class="text-right">
+                  <% if holding.trend %>
+                    <span style="color: <%= holding.trend.color %>">
+                      <%= holding.trend.percent_formatted %>
+                    </span>
+                  <% else %>
+                    <span class="text-secondary"><%= t("reports.investment_performance.no_data") %></span>
+                  <% end %>
+                </div>
+              </div>
+              <% if idx < investment_metrics[:top_holdings].size - 1 %>
+                <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Gains by Tax Treatment %>
+    <% if investment_metrics[:gains_by_tax_treatment].present? %>
+      <div class="space-y-3">
+        <h4 class="text-lg font-medium"><%= t("reports.investment_performance.gains_by_tax_treatment") %></h4>
+
+        <div class="flex flex-wrap gap-4">
+          <% investment_metrics[:gains_by_tax_treatment].each do |treatment, data| %>
+            <div class="bg-container-inset rounded-lg p-4 space-y-3 flex-1 min-w-64">
+              <div class="flex items-center justify-between">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= tax_treatment_badge_classes(treatment) %>" title="<%= t("accounts.tax_treatment_descriptions.#{treatment}") %>">
+                  <%= t("accounts.tax_treatments.#{treatment}") %>
+                </span>
+                <span class="text-sm font-semibold text-primary">
+                  <%= format_money(data[:total_gain]) %>
+                </span>
+              </div>
+
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-secondary"><%= t("reports.investment_performance.unrealized_gains") %></span>
+                  <span class="text-primary"><%= format_money(data[:unrealized_gain]) %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-secondary"><%= t("reports.investment_performance.realized_gains") %></span>
+                  <span class="text-primary"><%= format_money(data[:realized_gain]) %></span>
+                </div>
+              </div>
+
+              <% if treatment == :taxable && data[:realized_gain].amount > 0 %>
+                <p class="text-xs text-warning flex items-center gap-1">
+                  <%= icon("alert-triangle", size: "sm") %>
+                  <%= t("reports.investment_performance.taxable_realized_note") %>
+                </p>
+              <% end %>
+
+              <details class="group">
+                <summary class="cursor-pointer text-xs text-secondary hover:text-primary flex items-center gap-1">
+                  <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
+                  <%= t("reports.investment_performance.view_details") %>
+                  (<%= t("reports.investment_performance.holdings_count", count: data[:holdings].count) %>, <%= t("reports.investment_performance.sells_count", count: data[:sell_trades].count) %>)
+                </summary>
+
+                <div class="mt-2 space-y-2 text-xs">
+                  <% if data[:holdings].any? %>
+                    <div class="space-y-1">
+                      <p class="text-secondary font-medium"><%= t("reports.investment_performance.holdings") %></p>
+                      <% data[:holdings].first(5).each do |holding| %>
+                        <div class="flex justify-between pl-2">
+                          <span class="text-primary"><%= holding.ticker %></span>
+                          <span class="<%= holding.trend ? "" : "text-secondary" %>" style="<%= holding.trend ? "color: #{holding.trend.color}" : "" %>">
+                            <%= holding.trend ? format_money(Money.new(holding.trend.value, Current.family.currency)) : t("reports.investment_performance.no_data") %>
+                          </span>
                         </div>
                       <% end %>
-                      <div>
-                        <p class="font-medium text-primary"><%= holding.ticker %></p>
-                        <p class="text-xs text-secondary"><%= truncate(holding.name, length: 25) %></p>
-                      </div>
+                      <% if data[:holdings].count > 5 %>
+                        <p class="text-secondary pl-2"><%= t("reports.investment_performance.and_more", count: data[:holdings].count - 5) %></p>
+                      <% end %>
                     </div>
-                  </td>
-                  <td class="px-4 py-3 text-right text-secondary">
-                    <%= number_to_percentage(holding.weight || 0, precision: 1) %>
-                  </td>
-                  <td class="px-4 py-3 text-right font-medium text-primary">
-                    <%= format_money(holding.amount_money) %>
-                  </td>
-                  <td class="px-4 py-3 text-right">
-                    <% if holding.trend %>
-                      <span style="color: <%= holding.trend.color %>">
-                        <%= holding.trend.percent_formatted %>
-                      </span>
-                    <% else %>
-                      <span class="text-secondary">-</span>
-                    <% end %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
+                  <% end %>
+
+                  <% if data[:sell_trades].any? %>
+                    <div class="space-y-1">
+                      <p class="text-secondary font-medium"><%= t("reports.investment_performance.sell_trades") %></p>
+                      <% data[:sell_trades].first(5).each do |trade| %>
+                        <% gain = trade.realized_gain_loss %>
+                        <div class="flex justify-between pl-2">
+                          <span class="text-primary"><%= trade.security.ticker %></span>
+                          <span class="<%= gain ? "" : "text-secondary" %>" style="<%= gain ? "color: #{gain.color}" : "" %>">
+                            <%= gain ? format_money(Money.new(gain.value, Current.family.currency)) : t("reports.investment_performance.no_data") %>
+                          </span>
+                        </div>
+                      <% end %>
+                      <% if data[:sell_trades].count > 5 %>
+                        <p class="text-secondary pl-2"><%= t("reports.investment_performance.and_more", count: data[:sell_trades].count - 5) %></p>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </details>
+            </div>
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -115,7 +193,7 @@
     <%# Investment Accounts Summary %>
     <% if investment_metrics[:accounts].any? %>
       <div class="space-y-3">
-        <h4 class="text-sm font-medium text-secondary uppercase"><%= t("reports.investment_performance.accounts") %></h4>
+        <h4 class="text-lg font-medium"><%= t("reports.investment_performance.accounts") %></h4>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <% investment_metrics[:accounts].each do |account| %>

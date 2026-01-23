@@ -33,7 +33,7 @@ export default class extends Controller {
 
   collapse(persist = true) {
     this.contentTarget.classList.add("hidden");
-    this.chevronTarget.classList.add("rotate-180");
+    this.chevronTarget.classList.add("-rotate-90");
     this.collapsedValue = true;
     if (this.hasButtonTarget) {
       this.buttonTarget.setAttribute("aria-expanded", "false");
@@ -45,7 +45,7 @@ export default class extends Controller {
 
   expand() {
     this.contentTarget.classList.remove("hidden");
-    this.chevronTarget.classList.remove("rotate-180");
+    this.chevronTarget.classList.remove("-rotate-90");
     this.collapsedValue = false;
     if (this.hasButtonTarget) {
       this.buttonTarget.setAttribute("aria-expanded", "true");

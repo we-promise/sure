@@ -24,11 +24,11 @@ maintainers:
 # Users must `helm repo add` the below repositories before installing this chart.
 dependencies:
   - name: cloudnative-pg
-    version: "0.22.0"
+    version: "~0.27"
     repository: "https://cloudnative-pg.github.io/charts"
     condition: cnpg.enabled
   - name: redis-operator
     alias: redisOperator
-    version: "~0.21.0"
+    version: "~0.23.0"
     repository: "https://ot-container-kit.github.io/helm-charts"
     condition: redisOperator.enabled

@@ -3,6 +3,14 @@ en:
   pages:
     changelog:
       title: What's new
+    privacy:
+      title: Privacy Policy
+      heading: Privacy Policy
+      placeholder: Privacy policy content will be displayed here.
+    terms:
+      title: Terms of Service
+      heading: Terms of Service
+      placeholder: Terms of service content will be displayed here.
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"

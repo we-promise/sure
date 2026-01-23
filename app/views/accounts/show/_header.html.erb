@@ -9,6 +9,9 @@
         <div class="truncate">
           <div class="flex items-center gap-3">
             <h2 class="font-medium text-xl truncate <%= "animate-pulse" if account.syncing? %>"><%= title %></h2>
+            <% if account.tax_treatment.present? %>
+              <%= render partial: "accounts/tax_treatment_badge", locals: { account: account } %>
+            <% end %>
             <% if account.draft? %>
               <%= render DS::Link.new(
                   text: "Complete setup",

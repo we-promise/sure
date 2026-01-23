@@ -40,6 +40,7 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validate :custom_column_import_requires_identifier
   validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family
   validate :rows_to_skip_within_file_bounds
@@ -303,6 +304,14 @@ class Import < ApplicationRecord
 
     def set_default_number_format
       self.number_format ||= "1,234.56" # Default to US/UK format
+    end
+
+    def custom_column_import_requires_identifier
+      return unless amount_type_strategy == "custom_column"
+
+      if amount_type_inflow_value.blank?
+        errors.add(:base, I18n.t("imports.errors.custom_column_requires_inflow"))
+      end
     end
 
     # Common encodings to try when UTF-8 detection fails

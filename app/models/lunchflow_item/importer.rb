@@ -1,4 +1,6 @@
 class LunchflowItem::Importer
+  include LunchflowTransactionHash
+
   attr_reader :lunchflow_item, :lunchflow_provider
 
   def initialize(lunchflow_item, lunchflow_provider:)
@@ -183,14 +185,22 @@ class LunchflowItem::Importer
 
     def fetch_and_store_transactions(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date}"
+      include_pending = Rails.configuration.x.lunchflow.include_pending
+
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date} (include_pending=#{include_pending})"
 
       begin
         # Fetch transactions
         transactions_data = lunchflow_provider.get_account_transactions(
           lunchflow_account.account_id,
-          start_date: start_date
+          start_date: start_date,
+          include_pending: include_pending
         )
+
+        # Optional: Debug logging
+        if Rails.configuration.x.lunchflow.debug_raw
+          Rails.logger.debug "Lunchflow raw response: #{transactions_data.to_json}"
+        end
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
@@ -207,17 +217,38 @@ class LunchflowItem::Importer
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
             # Build set of existing transaction IDs for efficient lookup
+            # For transactions with IDs: use the ID directly
+            # For transactions without IDs (blank/nil): use content hash to prevent duplicate storage
             existing_ids = existing_transactions.map do |tx|
-              tx.with_indifferent_access[:id]
-            end.to_set
+              tx_with_access = tx.with_indifferent_access
+              tx_id = tx_with_access[:id]
+
+              if tx_id.blank?
+                # Generate content hash for blank-ID transactions to detect duplicates
+                content_hash_for_transaction(tx_with_access)
+              else
+                tx_id
+              end
+            end.compact.to_set
 
             # Filter to ONLY truly new transactions (skip duplicates)
-            # Transactions are immutable on the bank side, so we don't need to update them
+            # For transactions WITH IDs: skip if ID already exists (true duplicates)
+            # For transactions WITHOUT IDs: skip if content hash exists (prevents unbounded growth)
+            # Note: Pending transactions may update from pending→posted, but we treat them as immutable snapshots
             new_transactions = transactions_data[:transactions].select do |tx|
               next false unless tx.is_a?(Hash)
 
-              tx_id = tx.with_indifferent_access[:id]
-              tx_id.present? && !existing_ids.include?(tx_id)
+              tx_with_access = tx.with_indifferent_access
+              tx_id = tx_with_access[:id]
+
+              if tx_id.blank?
+                # Use content hash to detect if we've already stored this exact transaction
+                content_hash = content_hash_for_transaction(tx_with_access)
+                !existing_ids.include?(content_hash)
+              else
+                # If has ID, only include if not already stored
+                !existing_ids.include?(tx_id)
+              end
             end
 
             if new_transactions.any?

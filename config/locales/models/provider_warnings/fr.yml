@@ -1,0 +1,4 @@
+---
+fr:
+  provider_warnings:
+    limited_investment_data: "Les données d'investissement de ce fournisseur sont limitées. Les étiquettes d'activité (Achat, Vente, Dividende) ne sont pas disponibles, ce qui peut affecter la précision du budget. Pensez à créer des règles pour exclure ou catégoriser les transactions d'investissement."
