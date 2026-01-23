@@ -12,7 +12,7 @@ class TransactionAttachmentsController < ApplicationController
 
     if attachments.present?
       # Check attachment count limit before attaching
-      current_count = @transaction.attachments.count
+      current_count = @transaction.attachments.size
       new_count = attachments.is_a?(Array) ? attachments.length : 1
 
       if current_count + new_count > Transaction::MAX_ATTACHMENTS_PER_TRANSACTION
@@ -81,6 +81,13 @@ class TransactionAttachmentsController < ApplicationController
     end
 
     def attachment_params
-      params[:attachments] || params[:attachment]
+      if params.has_key?(:attachments)
+        Array(params.require(:attachments)).map do |param|
+          param.respond_to?(:permit) ? param.permit(:file, :filename, :content_type, :description, :metadata) : param
+        end
+      elsif params.has_key?(:attachment)
+        param = params.require(:attachment)
+        param.respond_to?(:permit) ? param.permit(:file, :filename, :content_type, :description, :metadata) : param
+      end
     end
 end
