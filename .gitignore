@@ -101,13 +101,16 @@ tasks.json
 .taskmaster/reports/
 .taskmaster/state.json
 *.mcp.json
-scripts/
 .cursor/mcp.json
 .taskmasterconfig
 .windsurfrules
 .cursor/rules/dev_workflow.mdc
 .cursor/rules/taskmaster.mdc
 
+
+# Persistent Docker data (host-based storage)
+/data/
+/backups/
 
 # Auto Claude data directory
 .auto-claude/

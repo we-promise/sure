@@ -1,0 +1,146 @@
+# ===========================================================================
+# Persistent Docker Compose - Host-Based Storage
+# ===========================================================================
+#
+# This file runs Sure with data stored directly on your host filesystem,
+# NOT in Docker-managed volumes. Data survives Docker daemon crashes,
+# reinstalls, or any Docker-related issues.
+#
+# Data is stored in ./data/ directory (or customize via DATA_DIR env var):
+#   ./data/postgres/    - PostgreSQL database files
+#   ./data/redis/       - Redis persistence files
+#   ./data/storage/     - Rails Active Storage files (uploads, etc.)
+#
+# Usage:
+#   # First time setup:
+#   mkdir -p ./data/postgres ./data/redis ./data/storage
+#
+#   # Start services:
+#   docker compose -f docker-compose.persistent.yml up -d
+#
+#   # Stop services:
+#   docker compose -f docker-compose.persistent.yml down
+#
+#   # View logs:
+#   docker compose -f docker-compose.persistent.yml logs -f
+#
+#   # Rebuild after code changes:
+#   docker compose -f docker-compose.persistent.yml up -d --build
+#
+# Backup: Simply backup the ./data/ directory
+# Restore: Copy backed up ./data/ directory back and start containers
+#
+# ===========================================================================
+
+x-db-env: &db_env
+  POSTGRES_USER: ${POSTGRES_USER:-sure_local}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure_local_password}
+  POSTGRES_DB: ${POSTGRES_DB:-sure_local}
+
+x-rails-env: &rails_env
+  <<: *db_env
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13}
+  SELF_HOSTED: "true"
+  RAILS_FORCE_SSL: "false"
+  RAILS_ASSUME_SSL: "false"
+  RAILS_ENV: "production"
+  DB_HOST: db
+  DB_PORT: 5432
+  REDIS_URL: redis://redis:6379/1
+  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN:-}
+  # Add any additional env vars from your .env file here or use env_file
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sure:local
+    container_name: sure-web-persistent
+    volumes:
+      # Bind mount to host filesystem - survives Docker daemon issues
+      - ${DATA_DIR:-./data}/storage:/rails/storage
+    ports:
+      - "${PORT:-3000}:3000"
+    restart: unless-stopped
+    environment:
+      <<: *rails_env
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sure_persistent_net
+
+  worker:
+    image: sure:local
+    container_name: sure-worker-persistent
+    command: bundle exec sidekiq
+    volumes:
+      - ${DATA_DIR:-./data}/storage:/rails/storage
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *rails_env
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+    networks:
+      - sure_persistent_net
+
+  db:
+    image: postgres:16
+    container_name: sure-db-persistent
+    restart: unless-stopped
+    volumes:
+      # Bind mount PostgreSQL data to host filesystem
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+    environment:
+      <<: *db_env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - sure_persistent_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: sure-redis-persistent
+    restart: unless-stopped
+    volumes:
+      # Bind mount Redis data to host filesystem
+      - ${DATA_DIR:-./data}/redis:/data
+    # Enable Redis persistence (AOF + RDB snapshots)
+    command: redis-server --appendonly yes --appendfsync everysec --save 60 1 --save 300 10
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - sure_persistent_net
+
+networks:
+  sure_persistent_net:
+    driver: bridge
+    name: sure_persistent_net

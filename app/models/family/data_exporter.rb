@@ -43,18 +43,17 @@ class Family::DataExporter
 
     def generate_accounts_csv
       CSV.generate do |csv|
-        csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
+        # Headers match AccountImport csv_template for seamless re-import
+        csv << [ "account_type", "name", "balance", "currency", "balance_date" ]
 
         # Only export accounts belonging to this family
         @family.accounts.includes(:accountable).find_each do |account|
           csv << [
-            account.id,
-            account.name,
             account.accountable_type,
-            account.subtype,
+            account.name,
             account.balance.to_s,
             account.currency,
-            account.created_at.iso8601
+            account.created_at.to_date.iso8601
           ]
         end
       end
@@ -62,7 +61,8 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        # Headers match TransactionImport csv_template for seamless re-import
+        csv << [ "date", "amount", "name", "currency", "category", "tags", "account", "notes" ]
 
         # Only export transactions from accounts belonging to this family
         @family.transactions
@@ -70,13 +70,13 @@ class Family::DataExporter
           .find_each do |transaction|
             csv << [
               transaction.entry.date.iso8601,
-              transaction.entry.account.name,
               transaction.entry.amount.to_s,
               transaction.entry.name,
+              transaction.entry.currency,
               transaction.category&.name,
-              transaction.tags.pluck(:name).join(","),
-              transaction.entry.notes,
-              transaction.entry.currency
+              transaction.tags.pluck(:name).join("|"),
+              transaction.entry.account.name,
+              transaction.entry.notes
             ]
           end
       end
@@ -84,7 +84,8 @@ class Family::DataExporter
 
     def generate_trades_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ]
+        # Headers match TradeImport csv_template for seamless re-import
+        csv << [ "date", "ticker", "exchange_operating_mic", "currency", "qty", "price", "account", "name" ]
 
         # Only export trades from accounts belonging to this family
         @family.trades
@@ -92,12 +93,13 @@ class Family::DataExporter
           .find_each do |trade|
             csv << [
               trade.entry.date.iso8601,
-              trade.entry.account.name,
               trade.security.ticker,
+              trade.security.exchange_operating_mic,
+              trade.currency,
               trade.qty.to_s,
               trade.price.to_s,
-              trade.entry.amount.to_s,
-              trade.currency
+              trade.entry.account.name,
+              trade.entry.name
             ]
           end
       end
