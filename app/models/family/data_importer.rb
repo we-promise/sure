@@ -124,7 +124,7 @@ class Family::DataImporter
           name: data["name"],
           color: data["color"] || Category::UNCATEGORIZED_COLOR,
           classification: data["classification"] || "expense",
-          lucide_icon: data["lucide_icon"]
+          lucide_icon: data["lucide_icon"] || "shapes"
         )
 
         category.save!
