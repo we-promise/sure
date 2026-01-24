@@ -36,12 +36,24 @@ export default class extends Controller {
 
   connect() {
     this.isRemoving = false;
+    this.isVisible = false;
 
     if (this.hasInitialClass && this.hasVisibleClass) {
       requestAnimationFrame(() => {
+        if (!this.element) return;
         this.element.classList.remove(...this.initialClasses);
         this.element.classList.add(...this.visibleClasses);
+        this.isVisible = true;
       });
+    }
+  }
+
+  disconnect() {
+    this.isRemoving = false;
+    this.isVisible = false;
+    if (this._removalTimeoutId) {
+      clearTimeout(this._removalTimeoutId);
+      this._removalTimeoutId = null;
     }
   }
 
@@ -53,9 +65,31 @@ export default class extends Controller {
       this.element.classList.remove(...this.visibleClasses);
       this.element.classList.add(...this.exitClasses);
 
-      setTimeout(() => {
-        this.element.remove();
-      }, this.durationValue);
+      const removeElement = () => {
+        if (!this.element) return;
+        this.element.removeEventListener("transitionend", onTransitionEnd);
+        this.element.removeEventListener("animationend", onTransitionEnd);
+        if (this._removalTimeoutId) {
+          clearTimeout(this._removalTimeoutId);
+          this._removalTimeoutId = null;
+        }
+        if (this.element.parentNode) {
+          this.element.remove();
+        }
+      };
+
+      const onTransitionEnd = (event) => {
+        if (event.target !== this.element) return;
+        removeElement();
+      };
+
+      this.element.addEventListener("transitionend", onTransitionEnd);
+      this.element.addEventListener("animationend", onTransitionEnd);
+
+      // Fallback timeout in case events don't fire
+      this._removalTimeoutId = window.setTimeout(() => {
+        removeElement();
+      }, this.durationValue + 100);
     } else {
       this.element.remove();
     }

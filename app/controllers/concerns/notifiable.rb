@@ -48,7 +48,7 @@ module Notifiable
     end
 
     def resolve_cta(cta)
-      case cta["type"] || cta[:type]
+      case cta[:type]
       when "category_rule"
         { partial: "rules/category_rule_cta", locals: { cta: } }
       end
