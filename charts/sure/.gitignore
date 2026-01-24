@@ -1,0 +1,6 @@
+# Ignore downloaded chart dependencies
+charts/
+*.tgz
+
+# Ignore debug output
+.debug/
