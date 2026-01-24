@@ -101,8 +101,9 @@ ru:
         access_denied: 'Владелец ресурса или сервер авторизации отклонили запрос.'
         invalid_scope: 'Запрошенная область доступа (scope) неверна, неизвестна или неверно сформирована.'
         invalid_code_challenge_method:
-          zero: 'Сервер авторизации не поддерживает PKCE, так как не заданы разрешенные методы code_challenge_method.'
           one: 'Параметр code_challenge_method должен иметь значение %{challenge_methods}.'
+          few: 'Параметр code_challenge_method должен иметь одно из значений: %{challenge_methods}.'
+          many: 'Параметр code_challenge_method должен иметь одно из значений: %{challenge_methods}.'
           other: 'Параметр code_challenge_method должен иметь одно из значений: %{challenge_methods}.'
         server_error: 'Сервер авторизации столкнулся с непредвиденной ошибкой, которая помешала выполнить запрос.'
         temporarily_unavailable: 'Сервер авторизации в данный момент не может обработать запрос из-за временной перегрузки или технического обслуживания.'

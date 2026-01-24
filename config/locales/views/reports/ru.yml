@@ -147,15 +147,15 @@ ru:
       no_data: "-"
       view_details: Показать детали
       holdings_count:
-        one: "% {count} актив"
-        few: "% {count} актива"
-        many: "% {count} активов"
-        other: "% {count} актива"
+        one: "%{count} актив"
+        few: "%{count} актива"
+        many: "%{count} активов"
+        other: "%{count} актива"
       sells_count:
-        one: "% {count} продажа"
-        few: "% {count} продажи"
-        many: "% {count} продаж"
-        other: "% {count} продажи"
+        one: "%{count} продажа"
+        few: "%{count} продажи"
+        many: "%{count} продаж"
+        other: "%{count} продажи"
       holdings: Активы
       sell_trades: Продажи
       and_more: "+ еще %{count}"
@@ -191,8 +191,8 @@ ru:
         expenses: Расходы
         net_savings: Чистые сбережения
         budget: Бюджет
-        vs_prior: "% {percent}% к пред."
-        of_income: "% {percent}% от дохода"
+        vs_prior: "%{percent}% к пред."
+        of_income: "%{percent}% от дохода"
         used: использовано
       net_worth:
         title: Чистый капитал
