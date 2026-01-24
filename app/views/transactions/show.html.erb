@@ -45,6 +45,8 @@
       <% end %>
     <% end %>
 
+    <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) %>
+
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4">
         <%= styled_form_with model: @entry,

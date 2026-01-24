@@ -1,0 +1,155 @@
+<%# locals: (snaptrade_item:) %>
+
+<%= tag.div id: dom_id(snaptrade_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 bg-success/10 rounded-full">
+          <% if snaptrade_item.logo.attached? %>
+            <%= image_tag snaptrade_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
+          <% else %>
+            <div class="flex items-center justify-center">
+              <%= tag.p snaptrade_item.name.first.upcase, class: "text-success text-xs font-medium" %>
+            </div>
+          <% end %>
+        </div>
+
+        <% unlinked_count = snaptrade_item.unlinked_accounts_count %>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p snaptrade_item.name, class: "font-medium text-primary" %>
+            <% if snaptrade_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <% if snaptrade_item.snaptrade_accounts.any? %>
+            <p class="text-xs text-secondary">
+              <%= snaptrade_item.brokerage_summary %>
+            </p>
+          <% end %>
+          <% if snaptrade_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif snaptrade_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".requires_update") %>
+            </div>
+          <% elsif snaptrade_item.sync_error.present? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= render DS::Tooltip.new(text: snaptrade_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
+              <%= tag.span t(".error"), class: "text-destructive" %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if snaptrade_item.last_synced_at %>
+                <%= t(".status", timestamp: time_ago_in_words(snaptrade_item.last_synced_at), summary: snaptrade_item.sync_status_summary) %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if snaptrade_item.requires_update? || !snaptrade_item.user_registered? %>
+          <%= render DS::Link.new(
+            text: t(".reconnect"),
+            icon: "link",
+            variant: "secondary",
+            href: connect_snaptrade_item_path(snaptrade_item)
+          ) %>
+        <% else %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_snaptrade_item_path(snaptrade_item),
+            disabled: snaptrade_item.syncing?
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+            variant: "link",
+            text: t(".connect_brokerage"),
+            icon: "plus",
+            href: connect_snaptrade_item_path(snaptrade_item)
+          ) %>
+          <% if unlinked_count > 0 %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".setup_accounts_menu"),
+              icon: "settings",
+              href: setup_accounts_snaptrade_item_path(snaptrade_item),
+              frame: :modal
+            ) %>
+          <% end %>
+          <% menu.with_item(
+            variant: "link",
+            text: t(".manage_connections"),
+            icon: "cable",
+            href: settings_providers_path(manage: "1")
+          ) %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: snaptrade_item_path(snaptrade_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(snaptrade_item.name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+
+    <% unless snaptrade_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if snaptrade_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: snaptrade_item.accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = snaptrade_item.syncs.ordered.first&.sync_stats || {} %>
+        <% activities_pending = snaptrade_item.snaptrade_accounts.any?(&:activities_fetch_pending) %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: snaptrade_item,
+          institutions_count: snaptrade_item.snaptrade_accounts.map(&:brokerage_name).uniq.compact.size,
+          activities_pending: activities_pending
+        ) %>
+
+        <% if unlinked_count > 0 && snaptrade_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_snaptrade_item_path(snaptrade_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif snaptrade_item.snaptrade_accounts.empty? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".connect_brokerage"),
+              icon: "link",
+              variant: "primary",
+              href: connect_snaptrade_item_path(snaptrade_item)
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

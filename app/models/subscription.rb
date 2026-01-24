@@ -35,4 +35,8 @@ class Subscription < ApplicationRecord
       "Open demo"
     end
   end
+
+  def pending_cancellation?
+    active? && cancel_at_period_end?
+  end
 end

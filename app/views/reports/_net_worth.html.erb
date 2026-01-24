@@ -3,31 +3,31 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     <%# Current Net Worth %>
     <div class="p-4 bg-surface-inset rounded-lg">
-      <p class="text-xs text-tertiary mb-1"><%= t("reports.net_worth.current_net_worth") %></p>
-      <p class="text-xl font-semibold <%= net_worth_metrics[:current_net_worth] >= 0 ? "text-success" : "text-destructive" %>">
+      <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.current_net_worth") %></p>
+      <p class="text-2xl font-semibold <%= net_worth_metrics[:current_net_worth] >= 0 ? "text-success" : "text-destructive" %>">
         <%= net_worth_metrics[:current_net_worth].format %>
       </p>
     </div>
 
     <%# Period Change %>
     <div class="p-4 bg-surface-inset rounded-lg">
-      <p class="text-xs text-tertiary mb-1"><%= t("reports.net_worth.period_change") %></p>
+      <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.period_change") %></p>
       <% if net_worth_metrics[:trend] %>
         <% trend = net_worth_metrics[:trend] %>
-        <p class="text-xl font-semibold" style="color: <%= trend.color %>">
+        <p class="text-2xl font-semibold mb-1" style="color: <%= trend.color %>">
           <%= trend.value.format(signify_positive: true) %>
         </p>
         <p class="text-xs" style="color: <%= trend.color %>">
           <%= trend.value >= 0 ? "+" : "" %><%= trend.percent_formatted %>
         </p>
       <% else %>
-        <p class="text-xl font-semibold text-tertiary">--</p>
+        <p class="text-2xl font-semibold mb-1 text-tertiary">--</p>
       <% end %>
     </div>
 
     <%# Assets vs Liabilities %>
     <div class="p-4 bg-surface-inset rounded-lg">
-      <p class="text-xs text-tertiary mb-1"><%= t("reports.net_worth.assets_vs_liabilities") %></p>
+      <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.assets_vs_liabilities") %></p>
       <div class="flex items-baseline gap-2">
         <span class="text-lg font-semibold text-success"><%= net_worth_metrics[:total_assets].format %></span>
         <span class="text-xs text-tertiary">-</span>
@@ -39,30 +39,40 @@
   <%# Asset/Liability Breakdown %>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <%# Assets Summary %>
-    <div>
-      <h3 class="text-sm font-medium text-secondary mb-3"><%= t("reports.net_worth.total_assets") %></h3>
-      <div class="space-y-2">
-        <% net_worth_metrics[:asset_groups].each do |group| %>
-          <div class="flex items-center justify-between py-2 border-b border-tertiary/50">
-            <span class="text-sm text-primary"><%= group[:name] %></span>
-            <span class="text-sm font-medium text-success"><%= group[:total].format %></span>
+    <div class="bg-container-inset rounded-xl p-1 overflow-x-auto w-full flex flex-col">
+      <div class="grid grid-cols-2 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
+        <div class="col-span-1 font-medium text-secondary"><%= t("reports.net_worth.total_assets") %></div>
+      </div>
+      <div class="bg-container rounded-lg shadow-border-xs flex-1 flex flex-col">
+        <% net_worth_metrics[:asset_groups].each_with_index do |group, idx| %>
+          <div class="grid grid-cols-2 items-center text-secondary text-sm py-3 px-4 lg:px-6">
+            <div class="col-span-1 font-medium text-secondary"><%= group[:name] %></div>
+            <div class="col-span-1 font-medium text-secondary justify-self-end text-success"><%= group[:total].format %></div>
           </div>
+          <% if idx < net_worth_metrics[:asset_groups].size - 1 %>
+            <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+          <% end %>
         <% end %>
         <% if net_worth_metrics[:asset_groups].empty? %>
-          <p class="text-sm text-tertiary py-2"><%= t("reports.net_worth.no_assets") %></p>
+          <p class="text-sm text-secondary p-2 text-center"><%= t("reports.net_worth.no_assets") %></p>
         <% end %>
       </div>
     </div>
 
     <%# Liabilities Summary %>
-    <div>
-      <h3 class="text-sm font-medium text-secondary mb-3"><%= t("reports.net_worth.total_liabilities") %></h3>
-      <div class="space-y-2">
-        <% net_worth_metrics[:liability_groups].each do |group| %>
-          <div class="flex items-center justify-between py-2 border-b border-tertiary/50">
-            <span class="text-sm text-primary"><%= group[:name] %></span>
-            <span class="text-sm font-medium text-destructive"><%= group[:total].format %></span>
+    <div class="bg-container-inset rounded-xl p-1 overflow-x-auto w-full flex flex-col">
+      <div class="grid grid-cols-2 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
+        <div class="col-span-1 font-medium text-secondary"><%= t("reports.net_worth.total_liabilities") %></div>
+      </div>
+      <div class="bg-container rounded-lg shadow-border-xs flex-1 flex flex-col">
+        <% net_worth_metrics[:liability_groups].each_with_index do |group, idx| %>
+          <div class="grid grid-cols-2 items-center text-secondary text-sm py-3 px-4 lg:px-6">
+            <div class="col-span-1 font-medium text-secondary"><%= group[:name] %></div>
+            <div class="col-span-1 font-medium text-secondary justify-self-end text-destructive"><%= group[:total].format %></div>
           </div>
+          <% if idx < net_worth_metrics[:liability_groups].size - 1 %>
+            <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+          <% end %>
         <% end %>
         <% if net_worth_metrics[:liability_groups].empty? %>
           <p class="text-sm text-tertiary py-2"><%= t("reports.net_worth.no_liabilities") %></p>

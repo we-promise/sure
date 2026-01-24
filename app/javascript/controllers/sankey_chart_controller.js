@@ -45,6 +45,9 @@ export default class extends Controller {
     const { nodes = [], links = [] } = this.dataValue || {};
     if (!nodes.length || !links.length) return;
 
+    // Hide tooltip and reset any hover states before redrawing
+    this.#hideTooltip();
+
     d3.select(this.element).selectAll("svg").remove();
 
     const width = this.element.clientWidth || 600;
@@ -221,7 +224,7 @@ export default class extends Controller {
       .style("cursor", "default")
       .style("opacity", d => hiddenLabels.has(d.index) ? 0 : 1)
       .style("transition", "opacity 0.2s ease")
-      .each(function(d) {
+      .each(function (d) {
         const textEl = d3.select(this);
         textEl.selectAll("tspan").remove();
 
@@ -241,7 +244,9 @@ export default class extends Controller {
   // Calculate which labels should be hidden to prevent overlap
   #calculateHiddenLabels(nodes) {
     const hiddenLabels = new Set();
-    const minSpacing = this.constructor.MIN_LABEL_SPACING;
+    const height = this.element.clientHeight || 400;
+    const isLargeGraph = height > 600;
+    const minSpacing = isLargeGraph ? this.constructor.MIN_LABEL_SPACING * 0.7 : this.constructor.MIN_LABEL_SPACING;
 
     // Group nodes by column (using depth which d3-sankey assigns)
     const columns = new Map();
@@ -260,8 +265,11 @@ export default class extends Controller {
 
       columnNodes.forEach(node => {
         const nodeY = (node.y0 + node.y1) / 2;
+        const nodeHeight = node.y1 - node.y0;
 
-        if (nodeY - lastVisibleY < minSpacing) {
+        if (isLargeGraph && nodeHeight > minSpacing * 1.5) {
+          lastVisibleY = nodeY;
+        } else if (nodeY - lastVisibleY < minSpacing) {
           // Too close to previous visible label, hide this one
           hiddenLabels.add(node.index);
         } else {
@@ -338,7 +346,8 @@ export default class extends Controller {
   // Tooltip methods
 
   #createTooltip() {
-    this.tooltip = d3.select("body")
+    const dialog = this.element.closest("dialog");
+    this.tooltip = d3.select(dialog || document.body)
       .append("div")
       .attr("class", "bg-gray-700 text-white text-sm p-2 rounded pointer-events-none absolute z-50")
       .style("opacity", 0)
@@ -348,32 +357,44 @@ export default class extends Controller {
   #showTooltip(event, value, percentage, title = null) {
     if (!this.tooltip) this.#createTooltip();
 
-    const formattedValue = this.#formatCurrency(value);
-    const percentageText = percentage ? `${percentage}%` : "0%";
     const content = title
-      ? `${title}<br/>${formattedValue} (${percentageText})`
-      : `${formattedValue} (${percentageText})`;
+      ? `${title}<br/>${this.#formatCurrency(value)} (${percentage || 0}%)`
+      : `${this.#formatCurrency(value)} (${percentage || 0}%)`;
+
+    const isInDialog = !!this.element.closest("dialog");
+    const x = isInDialog ? event.clientX : event.pageX;
+    const y = isInDialog ? event.clientY : event.pageY;
 
     this.tooltip
       .html(content)
-      .style("left", `${event.pageX + 10}px`)
-      .style("top", `${event.pageY - 10}px`)
+      .style("position", isInDialog ? "fixed" : "absolute")
+      .style("left", `${x + 10}px`)
+      .style("top", `${y - 10}px`)
       .transition()
       .duration(100)
       .style("opacity", 1);
   }
 
   #updateTooltipPosition(event) {
-    this.tooltip
-      ?.style("left", `${event.pageX + 10}px`)
-      .style("top", `${event.pageY - 10}px`);
+    if (this.tooltip) {
+      const isInDialog = !!this.element.closest("dialog");
+      const x = isInDialog ? event.clientX : event.pageX;
+      const y = isInDialog ? event.clientY : event.pageY;
+
+      this.tooltip
+        ?.style("left", `${x + 10}px`)
+        .style("top", `${y - 10}px`);
+    }
   }
 
   #hideTooltip() {
-    this.tooltip
-      ?.transition()
-      .duration(100)
-      .style("opacity", 0);
+    if (this.tooltip) {
+      this.tooltip
+        ?.transition()
+        .duration(100)
+        .style("opacity", 0)
+        .style("pointer-events", "none");
+    }
   }
 
   #formatCurrency(value) {

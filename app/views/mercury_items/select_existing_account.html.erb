@@ -1,0 +1,57 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description") %>
+        </p>
+
+        <form action="<%= link_existing_account_mercury_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <%= hidden_field_tag :return_to, @return_to %>
+
+          <div class="space-y-2">
+            <% @available_accounts.each do |account| %>
+              <% account_name = account[:nickname].presence || account[:name].presence || account[:legalBusinessName].presence %>
+              <% has_blank_name = account_name.blank? %>
+              <label class="flex items-start gap-3 p-3 border <%= has_blank_name ? "border-error bg-error/5" : "border-primary" %> rounded-lg <%= has_blank_name ? "cursor-not-allowed opacity-60" : "hover:bg-subtle cursor-pointer" %> transition-colors">
+                <%= radio_button_tag "mercury_account_id", account[:id], false, disabled: has_blank_name, class: "mt-1" %>
+                <div class="flex-1">
+                  <div class="font-medium text-sm <%= has_blank_name ? "text-error" : "text-primary" %>">
+                    <% if has_blank_name %>
+                      <%= t(".no_name_placeholder") %>
+                    <% else %>
+                      <%= account_name %>
+                    <% end %>
+                  </div>
+                  <div class="text-xs text-secondary mt-1">
+                    Mercury • USD • <%= account[:status] %>
+                    <% if account[:type].present? %>
+                      • <%= account[:type].titleize %>
+                    <% end %>
+                  </div>
+                  <% if has_blank_name %>
+                    <div class="text-xs text-error mt-1">
+                      <%= t(".configure_name_in_mercury") %>
+                    </div>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= link_to t(".cancel"), @return_to || accounts_path,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+            <%= submit_tag t(".link_account"),
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
+          </div>
+        </form>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

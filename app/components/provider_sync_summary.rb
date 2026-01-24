@@ -19,15 +19,21 @@
 #   ) %>
 #
 class ProviderSyncSummary < ViewComponent::Base
-  attr_reader :stats, :provider_item, :institutions_count
+  attr_reader :stats, :provider_item, :institutions_count, :activities_pending
 
   # @param stats [Hash] The sync statistics hash from sync.sync_stats
   # @param provider_item [Object] The provider item (must respond to last_synced_at)
   # @param institutions_count [Integer, nil] Optional count of connected institutions
-  def initialize(stats:, provider_item:, institutions_count: nil)
+  # @param activities_pending [Boolean] Whether activities are still being fetched in background
+  def initialize(stats:, provider_item:, institutions_count: nil, activities_pending: false)
     @stats = stats || {}
     @provider_item = provider_item
     @institutions_count = institutions_count
+    @activities_pending = activities_pending
+  end
+
+  def activities_pending?
+    @activities_pending
   end
 
   def render?
@@ -100,6 +106,19 @@ class ProviderSyncSummary < ViewComponent::Base
 
   def holdings_count
     stats.key?("holdings_processed") ? holdings_processed : holdings_found
+  end
+
+  # Trades statistics (investment activities like buy/sell)
+  def trades_imported
+    stats["trades_imported"].to_i
+  end
+
+  def trades_skipped
+    stats["trades_skipped"].to_i
+  end
+
+  def has_trades_stats?
+    stats.key?("trades_imported") || stats.key?("trades_skipped")
   end
 
   # Returns the CSS color class for a data quality detail severity

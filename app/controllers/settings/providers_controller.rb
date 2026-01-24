@@ -1,8 +1,6 @@
 class Settings::ProvidersController < ApplicationController
   layout "settings"
 
-  guard_feature unless: -> { self_hosted? }
-
   before_action :ensure_admin, only: [ :show, :update ]
 
   def show
@@ -12,6 +10,9 @@ class Settings::ProvidersController < ApplicationController
     ]
 
     prepare_show_context
+  rescue ActiveRecord::Encryption::Errors::Configuration => e
+    Rails.logger.error("Active Record Encryption not configured: #{e.message}")
+    @encryption_error = true
   end
 
   def update
@@ -127,7 +128,9 @@ class Settings::ProvidersController < ApplicationController
         config.provider_key.to_s.casecmp("enable_banking").zero?  || \
         config.provider_key.to_s.casecmp("sophtron").zero? || \
         config.provider_key.to_s.casecmp("coinstats").zero? || \
-        config.provider_key.to_s.casecmp("coinbase").zero?
+        config.provider_key.to_s.casecmp("mercury").zero? || \
+        config.provider_key.to_s.casecmp("coinbase").zero? || \
+        config.provider_key.to_s.casecmp("snaptrade").zero?
       end
 
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
@@ -137,6 +140,8 @@ class Settings::ProvidersController < ApplicationController
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
+      @mercury_items = Current.family.mercury_items.ordered.select(:id)
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
+      @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
     end
 end

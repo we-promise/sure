@@ -1,0 +1,106 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p><%= t("providers.snaptrade.description") %></p>
+
+    <p class="text-primary font-medium"><%= t("providers.snaptrade.setup_title") %></p>
+    <ol>
+      <li><%= t("providers.snaptrade.step_1_html") %></li>
+      <li><%= t("providers.snaptrade.step_2") %></li>
+      <li><%= t("providers.snaptrade.step_3") %></li>
+      <li><%= t("providers.snaptrade.step_4") %></li>
+    </ol>
+
+    <p class="text-warning text-sm"><%= icon("alert-triangle", class: "inline-block w-4 h-4 mr-1") %><%= t("providers.snaptrade.free_tier_warning") %></p>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <%
+    snaptrade_item = Current.family.snaptrade_items.first_or_initialize(name: "SnapTrade Connection")
+    is_new_record = snaptrade_item.new_record?
+    is_configured = snaptrade_item.persisted? && snaptrade_item.credentials_configured?
+    is_registered = snaptrade_item.persisted? && snaptrade_item.user_registered?
+  %>
+
+  <%= styled_form_with model: snaptrade_item,
+                       url: is_new_record ? snaptrade_items_path : snaptrade_item_path(snaptrade_item),
+                       scope: :snaptrade_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :client_id,
+                        label: t("providers.snaptrade.client_id_label"),
+                        placeholder: is_new_record ? t("providers.snaptrade.client_id_placeholder") : t("providers.snaptrade.client_id_update_placeholder"),
+                        type: :password %>
+
+    <%= form.text_field :consumer_key,
+                        label: t("providers.snaptrade.consumer_key_label"),
+                        placeholder: is_new_record ? t("providers.snaptrade.consumer_key_placeholder") : t("providers.snaptrade.consumer_key_update_placeholder"),
+                        type: :password %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? t("providers.snaptrade.save_button") : t("providers.snaptrade.update_button"),
+                      class: "btn btn--primary" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.where.not(client_id: [nil, ""]) %>
+
+  <div class="border-t border-primary pt-4 mt-4">
+    <% if items&.any? %>
+      <% item = items.first %>
+      <% if item.user_registered? %>
+        <details class="group"
+                 data-controller="lazy-load"
+                 data-action="toggle->lazy-load#toggled"
+                 data-lazy-load-url-value="<%= connections_snaptrade_item_path(item) %>"
+                 data-lazy-load-auto-open-param-value="manage">
+          <summary class="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 bg-success rounded-full"></div>
+              <p class="text-sm text-secondary">
+                <%= t("providers.snaptrade.status_connected", count: item.snaptrade_accounts.count) %>
+                <% if item.unlinked_accounts_count > 0 %>
+                  <span class="text-warning">(<%= t("providers.snaptrade.needs_setup", count: item.unlinked_accounts_count) %>)</span>
+                <% end %>
+              </p>
+            </div>
+            <span class="flex items-center gap-1 text-sm text-secondary hover:text-primary">
+              <%= t("providers.snaptrade.manage_connections") %>
+              <%= icon "chevron-right", class: "w-3 h-3 transition-transform group-open:rotate-90" %>
+            </span>
+          </summary>
+
+          <div class="mt-3 space-y-3" data-lazy-load-target="content">
+            <p class="text-xs text-secondary">
+              <%= t("providers.snaptrade.connection_limit_info") %>
+            </p>
+
+            <div data-lazy-load-target="loading" class="flex items-center gap-2 text-sm text-secondary py-2">
+              <%= icon "loader-2", class: "w-4 h-4 animate-spin" %>
+              <%= t("providers.snaptrade.loading_connections") %>
+            </div>
+
+            <div data-lazy-load-target="frame">
+            </div>
+          </div>
+        </details>
+      <% else %>
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 bg-warning rounded-full"></div>
+          <p class="text-sm text-secondary"><%= t("providers.snaptrade.status_needs_registration") %></p>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+        <p class="text-sm text-secondary"><%= t("providers.snaptrade.status_not_configured") %></p>
+      </div>
+    <% end %>
+  </div>
+</div>

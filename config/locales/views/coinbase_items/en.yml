@@ -47,6 +47,7 @@ en:
       setup_needed: Wallets ready to import
       setup_description: Select which Coinbase wallets you want to track.
       setup_action: Import Wallets
+      import_wallets_menu: Import Wallets
       more_wallets_available:
         one: "%{count} more wallet available to import"
         other: "%{count} more wallets available to import"

@@ -374,13 +374,13 @@ class ReportsController < ApplicationController
       family_currency = Current.family.currency
 
       # Helper to initialize a category group hash
-      init_category_group = ->(id, name, color, type) do
-        { category_id: id, category_name: name, category_color: color, type: type, total: 0, count: 0, subcategories: {} }
+      init_category_group = ->(id, name, color, icon, type) do
+        { category_id: id, category_name: name, category_color: color, category_icon: icon, type: type, total: 0, count: 0, subcategories: {} }
       end
 
       # Helper to initialize a subcategory hash
       init_subcategory = ->(category) do
-        { category_id: category.id, category_name: category.name, category_color: category.color, total: 0, count: 0 }
+        { category_id: category.id, category_name: category.name, category_color: category.color, category_icon: category.lucide_icon, total: 0, count: 0 }
       end
 
       # Helper to process an entry (transaction or trade)
@@ -392,16 +392,16 @@ class ReportsController < ApplicationController
           # Uncategorized or Other Investments (for trades)
           if is_trade
             parent_key = [ :other_investments, type ]
-            grouped_data[parent_key] ||= init_category_group.call(:other_investments, Category.other_investments_name, Category::OTHER_INVESTMENTS_COLOR, type)
+            grouped_data[parent_key] ||= init_category_group.call(:other_investments, Category.other_investments.name, Category.other_investments.color, Category.other_investments.lucide_icon, type)
           else
             parent_key = [ :uncategorized, type ]
-            grouped_data[parent_key] ||= init_category_group.call(:uncategorized, Category.uncategorized_name, Category::UNCATEGORIZED_COLOR, type)
+            grouped_data[parent_key] ||= init_category_group.call(:uncategorized, Category.uncategorized.name, Category.uncategorized.color, Category.uncategorized.lucide_icon, type)
           end
         elsif category.parent_id.present?
           # This is a subcategory - group under parent
           parent = category.parent
           parent_key = [ parent.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, type)
+          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, parent.lucide_icon, type)
 
           # Add to subcategory
           grouped_data[parent_key][:subcategories][category.id] ||= init_subcategory.call(category)
@@ -410,7 +410,7 @@ class ReportsController < ApplicationController
         else
           # This is a root category (no parent)
           parent_key = [ category.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, type)
+          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, category.lucide_icon, type)
         end
 
         grouped_data[parent_key][:count] += 1

@@ -34,11 +34,12 @@
 - Never commit secrets. Start from `.env.local.example`; use `.env.local` for development only.
 - Run `bin/brakeman` before major PRs. Prefer environment variables over hard-coded values.
 
-## Providers: Pending Transactions and FX Metadata (SimpleFIN/Plaid)
+## Providers: Pending Transactions and FX Metadata (SimpleFIN/Plaid/Lunchflow)
 
 - Pending detection
   - SimpleFIN: pending when provider sends `pending: true`, or when `posted` is blank/0 and `transacted_at` is present.
   - Plaid: pending when Plaid sends `pending: true` (stored at `transaction.extra["plaid"]["pending"]` for bank/credit transactions imported via `PlaidEntry::Processor`).
+  - Lunchflow: pending when API returns `isPending: true` in transaction response (stored at `transaction.extra["lunchflow"]["pending"]`).
 - Storage (extras)
   - Provider metadata lives on `Transaction#extra`, namespaced (e.g., `extra["simplefin"]["pending"]`).
   - SimpleFIN FX: `extra["simplefin"]["fx_from"]`, `extra["simplefin"]["fx_date"]`.
@@ -48,14 +49,17 @@
   - Some providers don’t expose pendings; in that case nothing is shown.
 - Configuration (default-off)
   - SimpleFIN runtime toggles live in `config/initializers/simplefin.rb` via `Rails.configuration.x.simplefin.*`.
+  - Lunchflow runtime toggles live in `config/initializers/lunchflow.rb` via `Rails.configuration.x.lunchflow.*`.
   - ENV-backed keys:
     - `SIMPLEFIN_INCLUDE_PENDING=1` (forces `pending=1` on SimpleFIN fetches when caller didn’t specify a `pending:` arg)
     - `SIMPLEFIN_DEBUG_RAW=1` (logs raw payload returned by SimpleFIN)
+    - `LUNCHFLOW_INCLUDE_PENDING=1` (forces `include_pending=true` on Lunchflow API requests)
+    - `LUNCHFLOW_DEBUG_RAW=1` (logs raw payload returned by Lunchflow)
 
 ### Provider support notes
 
 - SimpleFIN: supports pending + FX metadata; stored under `extra["simplefin"]`.
 - Plaid: supports pending when the upstream Plaid payload includes `pending: true`; stored under `extra["plaid"]`.
 - Plaid investments: investment transactions currently do not store pending metadata.
-- Lunchflow: does not currently store pending metadata.
+- Lunchflow: supports pending via `include_pending` query parameter; stored under `extra["lunchflow"]`.
 - Manual/CSV imports: no pending concept.

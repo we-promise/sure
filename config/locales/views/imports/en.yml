@@ -109,3 +109,5 @@ en:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
+    errors:
+      custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"

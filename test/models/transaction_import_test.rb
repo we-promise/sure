@@ -85,7 +85,8 @@ class TransactionImportTest < ActiveSupport::TestCase
       date_format: "%m/%d/%Y",
       amount_col_label: "amount",
       entity_type_col_label: "amount_type",
-      amount_type_inflow_value: "debit",
+      amount_type_identifier_value: "debit",
+      amount_type_inflow_value: "inflows_positive",
       amount_type_strategy: "custom_column",
       signage_convention: nil # Explicitly set to nil to prove this is not needed
     )

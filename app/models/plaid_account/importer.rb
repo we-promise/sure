@@ -23,7 +23,7 @@ class PlaidAccount::Importer
     end
 
     def import_investments
-      plaid_account.upsert_plaid_investments_snapshot!(account_snapshot.investments_data)
+      plaid_account.upsert_plaid_holdings_snapshot!(account_snapshot.investments_data)
     end
 
     def import_liabilities

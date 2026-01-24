@@ -65,6 +65,7 @@ class CoinstatsItem::SyncerTest < ActiveSupport::TestCase
     mock_sync = mock("sync")
     mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
     mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
+    mock_sync.stubs(:sync_stats).returns({})
     mock_sync.stubs(:window_start_date).returns(nil)
     mock_sync.stubs(:window_end_date).returns(nil)
     mock_sync.expects(:update!).at_least_once
@@ -96,6 +97,7 @@ class CoinstatsItem::SyncerTest < ActiveSupport::TestCase
     mock_sync = mock("sync")
     mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
     mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
+    mock_sync.stubs(:sync_stats).returns({})
     mock_sync.stubs(:window_start_date).returns(nil)
     mock_sync.stubs(:window_end_date).returns(nil)
     mock_sync.expects(:update!).at_least_once
@@ -150,6 +152,7 @@ class CoinstatsItem::SyncerTest < ActiveSupport::TestCase
     mock_sync = mock("sync")
     mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
     mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
+    mock_sync.stubs(:sync_stats).returns({})
     mock_sync.stubs(:window_start_date).returns(nil)
     mock_sync.stubs(:window_end_date).returns(nil)
     mock_sync.expects(:update!).at_least_once.with do |args|

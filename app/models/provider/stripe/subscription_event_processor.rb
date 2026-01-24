@@ -10,7 +10,8 @@ class Provider::Stripe::SubscriptionEventProcessor < Provider::Stripe::EventProc
       interval: subscription_details.plan.interval,
       amount: subscription_details.plan.amount / 100.0, # Stripe returns cents, we report dollars
       currency: subscription_details.plan.currency.upcase,
-      current_period_ends_at: Time.at(subscription_details.current_period_end)
+      current_period_ends_at: Time.at(subscription_details.current_period_end),
+      cancel_at_period_end: subscription.cancel_at_period_end
     )
   end
 

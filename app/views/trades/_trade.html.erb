@@ -4,13 +4,13 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(trade) do %>
-    <div class="grid grid-cols-12 items-center <%= entry.excluded ? "text-gray-400 bg-gray-25" : "text-primary" %> text-sm font-medium p-4">
+    <div class="group grid grid-cols-12 items-center <%= entry.excluded ? "text-secondary bg-surface-inset" : "text-primary" %> text-sm font-medium p-4">
       <div class="col-span-8 flex items-center gap-4">
         <%= check_box_tag dom_id(entry, "selection"),
                         class: "checkbox checkbox--light hidden lg:block",
-                        data: { 
-                          id: entry.id, 
-                          "bulk-select-target": "row", 
+                        data: {
+                          id: entry.id,
+                          "bulk-select-target": "row",
                           action: "bulk-select#toggleRowSelection",
                           checkbox_toggle_target: "selectionEntry"
                         } %>
@@ -44,7 +44,16 @@
         <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: trade %>
       </div>
 
-      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2">
+        <%# Protection indicator - shows on hover when entry is protected from sync %>
+        <% if entry.protected_from_sync? && !entry.excluded? %>
+          <%= link_to entry_path(entry),
+                data: { turbo_frame: "drawer", turbo_prefetch: false },
+                class: "invisible group-hover:visible transition-opacity",
+                title: t("entries.protection.tooltip") do %>
+            <%= icon "lock", size: "sm", class: "text-secondary" %>
+          <% end %>
+        <% end %>
         <%= content_tag :p,
                     format_money(-entry.amount_money),
                     class: ["text-green-600": entry.amount.negative?] %>

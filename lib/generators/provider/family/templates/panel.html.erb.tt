@@ -1,71 +1,72 @@
 <div class="space-y-4">
   <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
+    <p class="text-primary font-medium"><%= "<" + "%= t(\"#{file_name}_items.panel.setup_instructions\") %" + ">" %></p>
     <ol>
-      <li>Visit your <%= class_name.titleize %> dashboard to get your credentials</li>
-      <li>Enter your credentials below and click the Save button</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts</li>
+      <li><%= "<" + "%= t(\"#{file_name}_items.panel.step_1\") %" + ">" %></li>
+      <li><%= "<" + "%= t(\"#{file_name}_items.panel.step_2\") %" + ">" %></li>
+      <li><%= "<" + "%= t(\"#{file_name}_items.panel.step_3\") %" + ">" %></li>
     </ol>
 
-    <p class="text-primary font-medium">Field descriptions:</p>
+    <p class="text-primary font-medium"><%= "<" + "%= t(\"#{file_name}_items.panel.field_descriptions\") %" + ">" %></p>
     <ul>
 <% parsed_fields.each do |field| -%>
-      <li><strong><%= field[:name].titleize %>:</strong> Your <%= class_name.titleize %> <%= field[:name].humanize.downcase %><%= field[:secret] ? ' (required)' : '' %><%= field[:default] ? " (optional, defaults to #{field[:default]})" : '' %></li>
+      <li><strong><%= "<" + "%= t(\"#{file_name}_items.panel.fields.#{field[:name]}.label\") %" + ">" %>:</strong> <%= "<" + "%= t(\"#{file_name}_items.panel.fields.#{field[:name]}.description\") %" + ">" %><% if field[:secret] -%> <%= "<" + "%= t(\"#{file_name}_items.panel.required\") %" + ">" %><% end -%><% if field[:default] -%> <%= "<" + "%= t(\"#{file_name}_items.panel.optional_with_default\", default_value: \"#{field[:default]}\") %" + ">" %><% end -%></li>
 <% end -%>
     </ul>
   </div>
 
-  <%% error_msg = local_assigns[:error_message] || @error_message %>
-  <%% if error_msg.present? %>
+  <%= "<" + "% error_msg = local_assigns[:error_message] || @error_message %" + ">" %>
+  <%= "<" + "% if error_msg.present? %" + ">" %>
     <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%%= error_msg %>"><%%= error_msg %></p>
+      <p class="line-clamp-3" title="<%= "<" + "%= error_msg %" + ">" %>"><%= "<" + "%= error_msg %" + ">" %></p>
     </div>
-  <%% end %>
+  <%= "<" + "% end %" + ">" %>
 
-  <%%
+  <%= "<" + "%" %>
     # Get or initialize a <%= file_name %>_item for this family
     # - If family has an item WITH credentials, use it (for updates)
     # - If family has an item WITHOUT credentials, use it (to add credentials)
     # - If family has no items at all, create a new one
     <%= file_name %>_item = Current.family.<%= file_name %>_items.first_or_initialize(name: "<%= class_name.titleize %> Connection")
     is_new_record = <%= file_name %>_item.new_record?
-  %>
+  <%= "%" + ">" %>
 
-  <%%= styled_form_with model: <%= file_name %>_item,
+  <%= "<" + "%= styled_form_with model: #{file_name}_item," %>
                        url: is_new_record ? <%= file_name %>_items_path : <%= file_name %>_item_path(<%= file_name %>_item),
                        scope: :<%= file_name %>_item,
                        method: is_new_record ? :post : :patch,
                        data: { turbo: true },
-                       class: "space-y-3" do |form| %>
+                       class: "space-y-3" do |form| <%= "%" + ">" %>
 <% parsed_fields.each do |field| -%>
-    <%%= form.<%= %w[text string].include?(field[:type]) ? 'text_field' : 'number_field' %> :<%= field[:name] %>,
-                        label: "<%= field[:name].titleize %><%= field[:default] ? ' (Optional)' : '' %>",
+    <%= "<" + "%= form.#{%w[text string].include?(field[:type]) ? 'text_field' : 'number_field'} :#{field[:name]}," %>
+                        label: t("<%= file_name %>_items.panel.fields.<%= field[:name] %>.label")<%= field[:default] ? " + \" \" + t(\"#{file_name}_items.panel.optional\")" : '' %>,
 <% if field[:secret] -%>
-                        placeholder: is_new_record ? "Paste <%= field[:name].humanize.downcase %> here" : "Enter new <%= field[:name].humanize.downcase %> to update",
-                        type: :password %>
+                        placeholder: is_new_record ? t("<%= file_name %>_items.panel.fields.<%= field[:name] %>.placeholder_new") : t("<%= file_name %>_items.panel.fields.<%= field[:name] %>.placeholder_update"),
+                        type: :password <%= "%" + ">" %>
 <% elsif field[:default] -%>
                         placeholder: "<%= field[:default] %> (default)",
-                        value: <%= file_name %>_item.<%= field[:name] %> %>
+                        value: <%= file_name %>_item.<%= field[:name] %> <%= "%" + ">" %>
 <% else -%>
-                        placeholder: is_new_record ? "Enter <%= field[:name].humanize.downcase %>" : "Enter new <%= field[:name].humanize.downcase %> to update",
-                        value: <%= file_name %>_item.<%= field[:name] %> %>
+                        placeholder: is_new_record ? t("<%= file_name %>_items.panel.fields.<%= field[:name] %>.placeholder_new") : t("<%= file_name %>_items.panel.fields.<%= field[:name] %>.placeholder_update"),
+                        value: <%= file_name %>_item.<%= field[:name] %> <%= "%" + ">" %>
 <% end -%>
 
 <% end -%>
     <div class="flex justify-end">
-      <%%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+      <%= "<" + "%= form.submit is_new_record ? t(\"#{file_name}_items.panel.save_button\") : t(\"#{file_name}_items.panel.update_button\")," %>
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" <%= "%" + ">" %>
     </div>
-  <%% end %>
+  <%= "<" + "% end %" + ">" %>
 
-  <%% items = local_assigns[:<%= file_name %>_items] || @<%= file_name %>_items || Current.family.<%= file_name %>_items.where.not(<%= parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || 'api_key' %>: [nil, ""]) %>
+<% secret_field = parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || 'api_key' -%>
+  <%= "<" + "% items = local_assigns[:#{file_name}_items] || @#{file_name}_items || Current.family.#{file_name}_items.where.not(#{secret_field}: [nil, \"\"]) %" + ">" %>
   <div class="flex items-center gap-2">
-    <%% if items&.any? %>
+    <%= "<" + "% if items&.any? %" + ">" %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
-    <%% else %>
+      <p class="text-sm text-secondary"><%= "<" + "%= t(\"#{file_name}_items.panel.status_configured_html\", accounts_path: accounts_path).html_safe %" + ">" %></p>
+    <%= "<" + "% else %" + ">" %>
       <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary">Not configured</p>
-    <%% end %>
+      <p class="text-sm text-secondary"><%= "<" + "%= t(\"#{file_name}_items.panel.status_not_configured\") %" + ">" %></p>
+    <%= "<" + "% end %" + ">" %>
   </div>
 </div>

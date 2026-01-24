@@ -323,20 +323,46 @@ class Account::ProviderImportAdapter
         holding = account.holdings.find_by(external_id: external_id)
 
         unless holding
-          # Fallback path: match by (security, date, currency) — and when provided,
-          # also scope by account_provider_id to avoid cross‑provider claiming.
-          # This keeps behavior symmetric with deletion logic below which filters
-          # by account_provider_id when present.
-          find_by_attrs = {
-            security: security,
+          # Fallback path 1a: match by provider_security (for remapped holdings)
+          # This allows re-matching a holding that was remapped to a different security
+          # Scope by account_provider_id to avoid cross-provider overwrites
+          fallback_1a_attrs = {
+            provider_security: security,
             date: date,
             currency: currency
           }
-          if account_provider_id.present?
-            find_by_attrs[:account_provider_id] = account_provider_id
+          fallback_1a_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
+          holding = account.holdings.find_by(fallback_1a_attrs)
+
+          # Fallback path 1b: match by provider_security ticker (for remapped holdings when
+          # Security::Resolver returns a different security instance for the same ticker)
+          # Scope by account_provider_id to avoid cross-provider overwrites
+          # Skip if ticker is blank to avoid matching NULL tickers
+          unless holding || security.ticker.blank?
+            scope = account.holdings
+              .joins("INNER JOIN securities AS ps ON ps.id = holdings.provider_security_id")
+              .where(date: date, currency: currency)
+              .where("ps.ticker = ?", security.ticker)
+            scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
+            holding = scope.first
           end
 
-          holding = account.holdings.find_by(find_by_attrs)
+          # Fallback path 2: match by (security, date, currency) — and when provided,
+          # also scope by account_provider_id to avoid cross‑provider claiming.
+          # This keeps behavior symmetric with deletion logic below which filters
+          # by account_provider_id when present.
+          unless holding
+            find_by_attrs = {
+              security: security,
+              date: date,
+              currency: currency
+            }
+            if account_provider_id.present?
+              find_by_attrs[:account_provider_id] = account_provider_id
+            end
+
+            holding = account.holdings.find_by(find_by_attrs)
+          end
         end
 
         holding ||= account.holdings.new(
@@ -382,7 +408,6 @@ class Account::ProviderImportAdapter
 
       # Build base attributes
       attributes = {
-        security: security,
         date: date,
         currency: currency,
         qty: quantity,
@@ -391,6 +416,14 @@ class Account::ProviderImportAdapter
         account_provider_id: account_provider_id,
         external_id: external_id
       }
+
+      # Only update security if not locked by user
+      if holding.new_record? || holding.security_replaceable_by_provider?
+        attributes[:security] = security
+        # Track the provider's original security so reset_security_to_provider! works
+        # Only set if not already set (preserves original if user remapped then unlocked)
+        attributes[:provider_security_id] = security.id if holding.provider_security_id.blank?
+      end
 
       # Only update cost_basis if reconciliation says to
       if reconciled[:should_update]

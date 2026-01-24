@@ -105,8 +105,8 @@ en:
         income: Income
         uncategorized: Uncategorized
         entries:
-          one: entry
-          other: entries
+          one: "%{count} entry"
+          other: "%{count} entries"
         percentage: "% of Total"
       pagination:
         showing:

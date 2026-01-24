@@ -1,6 +1,9 @@
 class SubscriptionsController < ApplicationController
   # Disables subscriptions for self hosted instances
-  guard_feature if: -> { self_hosted? }
+  before_action :guard_self_hosted, if: -> { self_hosted? }
+
+  # Disables Stripe portal for users without stripe_customer_id (demo users, manually created users)
+  guard_feature unless: -> { Current.family.can_manage_subscription? }, only: :show
 
   # Upgrade page for unsubscribed users
   def upgrade
@@ -51,13 +54,17 @@ class SubscriptionsController < ApplicationController
 
     if checkout_result.success?
       Current.family.start_subscription!(checkout_result.subscription_id)
-      redirect_to root_path, notice: "Welcome to Sure!  Your subscription has been created."
+      redirect_to root_path, notice: "Welcome to Sure!  Your contribution is appreciated."
     else
-      redirect_to root_path, alert: "Something went wrong processing your subscription. Please contact us to get this fixed."
+      redirect_to root_path, alert: "Something went wrong processing your contribution. Please try again."
     end
   end
 
   private
+    def guard_self_hosted
+      render plain: "Feature disabled: subscriptions are not available in self-hosted mode", status: :forbidden
+    end
+
     def stripe
       @stripe ||= Provider::Registry.get_provider(:stripe)
     end

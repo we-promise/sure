@@ -1,0 +1,133 @@
+<%%= "<" + "%# locals: (#{file_name}_item:) %" + ">" %>
+
+<%%= "<" + "%= tag.div id: dom_id(#{file_name}_item) do %" + ">" %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex items-center gap-2">
+        <%%= "<" + "%= icon \"chevron-right\", class: \"group-open:transform group-open:rotate-90\" %" + ">" %>
+
+        <div class="flex items-center justify-center h-8 w-8 bg-primary/10 rounded-full">
+          <div class="flex items-center justify-center">
+            <%%= "<" + "%= tag.p #{file_name}_item.name.first.upcase, class: \"text-primary text-xs font-medium\" %" + ">" %>
+          </div>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%%= "<" + "%= tag.p #{file_name}_item.name, class: \"font-medium text-primary\" %" + ">" %>
+            <%%= "<" + "% if #{file_name}_item.scheduled_for_deletion? %" + ">" %>
+              <p class="text-destructive text-sm animate-pulse"><%%= "<" + "%= t(\".deletion_in_progress\") %" + ">" %></p>
+            <%%= "<" + "% end %" + ">" %>
+          </div>
+          <p class="text-xs text-secondary"><%%= "<" + "%= t(\".provider_name\") %" + ">" %></p>
+          <%%= "<" + "% if #{file_name}_item.syncing? %" + ">" %>
+            <div class="text-secondary flex items-center gap-1">
+              <%%= "<" + "%= icon \"loader\", size: \"sm\", class: \"animate-spin\" %" + ">" %>
+              <%%= "<" + "%= tag.span t(\".syncing\") %" + ">" %>
+            </div>
+          <%%= "<" + "% elsif #{file_name}_item.requires_update? %" + ">" %>
+            <div class="text-warning flex items-center gap-1">
+              <%%= "<" + "%= icon \"alert-triangle\", size: \"sm\", color: \"warning\" %" + ">" %>
+              <%%= "<" + "%= tag.span t(\".requires_update\") %" + ">" %>
+            </div>
+          <%%= "<" + "% else %" + ">" %>
+            <p class="text-secondary">
+              <%%= "<" + "% if #{file_name}_item.last_synced_at %" + ">" %>
+                <%%= "<" + "% if #{file_name}_item.sync_status_summary %" + ">" %>
+                  <%%= "<" + "%= t(\".status_with_summary\", timestamp: time_ago_in_words(#{file_name}_item.last_synced_at), summary: #{file_name}_item.sync_status_summary) %" + ">" %>
+                <%%= "<" + "% else %" + ">" %>
+                  <%%= "<" + "%= t(\".status\", timestamp: time_ago_in_words(#{file_name}_item.last_synced_at)) %" + ">" %>
+                <%%= "<" + "% end %" + ">" %>
+              <%%= "<" + "% else %" + ">" %>
+                <%%= "<" + "%= t(\".status_never\") %" + ">" %>
+              <%%= "<" + "% end %" + ">" %>
+            </p>
+          <%%= "<" + "% end %" + ">" %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%%= "<" + "% if #{file_name}_item.requires_update? %" + ">" %>
+          <%%= "<" + "%= render DS::Link.new(" %>
+            text: t(".update_credentials"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) <%%= "%" + ">" %>
+        <%%= "<" + "% else %" + ">" %>
+          <%%= "<" + "%= icon(" %>
+            "refresh-cw",
+            as_button: true,
+            href: sync_<%= file_name %>_item_path(<%= file_name %>_item),
+            disabled: <%= file_name %>_item.syncing?
+          ) <%%= "%" + ">" %>
+        <%%= "<" + "% end %" + ">" %>
+
+        <%%= "<" + "%= render DS::Menu.new do |menu| %" + ">" %>
+          <%%= "<" + "% menu.with_item(" %>
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: <%= file_name %>_item_path(<%= file_name %>_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(<%= file_name %>_item.name, high_severity: true)
+          ) <%%= "%" + ">" %>
+        <%%= "<" + "% end %" + ">" %>
+      </div>
+    </summary>
+
+    <%%= "<" + "% unless #{file_name}_item.scheduled_for_deletion? %" + ">" %>
+      <div class="space-y-4 mt-4">
+        <%%= "<" + "% if #{file_name}_item.accounts.any? %" + ">" %>
+          <%%= "<" + "%= render \"accounts/index/account_groups\", accounts: #{file_name}_item.accounts %" + ">" %>
+        <%%= "<" + "% end %" + ">" %>
+
+        <%%= "<" + "%# Sync summary (collapsible) - using shared ProviderSyncSummary component %" + ">" %>
+        <%%= "<" + "% stats = if defined?(@#{file_name}_sync_stats_map) && @#{file_name}_sync_stats_map" %>
+             @<%= file_name %>_sync_stats_map[<%= file_name %>_item.id] || {}
+           else
+             <%= file_name %>_item.syncs.ordered.first&.sync_stats || {}
+           end <%%= "%" + ">" %>
+        <%%= "<" + "%= render ProviderSyncSummary.new(" %>
+          stats: stats,
+          provider_item: <%= file_name %>_item
+        ) <%%= "%" + ">" %>
+
+        <%%= "<" + "%# Compute unlinked accounts (no AccountProvider link) %" + ">" %>
+        <%%= "<" + "% unlinked_count = #{file_name}_item.unlinked_#{file_name}_accounts&.count || 0 %" + ">" %>
+
+        <%%= "<" + "% if unlinked_count.to_i > 0 && #{file_name}_item.accounts.empty? %" + ">" %>
+          <%%= "<" + "%# No accounts imported yet - show prominent setup prompt %" + ">" %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%%= "<" + "%= t(\".setup_needed\") %" + ">" %></p>
+            <p class="text-secondary text-sm"><%%= "<" + "%= t(\".setup_description\", linked: #{file_name}_item.accounts.count, total: #{file_name}_item.#{file_name}_accounts.count) %" + ">" %></p>
+            <%%= "<" + "%= render DS::Link.new(" %>
+              text: t(".setup_action"),
+              icon: "plus",
+              variant: "primary",
+              href: setup_accounts_<%= file_name %>_item_path(<%= file_name %>_item),
+              frame: :modal
+            ) <%%= "%" + ">" %>
+          </div>
+        <%%= "<" + "% elsif unlinked_count.to_i > 0 %" + ">" %>
+          <%%= "<" + "%# Some accounts imported, more available - show subtle link %" + ">" %>
+          <div class="pt-2 border-t border-primary">
+            <%%= "<" + "%= link_to setup_accounts_#{file_name}_item_path(#{file_name}_item)," %>
+                        data: { turbo_frame: :modal },
+                        class: "flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors" do <%%= "%" + ">" %>
+              <%%= "<" + "%= icon \"plus\", size: \"sm\" %" + ">" %>
+              <span><%%= "<" + "%= t(\".more_accounts_available\", count: unlinked_count) %" + ">" %></span>
+            <%%= "<" + "% end %" + ">" %>
+          </div>
+        <%%= "<" + "% elsif #{file_name}_item.accounts.empty? && #{file_name}_item.#{file_name}_accounts.none? %" + ">" %>
+          <%%= "<" + "%# No provider accounts at all - waiting for sync %" + ">" %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%%= "<" + "%= t(\".no_accounts_title\") %" + ">" %></p>
+            <p class="text-secondary text-sm"><%%= "<" + "%= t(\".no_accounts_description\") %" + ">" %></p>
+          </div>
+        <%%= "<" + "% end %" + ">" %>
+      </div>
+    <%%= "<" + "% end %" + ">" %>
+  </details>
+<%%= "<" + "% end %" + ">" %>

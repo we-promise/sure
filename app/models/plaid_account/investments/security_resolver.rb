@@ -43,7 +43,7 @@ class PlaidAccount::Investments::SecurityResolver
     Response = Struct.new(:security, :cash_equivalent?, :brokerage_cash?, keyword_init: true)
 
     def securities
-      plaid_account.raw_investments_payload["securities"] || []
+      plaid_account.raw_holdings_payload&.dig("securities") || []
     end
 
     # Tries to find security, or returns the "proxy security" (common with options contracts that have underlying securities)

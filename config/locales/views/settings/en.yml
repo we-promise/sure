@@ -4,6 +4,7 @@ en:
     settings:
       payments:
         renewal: "Your contribution continues on %{date}."
+        cancellation: "Your contribution ends on %{date}."
   settings:
     ai_prompts:
       show:
@@ -147,6 +148,9 @@ en:
     providers:
       show:
         coinbase_title: Coinbase
+      encryption_error:
+        title: Encryption Configuration Required
+        message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Coinbase API Settings</a>
