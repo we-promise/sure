@@ -68,19 +68,11 @@ ru:
     mark_recurring_title: Повторяющаяся транзакция
     potential_duplicate_title: Обнаружен возможный дубликат
     potential_duplicate_description: Эта ожидающая транзакция может быть той же самой, что и подтвержденная ниже. Если это так, объедините их, чтобы избежать двойного учета.
-    merge_duplicate: Да, объединить
-    keep_both: Нет, оставить обе
-    transaction:
-      pending: В ожидании
-      pending_tooltip: Ожидающая транзакция — может измениться после подтверждения банком
-      activity_type_tooltip: Тип инвестиционной активности
-      possible_duplicate: Дубликат?
-      potential_duplicate_tooltip: Возможно, это дубликат другой транзакции
-      review_recommended: Проверить
-      review_recommended_tooltip: Большая разница в сумме — рекомендуется проверить, не является ли это дубликатом
     merge_duplicate:
+      confirm: Да, объединить
       success: Транзакции успешно объединены
       failure: Не удалось объединить транзакции
+    keep_both: Нет, оставить обе
     dismiss_duplicate:
       success: Оставлены как отдельные транзакции
       failure: Не удалось отклонить предложение о дубликате

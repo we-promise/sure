@@ -27,18 +27,18 @@
                 </div>
               </div>
 
-              <div class="flex items-center gap-2 mt-3">
-                <%= button_to t("transactions.show.merge_duplicate"),
-                    merge_duplicate_transaction_path(@entry.transaction),
-                    method: :post,
-                    class: "btn btn--primary btn--sm",
-                    data: { turbo_frame: "_top" } %>
-                <%= button_to t("transactions.show.keep_both"),
-                    dismiss_duplicate_transaction_path(@entry.transaction),
-                    method: :post,
-                    class: "btn btn--outline btn--sm",
-                    data: { turbo_frame: "_top" } %>
-              </div>
+      <div class="flex gap-2">
+        <%= button_to t("transactions.merge_duplicate.confirm"),
+                      merge_duplicate_transaction_path(@entry.transaction),
+                      method: :post,
+                      class: "btn btn-primary btn-sm",
+                      data: { turbo_frame: "_top" } %>
+        <%= button_to t("transactions.keep_both"),
+                      dismiss_duplicate_transaction_path(@entry.transaction),
+                      method: :post,
+                      class: "btn btn-ghost btn-sm",
+                      data: { turbo_frame: "_top" } %>
+      </div>
             </div>
           </div>
         </div>
