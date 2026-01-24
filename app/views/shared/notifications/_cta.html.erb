@@ -1,7 +1,7 @@
 <%# locals: (message:, description:) %>
 
 <div id="cta">
-  <%= tag.div class: "relative flex gap-3 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-lg transition-enter-exit animate-fade-up-initial",
+  <%= tag.div class: "relative flex gap-3 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-lg mb-3 transition-enter-exit animate-fade-up-initial",
               data: {
                 controller: "element-removal",
                 element_removal_initial_class: "animate-fade-up-initial",
@@ -23,8 +23,15 @@
     <%= yield %>
   </div>
 
-  <div class="absolute -top-2 -right-2">
-    <%= icon "x", class: "p-0.5 hidden group-hover:inline-block border border-alpha-black-50 border-solid rounded-lg bg-container text-subdued cursor-pointer", data: { action: "click->element-removal#remove" } %>
+  <div class="ml-auto">
+    <%= render DS::Button.new(
+      variant: :icon,
+      size: :sm,
+      icon: "x",
+      class: "inline-flex",
+      data: { action: "click->element-removal#remove" },
+      aria: { label: t("reports.google_sheets_instructions.close") }
+    ) %>
   </div>
   <% end %>
 </div>

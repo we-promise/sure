@@ -37,8 +37,14 @@ export default class extends Controller {
   connect() {
     this.isRemoving = false;
     this.isVisible = false;
+    this._transitionEndHandler = null;
+    this._animationEndHandler = null;
 
     if (this.hasInitialClass && this.hasVisibleClass) {
+      // Don't start enter animation if element is in exit state
+      const hasExitClasses = this.hasExitClass && this.exitClasses.some(cls => this.element.classList.contains(cls));
+      if (hasExitClasses) return;
+
       requestAnimationFrame(() => {
         if (!this.element) return;
         this.element.classList.remove(...this.initialClasses);
@@ -55,6 +61,15 @@ export default class extends Controller {
       clearTimeout(this._removalTimeoutId);
       this._removalTimeoutId = null;
     }
+    // Clean up event listeners if they exist
+    if (this._transitionEndHandler && this.element) {
+      this.element.removeEventListener("transitionend", this._transitionEndHandler);
+      this._transitionEndHandler = null;
+    }
+    if (this._animationEndHandler && this.element) {
+      this.element.removeEventListener("animationend", this._animationEndHandler);
+      this._animationEndHandler = null;
+    }
   }
 
   remove() {
@@ -67,8 +82,9 @@ export default class extends Controller {
 
       const removeElement = () => {
         if (!this.element) return;
-        this.element.removeEventListener("transitionend", onTransitionEnd);
-        this.element.removeEventListener("animationend", onTransitionEnd);
+        // Event listeners are auto-removed with {once: true}, but clear references
+        this._transitionEndHandler = null;
+        this._animationEndHandler = null;
         if (this._removalTimeoutId) {
           clearTimeout(this._removalTimeoutId);
           this._removalTimeoutId = null;
@@ -80,11 +96,15 @@ export default class extends Controller {
 
       const onTransitionEnd = (event) => {
         if (event.target !== this.element) return;
+        this._transitionEndHandler = null;
+        this._animationEndHandler = null;
         removeElement();
       };
 
-      this.element.addEventListener("transitionend", onTransitionEnd);
-      this.element.addEventListener("animationend", onTransitionEnd);
+      this._transitionEndHandler = onTransitionEnd;
+      this._animationEndHandler = onTransitionEnd;
+      this.element.addEventListener("transitionend", onTransitionEnd, { once: true });
+      this.element.addEventListener("animationend", onTransitionEnd, { once: true });
 
       // Fallback timeout in case events don't fire
       this._removalTimeoutId = window.setTimeout(() => {

@@ -16,6 +16,13 @@
   <%= tag.p message, class: "text-primary text-sm font-medium line-clamp-3 min-w-0", title: message %>
 
   <div class="ml-auto">
-    <%= icon "x", data: { action: "click->element-removal#remove" }, class: "cursor-pointer" %>
+    <%= render DS::Button.new(
+      variant: :icon,
+      size: :sm,
+      icon: "x",
+      class: "inline-flex",
+      data: { action: "click->element-removal#remove" },
+      aria: { label: t("reports.google_sheets_instructions.close") }
+    ) %>
   </div>
 <% end %>

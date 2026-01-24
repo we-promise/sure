@@ -24,16 +24,22 @@
     </div>
   </div>
 
-  <div class="ml-auto">
-    <div class="h-5 shrink-0">
+  <div class="ml-auto relative h-5 w-5">
+    <div class="h-5 w-5 shrink-0 group-hover:hidden">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
         <path d="M18 10C18 14.4183 14.4183 18 10 18C5.58172 18 2 14.4183 2 10C2 5.58172 5.58172 2 10 2C14.4183 2 18 5.58172 18 10ZM3.6 10C3.6 13.5346 6.46538 16.4 10 16.4C13.5346 16.4 16.4 13.5346 16.4 10C16.4 6.46538 13.5346 3.6 10 3.6C6.46538 3.6 3.6 6.46538 3.6 10Z" fill="#E5E5E5" />
         <circle class="origin-center -rotate-90 animate-stroke-fill" stroke="#141414" stroke-opacity="0.4" r="7.2" cx="10" cy="10" stroke-dasharray="43.9822971503" stroke-dashoffset="43.9822971503" />
       </svg>
     </div>
-  </div>
-
-  <div class="absolute -top-2 -right-2">
-    <%= icon "x", class: "p-0.5 hidden group-hover:inline-block border border-alpha-black-50 border-solid rounded-lg bg-container text-subdued cursor-pointer", data: { action: "click->element-removal#remove" } %>
+    <div class="absolute inset-0 hidden group-hover:flex items-center justify-center">
+      <%= render DS::Button.new(
+        variant: :icon,
+        size: :sm,
+        icon: "x",
+        class: "!h-5 !w-5 !p-0 !min-w-0 rounded",
+        data: { action: "click->element-removal#remove" },
+        aria: { label: t("reports.google_sheets_instructions.close") }
+      ) %>
+    </div>
   </div>
 <% end %>
