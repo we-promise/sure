@@ -26,3 +26,15 @@ en:
         few questions to complete your profile and then get you all set up.
       setup: Set up account
       title: Meet %{product_name}
+    goals:
+      title: What brings you here?
+      subtitle: Select one or more goals that you have with using %{product_name} as your personal finance tool.
+      unified_accounts: See all my accounts in one place
+      cashflow: Understand cashflow and expenses
+      budgeting: Manage financial plans and budgeting
+      partner: Manage finances with a partner
+      investments: Track investments
+      ai_insights: Let AI help me understand my finances
+      optimization: Analyze and optimize accounts
+      reduce_stress: Reduce financial stress or anxiety
+      submit: Next

@@ -163,6 +163,7 @@ module LanguagesHelper
     "nb",   # Norwegian Bokmål - 57 translation files
     "ca",   # Catalan - 57 translation files
     "ro",   # Romanian - 62 translation files
+    "ru",   # Russian
     "pt-BR", # Brazilian Portuguese - 60 translation files
     "zh-CN", # Chinese (Simplified) - 59 translation files
     "zh-TW",  # Chinese (Traditional) - 63 translation files
