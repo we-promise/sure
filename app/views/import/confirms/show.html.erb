@@ -2,32 +2,60 @@
   <%= render "imports/nav", import: @import %>
 <% end %>
 
-<%= content_for :previous_path, import_clean_path(@import) %>
+<%= content_for :previous_path, @import.type == "BulkImport" ? imports_path : import_clean_path(@import) %>
 
-<% step_idx = (params[:step] || "1").to_i - 1 %>
-<% step_mapping_class = @import.mapping_steps[step_idx] %>
+<% if @import.type == "BulkImport" %>
+  <div class="space-y-6 mx-auto max-w-md mb-6">
+    <div class="text-center space-y-2">
+      <h1 class="text-3xl text-primary font-medium"><%= t("import.confirms.bulk_import.title") %></h1>
+      <p class="text-secondary text-sm"><%= t("import.confirms.bulk_import.description") %></p>
+    </div>
 
-<div class="space-y-12 mx-auto max-w-md mb-6">
-  <div class="flex justify-center items-center gap-2">
-    <% @import.mapping_steps.each_with_index do |step_mapping_class, idx| %>
-      <% is_active = step_idx == idx %>
+    <div class="bg-container shadow-border-xs rounded-xl p-6 space-y-4">
+      <h3 class="text-sm font-medium text-secondary uppercase"><%= t("import.confirms.bulk_import.summary") %></h3>
+      <% dry_run = @import.dry_run %>
+      <ul class="space-y-3">
+        <% dry_run.each do |key, count| %>
+          <% next if count.zero? %>
+          <li class="flex items-center justify-between">
+            <span class="text-primary"><%= key.to_s.humanize %></span>
+            <span class="text-secondary font-medium"><%= count %></span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
 
-      <%= link_to url_for(step: idx + 1), class: "w-5 h-[3px] #{is_active ? 'bg-gray-900' : 'bg-gray-100'} rounded-xl hover:bg-gray-300 transition-colors duration-200" do %>
-        <span class="sr-only">Step <%= idx + 1 %></span>
+    <div class="flex flex-col gap-2">
+      <%= button_to t("import.confirms.bulk_import.publish_button"), publish_import_path(@import), method: :post, class: "btn btn--primary w-full", disabled: !@import.publishable? %>
+      <%= link_to t("import.confirms.bulk_import.cancel"), imports_path, class: "btn btn--ghost w-full text-center" %>
+    </div>
+  </div>
+<% else %>
+  <% step_idx = (params[:step] || "1").to_i - 1 %>
+  <% step_mapping_class = @import.mapping_steps[step_idx] %>
+
+  <div class="space-y-12 mx-auto max-w-md mb-6">
+    <div class="flex justify-center items-center gap-2">
+      <% @import.mapping_steps.each_with_index do |step_mapping_class, idx| %>
+        <% is_active = step_idx == idx %>
+
+        <%= link_to url_for(step: idx + 1), class: "w-5 h-[3px] #{is_active ? 'bg-gray-900' : 'bg-gray-100'} rounded-xl hover:bg-gray-300 transition-colors duration-200" do %>
+          <span class="sr-only">Step <%= idx + 1 %></span>
+        <% end %>
       <% end %>
-    <% end %>
+    </div>
+
+    <div class="text-center space-y-2">
+      <h1 class="text-3xl text-primary font-medium">
+        <%= t(".#{step_mapping_class.name.demodulize.underscore}_title", import_type: @import.type.underscore.humanize) %>
+      </h1>
+      <p class="text-secondary text-sm">
+        <%= t(".#{step_mapping_class.name.demodulize.underscore}_description", import_type: @import.type.underscore.humanize, product_name: product_name) %>
+      </p>
+    </div>
   </div>
 
-  <div class="text-center space-y-2">
-    <h1 class="text-3xl text-primary font-medium">
-      <%= t(".#{step_mapping_class.name.demodulize.underscore}_title", import_type: @import.type.underscore.humanize) %>
-    </h1>
-    <p class="text-secondary text-sm">
-      <%= t(".#{step_mapping_class.name.demodulize.underscore}_description", import_type: @import.type.underscore.humanize, product_name: product_name) %>
-    </p>
+  <div class="max-w-3xl mx-auto flex flex-col items-center">
+    <%= render partial: "import/confirms/mappings", locals: { import: @import, mapping_class: step_mapping_class, step_idx: step_idx } %>
   </div>
-</div>
-
-<div class="max-w-3xl mx-auto flex flex-col items-center">
-  <%= render partial: "import/confirms/mappings", locals: { import: @import, mapping_class: step_mapping_class, step_idx: step_idx } %>
-</div>
+<% end %>

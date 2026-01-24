@@ -33,6 +33,12 @@ en:
         date_format_label: Date format
         rows_to_skip_label: Skip first n rows
     confirms:
+      bulk_import:
+        title: Confirm your import
+        description: Review the data that will be imported from your export file.
+        summary: Import summary
+        publish_button: Start import
+        cancel: Cancel
       mappings:
         create_account: Create account
         csv_mapping_label: "%{mapping} in CSV"
@@ -68,6 +74,15 @@ en:
         instructions_4: Columns marked with an asterisk (*) are required data.
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
+      bulk_import:
+        title: Import from export
+        description: Upload the all.ndjson file from your data export to restore your accounts, transactions, categories, and more.
+        drop_title: Drop NDJSON to upload
+        drop_subtitle: Your file will be uploaded automatically
+        browse: Browse
+        browse_hint: to add your all.ndjson file here
+        upload_button: Upload NDJSON
+        hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
   imports:
     index:
       title: Imports
@@ -97,6 +112,7 @@ en:
       description: You can manually import various types of data via CSV or use one
         of our import templates like Mint.
       import_accounts: Import accounts
+      import_bulk: Import from export (NDJSON)
       import_categories: Import categories
       import_mint: Import from Mint
       import_portfolio: Import investments
@@ -105,6 +121,9 @@ en:
       resume: Resume %{type}
       sources: Sources
       title: New CSV Import
+    create:
+      csv_uploaded: CSV uploaded successfully.
+      ndjson_uploaded: NDJSON file uploaded successfully.
     ready:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
