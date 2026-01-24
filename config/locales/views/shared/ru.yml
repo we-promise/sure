@@ -1,0 +1,14 @@
+---
+ru:
+  shared:
+    confirm_modal:
+      accept: Подтвердить
+      body_html: "<p>Вы не сможете отменить это решение</p>"
+      cancel: Отмена
+      title: Вы уверены?
+    money_field:
+      label: Сумма
+    syncing_notice:
+      syncing: Синхронизация данных счетов...
+    trend_change:
+      no_change: "без изменений"

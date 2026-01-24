@@ -1,0 +1,31 @@
+---
+ru:
+  sessions:
+    create:
+      invalid_credentials: Неверный email или пароль.
+      local_login_disabled: Вход по паролю отключен. Пожалуйста, используйте единый вход (SSO).
+    destroy:
+      logout_successful: Вы успешно вышли из системы.
+    post_logout:
+      logout_successful: Вы успешно вышли из системы.
+    openid_connect:
+      failed: Не удалось пройти аутентификацию через OpenID Connect.
+    failure:
+      failed: Не удалось пройти аутентификацию.
+      sso_provider_unavailable: "Провайдер SSO в данный момент недоступен. Пожалуйста, попробуйте позже или свяжитесь с администратором."
+      sso_invalid_response: "Получен неверный ответ от провайдера SSO. Пожалуйста, попробуйте еще раз."
+      sso_failed: "Ошибка аутентификации через единый вход (SSO). Пожалуйста, попробуйте еще раз."
+    new:
+      email: Адрес электронной почты
+      email_placeholder: you@example.com
+      forgot_password: Забыли пароль?
+      password: Пароль
+      submit: Войти
+      title: Sure
+      password_placeholder: Введите ваш пароль
+      openid_connect: Войти через OpenID Connect
+      google_auth_connect: Войти через Google
+      local_login_admin_only: Локальный вход разрешен только администраторам.
+      no_auth_methods_enabled: В данный момент методы аутентификации не включены. Пожалуйста, свяжитесь с администратором.
+      demo_banner_title: "Активен демо-режим"
+      demo_banner_message: "Это демонстрационная среда. Учетные данные были подставлены автоматически для вашего удобства. Пожалуйста, не вводите реальную или конфиденциальную информацию."

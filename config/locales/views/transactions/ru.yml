@@ -1,0 +1,189 @@
+---
+ru:
+  transactions:
+    unknown_name: Неизвестная транзакция
+    form:
+      account: Счет
+      account_prompt: Выберите счет
+      amount: Сумма
+      category: Категория
+      category_prompt: Выберите категорию
+      date: Дата
+      description: Описание
+      description_placeholder: Опишите транзакцию
+      expense: Расход
+      income: Доход
+      none: (нет)
+      note_label: Заметки
+      note_placeholder: Введите заметку
+      submit: Добавить транзакцию
+      tags_label: Теги
+      transfer: Перевод
+    new:
+      new_transaction: Новая транзакция
+    show:
+      account_label: Счет
+      amount: Сумма
+      category_label: Категория
+      date_label: Дата
+      delete: Удалить
+      delete_subtitle: Это безвозвратно удалит транзакцию, повлияет на историю ваших балансов и не может быть отменено.
+      delete_title: Удалить транзакцию
+      details: Детали
+      exclude: Исключить
+      exclude_description: Исключенные транзакции будут убраны из расчетов бюджета и отчетов.
+      activity_type: Тип активности
+      activity_type_description: Тип инвестиционной активности (Покупка, Продажа, Дивиденды и т.д.). Определяется автоматически или вручную.
+      one_time_title: Разовая %{type}
+      one_time_description: Разовые транзакции будут исключены из определенных расчетов бюджета и отчетов, чтобы помочь вам сосредоточиться на важном.
+      convert_to_trade_title: Преобразовать в сделку
+      convert_to_trade_description: Преобразуйте эту транзакцию в операцию Покупки или Продажи ценных бумаг для отслеживания портфеля.
+      convert_to_trade_button: Преобразовать в сделку
+      merchant_label: Торговец
+      name_label: Название
+      nature: Тип
+      none: "(нет)"
+      note_label: Заметки
+      note_placeholder: Введите заметку
+      overview: Обзор
+      settings: Настройки
+      tags_label: Теги
+      uncategorized: "(без категории)"
+    activity_labels:
+      buy: Покупка
+      sell: Продажа
+      sweep_in: Перевод на счет (Sweep In)
+      sweep_out: Списание со счета (Sweep Out)
+      dividend: Дивиденды
+      reinvestment: Реинвестирование
+      interest: Проценты
+      fee: Комиссия
+      transfer: Перевод
+      contribution: Взнос
+      withdrawal: Снятие
+      exchange: Обмен
+      other: Прочее
+    mark_recurring: Пометить как повторяющуюся
+    mark_recurring_subtitle: Отслеживать это как повторяющуюся транзакцию. Разброс суммы автоматически рассчитывается на основе похожих транзакций за последние 6 месяцев.
+    mark_recurring_title: Повторяющаяся транзакция
+    potential_duplicate_title: Обнаружен возможный дубликат
+    potential_duplicate_description: Эта ожидающая транзакция может быть той же самой, что и подтвержденная ниже. Если это так, объедините их, чтобы избежать двойного учета.
+    merge_duplicate: Да, объединить
+    keep_both: Нет, оставить обе
+    transaction:
+      pending: В ожидании
+      pending_tooltip: Ожидающая транзакция — может измениться после подтверждения банком
+      activity_type_tooltip: Тип инвестиционной активности
+      possible_duplicate: Дубликат?
+      potential_duplicate_tooltip: Возможно, это дубликат другой транзакции
+      review_recommended: Проверить
+      review_recommended_tooltip: Большая разница в сумме — рекомендуется проверить, не является ли это дубликатом
+    merge_duplicate:
+      success: Транзакции успешно объединены
+      failure: Не удалось объединить транзакции
+    dismiss_duplicate:
+      success: Оставлены как отдельные транзакции
+      failure: Не удалось отклонить предложение о дубликате
+    header:
+      edit_categories: Редактировать категории
+      edit_imports: Редактировать импорты
+      edit_merchants: Редактировать торговцев
+      edit_tags: Редактировать теги
+      import: Импорт
+    index:
+      transaction: транзакция
+      transactions: транзакции
+      import: Импорт
+    toggle_recurring_section: Скрыть/показать предстоящие платежи
+    search:
+      filters:
+        account: Счет
+        date: Дата
+        type: Тип
+        status: Status
+        amount: Amount
+        category: Category
+        tag: Tag
+        merchant: Merchant
+    convert_to_trade:
+      title: Преобразовать в сделку
+      description: Преобразуйте эту транзакцию в сделку с деталями ценной бумаги
+      date_label: "Дата:"
+      account_label: "Счет:"
+      amount_label: "Сумма:"
+      security_label: Ценная бумага
+      security_prompt: Выберите бумагу...
+      security_custom: "+ Ввести тикер вручную"
+      security_not_listed_hint: Не видите свою бумагу? Выберите «Ввести тикер вручную» в конце списка.
+      ticker_placeholder: AAPL
+      ticker_hint: Введите тикер акции/ETF (например, AAPL, MSFT)
+      ticker_search_placeholder: Поиск тикера...
+      ticker_search_hint: Поиск по тикеру или названию компании, либо ввод своего тикера
+      price_mismatch_title: Цена может не совпадать
+      price_mismatch_message: "Ваша цена (%{entered_price}/ед.) значительно отличается от текущей рыночной цены %{ticker} (%{market_price}). Если это кажется ошибкой, возможно, вы выбрали не ту бумагу — попробуйте использовать «Ввести тикер вручную»."
+      quantity_label: Количество (Штук)
+      quantity_placeholder: например, 20
+      quantity_hint: Количество купленных/проданных единиц
+      price_label: Цена за штуку
+      price_placeholder: например, 52.15
+      price_hint: Цена за штуку (%{currency})
+      qty_or_price_hint: Введите количество ИЛИ цену. Второй параметр будет рассчитан автоматически исходя из суммы транзакции (%{amount}).
+      trade_type_label: Тип сделки
+      trade_type_hint: Покупка или продажа ценных бумаг
+      exchange_label: Биржа (Необязательно)
+      exchange_placeholder: MOEX
+      exchange_hint: Оставьте пустым для автоопределения
+      cancel: Отмена
+      submit: Преобразовать в сделку
+      success: Транзакция преобразована в сделку
+      conversion_note: "Преобразовано из транзакции: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Только транзакции на инвестиционных счетах могут быть преобразованы в сделки
+        already_converted: Эта транзакция уже преобразована или исключена
+        enter_ticker: Пожалуйста, введите тикер
+        security_not_found: Выбранная ценная бумага больше не существует. Выберите другую.
+        select_security: Пожалуйста, выберите или введите ценную бумагу
+        enter_qty_or_price: Пожалуйста, введите количество или цену за штуку. Второй параметр будет рассчитан автоматически.
+        invalid_qty_or_price: Неверное количество или цена. Введите положительные значения.
+        conversion_failed: "Не удалось преобразовать транзакцию: %{error}"
+        unexpected_error: "Непредвиденная ошибка при преобразовании: %{error}"
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Равно
+          greater_than: Больше чем
+          less_than: Меньше чем
+          placeholder: '0'
+        badge:
+          expense: Расход
+          income: Доход
+          on_or_after: с %{date}
+          on_or_before: до %{date}
+          transfer: Перевод
+          confirmed: Подтверждено
+          pending: В ожидании
+        type_filter:
+          expense: Расход
+          income: Доход
+          transfer: Перевод
+        status_filter:
+          confirmed: Подтверждено
+          pending: В ожидании
+      menu:
+        account_filter: Счет
+        amount_filter: Сумма
+        apply: Применить
+        cancel: Отмена
+        category_filter: Категория
+        clear_filters: Сбросить фильтры
+        date_filter: Дата
+        merchant_filter: Торговец
+        status_filter: Статус
+        tag_filter: Тег
+        type_filter: Тип
+      search:
+        equal_to: равно
+        greater_than: больше чем
+        less_than: меньше чем
+      form:
+        toggle_selection_checkboxes: Выбрать/снять всё

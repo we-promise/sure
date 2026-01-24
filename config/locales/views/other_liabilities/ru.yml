@@ -1,0 +1,7 @@
+---
+ru:
+  other_liabilities:
+    edit:
+      edit: Редактировать %{account}
+    new:
+      title: Введите данные обязательства

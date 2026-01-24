@@ -1,0 +1,8 @@
+---
+ru:
+  invitation_mailer:
+    invite_email:
+      accept_button: Принять приглашение
+      body: "%{inviter} приглашает вас присоединиться к группе %{family} в %{product_name}!"
+      expiry_notice: Это приглашение истечет через %{days} дн.
+      greeting: Добро пожаловать в %{product_name}!

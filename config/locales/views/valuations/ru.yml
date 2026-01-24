@@ -1,0 +1,30 @@
+---
+ru:
+  valuations:
+    form:
+      amount: Сумма
+      submit: Добавить обновление баланса
+    header:
+      balance: Баланс
+    index:
+      change: изменение
+      date: дата
+      new_entry: Новая запись
+      no_valuations: Оценок для этого счета пока нет
+      valuations: Стоимость
+      value: значение
+    new:
+      title: Новый баланс
+    show:
+      amount: Сумма
+      date_label: Дата
+      delete: Удалить
+      delete_subtitle: Это действие нельзя отменить
+      delete_title: Удалить запись
+      details: Детали
+      name_label: Название
+      name_placeholder: Введите название для этой записи
+      note_label: Заметки
+      note_placeholder: Добавьте дополнительные сведения об этой записи
+      overview: Обзор
+      settings: Настройки

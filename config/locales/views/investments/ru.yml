@@ -1,0 +1,126 @@
+---
+ru:
+  investments:
+    edit:
+      edit: Редактировать %{account}
+    form:
+      none: Нет
+      subtype_prompt: Выберите тип инвестиции
+    new:
+      title: Введите баланс счета
+    show:
+      chart_title: Общая стоимость
+    subtypes:
+      # United States
+      brokerage:
+        short: Брокерский
+        long: Брокерский счет
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: Традиционный IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: План 529
+        long: Накопительный план 529 (образовательный)
+      hsa:
+        short: HSA
+        long: Накопительный медицинский счет (HSA)
+      ugma:
+        short: UGMA
+        long: Кастодиальный счет UGMA
+      utma:
+        short: UTMA
+        long: Кастодиальный счет UTMA
+      # United Kingdom
+      isa:
+        short: ISA
+        long: Индивидуальный сберегательный счет (ISA)
+      lisa:
+        short: LISA
+        long: Пожизненный ISA (LISA)
+      sipp:
+        short: SIPP
+        long: Самостоятельно инвестируемая пенсия (SIPP)
+      workplace_pension_uk:
+        short: Пенсия
+        long: Корпоративная пенсия (UK)
+      # Canada
+      rrsp:
+        short: RRSP
+        long: Зарегистрированный план пенсионных накоплений (RRSP)
+      tfsa:
+        short: TFSA
+        long: Безналоговый сберегательный счет (TFSA)
+      resp:
+        short: RESP
+        long: Зарегистрированный план сбережений на образование (RESP)
+      lira:
+        short: LIRA
+        long: Заблокированный пенсионный счет (LIRA)
+      rrif:
+        short: RRIF
+        long: Зарегистрированный фонд пенсионного дохода (RRIF)
+      # Australia
+      super:
+        short: Super
+        long: Пенсионные накопления (Superannuation)
+      smsf:
+        short: SMSF
+        long: Самоуправляемый пенсионный фонд (SMSF)
+      # Europe
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions (PEA)
+      pillar_3a:
+        short: Столп 3a
+        long: Частная пенсия (Столп 3a)
+      riester:
+        short: Ристер
+        long: Пенсия Ристера
+      # Generic
+      pension:
+        short: Пенсия
+        long: Пенсия
+      retirement:
+        short: Пенсионный
+        long: Пенсионный счет
+      mutual_fund:
+        short: ПИФ
+        long: Паевой инвестиционный фонд
+      angel:
+        short: Ангел
+        long: Ангельские инвестиции
+      trust:
+        short: Траст
+        long: Трастовый счет
+      other:
+        short: Прочее
+        long: Прочие инвестиции
+    value_tooltip:
+      cash: Наличные
+      holdings: Активы
+      total: Баланс портфеля
+      total_value_tooltip: Общий баланс портфеля — это сумма наличных на брокерском счете (доступных для торговли) и текущей рыночной стоимости ваших активов.

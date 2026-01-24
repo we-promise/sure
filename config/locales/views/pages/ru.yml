@@ -1,0 +1,58 @@
+---
+ru:
+  pages:
+    changelog:
+      title: Что нового
+    privacy:
+      title: Политика конфиденциальности
+      heading: Политика конфиденциальности
+      placeholder: Здесь будет текст политики конфиденциальности.
+    terms:
+      title: Условия использования
+      heading: Условия использования
+      placeholder: Здесь будет текст условий использования.
+    dashboard:
+      welcome: "С возвращением, %{name}"
+      subtitle: "Вот что происходит с вашими финансами"
+      new: "Новое"
+      drag_to_reorder: "Перетащите, чтобы изменить порядок секции"
+      toggle_section: "Скрыть/показать секцию"
+      net_worth_chart:
+        data_not_available: Нет данных за выбранный период
+        title: Чистый капитал
+      no_account_empty_state:
+        new_account: Новый счет
+        no_account_subtitle: Пока нет добавленных счетов, данные не отображаются. Добавьте свой первый счет, чтобы увидеть аналитику.
+        no_account_title: Счетов пока нет
+      balance_sheet:
+        title: "Баланс"
+        no_items: "Пока нет %{name}"
+        add_accounts: "Добавьте счета %{name}, чтобы увидеть полную структуру"
+      cashflow_sankey:
+        title: "Денежный поток"
+        no_data_title: "Нет данных о движении средств за этот период"
+        no_data_description: "Добавьте транзакции или измените период отображения"
+        add_transaction: "Добавить транзакцию"
+      no_accounts:
+        title: "Счетов пока нет"
+        description: "Добавьте счета для отображения чистого капитала"
+        add_account: "Добавить счет"
+      outflows_donut:
+        title: "Расходы"
+        total_outflows: "Всего расходов"
+        categories: "Категории"
+        value: "Сумма"
+        weight: "Вес"
+      investment_summary:
+        title: "Инвестиции"
+        total_return: "Общая доходность"
+        holding: "Актив"
+        weight: "Вес"
+        value: "Стоимость"
+        return: "Доход"
+        period_activity: "Активность за %{period}"
+        contributions: "Внесено"
+        withdrawals: "Выведено"
+        trades: "Сделки"
+        no_investments: "Нет инвестиционных счетов"
+        add_investment: "Добавьте инвестиционный счет для отслеживания портфеля"

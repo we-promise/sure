@@ -1,0 +1,27 @@
+---
+ru:
+  layouts:
+    application:
+      nav:
+        assistant: Ассистент
+        budgets: Бюджеты
+        home: Главная
+        reports: Отчеты
+        transactions: Транзакции
+    auth:
+      existing_account: Уже есть аккаунт?
+      no_account: Впервые в %{product_name}?
+      sign_in: Войти
+      sign_up: Создать аккаунт
+    shared:
+      footer:
+        privacy_policy: Политика конфиденциальности
+        terms_of_service: Условия использования
+    trial:
+      open_demo: Открыть демо
+      data_deleted_in_days:
+        one: Данные будут удалены через %{days} день
+        few: Данные будут удалены через %{days} дня
+        many: Данные будут удалены через %{days} дней
+        other: Данные будут удалены через %{days} дня
+      contribute: Участвовать

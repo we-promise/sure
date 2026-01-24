@@ -1,0 +1,69 @@
+---
+ru:
+  coinstats_items:
+    create:
+      success: Подключение к провайдеру CoinStats успешно настроено.
+      default_name: Подключение CoinStats
+      errors:
+        validation_failed: "Ошибка валидации: %{message}."
+    update:
+      success: Подключение к провайдеру CoinStats успешно обновлено.
+      errors:
+        validation_failed: "Ошибка валидации: %{message}."
+    destroy:
+      success: Подключение к провайдеру CoinStats запланировано к удалению.
+    link_wallet:
+      success:
+        one: "%{count} криптокошелек успешно привязан."
+        few: "%{count} криптокошелька успешно привязано."
+        many: "%{count} криптокошельков успешно привязано."
+        other: "%{count} криптокошелька успешно привязано."
+      missing_params: "Отсутствуют обязательные параметры: адрес и блокчейн."
+      failed: Не удалось привязать криптокошелек.
+      error: "Ошибка привязки криптокошелька: %{message}."
+    new:
+      title: Привязать криптокошелек через CoinStats
+      blockchain_fetch_error: Не удалось загрузить список блокчейнов. Пожалуйста, попробуйте позже.
+      address_label: Адрес
+      address_placeholder: Обязательно
+      blockchain_label: Блокчейн
+      blockchain_placeholder: Обязательно
+      blockchain_select_blank: Выберите блокчейн
+      link: Привязать криптокошелек
+      not_configured_title: Подключение к CoinStats не настроено
+      not_configured_message: Чтобы привязать криптокошелек, необходимо сначала настроить подключение к провайдеру CoinStats.
+      not_configured_step1_html: Перейдите в <strong>Настройки → Провайдеры</strong>
+      not_configured_step2_html: Найдите провайдера <strong>CoinStats</strong>
+      not_configured_step3_html: Следуйте <strong>инструкциям по настройке</strong>, чтобы завершить конфигурацию провайдера
+      go_to_settings: Перейти к настройкам провайдеров
+      setup_instructions: "Инструкции по настройке:"
+      step1_html: Посетите <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">панель управления CoinStats Public API</a>, чтобы получить API-ключ.
+      step2: Введите ваш API-ключ ниже и нажмите «Настроить».
+      step3_html: После успешного подключения перейдите на вкладку <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Счета</a>, чтобы настроить криптокошельки.
+      api_key_label: API-ключ
+      api_key_placeholder: Обязательно
+      configure: Настроить
+      update_configuration: Перенастроить
+      default_name: Подключение CoinStats
+      status_configured_html: Готово к использованию
+      status_not_configured: Не настроено
+    coinstats_item:
+      deletion_in_progress: Данные криптокошелька удаляются…
+      provider_name: CoinStats
+      syncing: Синхронизация…
+      sync_status:
+        no_accounts: Криптокошельки не найдены
+        all_synced:
+          one: "%{count} криптокошелек синхронизирован"
+          few: "%{count} криптокошелька синхронизировано"
+          many: "%{count} криптокошельков синхронизировано"
+          other: "%{count} криптокошелька синхронизировано"
+        partial_sync: "%{linked_count} кошельков синхронизировано, %{unlinked_count} требуют настройки"
+      reconnect: Переподключить
+      status: Последняя синхронизация %{timestamp} назад
+      status_never: Никогда не синхронизировалось
+      status_with_summary: "Последняя синхронизация %{timestamp} назад • %{summary}"
+      update_api_key: Обновить API-ключ
+      delete: Удалить
+      no_wallets_title: Криптокошельки не подключены
+      no_wallets_message: В данный момент нет криптокошельков, подключенных к CoinStats.

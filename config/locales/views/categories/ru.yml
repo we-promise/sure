@@ -1,0 +1,34 @@
+---
+ru:
+  categories:
+    bootstrap:
+      success: Категории по умолчанию успешно созданы
+    category:
+      delete: Удалить категорию
+      edit: Редактировать категорию
+    create:
+      success: Категория успешно создана
+    destroy:
+      success: Категория успешно удалена
+    edit:
+      edit: Редактировать категорию
+    form:
+      placeholder: Название категории
+    index:
+      bootstrap: Использовать стандартные (рекомендуется)
+      categories: Категории
+      categories_expenses: Категории расходов
+      categories_incomes: Категории доходов
+      empty: Категории не найдены
+      new: Новая категория
+    menu:
+      loading: Загрузка...
+    new:
+      new_category: Новая категория
+    update:
+      success: Категория успешно обновлена
+  category:
+    dropdowns:
+      show:
+        bootstrap: Сгенерировать категории по умолчанию
+        empty: Категории не найдены

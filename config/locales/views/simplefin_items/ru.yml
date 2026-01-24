@@ -1,0 +1,120 @@
+---
+ru:
+  simplefin_items:
+    new:
+      title: Подключить SimpleFIN
+      setup_token: Токен настройки
+      setup_token_placeholder: вставьте ваш токен настройки SimpleFIN
+      connect: Подключить
+      cancel: Отмена
+    create:
+      success: Подключение SimpleFIN успешно добавлено! Ваши счета появятся в ближайшее время после синхронизации в фоновом режиме.
+      errors:
+        blank_token: Пожалуйста, введите токен настройки SimpleFIN.
+        invalid_token: Неверный токен настройки. Убедитесь, что вы скопировали токен целиком из SimpleFIN Bridge.
+        token_compromised: Токен может быть скомпрометирован, просрочен или уже использован. Пожалуйста, создайте новый.
+        create_failed: "Ошибка подключения: %{message}"
+        unexpected: Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз.
+    destroy:
+      success: Подключение SimpleFIN будет удалено
+    update:
+      success: Подключение SimpleFIN успешно обновлено! Ваши счета переподключаются.
+      errors:
+        blank_token: Пожалуйста, введите токен настройки SimpleFIN.
+        invalid_token: Неверный токен настройки. Убедитесь, что вы скопировали токен целиком из SimpleFIN Bridge.
+        token_compromised: Токен может быть скомпрометирован, просрочен или уже использован. Пожалуйста, создайте новый.
+        update_failed: "Ошибка обновления подключения: %{message}"
+        unexpected: Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз.
+    edit:
+      setup_token:
+        label: "Токен настройки SimpleFIN:"
+        placeholder: "Вставьте ваш токен настройки SimpleFIN здесь..."
+        help_text: "Токен должен быть длинной строкой, начинающейся с букв и цифр"
+    setup_accounts:
+      stale_accounts:
+        title: "Счета, отсутствующие в SimpleFIN"
+        description: "Эти счета существуют в вашей базе данных, но больше не предоставляются SimpleFIN. Это может произойти при изменении конфигурации на стороне банка."
+        action_prompt: "Что вы хотите сделать?"
+        action_delete: "Удалить счет и все транзакции"
+        action_move: "Переместить транзакции в:"
+        action_skip: "Пропустить пока"
+        transaction_count:
+          one: "%{count} транзакция"
+          few: "%{count} транзакции"
+          many: "%{count} транзакций"
+          other: "%{count} транзакции"
+    complete_account_setup:
+      all_skipped: "Все счета были пропущены. Счета не созданы."
+      no_accounts: "Нет счетов для настройки."
+      success:
+        one: "Успешно создан %{count} счет SimpleFIN! Ваши транзакции и активы импортируются в фоновом режиме."
+        few: "Успешно создано %{count} счета SimpleFIN! Ваши транзакции и активы импортируются в фоновом режиме."
+        many: "Успешно создано %{count} счетов SimpleFIN! Ваши транзакции и активы импортируются в фоновом режиме."
+        other: "Успешно создано %{count} счета SimpleFIN! Ваши транзакции и активы импортируются в фоновом режиме."
+      stale_accounts_processed: "Устаревшие счета: %{deleted} удалено, %{moved} перемещено."
+      stale_accounts_errors:
+        one: "Ошибка при обработке %{count} устаревшего счета. Проверьте логи."
+        few: "Ошибка при обработке %{count} устаревших счетов. Проверьте логи."
+        many: "Ошибка при обработке %{count} устаревших счетов. Проверьте логи."
+        other: "Ошибка при обработке %{count} устаревших счетов. Проверьте логи."
+    simplefin_item:
+      add_new: Добавить новое подключение
+      confirm_accept: Удалить подключение
+      confirm_body: Это безвозвратно удалит все счета в этой группе и все связанные с ними данные.
+      confirm_title: Удалить подключение SimpleFIN?
+      delete: Удалить
+      deletion_in_progress: "(выполняется удаление...)"
+      error: Произошла ошибка при синхронизации данных
+      no_accounts_description: У этого подключения еще нет синхронизированных счетов.
+      no_accounts_title: Счета не найдены
+      requires_update: Переподключить
+      setup_needed: Новые счета готовы к настройке
+      setup_description: Выберите типы счетов для ваших новых импортированных счетов SimpleFIN.
+      setup_action: Настроить новые счета
+      setup_accounts_menu: Настроить счета
+      more_accounts_available:
+        one: "Доступен еще %{count} счет для настройки"
+        few: "Доступно еще %{count} счета для настройки"
+        many: "Доступно еще %{count} счетов для настройки"
+        other: "Доступно еще %{count} счета для настройки"
+      accounts_skipped_tooltip: "Некоторые счета были пропущены из-за ошибок при синхронизации"
+      accounts_skipped_label: "Пропущено: %{count}"
+      rate_limited_ago: "Лимит запросов (%{time} назад)"
+      rate_limited_recently: "Лимит запросов недавно превышен"
+      status: Последняя синхронизация %{timestamp} назад
+      status_never: Никогда не синхронизировалось
+      status_with_summary: "Последняя синхронизация %{timestamp} назад • %{summary}"
+      syncing: Синхронизация...
+      update: Обновить
+      stale_pending_note: "(исключено из бюджета)"
+      stale_pending_accounts: "в: %{accounts}"
+      reconciled_details_note: "(см. сводку синхронизации для деталей)"
+      duplicate_accounts_skipped: "Некоторые счета были пропущены как дубликаты — используйте «Привязать существующие счета» для объединения."
+    select_existing_account:
+      title: "Привязать %{account_name} к SimpleFIN"
+      description: Выберите счет SimpleFIN для привязки к существующему счету
+      cancel: Отмена
+      link_account: Привязать счет
+      no_accounts_found: Счета SimpleFIN для этой семьи не найдены.
+      wait_for_sync: Если вы только что подключились или запустили синхронизацию, попробуйте снова после её завершения.
+      unlink_to_move: Чтобы переместить привязку, сначала отвяжите её в меню действий счета.
+      all_accounts_already_linked: Похоже, все счета SimpleFIN уже привязаны.
+      currently_linked_to: "В данный момент привязан к: %{account_name}"
+
+    link_existing_account:
+      success: Счет успешно привязан к SimpleFIN
+      errors:
+        only_manual: Только созданные вручную счета могут быть привязаны
+        invalid_simplefin_account: Выбран неверный счет SimpleFIN
+    reconciled_status:
+      message:
+        one: "%{count} дубликат ожидающей транзакции сверен"
+        few: "%{count} дубликата ожидающих транзакций сверено"
+        many: "%{count} дубликатов ожидающих транзакций сверено"
+        other: "%{count} дубликата ожидающих транзакций сверено"
+    stale_pending_status:
+      message:
+        one: "%{count} ожидающая транзакция старше %{days} дн."
+        few: "%{count} ожидающие транзакции старше %{days} дн."
+        many: "%{count} ожидающих транзакций старше %{days} дн."
+        other: "%{count} ожидающей транзакции старше %{days} дн."

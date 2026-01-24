@@ -1,0 +1,7 @@
+---
+ru:
+  models:
+    category:
+      uncategorized: Без категории
+      other_investments: Прочие инвестиции
+      investment_contributions: Инвестиционные взносы

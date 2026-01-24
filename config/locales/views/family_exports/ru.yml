@@ -1,0 +1,31 @@
+---
+ru:
+  family_exports:
+    access_denied: Доступ запрещен
+    create:
+      success: Экспорт запущен. Вы сможете скачать его в ближайшее время.
+    delete_confirmation: Вы уверены, что хотите удалить этот экспорт? Это действие нельзя отменить.
+    delete_failed_confirmation: Вы уверены, что хотите удалить этот неудавшийся экспорт?
+    destroy:
+      success: Экспорт успешно удален
+    export_not_ready: Экспорт еще не готов для скачивания
+    exporting: Выполняется экспорт...
+    index:
+      title: Экспорт данных
+      new: Новый экспорт
+    table:
+      title: Список экспортов
+      header:
+        date: Дата
+        filename: Имя файла
+        status: Статус
+        actions: Действия
+      row:
+        status:
+          in_progress: В процессе
+          complete: Завершен
+          failed: Ошибка
+        actions:
+          delete: Удалить
+          download: Скачать
+      empty: Экспортов пока нет.

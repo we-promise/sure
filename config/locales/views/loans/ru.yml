@@ -1,0 +1,23 @@
+---
+ru:
+  loans:
+    edit:
+      edit: Редактировать %{account}
+    form:
+      interest_rate: Процентная ставка
+      interest_rate_placeholder: '5.25'
+      initial_balance: Первоначальная сумма кредита
+      rate_type: Тип ставки
+      term_months: Срок (в месяцах)
+      term_months_placeholder: '360'
+    new:
+      title: Введите данные кредита
+    overview:
+      interest_rate: Процентная ставка
+      monthly_payment: Ежемесячный платеж
+      not_applicable: Н/Д
+      original_principal: Основной долг
+      remaining_principal: Остаток долга
+      term: Срок
+      type: Тип
+      unknown: Неизвестно

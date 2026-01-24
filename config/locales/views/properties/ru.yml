@@ -1,0 +1,32 @@
+---
+ru:
+  properties:
+    edit:
+      edit: Редактировать %{account}
+    form:
+      address_line1: Улица и номер дома
+      address_line1_placeholder: ул. Ленина, д. 1, кв. 2
+      area: Жилая площадь
+      area_placeholder: '60'
+      area_unit: Единица измерения
+      country: Страна
+      country_placeholder: RU
+      locality: Город
+      locality_placeholder: Москва
+      none: Нет
+      postal_code: Почтовый индекс
+      postal_code_placeholder: '101000'
+      region: Область/Регион
+      region_placeholder: Московская область
+      subtype_prompt: Выберите тип недвижимости
+      year_built: Год постройки
+      year_built_placeholder: '2010'
+    new:
+      title: Введите данные недвижимости
+    overview:
+      living_area: Жилая площадь
+      market_value: Рыночная стоимость
+      purchase_price: Цена покупки
+      trend: Тренд
+      unknown: Неизвестно
+      year_built: Год постройки

@@ -1,0 +1,16 @@
+---
+ru:
+  oidc_accounts:
+    link:
+      account_creation_disabled: Создание новых учетных записей через единый вход (SSO) отключено. Пожалуйста, свяжитесь с администратором для создания учетной записи.
+    new_user:
+      title: Завершение регистрации
+      heading: Создайте вашу учетную запись
+      description: Пожалуйста, подтвердите ваши данные для завершения создания учетной записи с помощью %{provider}.
+      email_label: Email (от SSO провайдера)
+      first_name_label: Имя
+      first_name_placeholder: Введите ваше имя
+      last_name_label: Фамилия
+      last_name_placeholder: Введите вашу фамилию
+      submit: Создать учетную запись
+      cancel: Отмена

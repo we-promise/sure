@@ -1,0 +1,49 @@
+---
+ru:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Не удалось инициировать авторизацию
+      bank_required: Пожалуйста, выберите банк.
+      invalid_redirect: Получен неверный URL авторизации. Пожалуйста, попробуйте еще раз.
+      redirect_uri_not_allowed: Перенаправление запрещено. Пожалуйста, настройте `%{callback_url}` в настройках вашего приложения Enable Banking.
+      unexpected_error: Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз.
+    callback:
+      authorization_error: Авторизация не удалась
+      invalid_callback: Неверные параметры обратного вызова.
+      item_not_found: Подключение не найдено.
+      session_failed: Не удалось завершить авторизацию
+      success: Успешное подключение к вашему банку. Ваши счета синхронизируются.
+      unexpected_error: Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз.
+    complete_account_setup:
+      all_skipped: Все счета были пропущены. Вы можете настроить их позже на странице счетов.
+      no_accounts: Нет доступных счетов для настройки.
+      success: Успешно создано %{count} счетов!
+    create:
+      success: Конфигурация Enable Banking успешна.
+    destroy:
+      success: Подключение Enable Banking поставлено в очередь на удаление.
+    link_accounts:
+      already_linked: Выбранные счета уже привязаны.
+      link_failed: Не удалось привязать счета
+      no_accounts_selected: Счета не выбраны.
+      no_session: Нет активного подключения Enable Banking. Пожалуйста, сначала подключитесь к банку.
+      success: Успешно привязано %{count} счетов.
+    link_existing_account:
+      success: Счет успешно привязан к Enable Banking
+      errors:
+        only_manual: Только созданные вручную счета могут быть привязаны
+        invalid_enable_banking_account: Выбран неверный счет Enable Banking
+    new:
+      link_enable_banking_title: Привязать Enable Banking
+    reauthorize:
+      invalid_redirect: Получен неверный URL авторизации. Пожалуйста, попробуйте еще раз.
+      reauthorization_failed: Повторная авторизация не удалась
+    select_bank:
+      cancel: Отмена
+      check_country: Пожалуйста, проверьте настройки кода вашей страны.
+      credentials_required: Пожалуйста, сначала настройте ваши учетные данные Enable Banking.
+      description: Выберите банк, который вы хотите подключить к вашим счетам.
+      no_banks: Нет доступных банков для этой страны/региона.
+      title: Выберите ваш банк
+    update:
+      success: Конфигурация Enable Banking обновлена.

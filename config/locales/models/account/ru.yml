@@ -1,0 +1,21 @@
+---
+ru:
+  activerecord:
+    attributes:
+      account:
+        balance: Баланс
+        currency: Валюта
+        family: Семья
+        family_id: Семья
+        name: Название
+        subtype: Подтип
+    models:
+      account: Счет
+      account/credit: Кредитная карта
+      account/depository: Банковский счет
+      account/investment: Инвестиция
+      account/loan: Займ/Кредит
+      account/other_asset: Прочий актив
+      account/other_liability: Прочее обязательство
+      account/property: Недвижимость
+      account/vehicle: Транспортное средство

@@ -1,0 +1,91 @@
+---
+ru:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Управление регистрацией новых пользователей в вашем экземпляре %{product}.
+        email_confirmation_description: Если включено, пользователи должны подтверждать свой email при его изменении.
+        email_confirmation_title: Требовать подтверждение email
+        generate_tokens: Сгенерировать новый код
+        generated_tokens: Сгенерированные коды
+        title: Регистрация
+        states:
+          open: Открыта
+          closed: Закрыта
+          invite_only: Только по приглашениям
+      show:
+        general: Общие настройки
+        financial_data_providers: Провайдеры финансовых данных
+        sync_settings: Настройки синхронизации
+        invites: Коды приглашений
+        title: Self-Hosting
+        danger_zone: Опасная зона
+        clear_cache: Очистить кэш данных
+        clear_cache_warning: Очистка кэша данных удалит все курсы валют, цены ценных бумаг, балансы счетов и другие данные. Это НЕ удалит счета, транзакции, категории или другие пользовательские данные.
+        confirm_clear_cache:
+          title: Очистить кэш данных?
+          body: Вы уверены, что хотите очистить кэш данных? Это удалит все курсы валют, цены ценных бумаг, балансы счетов и другие кэшированные данные. Это действие нельзя отменить.
+      provider_selection:
+        title: Выбор провайдера
+        description: Выберите сервис для получения курсов валют и цен на ценные бумаги. Yahoo Finance бесплатен и не требует API-ключа. Twelve Data требует бесплатный API-ключ, но может предлагать лучшее покрытие.
+        exchange_rate_provider_label: Провайдер курсов валют
+        securities_provider_label: Провайдер ценных бумаг (цены акций)
+        env_configured_message: Выбор провайдера отключен, так как заданы переменные окружения (EXCHANGE_RATE_PROVIDER или SECURITIES_PROVIDER). Чтобы включить выбор здесь, удалите эти переменные из вашей конфигурации.
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+      brand_fetch_settings:
+        description: Введите Client ID, предоставленный Brand Fetch
+        label: Client ID
+        placeholder: Введите ваш Client ID здесь
+        title: Настройки Brand Fetch
+        high_res_label: Включить логотипы высокого разрешения
+        high_res_description: Если включено, логотипы будут загружаться в разрешении 120x120 вместо 40x40. Это обеспечивает более четкие изображения на экранах с высоким DPI.
+      openai_settings:
+        description: Введите токен доступа и опционально настройте совместимый с OpenAI провайдер
+        env_configured_message: Успешно настроено через переменные окружения.
+        access_token_label: Токен доступа
+        access_token_placeholder: Введите ваш токен доступа здесь
+        uri_base_label: Базовый URL API (Опционально)
+        uri_base_placeholder: "https://api.openai.com/v1 (по умолчанию)"
+        model_label: Модель (Опционально)
+        model_placeholder: "gpt-4.1 (по умолчанию)"
+        json_mode_label: Режим JSON
+        json_mode_auto: Авто (рекомендуется)
+        json_mode_strict: Строгий (лучше для thinking моделей)
+        json_mode_none: Нет (лучше для стандартных моделей)
+        json_mode_json_object: Объект JSON
+        json_mode_help: "Строгий режим лучше всего работает с моделями рассуждений (thinking models), такими как qwen-thinking, deepseek-reasoner. Режим 'Нет' лучше для стандартных моделей (llama, mistral, gpt-oss)."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance предоставляет бесплатный доступ к ценам акций, курсам валют и финансовым данным без необходимости API-ключа.
+        status_active: Yahoo Finance активен и работает
+        status_inactive: Подключение к Yahoo Finance не удалось
+        connection_failed: Не удалось подключиться к Yahoo Finance
+        troubleshooting: Проверьте ваше интернет-соединение и настройки брандмауэра. Yahoo Finance может быть временно недоступен.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} дневных вызовов API использовано (%{percentage})"
+        description: Введите API-ключ, предоставленный Twelve Data
+        env_configured_message: Успешно настроено через переменную окружения TWELVE_DATA_API_KEY.
+        label: API-ключ
+        placeholder: Введите ваш API-ключ здесь
+        plan: "План %{plan}"
+        title: Twelve Data
+      update:
+        failure: Неверное значение настройки
+        success: Настройки обновлены
+        invalid_onboarding_state: Неверное состояние регистрации
+        invalid_sync_time: Неверный формат времени синхронизации. Пожалуйста, используйте формат ЧЧ:ММ (например, 02:30).
+        scheduler_sync_failed: Настройки сохранены, но не удалось обновить расписание синхронизации. Пожалуйста, попробуйте еще раз или проверьте логи сервера.
+      clear_cache:
+        cache_cleared: Кэш данных очищен. Это может занять несколько минут.
+      not_authorized: У вас нет прав на выполнение этого действия
+      sync_settings:
+        auto_sync_label: Включить автоматическую синхронизацию
+        auto_sync_description: Если включено, все счета будут автоматически синхронизироваться ежедневно в указанное время.
+        auto_sync_time_label: Время синхронизации (ЧЧ:ММ)
+        auto_sync_time_description: Укажите время суток, когда должна происходить автоматическая синхронизация.
+        include_pending_label: Включать ожидающие транзакции
+        include_pending_description: Если включено, ожидающие (неподтвержденные) транзакции будут импортироваться и автоматически сверяться при их подтверждении. Отключите, если ваш банк предоставляет ненадежные данные об ожидающих операциях.
+        env_configured_message: Эта настройка отключена, так как задана переменная окружения провайдера (SIMPLEFIN_INCLUDE_PENDING или PLAID_INCLUDE_PENDING). Удалите её, чтобы включить эту настройку.

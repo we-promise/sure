@@ -1,0 +1,39 @@
+---
+ru:
+  rules:
+    no_action: Нет действия
+    actions:
+      value_placeholder: Введите значение
+    apply_all:
+      button: Применить все
+      confirm_title: Применить все правила
+      confirm_message: Вы собираетесь применить %{count} правил, которые затронут %{transactions} уникальных транзакций. Подтвердите выполнение операции.
+      confirm_button: Подтвердить и применить все
+      success: Все правила поставлены в очередь на выполнение
+      ai_cost_title: Оценка стоимости ИИ
+      ai_cost_message: Это потребует использования ИИ для категоризации до %{transactions} транзакций.
+      estimated_cost: "Ориентировочная стоимость: ~$%{cost}"
+      cost_unavailable_model: Оценка стоимости недоступна для модели "%{model}".
+      cost_unavailable_no_provider: Оценка стоимости недоступна (провайдер LLM не настроен).
+      cost_warning: Вы можете понести расходы, пожалуйста, сверьтесь с актуальными ценами вашего провайдера модели.
+      view_usage: Показать историю использования
+    recent_runs:
+      title: Последние запуски
+      description: История выполнения ваших правил, включая статус успеха/ошибки и количество затронутых транзакций.
+      unnamed_rule: Правило без названия
+      columns:
+        date_time: Дата/Время
+        execution_type: Тип
+        status: Статус
+        rule_name: Название правила
+        transactions_counts:
+          queued: В очереди
+          processed: Обработано
+          modified: Изменено
+      execution_types:
+        manual: Вручную
+        scheduled: По расписанию
+      statuses:
+        pending: В ожидании
+        success: Успешно
+        failed: Ошибка

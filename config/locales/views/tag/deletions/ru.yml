@@ -1,0 +1,13 @@
+---
+ru:
+  tag:
+    deletions:
+      create:
+        deleted: Тег удален
+      new:
+        delete_and_leave_uncategorized: Удалить "%{tag_name}"
+        delete_and_recategorize: Удалить "%{tag_name}" и назначить новый тег
+        delete_tag: Удалить тег?
+        explanation: "%{tag_name} будет удален из транзакций и других объектов. Вместо того чтобы оставлять их без тега, вы можете назначить новый тег ниже."
+        replacement_tag_prompt: Выберите тег
+        tag: Тег

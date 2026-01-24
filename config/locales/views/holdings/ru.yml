@@ -1,0 +1,86 @@
+---
+ru:
+  holdings:
+    cash:
+      brokerage_cash: Наличные на брокерском счету
+    destroy:
+      success: Актив удален
+    update:
+      success: Цена покупки (cost basis) сохранена.
+      error: Недопустимое значение цены покупки.
+    unlock_cost_basis:
+      success: Цена покупки разблокирована. Она может быть обновлена при следующей синхронизации.
+    remap_security:
+      success: Ценная бумага успешно обновлена.
+      security_not_found: Не удалось найти выбранную ценную бумагу.
+    reset_security:
+      success: Ценная бумага сброшена до значения провайдера.
+    errors:
+      security_collision: "Не удалось переназначить: у вас уже есть актив для %{ticker} на дату %{date}."
+    cost_basis_sources:
+      manual: Установлено пользователем
+      calculated: Рассчитано по сделкам
+      provider: Получено от провайдера
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Установить цену покупки для %{ticker} (%{qty} шт.)"
+      total_cost_basis_label: Общая цена покупки
+      or_per_share_label: "Или введите за единицу:"
+      per_share: за единицу
+      cancel: Отмена
+      save: Сохранить
+      overwrite_confirm_title: Перезаписать цену покупки?
+      overwrite_confirm_body: "Это заменит текущую цену покупки (%{current})."
+    holding:
+      per_share: за единицу
+      shares:
+        one: "%{qty} единица"
+        few: "%{qty} единицы"
+        many: "%{qty} единиц"
+        other: "%{qty} единицы"
+      unknown: "--"
+      no_cost_basis: Цена покупки не указана
+    index:
+      average_cost: Средняя цена
+      holdings: Активы
+      name: Название
+      new_holding: Новая операция
+      no_holdings: Нет активов для отображения.
+      return: Общая доходность
+      weight: Вес
+    missing_price_tooltip:
+      description: Для этой инвестиции отсутствуют значения цен, поэтому мы не можем рассчитать её доходность или стоимость.
+      missing_data: Данные отсутствуют
+    show:
+      avg_cost_label: Средняя цена
+      current_market_price_label: Текущая рыночная цена
+      delete: Удалить
+      delete_subtitle: Это удалит актив и все связанные с ним сделки на этом счету. Это действие нельзя отменить.
+      delete_title: Удалить актив
+      edit_security: Изменить ценную бумагу
+      history: История
+      no_trade_history: История сделок для этого актива отсутствует.
+      overview: Обзор
+      portfolio_weight_label: Доля в портфеле
+      settings: Настройки
+      security_label: Ценная бумага
+      originally: "было %{ticker}"
+      search_security: Поиск бумаги
+      search_security_placeholder: Поиск по тикеру или названию
+      cancel: Отмена
+      remap_security: Сохранить
+      no_security_provider: Провайдер данных не настроен. Поиск ценных бумаг невозможен.
+      security_remapped_label: Бумага переназначена
+      provider_sent: "Провайдер прислал: %{ticker}"
+      reset_to_provider: Сбросить до провайдера
+      reset_confirm_title: Сбросить бумагу до значения провайдера?
+      reset_confirm_body: "Это изменит ценную бумагу с %{current} обратно на %{original} и перенесет все связанные сделки."
+      ticker_label: Тикер
+      trade_history_entry: "%{qty} шт. %{security} по цене %{price}"
+      total_return_label: Общая доходность
+      unknown: Неизвестно
+      cost_basis_locked_label: Цена покупки заблокирована
+      cost_basis_locked_description: Установленная вами вручную цена покупки не будет изменена при синхронизации.
+      unlock_cost_basis: Разблокировать
+      unlock_confirm_title: Разблокировать цену покупки?
+      unlock_confirm_body: Это позволит обновлять цену покупки при синхронизации с провайдером или расчете на основе сделок.

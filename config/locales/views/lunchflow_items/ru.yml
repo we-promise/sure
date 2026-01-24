@@ -1,0 +1,153 @@
+---
+ru:
+  lunchflow_items:
+    create:
+      success: Подключение Lunch Flow успешно создано
+    destroy:
+      success: Подключение Lunch Flow удалено
+    index:
+      title: Подключения Lunch Flow
+    loading:
+      loading_message: Загрузка счетов Lunch Flow...
+      loading_title: Загрузка
+    link_accounts:
+      all_already_linked:
+        one: "Выбранный счет (%{names}) уже привязан"
+        few: "Все %{count} выбранных счета уже привязаны: %{names}"
+        many: "Все %{count} выбранных счетов уже привязаны: %{names}"
+        other: "Все %{count} выбранных счета уже привязаны: %{names}"
+      api_error: "Ошибка API: %{message}"
+      invalid_account_names:
+        one: "Невозможно привязать счет с пустым именем"
+        few: "Невозможно привязать %{count} счета с пустыми именами"
+        many: "Невозможно привязать %{count} счетов с пустыми именами"
+        other: "Невозможно привязать %{count} счета с пустыми именами"
+      link_failed: Не удалось привязать счета
+      no_accounts_selected: Пожалуйста, выберите хотя бы один счет
+      partial_invalid: "Успешно привязано %{created_count} счет(ов), %{already_linked_count} уже были привязаны, %{invalid_count} счет(ов) имели неверные имена"
+      partial_success: "Успешно привязано %{created_count} счет(ов). %{already_linked_count} счет(ов) уже были привязаны: %{already_linked_names}"
+      success:
+        one: "Успешно привязан %{count} счет"
+        few: "Успешно привязано %{count} счета"
+        many: "Успешно привязано %{count} счетов"
+        other: "Успешно привязано %{count} счета"
+    lunchflow_item:
+      accounts_need_setup: Требуется настройка счетов
+      delete: Удалить подключение
+      deletion_in_progress: выполняется удаление...
+      error: Ошибка
+      no_accounts_description: У этого подключения еще нет привязанных счетов.
+      no_accounts_title: Нет счетов
+      setup_action: Настроить новые счета
+      setup_description: "Привязано %{linked} из %{total} счетов. Выберите типы для новых импортированных счетов Lunch Flow."
+      setup_needed: Новые счета готовы к настройке
+      status: "Синхронизировано %{timestamp} назад"
+      status_never: Никогда не синхронизировалось
+      status_with_summary: "Последняя синхронизация %{timestamp} назад • %{summary}"
+      syncing: Синхронизация...
+      total: Всего
+      unlinked: Не привязано
+    select_accounts:
+      accounts_selected: счетов выбрано
+      api_error: "Ошибка API: %{message}"
+      cancel: Отмена
+      configure_name_in_lunchflow: Невозможно импортировать — пожалуйста, укажите имя счета в Lunch Flow
+      description: Выберите счета, которые вы хотите привязать к вашему аккаунту %{product_name}.
+      link_accounts: Привязать выбранные счета
+      no_accounts_found: Счета не найдены. Пожалуйста, проверьте настройки API-ключа.
+      no_api_key: API-ключ Lunch Flow не настроен. Пожалуйста, настройте его в Настройках.
+      no_name_placeholder: "(Без имени)"
+      title: Выберите счета Lunch Flow
+    select_existing_account:
+      account_already_linked: Этот счет уже привязан к провайдеру
+      all_accounts_already_linked: Все счета Lunch Flow уже привязаны
+      api_error: "Ошибка API: %{message}"
+      cancel: Отмена
+      configure_name_in_lunchflow: Невозможно импортировать — пожалуйста, укажите имя счета в Lunch Flow
+      description: Выберите счет Lunch Flow для привязки к этому счету. Транзакции будут синхронизированы и дедуплицированы автоматически.
+      link_account: Привязать счет
+      no_account_specified: Счет не указан
+      no_accounts_found: Счета Lunch Flow не найдены. Пожалуйста, проверьте настройки API-ключа.
+      no_api_key: API-ключ Lunch Flow не настроен. Пожалуйста, настройте его в Настройках.
+      no_name_placeholder: "(Без имени)"
+      title: "Привязка %{account_name} к Lunch Flow"
+    link_existing_account:
+      account_already_linked: Этот счет уже привязан к провайдеру
+      api_error: "Ошибка API: %{message}"
+      invalid_account_name: Невозможно привязать счет с пустым именем
+      lunchflow_account_already_linked: Этот счет Lunch Flow уже привязан к другому счету
+      lunchflow_account_not_found: Счет Lunch Flow не найден
+      missing_parameters: Отсутствуют обязательные параметры
+      success: "Счет %{account_name} успешно привязан к Lunch Flow"
+    setup_accounts:
+      account_type_label: "Тип счета:"
+      all_accounts_linked: "Все ваши счета Lunch Flow уже настроены."
+      api_error: "Ошибка API: %{message}"
+      fetch_failed: "Не удалось загрузить счета"
+      no_accounts_to_setup: "Нет счетов для настройки"
+      no_api_key: "API-ключ Lunch Flow не настроен. Пожалуйста, проверьте настройки подключения."
+      account_types:
+        skip: Пропустить этот счет
+        depository: Текущий или сберегательный счет
+        credit_card: Кредитная карта
+        investment: Инвестиционный счет
+        loan: Займ или ипотека
+        other_asset: Прочий актив
+      subtype_labels:
+        depository: "Подтип счета:"
+        credit_card: ""
+        investment: "Тип инвестиции:"
+        loan: "Тип займа:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Кредитные карты будут автоматически настроены как счета кредитных карт."
+        other_asset: "Для прочих активов дополнительные опции не требуются."
+      subtypes:
+        depository:
+          checking: Текущий (Checking)
+          savings: Сберегательный (Savings)
+          hsa: Накопительный медицинский (HSA)
+          cd: Депозитный сертификат (CD)
+          money_market: Денежный рынок
+        investment:
+          brokerage: Брокерский
+          pension: Пенсия
+          retirement: Пенсионный счет
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "План 529"
+          hsa: Накопительный медицинский (HSA)
+          mutual_fund: Паевой фонд
+          ira: Традиционный IRA
+          roth_ira: Roth IRA
+          angel: Ангельские инвестиции
+        loan:
+          mortgage: Ипотека
+          student: Студенческий займ
+          auto: Автокредит
+          other: Прочий займ
+      balance: Balance
+      cancel: Отмена
+      choose_account_type: "Выберите правильный тип для каждого счета Lunch Flow:"
+      create_accounts: Создать счета
+      creating_accounts: Создание счетов...
+      historical_data_range: "Период исторических данных:"
+      subtitle: Choose the correct account types for your imported accounts
+      sync_start_date_help: Select how far back you want to sync transaction history. Maximum 3 years of history available.
+      sync_start_date_label: "Start syncing transactions from:"
+      title: Set Up Your Lunch Flow Accounts
+    complete_account_setup:
+      all_skipped: "All accounts were skipped. No accounts were created."
+      creation_failed: "Failed to create accounts: %{error}"
+      no_accounts: "No accounts to set up."
+      success:
+        one: "Успешно создан %{count} счет."
+        few: "Успешно создано %{count} счета."
+        many: "Успешно создано %{count} счетов."
+        other: "Успешно создано %{count} счета."
+    sync:
+      success: Синхронизация запущена
+    update:
+      success: Подключение Lunch Flow обновлено

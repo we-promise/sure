@@ -1,0 +1,165 @@
+---
+ru:
+  views:
+    settings:
+      payments:
+        renewal: "Ваш взнос будет продлен %{date}."
+        cancellation: "Ваш взнос закончится %{date}."
+  settings:
+    ai_prompts:
+      show:
+        page_title: ИИ-подсказки
+        openai_label: OpenAI
+        disable_ai: Отключить ИИ-ассистента
+        prompt_instructions: Инструкции для подсказок
+        main_system_prompt:
+          title: Основной системный промпт
+          subtitle: Основные инструкции, определяющие поведение ИИ-ассистента во всех чатах
+        transaction_categorizer:
+          title: Категоризатор транзакций
+          subtitle: ИИ автоматически распределяет транзакции по вашим категориям
+        merchant_detector:
+          title: Определение торговцев
+          subtitle: ИИ идентифицирует и дополняет данные транзакций информацией о торговце
+    payments:
+      show:
+        page_title: Платежи
+        subscription_subtitle: Обновите данные вашей банковской карты
+        subscription_title: Управление взносами
+    preferences:
+      show:
+        country: Страна
+        currency: Валюта
+        date_format: Формат даты
+        general_subtitle: Настройте ваши предпочтения
+        general_title: Общие
+        default_period: Период по умолчанию
+        default_account_order: Порядок счетов по умолчанию
+        language: Язык
+        page_title: Предпочтения
+        theme_dark: Темная
+        theme_light: Светлая
+        theme_subtitle: Выберите предпочитаемую тему приложения
+        theme_system: Системная
+        theme_title: Тема
+        timezone: Часовой пояс
+    profiles:
+      destroy:
+        cannot_remove_self: Вы не можете удалить самого себя из аккаунта.
+        member_removal_failed: Возникла проблема при удалении участника.
+        member_removed: Участник успешно удален.
+        not_authorized: У вас нет прав на удаление участников.
+      show:
+        confirm_delete:
+          body: Вы уверены, что хотите безвозвратно удалить свой аккаунт? Это действие нельзя отменить.
+          title: Удалить аккаунт?
+        confirm_reset:
+          body: Вы уверены, что хотите сбросить данные аккаунта? Это удалит все ваши счета, категории, торговцев, теги и другие данные. Это действие нельзя отменить.
+          title: Сбросить данные аккаунта?
+        confirm_reset_with_sample_data:
+          body: Вы уверены, что хотите сбросить данные и загрузить демонстрационные данные? Ваши текущие данные будут удалены и заменены демо-данными для безопасного ознакомления с Sure.
+          title: Сбросить данные и загрузить демо-данные?
+        confirm_remove_invitation:
+          body: Вы уверены, что хотите отозвать приглашение для %{email}?
+          title: Отозвать приглашение
+        confirm_remove_member:
+          body: Вы уверены, что хотите удалить участника %{name} из вашего аккаунта?
+          title: Удалить участника
+        danger_zone_title: Опасная зона
+        delete_account: Удалить аккаунт
+        delete_account_warning: Удаление аккаунта приведет к безвозвратному удалению всех ваших данных. Это действие нельзя отменить.
+        reset_account: Сбросить данные
+        reset_account_warning: Сброс данных удалит все ваши счета, категории, торговцев, теги и прочую информацию, но сохранит вашу учетную запись пользователя.
+        reset_account_with_sample_data: Сбросить и загрузить демо
+        reset_account_with_sample_data_warning: Удалить все существующие данные и загрузить свежий набор демонстрационных данных для ознакомления.
+        email: Email
+        first_name: Имя
+        household_form_input_placeholder: Введите название домохозяйства
+        household_form_label: Название домохозяйства
+        household_subtitle: Приглашайте членов семьи, партнеров и других лиц. Приглашенные пользователи смогут входить в ваше домохозяйство и иметь доступ к общим счетам.
+        household_title: Домохозяйство
+        invitation_link: Ссылка для приглашения
+        invite_member: Добавить участника
+        last_name: Фамилия
+        page_title: Информация профиля
+        pending: В ожидании
+        profile_subtitle: Настройте то, как вы отображаетесь в %{product_name}
+        profile_title: Личные данные
+        remove_invitation: Отозвать приглашение
+        remove_member: Удалить участника
+        save: Сохранить
+    securities:
+      show:
+        page_title: Безопасность
+        mfa_title: Двухфакторная аутентификация
+        mfa_description: Добавьте дополнительный уровень защиты вашего аккаунта, используя код из приложения-аутентификатора при входе
+        enable_mfa: Включить 2FA
+        disable_mfa: Отключить 2FA
+        disable_mfa_confirm: Вы уверены, что хотите отключить двухфакторную аутентификацию?
+        sso_title: Подключенные аккаунты
+        sso_subtitle: Управляйте подключениями через единый вход (SSO)
+        sso_disconnect: Отключить
+        sso_last_used: Последний раз использовалось
+        sso_never: Никогда
+        sso_no_email: Нет email
+        sso_no_identities: Нет подключенных SSO-аккаунтов
+        sso_connect_hint: Выйдите и войдите через провайдера SSO, чтобы подключить аккаунт.
+        sso_confirm_title: Отключить аккаунт?
+        sso_confirm_body: Вы уверены, что хотите отключить ваш аккаунт %{provider}? Вы сможете снова подключить его позже, войдя через этого провайдера.
+        sso_confirm_button: Отключить
+        sso_warning_message: Это ваш единственный метод входа. Вам следует установить пароль в настройках безопасности перед отключением, иначе вы можете потерять доступ к своему аккаунту.
+    settings_nav:
+      accounts_label: Счета
+      advanced_section_title: Расширенные
+      ai_prompts_label: ИИ-подсказки
+      api_key_label: API-ключи
+      payment_label: Оплата
+      categories_label: Категории
+      feedback_label: Обратная связь
+      general_section_title: Общие
+      imports_label: Импорт
+      exports_label: Экспорт
+      logout: Выйти
+      merchants_label: Торговцы
+      guides_label: Руководства
+      other_section_title: Дополнительно
+      preferences_label: Предпочтения
+      profile_label: Информация профиля
+      recurring_transactions_label: Повторяющиеся
+      rules_label: Правила
+      security_label: Безопасность
+      self_hosting_label: Self-Hosting
+      tags_label: Теги
+      transactions_section_title: Транзакции
+      whats_new_label: Что нового
+      api_keys_label: API-ключи
+      bank_sync_label: Банковская синхронизация
+    settings_nav_link_large:
+      next: Вперед
+      previous: Назад
+    user_avatar_field:
+      accepted_formats: JPG или PNG. Макс. 5 МБ.
+      choose: Загрузить фото
+      choose_label: (необязательно)
+      change: Изменить фото
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Требуется настройка шифрования
+        message: Ключи шифрования Active Record не настроены. Пожалуйста, убедитесь, что учетные данные шифрования (primary_key, deterministic_key и key_derivation_salt) правильно заданы в учетных данных Rails или переменных окружения перед использованием провайдеров синхронизации.
+      coinbase_panel:
+        setup_instructions: "Для подключения Coinbase:"
+        step1_html: Перейдите в <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">настройки Coinbase API</a>
+        step2: Создайте новый API-ключ с правами «только чтение» (view accounts, view transactions)
+        step3: Скопируйте ваш API-ключ и секретный ключ и вставьте их ниже
+        api_key_label: API-ключ
+        api_key_placeholder: Введите ваш API-ключ Coinbase
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Введите ваш секретный ключ API Coinbase
+        connect_button: Подключить Coinbase
+        syncing: Синхронизация...
+        sync: Синхронизировать
+        disconnect_confirm: Вы уверены, что хотите отключить это соединение с Coinbase? Ваши синхронизированные счета станут ручными.
+        status_connected: Coinbase подключен и синхронизирует ваши криптоактивы.
+        status_not_connected: Не подключено. Введите учетные данные API выше, чтобы начать.

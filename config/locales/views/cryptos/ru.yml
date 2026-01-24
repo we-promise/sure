@@ -1,0 +1,20 @@
+---
+ru:
+  cryptos:
+    edit:
+      edit: Редактировать %{account}
+    form:
+      subtype_label: Тип счета
+      subtype_prompt: Выберите тип...
+      subtype_none: Не указано
+      tax_treatment_label: Налоговый режим
+      tax_treatment_hint: Большинство криптовалют хранятся на налогооблагаемых счетах. Выберите другой вариант, если активы находятся на счете с налоговыми льготами.
+    new:
+      title: Введите баланс счета
+    subtypes:
+      wallet:
+        short: Кошелек
+        long: Криптокошелек
+      exchange:
+        short: Биржа
+        long: Криптобиржа

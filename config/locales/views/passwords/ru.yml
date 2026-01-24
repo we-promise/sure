@@ -1,0 +1,10 @@
+---
+ru:
+  passwords:
+    edit:
+      password: Новый пароль
+      password_challenge: Текущий пароль
+      submit: Сменить пароль
+      title: Обновление пароля
+    update:
+      success: Ваш пароль был успешно изменен.

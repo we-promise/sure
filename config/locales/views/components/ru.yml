@@ -1,0 +1,81 @@
+---
+ru:
+  provider_sync_summary:
+    title: Сводка синхронизации
+    last_sync: "Последняя синхронизация: %{time_ago} назад"
+    accounts:
+      title: Счета
+      total: "Всего: %{count}"
+      linked: "Привязано: %{count}"
+      unlinked: "Не привязано: %{count}"
+      institutions: "Учреждения: %{count}"
+    transactions:
+      title: Транзакции
+      seen: "Обнаружено: %{count}"
+      imported: "Импортировано: %{count}"
+      updated: "Обновлено: %{count}"
+      skipped: "Пропущено: %{count}"
+      fetching: "Получение данных от брокера..."
+      protected:
+        one: "%{count} запись защищена (не перезаписана)"
+        few: "%{count} записи защищено (не перезаписано)"
+        many: "%{count} записей защищено (не перезаписано)"
+        other: "%{count} записи защищено (не перезаписано)"
+      view_protected: Показать защищенные записи
+    skip_reasons:
+      excluded: Исключено
+      user_modified: Изменено пользователем
+      import_locked: CSV импорт
+      protected: Защищено
+    holdings:
+      title: Активы
+      found: "Найдено: %{count}"
+      processed: "Обработано: %{count}"
+    trades:
+      title: Сделки
+      imported: "Импортировано: %{count}"
+      skipped: "Пропущено: %{count}"
+      fetching: "Получение операций от брокера..."
+    health:
+      title: Состояние
+      view_error_details: Показать детали ошибки
+      rate_limited: "Лимит запросов превышен %{time_ago}"
+      recently: недавно
+      errors: "Ошибки: %{count}"
+      pending_reconciled:
+        one: "%{count} дубликат ожидающей транзакции сверен"
+        few: "%{count} дубликата ожидающих транзакций сверено"
+        many: "%{count} дубликатов ожидающих транзакций сверено"
+        other: "%{count} дубликата ожидающих транзакций сверено"
+      view_reconciled: Показать сверенные транзакции
+      duplicate_suggestions:
+        one: "%{count} возможный дубликат требует проверки"
+        few: "%{count} возможных дубликата требуют проверки"
+        many: "%{count} возможных дубликатов требуют проверки"
+        other: "%{count} возможного дубликата требуют проверки"
+      view_duplicate_suggestions: Показать предполагаемые дубликаты
+      stale_pending:
+        one: "%{count} устаревшая ожидающая транзакция (исключена из бюджета)"
+        few: "%{count} устаревшие ожидающие транзакции (исключены из бюджета)"
+        many: "%{count} устаревших ожидающих транзакций (исключены из бюджета)"
+        other: "%{count} устаревшей ожидающей транзакции (исключены из бюджета)"
+      view_stale_pending: Показать затронутые счета
+      stale_pending_count:
+        one: "%{count} транзакция"
+        few: "%{count} транзакции"
+        many: "%{count} транзакций"
+        other: "%{count} транзакции"
+      stale_unmatched:
+        one: "%{count} ожидающая транзакция требует ручной проверки"
+        few: "%{count} ожидающие транзакции требуют ручной проверки"
+        many: "%{count} ожидающих транзакций требуют ручной проверки"
+        other: "%{count} ожидающей транзакции требуют ручной проверки"
+      view_stale_unmatched: Показать транзакции, требующие проверки
+      stale_unmatched_count:
+        one: "%{count} транзакция"
+        few: "%{count} транзакции"
+        many: "%{count} транзакций"
+        other: "%{count} транзакции"
+      data_warnings: "Предупреждения о данных: %{count}"
+      notices: "Уведомления: %{count}"
+      view_data_quality: Показать качество данных

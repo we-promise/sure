@@ -1,0 +1,88 @@
+---
+ru:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Успешное подключение к Coinbase! Ваши счета синхронизируются.
+    update:
+      success: Конфигурация Coinbase успешно обновлена.
+    destroy:
+      success: Подключение Coinbase запланировано к удалению.
+    setup_accounts:
+      title: Импорт кошельков Coinbase
+      subtitle: Выберите кошельки для отслеживания
+      instructions: Выберите кошельки, которые вы хотите импортировать. Невыбранные кошельки останутся доступными, если вы захотите добавить их позже.
+      no_accounts: Все кошельки уже импортированы.
+      accounts_count:
+        one: "Доступен %{count} кошелек"
+        few: "Доступно %{count} кошелька"
+        many: "Доступно %{count} кошельков"
+        other: "Доступно %{count} кошелька"
+      select_all: Выбрать все
+      import_selected: Импортировать выбранные
+      cancel: Отмена
+      creating: Импорт...
+    complete_account_setup:
+      success:
+        one: "Импортирован %{count} кошелек"
+        few: "Импортировано %{count} кошелька"
+        many: "Импортировано %{count} кошельков"
+        other: "Импортировано %{count} кошелька"
+      none_selected: Кошельки не выбраны
+      no_accounts: Нет кошельков для импорта
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Синхронизация...
+      reconnect: Требуется обновить учетные данные
+      deletion_in_progress: Удаление...
+      sync_status:
+        no_accounts: Счета не найдены
+        all_synced:
+          one: "%{count} счет синхронизирован"
+          few: "%{count} счета синхронизировано"
+          many: "%{count} счетов синхронизировано"
+          other: "%{count} счета синхронизировано"
+        partial_sync: "%{linked_count} синхронизировано, %{unlinked_count} требуют настройки"
+      status: "Последняя синхронизация %{timestamp} назад"
+      status_with_summary: "Последняя синхронизация %{timestamp} назад - %{summary}"
+      status_never: Никогда не синхронизировалось
+      update_credentials: Обновить данные
+      delete: Удалить
+      no_accounts_title: Счета не найдены
+      no_accounts_message: Ваши кошельки Coinbase появятся здесь после синхронизации.
+      setup_needed: Кошельки готовы к импорту
+      setup_description: Выберите кошельки Coinbase, которые вы хотите отслеживать.
+      setup_action: Импортировать кошельки
+      import_wallets_menu: Импорт кошельков
+      more_wallets_available:
+        one: "Доступен еще %{count} кошелек для импорта"
+        few: "Доступно еще %{count} кошелька для импорта"
+        many: "Доступно еще %{count} кошельков для импорта"
+        other: "Доступно еще %{count} кошелька для импорта"
+    select_existing_account:
+      title: Привязать счет Coinbase
+      no_accounts_found: Счета Coinbase не найдены.
+      wait_for_sync: Дождитесь окончания синхронизации с Coinbase
+      check_provider_health: Проверьте правильность API ключей Coinbase
+      balance: Баланс
+      currently_linked_to: "В данный момент привязан к: %{account_name}"
+      link: Привязать
+      cancel: Отмена
+    link_existing_account:
+      success: Успешно привязано к счету Coinbase
+      errors:
+        only_manual: Только созданные вручную счета могут быть привязаны к Coinbase
+        invalid_coinbase_account: Неверный счет Coinbase
+  coinbase_item:
+    syncer:
+      checking_credentials: Проверка учетных данных...
+      credentials_invalid: Неверные учетные данные API. Пожалуйста, проверьте ваш API ключ и секретный ключ.
+      importing_accounts: Импорт счетов из Coinbase...
+      checking_configuration: Проверка конфигурации счета...
+      accounts_need_setup:
+        one: "%{count} счет требует настройки"
+        few: "%{count} счета требуют настройки"
+        many: "%{count} счетов требуют настройки"
+        other: "%{count} счета требуют настройки"
+      processing_accounts: Обработка данных счетов...
+      calculating_balances: Расчет балансов...

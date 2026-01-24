@@ -1,0 +1,7 @@
+---
+ru:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Нельзя отвязать единственный метод входа
+        success: Успешно

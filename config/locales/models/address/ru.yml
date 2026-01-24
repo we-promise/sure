@@ -1,0 +1,11 @@
+---
+ru:
+  address:
+    attributes:
+      country: Страна
+      line1: Улица и номер дома
+      line2: Квартира/офис
+      locality: Населенный пункт
+      postal_code: Почтовый индекс
+      region: Регион/Область
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

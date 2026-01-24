@@ -1,0 +1,7 @@
+---
+ru:
+  budgets:
+    show:
+      tabs:
+        actual: "Фактические"
+        budgeted: "Запланированные"
