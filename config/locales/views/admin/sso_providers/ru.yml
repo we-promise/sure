@@ -13,7 +13,7 @@ ru:
         table:
           name: "Название"
           strategy: "Стратегия"
-          status: "Status"
+          status: "Статус"
           issuer: "Издатель (Issuer)"
           actions: "Действия"
           enabled: "Включен"

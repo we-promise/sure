@@ -6,7 +6,7 @@ ru:
     projected: Прогнозируемые
     recurring: Повторяющиеся
     expected_on: Ожидается %{date}
-    day_of_month: %{day}-й день месяца
+    day_of_month: "%{day}-й день месяца"
     identify_patterns: Найти закономерности
     cleanup_stale: Очистить устаревшие
     settings:

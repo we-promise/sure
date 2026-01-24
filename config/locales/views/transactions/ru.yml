@@ -100,11 +100,11 @@ ru:
         account: Счет
         date: Дата
         type: Тип
-        status: Status
-        amount: Amount
-        category: Category
-        tag: Tag
-        merchant: Merchant
+        status: Статус
+        amount: Сумма
+        category: Категория
+        tag: Тег
+        merchant: Торговец
     convert_to_trade:
       title: Преобразовать в сделку
       description: Преобразуйте эту транзакцию в сделку с деталями ценной бумаги

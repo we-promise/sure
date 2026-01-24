@@ -60,7 +60,7 @@ ru:
         new_balance: Новый баланс
         new_trade: Новая сделка
         new_transaction: Новая транзакция
-        new_transfer: Новая перевод
+        new_transfer: Новый перевод
         no_entries: Записей не найдено
         pending: В ожидании
         search:
@@ -135,10 +135,10 @@ ru:
       error: "Не удалось отвязать счет: %{error}"
       generic_error: "Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз."
     select_provider:
-      title: Select a provider to link
-      description: "Choose which provider you want to use to link %{account_name}"
-      already_linked: "Account is already linked to a provider"
-      no_providers: "No providers are currently configured"
+      title: Выберите провайдера для привязки
+      description: "Выберите провайдера, которого вы хотите использовать для привязки %{account_name}"
+      already_linked: "Счет уже привязан к провайдеру"
+      no_providers: "Провайдеры пока не настроены"
 
   email_confirmations:
     new:
