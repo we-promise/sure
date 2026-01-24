@@ -54,6 +54,17 @@ ru:
         instructions_4: Столбцы, отмеченные звездочкой (*), обязательны для заполнения.
         instructions_5: В числах не должно быть запятых, символов валют и скобок.
         title: Импорт данных
+        drag_drop_title: Перетащите CSV для загрузки
+        drag_drop_subtitle: Ваш файл будет загружен автоматически
+        tab_csv_upload: Загрузить CSV
+        tab_csv_paste: Копировать и вставить
+        account_label: Счет (необязательно)
+        multi_account: Импорт нескольких счетов
+        browse: Выберите файл
+        browse_text: " для загрузки вашего CSV"
+        paste_placeholder: Вставьте содержимое вашего CSV файла сюда
+        download_sample: Скачать пример CSV
+        see_required_format: ", чтобы увидеть требуемый формат"
   imports:
     index:
       title: Импорт данных

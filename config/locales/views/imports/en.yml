@@ -68,6 +68,17 @@ en:
         instructions_4: Columns marked with an asterisk (*) are required data.
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
+        drag_drop_title: Drop CSV to upload
+        drag_drop_subtitle: Your file will be uploaded automatically
+        tab_csv_upload: Upload CSV
+        tab_csv_paste: Copy & Paste
+        account_label: Account (optional)
+        multi_account: Multi-account import
+        browse: Browse
+        browse_text: " to add your CSV file here"
+        paste_placeholder: Paste your CSV file contents here
+        download_sample: Download a sample CSV
+        see_required_format: " to see the required CSV format"
   imports:
     index:
       title: Imports
