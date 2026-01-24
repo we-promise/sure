@@ -7,13 +7,12 @@ module SimplefinItem::Unlinking
 
   # Idempotently remove all connections between this SimpleFin item and local accounts.
   # - Detaches any AccountProvider links for each SimplefinAccount
-  # - Nullifies legacy Account.simplefin_account_id backrefs
   # - Detaches Holdings that point at the AccountProvider links
   # Returns a per-SFA result payload for observability
   def unlink_all!(dry_run: false)
     results = []
 
-    simplefin_accounts.includes(:account).find_each do |sfa|
+    simplefin_accounts.includes(account_provider: :account).find_each do |sfa|
       links = AccountProvider.where(provider_type: "SimplefinAccount", provider_id: sfa.id).to_a
       link_ids = links.map(&:id)
       result = {
@@ -36,13 +35,6 @@ module SimplefinItem::Unlinking
           # Destroy all provider links
           links.each do |ap|
             ap.destroy!
-          end
-
-          # Legacy FK fallback: ensure any legacy link is cleared
-          # NOTE: `SimplefinAccount#account_id` is the provider's external identifier.
-          # The legacy link is `Account.simplefin_account_id` (accessible via `sfa.account`).
-          if sfa.account.present?
-            sfa.account.update!(simplefin_account_id: nil)
           end
         end
       rescue => e

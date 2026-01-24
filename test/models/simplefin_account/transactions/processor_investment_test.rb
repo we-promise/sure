@@ -59,8 +59,8 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
       ]
     )
 
-    # Link the account via legacy FK
-    @account.update!(simplefin_account_id: @simplefin_account.id)
+    # Link the account via AccountProvider
+    AccountProvider.create!(account: @account, provider: @simplefin_account)
   end
 
   test "processes dividend transactions for investment accounts" do
@@ -194,17 +194,17 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
       ]
     )
     # New account is NOT linked (this is the problem we're fixing)
-    assert_nil new_simplefin_account.account
+    assert_nil new_simplefin_account.current_account
 
     # Before repair: @simplefin_account is linked (but stale), new_simplefin_account is unlinked
-    assert_equal @simplefin_account.id, @account.reload.simplefin_account_id
+    assert_equal @account.id, @simplefin_account.reload.current_account&.id
 
     # Process accounts - should repair the stale linkage
     @simplefin_item.process_accounts
 
-    # After repair: new_simplefin_account should be linked
-    @account.reload
-    assert_equal new_simplefin_account.id, @account.simplefin_account_id, "Expected linkage to transfer to new_simplefin_account (#{new_simplefin_account.id}) but got #{@account.simplefin_account_id}"
+    # After repair: new_simplefin_account should be linked via AccountProvider
+    new_simplefin_account.reload
+    assert_equal @account.id, new_simplefin_account.current_account&.id, "Expected linkage to transfer to new_simplefin_account"
 
     # Old SimplefinAccount should still exist but be cleared of data
     @simplefin_account.reload
@@ -234,13 +234,13 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
       ]
     )
 
-    original_linkage = @account.simplefin_account_id
+    original_provider = @simplefin_account
 
     @simplefin_item.process_accounts
 
     # Should NOT have transferred linkage because names don't match
-    @account.reload
-    assert_equal original_linkage, @account.simplefin_account_id
+    @simplefin_account.reload
+    assert_equal @account.id, @simplefin_account.current_account&.id
     assert_equal 0, @account.entries.count
   end
 
@@ -263,9 +263,9 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
 
     @simplefin_item.process_accounts
 
-    # Should transfer linkage to new account (repair by name match)
-    @account.reload
-    assert_equal new_simplefin_account.id, @account.simplefin_account_id
+    # Should transfer linkage to new account (repair by name match) via AccountProvider
+    new_simplefin_account.reload
+    assert_equal @account.id, new_simplefin_account.current_account&.id
 
     # Transactions should be merged: 3 from old + 1 from new = 4 total
     assert_equal 4, @account.entries.count

@@ -211,8 +211,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       balance: 1000,
       currency: "USD",
       accountable_type: "Depository",
-      accountable: Depository.create!(subtype: "checking"),
-      simplefin_account_id: simplefin_account1.id
+      accountable: Depository.create!(subtype: "checking")
     )
     maybe_account2 = Account.create!(
       family: @family,
@@ -220,13 +219,12 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       balance: 5000,
       currency: "USD",
       accountable_type: "Depository",
-      accountable: Depository.create!(subtype: "savings"),
-      simplefin_account_id: simplefin_account2.id
+      accountable: Depository.create!(subtype: "savings")
     )
 
-    # Update SimpleFIN accounts to reference the Maybe accounts
-    simplefin_account1.update!(account: maybe_account1)
-    simplefin_account2.update!(account: maybe_account2)
+    # Link SimpleFIN accounts via AccountProvider
+    AccountProvider.create!(account: maybe_account1, provider: simplefin_account1)
+    AccountProvider.create!(account: maybe_account2, provider: simplefin_account2)
 
     # Mock only the external API calls
     mock_provider = mock()
@@ -252,11 +250,11 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     # Verify no duplicate SimpleFIN items were created
     assert_equal 1, @family.simplefin_items.count
 
-    # Verify account linkages remain intact
+    # Verify account linkages remain intact via AccountProvider
     maybe_account1.reload
     maybe_account2.reload
-    assert_equal simplefin_account1.id, maybe_account1.simplefin_account_id
-    assert_equal simplefin_account2.id, maybe_account2.simplefin_account_id
+    assert AccountProvider.exists?(account: maybe_account1, provider: simplefin_account1)
+    assert AccountProvider.exists?(account: maybe_account2, provider: simplefin_account2)
 
     # Verify item is NOT scheduled for deletion (we updated it, not replaced it)
     assert_not @simplefin_item.scheduled_for_deletion?
@@ -277,17 +275,16 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       account_type: "depository"
     )
 
-    # Create Maybe account linked to the SimpleFIN account
+    # Create Maybe account linked to the SimpleFIN account via AccountProvider
     maybe_account = Account.create!(
       family: @family,
       name: "Checking Account",
       balance: 1000,
       currency: "USD",
       accountable_type: "Depository",
-      accountable: Depository.create!(subtype: "checking"),
-      simplefin_account_id: simplefin_account.id
+      accountable: Depository.create!(subtype: "checking")
     )
-    simplefin_account.update!(account: maybe_account)
+    AccountProvider.create!(account: maybe_account, provider: simplefin_account)
 
     # Mock only the external API calls
     mock_provider = mock()
@@ -308,10 +305,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_item_id, @simplefin_item.id
     assert_equal "https://example.com/new_access", @simplefin_item.access_url
 
-    # Verify account linkage remains intact (linkage preserved regardless of sync results)
+    # Verify account linkage remains intact via AccountProvider
     maybe_account.reload
     simplefin_account.reload
-    assert_equal simplefin_account.id, maybe_account.simplefin_account_id
+    assert AccountProvider.exists?(account: maybe_account, provider: simplefin_account)
     assert_equal maybe_account, simplefin_account.current_account
 
     # Item is NOT scheduled for deletion (we updated it, not replaced it)
@@ -326,17 +323,17 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "No SimpleFIN accounts found for this family."
   end
 
-  test "select_existing_account lists simplefin accounts even when they are already linked" do
+  test "select_existing_account shows only unlinked simplefin accounts" do
     account = accounts(:depository)
 
-    sfa = @simplefin_item.simplefin_accounts.create!(
+    # Linked SFA - should NOT appear
+    linked_sfa = @simplefin_item.simplefin_accounts.create!(
       name: "Linked SF",
       account_id: "sf_linked_123",
       currency: "USD",
       current_balance: 10,
       account_type: "depository"
     )
-
     linked_account = Account.create!(
       family: @family,
       name: "Existing Linked Account",
@@ -345,16 +342,23 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       accountable_type: "Depository",
       accountable: Depository.create!(subtype: "checking")
     )
-    # Model the pre-relink state: the provider account is linked to a newly set up duplicate
-    # via the legacy FK, and may also have an AccountProvider.
-    linked_account.update!(simplefin_account_id: sfa.id)
-    sfa.update!(account: linked_account)
-    AccountProvider.create!(account: linked_account, provider: sfa)
+    AccountProvider.create!(account: linked_account, provider: linked_sfa)
+
+    # Unlinked SFA - should appear
+    unlinked_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Unlinked SF",
+      account_id: "sf_unlinked_456",
+      currency: "USD",
+      current_balance: 20,
+      account_type: "depository"
+    )
 
     get select_existing_account_simplefin_items_url(account_id: account.id)
     assert_response :success
-    assert_includes @response.body, "Linked SF"
-    assert_includes @response.body, "Currently linked to: Existing Linked Account"
+    # Linked SFAs are hidden - they can be managed via their linked account
+    refute_includes @response.body, "Linked SF"
+    # Unlinked SFAs are shown as candidates to link
+    assert_includes @response.body, "Unlinked SF"
   end
 
   test "select_existing_account hides simplefin accounts after they have been relinked" do
@@ -383,17 +387,16 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     refute_includes @response.body, "Relinked SF"
   end
-  test "destroy should unlink provider links and legacy fk" do
+  test "destroy should unlink provider links" do
     # Create SFA and linked Account with AccountProvider
     sfa = @simplefin_item.simplefin_accounts.create!(name: "Linked", account_id: "sf_link_1", currency: "USD", current_balance: 1, account_type: "depository")
-    acct = Account.create!(family: @family, name: "Manual A", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"), simplefin_account_id: sfa.id)
+    acct = Account.create!(family: @family, name: "Manual A", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"))
     AccountProvider.create!(account: acct, provider_type: "SimplefinAccount", provider_id: sfa.id)
 
     delete simplefin_item_url(@simplefin_item)
     assert_redirected_to accounts_path
 
     # Links are removed immediately even though deletion is scheduled
-    assert_nil acct.reload.simplefin_account_id
     assert_equal 0, AccountProvider.where(provider_type: "SimplefinAccount", provider_id: sfa.id).count
   end
 
@@ -402,7 +405,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     # Linked SFA (should be ignored by setup)
     linked_sfa = @simplefin_item.simplefin_accounts.create!(name: "Linked", account_id: "sf_l_1", currency: "USD", current_balance: 5, account_type: "depository")
     linked_acct = Account.create!(family: @family, name: "Already Linked", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "savings"))
-    linked_sfa.update!(account: linked_acct)
+    AccountProvider.create!(account: linked_acct, provider: linked_sfa)
 
     # Unlinked SFA (should be created via setup)
     unlinked_sfa = @simplefin_item.simplefin_accounts.create!(name: "New CC", account_id: "sf_cc_1", currency: "USD", current_balance: -20, account_type: "credit")
@@ -419,10 +422,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     # Linked one unchanged, unlinked now has an account
     linked_sfa.reload
     unlinked_sfa.reload
-    # The previously linked SFA should still point to the same Maybe account via legacy FK or provider link
-    assert_equal linked_acct.id, linked_sfa.account&.id
-    # The newly created account for the unlinked SFA should now exist
-    assert_not_nil unlinked_sfa.account_id
+    # The previously linked SFA should still point to the same Maybe account via AccountProvider
+    assert_equal linked_acct.id, linked_sfa.current_account&.id
+    # The newly created account for the unlinked SFA should now have an AccountProvider
+    assert_not_nil unlinked_sfa.current_account
   end
   test "update redirects to accounts after setup without forcing a modal" do
     @simplefin_item.update!(status: :requires_update)
@@ -494,8 +497,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable: Crypto.create!
     )
-    linked_sfa.update!(account: linked_account)
-    linked_account.update!(simplefin_account_id: linked_sfa.id)
+    AccountProvider.create!(account: linked_account, provider: linked_sfa)
 
     # Set raw_payload to simulate upstream API response WITHOUT the stale account
     @simplefin_item.update!(raw_payload: {
@@ -528,8 +530,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable: Depository.create!(subtype: "checking")
     )
-    stale_sfa.update!(account: stale_account)
-    stale_account.update!(simplefin_account_id: stale_sfa.id)
+    AccountProvider.create!(account: stale_account, provider: stale_sfa)
 
     # Add a transaction to the account
     Entry.create!(
@@ -571,8 +572,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable: Crypto.create!
     )
-    stale_sfa.update!(account: stale_account)
-    stale_account.update!(simplefin_account_id: stale_sfa.id)
+    AccountProvider.create!(account: stale_account, provider: stale_sfa)
 
     # Create target account (active)
     target_sfa = @simplefin_item.simplefin_accounts.create!(
@@ -589,9 +589,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable: Depository.create!(subtype: "checking")
     )
-    target_sfa.update!(account: target_account)
-    target_account.update!(simplefin_account_id: target_sfa.id)
-    target_sfa.ensure_account_provider!
+    AccountProvider.create!(account: target_account, provider: target_sfa)
 
     # Add transactions to stale account
     entry1 = Entry.create!(
@@ -654,8 +652,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD",
       accountable: Depository.create!(subtype: "checking")
     )
-    stale_sfa.update!(account: stale_account)
-    stale_account.update!(simplefin_account_id: stale_sfa.id)
+    AccountProvider.create!(account: stale_account, provider: stale_sfa)
 
     @simplefin_item.update!(raw_payload: { accounts: [] })
 

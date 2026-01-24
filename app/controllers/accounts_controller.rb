@@ -113,8 +113,11 @@ class AccountsController < ApplicationController
           Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
         end
 
-        # Capture provider accounts before clearing links (so we can destroy them)
-        simplefin_account_to_destroy = @account.simplefin_account
+        # Capture SimplefinAccounts before clearing links (so we can destroy them)
+        simplefin_accounts_to_destroy = @account.account_providers
+          .where(provider_type: "SimplefinAccount")
+          .map { |ap| SimplefinAccount.find_by(id: ap.provider_id) }
+          .compact
 
         # Capture SnaptradeAccounts linked via AccountProvider
         # Destroying them will trigger delete_snaptrade_connection callback to free connection slots
@@ -123,18 +126,15 @@ class AccountsController < ApplicationController
           .map { |ap| SnaptradeAccount.find_by(id: ap.provider_id) }
           .compact
 
-        # Remove new system links (account_providers join table)
+        # Remove account provider links
         @account.account_providers.destroy_all
 
-        # Remove legacy system links (foreign keys)
-        @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
-
-        # Destroy the SimplefinAccount record so it doesn't cause stale account issues
+        # Destroy SimplefinAccount records so they don't cause stale account issues
         # This is safe because:
         # - Account data (transactions, holdings, balances) lives on the Account, not SimplefinAccount
         # - SimplefinAccount only caches API data which is regenerated on reconnect
         # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
-        simplefin_account_to_destroy&.destroy!
+        simplefin_accounts_to_destroy.each(&:destroy!)
 
         # Destroy SnaptradeAccount records to free up SnapTrade connection slots
         # The before_destroy callback will delete the connection from SnapTrade API
@@ -206,10 +206,10 @@ class AccountsController < ApplicationController
         @simplefin_sync_stats_map[item.id] = stats
         @simplefin_has_unlinked_map[item.id] = item.family.accounts.listable_manual.exists?
 
-        # Count unlinked accounts
+        # Count unlinked accounts (no AccountProvider)
         count = item.simplefin_accounts
-          .left_joins(:account, :account_provider)
-          .where(accounts: { id: nil }, account_providers: { id: nil })
+          .left_joins(:account_provider)
+          .where(account_providers: { id: nil })
           .count
         @simplefin_unlinked_count_map[item.id] = count
 

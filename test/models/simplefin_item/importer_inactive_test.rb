@@ -72,9 +72,9 @@ class SimplefinItem::ImporterInactiveTest < ActiveSupport::TestCase
       name: "Paid Off Card",
       balance: 0,
       currency: "USD",
-      accountable: credit_card,
-      simplefin_account_id: sfa.id
+      accountable: credit_card
     )
+    AccountProvider.create!(account: account, provider: sfa)
 
     account_data = { id: "cc1", name: "Paid Off Card", balance: 0, "available-balance": 0, currency: "USD" }
 
@@ -102,9 +102,9 @@ class SimplefinItem::ImporterInactiveTest < ActiveSupport::TestCase
       name: "Paid Off Loan",
       balance: 0,
       currency: "USD",
-      accountable: loan,
-      simplefin_account_id: sfa.id
+      accountable: loan
     )
+    AccountProvider.create!(account: account, provider: sfa)
 
     account_data = { id: "loan1", name: "Paid Off Loan", balance: 0, "available-balance": 0, currency: "USD" }
 

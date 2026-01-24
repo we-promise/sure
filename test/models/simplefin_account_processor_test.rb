@@ -21,7 +21,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:credit_card)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -39,7 +39,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:depository)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -57,7 +57,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:loan)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -75,7 +75,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:credit_card)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -94,7 +94,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:credit_card)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -113,7 +113,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:credit_card)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -132,7 +132,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:credit_card)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -151,7 +151,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:credit_card)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -171,7 +171,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
 
     # Link to an asset account intentionally
     acct = accounts(:depository)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
@@ -191,7 +191,7 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     )
 
     acct = accounts(:credit_card)
-    acct.update!(simplefin_account: sfin_acct)
+    AccountProvider.create!(account: acct, provider: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 

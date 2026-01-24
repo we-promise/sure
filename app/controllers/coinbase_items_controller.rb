@@ -154,7 +154,7 @@ class CoinbaseItemsController < ApplicationController
     end
 
     # Guard: only manual accounts can be linked (no existing provider links)
-    if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
+    if @account.account_providers.any?
       flash[:alert] = t(".errors.only_manual")
       if turbo_frame_request?
         return render turbo_stream: Array(flash_notification_stream_items)

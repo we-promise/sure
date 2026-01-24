@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_24_002638) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -41,11 +41,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.string "currency"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
-    t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.jsonb "locked_attributes", default: {}
     t.string "status", default: "active"
-    t.uuid "simplefin_account_id"
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
@@ -59,8 +57,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.index ["family_id", "status"], name: "index_accounts_on_family_id_and_status"
     t.index ["family_id"], name: "index_accounts_on_family_id"
     t.index ["import_id"], name: "index_accounts_on_import_id"
-    t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id"
-    t.index ["simplefin_account_id"], name: "index_accounts_on_simplefin_account_id"
     t.index ["status"], name: "index_accounts_on_status"
   end
 
@@ -1431,8 +1427,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
-  add_foreign_key "accounts", "plaid_accounts"
-  add_foreign_key "accounts", "simplefin_accounts"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_keys", "users"

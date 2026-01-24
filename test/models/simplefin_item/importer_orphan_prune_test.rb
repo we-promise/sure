@@ -53,15 +53,15 @@ class SimplefinItem::ImporterOrphanPruneTest < ActiveSupport::TestCase
       account_type: "checking"
     )
 
-    # Link it to an Account via legacy FK
+    # Link it to an Account via AccountProvider
     account = Account.create!(
       family: @family,
       name: "Business Checking",
       currency: "USD",
       balance: 100,
-      accountable: Depository.create!(subtype: :checking),
-      simplefin_account_id: old_sfa.id
+      accountable: Depository.create!(subtype: :checking)
     )
+    AccountProvider.create!(account: account, provider: old_sfa)
 
     # Stub provider to return accounts with NEW account_ids
     mock_provider = mock()

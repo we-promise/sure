@@ -76,11 +76,8 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
   test "does not delete future holdings when processing Plaid holdings" do
     account = @plaid_account.current_account
 
-    # Create account_provider
-    account_provider = AccountProvider.create!(
-      account: account,
-      provider: @plaid_account
-    )
+    # Use existing account_provider from fixture (plaid_accounts(:one) is pre-linked to connected)
+    account_provider = @plaid_account.account_provider
 
     # Create a third security for testing
     third_security = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")

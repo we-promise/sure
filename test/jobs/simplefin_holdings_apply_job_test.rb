@@ -7,7 +7,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
 
     @account = accounts(:investment)
 
-    # Link SFA to existing investment account via legacy association for simplicity
+    # Link SFA to existing investment account via AccountProvider
     @sfa = @item.simplefin_accounts.create!(
       name: "Invest",
       account_id: "sf_invest_1",
@@ -15,7 +15,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
       account_type: "investment",
       current_balance: 10_000
     )
-    @account.update!(simplefin_account_id: @sfa.id)
+    AccountProvider.create!(account: @account, provider: @sfa)
   end
 
   test "materializes holdings from raw_holdings_payload and is idempotent" do

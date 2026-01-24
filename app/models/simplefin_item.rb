@@ -23,17 +23,16 @@ class SimplefinItem < ApplicationRecord
   has_one_attached :logo
 
   has_many :simplefin_accounts, dependent: :destroy
-  has_many :legacy_accounts, through: :simplefin_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  # Get accounts from both new and legacy systems
+  # Get linked accounts via AccountProvider
   def accounts
     # Preload associations to avoid N+1 queries
     simplefin_accounts
-      .includes(:account, account_provider: :account)
+      .includes(account_provider: :account)
       .map(&:current_account)
       .compact
       .uniq
@@ -63,9 +62,9 @@ class SimplefinItem < ApplicationRecord
   end
 
   def process_accounts
-    # Process accounts linked via BOTH legacy FK and AccountProvider
+    # Process accounts linked via AccountProvider
     # Use direct query to ensure fresh data from DB, bypassing any association cache
-    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, :linked_account, account_provider: :account).to_a
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(account_provider: :account).to_a
 
     Rails.logger.info "=" * 60
     Rails.logger.info "SimplefinItem#process_accounts START - Item #{id} (#{name})"
@@ -75,7 +74,7 @@ class SimplefinItem < ApplicationRecord
     all_accounts.each do |sfa|
       acct = sfa.current_account
       Rails.logger.info "  - SimplefinAccount id=#{sfa.id} sf_account_id=#{sfa.account_id} name='#{sfa.name}'"
-      Rails.logger.info "    linked_account: #{sfa.linked_account&.id || 'nil'}, account: #{sfa.account&.id || 'nil'}, current_account: #{acct&.id || 'nil'}"
+      Rails.logger.info "    current_account: #{acct&.id || 'nil'}"
       Rails.logger.info "    raw_transactions_payload count: #{sfa.raw_transactions_payload.to_a.count}"
     end
 
@@ -83,7 +82,7 @@ class SimplefinItem < ApplicationRecord
     repair_stale_linkages(all_accounts)
 
     # Re-fetch after repairs - use direct query for fresh data
-    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, :linked_account, account_provider: :account).to_a
+    all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(account_provider: :account).to_a
 
     linked = all_accounts.select { |sfa| sfa.current_account.present? }
     unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
@@ -169,27 +168,18 @@ class SimplefinItem < ApplicationRecord
           new_sfa.update!(raw_transactions_payload: merged)
         end
 
-        # Check if linked via legacy FK (use to_s for UUID comparison safety)
-        if account.simplefin_account_id.to_s == stale_match.id.to_s
-          account.simplefin_account_id = new_sfa.id
-          account.save!
-        end
-
-        # Check if linked via AccountProvider
+        # Transfer AccountProvider linkage from old to new SimplefinAccount
         if stale_match.account_provider.present?
           Rails.logger.info "SimplefinItem#repair_stale_linkages - Transferring AccountProvider linkage from SimplefinAccount #{stale_match.id} to #{new_sfa.id}"
           stale_match.account_provider.update!(provider: new_sfa)
         end
 
         # If the new one doesn't have an AccountProvider yet, create one
-        new_sfa.ensure_account_provider!
+        new_sfa.ensure_account_provider!(account)
 
         Rails.logger.info "SimplefinItem#repair_stale_linkages - Successfully transferred linkage for Account '#{account.name}' to SimplefinAccount id=#{new_sfa.id}"
 
         # Clear transactions from stale SimplefinAccount and leave it orphaned
-        # We don't destroy it because has_one :account, dependent: :nullify would nullify the FK we just set
-        # IMPORTANT: Use update_all to bypass AR associations - stale_match.update! would
-        # trigger autosave on the preloaded account association, reverting the FK we just set!
         SimplefinAccount.where(id: stale_match.id).update_all(raw_transactions_payload: [], raw_holdings_payload: [])
         Rails.logger.info "SimplefinItem#repair_stale_linkages - Cleared data from stale SimplefinAccount id=#{stale_match.id} (leaving orphaned)"
       rescue => e
@@ -320,8 +310,7 @@ class SimplefinItem < ApplicationRecord
 
   def connected_institutions
     # Get unique institutions from all accounts
-    simplefin_accounts.includes(:account)
-                     .where.not(org_data: nil)
+    simplefin_accounts.where.not(org_data: nil)
                      .map { |acc| acc.org_data }
                      .uniq { |org| org["domain"] || org["name"] }
   end
@@ -433,9 +422,8 @@ class SimplefinItem < ApplicationRecord
   # Count stale pending transactions (>8 days old) across all linked accounts
   # Returns { count: N, accounts: [names] } or { count: 0 } if none
   def stale_pending_status(days: 8)
-    # Get all accounts linked to this SimpleFIN item
-    # Eager-load both association paths to avoid N+1 on current_account method
-    linked_accounts = simplefin_accounts.includes(:account, :linked_account).filter_map(&:current_account)
+    # Get all accounts linked to this SimpleFIN item via AccountProvider
+    linked_accounts = simplefin_accounts.includes(account_provider: :account).filter_map(&:current_account)
     return { count: 0 } if linked_accounts.empty?
 
     # Batch query to avoid N+1

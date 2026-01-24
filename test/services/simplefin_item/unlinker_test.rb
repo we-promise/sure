@@ -16,11 +16,7 @@ class SimplefinItem::UnlinkerTest < ActiveSupport::TestCase
       current_balance: 1000
     )
 
-    # Legacy FK link (old path)
-    @account.update!(simplefin_account_id: @sfa.id)
-    @sfa.update!(account: @account)
-
-    # New AccountProvider link
+    # Create AccountProvider link
     @link = AccountProvider.create!(account: @account, provider: @sfa)
 
     # Create a security and a holding that references the AccountProvider link
@@ -37,7 +33,7 @@ class SimplefinItem::UnlinkerTest < ActiveSupport::TestCase
     )
   end
 
-  test "unlink_all! detaches holdings, destroys provider links, and clears legacy FK" do
+  test "unlink_all! detaches holdings and destroys provider links" do
     results = @item.unlink_all!
 
     # Observability payload
@@ -50,10 +46,6 @@ class SimplefinItem::UnlinkerTest < ActiveSupport::TestCase
     # Holding detached from provider link but preserved
     assert @holding.reload
     assert_nil @holding.account_provider_id
-
-    # Legacy FK cleared (SFA legacy association and Account FK)
-    assert_nil @sfa.reload.account
-    assert_nil @account.reload.simplefin_account_id
   end
 
   test "unlink_all! is idempotent when run twice" do
@@ -67,9 +59,6 @@ class SimplefinItem::UnlinkerTest < ActiveSupport::TestCase
 
     # State remains clean
     assert_nil AccountProvider.find_by(provider: @sfa)
-    # SFA upstream account_id should remain intact; legacy association should be cleared
-    assert_nil @sfa.reload.account
-    assert_nil @account.reload.simplefin_account_id
     assert_nil @holding.reload.account_provider_id
   end
 end

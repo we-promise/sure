@@ -135,10 +135,10 @@ class SimplefinItemsController < ApplicationController
   end
 
   def setup_accounts
-    # Only show unlinked accounts - check both legacy FK and AccountProvider
+    # Only show unlinked accounts (no AccountProvider)
     @simplefin_accounts = @simplefin_item.simplefin_accounts
-      .left_joins(:account, :account_provider)
-      .where(accounts: { id: nil }, account_providers: { id: nil })
+      .left_joins(:account_provider)
+      .where(account_providers: { id: nil })
     @account_type_options = [
       [ "Skip this account", "skip" ],
       [ "Checking or Savings Account", "Depository" ],
@@ -255,7 +255,7 @@ class SimplefinItemsController < ApplicationController
       end
 
       # Skip if already linked (race condition protection)
-      if simplefin_account.account.present?
+      if simplefin_account.current_account.present?
         Rails.logger.info("SimpleFIN account #{simplefin_account_id} already linked, skipping")
         next
       end
@@ -271,9 +271,6 @@ class SimplefinItemsController < ApplicationController
         selected_type,
         selected_subtype
       )
-      simplefin_account.update!(account: account)
-      # Also create AccountProvider for consistency with the new linking system
-      simplefin_account.ensure_account_provider!
       created_accounts << account
     end
 
@@ -339,20 +336,14 @@ class SimplefinItemsController < ApplicationController
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
 
-    # Allow explicit relinking by listing all available SimpleFIN accounts for the family.
-    # The UI will surface the current mapping (if any), and the action will move the link.
+    # Allow explicit relinking by listing available SimpleFIN accounts for the family.
+    # Only show unlinked SFAs - accounts that are already linked are hidden since
+    # they can be managed via their linked account.
     @available_simplefin_accounts = Current.family.simplefin_items
-      .includes(simplefin_accounts: [ :account, { account_provider: :account } ])
+      .includes(simplefin_accounts: { account_provider: :account })
       .flat_map(&:simplefin_accounts)
-      # After provider setup, SFAs may already have an AccountProvider (linked to the freshly
-      # created duplicate accounts). During relink, we need to show those SFAs until the legacy
-      # link (`Account.simplefin_account_id`) has been cleared.
-      #
-      # Eligibility rule:
-      # - Show SFAs that are still legacy-linked (`sfa.account.present?`) => candidates to move.
-      # - Show SFAs that are fully unlinked (no legacy account and no account_provider) => candidates to link.
-      # - Hide SFAs that are linked via AccountProvider but no longer legacy-linked => already relinked.
-      .select { |sfa| sfa.account.present? || sfa.account_provider.nil? }
+      # Only show unlinked SFAs (no AccountProvider)
+      .select { |sfa| sfa.account_provider.nil? }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
@@ -364,8 +355,8 @@ class SimplefinItemsController < ApplicationController
     @account = Current.family.accounts.find(params[:account_id])
     simplefin_account = SimplefinAccount.find(params[:simplefin_account_id])
 
-    # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
-    if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
+    # Guard: only manual accounts can be linked (no existing provider links)
+    if @account.account_providers.any?
       flash[:alert] = t("simplefin_items.link_existing_account.errors.only_manual")
       if turbo_frame_request?
         return render turbo_stream: Array(flash_notification_stream_items)
@@ -385,14 +376,9 @@ class SimplefinItemsController < ApplicationController
       return
     end
 
-    # Relink behavior: detach any legacy link and point provider link at the chosen account
+    # Relink behavior: update the AccountProvider to point at the chosen account
     Account.transaction do
       simplefin_account.lock!
-
-      # Clear legacy association if present (Account.simplefin_account_id)
-      if (legacy_account = simplefin_account.account)
-        legacy_account.update!(simplefin_account_id: nil)
-      end
 
       # Upsert the AccountProvider mapping deterministically
       ap = AccountProvider.find_or_initialize_by(provider: simplefin_account)
@@ -529,7 +515,7 @@ class SimplefinItemsController < ApplicationController
 
       # Find SimplefinAccounts that are linked but not in upstream
       @simplefin_item.simplefin_accounts
-        .includes(:account, account_provider: :account)
+        .includes(account_provider: :account)
         .select { |sfa| sfa.current_account.present? && !upstream_ids.include?(sfa.account_id) }
     end
 

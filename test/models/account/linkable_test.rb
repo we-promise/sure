@@ -7,7 +7,8 @@ class Account::LinkableTest < ActiveSupport::TestCase
   end
 
   test "linked? returns true when account has providers" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     assert @account.linked?
@@ -18,7 +19,8 @@ class Account::LinkableTest < ActiveSupport::TestCase
   end
 
   test "providers returns all provider adapters" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     providers = @account.providers
@@ -27,7 +29,8 @@ class Account::LinkableTest < ActiveSupport::TestCase
   end
 
   test "provider_for returns specific provider adapter" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     adapter = @account.provider_for("PlaidAccount")
@@ -35,7 +38,8 @@ class Account::LinkableTest < ActiveSupport::TestCase
   end
 
   test "linked_to? checks if account is linked to specific provider type" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     assert @account.linked_to?("PlaidAccount")
@@ -48,7 +52,8 @@ class Account::LinkableTest < ActiveSupport::TestCase
   end
 
   test "can_delete_holdings? returns false when any provider disallows deletion" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     # PlaidAdapter.can_delete_holdings? returns false by default
@@ -56,7 +61,8 @@ class Account::LinkableTest < ActiveSupport::TestCase
   end
 
   test "can_delete_holdings? returns true only when all providers allow deletion" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     # Stub all providers to return true

@@ -11,18 +11,44 @@ class PlaidAccount < ApplicationRecord
 
   belongs_to :plaid_item
 
-  # Legacy association via foreign key (will be removed after migration)
-  has_one :account, dependent: :nullify, foreign_key: :plaid_account_id
-  # New association through account_providers
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :plaid_type, :currency, presence: true
   validate :has_balance
 
-  # Helper to get account using new system first, falling back to legacy
   def current_account
-    linked_account || account
+    linked_account
+  end
+
+  # Ensure there is an AccountProvider link for this Plaid account.
+  # Safe and idempotent; returns the AccountProvider or nil if no account is provided.
+  def ensure_account_provider!(account = nil)
+    # If already linked and no new account specified, return existing
+    if account_provider.present?
+      if account && account_provider.account_id != account.id
+        account_provider.update!(account: account)
+      end
+      return account_provider
+    end
+
+    acct = account || current_account
+    return nil unless acct
+
+    provider = AccountProvider
+      .find_or_initialize_by(provider_type: "PlaidAccount", provider_id: id)
+      .tap do |p|
+        p.account = acct
+        p.save!
+      end
+
+    # Reload the association so future accesses don't return stale/nil value
+    reload_account_provider
+
+    provider
+  rescue => e
+    Rails.logger.warn("PlaidAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
+    nil
   end
 
   def upsert_plaid_snapshot!(account_snapshot)

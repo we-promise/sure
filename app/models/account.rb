@@ -25,7 +25,6 @@ class Account < ApplicationRecord
   scope :manual, -> {
     left_joins(:account_providers)
       .where(account_providers: { id: nil })
-      .where(plaid_account_id: nil, simplefin_account_id: nil)
   }
 
   scope :visible_manual, -> {
@@ -137,12 +136,16 @@ class Account < ApplicationRecord
         cash_balance: cash_balance,
         currency: simplefin_account.currency,
         accountable_type: account_type,
-        accountable_attributes: build_simplefin_accountable_attributes(simplefin_account, account_type, subtype),
-        simplefin_account_id: simplefin_account.id
+        accountable_attributes: build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
       }
 
       # Skip initial sync - provider sync will handle balance creation with correct currency
-      create_and_sync(attributes, skip_initial_sync: true)
+      account = create_and_sync(attributes, skip_initial_sync: true)
+
+      # Link the account to the SimpleFIN provider
+      simplefin_account.ensure_account_provider!(account)
+
+      account
     end
 
     def create_from_enable_banking_account(enable_banking_account, account_type, subtype = nil)

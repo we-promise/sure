@@ -34,7 +34,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "syncing linked account triggers sync for all provider items" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     plaid_item = plaid_account.plaid_item
     AccountProvider.create!(account: @account, provider: plaid_account)
 
@@ -59,7 +60,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "confirms unlink for linked account" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     get confirm_unlink_account_url(@account)
@@ -73,7 +75,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unlinks linked account successfully with new system" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
     @account.reload
 
@@ -87,9 +90,10 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
   end
 
-  test "unlinks linked account successfully with legacy system" do
-    plaid_account = plaid_accounts(:one)
-    @account.update!(plaid_account_id: plaid_account.id)
+  test "unlinks linked account successfully with account_provider" do
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
+    AccountProvider.create!(account: @account, provider: plaid_account)
     @account.reload
 
     assert @account.linked?
@@ -98,7 +102,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     @account.reload
 
     assert_not @account.linked?
-    assert_nil @account.plaid_account_id
+    assert_equal 0, @account.account_providers.count
     assert_redirected_to accounts_path
     assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
   end
@@ -110,7 +114,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unlinked account can be deleted" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
     @account.reload
 
@@ -158,7 +163,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "select_provider redirects for already linked account" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     get select_provider_account_url(@account)
@@ -195,8 +201,8 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     # Create a manual linked to SFA so unlinked count == 0
     sfa = item.simplefin_accounts.create!(name: "B", account_id: "sf_b", currency: "USD", current_balance: 1, account_type: "depository")
     linked = Account.create!(family: @family, name: "Linked", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "savings"))
-    # Legacy association sufficient to count as linked
-    sfa.update!(account: linked)
+    # Link via AccountProvider
+    AccountProvider.create!(account: linked, provider: sfa)
 
     # Also create another manual account to make manuals_exist true
     Account.create!(family: @family, name: "Manual B", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"))
