@@ -205,7 +205,7 @@ class Family::DataImporter
         transaction = Transaction.new(
           category_id: new_category_id,
           merchant_id: new_merchant_id,
-          kind: data["kind"]
+          kind: data["kind"] || "standard"
         )
 
         entry = Entry.new(
