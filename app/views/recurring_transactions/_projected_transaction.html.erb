@@ -1,7 +1,7 @@
 <%# locals: (recurring_transaction:) %>
 
 <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4">
-  <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
+  <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
     <div class="max-w-full">
       <%= content_tag :div, class: ["flex items-center gap-2"] do %>
         <% if recurring_transaction.merchant.present? %>
@@ -28,7 +28,7 @@
 
         <div class="truncate">
           <div class="space-y-0.5">
-            <div class="flex items-center gap-2 min-w-0">
+            <div class="flex items-center gap-1 min-w-0">
               <div class="truncate flex-shrink">
                 <%= recurring_transaction.merchant.present? ? recurring_transaction.merchant.name : recurring_transaction.name %>
               </div>
@@ -53,7 +53,7 @@
     <span class="text-xs text-secondary"><%= t("recurring_transactions.recurring") %></span>
   </div>
 
-  <div class="col-span-2 ml-auto text-right">
+  <div class="col-span-2 ml-auto text-right shrink-0">
     <% display_amount = recurring_transaction.manual? && recurring_transaction.expected_amount_avg.present? ? recurring_transaction.expected_amount_avg : recurring_transaction.amount %>
     <%= content_tag :p, format_money(-Money.new(display_amount, recurring_transaction.currency)), class: ["font-medium", display_amount.negative? ? "text-success" : "text-subdued"] %>
   </div>

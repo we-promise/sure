@@ -1,7 +1,9 @@
-<% if @projected_recurring.any? && @q.blank? %>
+<% if @projected_recurring.any? %>
   <div id="upcoming" class="flex flex-col bg-container rounded-xl shadow-border-xs px-3 py-4 lg:p-4 relative group">
-    <div class="flex items-center gap-2 px-2">
-      <h3 class="text-xs uppercase font-medium text-secondary"><%= t("recurring_transactions.upcoming") %></h3>
+    <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
+      <div class="pl-0.5 col-span-8 flex items-center gap-4"><p>transaction</p></div>
+      <p class="col-span-2 md:block hidden">type</p>
+      <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block">amount</p>
     </div>
     <div class="space-y-6">
       <% @projected_recurring.group_by(&:next_expected_date).sort.each do |date, transactions| %>
