@@ -336,14 +336,12 @@ class SimplefinItemsController < ApplicationController
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
 
-    # Allow explicit relinking by listing available SimpleFIN accounts for the family.
-    # Only show unlinked SFAs - accounts that are already linked are hidden since
-    # they can be managed via their linked account.
+    # Allow explicit relinking by listing all SimpleFIN accounts for the family.
+    # Include already-linked SFAs so users can reassign them to a different manual account.
+    # The UI shows which SFAs are currently linked and to which account.
     @available_simplefin_accounts = Current.family.simplefin_items
       .includes(simplefin_accounts: { account_provider: :account })
       .flat_map(&:simplefin_accounts)
-      # Only show unlinked SFAs (no AccountProvider)
-      .select { |sfa| sfa.account_provider.nil? }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 

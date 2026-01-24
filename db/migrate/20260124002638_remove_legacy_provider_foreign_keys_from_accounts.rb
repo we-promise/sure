@@ -57,6 +57,9 @@ class RemoveLegacyProviderForeignKeysFromAccounts < ActiveRecord::Migration[7.2]
     add_index :accounts, :plaid_account_id
     add_index :accounts, :simplefin_account_id
 
+    add_foreign_key :accounts, :plaid_accounts, column: :plaid_account_id
+    add_foreign_key :accounts, :simplefin_accounts, column: :simplefin_account_id
+
     # Note: Rolling back will NOT restore data that was in these columns.
     # The AccountProvider records remain the source of truth.
   end

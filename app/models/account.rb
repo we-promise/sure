@@ -143,7 +143,11 @@ class Account < ApplicationRecord
       account = create_and_sync(attributes, skip_initial_sync: true)
 
       # Link the account to the SimpleFIN provider
-      simplefin_account.ensure_account_provider!(account)
+      link = simplefin_account.ensure_account_provider!(account)
+      unless link
+        account.destroy!
+        raise ActiveRecord::RecordNotSaved, "Failed to link SimpleFIN account #{simplefin_account.id} to account #{account.id}"
+      end
 
       account
     end

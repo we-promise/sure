@@ -37,8 +37,9 @@ module Account::Linkable
   end
 
   # Convenience method to get the provider name
+  # Uses AccountProvider#provider_name which has a fallback to provider_type
   def provider_name
-    provider&.provider_name
+    account_providers.first&.provider_name
   end
 
   # Check if account is linked to a specific provider

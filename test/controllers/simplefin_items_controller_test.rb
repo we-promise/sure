@@ -323,10 +323,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "No SimpleFIN accounts found for this family."
   end
 
-  test "select_existing_account shows only unlinked simplefin accounts" do
+  test "select_existing_account shows both linked and unlinked simplefin accounts for relinking" do
     account = accounts(:depository)
 
-    # Linked SFA - should NOT appear
+    # Linked SFA - SHOULD appear (so users can reassign it)
     linked_sfa = @simplefin_item.simplefin_accounts.create!(
       name: "Linked SF",
       account_id: "sf_linked_123",
@@ -344,7 +344,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     )
     AccountProvider.create!(account: linked_account, provider: linked_sfa)
 
-    # Unlinked SFA - should appear
+    # Unlinked SFA - should also appear
     unlinked_sfa = @simplefin_item.simplefin_accounts.create!(
       name: "Unlinked SF",
       account_id: "sf_unlinked_456",
@@ -355,13 +355,14 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     get select_existing_account_simplefin_items_url(account_id: account.id)
     assert_response :success
-    # Linked SFAs are hidden - they can be managed via their linked account
-    refute_includes @response.body, "Linked SF"
-    # Unlinked SFAs are shown as candidates to link
+    # Both linked and unlinked SFAs are shown so users can select or reassign
+    assert_includes @response.body, "Linked SF"
     assert_includes @response.body, "Unlinked SF"
+    # Linked SFAs show their current link info
+    assert_includes @response.body, "Currently linked to: Existing Linked Account"
   end
 
-  test "select_existing_account hides simplefin accounts after they have been relinked" do
+  test "select_existing_account shows linked simplefin accounts with current link info" do
     account = accounts(:depository)
 
     sfa = @simplefin_item.simplefin_accounts.create!(
@@ -372,7 +373,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       account_type: "depository"
     )
 
-    # Simulate post-relink state: legacy link cleared, AccountProvider exists.
+    # SFA is linked via AccountProvider
     linked_account = Account.create!(
       family: @family,
       name: "Final Linked Account",
@@ -385,7 +386,9 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     get select_existing_account_simplefin_items_url(account_id: account.id)
     assert_response :success
-    refute_includes @response.body, "Relinked SF"
+    # Linked SFAs are shown so users can reassign them to different accounts
+    assert_includes @response.body, "Relinked SF"
+    assert_includes @response.body, "Currently linked to: Final Linked Account"
   end
   test "destroy should unlink provider links" do
     # Create SFA and linked Account with AccountProvider
