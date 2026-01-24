@@ -158,8 +158,8 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unlock clears protection flags on user-modified entry" do
-    # Mark as protected
-    @entry.update!(user_modified: true)
+    # Mark as protected with locked_attributes on both entry and entryable
+    @entry.update!(user_modified: true, locked_attributes: { "name" => Time.current.iso8601 })
     @entry.trade.update!(locked_attributes: { "qty" => Time.current.iso8601 })
 
     assert @entry.reload.protected_from_sync?
@@ -171,7 +171,8 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
 
     @entry.reload
     assert_not @entry.user_modified?
-    assert_empty @entry.trade.locked_attributes
+    assert_empty @entry.locked_attributes, "Entry locked_attributes should be cleared"
+    assert_empty @entry.trade.locked_attributes, "Trade locked_attributes should be cleared"
     assert_not @entry.protected_from_sync?
   end
 

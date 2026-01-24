@@ -291,9 +291,9 @@ end
     entry = create_transaction(account: account, amount: 100)
     transaction = entry.entryable
 
-    # Mark as protected
-    entry.update!(user_modified: true)
-    transaction.update!(locked_attributes: { "name" => Time.current.iso8601 })
+    # Mark as protected with locked_attributes on both entry and entryable
+    entry.update!(user_modified: true, locked_attributes: { "date" => Time.current.iso8601 })
+    transaction.update!(locked_attributes: { "category_id" => Time.current.iso8601 })
 
     assert entry.reload.protected_from_sync?
 
@@ -304,7 +304,8 @@ end
 
     entry.reload
     assert_not entry.user_modified?
-    assert_empty entry.entryable.locked_attributes
+    assert_empty entry.locked_attributes, "Entry locked_attributes should be cleared"
+    assert_empty entry.entryable.locked_attributes, "Transaction locked_attributes should be cleared"
     assert_not entry.protected_from_sync?
   end
 

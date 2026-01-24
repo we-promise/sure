@@ -20,7 +20,7 @@
           <% entry.locked_fields_with_timestamps.each do |field, timestamp| %>
             <div class="flex items-center justify-between text-sm">
               <span class="text-primary"><%= field.humanize %></span>
-              <span class="text-secondary"><%= timestamp.respond_to?(:strftime) ? timestamp.strftime("%b %d, %Y") : timestamp %></span>
+              <span class="text-secondary"><%= timestamp.respond_to?(:strftime) ? l(timestamp.to_date, format: :long) : timestamp %></span>
             </div>
           <% end %>
         </div>

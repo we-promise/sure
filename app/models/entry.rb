@@ -271,30 +271,37 @@ class Entry < ApplicationRecord
     nil
   end
 
-  # Returns array of field names that are locked on the entryable.
+  # Returns array of field names that are locked on entry and entryable.
   #
   # @return [Array<String>] locked field names
   def locked_field_names
-    entryable&.locked_attributes&.keys || []
+    entry_keys = locked_attributes&.keys || []
+    entryable_keys = entryable&.locked_attributes&.keys || []
+    (entry_keys + entryable_keys).uniq
   end
 
   # Returns hash of locked field names to their lock timestamps.
+  # Combines locked_attributes from both entry and entryable.
   # Parses ISO8601 timestamps stored in locked_attributes.
   #
   # @return [Hash{String => Time}] field name to lock timestamp
   def locked_fields_with_timestamps
-    (entryable&.locked_attributes || {}).transform_values do |timestamp|
+    combined = (locked_attributes || {}).merge(entryable&.locked_attributes || {})
+    combined.transform_values do |timestamp|
       Time.zone.parse(timestamp.to_s) rescue timestamp
     end
   end
 
   # Clears protection flags so provider sync can update this entry again.
-  # Clears user_modified, import_locked flags, and all locked_attributes.
+  # Clears user_modified, import_locked flags, and all locked_attributes
+  # on both the entry and its entryable.
   #
   # @return [void]
   def unlock_for_sync!
-    update!(user_modified: false, import_locked: false)
-    entryable&.update!(locked_attributes: {})
+    self.class.transaction do
+      update!(user_modified: false, import_locked: false, locked_attributes: {})
+      entryable&.update!(locked_attributes: {})
+    end
   end
 
   class << self
