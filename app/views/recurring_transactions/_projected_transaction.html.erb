@@ -3,17 +3,17 @@
 <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4">
   <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
     <div class="max-w-full">
-      <%= content_tag :div, class: ["flex items-center gap-2"] do %>
+      <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
         <% if recurring_transaction.merchant.present? %>
           <% if recurring_transaction.merchant.logo_url.present? %>
             <%= image_tag Setting.transform_brand_fetch_url(recurring_transaction.merchant.logo_url),
-                class: "w-6 h-6 rounded-full",
+                class: "w-9 h-9 rounded-full",
                 loading: "lazy" %>
           <% else %>
             <%= render DS::FilledIcon.new(
               variant: :text,
               text: recurring_transaction.merchant.name,
-              size: "sm",
+              size: "lg",
               rounded: true
             ) %>
           <% end %>
@@ -21,7 +21,7 @@
           <%= render DS::FilledIcon.new(
             variant: :text,
             text: recurring_transaction.name,
-            size: "sm",
+            size: "lg",
             rounded: true
           ) %>
         <% end %>
