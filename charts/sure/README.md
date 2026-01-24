@@ -49,6 +49,12 @@ helm upgrade --install sure charts/sure \
 
 Expose the app via an Ingress (see values) or `kubectl port-forward svc/sure 8080:80 -n sure`.
 
+## Example values files
+
+The chart includes example values files demonstrating common configurations:
+
+- `values-example-envfrom.yaml` - Shows how to use `extraEnvFrom` to inject environment variables from secrets, which is more maintainable than listing each variable individually.
+
 ## Using external Postgres/Redis
 
 Disable the bundled CNPG/Redis resources and set URLs explicitly.
