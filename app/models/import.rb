@@ -4,12 +4,12 @@ class Import < ApplicationRecord
 
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
-  ALLOWED_CSV_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+  ALLOWED_CSV_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv application/x-ndjson application/json].freeze
   ALLOWED_PDF_MIME_TYPES = %w[application/pdf].freeze
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport QifImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport QifImport BulkImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 

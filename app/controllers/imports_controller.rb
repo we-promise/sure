@@ -85,7 +85,14 @@ class ImportsController < ApplicationController
       # Stream reading is not fully applicable here as we store the raw string in the DB,
       # but we have validated size beforehand to prevent memory exhaustion from massive files.
       import.update!(raw_file_str: file.read)
-      redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
+
+      # BulkImport (NDJSON) skips configuration and goes directly to confirm
+      if type == "BulkImport"
+        import.generate_rows_from_csv # Sets the row count
+        redirect_to import_confirm_path(import), notice: t("imports.create.ndjson_uploaded")
+      else
+        redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
+      end
     else
       redirect_to import_upload_path(import)
     end
