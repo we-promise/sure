@@ -41,7 +41,8 @@
             </div>
 
             <div class="text-secondary text-xs font-normal">
-              <%= t("recurring_transactions.expected_in", days: (recurring_transaction.next_expected_date - Date.today).to_i) %>
+              <%= days_left = (recurring_transaction.next_expected_date.to_date - Time.zone.today).to_i
+              days_left.zero? ? t("recurring_transactions.expected_today") : t("recurring_transactions.expected_in", count: days_left) %>
             </div>
           </div>
         </div>
