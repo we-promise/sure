@@ -8,8 +8,16 @@ module Localize
 
   private
     def switch_locale(&action)
-      locale = locale_from_param || locale_from_family || locale_from_accept_language || I18n.default_locale
+      locale = locale_from_param || locale_from_user || locale_from_accept_language || locale_from_family || I18n.default_locale
       I18n.with_locale(locale, &action)
+    end
+
+    def locale_from_user
+      locale = Current.user&.locale
+      return if locale.blank?
+
+      locale_sym = locale.to_sym
+      locale_sym if I18n.available_locales.include?(locale_sym)
     end
 
     def locale_from_family

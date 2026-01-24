@@ -35,6 +35,7 @@ nl:
         default_period: Standaard Periode
         default_account_order: Standaard Account Volgorde
         language: Taal
+        language_auto: Use browser language
         page_title: Voorkeuren
         theme_dark: Donker
         theme_light: Licht

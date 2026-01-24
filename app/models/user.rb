@@ -39,6 +39,7 @@ class User < ApplicationRecord
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
   validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
+  validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }, allow_nil: true
 
   # Password is required on create unless the user is being created via SSO JIT.
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.

@@ -34,6 +34,7 @@ pt-BR:
         general_title: Geral
         default_period: Período Padrão
         language: Idioma
+        language_auto: Use browser language
         page_title: Preferências
         theme_dark: Escuro
         theme_light: Claro

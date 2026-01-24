@@ -19,6 +19,7 @@ tr:
         general_title: Genel
         default_period: Varsayılan Dönem
         language: Dil
+        language_auto: Use browser language
         page_title: Tercihler
         theme_dark: Koyu
         theme_light: Açık

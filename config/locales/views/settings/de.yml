@@ -34,6 +34,7 @@ de:
         default_period: Standardzeitraum
         default_account_order: Standardreihenfolge der Konten
         language: Sprache
+        language_auto: Use browser language
         page_title: Einstellungen
         theme_dark: Dunkel
         theme_light: Hell
