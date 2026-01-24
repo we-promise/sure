@@ -98,7 +98,7 @@ class PlaidAccount::Investments::TransactionsProcessor
     end
 
     def transactions
-      plaid_account.raw_investments_payload["transactions"] || []
+      plaid_account.raw_holdings_payload["transactions"] || []
     end
 
     # Plaid unfortunately returns incorrect signage on some `quantity` values. They claim all "sell" transactions

@@ -5,7 +5,7 @@ class PlaidAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
-    encrypts :raw_investments_payload
+    encrypts :raw_holdings_payload
     encrypts :raw_liabilities_payload
   end
 
@@ -48,9 +48,9 @@ class PlaidAccount < ApplicationRecord
     save!
   end
 
-  def upsert_plaid_investments_snapshot!(investments_snapshot)
+  def upsert_plaid_holdings_snapshot!(holdings_snapshot)
     assign_attributes(
-      raw_investments_payload: investments_snapshot
+      raw_holdings_payload: holdings_snapshot
     )
 
     save!

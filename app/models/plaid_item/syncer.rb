@@ -61,7 +61,7 @@ class PlaidItem::Syncer
 
     def count_holdings(plaid_accounts)
       plaid_accounts.sum do |pa|
-        Array(pa.raw_investments_payload).size
+        Array(pa.raw_holdings_payload).size
       end
     end
 end
