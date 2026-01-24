@@ -150,7 +150,7 @@ class Family::DataImporter
 
         tag = @family.tags.build(
           name: data["name"],
-          color: data["color"]
+          color: data["color"] || Tag::COLORS.sample
         )
 
         tag.save!
