@@ -58,6 +58,14 @@ end
 
 Sidekiq.configure_server do |config|
   config.redis = redis_config
+
+  # Initialize auto-sync scheduler when Sidekiq server starts
+  config.on(:startup) do
+    AutoSyncScheduler.sync!
+    Rails.logger.info("[AutoSyncScheduler] Initialized sync_all_accounts cron job")
+  rescue => e
+    Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
+  end
 end
 
 Sidekiq.configure_client do |config|
@@ -67,14 +75,4 @@ end
 Sidekiq::Cron.configure do |config|
   # 10 min "catch-up" window in case worker process is re-deploying when cron tick occurs
   config.reschedule_grace_period = 600
-end
-
-# Initialize auto-sync scheduler when Sidekiq server starts
-Sidekiq.configure_server do |config|
-  config.on(:startup) do
-    AutoSyncScheduler.sync!
-    Rails.logger.info("[AutoSyncScheduler] Initialized sync_all_accounts cron job")
-  rescue => e
-    Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
-  end
 end
