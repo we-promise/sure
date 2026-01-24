@@ -77,34 +77,34 @@ class BulkImport < Import
 
   private
 
-  def parse_ndjson_counts
-    return {} unless raw_file_str.present?
+    def parse_ndjson_counts
+      return {} unless raw_file_str.present?
 
-    counts = Hash.new(0)
-    raw_file_str.each_line do |line|
-      next if line.strip.empty?
+      counts = Hash.new(0)
+      raw_file_str.each_line do |line|
+        next if line.strip.empty?
+        begin
+          record = JSON.parse(line)
+          counts[record["type"]] += 1 if record["type"]
+        rescue JSON::ParserError
+          # Skip invalid lines
+        end
+      end
+      counts
+    end
+
+    def valid_ndjson?
+      return false unless raw_file_str.present?
+
+      # Check at least first line is valid NDJSON
+      first_line = raw_file_str.lines.first&.strip
+      return false if first_line.blank?
+
       begin
-        record = JSON.parse(line)
-        counts[record["type"]] += 1 if record["type"]
+        record = JSON.parse(first_line)
+        record.key?("type") && record.key?("data")
       rescue JSON::ParserError
-        # Skip invalid lines
+        false
       end
     end
-    counts
-  end
-
-  def valid_ndjson?
-    return false unless raw_file_str.present?
-
-    # Check at least first line is valid NDJSON
-    first_line = raw_file_str.lines.first&.strip
-    return false if first_line.blank?
-
-    begin
-      record = JSON.parse(first_line)
-      record.key?("type") && record.key?("data")
-    rescue JSON::ParserError
-      false
-    end
-  end
 end
