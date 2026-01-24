@@ -21,10 +21,10 @@ module Notifiable
     end
 
     def render_flash_cta
-      return nil unless flash[:cta]
+      return view_context.content_tag(:div, "", id: "cta") unless flash[:cta]
 
       notification = resolve_cta(flash[:cta])
-      return nil unless notification
+      return view_context.content_tag(:div, "", id: "cta") unless notification
 
       view_context.render(**notification)
     end
