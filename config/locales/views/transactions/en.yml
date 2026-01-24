@@ -95,6 +95,9 @@ en:
       transaction: transaction
       transactions: transactions
       import: Import
+    list:
+      transaction: transaction
+      transactions: transactions
     toggle_recurring_section: Toggle upcoming recurring transactions
     search:
       filters:
