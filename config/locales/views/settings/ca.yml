@@ -41,6 +41,7 @@ ca:
         general_subtitle: Configura les teves preferències
         general_title: General
         language: Idioma
+        language_auto: Idioma del navegador
         page_title: Preferències
         theme_dark: Fosc
         theme_light: Clar

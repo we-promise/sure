@@ -1,0 +1,42 @@
+<%# locals: (entry:, unlock_path:) %>
+
+<%# Protection indicator - shows when entry is protected from sync overwrites %>
+<%= turbo_frame_tag dom_id(entry, :protection) do %>
+  <% if entry.protected_from_sync? && !entry.excluded? %>
+  <details class="mx-4 my-3 border border-primary rounded-lg overflow-hidden">
+    <summary class="flex items-center gap-2 cursor-pointer p-3 bg-container hover:bg-surface-hover list-none [&::-webkit-details-marker]:hidden">
+      <%= icon "lock", size: "sm", class: "text-secondary" %>
+      <span class="text-sm font-medium text-primary flex-1"><%= t("entries.protection.title") %></span>
+      <%= icon "chevron-down", size: "sm", class: "text-secondary transition-transform [[open]>&]:rotate-180" %>
+    </summary>
+    <div class="p-4 border-t border-primary bg-surface-inset space-y-4">
+      <p class="text-sm text-secondary">
+        <%= t("entries.protection.description") %>
+      </p>
+
+      <% if entry.locked_field_names.any? %>
+        <div class="space-y-2">
+          <p class="text-xs font-medium text-secondary"><%= t("entries.protection.locked_fields_label") %></p>
+          <% entry.locked_fields_with_timestamps.each do |field, timestamp| %>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-primary"><%= field.humanize %></span>
+              <span class="text-secondary"><%= timestamp.respond_to?(:strftime) ? l(timestamp.to_date, format: :long) : timestamp %></span>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%= link_to unlock_path,
+          class: "w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-secondary text-primary hover:bg-surface-hover transition-colors",
+          data: {
+            turbo_method: :post,
+            turbo_confirm: t("entries.protection.unlock_confirm"),
+            turbo_frame: "_top"
+          } do %>
+        <%= icon "unlock", size: "sm" %>
+        <span><%= t("entries.protection.unlock_button") %></span>
+      <% end %>
+    </div>
+  </details>
+  <% end %>
+<% end %>

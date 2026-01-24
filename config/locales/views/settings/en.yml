@@ -36,6 +36,7 @@ en:
         default_period: Default Period
         default_account_order: Default Account Order
         language: Language
+        language_auto: Browser language
         page_title: Preferences
         theme_dark: Dark
         theme_light: Light

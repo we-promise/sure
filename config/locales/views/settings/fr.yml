@@ -35,6 +35,7 @@ fr:
         default_period: Période par défaut
         default_account_order: Ordre d'affichage des comptes par défaut
         language: Langue
+        language_auto: Langue du navigateur
         page_title: Préférences
         theme_dark: Sombre
         theme_light: Clair
