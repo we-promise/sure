@@ -128,20 +128,20 @@ ru:
           student: Студенческий займ
           auto: Автокредит
           other: Прочий займ
-      balance: Balance
+      balance: Баланс
       cancel: Отмена
       choose_account_type: "Выберите правильный тип для каждого счета Lunch Flow:"
       create_accounts: Создать счета
       creating_accounts: Создание счетов...
       historical_data_range: "Период исторических данных:"
-      subtitle: Choose the correct account types for your imported accounts
-      sync_start_date_help: Select how far back you want to sync transaction history. Maximum 3 years of history available.
-      sync_start_date_label: "Start syncing transactions from:"
-      title: Set Up Your Lunch Flow Accounts
+      subtitle: Выберите правильный тип для каждого импортированного счета
+      sync_start_date_help: Выберите, за какой период синхронизировать историю транзакций. Доступно до 3 лет истории.
+      sync_start_date_label: "Начать синхронизацию транзакций с:"
+      title: Настройка счетов Lunch Flow
     complete_account_setup:
-      all_skipped: "All accounts were skipped. No accounts were created."
-      creation_failed: "Failed to create accounts: %{error}"
-      no_accounts: "No accounts to set up."
+      all_skipped: "Все счета были пропущены. Счета не созданы."
+      creation_failed: "Не удалось создать счета: %{error}"
+      no_accounts: "Нет счетов для настройки."
       success:
         one: "Успешно создан %{count} счет."
         few: "Успешно создано %{count} счета."

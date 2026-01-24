@@ -47,7 +47,11 @@ ru:
     new:
       title: Новый торговец
     perform_merge:
-      success: Успешно объединено %{count} торговцев
+      success:
+        one: "Успешно объединён %{count} торговец"
+        few: "Успешно объединено %{count} торговца"
+        many: "Успешно объединено %{count} торговцев"
+        other: "Успешно объединено %{count} торговца"
       no_merchants_selected: Торговцы для объединения не выбраны
       target_not_found: Целевой торговец не найден
       invalid_merchants: Выбраны неверные торговцы
