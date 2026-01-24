@@ -12,3 +12,12 @@ en:
       loading: Loading entries...
     update:
       success: Entry updated
+    unlock:
+      success: Entry unlocked. It may be updated on next sync.
+    protection:
+      tooltip: Protected from sync
+      title: Protected from sync
+      description: Your edits to this entry won't be overwritten by provider sync.
+      locked_fields_label: "Locked fields:"
+      unlock_button: Allow sync to update
+      unlock_confirm: Allow sync to update this entry? Your changes may be overwritten on the next sync.

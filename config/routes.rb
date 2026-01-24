@@ -231,7 +231,11 @@ Rails.application.routes.draw do
       post :reset_security
     end
   end
-  resources :trades, only: %i[show new create update destroy]
+  resources :trades, only: %i[show new create update destroy] do
+    member do
+      post :unlock
+    end
+  end
   resources :valuations, only: %i[show new create update destroy] do
     post :confirm_create, on: :collection
     post :confirm_update, on: :member
@@ -257,6 +261,7 @@ Rails.application.routes.draw do
       post :mark_as_recurring
       post :merge_duplicate
       post :dismiss_duplicate
+      post :unlock
     end
   end
 

@@ -1,6 +1,7 @@
 class TransactionsController < ApplicationController
   include EntryableResource
 
+  before_action :set_entry_for_unlock, only: :unlock
   before_action :store_params!, only: :index
 
   def new
@@ -235,6 +236,13 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path, status: :see_other
   end
 
+  def unlock
+    @entry.unlock_for_sync!
+    flash[:notice] = t("entries.unlock.success")
+
+    redirect_back_or_to transactions_path
+  end
+
   def mark_as_recurring
     transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
 
@@ -286,6 +294,11 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def set_entry_for_unlock
+      transaction = Current.family.transactions.find(params[:id])
+      @entry = transaction.entry
+    end
+
     def needs_rule_notification?(transaction)
       return false if Current.user.rule_prompts_disabled
 

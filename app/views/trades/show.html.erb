@@ -6,6 +6,8 @@
   <% trade = @entry.trade %>
 
   <% dialog.with_body do %>
+    <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_trade_path(trade) %>
+
     <% dialog.with_section(title: t(".details"), open: true) do %>
       <div class="pb-4">
         <%= styled_form_with model: @entry,

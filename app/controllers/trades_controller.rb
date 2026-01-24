@@ -1,6 +1,8 @@
 class TradesController < ApplicationController
   include EntryableResource
 
+  before_action :set_entry_for_unlock, only: :unlock
+
   # Defaults to a buy trade
   def new
     @account = Current.family.accounts.find_by(id: params[:account_id])
@@ -30,6 +32,7 @@ class TradesController < ApplicationController
 
   def update
     if @entry.update(update_entry_params)
+      @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.sync_account_later
 
@@ -51,7 +54,19 @@ class TradesController < ApplicationController
     end
   end
 
+  def unlock
+    @entry.unlock_for_sync!
+    flash[:notice] = t("entries.unlock.success")
+
+    redirect_back_or_to account_path(@entry.account)
+  end
+
   private
+    def set_entry_for_unlock
+      trade = Current.family.trades.find(params[:id])
+      @entry = trade.entry
+    end
+
     def entry_params
       params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature,

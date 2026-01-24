@@ -156,4 +156,56 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with job: SyncJob
     assert_redirected_to account_url(created_entry.account)
   end
+
+  test "unlock clears protection flags on user-modified entry" do
+    # Mark as protected
+    @entry.update!(user_modified: true)
+    @entry.trade.update!(locked_attributes: { "qty" => Time.current.iso8601 })
+
+    assert @entry.reload.protected_from_sync?
+
+    post unlock_trade_path(@entry.trade)
+
+    assert_redirected_to account_path(@entry.account)
+    assert_equal "Entry unlocked. It may be updated on next sync.", flash[:notice]
+
+    @entry.reload
+    assert_not @entry.user_modified?
+    assert_empty @entry.trade.locked_attributes
+    assert_not @entry.protected_from_sync?
+  end
+
+  test "unlock clears import_locked flag" do
+    @entry.update!(import_locked: true)
+
+    assert @entry.reload.protected_from_sync?
+
+    post unlock_trade_path(@entry.trade)
+
+    assert_redirected_to account_path(@entry.account)
+    @entry.reload
+    assert_not @entry.import_locked?
+    assert_not @entry.protected_from_sync?
+  end
+
+  test "update locks saved attributes" do
+    assert_not @entry.user_modified?
+    assert_empty @entry.trade.locked_attributes
+
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }
+
+    @entry.reload
+    assert @entry.user_modified?
+    assert @entry.trade.locked_attributes.key?("qty")
+    assert @entry.trade.locked_attributes.key?("price")
+  end
 end
