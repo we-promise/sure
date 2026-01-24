@@ -27,7 +27,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       transactions: [] # not relevant for test
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve)
                       .with(plaid_security_id: "123")
@@ -122,7 +122,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       transactions: []
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     # Mock security resolver for all three securities
     @security_resolver.expects(:resolve)
@@ -172,7 +172,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       transactions: []
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     # First security fails to resolve
     @security_resolver.expects(:resolve)
@@ -210,7 +210,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       transactions: []
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve)
                       .with(plaid_security_id: "string_values")
@@ -261,7 +261,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       transactions: []
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve)
                       .with(plaid_security_id: "missing_quantity")
@@ -307,7 +307,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       transactions: []
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve)
                       .with(plaid_security_id: "no_currency")

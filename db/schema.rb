@@ -939,7 +939,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_24_002638) do
     t.datetime "updated_at", null: false
     t.jsonb "raw_payload", default: {}
     t.jsonb "raw_transactions_payload", default: {}
-    t.jsonb "raw_investments_payload", default: {}
+    t.jsonb "raw_holdings_payload", default: {}
     t.jsonb "raw_liabilities_payload", default: {}
     t.index ["plaid_id"], name: "index_plaid_accounts_on_plaid_id", unique: true
     t.index ["plaid_item_id"], name: "index_plaid_accounts_on_plaid_item_id"
