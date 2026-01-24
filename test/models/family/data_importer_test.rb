@@ -233,7 +233,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, result[:entries].count
 
     account = @family.accounts.find_by(name: "Property")
-    valuation = account.valuations.find_by(entry: { name: "Updated valuation" })
+    valuation = account.valuations.joins(:entry).find_by(entries: { name: "Updated valuation" })
     assert_not_nil valuation
     assert_equal 520000.0, valuation.entry.amount.to_f
   end
