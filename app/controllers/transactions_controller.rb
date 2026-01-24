@@ -69,6 +69,7 @@ class TransactionsController < ApplicationController
     if @entry.save
       @entry.sync_account_later
       @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       flash[:notice] = "Transaction created"
@@ -99,6 +100,9 @@ class TransactionsController < ApplicationController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later
 
+      # Reload to ensure fresh state for turbo stream rendering
+      @entry.reload
+
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
         format.turbo_stream do
@@ -107,6 +111,11 @@ class TransactionsController < ApplicationController
               dom_id(@entry, :header),
               partial: "transactions/header",
               locals: { entry: @entry }
+            ),
+            turbo_stream.replace(
+              dom_id(@entry, :protection),
+              partial: "entries/protection_indicator",
+              locals: { entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) }
             ),
             turbo_stream.replace(@entry),
             *flash_notification_stream_items
@@ -207,7 +216,7 @@ class TransactionsController < ApplicationController
         original_name: @entry.name,
         original_date: I18n.l(@entry.date, format: :long))
 
-      @entry.account.entries.create!(
+      new_entry = @entry.account.entries.create!(
         name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
         date: @entry.date,
         amount: signed_amount,
@@ -221,6 +230,10 @@ class TransactionsController < ApplicationController
           investment_activity_label: activity_label
         )
       )
+
+      # Mark the new trade as user-modified to protect from sync
+      new_entry.lock_saved_attributes!
+      new_entry.mark_user_modified!
 
       # Mark original transaction as excluded (soft delete)
       @entry.update!(excluded: true)

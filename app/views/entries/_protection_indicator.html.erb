@@ -1,7 +1,8 @@
 <%# locals: (entry:, unlock_path:) %>
 
 <%# Protection indicator - shows when entry is protected from sync overwrites %>
-<% if entry.protected_from_sync? && !entry.excluded? %>
+<%= turbo_frame_tag dom_id(entry, :protection) do %>
+  <% if entry.protected_from_sync? && !entry.excluded? %>
   <details class="mx-4 my-3 border border-primary rounded-lg overflow-hidden">
     <summary class="flex items-center gap-2 cursor-pointer p-3 bg-container hover:bg-surface-hover list-none [&::-webkit-details-marker]:hidden">
       <%= icon "lock", size: "sm", class: "text-secondary" %>
@@ -37,4 +38,5 @@
       <% end %>
     </div>
   </details>
+  <% end %>
 <% end %>

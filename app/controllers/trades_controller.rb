@@ -19,6 +19,12 @@ class TradesController < ApplicationController
     @model = Trade::CreateForm.new(create_params.merge(account: @account)).create
 
     if @model.persisted?
+      # Mark manually created entries as user-modified to protect from sync
+      if @model.is_a?(Entry)
+        @model.lock_saved_attributes!
+        @model.mark_user_modified!
+      end
+
       flash[:notice] = t("entries.create.success")
 
       respond_to do |format|
@@ -36,16 +42,24 @@ class TradesController < ApplicationController
       @entry.mark_user_modified!
       @entry.sync_account_later
 
+      # Reload to ensure fresh state for turbo stream rendering
+      @entry.reload
+
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t("entries.update.success") }
         format.turbo_stream do
           render turbo_stream: [
             turbo_stream.replace(
-              "header_entry_#{@entry.id}",
+              dom_id(@entry, :header),
               partial: "trades/header",
               locals: { entry: @entry }
             ),
-            turbo_stream.replace("entry_#{@entry.id}", partial: "entries/entry", locals: { entry: @entry })
+            turbo_stream.replace(
+              dom_id(@entry, :protection),
+              partial: "entries/protection_indicator",
+              locals: { entry: @entry, unlock_path: unlock_trade_path(@entry.trade) }
+            ),
+            turbo_stream.replace(@entry)
           ]
         end
       end
