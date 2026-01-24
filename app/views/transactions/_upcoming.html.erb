@@ -6,7 +6,10 @@
       <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block">amount</p>
     </div>
     <div class="space-y-6">
-      <% @projected_recurring.group_by(&:next_expected_date).sort.each do |date, transactions| %>
+      <% upcoming_transactions = @projected_recurring.select do |t|
+        t.next_expected_date.to_date.between?(Time.zone.today, Time.zone.today + 10.days)
+      end 
+      upcoming_transactions.group_by(&:next_expected_date).sort.each do |date, transactions| %>
         <div id="upcoming-group-<%= date %>" class="bg-container-inset rounded-xl p-1 w-full">
           <div class="py-2 px-4 flex items-center justify-between font-medium text-xs text-secondary">
             <p class="uppercase space-x-1.5">
