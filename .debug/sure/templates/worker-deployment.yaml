@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: RELEASE-NAME-sure-worker
+  labels:
+    app.kubernetes.io/name: sure
+    helm.sh/chart: sure-0.6.7-alpha
+    app.kubernetes.io/version: "0.6.7-alpha"
+    app.kubernetes.io/instance: RELEASE-NAME
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+      app.kubernetes.io/name: sure
+      app.kubernetes.io/instance: RELEASE-NAME
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/name: sure
+        app.kubernetes.io/instance: RELEASE-NAME
+      annotations:
+        {}
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: sidekiq
+          image: ghcr.io/we-promise/sure:0.6.6
+          imagePullPolicy: IfNotPresent
+          command: ["bash", "-lc"]
+          # Default: use Sidekiq's config/sidekiq.yml so all priority queues are polled
+          args:
+            - |
+              bundle exec sidekiq -C config/sidekiq.yml
+          env:
+            - name: RAILS_ENV
+              value: "production"
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-sure-app
+                  key: SECRET_KEY_BASE
+            - name: ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-sure-app
+                  key: ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - name: ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-sure-app
+                  key: ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - name: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-sure-app
+                  key: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-sure-db-app
+                  key: password
+            - name: DATABASE_URL
+              value: "postgresql://sure:$(DB_PASSWORD)@sure-db-rw.NAMESPACE.svc.cluster.local:5432/sure?sslmode=prefer"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-sure-app
+                  key: redis-password
+            - name: REDIS_URL
+              value: "redis://default:$(REDIS_PASSWORD)@RELEASE-NAME-sure-redis-master.NAMESPACE.svc.cluster.local:6379/0"
+            - name: AI_DEBUG_MODE
+              value: ""
+            - name: ONBOARDING_STATE
+              value: "open"
+            - name: SELF_HOSTED
+              value: "true"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+          resources:
+            limits: {}
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            []
+      volumes:
+        []
+      nodeSelector:
+        {}
+      affinity:
+        {}
+      tolerations:
+        []
+      topologySpreadConstraints:
+        []

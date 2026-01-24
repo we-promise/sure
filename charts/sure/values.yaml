@@ -20,8 +20,24 @@ rails:
   # Extra environment variables (non-sensitive). Key/values become env vars.
   extraEnv: {}
   # Extra environment variables with full EnvVar objects (supports valueFrom/secretKeyRef)
+  # Use this when you need to reference specific keys from secrets/configmaps
+  # Example:
+  # extraEnvVars:
+  #   - name: SPECIFIC_KEY
+  #     valueFrom:
+  #       secretKeyRef:
+  #         name: my-secret
+  #         key: some-key
   extraEnvVars: []
-  # Extra envFrom sources applied to all workloads
+  # Extra envFrom sources applied to all workloads (web, worker, jobs)
+  # Use this to inject ALL keys from a secret or configmap as environment variables
+  # This is more maintainable than listing each key individually in extraEnvVars
+  # Example:
+  # extraEnvFrom:
+  #   - secretRef:
+  #       name: sure-demo  # All keys from this secret become env vars
+  #   - configMapRef:
+  #       name: app-config
   extraEnvFrom: []
   # Control whether encryption env vars are injected into workloads
   encryptionEnv:

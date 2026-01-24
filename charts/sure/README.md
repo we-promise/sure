@@ -558,22 +558,88 @@ Note: Even if `simplefin.encryption.enabled=false`, the app initializer expects 
 
 For simple string key/value envs, continue to use `rails.extraEnv` and the per-workload `web.extraEnv` / `worker.extraEnv` maps.
 
-When you need `valueFrom` (e.g., Secret/ConfigMap references) or full EnvVar objects, use the new arrays:
+### Using extraEnvFrom (Recommended for large secret injection)
+
+When you have many environment variables stored in a Secret or ConfigMap, instead of mapping each one individually with `extraEnvVars`, use `extraEnvFrom` to inject all keys at once. This is more maintainable and less error-prone.
+
+**Example: Inject all keys from a Secret**
+
+```yaml
+rails:
+  extraEnvFrom:
+    - secretRef:
+        name: sure-demo  # All keys from this secret become env vars
+```
+
+This is equivalent to manually listing each key with `extraEnvVars`, but much more concise:
+
+```yaml
+# Instead of this repetitive approach:
+rails:
+  extraEnvVars:
+    - name: OPENAI_ACCESS_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: sure-demo
+          key: OPENAI_ACCESS_TOKEN
+    - name: OIDC_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: sure-demo
+          key: OIDC_CLIENT_ID
+    # ... many more entries ...
+
+# Use this simpler approach:
+rails:
+  extraEnvFrom:
+    - secretRef:
+        name: sure-demo  # All keys automatically injected
+```
+
+**Example: Inject from multiple sources**
+
+You can combine secrets and ConfigMaps:
+
+```yaml
+rails:
+  extraEnvFrom:
+    - secretRef:
+        name: sure-secrets     # Sensitive values
+    - configMapRef:
+        name: app-config       # Non-sensitive configuration
+```
+
+**Example: Per-workload injection**
+
+You can also inject environment variables specific to web or worker:
+
+```yaml
+web:
+  extraEnvFrom:
+    - configMapRef:
+        name: web-specific-config
+
+worker:
+  extraEnvFrom:
+    - configMapRef:
+        name: worker-specific-config
+```
+
+### Using extraEnvVars (for individual key references)
+
+When you need `valueFrom` for specific keys or full EnvVar objects, use `extraEnvVars`:
 
 ```yaml
 rails:
   extraEnvVars:
-    - name: SOME_FROM_SECRET
+    - name: SPECIFIC_KEY
       valueFrom:
         secretKeyRef:
           name: my-secret
           key: some-key
-  extraEnvFrom:
-    - secretRef:
-        name: another-secret
 ```
 
-These are injected into web, worker, migrate job/initContainer, CronJobs, and the SimpleFin backfill job in addition to the simple maps.
+**Note**: Both `extraEnvVars` and `extraEnvFrom` are injected into web, worker, migrate job/initContainer, CronJobs, and the SimpleFin backfill job in addition to the simple maps.
 
 ## Writable filesystem and /tmp
 
