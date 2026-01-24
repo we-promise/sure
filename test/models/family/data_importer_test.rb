@@ -568,7 +568,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
   private
 
-  def build_ndjson(records)
-    records.map(&:to_json).join("\n")
-  end
+    def build_ndjson(records)
+      records.map(&:to_json).join("\n")
+    end
 end
