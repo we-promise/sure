@@ -190,7 +190,11 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should not return category from another family" do
-    other_family_category = categories(:one) # belongs to :empty family
+    other_family_category = families(:empty).categories.create!(
+      name: "Other Family Category",
+      color: "#FF0000",
+      classification: "expense"
+    )
 
     get "/api/v1/categories/#{other_family_category.id}", params: {}, headers: {
       "Authorization" => "Bearer #{@access_token.token}"
