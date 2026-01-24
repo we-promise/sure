@@ -44,23 +44,26 @@
   </header>
 
   <%= render "summary", totals: @search.totals %>
+  <% if Current.family.recurring_transactions_disabled? %>
+    <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+  <% else %>
+    <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
+      <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
+        <% nav.with_btn(id: "transactions", label: t("transactions.show.tabs.transactions"), classes: "px-6") %>
+        <% nav.with_btn(id: "upcoming", label: t("transactions.show.tabs.upcoming"), classes: "px-6") %>
+      <% end %>
 
-  <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
-    <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
-      <% nav.with_btn(id: "transactions", label: t("transactions.show.tabs.transactions"), classes: "px-6") %>
-      <% nav.with_btn(id: "upcoming", label: t("transactions.show.tabs.upcoming"), classes: "px-6") %>
-    <% end %>
+      <% tabs.with_panel(tab_id: "transactions") do %>
+        <div class="bg-container rounded-xl shadow-border-xs">
+          <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+        </div>
+      <% end %>
 
-    <% tabs.with_panel(tab_id: "transactions") do %>
-      <div class="bg-container rounded-xl shadow-border-xs">
-        <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
-      </div>
-    <% end %>
-
-    <% tabs.with_panel(tab_id: "upcoming") do %>
-      <div class="bg-container rounded-xl shadow-border-xs">
-        <%= render "transactions/upcoming" %>
-      </div>
+      <% tabs.with_panel(tab_id: "upcoming") do %>
+        <div class="bg-container rounded-xl shadow-border-xs">
+          <%= render "transactions/upcoming" %>
+        </div>
+      <% end %>
     <% end %>
   <% end %>
 </div>
