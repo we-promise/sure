@@ -281,8 +281,8 @@ class RuleTest < ActiveSupport::TestCase
     assert parent_index < child_index, "Parent should appear before child in hierarchical order"
 
     # Child should have indented name (non-breaking space prefix)
-    assert_equal "Food", parent_option[0]
-    assert_equal "\u00A0\u00A0\u00A0\u00A0Groceries", child_option[0], "Child should have indented name"
+    assert_equal "Test Parent Category", parent_option[0]
+    assert_equal "\u00A0\u00A0\u00A0\u00A0Test Child Category", child_option[0], "Child should have indented name"
   end
 
   test "transaction_category condition filter returns hierarchically ordered options" do
@@ -305,7 +305,7 @@ class RuleTest < ActiveSupport::TestCase
     assert parent_index < child_index, "Parent should appear before child in hierarchical order"
 
     # Child should have indented name (non-breaking space prefix)
-    assert_equal "Food", parent_option[0]
-    assert_equal "\u00A0\u00A0\u00A0\u00A0Groceries", child_option[0], "Child should have indented name"
+    assert_equal "Test Parent Category", parent_option[0]
+    assert_equal "\u00A0\u00A0\u00A0\u00A0Test Child Category", child_option[0], "Child should have indented name"
   end
 end

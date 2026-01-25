@@ -3,12 +3,12 @@ one:
   family: empty
 
 parent_category:
-  name: Food
+  name: Test Parent Category
   family: empty
   classification: expense
 
 child_category:
-  name: Groceries
+  name: Test Child Category
   parent: parent_category
   family: empty
   classification: expense
