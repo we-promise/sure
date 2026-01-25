@@ -14,7 +14,7 @@ class Settings::LlmUsagesController < ApplicationController
                          .where(created_at: @start_date.beginning_of_day..@end_date.end_of_day)
                          .order(created_at: :desc)
 
-    @statistics = LlmUsage.statistics_for_collection(@llm_usages, currency: Current.family.currency)
+    @statistics = LlmUsage.statistics_for_family(Current.family, start_date: @start_date.beginning_of_day, end_date: @end_date.end_of_day)
   end
 
   private

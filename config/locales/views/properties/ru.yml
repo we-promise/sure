@@ -39,7 +39,7 @@ ru:
       none: (нет)
       postal_code: Индекс
       postal_code_placeholder: '125009'
-      region: Область/Регион
+      region: Область/Region
       region_placeholder: Московская обл.
       subtype_prompt: Выберите тип недвижимости
       year_built: Год постройки
@@ -62,22 +62,3 @@ ru:
         tab_overview: Обзор
         tab_value: Стоимость
         tab_address: Адрес
-    subtypes:
-      single_family_home:
-        short: "Дом"
-        long: "Частный дом"
-      multi_family_home:
-        short: "Многокв. дом"
-        long: "Многоквартирный дом"
-      condominium:
-        short: "Кондо"
-        long: "Кондоминиум"
-      townhouse:
-        short: "Таунхаус"
-        long: "Таунхаус"
-      investment_property:
-        short: "Инвест. объект"
-        long: "Инвестиционная недвижимость"
-      second_home:
-        short: "Второй дом"
-        long: "Второй дом (дача)"
