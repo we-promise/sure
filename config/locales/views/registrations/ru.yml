@@ -1,4 +1,3 @@
----
 ru:
   helpers:
     label:
@@ -18,11 +17,7 @@ ru:
       password_no_number: "должен содержать хотя бы одно число"
       password_no_special: "должен содержать хотя бы один специальный символ"
     new:
-      invitation_message: "%{
-        inviter
-        } пригласил вас присоединиться как %{
-        role
-        }"
+      invitation_message: "%{inviter} пригласил вас присоединиться как %{role}"
       join_family_title: Присоединиться к %{family}
       role_admin: администратора
       role_member: участника

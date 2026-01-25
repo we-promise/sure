@@ -1,4 +1,3 @@
----
 ru:
   subscriptions:
     self_hosted_alert: "%{product_name} недоступен в режиме self-hosted."
@@ -28,7 +27,6 @@ ru:
         many: "Ваши данные будут удалены через %{count} дней"
         other: "Ваши данные будут удалены через %{count} дня"
       trial_over: "Ваш пробный период закончился"
-  subscriptions:
     create:
       welcome: "Добро пожаловать в Sure!"
       trial_error: "Вы уже начали или завершили пробный период. Пожалуйста, перейдите на платный тариф, чтобы продолжить."
