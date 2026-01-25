@@ -8,11 +8,11 @@
     <% if import.requires_account? %>
       <div class="w-full max-w-full overflow-hidden mb-4">
         <div class="overflow-x-auto">
-          <div class="flex items-center justify-between p-4 gap-4 text-secondary bg-red-100 border border-red-200 rounded-lg w-[650px] min-w-0 mx-auto">
+          <div class="flex items-center justify-between p-4 gap-4 text-destructive bg-destructive/10 border border-destructive/20 rounded-lg w-[650px] min-w-0 mx-auto">
             <%= tag.p t(".no_accounts"), class: "text-sm" %>
 
             <%= render DS::Link.new(
-              text: "Create account",
+              text: t(".create_account"),
               variant: "primary",
               href: new_account_path(return_to: import_confirm_path(import)),
               frame: :modal
@@ -23,7 +23,7 @@
     <% elsif import.has_unassigned_account? %>
       <div class="w-full max-w-full overflow-hidden mb-4">
         <div class="overflow-x-auto">
-          <div class="flex items-center justify-between p-4 gap-4 text-secondary bg-yellow-100 border border-yellow-200 rounded-lg w-[650px] min-w-0 mx-auto">
+          <div class="flex items-center justify-between p-4 gap-4 text-warning bg-warning/10 border border-warning/20 rounded-lg w-[650px] min-w-0 mx-auto">
             <%= tag.p t(".unassigned_account"), class: "text-sm" %>
             <%= render DS::Link.new(
               text: t(".create_account"),
@@ -47,7 +47,7 @@
             <p class="justify-self-end"><%= t(".rows_label") %></p>
           </div>
 
-          <div class="shadow-border-xs rounded-md divide-y divide-alpha-black-100 text-sm">
+          <div class="shadow-border-xs rounded-md divide-y divide-alpha-black-100 theme-dark:divide-alpha-white-100 text-sm">
             <% mappings.sort_by(&:key).each do |mapping| %>
               <div class="px-5 py-3 bg-container first:rounded-tl-xl first:rounded-tr-xl last:rounded-bl-xl last:rounded-br-xl">
                 <%= render partial: "import/mappings/form", locals: { mapping: mapping } %>
@@ -60,7 +60,7 @@
 
     <div class="flex justify-center w-full">
       <%= render DS::Link.new(
-        text: "Next",
+        text: t(".next"),
         variant: "primary",
         href: is_last_step ? import_path(import) : url_for(step: step_idx + 2),
         icon: "arrow-right",

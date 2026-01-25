@@ -6,6 +6,7 @@ ru:
       link_provider: Привязать к провайдеру
       unlink_provider: Отвязать от провайдера
       troubleshoot: Устранение неполадок
+      deletion_in_progress: (выполняется удаление...)
     chart:
       data_not_available: Нет данных за выбранный период
     create:
@@ -45,8 +46,19 @@ ru:
         lunchflow_entry: Привязать счет Lunch Flow
         manual_entry: Ввести баланс вручную
         title: Как вы хотите добавить счет?
+      container:
+        previous: Назад
+        next: Далее
+        select: Выбрать
+        navigate: Навигация
+        close: Закрыть
       title: Что вы хотите добавить?
     show:
+      tabs:
+        activity: Активность
+        holdings: Активы
+        overview: Обзор
+      complete_setup: Завершить настройку
       activity:
         amount: Сумма
         balance: Баланс

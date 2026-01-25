@@ -1,6 +1,8 @@
 ---
 ru:
   shared:
+    app_version:
+      version: Версия
     confirm_modal:
       accept: Подтвердить
       body_html: "<p>Вы не сможете отменить это решение</p>"

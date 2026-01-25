@@ -3,20 +3,30 @@ ru:
   valuations:
     form:
       amount: Сумма
-      submit: Добавить обновление баланса
+      submit: Обновить баланс
     header:
       balance: Баланс
     index:
       change: изменение
       date: дата
       new_entry: Новая запись
-      no_valuations: Оценок для этого счета пока нет
+      no_valuations: Для этого счета пока нет оценок
       valuations: Стоимость
-      value: значение
+      value: стоимость
     new:
       title: Новый баланс
+      submit: Подтвердить
+      amount: Сумма
+    confirm_create:
+      title: Подтвердите новый баланс
+      confirm: Подтвердить
+    confirm_update:
+      title: Обновить баланс
+      update: Обновить
     show:
       amount: Сумма
+      amount_label: "Стоимость счета на дату"
+      update_value: "Обновить стоимость"
       date_label: Дата
       delete: Удалить
       delete_subtitle: Это действие нельзя отменить
@@ -25,6 +35,28 @@ ru:
       name_label: Название
       name_placeholder: Введите название для этой записи
       note_label: Заметки
-      note_placeholder: Добавьте дополнительные сведения об этой записи
+      note_placeholder: Добавьте дополнительные детали об этой записи
       overview: Обзор
       settings: Настройки
+    confirmation_contents:
+      investment_intro: "Это %{action_verb} стоимость счета на %{date} на:"
+      total_value: Общая стоимость счета
+      holdings_value: Стоимость активов
+      brokerage_cash: Денежные средства
+      intro: "%{action_verb} %{type} на %{date} на %{amount}."
+      recalculation_warning: "Все будущие транзакции и балансы будут пересчитаны на основе этого %{action}."
+      change: изменения
+      update: обновления
+      types:
+        depository: баланс счета
+        credit_card: баланс кредитной карты
+        loan: остаток кредита
+        property: стоимость недвижимости
+        vehicle: стоимость транспорта
+        crypto: крипто-баланс
+        other_asset: стоимость актива
+        other_liability: остаток обязательства
+        default: баланс
+    action_verbs:
+      set: установит
+      update: обновит

@@ -8,6 +8,8 @@ en:
     empty:
       description: Try adding an entry, editing filters or refining your search
       title: No entries found
+    selection_bar:
+      delete: Delete
     loading:
       loading: Loading entries...
     update:

@@ -11,11 +11,11 @@
     <div class="flex items-center gap-2">
       <%# Show prefix on condition groups, except the first one %>
       <div class="pl-2" data-condition-prefix>
-        <span class="font-medium uppercase text-xs">and</span>
+        <span class="font-medium uppercase text-xs"><%= t("rules.conditions.and") %></span>
       </div>
-      <p class="text-sm text-secondary">match</p>
-      <%= form.select :operator, [["all", "and"], ["any", "or"]], { container_class: "w-fit" }, data: { rules_target: "operatorField" } %>
-      <p class="text-sm text-secondary">of the following conditions</p>
+      <p class="text-sm text-secondary"><%= t("rules.conditions.match") %></p>
+      <%= form.select :operator, [[t("rules.conditions.all"), "and"], [t("rules.conditions.any"), "or"]], { container_class: "w-fit" }, data: { rules_target: "operatorField" } %>
+      <p class="text-sm text-secondary"><%= t("rules.conditions.of_the_following") %></p>
     </div>
 
     <%= icon(
@@ -40,7 +40,7 @@
   </ul>
 
   <%= render DS::Button.new(
-    text: "Add condition",
+    text: t("rules.conditions.add_condition"),
     leading_icon: "plus",
     variant: "ghost",
     type: "button",

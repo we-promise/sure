@@ -15,8 +15,18 @@ en:
       value: value
     new:
       title: New balance
+      submit: Confirm
+      amount: Amount
+    confirm_create:
+      title: Confirm new balance
+      confirm: Confirm
+    confirm_update:
+      title: Update balance
+      update: Update
     show:
       amount: Amount
+      amount_label: "Account value on date"
+      update_value: "Update value"
       date_label: Date
       delete: Delete
       delete_subtitle: This action cannot be undone
@@ -28,3 +38,25 @@ en:
       note_placeholder: Add any additional details about this entry
       overview: Overview
       settings: Settings
+    confirmation_contents:
+      investment_intro: "This will %{action_verb} the account value on %{date} to:"
+      total_value: Total account value
+      holdings_value: Holdings value
+      brokerage_cash: Brokerage cash
+      intro: "%{action_verb} %{type} on %{date} to %{amount}."
+      recalculation_warning: "All future transactions and balances will be recalculated based on this %{action}."
+      change: change
+      update: update
+      types:
+        depository: account balance
+        credit_card: credit card balance
+        loan: loan balance
+        property: property value
+        vehicle: vehicle value
+        crypto: crypto balance
+        other_asset: asset value
+        other_liability: liability balance
+        default: balance
+    action_verbs:
+      set: set
+      update: update

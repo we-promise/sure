@@ -21,6 +21,20 @@ ru:
         legacy_providers_title: "Провайдеры из конфигурации окружения"
         legacy_providers_notice: "Эти провайдеры настроены через переменные окружения или YAML и не могут управляться через этот интерфейс. Чтобы управлять ими здесь, перенесите их в базу данных, включив AUTH_PROVIDERS_SOURCE=db и создав их заново в интерфейсе."
         env_configured: "Env/YAML"
+        configured_providers: Настроенные провайдеры
+        configuration_mode: Режим конфигурации
+        db_backed_providers: Провайдеры из базы данных
+        db_backed_description: Загружать провайдеров из базы данных вместо YAML конфигурации
+        db_backed_hint_html: "Установите <code class=\"bg-surface px-1 py-0.5 rounded text-xs\">AUTH_PROVIDERS_SOURCE=db</code> для включения провайдеров из базы данных. Это позволяет вносить изменения без перезапуска сервера."
+        enabled_badge: Включен
+        disabled_badge: Выключен
+        edit: Редактировать
+        delete: Удалить
+        enable: Включить
+        disable: Выключить
+        confirm_toggle: "Вы уверены, что хотите %{action} этого провайдера?"
+        confirm_delete: "Вы уверены, что хотите удалить этого провайдера? Это действие нельзя отменить."
+        no_providers_configured: Пока нет настроенных SSO провайдеров.
       new:
         title: "Добавить SSO провайдера"
         description: "Настройка нового провайдера единого входа"

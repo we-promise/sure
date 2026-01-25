@@ -5,11 +5,11 @@
   <%= render DS::Menu.new do |menu| %>
     <% menu.with_item(
           variant: "button",
-          text: "Delete all",
+          text: t(".delete_all"),
           href: destroy_all_tags_path,
           method: :delete,
           icon: "trash-2",
-          confirm: CustomConfirm.for_resource_deletion("all tags", high_severity: true)) %>
+          confirm: CustomConfirm.for_resource_deletion(t(".confirm_delete_all"), high_severity: true)) %>
   <% end %>
 
     <%= render DS::Link.new(

@@ -30,7 +30,7 @@
         <% else %>
           <div class="flex items-center gap-1 px-2 py-0.5 rounded text-secondary hover:text-primary hover:bg-gray-100 theme-dark:hover:bg-gray-700 transition-colors">
             <%= icon "pencil", size: "xs" %>
-            <span class="text-xs">Set</span>
+            <span class="text-xs"><%= t(".set") %></span>
           </div>
         <% end %>
       <% end %>
@@ -94,12 +94,19 @@
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-              <button type="button"
-                      class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600"
-                      data-action="click->DS--menu#close">
-                <%= t(".cancel") %>
-              </button>
-              <%= f.submit t(".save"), class: "inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
+              <%= render DS::Button.new(
+                    text: t(".cancel"),
+                    variant: :secondary,
+                    size: :sm,
+                    type: "button",
+                    data: { action: "click->DS--menu#close" }
+                  ) %>
+              <%= render DS::Button.new(
+                    text: t(".save"),
+                    variant: :primary,
+                    size: :sm,
+                    type: :submit
+                  ) %>
             </div>
           <% end %>
         </div>

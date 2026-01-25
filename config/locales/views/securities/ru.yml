@@ -4,3 +4,4 @@ ru:
     combobox:
       display: "%{symbol} — %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+      flag_alt: "Флаг %{country}"

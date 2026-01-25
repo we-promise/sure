@@ -23,6 +23,7 @@ ru:
       provider: Получено от провайдера
     cost_basis_cell:
       unknown: "--"
+      set: Установить
       set_cost_basis_header: "Установить цену покупки для %{ticker} (%{qty} шт.)"
       total_cost_basis_label: Общая цена покупки
       or_per_share_label: "Или введите за единицу:"

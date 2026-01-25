@@ -3,10 +3,14 @@ en:
   transfers:
     create:
       success: Transfer created
+    account_links:
+      missing_account: "Data Error: Missing account"
+      transfer_id: "Transfer ID: %{id}"
     destroy:
       success: Transfer removed
     form:
       amount: Amount
+      amount_placeholder: "100"
       date: Date
       expense: Expense
       from: From
@@ -27,5 +31,11 @@ en:
       note_placeholder: Add a note to this transfer
       overview: Overview
       settings: Settings
+      from: From
+      to: To
+      date: Date
+      amount: Amount
+      category_label: Category
+      uncategorized: Uncategorized
     update:
       success: Transfer updated

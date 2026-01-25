@@ -3,13 +3,32 @@ en:
   impersonation_sessions:
     approve:
       success: Request approved
+      button: Approve
     complete:
       success: Session completed
+      button: End Session
     create:
       success: Request sent to user. Waiting for approval.
+      button: Request Impersonation
     join:
       success: Joined session
+      button: Join
+      prompt: Join a session
     leave:
       success: Left session
+      button: Leave
     reject:
       success: Request rejected
+      button: Reject
+    bar:
+      request: Request
+      session: Session
+      access: Access %{type}
+      support_requested: Sure support staff has requested access to your account (likely to help you with a support request). If you approve the request, all activity they take will be logged for security and audit purposes.
+      staff_viewing: Someone from the Sure Finances team is currently viewing your data. You may end the session at any time.
+      error: Something went wrong. Please contact us.
+      super_admin: Super Admin
+      jobs: Jobs
+      impersonating: "Impersonating: %{email}"
+      terminate: Terminate
+      uuid_placeholder: UUID

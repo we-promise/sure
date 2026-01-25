@@ -6,11 +6,11 @@
       <%= tag.h2 t(".title"), class: "font-medium text-lg" %>
       <% unless @account.linked? %>
         <%= render DS::Menu.new(variant: "button") do |menu| %>
-          <% menu.with_button(text: "New", variant: "secondary", icon: "plus") %>
+          <% menu.with_button(text: t(".new"), variant: "secondary", icon: "plus") %>
 
           <% menu.with_item(
               variant: "link",
-              text: "New balance",
+              text: t(".new_balance"),
               icon: "circle-dollar-sign",
               href: new_valuation_path(account_id: @account.id),
               data: { turbo_frame: :modal }) %>
@@ -46,7 +46,7 @@
               <%= icon("search") %>
               <%= hidden_field_tag :account_id, @account.id %>
               <%= form.search_field :search,
-                            placeholder: "Search entries by name",
+                            placeholder: t(".search.placeholder"),
                             value: @q[:search],
                             class: "form-field__input placeholder:text-sm placeholder:text-secondary",
                             "data-auto-submit-form-target": "auto" %>

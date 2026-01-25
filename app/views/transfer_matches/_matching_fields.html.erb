@@ -3,15 +3,15 @@
 <% if candidates.any? %>
   <div data-controller="transfer-match" class="space-y-2">
     <p class="text-sm text-secondary">
-      Select a method for matching your transactions.
+      <%= t(".select_method") %>
     </p>
 
     <%= form.select :method,
               [
-                ["Match existing transaction (recommended)", "existing"],
-                ["Create new transaction", "new"]
+                [t(".method_existing"), "existing"],
+                [t(".method_new"), "new"]
               ],
-              { selected: "existing", label: "Matching method" },
+              { selected: "existing", label: t(".matching_method") },
               data: { action: "change->transfer-match#update" } %>
 
     <div data-transfer-match-target="existingSelect">
@@ -19,19 +19,19 @@
                 candidates.map { |entry|
                   [entry_name_detailed(entry), entry.id]
                 },
-                { label: "Matching transaction" } %>
+                { label: t(".matching_transaction") } %>
     </div>
 
     <div data-transfer-match-target="newSelect" class="hidden">
       <%= form.select :target_account_id,
                 accounts.map { |account| [account.name, account.id] },
-                { label: "Target account" } %>
+                { label: t(".target_account") } %>
     </div>
   </div>
 <% else %>
   <p class="text-sm text-secondary">
-    We couldn't find any transactions to match from your other accounts.
-    Please select an account and we will create a new inflow transaction for you.
+    <%= t(".no_candidates_found") %>
+    <%= t(".select_account_to_create") %>
   </p>
 
   <%= form.hidden_field :method, value: "new" %>
@@ -39,6 +39,6 @@
   <div>
     <%= form.select :target_account_id,
                 accounts.map { |account| [account.name, account.id] },
-                { label: "Target account" } %>
+                { label: t(".target_account") } %>
   </div>
 <% end %>

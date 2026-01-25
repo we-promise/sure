@@ -50,6 +50,22 @@ en:
       settings: Settings
       tags_label: Tags
       uncategorized: "(uncategorized)"
+      additional_details: Additional details
+      provider_extras: Provider extras
+      payee: Payee
+      description: Description
+      memo: Memo
+      transfer_title: Transfer or Debt Payment?
+      transfer_description: Transfers and payments are special types of transactions that indicate money movement between 2 accounts.
+      open_matcher: Open matcher
+      convert_trade_title: Convert to Security Trade
+      convert_trade_description: Convert this transaction into a security trade (buy/sell) by providing ticker, shares, and price.
+      convert: Convert
+      loan_payment: Loan Payment
+      transfer: Transfer
+    one_time_tooltip: "One-time %{type} (excluded from averages)"
+    income: income
+    expense: expense
     activity_labels:
       buy: Buy
       sell: Sell
@@ -86,11 +102,22 @@ en:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
     header:
+      title: Transactions
+      new_rule: New rule
+      edit_rules: Edit rules
       edit_categories: Edit categories
-      edit_imports: Edit imports
-      edit_merchants: Edit merchants
       edit_tags: Edit tags
+      edit_merchants: Edit merchants
+      edit_imports: Edit imports
       import: Import
+      new_transaction: New transaction
+    drag_drop_title: Drop CSV to import
+    drag_drop_subtitle: Upload transactions directly
+    table:
+      header:
+        transaction: transaction
+        category: category
+        amount: amount
     index:
       transaction: transaction
       transactions: transactions
@@ -148,8 +175,32 @@ en:
         invalid_qty_or_price: Invalid quantity or price. Please enter valid positive values.
         conversion_failed: "Failed to convert transaction: %{error}"
         unexpected_error: "Unexpected error during conversion: %{error}"
+    bulk_updates:
+      new:
+        title: Edit transactions
+        overview: Overview
+        transactions: Transactions
+        select_category: Select a category
+        select_merchant: Select a merchant
+        none: None
+        tags: Tags
+        notes: Notes
+        notes_placeholder: Enter a note that will be applied to selected transactions
+        cancel: Cancel
+        save: Save
     searches:
       filters:
+        account_filter:
+          placeholder: Filter accounts
+        category_filter:
+          placeholder: Filter category
+        date_filter:
+          start_date: Start date
+          end_date: End date
+        merchant_filter:
+          placeholder: Filter merchants
+        tag_filter:
+          placeholder: Filter tags
         amount_filter:
           equal_to: Equal to
           greater_than: Greater than

@@ -11,7 +11,7 @@
         <%= render DS::Tabs.new(active_tab: active_tab, url_param_key: "tab") do |tabs_container| %>
           <% tabs_container.with_nav(classes: "max-w-fit") do |nav| %>
             <% tabs.each do |tab| %>
-              <% nav.with_btn(id: tab, label: tab.to_s.humanize, classes: "px-6") %>
+              <% nav.with_btn(id: tab, label: t("accounts.show.tabs.#{tab}"), classes: "px-6") %>
             <% end %>
           <% end %>
 

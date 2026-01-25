@@ -1,32 +1,57 @@
 ---
 ru:
   properties:
+    address:
+      title: Введите адрес недвижимости
+      line1: Улица и дом
+      line1_placeholder: ул. Ленина, д. 1
+      city: Город
+      city_placeholder: Москва
+      region: Область/Регион
+      region_placeholder: Московская обл.
+      postal_code: Почтовый индекс
+      postal_code_placeholder: 101000
+      country: Страна
+      country_placeholder: Россия
+      save: Сохранить
     edit:
       edit: Редактировать %{account}
     form:
-      address_line1: Улица и номер дома
-      address_line1_placeholder: ул. Ленина, д. 1, кв. 2
+      address_line1: Улица и дом
+      address_line1_placeholder: Тверская ул., д. 1
       area: Жилая площадь
-      area_placeholder: '60'
-      area_unit: Единица измерения
+      area_placeholder: '100'
+      area_unit: Ед. измерения
+      area_units:
+        sqft: Кв. футы
+        sqm: Кв. метры
       country: Страна
       country_placeholder: RU
       locality: Город
       locality_placeholder: Москва
-      none: Нет
-      postal_code: Почтовый индекс
-      postal_code_placeholder: '101000'
+      none: (нет)
+      postal_code: Индекс
+      postal_code_placeholder: '125009'
       region: Область/Регион
-      region_placeholder: Московская область
+      region_placeholder: Московская обл.
       subtype_prompt: Выберите тип недвижимости
       year_built: Год постройки
-      year_built_placeholder: '2010'
+      year_built_placeholder: '2000'
+      year_built_optional: Год постройки (необязательно)
+      area_optional: Площадь (необязательно)
+      name_label: Название
+      name_placeholder: Дача
+      type_label: Тип недвижимости
+      estimated_value_label: Оценочная рыночная стоимость
+      estimated_value_tooltip: Оценочная рыночная стоимость вашей недвижимости. Эти данные часто можно найти на сайтах по продаже недвижимости, и это никогда не бывает точным числом.
     new:
       title: Введите данные недвижимости
-    overview:
-      living_area: Жилая площадь
-      market_value: Рыночная стоимость
-      purchase_price: Цена покупки
-      trend: Тренд
-      unknown: Неизвестно
-      year_built: Год постройки
+      dialog_title: Ручной ввод данных
+      next: Далее
+      save: Сохранить
+    tabs:
+      overview:
+        edit_details: Редактировать детали счета
+        tab_overview: Обзор
+        tab_value: Стоимость
+        tab_address: Адрес

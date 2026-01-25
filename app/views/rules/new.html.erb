@@ -1,7 +1,7 @@
-<%= link_to "Back to rules", rules_path %>
+<%= link_to t("rules.back_to_rules"), rules_path %>
 
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "New #{@rule.resource_type} rule") %>
+  <% dialog.with_header(title: t("rules.new.title", resource: @rule.resource_type)) %>
   <% dialog.with_body do %>
     <%= render "rules/form", rule: @rule %>
   <% end %>

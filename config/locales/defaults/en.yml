@@ -5,6 +5,9 @@ en:
     product_name: "%{product_name}"
   global:
     expand: "Expand"
+    dismiss: "Dismiss"
+    edit: "Edit"
+    delete: "Delete"
   activerecord:
     errors:
       messages:

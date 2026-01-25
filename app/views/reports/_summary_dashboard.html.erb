@@ -12,7 +12,7 @@
 
     <div class="space-y-2">
       <p class="text-2xl font-semibold text-primary">
-        <%= metrics[:current_income].format %>
+        <%= format_money(metrics[:current_income]) %>
       </p>
 
       <% if metrics[:income_change] %>
@@ -40,7 +40,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("trending-down", class: "w-5 h-5") %>
+        <%= icon("trending-down", size: "sm") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.total_expenses") %>
         </h3>
@@ -49,18 +49,18 @@
 
     <div class="space-y-2">
       <p class="text-2xl font-semibold text-primary">
-        <%= metrics[:current_expenses].format %>
+        <%= format_money(metrics[:current_expenses]) %>
       </p>
 
       <% if metrics[:expense_change] %>
         <div class="flex items-center gap-1.5">
           <% if metrics[:expense_change] >= 0 %>
-            <%= icon("arrow-up", class: "w-4 h-4 text-destructive") %>
+            <%= icon("arrow-up", size: "sm", color: :destructive) %>
             <span class="text-sm font-medium text-destructive">
               +<%= metrics[:expense_change] %>%
             </span>
           <% else %>
-            <%= icon("arrow-down", class: "w-4 h-4 text-success") %>
+            <%= icon("arrow-down", size: "sm", color: :success) %>
             <span class="text-sm font-medium text-success">
               <%= metrics[:expense_change] %>%
             </span>
@@ -77,7 +77,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("piggy-bank", class: "w-5 h-5") %>
+        <%= icon("piggy-bank", size: "sm") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.net_savings") %>
         </h3>
@@ -86,7 +86,7 @@
 
     <div class="space-y-2">
       <p class="text-2xl font-semibold <%= metrics[:net_savings] >= 0 ? "text-success" : "text-destructive" %>">
-        <%= metrics[:net_savings].format %>
+        <%= format_money(metrics[:net_savings]) %>
       </p>
 
       <p class="text-sm text-tertiary">
@@ -99,7 +99,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <%= icon("gauge", class: "w-5 h-5") %>
+        <%= icon("gauge", size: "sm") %>
         <h3 class="text-sm font-medium text-secondary">
           <%= t("reports.summary.budget_performance") %>
         </h3>

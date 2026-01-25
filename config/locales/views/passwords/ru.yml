@@ -4,6 +4,7 @@ ru:
     edit:
       password: Новый пароль
       password_challenge: Текущий пароль
+      password_confirmation: Подтвердите новый пароль
       submit: Сменить пароль
       title: Обновление пароля
     update:

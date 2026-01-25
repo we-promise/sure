@@ -42,6 +42,11 @@ en:
         title: Brand Fetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
+        show_details: show details
+        logo_api_link: Logo API
+        step1_html: Visit %{link} and create a free Brand Fetch Developer account.
+        step2_html: Go to the %{link} page.
+        step3_html: Tap the eye icon under the "Your Client ID" section to reveal your <strong>Client ID</strong> and paste it below.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -73,6 +78,11 @@ en:
         placeholder: Enter your API key here
         plan: "%{plan} plan"
         title: Twelve Data
+        show_details: show details
+        api_keys_link: API Keys
+        step1_html: Visit %{link} and create a free Twelve Data Developer account.
+        step2_html: Go to the %{link} page.
+        step3_html: Reveal your <strong>Secret Key</strong> and paste it below.
       update:
         failure: Invalid setting value
         success: Settings updated

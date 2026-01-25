@@ -26,11 +26,41 @@ ru:
         update_failed: "Ошибка обновления подключения: %{message}"
         unexpected: Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз.
     edit:
+      title: Обновить подключение SimpleFin
+      header_subtitle: Получите новый токен настройки, чтобы переподключить ваш счет SimpleFin
+      reconnect_notice: "Ваше подключение SimpleFIN требует обновления:"
+      step1_html: "Посетите <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a>, чтобы создать новый токен настройки"
+      step2: "Скопируйте токен и вставьте его ниже"
+      step3: "Нажмите «Обновить», чтобы восстановить доступ"
+      update_button: Обновить
       setup_token:
         label: "Токен настройки SimpleFIN:"
         placeholder: "Вставьте ваш токен настройки SimpleFIN здесь..."
         help_text: "Токен должен быть длинной строкой, начинающейся с букв и цифр"
+    subtype_select:
+      please_select: "Пожалуйста, выберите %{type}"
+      select_placeholder: "Выберите %{type}"
     setup_accounts:
+      title: Настройка счетов SimpleFin
+      header_subtitle: Выберите правильные типы счетов для ваших импортированных счетов
+      info_box_title: "Выберите правильный тип счета для каждого счета SimpleFin:"
+      account_types_list:
+        depository: Расчетный или сберегательный
+        depository_desc: Обычные банковские счета
+        credit_card: Кредитная карта
+        credit_card_desc: Счета кредитных карт
+        investment: Инвестиционный
+        investment_desc: Брокерские, 401(k), IRA счета
+        loan: Кредит или ипотека
+        loan_desc: Долговые счета
+        other: Прочий актив
+        other_desc: Все остальное
+      sync_info_title: "История транзакций:"
+      sync_info_desc_html: "SimpleFin обычно предоставляет историю транзакций за <strong>60-90 дней</strong>, в зависимости от вашего банка. После первоначальной настройки новые транзакции будут синхронизироваться автоматически. Доступность исторических данных зависит от учреждения и типа счета."
+      balance_label: "Баланс:"
+      account_type_label: "Тип счета:"
+      loading_text: Создание счетов...
+      create_button: Создать счета
       stale_accounts:
         title: "Счета, отсутствующие в SimpleFIN"
         description: "Эти счета существуют в вашей базе данных, но больше не предоставляются SimpleFIN. Это может произойти при изменении конфигурации на стороне банка."

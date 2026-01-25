@@ -6,8 +6,8 @@
   <% if first_account %>
     <%= link_to first_account.name, account_path(first_account, tab: "activity"), class: "hover:underline", data: { turbo_frame: "_top" } %>
   <% else %>
-    <span class="text-warning text-xs italic" title="Transfer ID: <%= transfer.id %>">
-      Data Error: Missing account
+    <span class="text-warning text-xs italic" title="<%= t("transfers.account_links.transfer_id", id: transfer.id) %>">
+      <%= t("transfers.account_links.missing_account") %>
     </span>
   <% end %>
 
@@ -18,8 +18,8 @@
   <% if second_account %>
     <%= link_to second_account.name, account_path(second_account, tab: "activity"), class: "hover:underline", data: { turbo_frame: "_top" } %>
   <% else %>
-    <span class="text-warning text-xs italic" title="Transfer ID: <%= transfer.id %>">
-      Data Error: Missing account
+    <span class="text-warning text-xs italic" title="<%= t("transfers.account_links.transfer_id", id: transfer.id) %>">
+      <%= t("transfers.account_links.missing_account") %>
     </span>
   <% end %>
 </div>

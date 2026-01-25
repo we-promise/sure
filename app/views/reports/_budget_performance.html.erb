@@ -4,7 +4,7 @@
       <%= t("reports.budget_performance.title") %>
     </h2>
     <p class="text-sm text-tertiary">
-      <%= start_date.strftime("%B %Y") %>
+      <%= l(start_date, format: "%B %Y") %>
     </p>
   </div>
 
@@ -64,13 +64,13 @@
               <div>
                 <span class="text-tertiary"><%= t("reports.budget_performance.spent") %>:</span>
                 <span class="font-medium text-primary">
-                  <%= Money.new(budget_item[:actual], Current.family.currency).format %>
+                  <%= format_money(Money.new(budget_item[:actual], Current.family.currency)) %>
                 </span>
               </div>
               <div>
                 <span class="text-tertiary"><%= t("reports.budget_performance.budgeted") %>:</span>
                 <span class="font-medium text-secondary">
-                  <%= Money.new(budget_item[:budgeted], Current.family.currency).format %>
+                  <%= format_money(Money.new(budget_item[:budgeted], Current.family.currency)) %>
                 </span>
               </div>
             </div>
@@ -79,12 +79,12 @@
               <% if budget_item[:remaining] >= 0 %>
                 <span class="text-tertiary"><%= t("reports.budget_performance.remaining") %>:</span>
                 <span class="font-medium text-success">
-                  <%= Money.new(budget_item[:remaining], Current.family.currency).format %>
+                  <%= format_money(Money.new(budget_item[:remaining], Current.family.currency)) %>
                 </span>
               <% else %>
                 <span class="text-tertiary"><%= t("reports.budget_performance.over_by") %>:</span>
                 <span class="font-medium text-destructive">
-                  <%= Money.new(budget_item[:remaining].abs, Current.family.currency).format %>
+                  <%= format_money(Money.new(budget_item[:remaining].abs, Current.family.currency)) %>
                 </span>
               <% end %>
             </div>
@@ -97,7 +97,7 @@
               <div class="mt-3 pt-3 border-t border-tertiary">
                 <p class="text-xs text-tertiary">
                   <%= t("reports.budget_performance.suggested_daily",
-                        amount: Money.new((budget_item[:remaining] / days_remaining), Current.family.currency).format,
+                        amount: format_money(Money.new((budget_item[:remaining] / days_remaining), Current.family.currency)),
                         days: days_remaining) %>
                 </p>
               </div>

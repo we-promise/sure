@@ -4,6 +4,7 @@ en:
     edit:
       password: New Password
       password_challenge: Current Password
+      password_confirmation: Confirm New Password
       submit: Reset Password
       title: Update Password
     update:

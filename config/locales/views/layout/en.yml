@@ -17,6 +17,14 @@ en:
       footer:
         privacy_policy: Privacy Policy
         terms_of_service: Terms of Service
+        community_fork: community fork of Maybe Finance
+      confirm_dialog:
+        title: Are you sure?
+        subtitle: This action cannot be undone.
+        confirm: Confirm
+    doorkeeper:
+      application:
+        title: Sure Authorization
     trial:
       open_demo: Open demo
       data_deleted_in_days: Data deleted in %{days} days

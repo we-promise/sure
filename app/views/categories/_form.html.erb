@@ -14,7 +14,7 @@
           <div class="fixed right-0 sm:right-auto mx-2 sm:ml-8 sm:mr-0 mt-2 z-50 bg-container p-4 border border-alpha-black-25 rounded-2xl shadow-xs h-fit" data-category-target="popup">
             <div class="flex gap-2 flex-col mb-4" data-category-target="selection" style="<%= "display:none;" if @category.subcategory? %>">
               <div data-category-target="pickerSection"></div>
-              <h4 class="text-gray-500 text-sm">Color</h4>
+              <h4 class="text-gray-500 text-sm"><%= t("categories.form.color") %></h4>
               <div class="flex flex-wrap md:flex-nowrap gap-2 items-center" data-category-target="colorsSection">
                 <% Category::COLORS.each do |color| %>
                   <label class="relative">
@@ -34,14 +34,14 @@
                   <%= icon "palette", size: "2xl", data: { action: "click->category#toggleSections" } %>
                 </div>
                 <div data-category-target="validationMessage" class="hidden self-start flex gap-1 items-center text-xs text-destructive ">
-                  <span>Poor contrast, choose darker color or</span>
-                  <button type="button" class="underline cursor-pointer" data-action="category#autoAdjust">auto-adjust.</button>
+                  <span><%= t("categories.form.contrast_warning") %></span>
+                  <button type="button" class="underline cursor-pointer" data-action="category#autoAdjust"><%= t("categories.form.auto_adjust") %></button>
                 </div>
               </div>
             </div>
 
             <div class="flex flex-wrap gap-2 justify-center flex-col w-auto md:w-87">
-              <h4 class="text-secondary text-sm">Icon</h4>
+              <h4 class="text-secondary text-sm"><%= t("categories.form.icon") %></h4>
               <div class="flex flex-wrap gap-0.5 max-h-52 overflow-auto">
                 <% Category.icon_codes.each do |icon| %>
                   <label class="relative">
@@ -62,10 +62,10 @@
       <% end %>
 
       <div class="space-y-2">
-        <%= f.select :classification, [["Income", "income"], ["Expense", "expense"]], { label: "Classification" }, required: true %>
-        <%= f.text_field :name, placeholder: t(".placeholder"), required: true, autofocus: true, label: "Name", data: { color_avatar_target: "name" } %>
+        <%= f.select :classification, [[t("categories.form.income"), "income"], [t("categories.form.expense"), "expense"]], { label: t("categories.form.classification") }, required: true %>
+        <%= f.text_field :name, placeholder: t("categories.form.placeholder"), required: true, autofocus: true, label: t("categories.form.name"), data: { color_avatar_target: "name" } %>
         <% unless category.parent? %>
-          <%= f.select :parent_id, categories.pluck(:name, :id), { include_blank: "(unassigned)", label: "Parent category (optional)" }, disabled: category.parent?, data: { action: "change->category#handleParentChange" } %>
+          <%= f.select :parent_id, categories.pluck(:name, :id), { include_blank: t("categories.form.unassigned"), label: t("categories.form.parent_category") }, disabled: category.parent?, data: { action: "change->category#handleParentChange" } %>
         <% end %>
       </div>
     </section>

@@ -12,6 +12,11 @@ en:
       submit: Complete
       subtitle: Let's configure your preferences.
       title: Configure your preferences
+      as_of: as of
+      theme_label: Color theme
+      theme_system: System
+      theme_light: Light
+      theme_dark: Dark
     profile:
       country: Country
       first_name: First Name
@@ -26,6 +31,13 @@ en:
         few questions to complete your profile and then get you all set up.
       setup: Set up account
       title: Meet %{product_name}
+      heading: Let's set up your account
+      subtitle: First things first, let's get your profile set up.
+      first_name: First name
+      last_name: Last name
+      household_name: Household name
+      country: Country
+      submit: Continue
     goals:
       title: What brings you here?
       subtitle: Select one or more goals that you have with using %{product_name} as your personal finance tool.

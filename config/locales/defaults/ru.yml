@@ -1,5 +1,10 @@
 ---
 ru:
+  global:
+    expand: "Развернуть"
+    dismiss: "Пропустить"
+    edit: "Редактировать"
+    delete: "Удалить"
   activerecord:
     errors:
       messages:

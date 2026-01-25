@@ -12,8 +12,8 @@
     <% @import.mapping_steps.each_with_index do |step_mapping_class, idx| %>
       <% is_active = step_idx == idx %>
 
-      <%= link_to url_for(step: idx + 1), class: "w-5 h-[3px] #{is_active ? 'bg-gray-900' : 'bg-gray-100'} rounded-xl hover:bg-gray-300 transition-colors duration-200" do %>
-        <span class="sr-only">Step <%= idx + 1 %></span>
+      <%= link_to url_for(step: idx + 1), class: "w-5 h-[3px] #{is_active ? 'bg-inverse' : 'bg-surface-inset'} rounded-xl hover:bg-surface-hover transition-colors duration-200" do %>
+        <span class="sr-only"><%= t("common.step", number: idx + 1) %></span>
       <% end %>
     <% end %>
   </div>

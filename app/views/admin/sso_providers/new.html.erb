@@ -1,9 +1,9 @@
-<%= content_for :page_title, "Add SSO Provider" %>
+<%= content_for :page_title, t(".title") %>
 
 <div class="space-y-4">
-  <p class="text-secondary">Configure a new single sign-on authentication provider.</p>
+  <p class="text-secondary"><%= t(".description") %></p>
 
-  <%= settings_section title: "Provider Configuration" do %>
+  <%= settings_section title: t("admin.sso_providers.form.oauth_configuration") do %>
     <%= render "form", sso_provider: @sso_provider %>
   <% end %>
 </div>

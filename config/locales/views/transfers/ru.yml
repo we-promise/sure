@@ -3,10 +3,14 @@ ru:
   transfers:
     create:
       success: Перевод создан
+    account_links:
+      missing_account: "Ошибка данных: Отсутствует счет"
+      transfer_id: "ID перевода: %{id}"
     destroy:
       success: Перевод удален
     form:
       amount: Сумма
+      amount_placeholder: "100"
       date: Дата
       expense: Расход
       from: Откуда
@@ -26,5 +30,11 @@ ru:
       note_placeholder: Добавьте заметку к этому переводу
       overview: Обзор
       settings: Настройки
+      from: Откуда
+      to: Куда
+      date: Дата
+      amount: Сумма
+      category_label: Категория
+      uncategorized: Без категории
     update:
       success: Перевод обновлен

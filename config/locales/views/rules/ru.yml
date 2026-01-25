@@ -2,21 +2,86 @@
 ru:
   rules:
     no_action: Нет действия
+    if: ЕСЛИ
+    then: ТО
+    for: ДЛЯ
+    more_conditions:
+      one: и еще 1 условие
+      few: и еще %{count} условия
+      many: и еще %{count} условий
+      other: и еще %{count} условий
+    more_actions:
+      one: и еще 1 действие
+      few: и еще %{count} действия
+      many: и еще %{count} действий
+      other: и еще %{count} действий
+    action_to_value: "%{action} на %{value}"
+    all_resources: "Все прошлые и будущие %{resource}"
+    resources_on_or_after: "%{resource} от %{date} и позже"
+    reapply: Переприменить правило
+    back_to_rules: Назад к правилам
+    index:
+      title: Правила
+      delete_all: Удалить все правила
+      confirm_delete_all: все правила
+      new_rule: Новое правило
+      rules_count: Правила
+      sort_by: "Сортировка:"
+      sort_name: Название
+      sort_updated_at: Дата обновления
+      toggle_sort: Изменить порядок сортировки
+      empty_title: Правил пока нет
+      empty_description: Настройте правила для автоматического выполнения действий с вашими транзакциями и другими данными при каждой синхронизации счета.
+      ai_cost_warning: Действия правил с использованием ИИ платные. Старайтесь фильтровать как можно точнее, чтобы избежать лишних расходов.
+    form:
+      rule_name_label: Название правила (необязательно)
+      name_placeholder: Введите название для этого правила
+      if: ЕСЛИ
+      then: ТО
+      for: ДЛЯ
+      add_condition: Добавить условие
+      add_condition_group: Добавить группу условий
+      add_action: Добавить действие
+      all_resources: "Все прошлые и будущие %{resource_type}"
+      starting_from: Начиная с
     actions:
+      to: на
       value_placeholder: Введите значение
-    apply_all:
-      button: Применить все
-      confirm_title: Применить все правила
-      confirm_message: Вы собираетесь применить %{count} правил, которые затронут %{transactions} уникальных транзакций. Подтвердите выполнение операции.
-      confirm_button: Подтвердить и применить все
-      success: Все правила поставлены в очередь на выполнение
+    conditions:
+      and: и
+      match: соответствует
+      all: всем
+      any: любому
+      of_the_following: из следующих условий
+      add_condition: Добавить условие
+      value_placeholder: Введите значение
+    prompts:
+      dont_show_again: Больше не показывать
+      create_rule: Создать правило
+      category:
+        message: "Обновлено на %{category}"
+        description: Вы можете создать правило для автоматической категоризации подобных транзакций
+    confirm:
+      title: Подтверждение изменений
+      title_with_name: "Подтверждение изменений для \"%{name}\""
+      message: Вы собираетесь применить это правило к %{count} %{resources}, которые соответствуют заданным критериям. Вы уверены, что хотите продолжить?
       ai_cost_title: Оценка стоимости ИИ
-      ai_cost_message: Это потребует использования ИИ для категоризации до %{transactions} транзакций.
+      ai_cost_message:
+        one: Это потребует использования ИИ для категоризации 1 транзакции.
+        few: Это потребует использования ИИ для категоризации %{count} транзакций.
+        many: Это потребует использования ИИ для категоризации %{count} транзакций.
+        other: Это потребует использования ИИ для категоризации %{count} транзакций.
       estimated_cost: "Ориентировочная стоимость: ~$%{cost}"
       cost_unavailable_model: Оценка стоимости недоступна для модели "%{model}".
       cost_unavailable_no_provider: Оценка стоимости недоступна (провайдер LLM не настроен).
       cost_warning: Вы можете понести расходы, пожалуйста, сверьтесь с актуальными ценами вашего провайдера модели.
       view_usage: Показать историю использования
+      button: Подтвердить изменения
+    edit:
+      title: "Редактирование правила для %{resource}"
+      title_with_name: "Редактирование правила для %{resource} \"%{name}\""
+    new:
+      title: "Новое правило для %{resource}"
     recent_runs:
       title: Последние запуски
       description: История выполнения ваших правил, включая статус успеха/ошибки и количество затронутых транзакций.
@@ -24,7 +89,7 @@ ru:
       columns:
         date_time: Дата/Время
         execution_type: Тип
-        status: Статус
+        status: Status
         rule_name: Название правила
         transactions_counts:
           queued: В очереди

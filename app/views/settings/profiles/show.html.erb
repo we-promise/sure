@@ -9,7 +9,9 @@
 
       <% if @user.unconfirmed_email.present? %>
         <p class="mt-2 text-sm text-gray-600">
-          You have requested to change your email to <%= @user.unconfirmed_email %>. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or <%= link_to "request a new confirmation email", resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary" %>.
+          <%= t(".email_change_requested",
+                email: @user.unconfirmed_email,
+                link: link_to(t(".request_new_confirmation"), resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary")) %>
         </p>
       <% end %>
 
@@ -178,7 +180,7 @@
         variant: "destructive",
         href: user_path(@user),
         method: :delete,
-        confirm: CustomConfirm.for_resource_deletion("your account", high_severity: true)
+        confirm: CustomConfirm.for_resource_deletion(t(".delete_confirm_resource"), high_severity: true)
       ) %>
     </div>
   </div>

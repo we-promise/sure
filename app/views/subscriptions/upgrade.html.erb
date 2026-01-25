@@ -1,17 +1,17 @@
 <div class="flex flex-col h-full justify-between bg-surface">
   <nav class="p-4">
-    <h1 class="sr-only">Upgrade</h1>
+    <h1 class="sr-only"><%= t(".title") %></h1>
 
     <div class="flex justify-end gap-2">
       <%= render DS::Link.new(
-        text: "Account Settings",
+        text: t(".account_settings"),
         icon: "settings",
         variant: "ghost",
         href: settings_profile_path,
       ) %>
 
       <%= render DS::Button.new(
-        text: "Sign out",
+        text: t(".sign_out"),
         icon: "log-out",
         icon_position: :right,
         variant: "ghost",

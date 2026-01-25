@@ -42,7 +42,7 @@
         tabindex="0"
         role="listitem"
         aria-grabbed="false"
-        aria-label="<%= t(section[:title]) %> section. Press Enter or Space to grab for reordering, then use arrow keys to move."
+        aria-label="<%= t("pages.dashboard.section_accessibility_label", title: t(section[:title])) %>"
         data-action="
           dragstart->dashboard-sortable#dragStart
           dragend->dashboard-sortable#dragEnd

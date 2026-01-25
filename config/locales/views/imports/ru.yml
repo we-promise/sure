@@ -7,7 +7,55 @@ ru:
         errors_notice: В ваших данных есть ошибки. Наведите курсор на ошибку, чтобы увидеть детали.
         errors_notice_mobile: В ваших данных есть ошибки. Нажмите на подсказку об ошибке, чтобы увидеть детали.
         title: Очистка данных
+        cleaned_status: Ваши данные были очищены
+        next_step: Следующий шаг
+        view_all: Все строки
+        view_errors: Строки с ошибками
+    failure:
+      title: Ошибка импорта
+      description: Пожалуйста, проверьте формат файла на наличие ошибок и убедитесь, что все обязательные поля заполнены, затем попробуйте снова.
+      retry: Попробовать снова
+    importing:
+      title: Выполняется импорт
+      description: Ваш импорт находится в процессе обработки. Проверьте меню импорта для получения обновлений или нажмите «Проверить статус», чтобы обновить страницу. Вы можете продолжать пользоваться приложением.
+      check_status: Проверить статус
+      back_to_dashboard: Вернуться на главную
+    nav:
+      step: "Шаг %{current} из %{total}"
+      upload: Загрузка
+      configure: Настройка
+      clean: Очистка
+      map: Сопоставление
+      confirm: Подтверждение
+    ready:
+      title: Подтвердите данные импорта
+      description: Вот сводка новых элементов, которые будут добавлены в ваш аккаунт после публикации этого импорта.
+      item: объект
+      count: количество
+      publish: Опубликовать импорт
+    revert_failure:
+      title: Ошибка отката импорта
+      description: Пожалуйста, попробуйте еще раз
+      retry: Попробовать снова
+    success:
+      title: Импорт завершен
+      description: Ваши импортированные данные были успешно добавлены в приложение и теперь готовы к использованию.
+      back_to_dashboard: Вернуться на главную
     configurations:
+      common:
+        apply: Применить конфигурацию
+        date: Дата
+        amount: Сумма
+        currency: Валюта
+        format: Формат
+        account: Счет
+        name: Название
+        category: Категория
+        tags: Теги
+        notes: Заметки
+        select_column: Выберите столбец
+        leave_empty: Оставить пустым
+        default: По умолчанию
       update:
         success: Импорт успешно настроен.
       category_import:
@@ -16,6 +64,7 @@ ru:
         instructions: Нажмите «Продолжить», чтобы обработать CSV и перейти к этапу очистки.
       mint_import:
         date_format_label: Формат даты
+        preconfigured_notice: Мы предварительно настроили импорт из Mint для вас. Пожалуйста, перейдите к следующему шагу.
       rule_import:
         description: Настройте импорт правил. Правила будут созданы или обновлены на основе данных CSV.
         process_button: Обработать правила
@@ -23,29 +72,60 @@ ru:
       show:
         description: Выберите столбцы, соответствующие каждому полю в вашем CSV.
         title: Настройка импорта
+        template_found_title: Найдена конфигурация шаблона
+        template_found_description: Мы нашли конфигурацию из предыдущего импорта для этого счета. Хотите применить её к этому импорту?
+        manually_configure: Настроить вручную
+        apply_template: Применить шаблон
+        sample_data_caption: Образец данных из вашего CSV
       trade_import:
         date_format_label: Формат даты
+        qty_label: Количество
+        signage_label: Правило знаков
+        buys_positive: Покупка — положительное количество
+        buys_negative: Покупка — отрицательное количество
+        ticker_label: Тикер
+        exchange_label: Код биржи
+        price_label: Цена
+        provider_notice: "Примечание: Провайдер котировок не настроен. Импорт сделок будет работать, но Sure не сможет восстановить историю цен. Пожалуйста, настройте это в параметрах."
       transaction_import:
         date_format_label: Формат даты
         rows_to_skip_label: Пропустить первые n строк
-    confirms:
-      mappings:
-        create_account: Создать счет
-        csv_mapping_label: "%{mapping} в CSV"
-        sure_mapping_label: "%{mapping} в %{product_name}"
-        no_accounts: У вас еще нет ни одного счета. Пожалуйста, создайте счет, который мы сможем использовать для (неназначенных) строк в вашем CSV, или вернитесь к этапу «Очистка» и укажите имя счета.
-        rows_label: Строки
-        unassigned_account: Нужно создать новый счет для неназначенных строк?
-      show:
-        account_mapping_description: Сопоставьте все счета из импортируемого файла с существующими счетами. Вы также можете добавить новые счета или оставить их без категории.
-        account_mapping_title: Сопоставление счетов
-        account_type_mapping_description: Сопоставьте все типы счетов из импортируемого файла с типами в приложении
-        account_type_mapping_title: Сопоставление типов счетов
-        category_mapping_description: Сопоставьте все категории из импортируемого файла с существующими категориями. Вы также можете добавить новые категории или оставить их без категории.
-        category_mapping_title: Сопоставление категорий
-        tag_mapping_description: Сопоставьте все теги из импортируемого файла с существующими тегами. Вы также можете добавить новые теги или оставить их без категории.
-        tag_mapping_title: Сопоставление тегов
-    uploads:
+        amount_type_strategy_label: Стратегия типа суммы
+        signage_label: Тип суммы
+        inflows_positive: Доходы положительны
+        inflows_negative: Доходы отрицательны
+        custom_column_prefix: ↪
+        set_label: Установить
+        as_amount_type_column: как столбец типа суммы
+        as_identifier_value: как значение идентификатора
+        treat_as: Считать "%{value}" как
+        income: Доход (поступление)
+        expense: Расход (списание)
+      account_import:
+        entity_type_label: Тип сущности
+        balance_label: Баланс
+        balance_date_label: Дата баланса
+        confirms:
+          mappings:
+            create_account: Создать счет
+            csv_mapping_label: "%{
+    mapping} в CSV"
+            sure_mapping_label: "%{
+    mapping} в %{
+    product_name}"
+            no_accounts: У вас еще нет ни одного счета. Пожалуйста, создайте счет, который мы сможем использовать для (неназначенных) строк в вашем CSV, или вернитесь к этапу «Очистка» и укажите имя счета.
+            rows_label: Строки
+            unassigned_account: Нужно создать новый счет для неназначенных строк?
+            next: Далее
+        mappings:
+          form:
+            unassigned: (не назначено)
+            select_option: Выберите вариант
+            leave_unassigned: Оставить неназначенным
+        rows:
+          form:
+            errors_title: Ошибки
+        uploads:
       show:
         description: Вставьте или загрузите ваш CSV-файл ниже. Пожалуйста, ознакомьтесь с инструкциями в таблице перед началом.
         instructions_1: Ниже приведен пример CSV со столбцами, доступными для импорта.

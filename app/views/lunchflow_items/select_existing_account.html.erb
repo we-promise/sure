@@ -8,18 +8,17 @@
           <%= t(".description") %>
         </p>
 
-        <form action="<%= link_existing_account_lunchflow_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
-          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <%= form_with url: link_existing_account_lunchflow_items_path, method: :post, class: "space-y-4", data: { turbo_frame: "_top" } do |form| %>
           <%= hidden_field_tag :account_id, @account.id %>
           <%= hidden_field_tag :return_to, @return_to %>
 
           <div class="space-y-2">
             <% @available_accounts.each do |account| %>
               <% has_blank_name = account[:name].blank? %>
-              <label class="flex items-start gap-3 p-3 border <%= has_blank_name ? "border-error bg-error/5" : "border-primary" %> rounded-lg <%= has_blank_name ? "cursor-not-allowed opacity-60" : "hover:bg-subtle cursor-pointer" %> transition-colors">
-                <%= radio_button_tag "lunchflow_account_id", account[:id], false, disabled: has_blank_name, class: "mt-1" %>
+              <label class="flex items-start gap-3 p-3 border <%= has_blank_name ? "border-destructive bg-destructive/5" : "border-primary" %> rounded-lg <%= has_blank_name ? "cursor-not-allowed opacity-60" : "hover:bg-surface-hover cursor-pointer" %> transition-colors">
+                <%= radio_button_tag "lunchflow_account_id", account[:id], false, disabled: has_blank_name, class: "form-field__radio mt-1" %>
                 <div class="flex-1">
-                  <div class="font-medium text-sm <%= has_blank_name ? "text-error" : "text-primary" %>">
+                  <div class="font-medium text-sm <%= has_blank_name ? "text-destructive" : "text-primary" %>">
                     <% if has_blank_name %>
                       <%= t(".no_name_placeholder") %>
                     <% else %>
@@ -33,7 +32,7 @@
                     <%= account[:institution_name] %> • <%= account[:currency] %> • <%= account[:status] %>
                   </div>
                   <% if has_blank_name %>
-                    <div class="text-xs text-error mt-1">
+                    <div class="text-xs text-destructive mt-1">
                       <%= t(".configure_name_in_lunchflow") %>
                     </div>
                   <% end %>
@@ -43,13 +42,19 @@
           </div>
 
           <div class="flex gap-2 justify-end pt-4">
-            <%= link_to t(".cancel"), @return_to || accounts_path,
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
-            <%= submit_tag t(".link_account"),
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
+            <%= render DS::Link.new(
+                  text: t(".cancel"),
+                  href: @return_to || accounts_path,
+                  variant: :secondary,
+                  data: { turbo_frame: "_top", action: "DS--dialog#close" }
+                ) %>
+            <%= render DS::Button.new(
+                  text: t(".link_account"),
+                  variant: :primary,
+                  type: :submit
+                ) %>
           </div>
-        </form>
+        <% end %>
       </div>
     <% end %>
   <% end %>

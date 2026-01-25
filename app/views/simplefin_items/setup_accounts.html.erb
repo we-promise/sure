@@ -1,10 +1,10 @@
-<% content_for :title, "Set Up SimpleFin Accounts" %>
+<% content_for :title, t(".title") %>
 
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Set Up Your SimpleFin Accounts") do %>
+  <% dialog.with_header(title: t(".title")) do %>
     <div class="flex items-center gap-2">
       <%= icon "building-2", class: "text-primary" %>
-      <span class="text-primary">Choose the correct account types for your imported accounts</span>
+      <span class="text-primary"><%= t(".header_subtitle") %></span>
     </div>
   <% end %>
 
@@ -15,7 +15,7 @@
                   data: {
                     controller: "loading-button",
                     action: "submit->loading-button#showLoading",
-                    loading_button_loading_text_value: "Creating Accounts...",
+                    loading_button_loading_text_value: t(".loading_text"),
                     turbo_frame: "_top"
                   },
                   class: "space-y-6" do |form| %>
@@ -26,14 +26,14 @@
             <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
             <div>
               <p class="text-sm text-primary mb-2">
-                <strong>Choose the correct account type for each SimpleFin account:</strong>
+                <strong><%= t(".info_box_title") %></strong>
               </p>
               <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
-                <li><strong>Checking or Savings</strong> - Regular bank accounts</li>
-                <li><strong>Credit Card</strong> - Credit card accounts</li>
-                <li><strong>Investment</strong> - Brokerage, 401(k), IRA accounts</li>
-                <li><strong>Loan or Mortgage</strong> - Debt accounts</li>
-                <li><strong>Other Asset</strong> - Everything else</li>
+                <li><strong><%= t(".account_types_list.depository") %></strong> - <%= t(".account_types_list.depository_desc") %></li>
+                <li><strong><%= t(".account_types_list.credit_card") %></strong> - <%= t(".account_types_list.credit_card_desc") %></li>
+                <li><strong><%= t(".account_types_list.investment") %></strong> - <%= t(".account_types_list.investment_desc") %></li>
+                <li><strong><%= t(".account_types_list.loan") %></strong> - <%= t(".account_types_list.loan_desc") %></li>
+                <li><strong><%= t(".account_types_list.other") %></strong> - <%= t(".account_types_list.other_desc") %></li>
               </ul>
             </div>
           </div>
@@ -45,12 +45,10 @@
             <%= icon "clock", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
             <div class="flex-1">
               <p class="text-sm text-primary mb-2">
-                <strong>Transaction History:</strong>
+                <strong><%= t(".sync_info_title") %></strong>
               </p>
               <p class="text-xs text-secondary">
-                SimpleFin typically provides <strong>60-90 days</strong> of transaction history, depending on your bank.
-                After initial setup, new transactions will sync automatically going forward.
-                Historical data availability varies by institution and account type.
+                <%= t(".sync_info_desc_html") %>
               </p>
             </div>
           </div>
@@ -73,14 +71,14 @@
                   <% end %>
                 </h3>
                 <p class="text-sm text-secondary">
-                  Balance: <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency) %>
+                  <%= t(".balance_label") %> <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency) %>
                 </p>
               </div>
             </div>
 
             <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="<%= simplefin_account.id %>">
               <div>
-                <%= label_tag "account_types[#{simplefin_account.id}]", "Account Type:",
+                <%= label_tag "account_types[#{simplefin_account.id}]", t(".account_type_label"),
                              class: "block text-sm font-medium text-primary mb-2" %>
                 <%= select_tag "account_types[#{simplefin_account.id}]",
                               options_for_select(@account_type_options, selected_type),
@@ -126,7 +124,7 @@
 
       <div class="flex gap-3">
         <%= render DS::Button.new(
-          text: "Create Accounts",
+          text: t(".create_button"),
           variant: "primary",
           icon: "plus",
           type: "submit",
@@ -134,7 +132,7 @@
           data: { loading_button_target: "button" }
         ) %>
         <%= render DS::Link.new(
-          text: "Cancel",
+          text: t("simplefin_items.new.cancel"),
           variant: "secondary",
           href: accounts_path
         ) %>

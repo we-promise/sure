@@ -1,5 +1,44 @@
 ---
 en:
   chats:
-    demo_banner_title: "Demo Mode Active"
-    demo_banner_message: "You are using an open-weights Qwen3 LLM with credits provided by Cloudflare Workers AI.  Result may vary since the codebase was mostly tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
+    demo_banner_title: "Running in Demo Mode"
+    demo_banner_message: "You are using an open source Qwen3 LLM powered by Cloudflare Workers AI credits. Results may vary since the codebase was tested mainly on `gpt-4.1`, but your data is not sent anywhere for training! 🤖"
+    index:
+      title: Chats
+      new_chat: New chat
+    thinking: Thinking...
+    chat_nav:
+      all_chats: All chats
+      start_new: Start new chat
+    chat_error:
+      message: Failed to generate response. Please try again.
+      retry: Retry
+    ai_greeting:
+      intro: "Hey %{name}! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data."
+      there: "there"
+      commands_hint_html: "You can use %{slash} to access commands"
+      questions_title: "Here's a few questions you can ask:"
+      sample_1: "Evaluate investment portfolio"
+      sample_2: "Show spending insights"
+      sample_3: "Find unusual patterns"
+    assistant_messages:
+      reasoning: Assistant reasoning
+      tool_calls: Tool Calls
+      function: "Function:"
+      arguments: "Arguments:"
+    ai_consent:
+      title: Enable AI Chats
+      description_available: AI chat can answer financial questions and provide insights based on your data. To use this feature you'll need to explicitly enable it.
+      description_unavailable_html: "To use the AI assistant, you need to set the <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> environment variable or configure it in the Self-Hosting settings of your instance."
+      submit: Enable AI Chats
+      footer: Disable anytime. All data sent to our LLM providers is anonymized.
+    chat:
+      ago: "%{timestamp} ago"
+      edit_title: Edit chat title
+      delete_chat: Delete chat
+      delete_resource: chat
+    chat_form:
+      placeholder: Ask anything ...
+      disclaimer: AI responses are informational only and are not financial advice.
+      coming_soon: Coming soon
+    

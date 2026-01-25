@@ -1,39 +1,47 @@
 <!DOCTYPE html>
-<html>
+<% theme = Current.user&.theme || "system" %>
+<html
+  lang="<%= I18n.locale %>"
+  data-theme="<%= theme %>"
+  data-controller="theme"
+  data-theme-user-preference-value="<%= Current.user&.theme || "system" %>"
+  class="h-full text-primary overflow-hidden lg:overflow-auto font-sans">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <%= render "layouts/shared/head" %>
   <title><%= t("doorkeeper.layouts.admin.title") %></title>
-  <%= stylesheet_link_tag "doorkeeper/admin/application" %>
-  <%= csrf_meta_tags %>
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-5">
-  <%= link_to t("doorkeeper.layouts.admin.nav.oauth2_provider"), oauth_applications_path, class: "navbar-brand" %>
+<body class="h-full bg-surface antialiased overflow-y-auto">
+  <nav class="bg-container border-b border-primary px-6 py-4 mb-8">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-8">
+        <%= link_to oauth_applications_path, class: "text-lg font-bold text-primary flex items-center gap-2" do %>
+          <%= image_tag "logo-color.png", class: "w-8" %>
+          <span><%= t("doorkeeper.layouts.admin.nav.oauth2_provider") %></span>
+        <% end %>
 
-  <div class="collapse navbar-collapse">
-    <ul class="navbar-nav mr-auto">
-      <li class="nav-item <%= "active" if request.path == oauth_applications_path %>">
-        <%= link_to t("doorkeeper.layouts.admin.nav.applications"), oauth_applications_path, class: "nav-link" %>
-      </li>
-      <% if respond_to?(:root_path) %>
-        <li class="nav-item">
-          <%= link_to t("doorkeeper.layouts.admin.nav.home"), root_path, class: "nav-link" %>
-        </li>
-      <% end %>
-    </ul>
-  </div>
-</nav>
-
-<div class="doorkeeper-admin container">
-  <%- if flash[:notice].present? %>
-    <div class="alert alert-info">
-      <%= flash[:notice] %>
+        <div class="flex items-center gap-4">
+          <%= link_to t("doorkeeper.layouts.admin.nav.applications"), oauth_applications_path, 
+              class: class_names("text-sm font-medium transition-colors", 
+                                request.path == oauth_applications_path ? "text-primary" : "text-secondary hover:text-primary") %>
+          
+          <% if respond_to?(:root_path) %>
+            <%= link_to t("doorkeeper.layouts.admin.nav.home"), root_path, class: "text-sm font-medium text-secondary hover:text-primary transition-colors" %>
+          <% end %>
+        </div>
+      </div>
     </div>
-  <% end -%>
+  </nav>
 
-  <%= yield %>
-</div>
+  <main class="max-w-7xl mx-auto px-6 pb-12">
+    <%- if flash[:notice].present? %>
+      <div class="mb-6 p-4 rounded-xl bg-success/10 border border-success/20 text-success text-sm font-medium">
+        <%= flash[:notice] %>
+      </div>
+    <% end -%>
+
+    <div class="bg-container rounded-2xl shadow-border-xs p-6 md:p-8">
+      <%= yield %>
+    </div>
+  </main>
 </body>
 </html>

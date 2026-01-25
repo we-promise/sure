@@ -1,18 +1,18 @@
 <%# locals: (import:) %>
 
 <% steps = [
-  { name: "Upload", path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
-  { name: "Configure", path: import_configuration_path(import), is_complete: import.configured?, step_number: 2 },
-  { name: "Clean", path: import_clean_path(import), is_complete: import.cleaned?, step_number: 3 },
-  { name: "Map", path: import_confirm_path(import), is_complete: import.publishable?, step_number: 4 },
-  { name: "Confirm", path: import_path(import), is_complete: import.complete?, step_number: 5 }
-].reject { |step| step[:name] == "Map" && import.mapping_steps.empty? } %>
+  { name: t(".upload"), path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
+  { name: t(".configure"), path: import_configuration_path(import), is_complete: import.configured?, step_number: 2 },
+  { name: t(".clean"), path: import_clean_path(import), is_complete: import.cleaned?, step_number: 3 },
+  { name: t(".map"), path: import_confirm_path(import), is_complete: import.publishable?, step_number: 4 },
+  { name: t(".confirm"), path: import_path(import), is_complete: import.complete?, step_number: 5 }
+].reject { |step| step[:name] == t(".map") && import.mapping_steps.empty? } %>
 
 <% content_for :mobile_import_progress do %>
   <% active_step = steps.detect { |s| request.path.eql?(s[:path]) } %>
   <% if active_step.present? %>
     <div class="md:hidden text-center text-secondary text-md my-2">
-      <span class="text-gray-500">Step <%= active_step[:step_number] %> of <%= steps.size %></span>
+      <span class="text-secondary"><%= t(".step", current: active_step[:step_number], total: steps.size) %></span>
     </div>
   <% end %>
 <% end %>
@@ -25,25 +25,25 @@
       <% text_class = if is_current
                   "text-primary"
                 else
-                  step[:is_complete] ? "text-green-600" : "text-secondary"
+                  step[:is_complete] ? "text-success" : "text-secondary"
                 end %>
       <% step_class = if is_current
                   "bg-surface-inset text-primary"
                 else
-                  step[:is_complete] ? "bg-green-600/10 border-alpha-black-25" : "bg-container-inset"
+                  step[:is_complete] ? "bg-success/10 text-success border-alpha-black-25 theme-dark:border-alpha-white-25" : "bg-container-inset text-secondary"
                 end %>
 
       <%= link_to step[:path], class: "flex items-center gap-3" do %>
         <div class="flex items-center gap-2 text-sm font-medium <%= text_class %>">
-          <span class="<%= step_class %> w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center border border-transparent">
+          <span class="<%= step_class %> w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center border border-transparent transition-colors">
             <%= step[:is_complete] && !is_current ? icon("check", size: "sm", color: "current") : idx + 1 %>
           </span>
 
-          <span><%= step[:name] %></span>
+          <span class="whitespace-nowrap"><%= step[:name] %></span>
         </div>
       <% end %>
 
-      <hr class="border border-secondary w-12 group-last:hidden">
+      <hr class="border border-divider w-8 group-last:hidden">
     </li>
   <% end %>
 </ul>

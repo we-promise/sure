@@ -13,6 +13,19 @@ en:
     index:
       title: Exports
       new: New Export
+    new:
+      title: Export your data
+      subtitle: Download all your financial data
+      whats_included: "What's included:"
+      items:
+        accounts: All accounts and balances
+        transactions: Transaction history
+        investments: Investment trades
+        metadata: Categories, tags and rules
+      note_title: Note
+      note_description: This export includes all of your data, but only some of the data can be imported back via the CSV import feature. We support account, transaction (with category and tags), and trade imports. Other account data cannot be imported and is for your records only.
+      cancel: Cancel
+      submit: Export data
     table:
       title: Exports
       header:

@@ -3,6 +3,22 @@ ru:
   oidc_accounts:
     link:
       account_creation_disabled: Создание новых учетных записей через единый вход (SSO) отключено. Пожалуйста, свяжитесь с администратором для создания учетной записи.
+      title_link: Привязка SSO-аккаунта
+      title_create: Создание аккаунта
+      verify_identity: Подтвердите вашу личность
+      link_description: "Чтобы привязать ваш аккаунт %{provider}%{email}, пожалуйста, подтвердите личность, введя ваш пароль."
+      email_label: Email
+      email_placeholder: Введите ваш email
+      password_label: Пароль
+      password_placeholder: Введите ваш пароль
+      security_notice: Это гарантирует, что только вы можете привязывать внешние аккаунты к своему профилю.
+      link_button: Привязать аккаунт
+      heading_create: Создание новой учетной записи
+      no_account_found: "Аккаунт с email %{email} не найден. Нажмите ниже, чтобы создать новый аккаунт с помощью вашего профиля %{provider}."
+      email_static: "Email:"
+      name_static: "Имя:"
+      create_button: Создать аккаунт
+      cancel: Отмена
     new_user:
       title: Завершение регистрации
       heading: Создайте вашу учетную запись

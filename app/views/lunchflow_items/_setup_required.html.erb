@@ -1,32 +1,34 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Lunch Flow Setup Required") %>
+    <% dialog.with_header(title: t(".title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
         <div class="flex items-start gap-3">
           <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
           <div class="text-sm text-secondary">
-            <p class="font-medium text-primary mb-2">API Key Not Configured</p>
-            <p>Before you can link Lunch Flow accounts, you need to configure your Lunch Flow API key.</p>
+            <p class="font-medium text-primary mb-2"><%= t(".not_configured") %></p>
+            <p><%= t(".before_link_description") %></p>
           </div>
         </div>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-          <p class="font-medium text-primary">Setup Steps:</p>
+          <p class="font-medium text-primary"><%= t(".setup_steps_title") %></p>
           <ol class="list-decimal list-inside space-y-1 text-secondary">
-            <li>Go to <strong>Settings → Providers</strong></li>
-            <li>Find the <strong>Lunch Flow</strong> section</li>
-            <li>Enter your Lunch Flow API key</li>
-            <li>Return here to link your accounts</li>
+            <li><%= t(".step_1") %></li>
+            <li><%= t(".step_2") %></li>
+            <li><%= t(".step_3") %></li>
+            <li><%= t(".step_4") %></li>
           </ol>
         </div>
 
         <div class="mt-4">
-          <%= link_to settings_providers_path,
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors",
-                      data: { turbo: false } do %>
-            Go to Provider Settings
-          <% end %>
+          <%= render DS::Link.new(
+                text: t(".go_to_settings"),
+                href: settings_providers_path,
+                variant: :primary,
+                full_width: true,
+                data: { turbo: false }
+              ) %>
         </div>
       </div>
     <% end %>

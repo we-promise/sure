@@ -2,27 +2,27 @@
   <%= render "chats/ai_avatar" %>
 
   <div class="max-w-[85%] text-sm space-y-4 text-primary">
-    <p>Hey <%= Current.user&.first_name || "there" %>! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data.</p>
+    <p><%= t("chats.ai_greeting.intro", name: Current.user&.first_name || t("chats.ai_greeting.there")) %></p>
 
     <p>
-      You can use <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> to access commands
+      <%= t("chats.ai_greeting.commands_hint_html", slash: content_tag(:span, "/", class: "bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs")) %>
     </p>
 
     <div class="space-y-3">
-      <p>Here's a few questions you can ask:</p>
+      <p><%= t("chats.ai_greeting.questions_title") %></p>
 
       <% questions = [
         {
           icon: "chart-area",
-          text: "Evaluate investment portfolio"
+          text: t("chats.ai_greeting.sample_1")
         },
         {
           icon: "wallet-minimal",
-          text: "Show spending insights"
+          text: t("chats.ai_greeting.sample_2")
         },
         {
           icon: "alert-triangle",
-          text: "Find unusual patterns"
+          text: t("chats.ai_greeting.sample_3")
         }
       ] %>
 

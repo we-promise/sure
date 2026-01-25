@@ -125,3 +125,18 @@ en:
       total: Portfolio balance
       total_value_tooltip: The total portfolio balance is the sum of brokerage cash
         (available for trading) and the current market value of your holdings.
+    activity:
+      labels:
+        buy: Buy
+        sell: Sell
+        dividend: Dividend
+        interest: Interest
+        contribution: Contribution
+        withdrawal: Withdrawal
+        fee: Fee
+        transfer: Transfer
+        sweep_in: Sweep In
+        sweep_out: Sweep Out
+        exchange: Exchange
+        reinvestment: Reinvestment
+        other: Other

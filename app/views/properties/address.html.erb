@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Enter property manually") %>
+  <% dialog.with_header(title: t("properties.address.title")) %>
   <% dialog.with_body do %>
     <div class="flex gap-4">
       <!-- Left sidebar with tabs -->
@@ -13,25 +13,25 @@
 
             <%= form.fields_for :address do |address_form| %>
               <%= address_form.text_field :line1,
-                    label: "Address Line 1",
-                    placeholder: "123 Main Street" %>
+                    label: t("properties.address.line1"),
+                    placeholder: t("properties.address.line1_placeholder") %>
 
               <div class="flex items-center gap-2">
                 <%= address_form.text_field :locality,
-                      label: "City",
-                      placeholder: "San Francisco" %>
+                      label: t("properties.address.city"),
+                      placeholder: t("properties.address.city_placeholder") %>
                 <%= address_form.text_field :region,
-                      label: "State/Region",
-                      placeholder: "CA" %>
+                      label: t("properties.address.region"),
+                      placeholder: t("properties.address.region_placeholder") %>
               </div>
 
               <div class="flex items-center gap-2">
                 <%= address_form.text_field :postal_code,
-                      label: "Postal Code",
-                      placeholder: "12345" %>
+                      label: t("properties.address.postal_code"),
+                      placeholder: t("properties.address.postal_code_placeholder") %>
                 <%= address_form.text_field :country,
-                      label: "Country",
-                      placeholder: "USA" %>
+                      label: t("properties.address.country"),
+                      placeholder: t("properties.address.country_placeholder") %>
               </div>
             <% end %>
           </div>
@@ -39,7 +39,7 @@
           <!-- Save button -->
           <div class="flex justify-end mt-4">
             <%= render DS::Button.new(
-              text: "Save",
+              text: t("properties.address.save"),
               variant: "primary",
             ) %>
           </div>

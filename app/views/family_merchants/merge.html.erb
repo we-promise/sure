@@ -10,18 +10,18 @@
 
       <div class="space-y-2">
         <p class="text-sm font-medium text-primary"><%= t(".sources_label") %></p>
-        <div class="max-h-64 overflow-y-auto space-y-1 border border-secondary rounded-lg p-2">
+        <div class="max-h-64 overflow-y-auto space-y-1 border border-primary rounded-lg p-2 bg-container-inset">
           <% @merchants.each do |merchant| %>
-            <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
-              <%= check_box_tag "source_ids[]", merchant.id, false, class: "rounded border-gray-300" %>
-              <span class="text-sm text-primary"><%= merchant.name %></span>
+            <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded-md cursor-pointer group">
+              <%= check_box_tag "source_ids[]", merchant.id, false, class: "checkbox checkbox--light" %>
+              <span class="text-sm text-primary group-hover:text-primary-hover"><%= merchant.name %></span>
               <% if merchant.is_a?(ProviderMerchant) %>
-                <span class="text-xs text-subdued">(<%= merchant.source&.titleize %>)</span>
+                <span class="text-xs text-secondary">(<%= merchant.source&.titleize %>)</span>
               <% end %>
             </label>
           <% end %>
         </div>
-        <p class="text-xs text-subdued"><%= t(".sources_hint") %></p>
+        <p class="text-xs text-secondary"><%= t(".sources_hint") %></p>
       </div>
 
       <%= render DS::Button.new(

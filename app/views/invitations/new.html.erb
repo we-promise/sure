@@ -17,7 +17,7 @@
         { label: t(".role_label") } %>
 
       <div class="w-full">
-        <%= form.submit t(".submit"), class: "bg-inverse fg-inverse rounded-lg px-4 py-2 w-full" %>
+        <%= render DS::Button.new(text: t(".submit"), type: :submit, variant: :primary, full_width: true) %>
       </div>
     <% end %>
   <% end %>

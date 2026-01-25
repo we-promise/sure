@@ -5,3 +5,70 @@ ru:
       tabs:
         actual: "Фактические"
         budgeted: "Запланированные"
+      categories: "Категории"
+      edit: "Изменить"
+      table_header:
+        categories: Категории
+        amount: Сумма
+      donut:
+        spent: Потрачено
+        of_budget: "из %{amount}"
+        new_budget: Новый бюджет
+        unused: Не использовано
+      today: Сегодня
+    edit:
+      title: Настройка бюджета
+      description: Введите ваши ежемесячные доходы и планируемые расходы, чтобы настроить бюджет.
+      budgeted_spending: Планируемые расходы
+      expected_income: Ожидаемый доход
+      autosuggest_title: Автозаполнение бюджета
+      autosuggest_description: На основе истории транзакций. ИИ может ошибаться, проверьте перед продолжением.
+      continue: Продолжить
+    nav:
+      setup: Настройка
+      categories: Категории
+    actuals_summary:
+      income: Доходы
+      expenses: Расходы
+    budgeted_summary:
+      expected_income: Ожидаемый доход
+      earned: получено
+      over: сверх
+      left: осталось
+      budgeted: Запланировано
+      spent: потрачено
+    over_allocation:
+      message: Вы превысили распределение бюджета. Пожалуйста, исправьте распределение.
+      fix: Исправить распределение
+    budget_categories:
+      index:
+        title: Редактировать бюджет по категориям
+        description: Настройте бюджеты категорий, чтобы установить лимиты расходов. Нераспределенные средства будут автоматически отнесены к категории «Без категории».
+        confirm: Подтвердить
+      form:
+        avg: "/мес. ср."
+        shared: Общий
+        shared_tooltip: Оставьте пустым, чтобы использовать бюджет родительской категории
+      no_categories:
+        oops: Ой!
+        description: Вы еще не создали и не назначили категории расходов своим транзакциям.
+        use_defaults: Использовать стандартные (рекомендуется)
+        new_category: Новая категория
+      allocation_progress:
+        over_100_set: "> 100% задано"
+        percent_set: "%{percent} задано"
+        budget_exceeded: "Бюджет превышен на %{amount}"
+        left_to_allocate: "осталось распределить"
+      show:
+        category_label: Категория
+        overview: Обзор
+        spending: расход
+        status: Статус
+        overspent: перерасход
+        left: осталось
+        budgeted: Запланировано
+        monthly_avg: Среднемесячный расход
+        monthly_median: Медианный месячный расход
+        recent_transactions: Недавние транзакции
+        view_all: Посмотреть все транзакции категории
+        no_transactions: Транзакций за этот период не найдено.

@@ -1,6 +1,8 @@
 ---
 en:
   shared:
+    app_version:
+      version: Version
     confirm_modal:
       accept: Confirm
       body_html: "<p>You will not be able to undo this decision</p>"

@@ -2,22 +2,21 @@
 ru:
   tags:
     create:
-      created: Тег создан
-      error: 'Ошибка при создании тега: %{error}'
+      success: Тег успешно создан
     destroy:
-      deleted: Тег удален
-    edit:
-      edit: Редактировать тег
+      success: Тег успешно удален
     form:
-      placeholder: Название тега
+      name_placeholder: Название тега
     index:
+      delete_all: Удалить все
+      confirm_delete_all: все теги
       empty: Тегов пока нет
       new: Новый тег
       tags: Теги
     new:
-      new: Новый тег
-    tag:
-      delete: Удалить
-      edit: Редактировать
+      new_tag: Новый тег
     update:
-      updated: Тег обновлен
+      success: Тег успешно обновлен
+    tag:
+      delete: Удалить тег
+      edit: Редактировать тег

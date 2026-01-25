@@ -7,6 +7,27 @@ ru:
       success: Подключение Lunch Flow удалено
     index:
       title: Подключения Lunch Flow
+    api_error:
+      title: Ошибка подключения Lunch Flow
+      unable_to_connect: Не удалось подключиться к Lunch Flow
+      common_issues: "Общие проблемы:"
+      issue_invalid_api_key: "Неверный API-ключ: проверьте API-ключ в настройках провайдеров"
+      issue_expired_credentials: "Срок действия учетных данных истек: создайте новый API-ключ в Lunch Flow"
+      issue_network: "Проблема с сетью: проверьте подключение к интернету"
+      issue_service_down: "Сервис недоступен: API Lunch Flow может быть временно недоступен"
+      check_settings: Проверить настройки провайдера
+    setup_required:
+      title: Требуется настройка Lunch Flow
+      not_configured: API-ключ не настроен
+      before_link_description: Прежде чем привязывать счета Lunch Flow, необходимо настроить API-ключ Lunch Flow.
+      setup_steps_title: "Шаги настройки:"
+      step_1: "Перейдите в Настройки → Провайдеры"
+      step_2: "Найдите раздел Lunch Flow"
+      step_3: "Введите ваш API-ключ Lunch Flow"
+      step_4: "Вернитесь сюда, чтобы привязать свои счета"
+      go_to_settings: Перейти в настройки провайдеров
+    subtype_select:
+      select_option: "Выберите %{type}"
     loading:
       loading_message: Загрузка счетов Lunch Flow...
       loading_title: Загрузка

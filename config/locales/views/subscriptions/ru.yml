@@ -2,7 +2,18 @@
 ru:
   subscriptions:
     self_hosted_alert: "%{product_name} недоступен в режиме self-hosted."
+    plan_choice:
+      year_frequency: "/год"
+      month_frequency: "/мес"
+      charged_annual: "Оплата раз в год"
+      charged_monthly: "Ежемесячная оплата"
+      plans:
+        annual: "Годовой"
+        monthly: "Ежемесячный"
     upgrade:
+      title: Обновление
+      account_settings: Настройки аккаунта
+      sign_out: Выйти
       contribute_and_support_sure: "Сделать взнос и поддержать Sure"
       cta: "Продолжайте поддерживать разработку этого проекта!"
       header:

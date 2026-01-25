@@ -5,7 +5,7 @@
     <div class="p-4 bg-surface-inset rounded-lg">
       <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.current_net_worth") %></p>
       <p class="text-2xl font-semibold <%= net_worth_metrics[:current_net_worth] >= 0 ? "text-success" : "text-destructive" %>">
-        <%= net_worth_metrics[:current_net_worth].format %>
+        <%= format_money(net_worth_metrics[:current_net_worth]) %>
       </p>
     </div>
 
@@ -15,7 +15,7 @@
       <% if net_worth_metrics[:trend] %>
         <% trend = net_worth_metrics[:trend] %>
         <p class="text-2xl font-semibold mb-1" style="color: <%= trend.color %>">
-          <%= trend.value.format(signify_positive: true) %>
+          <%= format_money(trend.value, signify_positive: true) %>
         </p>
         <p class="text-xs" style="color: <%= trend.color %>">
           <%= trend.value >= 0 ? "+" : "" %><%= trend.percent_formatted %>
@@ -29,9 +29,9 @@
     <div class="p-4 bg-surface-inset rounded-lg">
       <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.assets_vs_liabilities") %></p>
       <div class="flex items-baseline gap-2">
-        <span class="text-lg font-semibold text-success"><%= net_worth_metrics[:total_assets].format %></span>
+        <span class="text-lg font-semibold text-success"><%= format_money(net_worth_metrics[:total_assets]) %></span>
         <span class="text-xs text-tertiary">-</span>
-        <span class="text-lg font-semibold text-destructive"><%= net_worth_metrics[:total_liabilities].format %></span>
+        <span class="text-lg font-semibold text-destructive"><%= format_money(net_worth_metrics[:total_liabilities]) %></span>
       </div>
     </div>
   </div>
@@ -47,7 +47,7 @@
         <% net_worth_metrics[:asset_groups].each_with_index do |group, idx| %>
           <div class="grid grid-cols-2 items-center text-secondary text-sm py-3 px-4 lg:px-6">
             <div class="col-span-1 font-medium text-secondary"><%= group[:name] %></div>
-            <div class="col-span-1 font-medium text-secondary justify-self-end text-success"><%= group[:total].format %></div>
+            <div class="col-span-1 font-medium text-secondary justify-self-end text-success"><%= format_money(group[:total]) %></div>
           </div>
           <% if idx < net_worth_metrics[:asset_groups].size - 1 %>
             <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
@@ -68,7 +68,7 @@
         <% net_worth_metrics[:liability_groups].each_with_index do |group, idx| %>
           <div class="grid grid-cols-2 items-center text-secondary text-sm py-3 px-4 lg:px-6">
             <div class="col-span-1 font-medium text-secondary"><%= group[:name] %></div>
-            <div class="col-span-1 font-medium text-secondary justify-self-end text-destructive"><%= group[:total].format %></div>
+            <div class="col-span-1 font-medium text-secondary justify-self-end text-destructive"><%= format_money(group[:total]) %></div>
           </div>
           <% if idx < net_worth_metrics[:liability_groups].size - 1 %>
             <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>

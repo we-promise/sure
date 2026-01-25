@@ -1,0 +1,5 @@
+---
+ru:
+  pwa:
+    manifest:
+      description: "%{product_name} — ваш персональный финансовый помощник."

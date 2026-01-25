@@ -9,7 +9,7 @@
   <%# Condition groups pass in show_prefix: false for subconditions since the ANY/ALL selector makes that clear %>
   <% if show_prefix %>
     <div class="pl-2" data-condition-prefix>
-      <span class="font-medium uppercase text-xs">and</span>
+      <span class="font-medium uppercase text-xs"><%= t("rules.conditions.and") %></span>
     </div>
   <% end %>
 
@@ -29,7 +29,7 @@
         <% if condition.filter.type == "number" %>
           <%= form.number_field :value, placeholder: "10", step: 0.01 %>
         <% else %>
-          <%= form.text_field :value, placeholder: "Enter a value" %>
+          <%= form.text_field :value, placeholder: t("rules.conditions.value_placeholder") %>
         <% end %>
       <% end %>
     </div>

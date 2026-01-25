@@ -1,7 +1,18 @@
 en:
   subscriptions:
     self_hosted_alert: "%{product_name} is not available in self-hosted mode."
+    plan_choice:
+      year_frequency: "/year"
+      month_frequency: "/month"
+      charged_annual: "Charged annually"
+      charged_monthly: "Charged monthly"
+      plans:
+        annual: "Annual"
+        monthly: "Monthly"
     upgrade:
+      title: Upgrade
+      account_settings: Account Settings
+      sign_out: Sign out
       contribute_and_support_sure: "Contribute and support Sure"
       cta: "Continue supporting the development of this codebase!"
       header:

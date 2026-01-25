@@ -10,7 +10,9 @@ ru:
     edit:
       title: Редактировать торговца
     form:
+      name_label: Название
       name_placeholder: Название торговца
+      website_label: Веб-сайт
       website_placeholder: Веб-сайт (например, starbucks.com)
       website_hint: Введите веб-сайт торговца для автоматического отображения логотипа
     index:

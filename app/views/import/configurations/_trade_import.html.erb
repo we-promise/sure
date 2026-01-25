@@ -3,38 +3,38 @@
 <%= styled_form_with model: @import, url: import_configuration_path(@import), scope: :import, method: :patch, class: "space-y-4" do |form| %>
   <div class="space-y-4">
     <div class="flex items-center gap-4">
-      <%= form.select :date_col_label, import.csv_headers, { include_blank: "Select column", label: "Date" }, required: true %>
+      <%= form.select :date_col_label, import.csv_headers, { include_blank: t("import.configurations.common.select_column"), label: t("import.configurations.common.date") }, required: true %>
       <%= form.select :date_format, Family::DATE_FORMATS, { label: t(".date_format_label")}, label: true, required: true %>
     </div>
 
     <div class="flex items-center gap-4">
-      <%= form.select :qty_col_label, import.csv_headers, { include_blank: "Select column", label: "Quantity" }, required: true %>
-      <%= form.select :signage_convention, [["Buys are positive qty", "inflows_positive"], ["Buys are negative qty", "inflows_negative"]], label: true, required: true %>
+      <%= form.select :qty_col_label, import.csv_headers, { include_blank: t("import.configurations.common.select_column"), label: t(".qty_label") }, required: true %>
+      <%= form.select :signage_convention, [[t(".buys_positive"), "inflows_positive"], [t(".buys_negative"), "inflows_negative"]], { label: t(".signage_label") }, required: true %>
     </div>
 
     <div class="flex items-center gap-4">
-      <%= form.select :currency_col_label, import.csv_headers, { include_blank: "Default", label: "Currency" } %>
-      <%= form.select :number_format, Import::NUMBER_FORMATS.keys, { label: "Format", prompt: "Select format" }, required: true %>
+      <%= form.select :currency_col_label, import.csv_headers, { include_blank: t("import.configurations.common.default"), label: t("import.configurations.common.currency") } %>
+      <%= form.select :number_format, Import::NUMBER_FORMATS.keys, { label: t("import.configurations.common.format"), prompt: t("import.configurations.common.select_column") }, required: true %>
     </div>
 
-    <%= form.select :ticker_col_label, import.csv_headers, { include_blank: "Select column", label: "Ticker" }, required: true %>
-    <%= form.select :exchange_operating_mic_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Stock exchange code" } %>
-    <%= form.select :price_col_label, import.csv_headers, { include_blank: "Select column", label: "Price" }, required: true %>
+    <%= form.select :ticker_col_label, import.csv_headers, { include_blank: t("import.configurations.common.select_column"), label: t(".ticker_label") }, required: true %>
+    <%= form.select :exchange_operating_mic_col_label, import.csv_headers, { include_blank: t("import.configurations.common.leave_empty"), label: t(".exchange_label") } %>
+    <%= form.select :price_col_label, import.csv_headers, { include_blank: t("import.configurations.common.select_column"), label: t(".price_label") }, required: true %>
 
     <% unless import.account.present? %>
-      <%= form.select :account_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Account" } %>
+      <%= form.select :account_col_label, import.csv_headers, { include_blank: t("import.configurations.common.leave_empty"), label: t("import.configurations.common.account") } %>
     <% end %>
 
-    <%= form.select :name_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Name" } %>
+    <%= form.select :name_col_label, import.csv_headers, { include_blank: t("import.configurations.common.leave_empty"), label: t("import.configurations.common.name") } %>
 
     <% unless Security.provider %>
       <div class="alert alert-warning">
         <p>
-          <strong>Note:</strong> The security prices provider is not configured.  Your trade imports will work, but Sure will not backfill price history.  Please go to your settings to configure this.
+          <strong><%= t("common.note") %>:</strong> <%= t(".provider_notice") %>
         </p>
       </div>
     <% end %>
   </div>
 
-  <%= form.submit "Apply configuration", disabled: import.complete? %>
+  <%= form.submit t("import.configurations.common.apply"), disabled: import.complete? %>
 <% end %>

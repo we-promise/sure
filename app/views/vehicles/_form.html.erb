@@ -25,7 +25,7 @@
                                     placeholder: t("vehicles.form.mileage_placeholder"),
                                     min: 0 %>
         <%= vehicle_form.select :mileage_unit,
-                              [["Miles", "mi"], ["Kilometers", "km"]],
+                              [[t("vehicles.form.mileage_units.mi"), "mi"], [t("vehicles.form.mileage_units.km"), "km"]],
                               { label: t("vehicles.form.mileage_unit") } %>
       </div>
     <% end %>

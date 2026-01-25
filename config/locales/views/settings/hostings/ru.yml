@@ -41,6 +41,11 @@ ru:
         title: Настройки Brand Fetch
         high_res_label: Включить логотипы высокого разрешения
         high_res_description: Если включено, логотипы будут загружаться в разрешении 120x120 вместо 40x40. Это обеспечивает более четкие изображения на экранах с высоким DPI.
+        show_details: подробнее
+        logo_api_link: Logo API
+        step1_html: Посетите %{link} и создайте бесплатный аккаунт разработчика Brand Fetch.
+        step2_html: Перейдите на страницу %{link}.
+        step3_html: Нажмите на иконку глаза в разделе «Your Client ID», чтобы увидеть ваш <strong>Client ID</strong>, и вставьте его ниже.
       openai_settings:
         description: Введите токен доступа и опционально настройте совместимый с OpenAI провайдер
         env_configured_message: Успешно настроено через переменные окружения.
@@ -72,6 +77,11 @@ ru:
         placeholder: Введите ваш API-ключ здесь
         plan: "План %{plan}"
         title: Twelve Data
+        show_details: подробнее
+        api_keys_link: API Keys
+        step1_html: Посетите %{link} и создайте бесплатный аккаунт разработчика Twelve Data.
+        step2_html: Перейдите на страницу %{link}.
+        step3_html: Раскройте ваш <strong>Secret Key</strong> и вставьте его ниже.
       update:
         failure: Неверное значение настройки
         success: Настройки обновлены

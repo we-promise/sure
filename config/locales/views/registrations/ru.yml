@@ -3,23 +3,33 @@ ru:
   helpers:
     label:
       user:
-        invite_code: Код приглашения
+        invite_code: Инвайт-код
     submit:
       user:
         create: Продолжить
   registrations:
-    closed: Регистрация в данный момент закрыта.
+    closed: Регистрация сейчас закрыта.
     create:
       failure: Возникла проблема при регистрации.
-      invalid_invite_code: Неверный код приглашения, пожалуйста, попробуйте еще раз.
+      invalid_invite_code: Неверный инвайт-код, попробуйте снова.
       success: Вы успешно зарегистрировались.
     new:
-      invitation_message: "%{inviter} пригласил вас присоединиться в качестве %{role}"
+      invitation_message: "%{
+        inviter
+        } пригласил вас присоединиться как %{
+        role
+        }"
       join_family_title: Присоединиться к %{family}
       role_admin: администратора
       role_member: участника
       submit: Создать аккаунт
-      title: Создайте ваш аккаунт
-      welcome_body: Для начала вам необходимо зарегистрировать новый аккаунт. Затем вы сможете настроить дополнительные параметры внутри приложения.
+      title: Создайте свой аккаунт
+      welcome_body: Чтобы начать, вам нужно зарегистрировать новый аккаунт. Затем вы сможете настроить дополнительные параметры внутри приложения.
       welcome_title: Добро пожаловать в Self Hosted %{product_name}!
       password_placeholder: Введите ваш пароль
+      email_placeholder: you@example.com
+      password_requirements:
+        length: Минимум 8 символов
+        case: Заглавные и строчные буквы
+        number: Цифра (0-9)
+        special: Спецсимвол (!, @, #, $, % и т.д.)

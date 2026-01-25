@@ -2,17 +2,17 @@
 
 <div class="h-full flex flex-col justify-center items-center">
   <div class="space-y-6 max-w-sm">
-    <div class="mx-auto bg-red-500/5 h-8 w-8 rounded-full flex items-center justify-center">
-      <%= icon "alert-octagon", color: "destructive" %>
+    <div class="mx-auto bg-destructive/10 h-10 w-10 rounded-full flex items-center justify-center">
+      <%= icon "alert-octagon", color: "destructive", size: "md" %>
     </div>
 
     <div class="text-center space-y-2">
-      <h1 class="font-medium text-primary text-center text-3xl">Reverting import failed</h1>
-      <p class="text-sm text-secondary">Please try again</p>
+      <h1 class="font-medium text-primary text-center text-3xl"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".description") %></p>
     </div>
 
     <%= render DS::Button.new(
-      text: "Try again",
+      text: t(".retry"),
       full_width: true,
       href: revert_import_path(import)
     ) %>

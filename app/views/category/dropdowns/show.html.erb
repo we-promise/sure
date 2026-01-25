@@ -61,7 +61,7 @@
                   data: { turbo_frame: "modal" } do %>
             <%= icon("refresh-cw") %>
 
-            <p>Match transfer/payment</p>
+            <p><%= t(".match_transfer") %></p>
           <% end %>
         <% end %>
 
@@ -78,7 +78,7 @@
             <% end %>
           </div>
 
-          <p>One-time <%= @transaction.entry.amount.negative? ? "income" : "expense" %></p>
+          <p><%= t(".one_time_#{@transaction.entry.amount.negative? ? "income" : "expense"}") %></p>
 
           <span class="text-orange-500 ml-auto">
             <%= icon("asterisk", color: "current") %>

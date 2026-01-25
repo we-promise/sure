@@ -26,11 +26,41 @@ en:
         update_failed: "Failed to update connection: %{message}"
         unexpected: An unexpected error occurred. Please try again.
     edit:
+      title: Update SimpleFin Connection
+      header_subtitle: Get a new setup token to reconnect your SimpleFin account
+      reconnect_notice: "Your SimpleFIN connection needs to be updated:"
+      step1_html: "Visit <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> to create a new setup token"
+      step2: "Copy the token and paste it below"
+      step3: "Click \"Update\" to restore access"
+      update_button: Update
       setup_token:
         label: "SimpleFIN Setup Token:"
         placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
+    subtype_select:
+      please_select: "Please select a %{type}"
+      select_placeholder: "Select %{type}"
     setup_accounts:
+      title: Set Up SimpleFin Accounts
+      header_subtitle: Choose the correct account types for your imported accounts
+      info_box_title: "Choose the correct account type for each SimpleFin account:"
+      account_types_list:
+        depository: Checking or Savings
+        depository_desc: Regular bank accounts
+        credit_card: Credit Card
+        credit_card_desc: Credit card accounts
+        investment: Investment
+        investment_desc: Brokerage, 401(k), IRA accounts
+        loan: Loan or Mortgage
+        loan_desc: Debt accounts
+        other: Other Asset
+        other_desc: Everything else
+      sync_info_title: "Transaction History:"
+      sync_info_desc_html: "SimpleFin typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
+      balance_label: "Balance:"
+      account_type_label: "Account Type:"
+      loading_text: Creating Accounts...
+      create_button: Create Accounts
       stale_accounts:
         title: "Accounts No Longer in SimpleFIN"
         description: "These accounts exist in your database but are no longer provided by SimpleFIN. This can happen when account configurations change upstream."

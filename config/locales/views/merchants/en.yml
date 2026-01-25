@@ -10,7 +10,9 @@ en:
     edit:
       title: Edit merchant
     form:
+      name_label: Name
       name_placeholder: Merchant name
+      website_label: Website
       website_placeholder: Website (e.g., starbucks.com)
       website_hint: Enter the merchant's website to automatically display their logo
     index:

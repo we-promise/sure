@@ -8,6 +8,10 @@ ru:
       interest_rate_placeholder: '5.25'
       initial_balance: Первоначальная сумма кредита
       rate_type: Тип ставки
+      rate_types:
+        fixed: Фиксированная
+        variable: Переменная
+        adjustable: Регулируемая
       term_months: Срок (в месяцах)
       term_months_placeholder: '360'
     new:
@@ -21,3 +25,16 @@ ru:
       term: Срок
       type: Тип
       unknown: Неизвестно
+    tabs:
+      overview:
+        edit_loan_details: Редактировать детали кредита
+        months:
+          one: "%{count} месяц"
+          few: "%{count} месяца"
+          many: "%{count} месяцев"
+          other: "%{count} месяца"
+        years:
+          one: "%{count} год"
+          few: "%{count} года"
+          many: "%{count} лет"
+          other: "%{count} года"

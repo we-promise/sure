@@ -3,6 +3,22 @@ en:
   oidc_accounts:
     link:
       account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.
+      title_link: Link OIDC Account
+      title_create: Create Account
+      verify_identity: Verify Your Identity
+      link_description: "To link your %{provider} account%{email}, please verify your identity by entering your password."
+      email_label: Email
+      email_placeholder: Enter your email
+      password_label: Password
+      password_placeholder: Enter your password
+      security_notice: This helps ensure that only you can link external accounts to your profile.
+      link_button: Link Account
+      heading_create: Create New Account
+      no_account_found: "No account found with the email %{email}. Click below to create a new account using your %{provider} identity."
+      email_static: "Email:"
+      name_static: "Name:"
+      create_button: Create Account
+      cancel: Cancel
     new_user:
       title: Complete Your Account
       heading: Create Your Account

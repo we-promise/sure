@@ -11,6 +11,12 @@ ru:
       submit: Добавить транзакцию
       ticker_placeholder: AAPL
       type: Тип
+      types:
+        buy: Покупка
+        sell: Продажа
+        deposit: Пополнение
+        withdrawal: Снятие
+        interest: Проценты
     header:
       buy: Покупка
       current_market_price_label: Текущая рыночная цена
@@ -20,6 +26,7 @@ ru:
       sell: Продажа
       symbol_label: Символ
       total_return_label: Нереализованная прибыль/убыток
+      linked_with_plaid: Связано с Plaid
     new:
       title: Новая транзакция
     show:

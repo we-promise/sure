@@ -92,7 +92,8 @@
               <div class="flex items-start justify-between">
                 <div>
                   <p class="text-sm font-medium text-primary"><%= t("layouts.trial.open_demo") %></p>
-                  <p class="text-sm text-secondary"><%= t("layouts.trial.data_deleted_in_days", days: Current.family.days_left_in_trial) %></p>
+                  <% days_left = Current.family.days_left_in_trial %>
+                  <p class="text-sm text-secondary"><%= t("layouts.trial.data_deleted_in_days", count: days_left, days: days_left) %></p>
                 </div>
 
                 <%= render DS::Link.new(

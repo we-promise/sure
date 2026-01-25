@@ -17,11 +17,19 @@ ru:
       footer:
         privacy_policy: Политика конфиденциальности
         terms_of_service: Условия использования
+        community_fork: сообществом поддерживаемый форк Maybe Finance
+      confirm_dialog:
+        title: Вы уверены?
+        subtitle: Это действие нельзя отменить.
+        confirm: Подтвердить
+    doorkeeper:
+      application:
+        title: Авторизация Sure
     trial:
       open_demo: Открыть демо
       data_deleted_in_days:
-        one: Данные будут удалены через %{days} день
-        few: Данные будут удалены через %{days} дня
-        many: Данные будут удалены через %{days} дней
-        other: Данные будут удалены через %{days} дня
+        one: Данные будут удалены через %{count} день
+        few: Данные будут удалены через %{count} дня
+        many: Данные будут удалены через %{count} дней
+        other: Данные будут удалены через %{count} дня
       contribute: Участвовать

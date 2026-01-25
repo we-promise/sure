@@ -127,11 +127,13 @@
       <% end %>
     <% end %>
 
-    <%= link_to new_family_export_path,
-                class: "bg-container-inset inline-flex items-center justify-center gap-2 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full font-medium text-primary text-sm text-center",
-                data: { turbo_frame: :modal } do %>
-      <%= icon("plus") %>
-      <%= t(".new") %>
-    <% end %>
+    <%= render DS::Link.new(
+          text: t(".new"),
+          href: new_family_export_path,
+          variant: :outline,
+          icon: "plus",
+          frame: :modal,
+          class: "w-full"
+        ) %>
   </div>
 <% end %>

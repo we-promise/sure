@@ -1,15 +1,15 @@
 <%# Modal: Link an existing manual account to a SimpleFIN account %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Link SimpleFIN account") %>
+    <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
 
     <% dialog.with_body do %>
       <% if @available_simplefin_accounts.blank? %>
         <div class="p-4 text-sm text-secondary">
-          <p class="mb-2"><%= t("simplefin_items.select_existing_account.no_accounts_found") %></p>
+          <p class="mb-2"><%= t(".no_accounts_found") %></p>
           <ul class="list-disc list-inside space-y-1">
-            <li><%= t("simplefin_items.select_existing_account.wait_for_sync") %></li>
-            <li><%= t("simplefin_items.select_existing_account.check_provider_health") %></li>
+            <li><%= t(".wait_for_sync") %></li>
+            <li><%= t(".check_provider_health") %></li>
           </ul>
         </div>
       <% else %>
@@ -22,10 +22,10 @@
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= sfa.name.presence || sfa.account_id %></span>
                   <span class="text-xs text-secondary">
-                    <%= sfa.currency %> • Balance: <%= number_to_currency((sfa.current_balance || sfa.available_balance || 0), unit: sfa.currency) %>
+                    <%= sfa.currency %> • <%= t("simplefin_items.setup_accounts.balance_label") %> <%= number_to_currency((sfa.current_balance || sfa.available_balance || 0), unit: sfa.currency) %>
                   </span>
                   <% if sfa.current_account.present? %>
-                    <span class="text-xs text-secondary"><%= t("simplefin_items.select_existing_account.currently_linked_to", account_name: sfa.current_account.name) %></span>
+                    <span class="text-xs text-secondary"><%= t(".currently_linked_to", account_name: sfa.current_account.name) %></span>
                   <% end %>
                 </div>
               </label>
@@ -33,8 +33,8 @@
           </div>
 
           <div class="flex items-center justify-end gap-2">
-            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
-            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+            <%= render DS::Button.new(text: t(".link_account"), variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: t(".cancel"), variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
           </div>
         <% end %>
       <% end %>

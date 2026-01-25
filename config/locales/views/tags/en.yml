@@ -2,22 +2,21 @@
 en:
   tags:
     create:
-      created: Tag created
-      error: 'Error creating tag: %{error}'
+      success: Tag created successfully
     destroy:
-      deleted: Tag deleted
-    edit:
-      edit: Edit tag
+      success: Tag deleted successfully
     form:
-      placeholder: Tag name
+      name_placeholder: Tag name
     index:
-      empty: No tags yet
+      delete_all: Delete all
+      confirm_delete_all: all tags
+      empty: No tags found
       new: New tag
       tags: Tags
     new:
-      new: New tag
-    tag:
-      delete: Delete
-      edit: Edit
+      new_tag: New tag
     update:
-      updated: Tag updated
+      success: Tag updated successfully
+    tag:
+      delete: Delete tag
+      edit: Edit tag

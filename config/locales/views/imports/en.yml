@@ -9,7 +9,55 @@ en:
         errors_notice_mobile: You have errors in your data.  Tap over the error tooltip to see
           details.
         title: Clean your data
+        cleaned_status: Your data has been cleaned
+        next_step: Next step
+        view_all: All rows
+        view_errors: Error rows
+    failure:
+      title: Import failed
+      description: Please check that your file format, for any errors and that all required fields are filled, then come back and try again.
+      retry: Try again
+    importing:
+      title: Import in progress
+      description: Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app.
+      check_status: Check status
+      back_to_dashboard: Back to dashboard
+    nav:
+      step: "Step %{current} of %{total}"
+      upload: Upload
+      configure: Configure
+      clean: Clean
+      map: Map
+      confirm: Confirm
+    ready:
+      title: Confirm your import data
+      description: Here's a summary of the new items that will be added to your account once you publish this import.
+      item: item
+      count: count
+      publish: Publish import
+    revert_failure:
+      title: Reverting import failed
+      description: Please try again
+      retry: Try again
+    success:
+      title: Import successful
+      description: Your imported data has been successfully added to the app and is now ready for use.
+      back_to_dashboard: Back to dashboard
     configurations:
+      common:
+        apply: Apply configuration
+        date: Date
+        amount: Amount
+        currency: Currency
+        format: Format
+        account: Account
+        name: Name
+        category: Category
+        tags: Tags
+        notes: Notes
+        select_column: Select column
+        leave_empty: Leave empty
+        default: Default
       update:
         success: Import configured successfully.
       category_import:
@@ -19,6 +67,7 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+        preconfigured_notice: We have pre-configured your Mint import for you. Please proceed to the next step.
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
           on the CSV data.
@@ -27,11 +76,39 @@ en:
       show:
         description: Select the columns that correspond to each field in your CSV.
         title: Configure your import
+        template_found_title: Template configuration found
+        template_found_description: We found a configuration from a previous import for this account. Would you like to apply it to this import?
+        manually_configure: Manually configure
+        apply_template: Apply template
+        sample_data_caption: Sample data from your uploaded CSV
       trade_import:
         date_format_label: Date format
+        qty_label: Quantity
+        signage_label: Signage convention
+        buys_positive: Buys are positive qty
+        buys_negative: Buys are negative qty
+        ticker_label: Ticker
+        exchange_label: Stock exchange code
+        price_label: Price
+        provider_notice: "Note: The security prices provider is not configured. Your trade imports will work, but Sure will not backfill price history. Please go to your settings to configure this."
       transaction_import:
         date_format_label: Date format
         rows_to_skip_label: Skip first n rows
+        amount_type_strategy_label: Amount type strategy
+        signage_label: Amount type
+        inflows_positive: Incomes are positive
+        inflows_negative: Incomes are negative
+        custom_column_prefix: ↪
+        set_label: Set
+        as_amount_type_column: as amount type column
+        as_identifier_value: as identifier value
+        treat_as: Treat "%{value}" as
+        income: Income (inflow)
+        expense: Expense (outflow)
+      account_import:
+        entity_type_label: Entity Type
+        balance_label: Balance
+        balance_date_label: Balance Date
     confirms:
       mappings:
         create_account: Create account
@@ -42,21 +119,15 @@ en:
           and provide an account name we can use.
         rows_label: Rows
         unassigned_account: Need to create a new account for unassigned rows?
-      show:
-        account_mapping_description: Assign all of your imported file's accounts to
-          Maybe's existing accounts.  You can also add new accounts or leave them
-          uncategorized.
-        account_mapping_title: Assign your accounts
-        account_type_mapping_description: Assign all of your imported file's account
-          types to Maybe's
-        account_type_mapping_title: Assign your account types
-        category_mapping_description: Assign all of your imported file's categories
-          to Maybe's existing categories.  You can also add new categories or leave
-          them uncategorized.
-        category_mapping_title: Assign your categories
-        tag_mapping_description: Assign all of your imported file's tags to Maybe's
-          existing tags.  You can also add new tags or leave them uncategorized.
-        tag_mapping_title: Assign your tags
+        next: Next
+    mappings:
+      form:
+        unassigned: (unassigned)
+        select_option: Select an option
+        leave_unassigned: Leave unassigned
+    rows:
+      form:
+        errors_title: Errors
     uploads:
       show:
         description: Paste or upload your CSV file below.  Please review the instructions

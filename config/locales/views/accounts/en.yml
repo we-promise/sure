@@ -6,6 +6,7 @@ en:
       link_provider: Link with provider
       unlink_provider: Unlink from provider
       troubleshoot: Troubleshoot
+      deletion_in_progress: (deletion in progress...)
     chart:
       data_not_available: Data not available for the selected period
     create:
@@ -45,8 +46,19 @@ en:
         lunchflow_entry: Link Lunch Flow account
         manual_entry: Enter account balance
         title: How would you like to add it?
+      container:
+        previous: Previous
+        next: Next
+        select: Select
+        navigate: Navigate
+        close: Close
       title: What would you like to add?
     show:
+      tabs:
+        activity: Activity
+        holdings: Holdings
+        overview: Overview
+      complete_setup: Complete setup
       activity:
         amount: Amount
         balance: Balance
@@ -79,6 +91,8 @@ en:
           the account information because you'll need to add it as a new account.</p>"
         confirm_title: Delete account?
         edit: Edit
+        delete_account: Delete account
+        delete_resource: account
         import: Import transactions
         import_trades: Import trades
         import_transactions: Import transactions

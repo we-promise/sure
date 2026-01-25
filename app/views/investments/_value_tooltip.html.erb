@@ -2,35 +2,35 @@
 
 <div data-controller="tooltip" data-tooltip-placement-value="right" data-tooltip-offset-value=10 data-tooltip-cross-axis-value=50>
   <%= icon("info", size: "sm") %>
-  <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-gray-700 text-sm p-2 rounded w-64">
-    <div class="fg-inverse">
+  <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-container-inverse text-inverse text-sm p-3 rounded-xl shadow-lg w-64 border border-primary">
+    <div class="font-medium mb-3">
       <%= t(".total_value_tooltip") %>
     </div>
-    <div class="flex pt-3">
-      <div class="text-gray-300">
+    <div class="flex items-center justify-between py-1">
+      <div class="text-secondary">
         <%= t(".cash") %>
       </div>
-      <div class="fg-inverse ml-auto">
-        <%= tag.p format_money(cash, precision: 0) %>
+      <div class="font-medium">
+        <%= format_money(cash, precision: 0) %>
       </div>
     </div>
-    <div class="flex">
-      <div class="text-gray-300">
+    <div class="flex items-center justify-between py-1">
+      <div class="text-secondary">
         <%= t(".holdings") %>
       </div>
-      <div class="fg-inverse ml-auto">
-        <%= tag.p format_money(holdings, precision: 0) %>
+      <div class="font-medium">
+        <%= format_money(holdings, precision: 0) %>
       </div>
     </div>
 
-    <hr class="my-2 border-secondary">
+    <hr class="my-2 border-divider">
 
-    <div class="flex">
-      <div class="text-gray-300">
+    <div class="flex items-center justify-between pt-1">
+      <div class="text-secondary">
         <%= t(".total") %>
       </div>
-      <div class="fg-inverse font-bold ml-auto">
-        <%= tag.p format_money(balance, precision: 0) %>
+      <div class="font-bold text-lg">
+        <%= format_money(balance, precision: 0) %>
       </div>
     </div>
   </div>

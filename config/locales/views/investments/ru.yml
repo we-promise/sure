@@ -124,3 +124,18 @@ ru:
       holdings: Активы
       total: Баланс портфеля
       total_value_tooltip: Общий баланс портфеля — это сумма наличных на брокерском счете (доступных для торговли) и текущей рыночной стоимости ваших активов.
+    activity:
+      labels:
+        buy: Покупка
+        sell: Продажа
+        dividend: Дивиденды
+        interest: Проценты
+        contribution: Пополнение
+        withdrawal: Вывод
+        fee: Комиссия
+        transfer: Перевод
+        sweep_in: Зачисление (Sweep)
+        sweep_out: Списание (Sweep)
+        exchange: Обмен
+        reinvestment: Реинвестирование
+        other: Прочее

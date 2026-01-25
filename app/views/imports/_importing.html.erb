@@ -2,18 +2,18 @@
 
 <div class="h-full flex flex-col justify-center items-center">
   <div class="space-y-6 max-w-sm">
-    <div class="mx-auto bg-gray-500/5 h-8 w-8 rounded-full flex items-center justify-center">
-      <%= icon "loader", class: "animate-pulse" %>
+    <div class="mx-auto bg-surface-inset h-10 w-10 rounded-full flex items-center justify-center">
+      <%= icon "loader", class: "animate-spin text-secondary" %>
     </div>
 
     <div class="text-center space-y-2">
-      <h1 class="font-medium text-primary text-center text-3xl">Import in progress</h1>
-      <p class="text-sm text-secondary">Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app.</p>
+      <h1 class="font-medium text-primary text-center text-3xl"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".description") %></p>
     </div>
 
     <div class="space-y-2 flex flex-col">
-      <%= render DS::Link.new(text: "Check status", href: import_path(import), variant: "primary", full_width: true) %>
-      <%= render DS::Link.new(text: "Back to dashboard", href: root_path, variant: "secondary", full_width: true) %>
+      <%= render DS::Link.new(text: t(".check_status"), href: import_path(import), variant: "primary", full_width: true) %>
+      <%= render DS::Link.new(text: t(".back_to_dashboard"), href: root_path, variant: "secondary", full_width: true) %>
     </div>
   </div>
 </div>

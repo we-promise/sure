@@ -6,7 +6,7 @@
       <%= icon "alert-circle", class: "w-5 h-5 text-destructive mr-2 shrink-0" %>
       <div>
         <p class="text-sm font-medium text-destructive">
-          <%= pluralize(sso_provider.errors.count, "error") %> prohibited this provider from being saved:
+          <%= t("admin.sso_providers.form.errors_title", count: sso_provider.errors.count) %>
         </p>
         <ul class="mt-2 text-sm text-destructive list-disc list-inside">
           <% sso_provider.errors.full_messages.each do |message| %>
@@ -20,7 +20,7 @@
 
 <%= styled_form_with model: [:admin, sso_provider], class: "space-y-6", data: { controller: "admin-sso-form" } do |form| %>
   <div class="space-y-4">
-    <h3 class="font-medium text-primary">Basic Information</h3>
+    <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.basic_information") %></h3>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <%= form.select :strategy,
@@ -30,28 +30,28 @@
             ["Google OAuth2", "google_oauth2"],
             ["GitHub", "github"]
           ], sso_provider.strategy),
-          { label: "Strategy" },
+          { label: t("admin.sso_providers.form.strategy_label") },
           { data: { action: "change->admin-sso-form#toggleFields" } } %>
 
       <%= form.text_field :name,
-          label: "Name",
-          placeholder: "e.g., keycloak, authentik",
+          label: t("admin.sso_providers.form.name_label"),
+          placeholder: t("admin.sso_providers.form.name_placeholder"),
           required: true,
           data: { action: "input->admin-sso-form#updateCallbackUrl" } %>
     </div>
-    <p class="text-xs text-secondary -mt-2">Unique identifier (lowercase, numbers, underscores only)</p>
+    <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.name_help") %></p>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <%= form.text_field :label,
-          label: "Button Label",
-          placeholder: "e.g., Sign in with Keycloak",
+          label: t("admin.sso_providers.form.label_label"),
+          placeholder: t("admin.sso_providers.form.label_placeholder"),
           required: true %>
 
       <div>
         <%= form.text_field :icon,
-            label: "Icon (optional)",
-            placeholder: "e.g., key, shield" %>
-        <p class="text-xs text-secondary mt-1">Lucide icon name for the login button</p>
+            label: t("admin.sso_providers.form.icon_label"),
+            placeholder: t("admin.sso_providers.form.icon_placeholder") %>
+        <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.icon_help") %></p>
       </div>
     </div>
 
@@ -65,42 +65,42 @@
   </div>
 
   <div class="border-t border-primary pt-4 space-y-4">
-    <h3 class="font-medium text-primary">OAuth/OIDC Configuration</h3>
+    <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.oauth_configuration") %></h3>
 
     <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
       <%= form.text_field :issuer,
-          label: "Issuer URL",
-          placeholder: "https://your-idp.example.com/realms/your-realm",
+          label: t("admin.sso_providers.form.issuer_label"),
+          placeholder: t("admin.sso_providers.form.issuer_placeholder"),
           data: { action: "blur->admin-sso-form#validateIssuer" } %>
-      <p class="text-xs text-secondary mt-1">OIDC issuer URL (validates .well-known/openid-configuration)</p>
+      <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.issuer_help") %></p>
     </div>
 
     <%= form.text_field :client_id,
-        label: "Client ID",
-        placeholder: "your-client-id",
+        label: t("admin.sso_providers.form.client_id_label"),
+        placeholder: t("admin.sso_providers.form.client_id_placeholder"),
         required: true %>
 
     <%= form.password_field :client_secret,
-        label: "Client Secret",
-        placeholder: sso_provider.persisted? ? "••••••••" : "your-client-secret",
+        label: t("admin.sso_providers.form.client_secret_label"),
+        placeholder: sso_provider.persisted? ? t("admin.sso_providers.form.client_secret_placeholder_existing") : t("admin.sso_providers.form.client_secret_placeholder_new"),
         required: !sso_provider.persisted? %>
     <% if sso_provider.persisted? %>
-      <p class="text-xs text-secondary -mt-2">Leave blank to keep existing secret</p>
+      <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.client_secret_help_existing") %></p>
     <% end %>
 
     <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
-      <label class="block text-sm font-medium text-primary mb-1">Callback URL</label>
+      <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.redirect_uri_label") %></label>
       <div class="flex items-center gap-2">
         <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
               data-admin-sso-form-target="callbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
                 data-action="click->admin-sso-form#copyCallback"
                 class="p-2 text-secondary hover:text-primary shrink-0"
-                title="Copy to clipboard">
+                title="<%= t("admin.sso_providers.form.copy_button") %>">
           <%= icon "copy", class: "w-4 h-4" %>
         </button>
       </div>
-      <p class="text-xs text-secondary mt-1">Configure this URL in your identity provider</p>
+      <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.redirect_uri_help") %></p>
     </div>
   </div>
 
@@ -179,7 +179,7 @@
         <button type="button"
                 data-action="click->admin-sso-form#copySamlCallback"
                 class="p-2 text-secondary hover:text-primary shrink-0"
-                title="Copy to clipboard">
+                title="<%= t("admin.sso_providers.form.copy_button") %>">
           <%= icon "copy", class: "w-4 h-4" %>
         </button>
       </div>
@@ -272,8 +272,8 @@
     </div>
 
     <div class="flex gap-3">
-      <%= link_to "Cancel", admin_sso_providers_path, class: "px-4 py-2 text-sm font-medium text-secondary hover:text-primary" %>
-      <%= form.submit sso_provider.persisted? ? "Update Provider" : "Create Provider",
+      <%= link_to t("admin.sso_providers.form.cancel"), admin_sso_providers_path, class: "px-4 py-2 text-sm font-medium text-secondary hover:text-primary" %>
+      <%= form.submit t("admin.sso_providers.form.submit"),
           class: "px-4 py-2 bg-primary text-inverse rounded-lg text-sm font-medium hover:bg-primary/90" %>
     </div>
   </div>

@@ -4,5 +4,9 @@ ru:
     invite_email:
       accept_button: Принять приглашение
       body: "%{inviter} приглашает вас присоединиться к группе %{family} в %{product_name}!"
-      expiry_notice: Это приглашение истечет через %{days} дн.
+      expiry_notice:
+        one: "Это приглашение истечет через %{count} день."
+        few: "Это приглашение истечет через %{count} дня."
+        many: "Это приглашение истечет через %{count} дней."
+        other: "Это приглашение истечет через %{count} дня."
       greeting: Добро пожаловать в %{product_name}!

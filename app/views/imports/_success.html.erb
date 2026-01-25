@@ -2,17 +2,17 @@
 
 <div class="h-full flex flex-col justify-center items-center">
   <div class="space-y-6 max-w-sm">
-    <div class="mx-auto bg-green-500/5 h-8 w-8 rounded-full flex items-center justify-center">
-      <%= icon "check", color: "success" %>
+    <div class="mx-auto bg-success/10 h-10 w-10 rounded-full flex items-center justify-center">
+      <%= icon "check", color: "success", size: "md" %>
     </div>
 
     <div class="text-center space-y-2">
-      <h1 class="font-medium text-primary text-center text-3xl">Import successful</h1>
-      <p class="text-sm text-secondary">Your imported data has been successfully added to the app and is now ready for use.</p>
+      <h1 class="font-medium text-primary text-center text-3xl"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".description") %></p>
     </div>
 
     <%= render DS::Link.new(
-      text: "Back to dashboard",
+      text: t(".back_to_dashboard"),
       variant: "primary",
       full_width: true,
       href: root_path

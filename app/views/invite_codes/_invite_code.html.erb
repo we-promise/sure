@@ -1,21 +1,28 @@
 <%# app/views/invite_codes/_invite_code.html.erb %>
 <div class="invite_code pt-2">
-  <div class="flex items-center justify-between p-2 w-1/2 bg-inverse rounded-md" data-controller="clipboard">
-    <div>
-      <span data-clipboard-target="source" class="text-inverse text-sm font-medium"><%= invite_code.token %></span>
+  <div class="flex items-center justify-between p-2 w-full md:w-1/2 bg-inverse rounded-lg shadow-border-xs" data-controller="clipboard">
+    <div class="pl-2">
+      <span data-clipboard-target="source" class="text-inverse text-sm font-mono tracking-wider"><%= invite_code.token %></span>
     </div>
-    <div class="flex items-center gap-2">
-      <button data-action="clipboard#copy" class="shrink-0 z-10 inline-flex items-center px-1 text-sm text-secondary font-sm text-center" type="button">
+    <div class="flex items-center gap-1">
+      <button data-action="clipboard#copy" class="p-2 text-inverse/60 hover:text-inverse transition-colors cursor-pointer" type="button" title="Copy code">
         <span data-clipboard-target="iconDefault">
-          <%= icon "copy" %>
+          <%= icon "copy", size: "sm", color: "current" %>
         </span>
-        <span class="hidden inline-flex items-center" data-clipboard-target="iconSuccess">
-          <%= icon "check" %>
+        <span class="hidden" data-clipboard-target="iconSuccess">
+          <%= icon "check", size: "sm", color: "success" %>
         </span>
       </button>
-      <%= button_to invite_code_path(invite_code), method: :delete, data: { confirm: "Are you sure?" }, class: "ml-2 text-red-600 text-xs" do %>
-        <%= icon("trash-2", size: "sm", class: "inline mr-1") %>
-      <% end %>
+
+      <%= render DS::Button.new(
+            variant: :icon,
+            icon: "trash-2",
+            size: :sm,
+            href: invite_code_path(invite_code),
+            method: :delete,
+            confirm: t("invite_codes.invite_code.delete_confirm"),
+            class: "!text-red-400 hover:!bg-red-400/10"
+          ) %>
     </div>
   </div>
 </div>

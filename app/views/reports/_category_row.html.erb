@@ -38,7 +38,7 @@
 
   <div class="col-span-1 text-right">
     <span class="text-sm <%= color_class %>">
-      <%= Money.new(item[:total], Current.family.currency).format %>
+      <%= format_money(Money.new(item[:total], Current.family.currency)) %>
     </span>
   </div>
 

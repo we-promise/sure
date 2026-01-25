@@ -1,61 +1,59 @@
 <%
-  header_title @user_exists ? "Link OIDC Account" : "Create Account"
+  header_title @user_exists ? t(".title_link") : t(".title_create")
 %>
 
 <% if @user_exists %>
-  <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-    <h3 class="text-sm font-medium text-yellow-800 mb-2">Verify Your Identity</h3>
-    <p class="text-sm text-yellow-700">
-      To link your <%= @pending_auth["provider"] %> account<% if @pending_auth["email"].present? %> (<%= @pending_auth["email"] %>)<% end %>,
-      please verify your identity by entering your password.
-    </p>
-  </div>
+  <%= render DS::Alert.new(
+        title: t(".verify_identity"),
+        message: t(".link_description", provider: @pending_auth["provider"], email: (@pending_auth["email"].present? ? " (#{@pending_auth['email']})" : "")),
+        variant: :warning,
+        class: "mb-6"
+      ) %>
 
   <%= styled_form_with url: create_link_oidc_account_path, class: "space-y-4", data: { turbo: false } do |form| %>
     <%= form.email_field :email,
-      label: "Email",
+      label: t(".email_label"),
       autofocus: false,
       autocomplete: "email",
-      required: "required",
-      placeholder: "Enter your email",
+      required: true,
+      placeholder: t(".email_placeholder"),
       value: @email %>
 
     <%= form.password_field :password,
-      label: "Password",
-      required: "required",
-      placeholder: "Enter your password",
+      label: t(".password_label"),
+      required: true,
+      placeholder: t(".password_placeholder"),
       autocomplete: "current-password" %>
 
-    <div class="text-sm text-gray-600 mt-2">
-      <p>This helps ensure that only you can link external accounts to your profile.</p>
-    </div>
+    <p class="text-sm text-secondary">
+      <%= t(".security_notice") %>
+    </p>
 
-    <%= form.submit "Link Account" %>
+    <%= form.submit t(".link_button") %>
   <% end %>
 <% else %>
-  <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-    <h3 class="text-sm font-medium text-blue-800 mb-2">Create New Account</h3>
-    <p class="text-sm text-blue-700">
-      No account found with the email <strong><%= @pending_auth["email"] %></strong>.
-      Click below to create a new account using your <%= @pending_auth["provider"] %> identity.
-    </p>
-  </div>
+  <%= render DS::Alert.new(
+        title: t(".heading_create"),
+        message: t(".no_account_found", email: tag.strong(@pending_auth["email"]), provider: @pending_auth["provider"]),
+        variant: :info,
+        class: "mb-6"
+      ) %>
 
   <div class="space-y-4">
-    <div class="p-4 bg-container border border-secondary rounded-md">
+    <div class="p-4 bg-container-inset border border-primary rounded-xl shadow-border-xs">
       <p class="text-sm text-primary">
-        <strong>Email:</strong> <%= @pending_auth["email"] %>
+        <strong><%= t(".email_static") %></strong> <%= @pending_auth["email"] %>
       </p>
       <% if @pending_auth["name"].present? %>
         <p class="text-sm text-primary mt-2">
-          <strong>Name:</strong> <%= @pending_auth["name"] %>
+          <strong><%= t(".name_static") %></strong> <%= @pending_auth["name"] %>
         </p>
       <% end %>
     </div>
 
     <% if @allow_account_creation %>
       <%= render DS::Button.new(
-        text: "Create Account",
+        text: t(".create_button"),
         href: create_user_oidc_account_path,
         full_width: true,
         variant: :primary,
@@ -63,18 +61,18 @@
         data: { turbo: false }
       ) %>
     <% else %>
-      <p class="text-xs text-secondary">
-        <%= t("oidc_accounts.link.account_creation_disabled") %>
+      <p class="text-xs text-secondary italic">
+        <%= t(".account_creation_disabled") %>
       </p>
     <% end %>
   </div>
 <% end %>
 
-<div class="mt-6 text-center">
+<div class="mt-8 text-center">
   <%= render DS::Link.new(
-    text: "Cancel",
+    text: t(".cancel"),
     href: new_session_path,
-    variant: :default,
-    class: "font-medium text-sm text-primary hover:underline transition"
+    variant: :ghost,
+    size: :sm
   ) %>
 </div>

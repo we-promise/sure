@@ -14,11 +14,11 @@
     <div class="bg-container border border-tertiary rounded-lg p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-0">
       <div class="flex items-center gap-2">
         <%= icon "check-circle", size: "sm", color: "success" %>
-        <p class="text-success text-sm">Your data has been cleaned</p>
+        <p class="text-success text-sm"><%= t(".cleaned_status") %></p>
       </div>
 
       <%= render DS::Link.new(
-        text: "Next step",
+        text: t(".next_step"),
         variant: "primary",
         href: import_confirm_path(@import),
         frame: :_top,
@@ -34,9 +34,9 @@
       </div>
 
       <div class="flex justify-center w-full md:w-auto">
-        <div class="bg-gray-50 rounded-lg inline-flex p-1 space-x-2 text-sm text-primary font-medium w-full md:w-auto">
-          <%= link_to "All rows", import_clean_path(@import, per_page: params[:per_page], view: "all"), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] != 'errors' ? 'bg-container' : ''}" %>
-          <%= link_to "Error rows", import_clean_path(@import, per_page: params[:per_page], view: "errors"), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] == 'errors' ? 'bg-container' : ''}" %>
+        <div class="bg-gray-50 theme-dark:bg-gray-800 rounded-lg inline-flex p-1 space-x-2 text-sm text-primary font-medium w-full md:w-auto">
+          <%= link_to t(".view_all"), import_clean_path(@import, per_page: params[:per_page], view: "all"), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] != 'errors' ? 'bg-container' : ''}" %>
+          <%= link_to t(".view_errors"), import_clean_path(@import, per_page: params[:per_page], view: "errors"), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] == 'errors' ? 'bg-container' : ''}" %>
         </div>
       </div>
     </div>

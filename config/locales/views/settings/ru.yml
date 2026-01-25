@@ -21,11 +21,29 @@ ru:
         merchant_detector:
           title: Определение торговцев
           subtitle: ИИ идентифицирует и дополняет данные транзакций информацией о торговце
+    guides:
+      show:
+        page_title: Руководства
+    bank_sync:
+      show:
+        page_title: Банковская синхронизация
+        providers: ПРОВАЙДЕРЫ
+        no_providers_configured: Провайдеры не настроены
+        configure_providers_description: Настройте провайдеров для привязки ваших банковских счетов.
     payments:
       show:
         page_title: Платежи
         subscription_subtitle: Обновите данные вашей банковской карты
         subscription_title: Управление взносами
+        currently_on: "В настоящее время используется тариф %{plan}."
+        trialing: "В настоящее время используется открытая демо-версия %{product}"
+        data_will_be_deleted: "Данные будут удалены через %{days} дней"
+        not_contributing: "не поддерживаете проект"
+        not_contributing_html: "В настоящее время вы %{status}"
+        contributions_description: "Ваша поддержка %{product} будет отображаться здесь."
+        manage: Управлять
+        choose_level: Выбрать уровень
+        payment_via: "Оплата через %{provider}"
     preferences:
       show:
         country: Страна
@@ -43,6 +61,7 @@ ru:
         theme_system: Системная
         theme_title: Тема
         timezone: Часовой пояс
+        translations_work_in_progress: Пожалуйста, обратите внимание, мы все еще работаем над переводами для различных языков.
     profiles:
       destroy:
         cannot_remove_self: Вы не можете удалить самого себя из аккаунта.
@@ -71,8 +90,10 @@ ru:
         reset_account: Сбросить данные
         reset_account_warning: Сброс данных удалит все ваши счета, категории, торговцев, теги и прочую информацию, но сохранит вашу учетную запись пользователя.
         reset_account_with_sample_data: Сбросить и загрузить демо
-        reset_account_with_sample_data_warning: Удалить все существующие данные и загрузить свежий набор демонстрационных данных для ознакомления.
+        reset_account_with_sample_data_warning: Удалить все существующие данные и загрузить свежий набор демонстрационных данных для ознакоминиться.
         email: Email
+        email_change_requested: "Вы запросили изменение email на %{email}. Пожалуйста, перейдите по ссылке в письме для подтверждения. Если вы не получили письмо, проверьте папку со спамом или %{link}."
+        request_new_confirmation: "запросите новое письмо с подтверждением"
         first_name: Имя
         household_form_input_placeholder: Введите название домохозяйства
         household_form_label: Название домохозяйства
@@ -91,6 +112,16 @@ ru:
     securities:
       show:
         page_title: Безопасность
+        mfa_title: Двухфакторная аутентификация
+        mfa_description: Добавьте дополнительный уровень безопасности вашему аккаунту, требуя код из приложения-аутентификатора при входе
+        mfa_enabled: включена
+        mfa_enabled_html: "Двухфакторная аутентификация %{status}"
+        mfa_enabled_description: Ваш аккаунт защищен дополнительным уровнем безопасности.
+        mfa_disabled: выключена
+        mfa_disabled_html: "Двухфакторная аутентификация %{status}"
+        mfa_disabled_description: Включите 2FA, чтобы добавить дополнительный уровень безопасности вашему аккаунту.
+        enable_mfa: Включить 2FA
+        disable_mfa: Выключить 2FA
         sso_title: Подключенные аккаунты
         sso_subtitle: Управляйте подключениями через единый вход (SSO)
         sso_disconnect: Отключить

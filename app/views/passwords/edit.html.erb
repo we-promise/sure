@@ -1,22 +1,17 @@
-<h1><% t(".title") %></h1>
+<% header_title t(".title") %>
 
 <%= styled_form_with model: Current.user, url: password_path, class: "space-y-4" do |form| %>
-  <div>
-    <%= form.label :password_challenge, t(".password_challenge") %>
-    <%= form.password_field :password_challenge %>
-  </div>
+  <%= form.password_field :password_challenge,
+        label: t(".password_challenge"),
+        required: true %>
 
-  <div>
-    <%= form.label :password, t(".password") %>
-    <%= form.password_field :password %>
-  </div>
+  <%= form.password_field :password,
+        label: t(".password"),
+        required: true %>
 
-  <div>
-    <%= form.label :password_confirmation %>
-    <%= form.password_field :password_confirmation %>
-  </div>
+  <%= form.password_field :password_confirmation,
+        label: t(".password_confirmation"),
+        required: true %>
 
-  <div>
-    <%= form.submit t(".submit") %>
-  </div>
+  <%= form.submit t(".submit") %>
 <% end %>

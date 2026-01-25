@@ -21,6 +21,20 @@ en:
         legacy_providers_title: "Environment-Configured Providers"
         legacy_providers_notice: "These providers are configured via environment variables or YAML and cannot be managed through this interface. To manage them here, migrate them to database-backed providers by enabling AUTH_PROVIDERS_SOURCE=db and recreating them in the UI."
         env_configured: "Env/YAML"
+        configured_providers: Configured Providers
+        configuration_mode: Configuration Mode
+        db_backed_providers: Database-backed providers
+        db_backed_description: Load providers from database instead of YAML config
+        db_backed_hint_html: "Set <code class=\"bg-surface px-1 py-0.5 rounded text-xs\">AUTH_PROVIDERS_SOURCE=db</code> to enable database-backed providers. This allows changes without server restarts."
+        enabled_badge: Enabled
+        disabled_badge: Disabled
+        edit: Edit
+        delete: Delete
+        enable: Enable
+        disable: Disable
+        confirm_toggle: "Are you sure you want to %{action} this provider?"
+        confirm_delete: "Are you sure you want to delete this provider? This action cannot be undone."
+        no_providers_configured: No SSO providers configured yet.
       new:
         title: "Add SSO Provider"
         description: "Configure a new single sign-on authentication provider"

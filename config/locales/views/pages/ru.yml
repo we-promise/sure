@@ -3,6 +3,8 @@ ru:
   pages:
     changelog:
       title: Что нового
+      date_unavailable: Дата недоступна
+      no_release_notes: Информация о релизе отсутствует
     feedback:
       title: Обратная связь
       heading: Оставить отзыв
@@ -10,6 +12,15 @@ ru:
       feature_request: Предложить функцию
       bug_report: Сообщить об ошибке
       discuss: Обсудить %{product_name} с другими
+    redis_configuration_error:
+      title: Требуется настройка Redis
+      subtitle: Ваша копия Sure требует правильно настроенного Redis для работы.
+      why_title: Почему Redis необходим?
+      why_description: Sure использует Redis для фоновых задач Sidekiq — таких как синхронизация данных счетов, обработка импорта и другие операции, которые поддерживают актуальность ваших финансовых данных.
+      setup_guide_button: Посмотреть руководство
+      setup_guide_hint: Следуйте нашему руководству по настройке Docker для конфигурации Redis
+      refresh_hint: После настройки Redis обновите эту страницу, чтобы продолжить.
+      refresh_button: Обновить страницу
     privacy:
       title: Политика конфиденциальности
       heading: Политика конфиденциальности
@@ -24,6 +35,7 @@ ru:
       new: "Новое"
       drag_to_reorder: "Перетащите, чтобы изменить порядок секции"
       toggle_section: "Скрыть/показать секцию"
+      section_accessibility_label: "Секция %{title}. Нажмите Enter или Пробел, чтобы захватить для перемещения, затем используйте стрелки."
       net_worth_chart:
         data_not_available: Нет данных за выбранный период
         title: Чистый капитал
@@ -35,6 +47,9 @@ ru:
         title: "Баланс"
         no_items: "Пока нет %{name}"
         add_accounts: "Добавьте счета %{name}, чтобы увидеть полную структуру"
+        name: Название
+        weight: Вес
+        value: Стоимость
       cashflow_sankey:
         title: "Денежный поток"
         no_data_title: "Нет данных о движении средств за этот период"

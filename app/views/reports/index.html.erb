@@ -92,8 +92,8 @@
     <%# Period Display %>
     <div class="text-sm text-subdued">
       <%= t("reports.index.showing_period",
-            start: @start_date.strftime("%b %-d, %Y"),
-            end: @end_date.strftime("%b %-d, %Y")) %>
+            start: l(@start_date, format: :long),
+            end: l(@end_date, format: :long)) %>
     </div>
   </div>
 <% end %>

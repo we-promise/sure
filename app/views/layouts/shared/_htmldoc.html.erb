@@ -3,7 +3,7 @@
 <% theme = Current.user&.theme || "system" %>
 
 <html
-  lang="en"
+  lang="<%= I18n.locale %>"
   data-theme="<%= theme %>"
   data-controller="theme"
   data-theme-user-preference-value="<%= Current.user&.theme || "system" %>"

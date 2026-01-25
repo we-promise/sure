@@ -10,8 +10,8 @@
 <div>
   <div class="text-large mb-4 flex items-center gap-2 text-lg">
     <%= icon(icon_name, class: "w-5 h-5") %>
-    <span><%= t(title_key) %>:</span>
-    <span class="font-medium text-secondary <%= color_class %>"> <%= Money.new(total, Current.family.currency).format %></span>
+    <span><%= t(title_key) %></span>
+    <span class="font-medium text-secondary <%= color_class %>"> <%= format_money(Money.new(total, Current.family.currency)) %></span>
   </div>
 
   <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
@@ -37,12 +37,10 @@
             color_class: color_class,
             level: :category
           %>
-          <% if idx < group.size - 1 %>
-            <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
-          <% end %>
+
           <%# Render subcategories if present %>
           <% if group[:subcategories].present? && group[:subcategories].any? %>
-            <% group[:subcategories].each_with_index do |subcategory, idx| %>
+            <% group[:subcategories].each_with_index do |subcategory, sub_idx| %>
               <%= render "reports/category_row",
                 item: subcategory,
                 total: total,
@@ -50,9 +48,10 @@
                 level: :subcategory
               %>
             <% end %>
-            <% if idx < group.size - 1 %>
-              <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
-            <% end %>
+          <% end %>
+
+          <% if idx < groups.size - 1 %>
+            <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
           <% end %>
         <% end %>
       </div>

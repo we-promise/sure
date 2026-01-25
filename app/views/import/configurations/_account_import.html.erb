@@ -1,18 +1,18 @@
 <%# locals: (import:) %>
 
 <%= styled_form_with model: @import, url: import_configuration_path(@import), scope: :import, method: :patch, class: "space-y-4" do |form| %>
-  <%= form.select :entity_type_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Entity Type" } %>
-  <%= form.select :name_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Name" }, required: true %>
-  <%= form.select :amount_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Balance" }, required: true %>
-  <%= form.select :currency_col_label, import.csv_headers, { include_blank: "Default", label: "Currency" } %>
+  <%= form.select :entity_type_col_label, import.csv_headers, { include_blank: t("import.configurations.common.leave_empty"), label: t(".entity_type_label") } %>
+  <%= form.select :name_col_label, import.csv_headers, { include_blank: t("import.configurations.common.leave_empty"), label: t("import.configurations.common.name") }, required: true %>
+  <%= form.select :amount_col_label, import.csv_headers, { include_blank: t("import.configurations.common.leave_empty"), label: t(".balance_label") }, required: true %>
+  <%= form.select :currency_col_label, import.csv_headers, { include_blank: t("import.configurations.common.default"), label: t("import.configurations.common.currency") } %>
 
   <div class="flex items-center gap-4">
-    <%= form.select :date_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Balance Date" } %>
+    <%= form.select :date_col_label, import.csv_headers, { include_blank: t("import.configurations.common.leave_empty"), label: t(".balance_date_label") } %>
     <%= form.select :date_format,
                     Family::DATE_FORMATS,
-                    { label: "Date Format", prompt: "Select format" },
+                    { label: t("import.configurations.common.format"), prompt: t("import.configurations.common.select_column") },
                     required: @import.date_col_label.present? %>
   </div>
 
-  <%= form.submit "Apply configuration", disabled: import.complete? %>
+  <%= form.submit t("import.configurations.common.apply"), disabled: import.complete? %>
 <% end %>

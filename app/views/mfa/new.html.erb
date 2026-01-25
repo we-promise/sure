@@ -11,7 +11,7 @@
   <h1 class="text-primary text-xl font-medium mb-4"><%= t(".page_title") %></h1>
   <%= settings_section title: t(".scan_title"), subtitle: t(".scan_description") do %>
     <div class="space-y-6">
-      <div class="qrcode">
+      <div class="qrcode p-4 bg-white inline-block rounded-xl shadow-border-xs">
         <%= generate_mfa_qr_code(Current.user.provisioning_uri) %>
       </div>
 
@@ -22,31 +22,35 @@
         </div>
         <div class="mt-2 flex items-center gap-2" data-controller="clipboard">
           <span data-clipboard-target="source" class="hidden"><%= Current.user.otp_secret %></span>
-          <input type="text"
-                 readonly
-                 autocomplete="off"
-                 value="<%= Current.user.otp_secret %>"
-                 class="text-sm bg-container px-2 py-1 rounded border border-secondary w-96 font-mono">
-          <button data-action="clipboard#copy" class="text-secondary hover:text-gray-700">
-            <span data-clipboard-target="iconDefault">
-              <%= icon "copy" %>
-            </span>
-            <span class="hidden" data-clipboard-target="iconSuccess">
-              <%= icon "check" %>
-            </span>
-          </button>
+          <div class="flex items-center gap-2 w-full max-w-md">
+            <input type="text"
+                   readonly
+                   autocomplete="off"
+                   value="<%= Current.user.otp_secret %>"
+                   class="text-sm bg-container px-3 py-2 rounded-lg border border-primary grow font-mono text-primary">
+            <button data-action="clipboard#copy" class="p-2 text-secondary hover:text-primary transition-colors cursor-pointer" title="Copy code">
+              <span data-clipboard-target="iconDefault">
+                <%= icon "copy", size: "sm" %>
+              </span>
+              <span class="hidden" data-clipboard-target="iconSuccess">
+                <%= icon "check", size: "sm", color: "success" %>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
+      <hr class="border-divider">
+
       <div>
-        <h3 class="text-lg font-medium leading-6 text-primary"><%= t(".verify_title") %></h3>
+        <h3 class="text-lg font-medium text-primary"><%= t(".verify_title") %></h3>
         <div class="mt-2 text-sm text-secondary">
           <p><%= t(".verify_description") %></p>
         </div>
       </div>
 
       <%= styled_form_with url: mfa_path, method: :post, class: "mt-5", data: { turbo: false } do |f| %>
-        <div>
+        <div class="max-w-xs">
           <%= f.text_field :code,
             required: true,
             autofocus: true,

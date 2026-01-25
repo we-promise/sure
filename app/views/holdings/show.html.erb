@@ -51,12 +51,17 @@
                                   required: true %>
                   </div>
                   <div class="flex justify-end gap-2">
-                    <button type="button"
-                            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600"
-                            data-action="click->holding-security-remap#toggle">
-                      <%= t(".cancel") %>
-                    </button>
-                    <%= f.submit t(".remap_security"), class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
+                    <%= render DS::Button.new(
+                          text: t(".cancel"),
+                          variant: :secondary,
+                          type: "button",
+                          data: { action: "click->holding-security-remap#toggle" }
+                        ) %>
+                    <%= render DS::Button.new(
+                          text: t(".remap_security"),
+                          variant: :primary,
+                          type: :submit
+                        ) %>
                   </div>
                 <% end %>
               <% else %>
@@ -162,12 +167,17 @@
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                  <button type="button"
-                          class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600"
-                          data-action="click->drawer-cost-basis#toggle">
-                    <%= t("holdings.cost_basis_cell.cancel") %>
-                  </button>
-                  <%= f.submit t("holdings.cost_basis_cell.save"), class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
+                  <%= render DS::Button.new(
+                        text: t("holdings.cost_basis_cell.cancel"),
+                        variant: :secondary,
+                        type: "button",
+                        data: { action: "click->drawer-cost-basis#toggle" }
+                      ) %>
+                  <%= render DS::Button.new(
+                        text: t("holdings.cost_basis_cell.save"),
+                        variant: :primary,
+                        type: :submit
+                      ) %>
                 </div>
               <% end %>
             </div>
@@ -232,15 +242,16 @@
                 <p class="text-secondary"><%= t(".provider_sent", ticker: @holding.provider_security.ticker) %></p>
               </div>
 
-              <%= button_to t(".reset_to_provider"),
-                  reset_security_holding_path(@holding),
-                  method: :post,
-                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
-                  form: { data: { turbo: false } },
-                  data: { turbo_confirm: {
-                    title: t(".reset_confirm_title"),
-                    body: t(".reset_confirm_body", current: @holding.security.ticker, original: @holding.provider_security.ticker)
-                  } } %>
+              <%= render DS::Button.new(
+                    text: t(".reset_to_provider"),
+                    variant: :secondary,
+                    type: :submit,
+                    form: { data: { turbo: false } },
+                    confirm: {
+                      title: t(".reset_confirm_title"),
+                      body: t(".reset_confirm_body", current: @holding.security.ticker, original: @holding.provider_security.ticker)
+                    }
+                  ) %>
             </div>
           <% end %>
 
@@ -251,12 +262,13 @@
                 <p class="text-secondary"><%= t(".cost_basis_locked_description") %></p>
               </div>
 
-              <%= button_to t(".unlock_cost_basis"),
-                  unlock_cost_basis_holding_path(@holding),
-                  method: :post,
-                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
-                  form: { data: { turbo: false } },
-                  data: { turbo_confirm: { title: t(".unlock_confirm_title"), body: t(".unlock_confirm_body") } } %>
+              <%= render DS::Button.new(
+                    text: t(".unlock_cost_basis"),
+                    variant: :secondary,
+                    type: :submit,
+                    form: { data: { turbo: false } },
+                    confirm: { title: t(".unlock_confirm_title"), body: t(".unlock_confirm_body") }
+                  ) %>
             </div>
           <% end %>
 
@@ -267,11 +279,13 @@
                 <p class="text-secondary"><%= t(".delete_subtitle") %></p>
               </div>
 
-              <%= button_to t(".delete"),
-                  holding_path(@holding),
-                  method: :delete,
-                  class: "rounded-lg px-3 py-2 text-red-500 text-sm font-medium border border-secondary",
-                  data: { turbo_confirm: true } %>
+              <%= render DS::Button.new(
+                    text: t(".delete"),
+                    variant: :outline_destructive,
+                    href: holding_path(@holding),
+                    method: :delete,
+                    confirm: true
+                  ) %>
             </div>
           <% end %>
         </div>

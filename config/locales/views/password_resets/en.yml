@@ -9,6 +9,7 @@ en:
       requested: Please check your email for a link to reset your password.
       submit: Reset password
       title: Reset password
+      email_placeholder: you@example.com
       back: Back
     update:
       invalid_token: Invalid token.

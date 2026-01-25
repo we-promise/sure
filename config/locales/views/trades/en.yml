@@ -11,6 +11,12 @@ en:
       submit: Add transaction
       ticker_placeholder: AAPL
       type: Type
+      types:
+        buy: Buy
+        sell: Sell
+        deposit: Deposit
+        withdrawal: Withdrawal
+        interest: Interest
     header:
       buy: Buy
       current_market_price_label: Current Market Price
@@ -20,6 +26,7 @@ en:
       sell: Sell
       symbol_label: Symbol
       total_return_label: Unrealized gain/loss
+      linked_with_plaid: Linked with Plaid
     new:
       title: New transaction
     show:

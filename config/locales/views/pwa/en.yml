@@ -1,0 +1,5 @@
+---
+en:
+  pwa:
+    manifest:
+      description: "%{product_name} is your personal finance assistant."

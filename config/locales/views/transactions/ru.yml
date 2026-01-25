@@ -49,6 +49,22 @@ ru:
       settings: Настройки
       tags_label: Теги
       uncategorized: "(без категории)"
+      additional_details: Дополнительные детали
+      provider_extras: Данные от провайдера
+      payee: Получатель
+      description: Описание
+      memo: Примечание
+      transfer_title: Перевод или оплата долга?
+      transfer_description: Переводы и платежи — это особые типы транзакций, показывающие движение денег между двумя счетами.
+      open_matcher: Открыть помощник
+      convert_trade_title: Преобразовать в сделку с ценными бумагами
+      convert_trade_description: Преобразуйте эту транзакцию в сделку (покупка/продажа), указав тикер, количество и цену.
+      convert: Преобразовать
+      loan_payment: Погашение кредита
+      transfer: Перевод
+    one_time_tooltip: "Разовый %{type} (исключен из средних значений)"
+    income: доход
+    expense: расход
     activity_labels:
       buy: Покупка
       sell: Продажа
@@ -82,6 +98,17 @@ ru:
       edit_merchants: Редактировать торговцев
       edit_tags: Редактировать теги
       import: Импорт
+      title: Транзакции
+      new_rule: Новое правило
+      edit_rules: Редактировать правила
+      new_transaction: Новая транзакция
+    drag_drop_title: Перетащите CSV для импорта
+    drag_drop_subtitle: Загрузить транзакции напрямую
+    table:
+      header:
+        transaction: Транзакция
+        category: Категория
+        amount: Сумма
     index:
       transaction: транзакция
       transactions: транзакции
@@ -134,13 +161,37 @@ ru:
         already_converted: Эта транзакция уже преобразована или исключена
         enter_ticker: Пожалуйста, введите тикер
         security_not_found: Выбранная ценная бумага больше не существует. Выберите другую.
-        select_security: Пожалуйста, выберите или введите ценную бумагу
+        select_security: Пожалуйста, выберите или введите ценную бумагу.
         enter_qty_or_price: Пожалуйста, введите количество или цену за штуку. Второй параметр будет рассчитан автоматически.
         invalid_qty_or_price: Неверное количество или цена. Введите положительные значения.
         conversion_failed: "Не удалось преобразовать транзакцию: %{error}"
         unexpected_error: "Непредвиденная ошибка при преобразовании: %{error}"
+    bulk_updates:
+      new:
+        title: Редактировать транзакции
+        overview: Обзор
+        transactions: Транзакции
+        select_category: Выберите категорию
+        select_merchant: Выберите торговца
+        none: Нет
+        tags: Теги
+        notes: Заметки
+        notes_placeholder: Введите заметку, которая будет применена к выбранным транзакциям
+        cancel: Отмена
+        save: Сохранить
     searches:
       filters:
+        account_filter:
+          placeholder: Фильтр счетов
+        category_filter:
+          placeholder: Фильтр категорий
+        date_filter:
+          start_date: Дата начала
+          end_date: Дата окончания
+        merchant_filter:
+          placeholder: Фильтр торговцев
+        tag_filter:
+          placeholder: Фильтр тегов
         amount_filter:
           equal_to: Равно
           greater_than: Больше чем

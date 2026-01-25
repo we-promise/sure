@@ -1,7 +1,7 @@
 <%# locals: (plan:, form:, checked: false) %>
 
 <% price = plan == "annual" ? 25 : 2.50 %>
-<% frequency = plan == "annual" ? "/year" : "/month" %>
+<% frequency = plan == "annual" ? t(".year_frequency") : t(".month_frequency") %>
 
 <div class="relative">
   <%= form.radio_button :plan, plan, class: "peer sr-only", checked: checked %>
@@ -10,18 +10,14 @@
     "peer-checked:bg-container peer-checked:rounded-2xl peer-checked:border-solid peer-checked:ring-4 peer-checked:ring-shadow",
     "transition-all duration-300"
   ) do %>
-    <h3 class="text-sm text-secondary"><%= plan.titleize %></h3>
+    <h3 class="text-sm text-secondary"><%= t(".plans.#{plan}") %></h3>
 
     <div class="mt-auto flex items-end gap-1">
       <p class="font-display text-xl lg:text-3xl font-medium text-primary">$<%= price %><%= frequency %></p>
     </div>
 
     <p class="text-sm text-secondary">
-      <% if plan == "annual" %>
-        Charged annually
-      <% else %>
-        Charged monthly
-      <% end %>
+      <%= t(".charged_#{plan}") %>
     </p>
   <% end %>
 </div>

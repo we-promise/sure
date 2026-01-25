@@ -14,11 +14,23 @@ ru:
       edit: Редактировать категорию
     form:
       placeholder: Название категории
+      color: Цвет
+      icon: Иконка
+      contrast_warning: Слишком слабый контраст, выберите цвет потемнее или
+      auto_adjust: настроить автоматически.
+      classification: Классификация
+      income: Доход
+      expense: Расход
+      name: Название
+      unassigned: (не назначена)
+      parent_category: Родительская категория (необязательно)
     index:
       bootstrap: Использовать стандартные (рекомендуется)
       categories: Категории
       categories_expenses: Категории расходов
       categories_incomes: Категории доходов
+      delete_all: Удалить все
+      confirm_delete_all: все категории
       empty: Категории не найдены
       new: Новая категория
     menu:
@@ -32,3 +44,9 @@ ru:
       show:
         bootstrap: Сгенерировать категории по умолчанию
         empty: Категории не найдены
+        search_placeholder: Поиск категорий...
+        no_categories: Категории не найдены
+        clear: Очистить категорию
+        match_transfer: Найти перевод/платеж
+        one_time_income: Разовый доход
+        one_time_expense: Разовый расход

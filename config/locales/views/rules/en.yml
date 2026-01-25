@@ -2,21 +2,80 @@
 en:
   rules:
     no_action: No Action
+    if: IF
+    then: THEN
+    for: FOR
+    more_conditions:
+      one: and 1 more condition
+      other: and %{count} more conditions
+    more_actions:
+      one: and 1 more action
+      other: and %{count} more actions
+    action_to_value: "%{action} to %{value}"
+    all_resources: "All past and future %{resource}"
+    resources_on_or_after: "%{resource} on or after %{date}"
+    reapply: Re-apply rule
+    back_to_rules: Back to rules
+    index:
+      title: Rules
+      delete_all: Delete all rules
+      confirm_delete_all: all rules
+      new_rule: New rule
+      rules_count: Rules
+      sort_by: "Sort by:"
+      sort_name: Name
+      sort_updated_at: Updated At
+      toggle_sort: Toggle sort direction
+      empty_title: No rules yet
+      empty_description: Set up rules to perform actions to your transactions and other data on every account sync.
+      ai_cost_warning: AI-enabled rule actions will cost money. Be sure to filter as narrowly as possible to avoid unnecessary costs.
+    form:
+      rule_name_label: Rule name (optional)
+      name_placeholder: Enter a name for this rule
+      if: IF
+      then: THEN
+      for: FOR
+      add_condition: Add condition
+      add_condition_group: Add condition group
+      add_action: Add action
+      all_resources: "All past and future %{resource_type}s"
+      starting_from: Starting from
     actions:
+      to: to
       value_placeholder: Enter a value
-    apply_all:
-      button: Apply All
-      confirm_title: Apply All Rules
-      confirm_message: You are about to apply %{count} rules affecting %{transactions} unique transactions. Please confirm if you wish to proceed.
-      confirm_button: Confirm and Apply All
-      success: All rules have been queued for execution
+    conditions:
+      and: and
+      match: match
+      all: all
+      any: any
+      of_the_following: of the following conditions
+      add_condition: Add condition
+      value_placeholder: Enter a value
+    prompts:
+      dont_show_again: Don't show this again
+      create_rule: Create rule
+      category:
+        message: "Updated to %{category}"
+        description: You can create a rule to automatically categorize transactions like this one
+    confirm:
+      title: Confirm changes
+      title_with_name: "Confirm changes to \"%{name}\""
+      message: You are about to apply this rule to %{count} %{resources} that meet the specified rule criteria. Please confirm if you wish to proceed with this change.
       ai_cost_title: AI Cost Estimation
-      ai_cost_message: This will use AI to categorize up to %{transactions} transactions.
+      ai_cost_message:
+        one: This will use AI to categorize 1 transaction.
+        other: This will use AI to categorize %{count} transactions.
       estimated_cost: "Estimated cost: ~$%{cost}"
       cost_unavailable_model: Cost estimation unavailable for model "%{model}".
       cost_unavailable_no_provider: Cost estimation unavailable (no LLM provider configured).
       cost_warning: You may incur costs, please check with the model provider for the most up-to-date prices.
       view_usage: View usage history
+      button: Confirm changes
+    edit:
+      title: "Edit %{resource} rule"
+      title_with_name: "Edit %{resource} rule \"%{name}\""
+    new:
+      title: "New %{resource} rule"
     recent_runs:
       title: Recent Runs
       description: View the execution history of your rules including success/failure status and transaction counts.

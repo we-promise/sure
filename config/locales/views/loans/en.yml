@@ -8,6 +8,10 @@ en:
       interest_rate_placeholder: '5.25'
       initial_balance: Original loan balance
       rate_type: Rate type
+      rate_types:
+        fixed: Fixed
+        variable: Variable
+        adjustable: Adjustable
       term_months: Term (months)
       term_months_placeholder: '360'
     new:
@@ -21,3 +25,12 @@ en:
       term: Term
       type: Type
       unknown: Unknown
+    tabs:
+      overview:
+        edit_loan_details: Edit loan details
+        months:
+          one: "%{count} month"
+          other: "%{count} months"
+        years:
+          one: "%{count} year"
+          other: "%{count} years"

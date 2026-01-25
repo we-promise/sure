@@ -25,13 +25,13 @@
                     <% end %>
                   </div>
                   <div class="text-right">
-                    <%= Money.new(trend[:income], Current.family.currency).format %>
+                    <%= format_money(Money.new(trend[:income], Current.family.currency)) %>
                   </div>
                   <div class="text-right">
-                    <%= Money.new(trend[:expenses], Current.family.currency).format %>
+                    <%= format_money(Money.new(trend[:expenses], Current.family.currency)) %>
                   </div>
                   <div class="text-right <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
-                    <%= Money.new(trend[:net], Current.family.currency).format %>
+                    <%= format_money(Money.new(trend[:net], Current.family.currency)) %>
                   </div>
                   <div class="text-right <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
                     <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
@@ -55,21 +55,21 @@
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_income") %></p>
             <p class="text-lg font-semibold text-success">
-              <%= Money.new(avg_income, Current.family.currency).format %>
+              <%= format_money(Money.new(avg_income, Current.family.currency)) %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
             <p class="text-lg font-semibold text-destructive">
-              <%= Money.new(avg_expenses, Current.family.currency).format %>
+              <%= format_money(Money.new(avg_expenses, Current.family.currency)) %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_savings") %></p>
             <p class="text-lg font-semibold <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
-              <%= Money.new(avg_net, Current.family.currency).format %>
+              <%= format_money(Money.new(avg_net, Current.family.currency)) %>
             </p>
           </div>
         </div>
