@@ -41,14 +41,14 @@
       <% else %>
         <%= tag.p "--", class: "text-secondary" %>
       <% end %>
-      <%= tag.p t(".shares", qty: number_with_precision(holding.qty, precision: 1)), class: "font-normal text-secondary" %>
+      <%= tag.p t(".shares", qty: format_quantity(holding.qty)), class: "font-normal text-secondary" %>
     </div>
 
     <div class="col-span-2 text-right">
       <%# Show Total Return (unrealized G/L) when cost basis exists (from trades or manual) %>
       <% if holding.trend %>
         <%= tag.p format_money(holding.trend.value), style: "color: #{holding.trend.color};" %>
-        <%= tag.p "(#{number_to_percentage(holding.trend.percent, precision: 1)})", style: "color: #{holding.trend.color};" %>
+        <%= tag.p "(#{holding.trend.percent_formatted})", style: "color: #{holding.trend.color};" %>
       <% else %>
         <%= tag.p "--", class: "text-secondary" %>
         <%= tag.p t(".no_cost_basis"), class: "text-xs text-secondary" %>

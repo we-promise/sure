@@ -1,0 +1,50 @@
+<%
+  percentage = total.zero? ? 0 : (item[:total].to_f / total * 100).round(1)
+  is_sub = level == :subcategory
+%>
+
+<div data-category="category-<%= item[:category_id] %>" class="grid grid-cols-4 items-center text-secondary text-sm py-3 px-4 lg:px-6 <%= is_sub ? "pl-7 lg:pl-9" : "" %>">
+  <div class="col-span-2 flex items-center gap-2">
+    <% if is_sub %>
+      <div class="text-subdued">
+        <%= icon "corner-down-right" %>
+      </div>
+    <% end %>
+    <% if item[:category_icon] %>
+      <div class="h-7 w-7 flex-shrink-0 rounded-full flex justify-center items-center"
+        style="
+          background-color: color-mix(in oklab, <%= item[:category_color] %> 10%, transparent);
+          border-color: color-mix(in oklab, <%= item[:category_color] %> 10%, transparent);
+          color: <%= item[:category_color] %>;
+        ">
+        <%= icon(item[:category_icon], color: "current", size: "sm") %>
+      </div>
+    <% else %>
+      <%= render DS::FilledIcon.new(
+        variant: :text,
+        hex_color: item[:category_color],
+        text: item[:category_name],
+        size: "md",
+        rounded: true
+      ) %>
+    <% end %>
+    <span class="font-medium text-primary">
+      <%= item[:category_name] %>
+    </span>
+    <span class="text-xs text-tertiary whitespace-nowrap">
+      (<%= t("reports.transactions_breakdown.table.entries", count: item[:count]) %>)
+    </span>
+  </div>
+
+  <div class="col-span-1 text-right">
+    <span class="text-sm <%= color_class %>">
+      <%= Money.new(item[:total], Current.family.currency).format %>
+    </span>
+  </div>
+
+  <div class="col-span-1 text-right">
+    <span class="text-sm text-secondary">
+      <%= percentage %>%
+    </span>
+  </div>
+</div>

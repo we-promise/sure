@@ -39,7 +39,7 @@
              data-controller="cost-basis-form"
              data-cost-basis-form-qty-value="<%= holding.qty %>">
           <h4 class="font-medium text-sm mb-3">
-            <%= t(".set_cost_basis_header", ticker: holding.ticker, qty: number_with_precision(holding.qty, precision: 2)) %>
+            <%= t(".set_cost_basis_header", ticker: holding.ticker, qty: format_quantity(holding.qty)) %>
           </h4>
           <%
             form_data = { turbo: false }

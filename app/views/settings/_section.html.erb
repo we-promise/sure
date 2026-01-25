@@ -1,6 +1,8 @@
-<%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true) %>
+<%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true, auto_open_param: nil) %>
 <% if collapsible %>
-  <details <%= "open" if open %> class="group bg-container shadow-border-xs rounded-xl p-4">
+  <details <%= "open" if open %>
+           class="group bg-container shadow-border-xs rounded-xl p-4"
+           <%= "data-controller=\"auto-open\" data-auto-open-param-value=\"#{h(auto_open_param)}\"".html_safe if auto_open_param.present? %>>
     <summary class="flex items-center justify-between gap-2 cursor-pointer rounded-lg list-none [&::-webkit-details-marker]:hidden">
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "text-secondary group-open:transform group-open:rotate-90 transition-transform" %>

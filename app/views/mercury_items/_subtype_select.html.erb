@@ -1,0 +1,23 @@
+<div class="subtype-select" data-type="<%= account_type %>" style="display: none;">
+  <% if subtype_config[:options].present? %>
+    <%= label_tag "account_subtypes[#{mercury_account.id}]", subtype_config[:label],
+                 class: "block text-sm font-medium text-primary mb-2" %>
+    <% selected_value = "" %>
+    <% if account_type == "Depository" %>
+      <% n = mercury_account.name.to_s.downcase %>
+      <% selected_value = "" %>
+      <% if n =~ /\bchecking\b|\bchequing\b|\bck\b|demand\s+deposit/ %>
+        <% selected_value = "checking" %>
+      <% elsif n =~ /\bsavings\b|\bsv\b/ %>
+        <% selected_value = "savings" %>
+      <% elsif n =~ /money\s+market|\bmm\b/ %>
+        <% selected_value = "money_market" %>
+      <% end %>
+    <% end %>
+    <%= select_tag "account_subtypes[#{mercury_account.id}]",
+                  options_for_select([["Select #{account_type == 'Depository' ? 'subtype' : 'type'}", ""]] + subtype_config[:options], selected_value),
+                  { class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" } %>
+  <% else %>
+    <p class="text-sm text-secondary"><%= subtype_config[:message] %></p>
+  <% end %>
+</div>

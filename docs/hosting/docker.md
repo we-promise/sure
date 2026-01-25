@@ -26,7 +26,7 @@ docker run hello-world
 Open your terminal and create a directory where your app will run. Below is an example command with a recommended directory:
 
 ```bash
-# Create a directory on your computer for Docker files (name whatever you'd like)
+# Create a directory on your computer for Docker files (name it whatever you like)
 mkdir -p ~/docker-apps/sure
 
 # Once created, navigate your current working directory to the new folder

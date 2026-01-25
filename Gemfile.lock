@@ -180,6 +180,7 @@ GEM
       dotenv (= 3.1.8)
       railties (>= 6.1)
     drb (2.2.3)
+    ed25519 (1.4.0)
     email_validator (2.2.4)
       activemodel
     erb (5.0.1)
@@ -680,6 +681,9 @@ GEM
     snaky_hash (2.0.3)
       hashie (>= 0.1.0, < 6)
       version_gem (>= 1.1.8, < 3)
+    snaptrade (2.0.156)
+      faraday (>= 1.0.1, < 3.0)
+      faraday-multipart (~> 1.0, >= 1.0.4)
     sorbet-runtime (0.5.12163)
     stackprof (0.2.27)
     stimulus-rails (1.3.4)
@@ -778,6 +782,7 @@ DEPENDENCIES
   derailed_benchmarks
   doorkeeper
   dotenv-rails
+  ed25519
   erb_lint
   faker
   faraday
@@ -842,6 +847,7 @@ DEPENDENCIES
   sidekiq-unique-jobs
   simplecov
   skylight
+  snaptrade (~> 2.0)
   stackprof
   stimulus-rails
   stripe

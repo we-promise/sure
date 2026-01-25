@@ -30,8 +30,8 @@ class Provider::Lunchflow
 
   # Get transactions for a specific account
   # Returns: { transactions: [...], total: N }
-  # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
-  def get_account_transactions(account_id, start_date: nil, end_date: nil)
+  # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
+  def get_account_transactions(account_id, start_date: nil, end_date: nil, include_pending: false)
     query_params = {}
 
     if start_date
@@ -40,6 +40,10 @@ class Provider::Lunchflow
 
     if end_date
       query_params[:end_date] = end_date.to_date.to_s
+    end
+
+    if include_pending
+      query_params[:include_pending] = true
     end
 
     path = "/accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions"

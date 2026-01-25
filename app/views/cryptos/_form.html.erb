@@ -2,10 +2,14 @@
 
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= form.fields_for :accountable do |crypto_form| %>
+    <%= crypto_form.select :subtype,
+                          Crypto::SUBTYPES.map { |k, v| [v[:long], k] },
+                          { label: t(".subtype_label"), prompt: t(".subtype_prompt"), include_blank: t(".subtype_none") } %>
+
     <%= crypto_form.select :tax_treatment,
                           Crypto.tax_treatments.keys.map { |k| [t("accounts.tax_treatments.#{k}"), k] },
-                          { label: t("cryptos.form.tax_treatment_label"), include_blank: false },
+                          { label: t(".tax_treatment_label"), include_blank: false },
                           {} %>
-    <p class="text-xs text-secondary mt-1"><%= t("cryptos.form.tax_treatment_hint") %></p>
+    <p class="text-xs text-secondary mt-1"><%= t(".tax_treatment_hint") %></p>
   <% end %>
 <% end %>

@@ -1,0 +1,258 @@
+---
+en:
+  <%= file_name %>_items:
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "No accounts found"
+      synced:
+        one: "%%{count} account synced"
+        other: "%%{count} accounts synced"
+      synced_with_setup: "%%{linked} synced, %%{unlinked} need setup"
+    institution_summary:
+      none: "No institutions connected"
+      count:
+        one: "%%{count} institution"
+        other: "%%{count} institutions"
+    errors:
+      provider_not_configured: "<%= class_name %> provider is not configured"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importing accounts from <%= class_name %>..."
+<% if investment_provider? -%>
+        processing: "Processing holdings and activities..."
+<% else -%>
+        processing: "Processing transactions..."
+<% end -%>
+        calculating: "Calculating balances..."
+        importing_data: "Importing account data..."
+        checking_setup: "Checking account configuration..."
+        needs_setup: "%%{count} accounts need setup..."
+      success: "Sync started"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Setup instructions:"
+      step_1: "Visit your <%= class_name.titleize %> dashboard to get your credentials"
+      step_2: "Enter your credentials below and click the Save button"
+      step_3: "After a successful connection, go to the Accounts tab to set up new accounts"
+      field_descriptions: "Field descriptions:"
+      optional: "(Optional)"
+      required: "(required)"
+      optional_with_default: "(optional, defaults to %%{default_value})"
+      save_button: "Save Configuration"
+      update_button: "Update Configuration"
+      status_configured_html: "Configured and ready to use. Visit the <a href=\"%%{accounts_path}\" class=\"link\">Accounts</a> tab to manage and set up accounts."
+      status_not_configured: "Not configured"
+      fields:
+<% parsed_fields.each do |field| -%>
+        <%= field[:name] %>:
+          label: "<%= field[:name].titleize %>"
+          description: "Your <%= class_name.titleize %> <%= field[:name].humanize.downcase %>"
+          placeholder_new: "Paste <%= field[:name].humanize.downcase %> here"
+          placeholder_update: "Enter new <%= field[:name].humanize.downcase %> to update"
+<% end -%>
+
+    # CRUD success messages
+    create:
+      success: "<%= class_name %> connection created successfully"
+    update:
+      success: "<%= class_name %> connection updated"
+    destroy:
+      success: "<%= class_name %> connection removed"
+    index:
+      title: "<%= class_name %> Connections"
+
+    # Loading states
+    loading:
+      loading_message: "Loading <%= class_name %> accounts..."
+      loading_title: "Loading"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "The selected account (%%{names}) is already linked"
+        other: "All %%{count} selected accounts are already linked: %%{names}"
+      api_error: "API error: %%{message}"
+      invalid_account_names:
+        one: "Cannot link account with blank name"
+        other: "Cannot link %%{count} accounts with blank names"
+      link_failed: "Failed to link accounts"
+      no_accounts_selected: "Please select at least one account"
+      no_api_key: "<%= class_name %> API key not found. Please configure it in Provider Settings."
+      partial_invalid: "Successfully linked %%{created_count} account(s), %%{already_linked_count} were already linked, %%{invalid_count} account(s) had invalid names"
+      partial_success: "Successfully linked %%{created_count} account(s). %%{already_linked_count} account(s) were already linked: %%{already_linked_names}"
+      success:
+        one: "Successfully linked %%{count} account"
+        other: "Successfully linked %%{count} accounts"
+
+    # Provider item display (used in _item partial)
+    <%= file_name %>_item:
+      accounts_need_setup: "Accounts need setup"
+      delete: "Delete connection"
+      deletion_in_progress: "deletion in progress..."
+      error: "Error"
+      more_accounts_available:
+        one: "%%{count} more account available"
+        other: "%%{count} more accounts available"
+      no_accounts_description: "This connection has no linked accounts yet."
+      no_accounts_title: "No accounts"
+      provider_name: "<%= class_name %>"
+      requires_update: "Connection needs update"
+      setup_action: "Set Up New Accounts"
+      setup_description: "%%{linked} of %%{total} accounts linked. Choose account types for your newly imported <%= class_name %> accounts."
+      setup_needed: "New accounts ready to set up"
+      status: "Synced %%{timestamp} ago"
+      status_never: "Never synced"
+      status_with_summary: "Last synced %%{timestamp} ago - %%{summary}"
+      syncing: "Syncing..."
+      total: "Total"
+      unlinked: "Unlinked"
+      update_credentials: "Update credentials"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "accounts selected"
+      api_error: "API error: %%{message}"
+      cancel: "Cancel"
+      configure_name_in_provider: "Cannot import - please configure account name in <%= class_name %>"
+      description: "Select the accounts you want to link to your %%{product_name} account."
+      link_accounts: "Link selected accounts"
+      no_accounts_found: "No accounts found. Please check your API key configuration."
+      no_api_key: "<%= class_name %> API key is not configured. Please configure it in Settings."
+      no_credentials_configured: "Please configure your <%= class_name %> credentials first in Provider Settings."
+      no_name_placeholder: "(No name)"
+      title: "Select <%= class_name %> Accounts"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "This account is already linked to a provider"
+      all_accounts_already_linked: "All <%= class_name %> accounts are already linked"
+      api_error: "API error: %%{message}"
+      balance_label: "Balance:"
+      cancel: "Cancel"
+      cancel_button: "Cancel"
+      configure_name_in_provider: "Cannot import - please configure account name in <%= class_name %>"
+      connect_hint: "Connect a <%= class_name %> account to enable automatic syncing."
+      description: "Select a <%= class_name %> account to link with this account. Transactions will be synced and deduplicated automatically."
+      header: "Link with <%= class_name %>"
+      link_account: "Link account"
+      link_button: "Link this account"
+      linking_to: "Linking to:"
+      no_account_specified: "No account specified"
+      no_accounts: "No unlinked <%= class_name %> accounts found."
+      no_accounts_found: "No <%= class_name %> accounts found. Please check your API key configuration."
+      no_api_key: "<%= class_name %> API key is not configured. Please configure it in Settings."
+      no_credentials_configured: "Please configure your <%= class_name %> credentials first in Provider Settings."
+      no_name_placeholder: "(No name)"
+      settings_link: "Go to Provider Settings"
+      subtitle: "Choose a <%= class_name %> account"
+      title: "Link %%{account_name} with <%= class_name %>"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "This account is already linked to a provider"
+      api_error: "API error: %%{message}"
+      invalid_account_name: "Cannot link account with blank name"
+      provider_account_already_linked: "This <%= class_name %> account is already linked to another account"
+      provider_account_not_found: "<%= class_name %> account not found"
+      missing_parameters: "Missing required parameters"
+      no_api_key: "<%= class_name %> API key not found. Please configure it in Provider Settings."
+      success: "Successfully linked %%{account_name} with <%= class_name %>"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Account Type:"
+      accounts_count:
+        one: "%%{count} account available"
+        other: "%%{count} accounts available"
+      all_accounts_linked: "All your <%= class_name %> accounts have already been set up."
+      api_error: "API error: %%{message}"
+      creating: "Creating accounts..."
+      fetch_failed: "Failed to Fetch Accounts"
+      import_selected: "Import selected accounts"
+      instructions: "Select the accounts you want to import from <%= class_name %>. You can choose multiple accounts."
+      no_accounts: "No unlinked accounts found from this <%= class_name %> connection."
+      no_accounts_to_setup: "No Accounts to Set Up"
+      no_api_key: "<%= class_name %> API key is not configured. Please check your connection settings."
+      select_all: "Select all"
+      account_types:
+        skip: "Skip this account"
+<% if banking_provider? -%>
+        depository: "Checking or Savings Account"
+        credit_card: "Credit Card"
+        loan: "Loan or Mortgage"
+        other_asset: "Other Asset"
+<% else -%>
+        depository: "Checking or Savings Account"
+        credit_card: "Credit Card"
+        investment: "Investment Account"
+        crypto: "Cryptocurrency Account"
+        loan: "Loan or Mortgage"
+        other_asset: "Other Asset"
+<% end -%>
+      subtype_labels:
+        depository: "Account Subtype:"
+        credit_card: ""
+<% if investment_provider? -%>
+        investment: "Investment Type:"
+        crypto: ""
+<% end -%>
+        loan: "Loan Type:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Credit cards will be automatically set up as credit card accounts."
+        other_asset: "No additional options needed for Other Assets."
+<% if investment_provider? -%>
+        crypto: "Cryptocurrency accounts will be set up to track holdings and transactions."
+<% end -%>
+      subtypes:
+        depository:
+          checking: "Checking"
+          savings: "Savings"
+          hsa: "Health Savings Account"
+          cd: "Certificate of Deposit"
+          money_market: "Money Market"
+<% if investment_provider? -%>
+        investment:
+          brokerage: "Brokerage"
+          pension: "Pension"
+          retirement: "Retirement"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "529 Plan"
+          hsa: "Health Savings Account"
+          mutual_fund: "Mutual Fund"
+          ira: "Traditional IRA"
+          roth_ira: "Roth IRA"
+          angel: "Angel"
+<% end -%>
+        loan:
+          mortgage: "Mortgage"
+          student: "Student Loan"
+          auto: "Auto Loan"
+          other: "Other Loan"
+      balance: "Balance"
+      cancel: "Cancel"
+      choose_account_type: "Choose the correct account type for each <%= class_name %> account:"
+      create_accounts: "Create Accounts"
+      creating_accounts: "Creating Accounts..."
+      historical_data_range: "Historical Data Range:"
+      subtitle: "Choose the correct account types for your imported accounts"
+      sync_start_date_help: "Select how far back you want to sync transaction history."
+      sync_start_date_label: "Start syncing transactions from:"
+      title: "Set Up Your <%= class_name %> Accounts"
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "All accounts were skipped. No accounts were created."
+      creation_failed: "Failed to create accounts: %%{error}"
+      no_accounts: "No accounts to set up."
+      success: "Successfully created %%{count} account(s)."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Please configure your <%= class_name %> credentials first in Provider Settings."

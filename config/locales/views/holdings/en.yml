@@ -10,6 +10,13 @@ en:
       error: Invalid cost basis value.
     unlock_cost_basis:
       success: Cost basis unlocked. It may be updated on next sync.
+    remap_security:
+      success: Security updated successfully.
+      security_not_found: Could not find the selected security.
+    reset_security:
+      success: Security reset to provider value.
+    errors:
+      security_collision: "Cannot remap: you already have a holding for %{ticker} on %{date}."
     cost_basis_sources:
       manual: User set
       calculated: From trades
@@ -33,7 +40,7 @@ en:
       average_cost: Average cost
       holdings: Holdings
       name: Name
-      new_holding: New transaction
+      new_holding: New activity
       no_holdings: No holdings to show.
       return: Total return
       weight: Weight
@@ -48,10 +55,24 @@ en:
       delete_subtitle: This will delete the holding and all your associated trades
         on this account.  This action cannot be undone.
       delete_title: Delete holding
+      edit_security: Edit security
       history: History
+      no_trade_history: No trade history available for this holding.
       overview: Overview
       portfolio_weight_label: Portfolio Weight
       settings: Settings
+      security_label: Security
+      originally: "was %{ticker}"
+      search_security: Search security
+      search_security_placeholder: Search by ticker or name
+      cancel: Cancel
+      remap_security: Save
+      no_security_provider: Security provider not configured. Cannot search for securities.
+      security_remapped_label: Security remapped
+      provider_sent: "Provider sent: %{ticker}"
+      reset_to_provider: Reset to provider
+      reset_confirm_title: Reset security to provider?
+      reset_confirm_body: "This will change the security from %{current} back to %{original} and move all associated trades."
       ticker_label: Ticker
       trade_history_entry: "%{qty} shares of %{security} at %{price}"
       total_return_label: Total Return
