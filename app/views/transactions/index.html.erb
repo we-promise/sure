@@ -49,8 +49,8 @@
   <% else %>
     <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
       <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
-        <% nav.with_btn(id: "transactions", label: t("transactions.show.tabs.transactions"), classes: "px-6") %>
-        <% nav.with_btn(id: "upcoming", label: t("transactions.show.tabs.upcoming"), classes: "px-6") %>
+        <% nav.with_btn(id: "transactions", label: t("transactions.show.tab_transactions"), classes: "px-6") %>
+        <% nav.with_btn(id: "upcoming", label: t("transactions.show.tab_upcoming"), classes: "px-6") %>
       <% end %>
 
       <% tabs.with_panel(tab_id: "transactions") do %>

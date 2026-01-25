@@ -10,7 +10,7 @@
     <%= f.file_field "import[csv_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
   <% end %>
 
-  <%= render "imports/drag_drop_overlay", title: "Drop CSV to import", subtitle: "Upload transactions directly" %>
+  <%= render "imports/drag_drop_overlay", title: t(".drag_drop_title"), subtitle: t(".drag_drop_subtitle") %>
 
   <%= render "transactions/searches/search" %>
 
@@ -32,8 +32,8 @@
             <p>transaction</p>
           </div>
 
-          <p class="col-span-2 md:block hidden">category</p>
-          <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block">amount</p>
+          <p class="col-span-2 md:block hidden"><%= t("transactions.form.category_label") %></p>
+          <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t("transactions.show.amount") %></p>
         </div>
       <% end %>
 
