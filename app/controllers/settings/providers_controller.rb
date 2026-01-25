@@ -5,8 +5,8 @@ class Settings::ProvidersController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Sync Providers", nil ]
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.providers"), nil ]
     ]
 
     prepare_show_context
@@ -66,13 +66,13 @@ class Settings::ProvidersController < ApplicationController
       # Reload provider configurations if needed
       reload_provider_configs(updated_fields)
 
-      redirect_to settings_providers_path, notice: "Provider settings updated successfully"
+      redirect_to settings_providers_path, notice: t("settings.providers.update.success", default: "Provider settings updated successfully")
     else
-      redirect_to settings_providers_path, notice: "No changes were made"
+      redirect_to settings_providers_path, notice: t("settings.providers.update.no_changes", default: "No changes were made")
     end
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.message}")
-    flash.now[:alert] = "Failed to update provider settings: #{error.message}"
+    flash.now[:alert] = t("settings.providers.update.error", error: error.message, default: "Failed to update provider settings: #{error.message}")
     prepare_show_context
     render :show, status: :unprocessable_entity
   end
@@ -93,7 +93,7 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_providers_path, alert: "Not authorized" unless Current.user.admin?
+      redirect_to settings_providers_path, alert: t("settings.providers.not_authorized", default: "Not authorized") unless Current.user.admin?
     end
 
     # Reload provider configurations after settings update

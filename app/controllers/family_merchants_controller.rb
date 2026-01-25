@@ -2,11 +2,6 @@ class FamilyMerchantsController < ApplicationController
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
-  def set_breadcrumbs
-    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.merchants"), nil ] ]
-  end
-
-
     # Show all merchants for this family
     @family_merchants = Current.family.merchants.alphabetically
     @provider_merchants = Current.family.assigned_merchants.where(type: "ProviderMerchant").alphabetically
@@ -21,6 +16,10 @@ class FamilyMerchantsController < ApplicationController
     @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
 
     render layout: "settings"
+  end
+
+  def set_breadcrumbs
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.merchants"), nil ] ]
   end
 
   def new
