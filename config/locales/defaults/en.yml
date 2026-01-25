@@ -205,6 +205,32 @@ en:
       header:
         one: "%{count} error prohibited this %{model} from being saved"
         other: "%{count} errors prohibited this %{model} from being saved"
+  rules:
+    conditions:
+      and: "AND"
+      value_placeholder: "Enter value..."
+      operators:
+        like: "Contains"
+        "=": "Equal to"
+        is_null: "Is empty"
+        ">": "Greater than"
+        ">=": "Greater or equal to"
+        "<": "Less than"
+        "<=": "Less than or equal to"
+      filters:
+        transaction_amount: "Transaction amount"
+        transaction_category: "Transaction category"
+        transaction_details: "Transaction details"
+        transaction_merchant: "Transaction merchant"
+        transaction_name: "Transaction name"
+        transaction_notes: "Transaction notes"
+    actions:
+      to: "TO"
+      value_placeholder: "Select value..."
+      executors:
+        categorize: "Categorize"
+        mark_transfer: "Mark as transfer"
+        set_merchant: "Set merchant"
   helpers:
     select:
       prompt: Please select

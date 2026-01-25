@@ -21,6 +21,7 @@ en:
       transfer: Transfer
     new:
       new_transaction: New transaction
+      title: New transaction
     show:
       account_label: Account
       amount: Amount

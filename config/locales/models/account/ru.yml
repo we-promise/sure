@@ -11,16 +11,16 @@ ru:
         subtype: Подтип
     models:
       account: Счет
-      account/credit: Кредитная карта
-      account/depository: Банковский счет
-      account/investment: Инвестиция
+      account/credit_card: Кредитная карта
+      account/depository: Наличные
+      account/investment: Инвестиции
+      account/crypto: Криптовалюта
+      account/property: Недвижимость
+      account/vehicle: Транспорт
       account/loan: Займ/Кредит
       account/other_asset: Прочий актив
       account/other_liability: Прочее обязательство
       account/other: Прочее
-      account/property: Недвижимость
-      account/vehicle: Транспортное средство
       account/asset: Активы
       account/liability: Обязательства
       account/cash: Наличные
-      account/depository: Наличные

@@ -3,7 +3,7 @@
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= form.fields_for :accountable do |crypto_form| %>
     <%= crypto_form.select :subtype,
-                          Crypto::SUBTYPES.map { |k, v| [v[:long], k] },
+                          Crypto::SUBTYPES.keys.map { |k| [Crypto.long_subtype_label_for(k), k] },
                           { label: t(".subtype_label"), prompt: t(".subtype_prompt"), include_blank: t(".subtype_none") } %>
 
     <%= crypto_form.select :tax_treatment,

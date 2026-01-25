@@ -249,6 +249,32 @@ ru:
         many: "%{model}: сохранение не удалось из-за %{count} ошибок"
         one: "%{model}: сохранение не удалось из-за %{count} ошибки"
         other: "%{model}: сохранение не удалось из-за %{count} ошибки"
+  rules:
+    conditions:
+      and: "И"
+      value_placeholder: "Введите значение..."
+      operators:
+        like: "Содержит"
+        "=": "Равно"
+        is_null: "Пусто"
+        ">": "Больше"
+        ">=": "Больше или равно"
+        "<": "Меньше"
+        "<=": "Меньше или равно"
+      filters:
+        transaction_amount: "Сумма транзакции"
+        transaction_category: "Категория транзакции"
+        transaction_details: "Детали транзакции"
+        transaction_merchant: "Торговец транзакции"
+        transaction_name: "Название транзакции"
+        transaction_notes: "Заметки транзакции"
+    actions:
+      to: "В"
+      value_placeholder: "Выберите значение..."
+      executors:
+        categorize: "Установить категорию"
+        mark_transfer: "Пометить как перевод"
+        set_merchant: "Установить торговца"
   helpers:
     select:
       prompt: 'Выберите: '

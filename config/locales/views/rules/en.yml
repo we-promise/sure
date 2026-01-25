@@ -75,7 +75,9 @@ en:
       title: "Edit %{resource} rule"
       title_with_name: "Edit %{resource} rule \"%{name}\""
     new:
-      title: "New %{resource} rule"
+      title: New %{resource_type} rule
+      submit: Create Rule
+    edit:
     recent_runs:
       title: Recent Runs
       description: View the execution history of your rules including success/failure status and transaction counts.

@@ -59,7 +59,7 @@ module Accountable
     end
 
     def display_name
-      self.name.pluralize.titleize
+      I18n.t("activerecord.models.account/#{self.name.underscore}", default: self.name.pluralize.titleize)
     end
 
     def balance_money(family)

@@ -97,7 +97,7 @@ class Investment < ApplicationRecord
 
       region_order.filter_map do |region|
         next unless grouped[region]
-        [ region_label_for(region), grouped[region].map { |k, v| [ v[:long], k ] } ]
+        [ region_label_for(region), grouped[region].map { |k, v| [ long_subtype_label_for(k), k ] } ]
       end
     end
   end

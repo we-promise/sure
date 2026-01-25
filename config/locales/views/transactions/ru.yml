@@ -21,6 +21,7 @@ ru:
       transfer: Перевод
     new:
       new_transaction: Новая транзакция
+      title: Новая транзакция
     show:
       account_label: Счет
       amount: Сумма
