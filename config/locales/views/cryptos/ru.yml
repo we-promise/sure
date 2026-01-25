@@ -10,22 +10,13 @@ ru:
       tax_treatment_hint: "Большинство криптовалют хранятся на налогооблагаемых счетах. Выберите другой вариант, если активы находятся на счете с налоговыми льготами."
     new:
       title: "Введите баланс счета"
-        subtypes:
-          wallet:
-            short: "Кошелек"
-            long: "Криптокошелек"
-          exchange:
-            short: "Биржа"
-            long: "Криптобиржа"
-      cryptos:
-        subtypes:
-          wallet:
-            short: "Кошелек"
-            long: "Криптокошелек"
-          exchange:
-            short: "Биржа"
-            long: "Криптобиржа"
-          other:
-            short: "Прочее"
-            long: "Прочее"
-    
+    subtypes:
+      wallet:
+        short: "Кошелек"
+        long: "Криптокошелек"
+      exchange:
+        short: "Биржа"
+        long: "Криптобиржа"
+      other:
+        short: "Прочее"
+        long: "Прочее"
