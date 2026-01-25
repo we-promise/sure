@@ -1,4 +1,3 @@
----
 ru:
   properties:
     update:
@@ -63,7 +62,6 @@ ru:
         tab_overview: Обзор
         tab_value: Стоимость
         tab_address: Адрес
-  properties:
     subtypes:
       single_family_home:
         short: "Дом"

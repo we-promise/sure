@@ -1,4 +1,3 @@
----
 en:
   properties:
     update:
@@ -63,3 +62,22 @@ en:
         tab_overview: Overview
         tab_value: Value
         tab_address: Address
+    subtypes:
+      single_family_home:
+        short: "Single Family Home"
+        long: "Single Family Home"
+      multi_family_home:
+        short: "Multi-Family Home"
+        long: "Multi-Family Home"
+      condominium:
+        short: "Condo"
+        long: "Condominium"
+      townhouse:
+        short: "Townhouse"
+        long: "Townhouse"
+      investment_property:
+        short: "Investment Property"
+        long: "Investment Property"
+      second_home:
+        short: "Second Home"
+        long: "Second Home"

@@ -1,24 +1,24 @@
 ru:
   breadcrumbs:
-    home: Главная
-    dashboard: Дашборд
-    accounts: Счета
-    transactions: Транзакции
-    budgets: Бюджеты
-    reports: Отчеты
-    merchants: Торговцы
-    categories: Категории
-    tags: Теги
-    rules: Правила
-    recurring_transactions: Повторяющиеся
-    profiles: Профиль
-    securities: Безопасность
-    settings: Настройки
-    llm_usages: Использование LLM
-    ai_prompts: ИИ-подсказки
-    api_keys: API-ключи
-    hostings: Self-Hosting
-    providers: Провайдеры
-    imports: Импорт
-    exports: Экспорт
-    guides: Руководства
+    home: "Главная"
+    dashboard: "Дашборд"
+    accounts: "Счета"
+    transactions: "Транзакции"
+    budgets: "Бюджеты"
+    reports: "Отчеты"
+    merchants: "Торговцы"
+    categories: "Категории"
+    tags: "Теги"
+    rules: "Правила"
+    recurring_transactions: "Повторяющиеся"
+    profiles: "Профиль"
+    securities: "Безопасность"
+    settings: "Настройки"
+    llm_usages: "Использование LLM"
+    ai_prompts: "ИИ-подсказки"
+    api_keys: "API-ключи"
+    hostings: "Self-Hosting"
+    providers: "Провайдеры"
+    imports: "Импорт"
+    exports: "Экспорт"
+    guides: "Руководства"

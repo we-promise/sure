@@ -1,24 +1,24 @@
 en:
   breadcrumbs:
-    home: Home
-    dashboard: Dashboard
-    accounts: Accounts
-    transactions: Transactions
-    budgets: Budgets
-    reports: Reports
-    merchants: Merchants
-    categories: Categories
-    tags: Tags
-    rules: Rules
-    recurring_transactions: Recurring Transactions
-    profiles: Profile
-    securities: Security
-    settings: Settings
-    llm_usages: LLM Usage
-    ai_prompts: AI Prompts
-    api_keys: API Keys
-    hostings: Self-Hosting
-    providers: Providers
-    imports: Imports
-    exports: Exports
-    guides: Guides
+    home: "Home"
+    dashboard: "Dashboard"
+    accounts: "Accounts"
+    transactions: "Transactions"
+    budgets: "Budgets"
+    reports: "Reports"
+    merchants: "Merchants"
+    categories: "Categories"
+    tags: "Tags"
+    rules: "Rules"
+    recurring_transactions: "Recurring Transactions"
+    profiles: "Profile"
+    securities: "Security"
+    settings: "Settings"
+    llm_usages: "LLM Usage"
+    ai_prompts: "AI Prompts"
+    api_keys: "API Keys"
+    hostings: "Self-Hosting"
+    providers: "Providers"
+    imports: "Imports"
+    exports: "Exports"
+    guides: "Guides"

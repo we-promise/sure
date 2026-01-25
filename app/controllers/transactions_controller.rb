@@ -4,6 +4,10 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_unlock, only: :unlock
   before_action :store_params!, only: :index
 
+  def set_breadcrumbs
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
+  end
+
   def new
     super
     @income_categories = Current.family.categories.incomes.alphabetically
