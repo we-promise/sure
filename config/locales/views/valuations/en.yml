@@ -13,6 +13,10 @@ en:
       no_valuations: No valuations for this account yet
       valuations: Value
       value: value
+    create:
+      success: Account updated
+    update:
+      updated: Entry updated
     new:
       title: New balance
       submit: Confirm

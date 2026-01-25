@@ -3,11 +3,9 @@ ru:
   transfers:
     create:
       success: Перевод создан
-    account_links:
-      missing_account: "Ошибка данных: Отсутствует счет"
-      transfer_id: "ID перевода: %{id}"
+      success_notice: Перевод создан
     destroy:
-      success: Перевод удален
+
     form:
       amount: Сумма
       amount_placeholder: "100"

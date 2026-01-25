@@ -26,6 +26,7 @@ module Sure
 
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
+    config.i18n.load_path += Dir[Rails.root.join("config", "locales", "**", "*.{rb,yml}")]
 
     config.app_mode = (ENV["SELF_HOSTED"] == "true" || ENV["SELF_HOSTING_ENABLED"] == "true" ? "self_hosted" : "managed").inquiry
 

@@ -1,5 +1,8 @@
 ru:
   transfer_matches:
+    create:
+      success: "Перевод создан"
+      transfer_to: "Перевод на %{name}"
     new:
       title: "Сопоставить перевод или платеж"
       from_account_with_name: "Со счета: %{name}"

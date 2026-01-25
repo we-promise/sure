@@ -31,9 +31,9 @@ class UsersController < ApplicationController
 
       # Add a special notice if AI was just enabled or disabled
       notice = if !was_ai_enabled && @user.ai_enabled
-        "AI Assistant has been enabled successfully."
+        t(".ai_enabled")
       elsif was_ai_enabled && !@user.ai_enabled
-        "AI Assistant has been disabled."
+        t(".ai_disabled")
       else
         t(".success")
       end

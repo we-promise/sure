@@ -3,6 +3,12 @@ en:
   chats:
     demo_banner_title: "Running in Demo Mode"
     demo_banner_message: "You are using an open source Qwen3 LLM powered by Cloudflare Workers AI credits. Results may vary since the codebase was tested mainly on `gpt-4.1`, but your data is not sent anywhere for training! 🤖"
+    new:
+      new_chat: "New chat %{date}"
+    update:
+      success: "Chat updated"
+    destroy:
+      success: "Chat was successfully deleted"
     index:
       title: Chats
       new_chat: New chat

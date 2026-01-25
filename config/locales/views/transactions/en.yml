@@ -1,6 +1,10 @@
 ---
 en:
   transactions:
+    create:
+      success: Transaction created
+    update:
+      updated: Transaction updated
     unknown_name: Unknown transaction
     form:
       account: Account

@@ -5,6 +5,7 @@ ru:
       brokerage_cash: Наличные на брокерском счету
     destroy:
       success: Актив удален
+      cannot_delete: Вы не можете удалить этот актив
     update:
       success: Цена покупки (cost basis) сохранена.
       error: Недопустимое значение цены покупки.

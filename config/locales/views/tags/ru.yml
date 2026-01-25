@@ -17,6 +17,8 @@ ru:
       new_tag: Новый тег
     update:
       success: Тег успешно обновлен
+    destroy_all:
+      all_deleted: "Все теги удалены"
     tag:
       delete: Удалить тег
       edit: Редактировать тег

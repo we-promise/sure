@@ -1,9 +1,7 @@
----
 en:
   invite_codes:
-    index:
-      invite_code_description: Generate a new code to see it displayed here. Generated
-        codes that have been used will no longer be shown.
-      no_invite_codes: No codes to show
-    invite_code:
-      delete_confirm: "Are you sure you want to delete this invite code?"
+    create:
+      not_authorized: "You are not allowed to generate invite codes"
+      success: "Code generated"
+    destroy:
+      success: "Code deleted"

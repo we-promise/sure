@@ -17,6 +17,8 @@ en:
       new_tag: New tag
     update:
       success: Tag updated successfully
+    destroy_all:
+      all_deleted: "All tags deleted"
     tag:
       delete: Delete tag
       edit: Edit tag

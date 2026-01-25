@@ -24,7 +24,7 @@ class FamilyExportsController < ApplicationController
     @pagy, @exports = pagy(Current.family.family_exports.ordered, limit: safe_per_page)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
-      [ t("breadcrumbs.exports"), family_exports_path ]
+      [ t("breadcrumbs.exports"), nil ]
     ]
     render layout: "settings"
   end

@@ -9,22 +9,11 @@ en:
     create:
       success: Category created successfully
     destroy:
-      success: Category deleted successfully
-    edit:
-      edit: Edit category
-    form:
-      placeholder: Category name
-      color: Color
-      icon: Icon
-      contrast_warning: Poor contrast, choose darker color or
-      auto_adjust: auto-adjust.
-      classification: Classification
-      income: Income
-      expense: Expense
-      name: Name
-      unassigned: (unassigned)
-      parent_category: Parent category (optional)
+      success: Category deleted
+    destroy_all:
+      all_deleted: All categories deleted
     index:
+
       bootstrap: Use defaults (Recommended)
       categories: Categories
       categories_expenses: Expense Categories

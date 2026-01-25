@@ -8,6 +8,8 @@ en:
       email_change_initiated: Please check your new email address for confirmation
         instructions.
       success: Your profile has been updated.
+      ai_enabled: "AI Assistant has been enabled successfully."
+      ai_disabled: "AI Assistant has been disabled."
     resend_confirmation_email:
       success: A new confirmation email is queued to be sent.
       no_pending_change: No email change is currently pending!

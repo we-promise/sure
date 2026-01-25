@@ -38,3 +38,23 @@ ru:
           few: "%{count} года"
           many: "%{count} лет"
           other: "%{count} года"
+  loans:
+    subtypes:
+      mortgage:
+        short: "Ипотека"
+        long: "Ипотечный кредит"
+      auto:
+        short: "Автокредит"
+        long: "Автомобильный кредит"
+      student:
+        short: "Студенческий"
+        long: "Студенческий кредит"
+      personal:
+        short: "Личный"
+        long: "Личный кредит"
+      business:
+        short: "Бизнес"
+        long: "Бизнес-кредит"
+      other:
+        short: "Другое"
+        long: "Прочий кредит"

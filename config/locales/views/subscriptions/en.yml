@@ -11,6 +11,7 @@ en:
         monthly: "Monthly"
     upgrade:
       title: Upgrade
+      already_contributing: "You are already contributing. Thank you!"
       account_settings: Account Settings
       sign_out: Sign out
       contribute_and_support_sure: "Contribute and support Sure"
@@ -21,4 +22,12 @@ en:
         today: "today"
       redirect_to_stripe: "In the next step, you'll be redirected to Stripe which handles credit cards for us."
       trialing: "Your data will be deleted in %{days} days"
-      trial_over: "Your trial is over"
+          trial_over: "Your trial is over"
+        subscriptions:
+          create:
+            welcome: "Welcome to Sure!"
+            trial_error: "You have already started or completed a trial. Please upgrade to continue."
+          success:
+            contribution_success: "Welcome to Sure! Your contribution is appreciated."
+            contribution_error: "Something went wrong processing your contribution. Please try again."
+      

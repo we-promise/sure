@@ -13,6 +13,10 @@ ru:
       failure: Возникла проблема при регистрации.
       invalid_invite_code: Неверный инвайт-код, попробуйте снова.
       success: Вы успешно зарегистрировались.
+      password_too_short: "должен быть не менее 8 символов"
+      password_mixed_case: "должен содержать как заглавные, так и строчные буквы"
+      password_no_number: "должен содержать хотя бы одно число"
+      password_no_special: "должен содержать хотя бы один специальный символ"
     new:
       invitation_message: "%{
         inviter

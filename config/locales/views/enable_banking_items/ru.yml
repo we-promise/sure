@@ -19,6 +19,7 @@ ru:
       no_accounts: Нет доступных счетов для настройки.
       success: Успешно создано %{count} счетов!
     create:
+      default_name: "Подключение Enable Banking"
       success: Конфигурация Enable Banking успешна.
     destroy:
       success: Подключение Enable Banking поставлено в очередь на удаление.

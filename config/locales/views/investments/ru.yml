@@ -139,3 +139,21 @@ ru:
         exchange: Обмен
         reinvestment: Реинвестирование
         other: Прочее
+  investments:
+    subtypes:
+      brokerage:
+        short: Брокерский
+        long: Брокерский счет
+      retirement:
+        short: Пенсионный
+        long: Пенсионный счет
+      pension:
+        short: Пенсия
+        long: Пенсия
+      other:
+        short: Прочее
+        long: Прочие инвестиции
+      ira:
+        short: IRA
+        long: Традиционный IRA
+      # Добавьте остальные по необходимости

@@ -80,6 +80,14 @@ ru:
     edit:
       title: "Редактирование правила для %{resource}"
       title_with_name: "Редактирование правила для %{resource} \"%{name}\""
+    apply:
+      activated: "Правило %{resource} активировано"
+    update:
+      updated: "Правило обновлено"
+    destroy:
+      deleted: "Правило удалено"
+    destroy_all:
+      all_deleted: "Все правила удалены"
     new:
       title: "Новое правило для %{resource}"
       submit: Создать правило

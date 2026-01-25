@@ -9,7 +9,7 @@ class EnableBankingItemsController < ApplicationController
 
   def create
     @enable_banking_item = Current.family.enable_banking_items.build(enable_banking_item_params)
-    @enable_banking_item.name ||= "Enable Banking Connection"
+    @enable_banking_item.name ||= t(".default_name", default: "Enable Banking Connection")
 
     if @enable_banking_item.save
       if turbo_frame_request?

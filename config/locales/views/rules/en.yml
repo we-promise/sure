@@ -74,6 +74,14 @@ en:
     edit:
       title: "Edit %{resource} rule"
       title_with_name: "Edit %{resource} rule \"%{name}\""
+    apply:
+      activated: "%{resource} rule activated"
+    update:
+      updated: "Rule updated"
+    destroy:
+      deleted: "Rule deleted"
+    destroy_all:
+      all_deleted: "All rules deleted"
     new:
       title: New %{resource_type} rule
       submit: Create Rule

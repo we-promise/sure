@@ -1,5 +1,8 @@
 en:
   transfer_matches:
+    create:
+      success: "Transfer created"
+      transfer_to: "Transfer to %{name}"
     new:
       title: "Match transfer or payment"
       from_account_with_name: "From account: %{name}"

@@ -39,8 +39,8 @@ class ValuationsController < ApplicationController
 
     if result.success?
       respond_to do |format|
-        format.html { redirect_back_or_to account_path(account), notice: "Account updated" }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(account), notice: "Account updated") }
+        format.html { redirect_back_or_to account_path(account), notice: t(".success") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(account), notice: t(".success")) }
       end
     else
       @error_message = result.error_message
@@ -64,7 +64,7 @@ class ValuationsController < ApplicationController
       @entry.reload
 
       respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), notice: "Entry updated" }
+        format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
           render turbo_stream: [
             turbo_stream.replace(

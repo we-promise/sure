@@ -1,6 +1,14 @@
 ---
 ru:
   properties:
+    update:
+      details_updated: "Детали недвижимости успешно обновлены."
+      details_error: "Не удалось обновить детали недвижимости."
+    update_balances:
+      balance_updated: "Баланс успешно обновлен."
+    update_address:
+      address_updated: "Адрес успешно обновлен."
+      address_error: "Не удалось обновить адрес. Пожалуйста, проверьте обязательные поля."
     address:
       title: Введите адрес недвижимости
       line1: Улица и дом
@@ -55,3 +63,23 @@ ru:
         tab_overview: Обзор
         tab_value: Стоимость
         tab_address: Адрес
+  properties:
+    subtypes:
+      single_family_home:
+        short: "Дом"
+        long: "Частный дом"
+      multi_family_home:
+        short: "Многокв. дом"
+        long: "Многоквартирный дом"
+      condominium:
+        short: "Кондо"
+        long: "Кондоминиум"
+      townhouse:
+        short: "Таунхаус"
+        long: "Таунхаус"
+      investment_property:
+        short: "Инвест. объект"
+        long: "Инвестиционная недвижимость"
+      second_home:
+        short: "Второй дом"
+        long: "Второй дом (дача)"

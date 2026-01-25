@@ -18,7 +18,10 @@ ru:
       note_placeholder: Введите заметку
       submit: Добавить транзакцию
       tags_label: Теги
-      transfer: Перевод
+    create:
+      success: Транзакция создана
+    update:
+      updated: Транзакция обновлена
     new:
       new_transaction: Новая транзакция
       title: Новая транзакция

@@ -5,6 +5,7 @@ en:
       brokerage_cash: Brokerage cash
     destroy:
       success: Holding deleted
+      cannot_delete: You cannot delete this holding
     update:
       success: Cost basis saved.
       error: Invalid cost basis value.

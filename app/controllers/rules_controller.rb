@@ -60,7 +60,7 @@ class RulesController < ApplicationController
   def apply
     @rule.update!(active: true)
     @rule.apply_later(ignore_attribute_locks: true)
-    redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
+    redirect_back_or_to rules_path, notice: t(".activated", resource: @rule.resource_type.humanize)
   end
 
   def confirm
@@ -86,8 +86,8 @@ class RulesController < ApplicationController
   def update
     if @rule.update(rule_params)
       respond_to do |format|
-        format.html { redirect_back_or_to rules_path, notice: "Rule updated" }
-        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: "Rule updated" }
+        format.html { redirect_back_or_to rules_path, notice: t(".updated") }
+        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: t(".updated") }
       end
     else
       render :edit, status: :unprocessable_entity
@@ -96,12 +96,12 @@ class RulesController < ApplicationController
 
   def destroy
     @rule.destroy
-    redirect_to rules_path, notice: "Rule deleted"
+    redirect_to rules_path, notice: t(".deleted")
   end
 
   def destroy_all
     Current.family.rules.destroy_all
-    redirect_to rules_path, notice: "All rules deleted"
+    redirect_to rules_path, notice: t(".all_deleted")
   end
 
   def confirm_all

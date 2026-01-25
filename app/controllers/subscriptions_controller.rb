@@ -8,7 +8,7 @@ class SubscriptionsController < ApplicationController
   # Upgrade page for unsubscribed users
   def upgrade
     if Current.family.subscription&.active?
-      redirect_to root_path, notice: "You are already contributing. Thank you!"
+      redirect_to root_path, notice: t(".already_contributing")
     else
       @plan = params[:plan] || "annual"
       render layout: "onboardings"
@@ -33,9 +33,9 @@ class SubscriptionsController < ApplicationController
   def create
     if Current.family.can_start_trial?
       Current.family.start_trial_subscription!
-      redirect_to root_path, notice: "Welcome to Sure!"
+      redirect_to root_path, notice: t(".welcome")
     else
-      redirect_to root_path, alert: "You have already started or completed a trial. Please upgrade to continue."
+      redirect_to root_path, alert: t(".trial_error")
     end
   end
 
@@ -54,9 +54,9 @@ class SubscriptionsController < ApplicationController
 
     if checkout_result.success?
       Current.family.start_subscription!(checkout_result.subscription_id)
-      redirect_to root_path, notice: "Welcome to Sure!  Your contribution is appreciated."
+      redirect_to root_path, notice: t(".contribution_success")
     else
-      redirect_to root_path, alert: "Something went wrong processing your contribution. Please try again."
+      redirect_to root_path, alert: t(".contribution_error")
     end
   end
 

@@ -1,6 +1,14 @@
 ---
 en:
   properties:
+    update:
+      details_updated: "Property details updated successfully."
+      details_error: "Unable to update property details."
+    update_balances:
+      balance_updated: "Balance updated successfully."
+    update_address:
+      address_updated: "Address updated successfully."
+      address_error: "Unable to update address. Please check the required fields."
     address:
       title: Enter property manually
       line1: Address Line 1

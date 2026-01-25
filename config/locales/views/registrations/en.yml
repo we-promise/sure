@@ -13,6 +13,10 @@ en:
       failure: There was a problem signing up.
       invalid_invite_code: Invalid invite code, please try again.
       success: You have signed up successfully.
+      password_too_short: "must be at least 8 characters"
+      password_mixed_case: "must include both uppercase and lowercase letters"
+      password_no_number: "must include at least one number"
+      password_no_special: "must include at least one special character"
     new:
       invitation_message: "%{inviter} has invited you to join as a %{role}"
       join_family_title: Join %{family}

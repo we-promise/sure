@@ -15,7 +15,7 @@ class ImportsController < ApplicationController
     @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES).ordered, limit: safe_per_page)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
-      [ t("breadcrumbs.imports"), imports_path ]
+      [ t("breadcrumbs.imports"), nil ]
     ]
     render layout: "settings"
   end

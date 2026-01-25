@@ -17,7 +17,7 @@ class PropertiesController < ApplicationController
 
   def update
     if @account.update(property_params)
-      @success_message = "Property details updated successfully."
+      @success_message = t(".details_updated")
 
       if @account.active?
         render :edit
@@ -25,7 +25,7 @@ class PropertiesController < ApplicationController
         redirect_to balances_property_path(@account)
       end
     else
-      @error_message = "Unable to update property details."
+      @error_message = t(".details_error")
       render :edit, status: :unprocessable_entity
     end
   end
@@ -40,7 +40,7 @@ class PropertiesController < ApplicationController
     result = @account.set_current_balance(balance_params[:balance].to_d)
 
     if result.success?
-      @success_message = "Balance updated successfully."
+      @success_message = t(".balance_updated")
 
       if @account.active?
         render :balances
@@ -68,11 +68,11 @@ class PropertiesController < ApplicationController
           format.turbo_stream { stream_redirect_to account_path(@account) }
         end
       else
-        @success_message = "Address updated successfully."
+        @success_message = t(".address_updated")
         render :address
       end
     else
-      @error_message = "Unable to update address. Please check the required fields."
+      @error_message = t(".address_error")
       render :address, status: :unprocessable_entity
     end
   end

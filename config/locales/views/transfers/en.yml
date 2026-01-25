@@ -3,6 +3,7 @@ en:
   transfers:
     create:
       success: Transfer created
+      success_notice: Transfer created
     account_links:
       missing_account: "Data Error: Missing account"
       transfer_id: "Transfer ID: %{id}"

@@ -16,7 +16,7 @@ class TransferMatchesController < ApplicationController
 
     @transfer.sync_account_later
 
-    redirect_back_or_to transactions_path, notice: "Transfer created"
+    redirect_back_or_to transactions_path, notice: t(".success")
   end
 
   private
@@ -37,7 +37,7 @@ class TransferMatchesController < ApplicationController
             amount: @entry.amount * -1,
             currency: @entry.currency,
             date: @entry.date,
-            name: "Transfer to #{@entry.amount.negative? ? @entry.account.name : target_account.name}",
+            name: t(".transfer_to", name: @entry.amount.negative? ? @entry.account.name : target_account.name),
           )
         )
 

@@ -9,21 +9,9 @@ ru:
     create:
       success: Категория успешно создана
     destroy:
-      success: Категория успешно удалена
-    edit:
-      edit: Редактировать категорию
-    form:
-      placeholder: Название категории
-      color: Цвет
-      icon: Иконка
-      contrast_warning: Слишком слабый контраст, выберите цвет потемнее или
-      auto_adjust: настроить автоматически.
-      classification: Классификация
-      income: Доход
-      expense: Расход
-      name: Название
-      unassigned: (не назначена)
-      parent_category: Родительская категория (необязательно)
+      success: Категория удалена
+    destroy_all:
+      all_deleted: Все категории удалены
     index:
       bootstrap: Использовать стандартные (рекомендуется)
       categories: Категории

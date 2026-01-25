@@ -1,8 +1,7 @@
----
 ru:
   invite_codes:
-    index:
-      invite_code_description: Сгенерируйте новый код, чтобы он появился здесь. Использованные коды больше не будут отображаться.
-      no_invite_codes: Коды отсутствуют
-    invite_code:
-      delete_confirm: "Вы уверены, что хотите удалить этот инвайт-код?"
+    create:
+      not_authorized: "Вам не разрешено генерировать коды приглашений"
+      success: "Код сгенерирован"
+    destroy:
+      success: "Код удален"

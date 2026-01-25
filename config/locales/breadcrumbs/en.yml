@@ -1,17 +1,16 @@
----
 en:
   breadcrumbs:
-    exports: Exports
     home: Home
-    imports: Imports
+    dashboard: Dashboard
+    accounts: Accounts
     transactions: Transactions
     budgets: Budgets
+    reports: Reports
+    merchants: Merchants
     categories: Categories
     tags: Tags
     rules: Rules
-    merchants: Merchants
     recurring_transactions: Recurring Transactions
-    accounts: Accounts
     profiles: Profile
     securities: Security
     settings: Settings
@@ -20,4 +19,6 @@ en:
     api_keys: API Keys
     hostings: Self-Hosting
     providers: Providers
-    dashboard: Dashboard
+    imports: Imports
+    exports: Exports
+    guides: Guides

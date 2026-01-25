@@ -13,6 +13,10 @@ ru:
       no_valuations: Для этого счета пока нет оценок
       valuations: Стоимость
       value: стоимость
+    create:
+      success: Счет обновлен
+    update:
+      updated: Запись обновлена
     new:
       title: Новый баланс
       submit: Подтвердить

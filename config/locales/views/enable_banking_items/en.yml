@@ -19,6 +19,7 @@ en:
       no_accounts: No accounts available to set up.
       success: Successfully created %{count} accounts!
     create:
+      default_name: "Enable Banking Connection"
       success: Enable Banking configuration successful.
     destroy:
       success: Enable Banking connection has been queued for deletion.
