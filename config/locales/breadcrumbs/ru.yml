@@ -2,5 +2,24 @@
 ru:
   breadcrumbs:
     exports: Экспорт
+    guides: Руководства
+    merchants: Торговцы
+    reports: Отчеты
+    api_keys: API-ключи
+    hostings: Self-Hosting
+    profiles: Профиль
+    securities: Безопасность
+    providers: Провайдеры
+    llm_usages: Использование LLM
+    ai_prompts: ИИ-подсказки
+    dashboard: Дашборд
     home: Главная
     imports: Импорт
+    transactions: Транзакции
+    budgets: Бюджеты
+    categories: Категории
+    tags: Теги
+    rules: Правила
+    recurring_transactions: Повторяющиеся
+    accounts: Счета
+    settings: Настройки

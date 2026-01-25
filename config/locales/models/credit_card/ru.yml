@@ -1,0 +1,6 @@
+ru:
+  credit_cards:
+    subtypes:
+      none:
+        short: "Нет"
+        long: "Нет"

@@ -1,0 +1,15 @@
+ru:
+  investments:
+    subtypes:
+      brokerage:
+        short: "Брокерский"
+        long: "Брокерский счет"
+      retirement:
+        short: "Пенсионный"
+        long: "Пенсионный счет"
+      education:
+        short: "Образовательный"
+        long: "Образовательный счет"
+      other:
+        short: "Другое"
+        long: "Другой инвестиционный счет"

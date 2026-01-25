@@ -1,0 +1,24 @@
+ru:
+  vehicles:
+    subtypes:
+      car:
+        short: "Авто"
+        long: "Автомобиль"
+      truck:
+        short: "Грузовик"
+        long: "Грузовой автомобиль"
+      motorcycle:
+        short: "Мотоцикл"
+        long: "Мотоцикл"
+      boat:
+        short: "Лодка"
+        long: "Лодка/Катер"
+      rv:
+        short: "Дом на колесах"
+        long: "Жилой фургон"
+      other:
+        short: "Другое"
+        long: "Другое транспортное средство"
+      none:
+        short: "Нет"
+        long: "Нет"

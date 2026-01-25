@@ -4,3 +4,20 @@ en:
     exports: Exports
     home: Home
     imports: Imports
+    transactions: Transactions
+    budgets: Budgets
+    categories: Categories
+    tags: Tags
+    rules: Rules
+    merchants: Merchants
+    recurring_transactions: Recurring Transactions
+    accounts: Accounts
+    profiles: Profile
+    securities: Security
+    settings: Settings
+    llm_usages: LLM Usage
+    ai_prompts: AI Prompts
+    api_keys: API Keys
+    hostings: Self-Hosting
+    providers: Providers
+    dashboard: Dashboard

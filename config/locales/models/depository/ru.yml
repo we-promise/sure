@@ -1,0 +1,18 @@
+ru:
+  depositories:
+    subtypes:
+      checking:
+        short: "Checking"
+        long: "Текущий счет"
+      savings:
+        short: "Savings"
+        long: "Сберегательный счет"
+      hsa:
+        short: "HSA"
+        long: "Медицинский сберегательный счет"
+      cd:
+        short: "CD"
+        long: "Депозитный сертификат"
+      money_market:
+        short: "MM"
+        long: "Счет денежного рынка"

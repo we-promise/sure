@@ -40,13 +40,29 @@ en:
       submit: Continue
     goals:
       title: What brings you here?
-      subtitle: Select one or more goals that you have with using %{product_name} as your personal finance tool.
+      subtitle: Select one or more reasons you’re using %{product_name} as a personal finance tool.
       unified_accounts: See all my accounts in one place
-      cashflow: Understand cashflow and expenses
-      budgeting: Manage financial plans and budgeting
+      cashflow: Understand cash flow and spending
+      budgeting: Manage financial plans and budgets
       partner: Manage finances with a partner
       investments: Track investments
-      ai_insights: Let AI help me understand my finances
+      ai_insights: Understand my finances with AI
       optimization: Analyze and optimize accounts
       reduce_stress: Reduce financial stress or anxiety
       submit: Next
+    trial:
+      title: Try Sure for %{days} days
+      data_deleted: Data will be deleted then
+      intro: Starting today you can give the product a good look.  If you like it, self-host or contribute to continue using it here.
+      try_button: Try Sure for %{days} days
+      continue_button: Continue trial
+      upgrade_button: Upgrade
+      how_things_work: How things work here
+      today: Today
+      today_desc: You'll get free access to Sure for %{days} days on our AWS.
+      remind_desc: We'll notify you to remind you to export your data.
+      delete_desc: We delete your data — contribute to continue using Sure here!
+      in_days: In %{count} days
+    logout:
+      sign_out: Sign out
+

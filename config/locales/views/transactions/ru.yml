@@ -113,8 +113,13 @@ ru:
       transaction: транзакция
       transactions: транзакции
       import: Импорт
+      total_transactions: Всего транзакций
+      income: Доходы
+      expenses: Расходы
     toggle_recurring_section: Скрыть/показать предстоящие платежи
     search:
+      placeholder: Поиск транзакций ...
+      filters_button: Фильтр
       filters:
         account: Счет
         date: Дата

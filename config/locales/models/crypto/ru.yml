@@ -1,0 +1,12 @@
+ru:
+  cryptos:
+    subtypes:
+      wallet:
+        short: "Кошелек"
+        long: "Криптокошелек"
+      exchange:
+        short: "Биржа"
+        long: "Биржа"
+      other:
+        short: "Другое"
+        long: "Прочее"

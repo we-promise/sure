@@ -17,34 +17,34 @@
     <%= image_tag "logo-color.png", class: "w-16 mb-6" %>
 
     <p class="text-xl lg:text-3xl text-primary font-display font-medium">
-      Try Sure for 45 days
+      <%= t(".title", days: 45) %>
     </p>
 
     <h2 class="text-xl lg:text-3xl font-display text-secondary font-medium mb-2">
-      Data will be deleted then
+      <%= t(".data_deleted") %>
     </h2>
 
     <p class="text-sm text-secondary text-center mb-8">
-      Starting today you can give the product a good look.  <br/>If you like it, self-host or contribute to continue using it here.
+      <%= t(".intro") %>
     </p>
 
     <div class="w-full">
       <% if Current.family.can_start_trial? %>
         <%= render DS::Button.new(
-        text: "Try Sure for 45 days",
+        text: t(".try_button", days: 45),
         href: subscription_path,
         full_width: true,
         data: { turbo: false }
       ) %>
       <% elsif Current.family.trialing? %>
         <%= render DS::Link.new(
-          text: "Continue trial",
+          text: t(".continue_button"),
           href: root_path,
           full_width: true,
         ) %>
       <% else %>
         <%= render DS::Link.new(
-          text: "Upgrade",
+          text: t(".upgrade_button"),
           href: upgrade_subscription_path,
           full_width: true,
         ) %>
@@ -53,7 +53,7 @@
   </div>
 
   <div class="space-y-8">
-    <h2 class="text-center text-lg lg:text-2xl font-medium text-primary">How things work here</h2>
+    <h2 class="text-center text-lg lg:text-2xl font-medium text-primary"><%= t(".how_things_work") %></h2>
 
     <div class="flex gap-3">
       <div class="rounded-xl p-1 bg-gray-400/20 theme-dark:bg-gray-500/20 flex flex-col justify-between items-center text-secondary">
@@ -64,18 +64,18 @@
 
       <div class="space-y-12">
         <div class="space-y-1.5 text-sm">
-          <p class="text-primary font-medium">Today</p>
-          <p class="text-secondary">You'll get free access to Sure for 45 days on our AWS.</p>
+          <p class="text-primary font-medium"><%= t(".today") %></p>
+          <p class="text-secondary"><%= t(".today_desc", days: 45) %></p>
         </div>
 
         <div class="space-y-1.5 text-sm">
-          <p class="text-primary font-medium">In 40 days (<%= 40.days.from_now.strftime("%B %d") %>)</p>
-          <p class="text-secondary">We'll notify you to remind you to export your data.</p>
+          <p class="text-primary font-medium"><%= t(".in_days", count: 40) %> (<%= 40.days.from_now.strftime("%B %d") %>)</p>
+          <p class="text-secondary"><%= t(".remind_desc") %></p>
         </div>
 
         <div class="space-y-1.5 text-sm">
-          <p class="text-primary font-medium">In 45 days (<%= 45.days.from_now.strftime("%B %d") %>)</p>
-          <p class="text-secondary">We delete your data &mdash; contribute to continue using Sure here!</p>
+          <p class="text-primary font-medium"><%= t(".in_days", count: 45) %> (<%= 45.days.from_now.strftime("%B %d") %>)</p>
+          <p class="text-secondary"><%= t(".delete_desc") %></p>
         </div>
       </div>
     </div>

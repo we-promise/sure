@@ -122,8 +122,13 @@ en:
       transaction: transaction
       transactions: transactions
       import: Import
-    toggle_recurring_section: Toggle upcoming recurring transactions
+      total_transactions: Total transactions
+      income: Income
+      expenses: Expenses
+    toggle_recurring_section: Toggle recurring section
     search:
+      placeholder: Search transactions ...
+      filters_button: Filter
       filters:
         account: Account
         date: Date

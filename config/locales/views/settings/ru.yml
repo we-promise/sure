@@ -134,32 +134,33 @@ ru:
         sso_confirm_body: Вы уверены, что хотите отключить ваш аккаунт %{provider}? Вы сможете снова подключить его позже, войдя через этого провайдера.
         sso_confirm_button: Отключить
         sso_warning_message: Это ваш единственный метод входа. Вам следует установить пароль в настройках безопасности перед отключением, иначе вы можете потерять доступ к своему аккаунту.
-    settings_nav:
-      accounts_label: Счета
-      advanced_section_title: Расширенные
-      ai_prompts_label: ИИ-подсказки
-      api_key_label: API-ключи
-      payment_label: Оплата
-      categories_label: Категории
-      feedback_label: Обратная связь
-      general_section_title: Общие
-      imports_label: Импорт
-      exports_label: Экспорт
-      logout: Выйти
-      merchants_label: Торговцы
-      guides_label: Руководства
-      other_section_title: Дополнительно
-      preferences_label: Предпочтения
-      profile_label: Информация профиля
-      recurring_transactions_label: Повторяющиеся
-      rules_label: Правила
-      security_label: Безопасность
-      self_hosting_label: Self-Hosting
-      tags_label: Теги
-      transactions_section_title: Транзакции
-      whats_new_label: Что нового
-      api_keys_label: API-ключи
-      bank_sync_label: Банковская синхронизация
+      settings_nav:
+        accounts_label: Счета
+        bank_sync_label: Банковская синхронизация
+        preferences_label: Предпочтения
+        profile_label: Информация профиля
+        security_label: Безопасность
+        payment_label: Оплата
+        categories_label: Категории
+        tags_label: Теги
+        rules_label: Правила
+        merchants_label: Торговцы
+        recurring_transactions_label: Повторяющиеся
+        advanced_section_title: Расширенные
+        ai_prompts_label: ИИ-подсказки
+        llm_usage_label: Использование LLM
+        api_keys_label: API-ключи
+        self_hosting_label: Self-Hosting
+        providers_label: Провайдеры
+        imports_label: Импорт
+        exports_label: Экспорт
+        sso_providers_label: SSO Провайдеры
+        users_label: Пользователи
+        other_section_title: Дополнительно
+        guides_label: Руководства
+        whats_new_label: Что нового
+        feedback_label: Обратная связь
+        logout: Выйти
     settings_nav_link_large:
       next: Вперед
       previous: Назад
