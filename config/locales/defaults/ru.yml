@@ -250,6 +250,9 @@ ru:
         one: "%{model}: сохранение не удалось из-за %{count} ошибки"
         other: "%{model}: сохранение не удалось из-за %{count} ошибки"
   rules:
+    resources:
+      transaction: "транзакций"
+      trade: "сделок"
     conditions:
       and: "И"
       value_placeholder: "Введите значение..."
@@ -269,12 +272,20 @@ ru:
         transaction_name: "Название транзакции"
         transaction_notes: "Заметки транзакции"
     actions:
-      to: "В"
+      to: "НА"
       value_placeholder: "Выберите значение..."
       executors:
         categorize: "Установить категорию"
         mark_transfer: "Пометить как перевод"
         set_merchant: "Установить торговца"
+        auto_categorize: "Автоматическая категория (ИИ)"
+        auto_detect_merchants: "Автоматическое определение торговцев (ИИ)"
+        exclude_transaction: "Исключить из бюджета и отчетов"
+        set_investment_activity_label: "Установить метку инвестиционной активности"
+        set_transaction_category: "Установить категорию транзакции"
+        set_transaction_merchant: "Установить торговца транзакции"
+        set_transaction_name: "Установить название транзакции"
+        set_transaction_tags: "Установить теги транзакции"
   helpers:
     select:
       prompt: 'Выберите: '

@@ -87,7 +87,7 @@
     <div class="ml-6 space-y-3">
       <div class="flex items-center gap-2">
         <%= f.radio_button :effective_date_enabled, false, checked: rule.effective_date.nil?, data: { action: "rules#clearEffectiveDate" } %>
-        <%= f.label :effective_date_enabled_false, t(".all_resources", resource_type: rule.resource_type), class: "text-sm text-primary" %>
+        <%= f.label :effective_date_enabled_false, t(".all_resources", resource: t("rules.resources.#{rule.resource_type}", default: rule.resource_type.humanize)), class: "text-sm text-primary" %>
       </div>
 
       <div class="flex items-center gap-2">

@@ -1,4 +1,3 @@
----
 ru:
   rules:
     no_action: Нет действия
@@ -42,8 +41,9 @@ ru:
       add_condition: Добавить условие
       add_condition_group: Добавить группу условий
       add_action: Добавить действие
-      all_resources: "Все прошлые и будущие %{resource_type}"
+      all_resources: "Все прошлые и будущие %{resource}"
       starting_from: Начиная с
+      submit: Создать правило
     actions:
       to: на
       value_placeholder: Введите значение
@@ -98,7 +98,7 @@ ru:
       columns:
         date_time: Дата/Время
         execution_type: Тип
-        status: Status
+        status: Статус
         rule_name: Название правила
         transactions_counts:
           queued: В очереди

@@ -22,6 +22,7 @@ en:
       note_placeholder: Enter a note
       submit: Add transaction
       tags_label: Tags
+      details: Details
       transfer: Transfer
     new:
       new_transaction: New transaction

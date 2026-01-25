@@ -18,6 +18,7 @@ ru:
       note_placeholder: Введите заметку
       submit: Добавить транзакцию
       tags_label: Теги
+      details: Детали
     create:
       success: Транзакция создана
     update:

@@ -206,6 +206,9 @@ en:
         one: "%{count} error prohibited this %{model} from being saved"
         other: "%{count} errors prohibited this %{model} from being saved"
   rules:
+    resources:
+      transaction: "transaction"
+      trade: "trade"
     conditions:
       and: "AND"
       value_placeholder: "Enter value..."
@@ -231,6 +234,14 @@ en:
         categorize: "Categorize"
         mark_transfer: "Mark as transfer"
         set_merchant: "Set merchant"
+        auto_categorize: "Auto categorize (AI)"
+        auto_detect_merchants: "Auto detect merchants (AI)"
+        exclude_transaction: "Exclude from budgeting and reports"
+        set_investment_activity_label: "Set investment activity label"
+        set_transaction_category: "Set transaction category"
+        set_transaction_merchant: "Set transaction merchant"
+        set_transaction_name: "Set transaction name"
+        set_transaction_tags: "Set transaction tags"
   helpers:
     select:
       prompt: Please select
