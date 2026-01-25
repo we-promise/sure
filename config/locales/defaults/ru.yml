@@ -1,5 +1,57 @@
 ---
 ru:
+  periods:
+    last_day:
+      label: Последний день
+      label_short: 1Д
+      comparison_label: к вчера
+    current_week:
+      label: Текущая неделя
+      label_short: С нач. нед.
+      comparison_label: к началу недели
+    last_7_days:
+      label: Последние 7 дней
+      label_short: 7Д
+      comparison_label: к прошлой неделе
+    current_month:
+      label: Текущий месяц
+      label_short: С нач. мес.
+      comparison_label: к началу месяца
+    last_month:
+      label: Прошлый месяц
+      label_short: ПМ
+      comparison_label: к прошлому месяцу
+    last_30_days:
+      label: Последние 30 дней
+      label_short: 30Д
+      comparison_label: к прошлым 30 дням
+    last_90_days:
+      label: Последние 90 дней
+      label_short: 90Д
+      comparison_label: к прошлому кварталу
+    current_year:
+      label: Текущий год
+      label_short: С нач. года
+      comparison_label: к началу года
+    last_365_days:
+      label: Последние 365 дней
+      label_short: 365Д
+      comparison_label: к прошлому году
+    last_5_years:
+      label: Последние 5 лет
+      label_short: 5Л
+      comparison_label: к прошлым 5 годам
+    last_10_years:
+      label: Последние 10 лет
+      label_short: 10Л
+      comparison_label: к прошлым 10 годам
+    all_time:
+      label: За все время
+      label_short: Все
+      comparison_label: к началу
+    custom:
+      label: Свой период
+      label_short: Свой
   global:
     expand: "Развернуть"
     dismiss: "Пропустить"
@@ -47,20 +99,35 @@ ru:
       default: "%d.%m.%Y"
       long: "%-d %B %Y"
       short: "%-d %b"
+      month_year: "%B %Y"
     month_names:
     -
-    - января
-    - февраля
-    - марта
-    - апреля
-    - мая
-    - июня
-    - июля
-    - августа
-    - сентября
-    - октября
-    - ноября
-    - декабря
+    - Январь
+    - Февраль
+    - Март
+    - Апрель
+    - Май
+    - Июнь
+    - Июль
+    - Август
+    - Сентябрь
+    - Октябрь
+    - Ноябрь
+    - Декабрь
+    standalone_month_names:
+    -
+    - Январь
+    - Февраль
+    - Март
+    - Апрель
+    - Май
+    - Июнь
+    - Июль
+    - Август
+    - Сентябрь
+    - Октябрь
+    - Ноябрь
+    - Декабрь
     order:
     - :day
     - :month

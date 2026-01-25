@@ -6,7 +6,7 @@
       <div class="flex items-center gap-2">
         <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
           <span class="<%= "animate-pulse" if classification_group.syncing? %>">
-            <%= classification_group.name %>
+            <%= t("activerecord.models.account/#{classification_group.name.downcase.singularize}", default: classification_group.name) %>
           </span>
 
           <% if classification_group.account_groups.any? %>
@@ -24,11 +24,11 @@
             <% end %>
           </div>
 
-          <div class="flex flex-wrap gap-4">
+                <div class="flex flex-wrap gap-4">
             <% classification_group.account_groups.each do |account_group| %>
               <div class="flex items-center gap-2 text-sm">
                 <div class="h-2.5 w-2.5 rounded-full" style="background-color: <%= account_group.color %>;"></div>
-                <p class="text-secondary"><%= account_group.name %></p>
+                <p class="text-secondary"><%= t("activerecord.models.account/#{account_group.name.downcase.underscore}", default: account_group.name) %></p>
                 <p class="text-primary font-mono"><%= number_to_percentage(account_group.weight, precision: 0) %></p>
               </div>
             <% end %>
@@ -58,7 +58,7 @@
                   <div class="w-40 shrink-0 flex items-center gap-4">
                     <%= icon("chevron-right", class: "group-open:rotate-90") %>
 
-                    <p><%= account_group.name %></p>
+                    <p><%= t("activerecord.models.account/#{account_group.name.downcase.underscore}", default: account_group.name) %></p>
                   </div>
 
                   <div class="flex items-center justify-between text-right gap-6">

@@ -1,21 +1,21 @@
 <div class="space-y-4 pb-6 lg:pb-12 flex flex-col">
   <header class="flex justify-between items-center text-primary font-medium">
-    <h1 class="text-xl"><%= t(".header.title") %></h1>
+    <h1 class="text-xl"><%= t("transactions.header.title") %></h1>
     <div class="flex items-center gap-5">
       <div class="flex items-center gap-2">
         <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(variant: "link", text: t(".header.new_rule"), href: new_rule_path(resource_type: "transaction"), icon: "plus", data: { turbo_frame: :modal }) %>
-          <% menu.with_item(variant: "link", text: t(".header.edit_rules"), href: rules_path, icon: "git-branch", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: t(".header.edit_categories"), href: categories_path, icon: "shapes", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: t(".header.edit_tags"), href: tags_path, icon: "tags", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: t(".header.edit_merchants"), href: family_merchants_path, icon: "store", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: t(".header.edit_imports"), href: imports_path, icon: "hard-drive-upload", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: t(".header.import"), href: new_import_path, icon: "download", data: { turbo_frame: "modal", class_name: "md:!hidden" }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.new_rule"), href: new_rule_path(resource_type: "transaction"), icon: "plus", data: { turbo_frame: :modal }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_rules"), href: rules_path, icon: "git-branch", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_categories"), href: categories_path, icon: "shapes", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_tags"), href: tags_path, icon: "tags", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_merchants"), href: family_merchants_path, icon: "store", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_imports"), href: imports_path, icon: "hard-drive-upload", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.import"), href: new_import_path, icon: "download", data: { turbo_frame: "modal", class_name: "md:!hidden" }) %>
         <% end %>
 
         <div class="hidden md:flex">
           <%= render DS::Link.new(
-            text: t(".header.import"),
+            text: t("transactions.header.import"),
             icon: "download",
             variant: "outline",
             href: new_import_path,
@@ -24,7 +24,7 @@
         </div>
 
         <%= render DS::Link.new(
-            text: t(".header.new_transaction"),
+            text: t("transactions.header.new_transaction"),
             icon: "plus",
             variant: "primary",
             href: new_transaction_path,
@@ -75,11 +75,11 @@
                                   action: "bulk-select#togglePageSelection",
                                   checkbox_toggle_target: "selectionEntry"
                                 } %>
-              <p><%= t(".table.header.transaction") %></p>
+              <p><%= t("transactions.table.header.transaction") %></p>
             </div>
 
-            <p class="col-span-2 md:block hidden"><%= t(".table.header.category") %></p>
-            <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t(".table.header.amount") %></p>
+            <p class="col-span-2 md:block hidden"><%= t("transactions.table.header.category") %></p>
+            <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t("transactions.table.header.amount") %></p>
           </div>
         <% end %>
 
