@@ -407,7 +407,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Bump version to next pre-release after ${{ github.ref_name }} release"
+          git commit -m "Bump version to next iteration after ${{ github.ref_name }} release"
 
           # Push with retry logic
           attempts=0
