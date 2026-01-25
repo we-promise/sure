@@ -11,8 +11,6 @@ class ReportsController < ApplicationController
 
     # Build reports sections for collapsible/reorderable UI
     @reports_sections = build_reports_sections
-
-    @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
   end
 
   def print
@@ -74,6 +72,7 @@ class ReportsController < ApplicationController
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.reports"), nil ] ]
   end
 
+  def google_sheets_instructions
     # Re-build the params needed for the export URL
     base_params = {
       period_type: params[:period_type],
