@@ -89,7 +89,7 @@ class AccountsController < ApplicationController
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
       @account.destroy_later
-      redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+      redirect_to accounts_path, notice: t("accounts.destroy.success", type: t("activerecord.models.account/#{@account.accountable_type.underscore}", default: @account.accountable_type))
     end
   end
 

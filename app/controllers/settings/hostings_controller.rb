@@ -7,9 +7,10 @@ class Settings::HostingsController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Self-Hosting", nil ]
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.hostings"), nil ]
     ]
+  end
 
     # Determine which providers are currently selected
     exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider

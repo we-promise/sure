@@ -51,10 +51,12 @@ en:
         weight: Weight
         value: Value
       cashflow_sankey:
-        title: "Cashflow"
-        no_data_title: "No cash flow data for this time period"
-        no_data_description: "Add transactions to display cash flow data or expand the time period"
+        title: "Cash Flow"
+        no_data_title: "No cash flow data for this period"
+        no_data_description: "Add transactions or change the date range"
         add_transaction: "Add transaction"
+        cash_flow_node: "Cash Flow"
+        surplus_node: "Surplus"
       no_accounts:
         title: "No accounts yet"
         description: "Add accounts to display net worth data"

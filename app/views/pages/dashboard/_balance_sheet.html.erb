@@ -118,10 +118,10 @@
           ) %>
 
           <p class="text-primary text-sm font-medium mb-1 mt-4">
-            <%= t("pages.dashboard.balance_sheet.no_items", name: classification_group.name) %>
+            <%= t("pages.dashboard.balance_sheet.no_items", name: t("activerecord.models.account/#{classification_group.name.downcase.singularize}", default: classification_group.name)) %>
           </p>
           <p class="text-secondary text-sm text-center">
-            <%= t("pages.dashboard.balance_sheet.add_accounts", name: classification_group.name) %>
+            <%= t("pages.dashboard.balance_sheet.add_accounts", name: t("activerecord.models.account/#{classification_group.name.downcase.singularize}", default: classification_group.name)) %>
           </p>
         </div>
       <% end %>

@@ -53,7 +53,7 @@
     <div class="my-2">
       <%= render DS::Link.new(
       href: new_polymorphic_path(account_group.key, step: "method_select"),
-      text: t("accounts.sidebar.new_account_group", account_group: t("activerecord.models.account/#{account_group.key.underscore}", default: account_group.name).downcase),
+      text: t("accounts.sidebar.new_groups.#{account_group.key.underscore}", default: t("accounts.sidebar.new_account")),
       icon: "plus",
       full_width: true,
       variant: "ghost",

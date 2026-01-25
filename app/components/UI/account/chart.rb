@@ -31,20 +31,20 @@ class UI::Account::Chart < ApplicationComponent
     when "Investment", "Crypto"
       case view
       when "balance"
-        "Total account value"
+        I18n.t("accounts.chart.titles.total_value", default: "Total account value")
       when "holdings_balance"
-        "Holdings value"
+        I18n.t("accounts.chart.titles.holdings_value", default: "Holdings value")
       when "cash_balance"
-        "Cash value"
+        I18n.t("accounts.chart.titles.cash_value", default: "Cash value")
       end
     when "Property", "Vehicle"
-      "Estimated #{account.accountable_type.humanize.downcase} value"
+      I18n.t("accounts.chart.titles.estimated_value", type: account.accountable_type.humanize.downcase, default: "Estimated #{account.accountable_type.humanize.downcase} value")
     when "CreditCard", "OtherLiability"
-      "Debt balance"
+      I18n.t("accounts.chart.titles.debt_balance", default: "Debt balance")
     when "Loan"
-      "Remaining principal balance"
+      I18n.t("accounts.chart.titles.remaining_principal", default: "Remaining principal balance")
     else
-      "Balance"
+      I18n.t("accounts.chart.titles.balance", default: "Balance")
     end
   end
 

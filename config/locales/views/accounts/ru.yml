@@ -9,6 +9,14 @@ ru:
       deletion_in_progress: (выполняется удаление...)
     chart:
       data_not_available: Нет данных за выбранный период
+      titles:
+        total_value: "Общая стоимость счета"
+        holdings_value: "Стоимость активов"
+        cash_value: "Наличные"
+        estimated_value: "Оценочная стоимость (%{type})"
+        debt_balance: "Задолженность"
+        remaining_principal: "Остаток основного долга"
+        balance: "Баланс"
     create:
       success: "Счет %{type} успешно создан"
     destroy:
@@ -105,6 +113,16 @@ ru:
       new_debt: Новый долг
       new_account: Новый счет
       new_account_group: "Новый %{account_group}"
+      new_groups:
+        depository: "Новые наличные"
+        investment: "Новые инвестиции"
+        crypto: "Новая криптовалюта"
+        property: "Новая недвижимость"
+        vehicle: "Новый транспорт"
+        credit_card: "Новая кред. карта"
+        loan: "Новый займ/кредит"
+        other_asset: "Новый актив"
+        other_liability: "Новое обязательство"
     types:
       depository: Наличные
       investment: Инвестиции

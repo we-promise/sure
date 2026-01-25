@@ -28,6 +28,31 @@ en:
       amount_label: "Account value on date"
       update_value: "Update value"
       date_label: Date
+    names:
+      opening_anchor:
+        property: "Original purchase price"
+        vehicle: "Original purchase price"
+        loan: "Original principal"
+        investment: "Opening account value"
+        crypto: "Opening account value"
+        other_asset: "Opening account value"
+        default: "Opening balance"
+      current_anchor:
+        property: "Current market value"
+        vehicle: "Current market value"
+        loan: "Current loan balance"
+        investment: "Current account value"
+        crypto: "Current account value"
+        other_asset: "Current account value"
+        default: "Current balance"
+      recon:
+        property: "Manual value update"
+        vehicle: "Manual value update"
+        loan: "Manual principal update"
+        investment: "Manual value update"
+        crypto: "Manual value update"
+        other_asset: "Manual value update"
+        default: "Manual balance update"
       delete: Delete
       delete_subtitle: This action cannot be undone
       delete_title: Delete Entry

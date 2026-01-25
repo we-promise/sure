@@ -8,7 +8,15 @@ en:
       troubleshoot: Troubleshoot
       deletion_in_progress: (deletion in progress...)
     chart:
-      data_not_available: Data not available for the selected period
+      data_not_available: No data available for the selected period
+      titles:
+        total_value: "Total account value"
+        holdings_value: "Holdings value"
+        cash_value: "Cash value"
+        estimated_value: "Estimated %{type} value"
+        debt_balance: "Debt balance"
+        remaining_principal: "Remaining principal balance"
+        balance: "Balance"
     create:
       success: "%{type} account created"
     destroy:
@@ -100,9 +108,6 @@ en:
     update:
       success: "%{type} account updated"
     sidebar:
-      missing_data: Missing historical data
-      missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
-      configure_providers: Configure your providers here.
       tabs:
         all: All
         assets: Assets
@@ -111,6 +116,16 @@ en:
       new_debt: New debt
       new_account: New account
       new_account_group: "New %{account_group}"
+      new_groups:
+        depository: "New cash"
+        investment: "New investment"
+        crypto: "New crypto"
+        property: "New property"
+        vehicle: "New vehicle"
+        credit_card: "New credit card"
+        loan: "New loan"
+        other_asset: "New asset"
+        other_liability: "New liability"
     types:
       depository: Cash
       investment: Investment

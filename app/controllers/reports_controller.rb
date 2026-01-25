@@ -70,7 +70,10 @@ class ReportsController < ApplicationController
     end
   end
 
-  def google_sheets_instructions
+  def set_breadcrumbs
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.reports"), nil ] ]
+  end
+
     # Re-build the params needed for the export URL
     base_params = {
       period_type: params[:period_type],

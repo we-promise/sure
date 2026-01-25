@@ -7,21 +7,15 @@ ru:
       multi_family_home:
         short: "Многокв. дом"
         long: "Многоквартирный дом"
-      condo:
+      condominium:
         short: "Кондо"
         long: "Кондоминиум"
       townhouse:
         short: "Таунхаус"
         long: "Таунхаус"
-      apartment:
-        short: "Квартира"
-        long: "Квартира"
-      land:
-        short: "Земля"
-        long: "Земельный участок"
-      commercial:
-        short: "Комм. недвиж."
-        long: "Коммерческая недвижимость"
-      other:
-        short: "Другое"
-        long: "Другая недвижимость"
+      investment_property:
+        short: "Инвест. объект"
+        long: "Инвестиционная недвижимость"
+      second_home:
+        short: "Второй дом"
+        long: "Второй дом (дача)"

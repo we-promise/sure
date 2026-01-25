@@ -37,7 +37,7 @@ module AccountableResource
     @account = Current.family.accounts.create_and_sync(account_params.except(:return_to))
     @account.lock_saved_attributes!
 
-    redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+    redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: t("activerecord.models.account/#{accountable_type.name.underscore}", default: accountable_type.name.underscore.humanize))
   end
 
   def update
@@ -61,7 +61,7 @@ module AccountableResource
     end
 
     @account.lock_saved_attributes!
-    redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
+    redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: t("activerecord.models.account/#{accountable_type.name.underscore}", default: accountable_type.name.underscore.humanize))
   end
 
   private
