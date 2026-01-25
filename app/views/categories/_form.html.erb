@@ -72,7 +72,7 @@
 
     <section>
       <%= hidden_field_tag :transaction_id, params[:transaction_id] %>
-      <%= f.submit %>
+      <%= f.submit category.persisted? ? t("categories.form.update") : t("categories.form.submit") %>
     </section>
   <% end %>
 </div>

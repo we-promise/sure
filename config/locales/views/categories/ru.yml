@@ -27,6 +27,20 @@ ru:
       new_category: Новая категория
     update:
       success: Категория успешно обновлена
+    form:
+      auto_adjust: "Автоматически"
+      classification: "Классификация"
+      color: "Цвет"
+      contrast_warning: "Низкий контраст"
+      expense: "Расход"
+      icon: "Иконка"
+      income: "Доход"
+      name: "Название"
+      parent_category: "Родительская категория"
+      placeholder: "Введите название..."
+      unassigned: "Не назначена"
+      submit: "Создать категорию"
+      update: "Обновить категорию"
   category:
     dropdowns:
       show:

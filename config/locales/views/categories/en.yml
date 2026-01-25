@@ -28,6 +28,20 @@ en:
       new_category: New category
     update:
       success: Category updated successfully
+    form:
+      auto_adjust: "Auto adjust"
+      classification: "Classification"
+      color: "Color"
+      contrast_warning: "Low contrast"
+      expense: "Expense"
+      icon: "Icon"
+      income: "Income"
+      name: "Name"
+      parent_category: "Parent category"
+      placeholder: "Enter name..."
+      unassigned: "Unassigned"
+      submit: "Create Category"
+      update: "Update Category"
 
   category:
     dropdowns:

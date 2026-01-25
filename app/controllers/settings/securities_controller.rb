@@ -6,5 +6,6 @@ class Settings::SecuritiesController < ApplicationController
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.securities"), nil ]
     ]
+    @oidc_identities = Current.user.oidc_identities
   end
 end
