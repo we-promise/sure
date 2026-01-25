@@ -145,7 +145,7 @@ class OnboardingsTest < ApplicationSystemTestCase
   test "trial page renders correctly" do
     visit trial_onboarding_path
 
-    assert_text "trial" # Adjust based on actual content
+    assert_text "Try Sure"
   end
 
   test "navigation between onboarding steps" do

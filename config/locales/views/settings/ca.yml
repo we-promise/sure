@@ -1,36 +1,47 @@
 ---
 ca:
+  views:
+    settings:
+      payments:
+        renewal: "La teva contribució continua el %{date}."
   settings:
     ai_prompts:
       show:
-        page_title: Prompts d'IA
-        openai_label: OpenAI
         disable_ai: Desactiva l'assistent d'IA
-        prompt_instructions: Instruccions del prompt
         main_system_prompt:
+          subtitle: Instruccions bàsiques que defineixen el comportament de l'assistent
+            d'IA a totes les converses
           title: Prompt principal del sistema
-          subtitle: Instruccions bàsiques que defineixen el comportament de l'assistent d'IA a totes les converses
-        transaction_categorizer:
-          title: Categoritzador de transaccions
-          subtitle: La IA categoritza automàticament les teves transaccions segons les categories definides
         merchant_detector:
+          subtitle: La IA identifica i enriqueix les dades de transaccions amb informació
+            de comerç
           title: Detector de comerços
-          subtitle: La IA identifica i enriqueix les dades de transaccions amb informació de comerç
-    billings:
+        openai_label: OpenAI
+        page_title: Prompts d'IA
+        prompt_instructions: Instruccions del prompt
+        transaction_categorizer:
+          subtitle: La IA categoritza automàticament les teves transaccions segons
+            les categories definides
+          title: Categoritzador de transaccions
+    payments:
       show:
-        page_title: Facturació
-        subscription_subtitle: Actualitza la teva subscripció i dades de facturació
+        page_title: Pagament
+        subscription_subtitle: Actualitza la teva subscripció i dades de pagament
         subscription_title: Gestiona la subscripció
+    hostings:
+      ensure_admin:
+        not_authorized: No autoritzat
     preferences:
       show:
         country: País
         currency: Moneda
         date_format: Format de data
+        default_account_order: Ordre de comptes per defecte
+        default_period: Període per defecte
         general_subtitle: Configura les teves preferències
         general_title: General
-        default_period: Període per defecte
-        default_account_order: Ordre de comptes per defecte
         language: Idioma
+        language_auto: Idioma del navegador
         page_title: Preferències
         theme_dark: Fosc
         theme_light: Clar
@@ -46,32 +57,35 @@ ca:
         not_authorized: No estàs autoritzat/da a eliminar membres.
       show:
         confirm_delete:
-          body: Segur que vols eliminar definitivament el teu compte? Aquesta acció és irreversible.
+          body: Segur que vols eliminar definitivament el teu compte? Aquesta acció
+            és irreversible.
           title: Eliminar el compte?
-        confirm_reset:
-          body: Segur que vols restablir el teu compte? Això eliminarà tots els teus comptes, categories, comerços, etiquetes i altres dades. Aquesta acció no es pot desfer.
-          title: Restablir el compte?
-        confirm_reset_with_sample_data:
-          body: Segur que vols restablir el teu compte i carregar dades d'exemple? Això eliminarà les teves dades existents i les substituirà per dades de demostració perquè puguis explorar Sure amb seguretat.
-          title: Restablir el compte i carregar dades d'exemple?
         confirm_remove_invitation:
           body: Segur que vols eliminar la invitació per a %{email}?
           title: Eliminar invitació
         confirm_remove_member:
           body: Segur que vols eliminar %{name} del teu compte?
           title: Eliminar membre
+        confirm_reset:
+          body: Segur que vols restablir el teu compte? Això eliminarà tots els teus
+            comptes, categories, comerços, etiquetes i altres dades. Aquesta acció
+            no es pot desfer.
+          title: Restablir el compte?
+        confirm_reset_with_sample_data:
+          body: Segur que vols restablir el teu compte i carregar dades d'exemple?
+            Això eliminarà les teves dades existents i les substituirà per dades de
+            demostració perquè puguis explorar Sure amb seguretat.
+          title: Restablir el compte i carregar dades d'exemple?
         danger_zone_title: Zona perillosa
         delete_account: Elimina el compte
-        delete_account_warning: Eliminar el teu compte suprimirà definitivament totes les teves dades i no es podrà desfer.
-        reset_account: Restableix el compte
-        reset_account_warning: Restablir el teu compte eliminarà tots els teus comptes, categories, comerços, etiquetes i altres dades, però mantindrà el teu usuari.
-        reset_account_with_sample_data: Restableix i pre-carrega
-        reset_account_with_sample_data_warning: Elimina totes les teves dades existents i carrega dades d'exemple per explorar amb un entorn preomplert.
+        delete_account_warning: Eliminar el teu compte suprimirà definitivament totes
+          les teves dades i no es podrà desfer.
         email: Correu electrònic
         first_name: Nom
         household_form_input_placeholder: Introdueix el nom de la llar
         household_form_label: Nom de la llar
-        household_subtitle: Convida membres de la família, parelles i altres persones. Els convidats podran accedir al teu compte familiar i als comptes compartits.
+        household_subtitle: Convida membres de la família, parelles i altres persones.
+          Els convidats podran accedir al teu compte familiar i als comptes compartits.
         household_title: Llar
         invitation_link: Enllaç d'invitació
         invite_member: Afegeix membre
@@ -82,40 +96,62 @@ ca:
         profile_title: Personal
         remove_invitation: Elimina invitació
         remove_member: Elimina membre
+        reset_account: Restableix el compte
+        reset_account_warning: Restablir el teu compte eliminarà tots els teus comptes,
+          categories, comerços, etiquetes i altres dades, però mantindrà el teu usuari.
+        reset_account_with_sample_data: Restableix i pre-carrega
+        reset_account_with_sample_data_warning: Elimina totes les teves dades existents
+          i carrega dades d'exemple per explorar amb un entorn preomplert.
         save: Desa
     securities:
       show:
         page_title: Valor
+        sso_confirm_body: Segur que vols desconnectar el teu compte de %{provider}?
+          Pots tornar-lo a connectar més tard iniciant sessió amb aquest proveïdor una altra vegada.
+        sso_confirm_button: Desconnecta
+        sso_confirm_title: Desconnectar compte?
+        sso_connect_hint: Tanca sessió i inicia amb un proveïdor SSO per connectar un compte.
+        sso_disconnect: Desconnecta
+        sso_last_used: Darrer ús
+        sso_never: Mai
+        sso_no_email: Sense correu electrònic
+        sso_no_identities: No hi ha comptes SSO connectats
+        sso_subtitle: Gestiona les teves connexions de compte amb inici de sessió únic
+        sso_title: Comptes connectats
+        sso_warning_message: Aquesta és la teva única mètode d'inici de sessió. Hauries de configurar una contrasenya
+          a la teva configuració de seguretat abans de desconnectar-te, altrament podries quedar blocat
+          fora del teu compte.
     settings_nav:
       accounts_label: Comptes
       advanced_section_title: Avançat
       ai_prompts_label: Prompts d'IA
       api_key_label: Clau API
-      billing_label: Facturació
+      api_keys_label: Clau API
+      bank_sync_label: Sincronització bancària
+      payment_label: Pagament
       categories_label: Categories
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Importa/Exporta
+      imports_label: Importacions
+      exports_label: Exportacions
+      guides_label: Guies
       logout: Tanca la sessió
       merchants_label: Comerços
-      guides_label: Guies
       other_section_title: Més
       preferences_label: Preferències
       profile_label: Informació del perfil
+      recurring_transactions_label: Recurrent
       rules_label: Regles
       security_label: Seguretat
       self_hosting_label: Autoallotjament
       tags_label: Etiquetes
       transactions_section_title: Transaccions
       whats_new_label: Novetats
-      api_keys_label: Clau API
-      bank_sync_label: Sincronització bancària
     settings_nav_link_large:
       next: Següent
       previous: Enrere
     user_avatar_field:
       accepted_formats: JPG o PNG. Màxim 5MB.
-      choose: Pujar foto
-      choose_label: (opcional)
       change: Canvia la foto
-
+      choose: Pujar foto
+      choose_label: "(opcional)"

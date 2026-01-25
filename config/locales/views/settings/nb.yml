@@ -1,10 +1,14 @@
 ---
 nb:
+  views:
+    settings:
+      payments:
+        renewal: "Bidraget ditt fortsetter den %{date}."
   settings:
-    billings:
+    payments:
       show:
-        page_title: Fakturering
-        subscription_subtitle: Oppdater abonnementet og faktureringsdetaljene dine
+        page_title: Betaling
+        subscription_subtitle: Oppdater abonnementet og betalingsdetaljene dine
         subscription_title: Administrer abonnement
     preferences:
       show:
@@ -15,6 +19,7 @@ nb:
         general_title: Generelt
         default_period: Standardperiode
         language: Språk
+        language_auto: Nettleserens språk
         page_title: Preferanser
         theme_dark: Mørk
         theme_light: Lys
@@ -76,11 +81,12 @@ nb:
       accounts_label: Kontoer
       api_key_label: API-nøkkel
       advanced_section_title: Avansert
-      billing_label: Fakturering
+      payment_label: Betaling
       categories_label: Kategorier
       feedback_label: Tilbakemelding
       general_section_title: Generelt
       imports_label: Importer
+      exports_label: Eksporter
       logout: Logg ut
       merchants_label: Forhandlere
       other_section_title: Mer

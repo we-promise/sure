@@ -1,0 +1,67 @@
+<% content_for :title, t("snaptrade_items.select_existing_account.title", default: "Link to SnapTrade Account") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("snaptrade_items.select_existing_account.header", default: "Link Existing Account")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "link", class: "text-primary" %>
+      <span class="text-primary"><%= t("snaptrade_items.select_existing_account.subtitle", default: "Select a SnapTrade account to link to") %> <%= @account.name %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <% if @snaptrade_accounts.blank? %>
+      <div class="text-center py-8">
+        <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+        <p class="text-secondary"><%= t("snaptrade_items.select_existing_account.no_accounts", default: "No unlinked SnapTrade accounts available.") %></p>
+        <p class="text-sm text-secondary mt-2"><%= t("snaptrade_items.select_existing_account.connect_hint", default: "You may need to connect a brokerage first.") %></p>
+        <%= link_to t("snaptrade_items.select_existing_account.settings_link", default: "Go to Provider Settings"), settings_providers_path, class: "btn btn--primary btn--sm mt-4" %>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg mb-4">
+          <p class="text-sm text-primary">
+            <strong><%= t("snaptrade_items.select_existing_account.linking_to", default: "Linking to account:") %></strong>
+            <%= @account.name %>
+          </p>
+        </div>
+
+        <% @snaptrade_accounts.each do |snaptrade_account| %>
+          <%= form_with url: link_existing_account_snaptrade_items_path,
+                        method: :post,
+                        local: true,
+                        class: "border border-primary rounded-lg p-4 hover:bg-surface transition-colors" do |form| %>
+            <%= hidden_field_tag :account_id, @account.id %>
+            <%= hidden_field_tag :snaptrade_account_id, snaptrade_account.id %>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-medium text-primary"><%= snaptrade_account.name %></h4>
+                <p class="text-sm text-secondary">
+                  <% if snaptrade_account.brokerage_name.present? %>
+                    <%= snaptrade_account.brokerage_name %> •
+                  <% end %>
+                  <%= t("snaptrade_items.select_existing_account.balance_label", default: "Balance:") %>
+                  <%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %>
+                </p>
+              </div>
+              <%= render DS::Button.new(
+                text: t("snaptrade_items.select_existing_account.link_button", default: "Link"),
+                variant: "primary",
+                size: "sm",
+                type: "submit"
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="mt-6">
+        <%= render DS::Link.new(
+          text: t("snaptrade_items.select_existing_account.cancel_button", default: "Cancel"),
+          variant: "secondary",
+          href: account_path(@account)
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

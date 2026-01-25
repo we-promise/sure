@@ -1,0 +1,34 @@
+---
+nl:
+  mfa:
+    backup_codes:
+      backup_codes_description: Elke code kan slechts één keer worden gebruikt. Bewaar deze codes veilig.
+      backup_codes_title: Uw back-upcodes
+      continue: Doorgaan naar beveiligingsinstellingen
+      description: Bewaar deze back-upcodes op een veilige plaats - u heeft ze nodig als u de toegang tot uw authenticatie-app verliest
+      page_title: Back-upcodes
+      title: Bewaar uw back-upcodes
+    create:
+      invalid_code: Ongeldige verificatiecode. Probeer het opnieuw.
+    disable:
+      success: Twee-factor authenticatie is uitgeschakeld
+    new:
+      code_label: Verificatiecode
+      code_placeholder: Voer 6-cijferige code in
+      description: Verbeter de beveiliging van uw account door twee-factor authenticatie in te stellen
+      page_title: Twee-factor authenticatie instellen
+      scan_description: Gebruik een authenticatie-app zoals Google Authenticator of 1Password om deze QR-code te scannen
+      scan_title: 1. Scan QR-code
+      secret_description: Als u de QR-code niet kunt scannen, voer dan deze geheime sleutel handmatig in uw authenticatie-app in
+      secret_title: Handmatige invoercode
+      title: Twee-factor authenticatie instellen
+      verify_button: Verifiëren en 2FA inschakelen
+      verify_description: Voer de 6-cijferige code van uw authenticatie-app in
+      verify_title: 2. Voer verificatiecode in
+    verify:
+      description: Voer de code van uw authenticatie-app in om door te gaan
+      page_title: Twee-factor authenticatie verifiëren
+      title: Twee-factor authenticatie
+      verify_button: Verifiëren
+    verify_code:
+      invalid_code: Ongeldige authenticatiecode. Probeer het opnieuw.

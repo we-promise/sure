@@ -41,12 +41,12 @@ x-rails-env: &rails_env
   DB_HOST: db
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
-# NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
+  # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
   OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
 
 services:
   web:
-    image: ghcr.io/we-promise/sure:latest
+    image: ghcr.io/we-promise/sure:stable
     volumes:
       - app-storage:/rails/storage
     ports:
@@ -63,7 +63,7 @@ services:
       - sure_net
 
   worker:
-    image: ghcr.io/we-promise/sure:latest
+    image: ghcr.io/we-promise/sure:stable
     command: bundle exec sidekiq
     volumes:
       - app-storage:/rails/storage
@@ -90,6 +90,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - sure_net
+
+  backup:
+    profiles:
+      - backup
+    image: prodrigestivill/postgres-backup-local
+    restart: unless-stopped
+    volumes:
+      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=${POSTGRES_DB:-sure_production}
+      - POSTGRES_USER=${POSTGRES_USER:-sure_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password}
+      - SCHEDULE=@daily # Runs once a day at midnight
+      - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
+      - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups
+      - BACKUP_KEEP_MONTHS=6 # Keeps 6 monthly backups
+    depends_on:
+      - db
     networks:
       - sure_net
 

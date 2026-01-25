@@ -3,7 +3,8 @@ import "@hotwired/turbo-rails";
 import "controllers";
 
 Turbo.StreamActions.redirect = function () {
-  Turbo.visit(this.target);
+  // Use "replace" to avoid adding form submission to browser history
+  Turbo.visit(this.target, { action: "replace" });
 };
 
 // Register service worker for PWA offline support

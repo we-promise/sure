@@ -34,6 +34,7 @@ en:
       budgeted: Budgeted
       remaining: Remaining
       over_by: Over by
+      shared: shared
       suggested_daily: "%{amount} suggested per day for %{days} remaining days"
       no_budgets: No budget categories set up for this month
       status:
@@ -104,8 +105,8 @@ en:
         income: Income
         uncategorized: Uncategorized
         entries:
-          one: entry
-          other: entries
+          one: "%{count} entry"
+          other: "%{count} entries"
         percentage: "% of Total"
       pagination:
         showing:
@@ -134,6 +135,22 @@ en:
       value: Value
       return: Return
       accounts: Investment Accounts
+      gains_by_tax_treatment: Gains by Tax Treatment
+      unrealized_gains: Unrealized Gains
+      realized_gains: Realized Gains
+      total_gains: Total Gains
+      taxable_realized_note: These gains may be subject to taxes
+      no_data: "-"
+      view_details: View details
+      holdings_count:
+        one: "%{count} holding"
+        other: "%{count} holdings"
+      sells_count:
+        one: "%{count} sell"
+        other: "%{count} sells"
+      holdings: Holdings
+      sell_trades: Sell Trades
+      and_more: "+%{count} more"
     investment_flows:
       title: Investment Flows
       description: Track money flowing into and out of your investment accounts

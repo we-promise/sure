@@ -1,0 +1,189 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class <%= class_name %>Account::ProcessorTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:empty)
+    # TODO: Create or reference your <%= file_name %>_item fixture
+    # @<%= file_name %>_item = <%= file_name %>_items(:configured_item)
+    # @<%= file_name %>_account = <%= file_name %>_accounts(:test_account)
+
+    # Create a linked Sure account for the provider account
+    @account = @family.accounts.create!(
+      name: "Test Account",
+      balance: 10000,
+      currency: "USD",
+<% if investment_provider? -%>
+      accountable: Investment.new
+<% else -%>
+      accountable: Depository.new
+<% end -%>
+    )
+
+    # TODO: Link the provider account to the Sure account
+    # @<%= file_name %>_account.ensure_account_provider!(@account)
+    # @<%= file_name %>_account.reload
+  end
+
+  # ==========================================================================
+  # Processor tests
+  # ==========================================================================
+
+  test "processor initializes with <%= file_name %>_account" do
+    skip "TODO: Set up <%= file_name %>_account fixture"
+
+    # processor = <%= class_name %>Account::Processor.new(@<%= file_name %>_account)
+    # assert_not_nil processor
+  end
+
+  test "processor skips processing when no linked account" do
+    skip "TODO: Set up <%= file_name %>_account fixture"
+
+    # Remove the account provider link
+    # @<%= file_name %>_account.account_provider&.destroy
+    # @<%= file_name %>_account.reload
+
+    # processor = <%= class_name %>Account::Processor.new(@<%= file_name %>_account)
+    # assert_nothing_raised { processor.process }
+  end
+
+  test "processor updates account balance" do
+    skip "TODO: Set up <%= file_name %>_account fixture"
+
+    # @<%= file_name %>_account.update!(current_balance: 15000)
+    #
+    # processor = <%= class_name %>Account::Processor.new(@<%= file_name %>_account)
+    # processor.process
+    #
+    # @account.reload
+    # assert_equal 15000, @account.balance.to_f
+  end
+<% if investment_provider? -%>
+
+  # ==========================================================================
+  # HoldingsProcessor tests
+  # ==========================================================================
+
+  test "holdings processor creates holdings from raw payload" do
+    skip "TODO: Set up <%= file_name %>_account fixture and holdings payload"
+
+    # @<%= file_name %>_account.update!(raw_holdings_payload: [
+    #   {
+    #     "symbol" => { "symbol" => "AAPL", "name" => "Apple Inc" },
+    #     "units" => 10,
+    #     "price" => 150.00,
+    #     "currency" => { "code" => "USD" }
+    #   }
+    # ])
+    #
+    # processor = <%= class_name %>Account::HoldingsProcessor.new(@<%= file_name %>_account)
+    # processor.process
+    #
+    # holding = @account.holdings.find_by(security: Security.find_by(ticker: "AAPL"))
+    # assert_not_nil holding
+    # assert_equal 10, holding.qty.to_f
+  end
+
+  test "holdings processor skips blank symbols" do
+    skip "TODO: Set up <%= file_name %>_account fixture"
+
+    # @<%= file_name %>_account.update!(raw_holdings_payload: [
+    #   { "symbol" => nil, "units" => 10, "price" => 100.00 }
+    # ])
+    #
+    # processor = <%= class_name %>Account::HoldingsProcessor.new(@<%= file_name %>_account)
+    # assert_nothing_raised { processor.process }
+  end
+
+  # ==========================================================================
+  # ActivitiesProcessor tests
+  # ==========================================================================
+
+  test "activities processor creates trades from raw payload" do
+    skip "TODO: Set up <%= file_name %>_account fixture and activities payload"
+
+    # @<%= file_name %>_account.update!(raw_activities_payload: [
+    #   {
+    #     "id" => "trade_001",
+    #     "type" => "BUY",
+    #     "symbol" => { "symbol" => "AAPL", "name" => "Apple Inc" },
+    #     "units" => 10,
+    #     "price" => 150.00,
+    #     "settlement_date" => Date.current.to_s,
+    #     "currency" => { "code" => "USD" }
+    #   }
+    # ])
+    #
+    # processor = <%= class_name %>Account::ActivitiesProcessor.new(@<%= file_name %>_account)
+    # processor.process
+    #
+    # entry = @account.entries.find_by(external_id: "trade_001", source: "<%= file_name %>")
+    # assert_not_nil entry
+    # assert entry.entryable.is_a?(Trade)
+  end
+
+  test "activities processor skips activities without external_id" do
+    skip "TODO: Set up <%= file_name %>_account fixture"
+
+    # @<%= file_name %>_account.update!(raw_activities_payload: [
+    #   { "id" => nil, "type" => "BUY", "units" => 10, "price" => 100.00 }
+    # ])
+    #
+    # processor = <%= class_name %>Account::ActivitiesProcessor.new(@<%= file_name %>_account)
+    # processor.process
+    #
+    # assert_equal 0, @account.entries.where(source: "<%= file_name %>").count
+  end
+<% else -%>
+
+  # ==========================================================================
+  # TransactionsProcessor tests
+  # ==========================================================================
+
+  test "transactions processor creates entries from raw payload" do
+    skip "TODO: Set up <%= file_name %>_account fixture and transactions payload"
+
+    # @<%= file_name %>_account.update!(raw_transactions_payload: [
+    #   {
+    #     "id" => "txn_001",
+    #     "amount" => 50.00,
+    #     "date" => Date.current.to_s,
+    #     "name" => "Coffee Shop",
+    #     "pending" => false
+    #   }
+    # ])
+    #
+    # processor = <%= class_name %>Account::Transactions::Processor.new(@<%= file_name %>_account)
+    # result = processor.process
+    #
+    # assert result[:success]
+    # assert_equal 1, result[:imported]
+  end
+
+  test "transactions processor handles missing transaction id gracefully" do
+    skip "TODO: Set up <%= file_name %>_account fixture"
+
+    # @<%= file_name %>_account.update!(raw_transactions_payload: [
+    #   { "id" => nil, "amount" => 50.00, "date" => Date.current.to_s }
+    # ])
+    #
+    # processor = <%= class_name %>Account::Transactions::Processor.new(@<%= file_name %>_account)
+    # result = processor.process
+    #
+    # assert_equal 1, result[:failed]
+  end
+
+  test "transactions processor returns empty result when no transactions" do
+    skip "TODO: Set up <%= file_name %>_account fixture"
+
+    # @<%= file_name %>_account.update!(raw_transactions_payload: [])
+    #
+    # processor = <%= class_name %>Account::Transactions::Processor.new(@<%= file_name %>_account)
+    # result = processor.process
+    #
+    # assert result[:success]
+    # assert_equal 0, result[:total]
+  end
+<% end -%>
+end

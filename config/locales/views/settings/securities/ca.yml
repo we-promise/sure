@@ -4,8 +4,9 @@ ca:
     securities:
       show:
         disable_mfa: Desactiva 2FA
-        disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos? Això farà que el teu compte sigui menys segur.
+        disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos?
+          Això farà que el teu compte sigui menys segur.
         enable_mfa: Activa 2FA
-        mfa_description: Afegeix una capa extra de seguretat al teu compte requerint un codi de la teva app d'autenticació en iniciar sessió
+        mfa_description: Afegeix una capa extra de seguretat al teu compte requerint
+          un codi de la teva app d'autenticació en iniciar sessió
         mfa_title: Autenticació en dos passos
-

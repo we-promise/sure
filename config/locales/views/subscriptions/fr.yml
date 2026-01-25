@@ -1,3 +1,13 @@
 fr:
   subscriptions:
     self_hosted_alert: "%{product_name} n'est pas disponible en mode auto-hébergé."
+    upgrade:
+      contribute_and_support_sure: "Contribuer et soutenir Sure"
+      cta: "Continuez à soutenir le développement de cette base de code !"
+      header:
+        support: "Soutenir"
+        sure: "Sure"
+        today: "aujourd'hui"
+      redirect_to_stripe: "Dans l'étape suivante, vous serez redirigé vers Stripe, qui gère les cartes de crédit pour nous."
+      trialing: "Vos données seront supprimées dans %{days} jours"
+      trial_over: "Votre période d'essai est terminée"

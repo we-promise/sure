@@ -1,0 +1,23 @@
+---
+nl:
+  layouts:
+    application:
+      nav:
+        assistant: Assistent
+        budgets: Budgetten
+        home: Startpagina
+        reports: Rapporten
+        transactions: Transacties
+    auth:
+      existing_account: Heeft u al een account?
+      no_account: Nieuw bij %{product_name}?
+      sign_in: Inloggen
+      sign_up: Account aanmaken
+    shared:
+      footer:
+        privacy_policy: Privacybeleid
+        terms_of_service: Servicevoorwaarden
+    trial:
+      open_demo: Open demo
+      data_deleted_in_days: Gegevens worden over %{days} dagen verwijderd
+      contribute: Bijdragen

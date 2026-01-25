@@ -23,7 +23,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.stubs(:resolve).returns(OpenStruct.new(
       security: securities(:aapl)
@@ -58,7 +58,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).never # Cash transactions don't have a security
 
@@ -91,7 +91,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).never # Cash transactions don't have a security
 
@@ -127,7 +127,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).returns(OpenStruct.new(
       security: securities(:aapl)
@@ -163,7 +163,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).never
 

@@ -1,0 +1,146 @@
+---
+nl:
+  views:
+    settings:
+      payments:
+        renewal: "Uw bijdrage wordt voortgezet op %{date}."
+  settings:
+    ai_prompts:
+      show:
+        page_title: AI Prompts
+        openai_label: OpenAI
+        disable_ai: AI Assistent uitschakelen
+        prompt_instructions: Prompt Instructies
+        main_system_prompt:
+          title: Hoofd Systeemprompt
+          subtitle: Kerninstructies die bepalen hoe de AI-assistent zich gedraagt in alle chatgesprekken
+        transaction_categorizer:
+          title: Transactie Categoriseerder
+          subtitle: AI categoriseert automatisch uw transacties op basis van uw gedefinieerde categorieën
+        merchant_detector:
+          title: Handelaar Detectie
+          subtitle: AI identificeert en verrijkt transactiegegevens met handelaarsinformatie
+    payments:
+      show:
+        page_title: Betaling
+        subscription_subtitle: Werk uw abonnement en betalingsgegevens bij
+        subscription_title: Abonnement beheren
+    preferences:
+      show:
+        country: Land
+        currency: Valuta
+        date_format: Datumformaat
+        general_subtitle: Configureer uw voorkeuren
+        general_title: Algemeen
+        default_period: Standaard Periode
+        default_account_order: Standaard Account Volgorde
+        language: Taal
+        language_auto: Browsertaal
+        page_title: Voorkeuren
+        theme_dark: Donker
+        theme_light: Licht
+        theme_subtitle: Kies een voorkeurstema voor de app
+        theme_system: Systeem
+        theme_title: Thema
+        timezone: Tijdzone
+    profiles:
+      destroy:
+        cannot_remove_self: U kunt uzelf niet van het account verwijderen.
+        member_removal_failed: Er was een probleem bij het verwijderen van het lid.
+        member_removed: Lid is succesvol verwijderd.
+        not_authorized: U bent niet geautoriseerd om leden te verwijderen.
+      show:
+        confirm_delete:
+          body: Weet u zeker dat u uw account permanent wilt verwijderen? Deze actie
+            is onomkeerbaar.
+          title: Account verwijderen?
+        confirm_reset:
+          body: Weet u zeker dat u uw account wilt resetten? Dit zal al uw accounts, categorieën, handelaren, tags en andere gegevens verwijderen. Deze actie kan niet ongedaan worden gemaakt.
+          title: Account resetten?
+        confirm_reset_with_sample_data:
+          body: Weet u zeker dat u uw account wilt resetten en voorbeeldgegevens wilt laden? Dit zal uw bestaande gegevens verwijderen en vervangen door demogegevens zodat u %{product_name} veilig kunt verkennen.
+          title: Account resetten en voorbeeldgegevens laden?
+        confirm_remove_invitation:
+          body: "Weet u zeker dat u de uitnodiging voor %{email} wilt verwijderen?"
+          title: Uitnodiging verwijderen
+        confirm_remove_member:
+          body: "Weet u zeker dat u %{name} van uw account wilt verwijderen?"
+          title: Lid verwijderen
+        danger_zone_title: Gevarenzone
+        delete_account: Account verwijderen
+        delete_account_warning: Het verwijderen van uw account zal permanent al
+          uw gegevens verwijderen en kan niet ongedaan worden gemaakt.
+        reset_account: Account resetten
+        reset_account_warning: Het resetten van uw account zal al uw accounts, categorieën, handelaren, tags en andere gegevens verwijderen, maar uw gebruikersaccount intact houden.
+        reset_account_with_sample_data: Resetten en vooraf laden
+        reset_account_with_sample_data_warning: Verwijder al uw bestaande gegevens en laad vervolgens nieuwe voorbeeldgegevens zodat u kunt verkennen met een vooraf gevulde omgeving.
+        email: E-mail
+        first_name: Voornaam
+        household_form_input_placeholder: Voer huishoudnaam in
+        household_form_label: Huishoudnaam
+        household_subtitle: Nodig familieleden, partners en andere personen uit. Genodigden
+          kunnen inloggen op uw huishouden en toegang krijgen tot uw gedeelde accounts.
+        household_title: Huishouden
+        invitation_link: Uitnodigingslink
+        invite_member: Lid toevoegen
+        last_name: Achternaam
+        page_title: Profielinformatie
+        pending: In behandeling
+        profile_subtitle: "Personaliseer hoe u verschijnt op %{product_name}"
+        profile_title: Persoonlijk
+        remove_invitation: Uitnodiging verwijderen
+        remove_member: Lid verwijderen
+        save: Opslaan
+    securities:
+      show:
+        page_title: Beveiliging
+        mfa_title: Twee-factor Authenticatie
+        mfa_description: Voeg een extra beveiligingslaag toe aan uw account door een code van uw authenticatie-app te vereisen bij het inloggen
+        enable_mfa: 2FA inschakelen
+        disable_mfa: 2FA uitschakelen
+        disable_mfa_confirm: Weet u zeker dat u twee-factor authenticatie wilt uitschakelen?
+        sso_title: Gekoppelde Accounts
+        sso_subtitle: Beheer uw single sign-on accountverbindingen
+        sso_disconnect: Loskoppelen
+        sso_last_used: Laatst gebruikt
+        sso_never: Nooit
+        sso_no_email: Geen e-mail
+        sso_no_identities: Geen SSO-accounts verbonden
+        sso_connect_hint: Log uit en log in met een SSO-provider om een account te verbinden.
+        sso_confirm_title: Account loskoppelen?
+        sso_confirm_body: "Weet u zeker dat u uw %{provider} account wilt loskoppelen? U kunt het later opnieuw verbinden door in te loggen met die provider."
+        sso_confirm_button: Loskoppelen
+        sso_warning_message: Dit is uw enige inlogmethode. U zou een wachtwoord moeten instellen in uw beveiligingsinstellingen voordat u loskoppelt, anders kunt u worden buitengesloten van uw account.
+    settings_nav:
+      accounts_label: Accounts
+      advanced_section_title: Geavanceerd
+      ai_prompts_label: AI Prompts
+      api_key_label: API Key
+      payment_label: Betaling
+      categories_label: Categorieën
+      feedback_label: Feedback
+      general_section_title: Algemeen
+      imports_label: Import/Export
+      logout: Uitloggen
+      merchants_label: Handelaren
+      guides_label: Handleidingen
+      other_section_title: Meer
+      preferences_label: Voorkeuren
+      profile_label: Profielinformatie
+      recurring_transactions_label: Terugkerend
+      rules_label: Regels
+      security_label: Beveiliging
+      self_hosting_label: Zelf-Hosting
+      tags_label: Tags
+      transactions_section_title: Transacties
+      whats_new_label: Wat is nieuw
+      api_keys_label: API Key
+      bank_sync_label: Bank Sync
+    settings_nav_link_large:
+      next: Volgende
+      previous: Terug
+    user_avatar_field:
+      accepted_formats: JPG of PNG. Max 5MB.
+      choose: Foto uploaden
+      choose_label: (optioneel)
+      change: Foto wijzigen

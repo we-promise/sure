@@ -1,11 +1,14 @@
 class SubscriptionsController < ApplicationController
   # Disables subscriptions for self hosted instances
-  guard_feature if: -> { self_hosted? }
+  before_action :guard_self_hosted, if: -> { self_hosted? }
+
+  # Disables Stripe portal for users without stripe_customer_id (demo users, manually created users)
+  guard_feature unless: -> { Current.family.can_manage_subscription? }, only: :show
 
   # Upgrade page for unsubscribed users
   def upgrade
     if Current.family.subscription&.active?
-      redirect_to root_path, notice: "You are already subscribed."
+      redirect_to root_path, notice: "You are already contributing. Thank you!"
     else
       @plan = params[:plan] || "annual"
       render layout: "onboardings"
@@ -16,7 +19,7 @@ class SubscriptionsController < ApplicationController
     checkout_session = stripe.create_checkout_session(
       plan: params[:plan],
       family_id: Current.family.id,
-      family_email: Current.family.billing_email,
+      family_email: Current.family.payment_email,
       success_url: success_subscription_url + "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: upgrade_subscription_url
     )
@@ -37,9 +40,9 @@ class SubscriptionsController < ApplicationController
   end
 
   def show
-    portal_session_url = stripe.create_billing_portal_session_url(
+    portal_session_url = stripe.create_payment_portal_session_url(
       customer_id: Current.family.stripe_customer_id,
-      return_url: settings_billing_url
+      return_url: settings_payment_url
     )
 
     redirect_to portal_session_url, allow_other_host: true, status: :see_other
@@ -51,13 +54,17 @@ class SubscriptionsController < ApplicationController
 
     if checkout_result.success?
       Current.family.start_subscription!(checkout_result.subscription_id)
-      redirect_to root_path, notice: "Welcome to Sure!  Your subscription has been created."
+      redirect_to root_path, notice: "Welcome to Sure!  Your contribution is appreciated."
     else
-      redirect_to root_path, alert: "Something went wrong processing your subscription. Please contact us to get this fixed."
+      redirect_to root_path, alert: "Something went wrong processing your contribution. Please try again."
     end
   end
 
   private
+    def guard_self_hosted
+      render plain: "Feature disabled: subscriptions are not available in self-hosted mode", status: :forbidden
+    end
+
     def stripe
       @stripe ||= Provider::Registry.get_provider(:stripe)
     end

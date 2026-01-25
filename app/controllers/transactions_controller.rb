@@ -1,6 +1,7 @@
 class TransactionsController < ApplicationController
   include EntryableResource
 
+  before_action :set_entry_for_unlock, only: :unlock
   before_action :store_params!, only: :index
 
   def new
@@ -21,7 +22,7 @@ class TransactionsController < ApplicationController
                          :transfer_as_inflow, :transfer_as_outflow
                        )
 
-    @pagy, @transactions = pagy(base_scope, limit: per_page)
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
     # Load projected recurring transactions for next month
     @projected_recurring = Current.family.recurring_transactions
@@ -68,6 +69,7 @@ class TransactionsController < ApplicationController
     if @entry.save
       @entry.sync_account_later
       @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       flash[:notice] = "Transaction created"
@@ -98,6 +100,9 @@ class TransactionsController < ApplicationController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later
 
+      # Reload to ensure fresh state for turbo stream rendering
+      @entry.reload
+
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
         format.turbo_stream do
@@ -106,6 +111,11 @@ class TransactionsController < ApplicationController
               dom_id(@entry, :header),
               partial: "transactions/header",
               locals: { entry: @entry }
+            ),
+            turbo_stream.replace(
+              dom_id(@entry, :protection),
+              partial: "entries/protection_indicator",
+              locals: { entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) }
             ),
             turbo_stream.replace(@entry),
             *flash_notification_stream_items
@@ -201,12 +211,17 @@ class TransactionsController < ApplicationController
       # Default activity label if not provided
       activity_label ||= is_sell ? "Sell" : "Buy"
 
-      # Create trade entry
-      @entry.account.entries.create!(
+      # Create trade entry with note about conversion
+      conversion_note = t("transactions.convert_to_trade.conversion_note",
+        original_name: @entry.name,
+        original_date: I18n.l(@entry.date, format: :long))
+
+      new_entry = @entry.account.entries.create!(
         name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
         date: @entry.date,
         amount: signed_amount,
         currency: @entry.currency,
+        notes: conversion_note,
         entryable: Trade.new(
           security: security,
           qty: signed_qty,
@@ -215,6 +230,10 @@ class TransactionsController < ApplicationController
           investment_activity_label: activity_label
         )
       )
+
+      # Mark the new trade as user-modified to protect from sync
+      new_entry.lock_saved_attributes!
+      new_entry.mark_user_modified!
 
       # Mark original transaction as excluded (soft delete)
       @entry.update!(excluded: true)
@@ -228,6 +247,13 @@ class TransactionsController < ApplicationController
   rescue StandardError => e
     flash[:alert] = t("transactions.convert_to_trade.errors.unexpected_error", error: e.message)
     redirect_back_or_to transactions_path, status: :see_other
+  end
+
+  def unlock
+    @entry.unlock_for_sync!
+    flash[:notice] = t("entries.unlock.success")
+
+    redirect_back_or_to transactions_path
   end
 
   def mark_as_recurring
@@ -281,8 +307,9 @@ class TransactionsController < ApplicationController
   end
 
   private
-    def per_page
-      params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
+    def set_entry_for_unlock
+      transaction = Current.family.transactions.find(params[:id])
+      @entry = transaction.entry
     end
 
     def needs_rule_notification?(transaction)
@@ -365,6 +392,8 @@ class TransactionsController < ApplicationController
     # Helper methods for convert_to_trade
 
     def resolve_security_for_conversion
+      user_country = Current.family.country
+
       if params[:security_id] == "__custom__"
         # User selected "Enter custom ticker" - check for combobox selection or manual entry
         if params[:ticker].present?
@@ -372,13 +401,15 @@ class TransactionsController < ApplicationController
           ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
           Security::Resolver.new(
             ticker_symbol.strip,
-            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence
+            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+            country_code: user_country
           ).resolve
         elsif params[:custom_ticker].present?
           # Manual entry from combobox's name_when_new or fallback text field
           Security::Resolver.new(
             params[:custom_ticker].strip,
-            exchange_operating_mic: params[:exchange_operating_mic].presence
+            exchange_operating_mic: params[:exchange_operating_mic].presence,
+            country_code: user_country
           ).resolve
         else
           flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
@@ -398,13 +429,15 @@ class TransactionsController < ApplicationController
         ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
         Security::Resolver.new(
           ticker_symbol.strip,
-          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence
+          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+          country_code: user_country
         ).resolve
       elsif params[:custom_ticker].present?
         # Manual entry from combobox's name_when_new (no existing holdings path)
         Security::Resolver.new(
           params[:custom_ticker].strip,
-          exchange_operating_mic: params[:exchange_operating_mic].presence
+          exchange_operating_mic: params[:exchange_operating_mic].presence,
+          country_code: user_country
         ).resolve
       end.tap do |security|
         if security.nil? && !performed?

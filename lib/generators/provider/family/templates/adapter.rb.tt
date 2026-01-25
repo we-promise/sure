@@ -7,7 +7,15 @@ class Provider::<%= class_name %>Adapter < Provider::Base
 
   # Define which account types this provider supports
   def self.supported_account_types
+<% if banking_provider? -%>
+    # Banking providers typically support these account types
+    # TODO: Adjust based on your provider's capabilities
     %w[Depository CreditCard Loan]
+<% else -%>
+    # Investment providers typically support these account types
+    # TODO: Adjust based on your provider's capabilities
+    %w[Investment Crypto]
+<% end -%>
   end
 
   # Returns connection configurations for this provider
@@ -71,9 +79,11 @@ class Provider::<%= class_name %>Adapter < Provider::Base
     provider_account.<%= file_name %>_item
   end
 
+<% if investment_provider? -%>
   def can_delete_holdings?
     false
   end
+<% end -%>
 
   def institution_domain
     metadata = provider_account.institution_metadata

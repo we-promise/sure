@@ -1,0 +1,36 @@
+# Minimal fixtures for SnapTrade accounts
+# Per CLAUDE.md: Keep fixtures minimal (2-3 per model for base cases)
+
+fidelity_401k:
+  snaptrade_item: configured_item
+  name: "Fidelity 401(k)"
+  snaptrade_account_id: "acc_123"
+  snaptrade_authorization_id: "auth_456"
+  account_number: "1234567890"
+  brokerage_name: "Fidelity"
+  currency: "USD"
+  current_balance: 50000.00
+  cash_balance: 1500.00
+  account_status: "active"
+  account_type: "401k"
+  provider: "fidelity"
+  raw_payload: {}
+  raw_holdings_payload: []
+  raw_activities_payload: []
+
+vanguard_ira:
+  snaptrade_item: configured_item
+  name: "Vanguard IRA"
+  snaptrade_account_id: "acc_456"
+  snaptrade_authorization_id: "auth_789"
+  account_number: "0987654321"
+  brokerage_name: "Vanguard"
+  currency: "USD"
+  current_balance: 75000.00
+  cash_balance: 500.00
+  account_status: "active"
+  account_type: "ira"
+  provider: "vanguard"
+  raw_payload: {}
+  raw_holdings_payload: []
+  raw_activities_payload: []

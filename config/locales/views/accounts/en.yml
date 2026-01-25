@@ -56,8 +56,11 @@ en:
         entry: entry
         filter: Filter
         new: New
+        new_activity: New activity
         new_balance: New balance
+        new_trade: New trade
         new_transaction: New transaction
+        new_transfer: New transfer
         no_entries: No entries found
         pending: Pending
         search:
@@ -77,6 +80,8 @@ en:
         confirm_title: Delete account?
         edit: Edit
         import: Import transactions
+        import_trades: Import trades
+        import_transactions: Import transactions
         manage: Manage accounts
     update:
       success: "%{type} account updated"
@@ -102,6 +107,23 @@ en:
       credit_card: Credit Card
       loan: Loan
       other_liability: Other Liability
+    tax_treatments:
+      taxable: Taxable
+      tax_deferred: Tax-Deferred
+      tax_exempt: Tax-Exempt
+      tax_advantaged: Tax-Advantaged
+    tax_treatment_descriptions:
+      taxable: Gains taxed when realized
+      tax_deferred: Contributions deductible, taxed on withdrawal
+      tax_exempt: Contributions after-tax, gains not taxed
+      tax_advantaged: Special tax benefits with conditions
+    subtype_regions:
+      us: United States
+      uk: United Kingdom
+      ca: Canada
+      au: Australia
+      eu: Europe
+      generic: General
     confirm_unlink:
       title: Unlink account from provider?
       description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."

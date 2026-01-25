@@ -18,3 +18,7 @@ ro:
       footer:
         privacy_policy: Politica de confidențialitate
         terms_of_service: Termeni și condiții
+    trial:
+      open_demo: Demo deschis
+      data_deleted_in_days: Datele vor fi șterse în %{days} zile
+      contribute: Contribuie

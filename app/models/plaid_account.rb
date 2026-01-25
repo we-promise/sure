@@ -1,4 +1,15 @@
 class PlaidAccount < ApplicationRecord
+  include Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+    # Support reading data encrypted under the old column name after rename
+    encrypts :raw_holdings_payload, previous: { attribute: :raw_investments_payload }
+    encrypts :raw_liabilities_payload
+  end
+
   belongs_to :plaid_item
 
   # Legacy association via foreign key (will be removed after migration)
@@ -38,9 +49,9 @@ class PlaidAccount < ApplicationRecord
     save!
   end
 
-  def upsert_plaid_investments_snapshot!(investments_snapshot)
+  def upsert_plaid_holdings_snapshot!(holdings_snapshot)
     assign_attributes(
-      raw_investments_payload: investments_snapshot
+      raw_holdings_payload: holdings_snapshot
     )
 
     save!

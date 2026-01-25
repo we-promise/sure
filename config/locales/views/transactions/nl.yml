@@ -1,0 +1,189 @@
+---
+nl:
+  transactions:
+    unknown_name: Onbekende transactie
+    form:
+      account: Account
+      account_prompt: Selecteer een Account
+      amount: Bedrag
+      category: Categorie
+      category_prompt: Selecteer een Categorie
+      date: Datum
+      description: Beschrijving
+      description_placeholder: Beschrijf transactie
+      expense: Uitgave
+      income: Inkomsten
+      none: (geen)
+      note_label: Notities
+      note_placeholder: Voer een notitie in
+      submit: Transactie toevoegen
+      tags_label: Tags
+      transfer: Overboeking
+    new:
+      new_transaction: Nieuwe transactie
+    show:
+      account_label: Account
+      amount: Bedrag
+      category_label: Categorie
+      date_label: Datum
+      delete: Verwijderen
+      delete_subtitle: Dit verwijdert permanent de transactie, beïnvloedt uw historische
+        saldi en kan niet ongedaan worden gemaakt.
+      delete_title: Transactie verwijderen
+      details: Details
+      exclude: Uitsluiten
+      exclude_description: Uitgesloten transacties worden verwijderd uit budgetberekeningen en rapporten.
+      activity_type: Activiteitstype
+      activity_type_description: Type beleggingsactiviteit (Kopen, Verkopen, Dividend, etc.). Automatisch gedetecteerd of handmatig ingesteld.
+      one_time_title: "Eenmalige %{type}"
+      one_time_description: Eenmalige transacties worden uitgesloten van bepaalde budgetberekeningen en rapporten om u te helpen zien wat echt belangrijk is.
+      convert_to_trade_title: Converteer naar Effectentransactie
+      convert_to_trade_description: Converteer deze transactie naar een Koop- of Verkooptransactie met effectendetails voor portfoliobeheer.
+      convert_to_trade_button: Converteer naar Trade
+      merchant_label: Handelaar
+      name_label: Naam
+      nature: Type
+      none: "(geen)"
+      note_label: Notities
+      note_placeholder: Voer een notitie in
+      overview: Overzicht
+      settings: Instellingen
+      tags_label: Tags
+      uncategorized: "(ongecategoriseerd)"
+    activity_labels:
+      buy: Kopen
+      sell: Verkopen
+      sweep_in: Sweep In
+      sweep_out: Sweep Out
+      dividend: Dividend
+      reinvestment: Herbelegging
+      interest: Rente
+      fee: Kosten
+      transfer: Overboeking
+      contribution: Storting
+      withdrawal: Opname
+      exchange: Wissel
+      other: Anders
+    mark_recurring: Markeer als Terugkerend
+    mark_recurring_subtitle: Volg dit als een terugkerende transactie. Bedragvariatie wordt automatisch berekend uit de afgelopen 6 maanden van vergelijkbare transacties.
+    mark_recurring_title: Terugkerende Transactie
+    potential_duplicate_title: Mogelijk duplicaat gedetecteerd
+    potential_duplicate_description: Deze wachtende transactie kan hetzelfde zijn als de geposte transactie hieronder. Indien ja, voeg ze samen om dubbeltelling te voorkomen.
+    merge_duplicate: Ja, voeg ze samen
+    keep_both: Nee, bewaar beide
+    transaction:
+      pending: Wachtend
+      pending_tooltip: Wachtende transactie — kan wijzigen bij posting
+      activity_type_tooltip: Beleggingsactiviteitstype
+      possible_duplicate: Duplicaat?
+      potential_duplicate_tooltip: Dit kan een duplicaat zijn van een andere transactie
+      review_recommended: Beoordeel
+      review_recommended_tooltip: Groot bedragverschil — beoordeling aanbevolen om te controleren of dit een duplicaat is
+    merge_duplicate:
+      success: Transacties succesvol samengevoegd
+      failure: Kon transacties niet samenvoegen
+    dismiss_duplicate:
+      success: Bewaard als aparte transacties
+      failure: Kon duplicaatsuggestie niet afwijzen
+    header:
+      edit_categories: Categorieën bewerken
+      edit_imports: Imports bewerken
+      edit_merchants: Handelaren bewerken
+      edit_tags: Tags bewerken
+      import: Importeren
+    index:
+      transaction: transactie
+      transactions: transacties
+      import: Importeren
+    toggle_recurring_section: Schakel aankomende terugkerende transacties in/uit
+    search:
+      filters:
+        account: Account
+        date: Datum
+        type: Type
+        status: Status
+        amount: Bedrag
+        category: Categorie
+        tag: Tag
+        merchant: Handelaar
+    convert_to_trade:
+      title: Converteer naar Effectentransactie
+      description: Converteer deze transactie naar een trade met effectendetails
+      date_label: "Datum:"
+      account_label: "Account:"
+      amount_label: "Bedrag:"
+      security_label: Effect
+      security_prompt: Selecteer een effect...
+      security_custom: "+ Voer aangepaste ticker in"
+      security_not_listed_hint: Ziet u uw effect niet? Selecteer "Voer aangepaste ticker in" onderaan de lijst.
+      ticker_placeholder: AAPL
+      ticker_hint: Voer het aandelen/ETF ticker symbool in (bijv. AAPL, MSFT)
+      ticker_search_placeholder: Zoek naar een ticker...
+      ticker_search_hint: Zoek op ticker symbool of bedrijfsnaam, of typ een aangepaste ticker
+      price_mismatch_title: Prijs komt mogelijk niet overeen
+      price_mismatch_message: "Uw prijs (%{entered_price}/aandeel) verschilt aanzienlijk van de huidige marktprijs van %{ticker} (%{market_price}). Als dit verkeerd lijkt, heeft u mogelijk het verkeerde effect geselecteerd — probeer \"Voer aangepaste ticker in\" te gebruiken om het juiste effect op te geven."
+      quantity_label: Hoeveelheid (Aandelen)
+      quantity_placeholder: bijv. 20
+      quantity_hint: Aantal verhandelde aandelen
+      price_label: Prijs per Aandeel
+      price_placeholder: bijv. 52.15
+      price_hint: "Prijs per aandeel (%{currency})"
+      qty_or_price_hint: "Voer minimaal hoeveelheid OF prijs in. De andere wordt berekend uit het transactiebedrag (%{amount})."
+      trade_type_label: Trade Type
+      trade_type_hint: Aandelen van een effect kopen of verkopen
+      exchange_label: Beurs (Optioneel)
+      exchange_placeholder: XNAS
+      exchange_hint: Laat leeg voor automatische detectie
+      cancel: Annuleren
+      submit: Converteer naar Trade
+      success: Transactie geconverteerd naar trade
+      errors:
+        not_investment_account: Alleen transacties in beleggingsaccounts kunnen worden geconverteerd naar trades
+        already_converted: Deze transactie is al geconverteerd of uitgesloten
+        enter_ticker: Voer een ticker symbool in
+        security_not_found: Geselecteerd effect bestaat niet meer. Selecteer een ander.
+        select_security: Selecteer of voer een effect in
+        enter_qty_or_price: Voer hoeveelheid of prijs per aandeel in. De andere wordt berekend uit het transactiebedrag.
+        invalid_qty_or_price: Ongeldige hoeveelheid of prijs. Voer geldige positieve waarden in.
+        conversion_failed: "Converteren van transactie mislukt: %{error}"
+        unexpected_error: "Onverwachte fout tijdens conversie: %{error}"
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Gelijk aan
+          greater_than: Groter dan
+          less_than: Kleiner dan
+          placeholder: '0'
+        badge:
+          expense: Uitgave
+          income: Inkomsten
+          on_or_after: op of na %{date}
+          on_or_before: op of voor %{date}
+          transfer: Overboeking
+          confirmed: Bevestigd
+          pending: Wachtend
+        type_filter:
+          expense: Uitgave
+          income: Inkomsten
+          transfer: Overboeking
+        status_filter:
+          confirmed: Bevestigd
+          pending: Wachtend
+      menu:
+        account_filter: Account
+        amount_filter: Bedrag
+        apply: Toepassen
+        cancel: Annuleren
+        category_filter: Categorie
+        clear_filters: Filters wissen
+        date_filter: Datum
+        merchant_filter: Handelaar
+        status_filter: Status
+        tag_filter: Tag
+        type_filter: Type
+      search:
+        equal_to: gelijk aan
+        greater_than: groter dan
+        less_than: kleiner dan
+      form:
+        toggle_selection_checkboxes: Schakel alle selectievakjes in/uit

@@ -76,7 +76,7 @@
 
           <%= family_form.select :locale,
             language_options,
-            { label: t(".locale"), required: true, selected: params[:locale] || @user.family.locale },
+            { label: t(".locale"), required: true, selected: params[:locale] || @user.locale || I18n.locale },
             { data: { action: "onboarding#setLocale" } } %>
 
           <%= family_form.select :currency,

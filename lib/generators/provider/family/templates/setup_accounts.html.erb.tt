@@ -1,0 +1,102 @@
+<%%= "<" + "% content_for :title, t(\"#{file_name}_items.setup_accounts.title\") %" + ">" %>
+
+<%%= "<" + "%= render DS::Dialog.new do |dialog| %" + ">" %>
+  <%%= "<" + "% dialog.with_header(title: t(\"#{file_name}_items.setup_accounts.title\")) do %" + ">" %>
+    <div class="flex items-center gap-2">
+      <%%= "<" + "%= icon \"settings\", class: \"text-primary\" %" + ">" %>
+      <span class="text-primary"><%%= "<" + "%= t(\"#{file_name}_items.setup_accounts.subtitle\") %" + ">" %></span>
+    </div>
+  <%%= "<" + "% end %" + ">" %>
+
+  <%%= "<" + "% dialog.with_body do %" + ">" %>
+    <%%= "<" + "%= form_with url: complete_account_setup_#{file_name}_item_path(@#{file_name}_item)," %>
+                  method: :post,
+                  local: true,
+                  id: "<%= file_name %>-setup-form",
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t("<%= file_name %>_items.setup_accounts.creating"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| <%%= "%" + ">" %>
+
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%%= "<" + "%= icon \"info\", size: \"sm\", class: \"text-primary mt-0.5 flex-shrink-0\" %" + ">" %>
+            <div>
+              <p class="text-sm text-primary">
+                <%%= "<" + "%= t(\"#{file_name}_items.setup_accounts.instructions\") %" + ">" %>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <%%= "<" + "% if @unlinked_accounts.empty? %" + ">" %>
+          <div class="text-center py-8">
+            <%%= "<" + "%= icon \"alert-circle\", class: \"text-warning mx-auto mb-4\", size: \"lg\" %" + ">" %>
+            <p class="text-secondary"><%%= "<" + "%= t(\"#{file_name}_items.setup_accounts.no_accounts\") %" + ">" %></p>
+          </div>
+        <%%= "<" + "% else %" + ">" %>
+          <div data-controller="select-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-secondary">
+                <%%= "<" + "%= t(\"#{file_name}_items.setup_accounts.accounts_count\", count: @unlinked_accounts.count) %" + ">" %>
+              </span>
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox"
+                       id="<%= file_name %>-select-all"
+                       data-action="change->select-all#toggle"
+                       class="checkbox checkbox--dark">
+                <span class="text-secondary"><%%= "<" + "%= t(\"#{file_name}_items.setup_accounts.select_all\") %" + ">" %></span>
+              </label>
+            </div>
+
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+              <%%= "<" + "% @unlinked_accounts.each do |#{file_name}_account| %" + ">" %>
+                <%%= "<" + "%= tag.label for: dom_id(#{file_name}_account, :acc), class: \"flex items-center gap-3 p-3 border border-primary rounded-lg hover:bg-surface transition-colors cursor-pointer\" do %" + ">" %>
+                  <%%= "<" + "%= check_box_tag \"selected_accounts[]\", #{file_name}_account.id, false, id: dom_id(#{file_name}_account, :acc), class: \"checkbox checkbox--dark\", data: { select_all_target: \"checkbox\" } %" + ">" %>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-primary truncate">
+                      <%%= "<" + "%= #{file_name}_account.name %" + ">" %>
+                    </p>
+                    <%%= "<" + "% if #{file_name}_account.account_type.present? %" + ">" %>
+                      <p class="text-xs text-secondary">
+                        <%%= "<" + "%= #{file_name}_account.account_type.titleize %" + ">" %>
+                      </p>
+                    <%%= "<" + "% end %" + ">" %>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <p class="text-sm font-medium text-primary">
+                      <%%= "<" + "%= number_to_currency(#{file_name}_account.current_balance || 0, unit: Money::Currency.new(#{file_name}_account.currency || \"USD\").symbol) %" + ">" %>
+                    </p>
+                    <p class="text-xs text-secondary">
+                      <%%= "<" + "%= #{file_name}_account.currency || \"USD\" %" + ">" %>
+                    </p>
+                  </div>
+                <%%= "<" + "% end %" + ">" %>
+              <%%= "<" + "% end %" + ">" %>
+            </div>
+          </div>
+        <%%= "<" + "% end %" + ">" %>
+      </div>
+
+      <div class="flex gap-3">
+        <%%= "<" + "%= render DS::Button.new(" %>
+          text: t("<%= file_name %>_items.setup_accounts.import_selected"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          data: { loading_button_target: "button" }
+        ) <%%= "%" + ">" %>
+        <%%= "<" + "%= render DS::Link.new(" %>
+          text: t("<%= file_name %>_items.setup_accounts.cancel"),
+          variant: "secondary",
+          href: accounts_path
+        ) <%%= "%" + ">" %>
+      </div>
+    <%%= "<" + "% end %" + ">" %>
+  <%%= "<" + "% end %" + ">" %>
+<%%= "<" + "% end %" + ">" %>
