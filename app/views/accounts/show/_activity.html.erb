@@ -15,13 +15,19 @@
               href: new_valuation_path(account_id: @account.id),
               data: { turbo_frame: :modal }) %>
 
-          <% unless @account.crypto? %>
-            <% href = @account.investment? ? new_trade_path(account_id: @account.id) : new_transaction_path(account_id: @account.id) %>
+          <% if @account.supports_trades? %>
             <% menu.with_item(
                 variant: "link",
-                text: "New transaction",
+                text: t(".new_trade"),
                 icon: "credit-card",
-                href: href,
+                href: new_trade_path(account_id: @account.id),
+                data: { turbo_frame: :modal }) %>
+          <% elsif !@account.crypto? %>
+            <% menu.with_item(
+                variant: "link",
+                text: t(".new_transaction"),
+                icon: "credit-card",
+                href: new_transaction_path(account_id: @account.id),
                 data: { turbo_frame: :modal }) %>
           <% end %>
         <% end %>

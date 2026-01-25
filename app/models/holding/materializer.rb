@@ -53,6 +53,16 @@ class Holding::Materializer
         key = holding_key(holding)
         existing = existing_holdings_map[key]
 
+        # Skip provider-sourced holdings - they have authoritative data from the provider
+        # (e.g., Coinbase, SimpleFIN) and should not be overwritten by calculated holdings
+        if existing&.account_provider_id.present?
+          Rails.logger.debug(
+            "Holding::Materializer - Skipping provider-sourced holding id=#{existing.id} " \
+            "security_id=#{existing.security_id} date=#{existing.date}"
+          )
+          next
+        end
+
         reconciled = Holding::CostBasisReconciler.reconcile(
           existing_holding: existing,
           incoming_cost_basis: holding.cost_basis,

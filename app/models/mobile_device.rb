@@ -1,4 +1,11 @@
 class MobileDevice < ApplicationRecord
+  include Encryptable
+
+  # Encrypt device_id if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :device_id, deterministic: true
+  end
+
   belongs_to :user
   belongs_to :oauth_application, class_name: "Doorkeeper::Application", optional: true
 

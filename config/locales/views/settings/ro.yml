@@ -35,6 +35,7 @@ ro:
         default_period: Perioadă implicită
         default_account_order: Ordine implicită conturi
         language: Limbă
+        language_auto: Limba browserului
         page_title: Preferințe
         theme_dark: Întunecat
         theme_light: Luminos

@@ -50,8 +50,8 @@ module Api
         family = current_resource_owner.family
 
         @merchant = family.merchants.find_by(id: params[:id]) ||
-                    Merchant.joins(:transactions)
-                            .where(transactions: { account_id: family.accounts.select(:id) })
+                    Merchant.joins(transactions: :entry)
+                            .where(entries: { account_id: family.accounts.select(:id) })
                             .distinct
                             .find_by(id: params[:id])
 

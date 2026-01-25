@@ -77,6 +77,9 @@ export default class extends Controller {
     );
     if (!section) return;
 
+    // Respect strict draggable="false" which might be set by other controllers (e.g. expand-controller)
+    if (section.getAttribute("draggable") === "false") return;
+
     this.pendingSection = section;
     this.touchStartY = event.touches[0].clientY;
     this.currentTouchY = this.touchStartY;

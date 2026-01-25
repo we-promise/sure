@@ -1,0 +1,80 @@
+name: Update Docs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        env:
+          MINTLIFY_API_KEY: ${{ secrets.MINTLIFY_API_KEY }}
+          PROJECT_ID: ${{ secrets.MINTLIFY_PROJECT_ID }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const projectId = process.env.PROJECT_ID;
+            const apiKey = process.env.MINTLIFY_API_KEY;
+
+            if (!projectId || !apiKey) {
+              core.setFailed('Missing MINTLIFY_PROJECT_ID or MINTLIFY_API_KEY secrets');
+              return;
+            }
+
+            const url = `https://api.mintlify.com/v1/agent/${projectId}/job`;
+            const payload = {
+              branch: `mintlify/docs-update-${Date.now()}`,
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are an action runner that updates documentation based on code changes. You should never ask questions. If you are not able to access the repository, report the error and exit.'
+                },
+                {
+                  role: 'user',
+                  content: `Update the documentation for our recent pushes to main:\n\nRepository: ${owner}/${repo}`
+                }
+              ],
+              asDraft: false
+            };
+
+            try {
+              const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+              });
+
+              if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}: ${await response.text()}`);
+              }
+
+              const reader = response.body.getReader();
+              const decoder = new TextDecoder();
+              let buffer = '';
+
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                  if (line.trim()) {
+                    console.log(line);
+                  }
+                }
+              }
+              if (buffer.trim()) {
+                console.log(buffer);
+              }
+
+              core.notice(`Documentation update job triggered for ${owner}/${repo}`);
+            } catch (error) {
+              core.setFailed(`Failed to create documentation update job: ${error.message}`);
+            }

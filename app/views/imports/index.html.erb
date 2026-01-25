@@ -41,32 +41,32 @@
                     <% if import.account.present? %>
                       <%= import.account.name + " " %>
                     <% end %>
-                    <%= import.type.titleize.gsub(/ Import\z/, '') %>
+                    <%= import.type.titleize.gsub(/ Import\z/, "") %>
                   <% end %>
                 </td>
                 <td class="px-2 py-3">
                   <% if import.pending? %>
-                    <%= render 'shared/badge' do %>
+                    <%= render "shared/badge" do %>
                       <%= t("imports.table.row.status.in_progress") %>
                     <% end %>
                   <% elsif import.importing? %>
-                    <%= render 'shared/badge', color: 'warning', pulse: true do %>
+                    <%= render "shared/badge", color: "warning", pulse: true do %>
                       <%= t("imports.table.row.status.uploading") %>
                     <% end %>
                   <% elsif import.failed? %>
-                    <%= render 'shared/badge', color: 'error' do %>
+                    <%= render "shared/badge", color: "error" do %>
                       <%= t("imports.table.row.status.failed") %>
                     <% end %>
                   <% elsif import.reverting? %>
-                    <%= render 'shared/badge', color: 'warning' do %>
+                    <%= render "shared/badge", color: "warning" do %>
                       <%= t("imports.table.row.status.reverting") %>
                     <% end %>
                   <% elsif import.revert_failed? %>
-                    <%= render 'shared/badge', color: 'error' do %>
+                    <%= render "shared/badge", color: "error" do %>
                       <%= t("imports.table.row.status.revert_failed") %>
                     <% end %>
                   <% elsif import.complete? %>
-                    <%= render 'shared/badge', color: 'success' do %>
+                    <%= render "shared/badge", color: "success" do %>
                       <%= t("imports.table.row.status.complete") %>
                     <% end %>
                   <% end %>

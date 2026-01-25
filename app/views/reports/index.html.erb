@@ -1,24 +1,36 @@
 <% content_for :page_header do %>
   <div class="space-y-4 mb-6">
-    <div class="space-y-1">
-      <h1 class="text-xl lg:text-3xl font-medium text-primary">
-        <%= t("reports.index.title") %>
-      </h1>
-      <p class="text-sm lg:text-base text-secondary">
-        <%= t("reports.index.subtitle") %>
-      </p>
-    </div>
-
-    <%# Flash messages %>
-    <% if flash[:alert].present? %>
-      <div class="p-3 rounded-lg bg-destructive-surface text-sm text-destructive">
-        <%= flash[:alert] %>
+    <header class="flex justify-between items-center text-primary font-medium gap-4">
+      <div class="space-y-1">
+        <h1 class="text-xl lg:text-3xl font-medium text-primary">
+          <%= t("reports.index.title") %>
+        </h1>
+        <p class="text-sm lg:text-base text-secondary">
+          <%= t("reports.index.subtitle") %>
+        </p>
       </div>
-    <% end %>
+
+      <%# Flash messages %>
+      <% if flash[:alert].present? %>
+        <div class="p-3 rounded-lg bg-destructive-surface text-sm text-destructive">
+          <%= flash[:alert] %>
+        </div>
+      <% end %>
+
+      <%# Print Report Button %>
+        <%= link_to print_reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date),
+                  target: "_blank",
+                  rel: "noopener",
+                  aria: { label: t("reports.index.print_report") },
+                  class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" do %>
+        <%= icon("printer", size: "sm") %>
+        <span class="hidden sm:inline"><%= t("reports.index.print_report") %></span>
+      <% end %>
+    </header>
 
     <%# Period Navigation Tabs %>
     <div class="flex items-center justify-between gap-4">
-      <div class="flex items-center gap-2 overflow-x-auto pb-2">
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
         <%= render DS::Link.new(
           text: t("reports.index.periods.monthly"),
           variant: @period_type == :monthly ? "secondary" : "ghost",
@@ -50,16 +62,6 @@
           size: :sm
         ) %>
       </div>
-
-      <%# Print Report Button %>
-      <%= link_to print_reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date),
-                  target: "_blank",
-                  rel: "noopener",
-                  aria: { label: t("reports.index.print_report") },
-                  class: "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-secondary bg-surface-inset hover:bg-surface-hover rounded-lg transition-colors flex-shrink-0" do %>
-        <%= icon("printer", size: "sm") %>
-        <span class="hidden sm:inline"><%= t("reports.index.print_report") %></span>
-      <% end %>
     </div>
 
     <%# Custom Date Range Picker (only shown when custom is selected) %>
@@ -88,7 +90,7 @@
     <% end %>
 
     <%# Period Display %>
-    <div class="text-sm text-secondary">
+    <div class="text-sm text-subdued">
       <%= t("reports.index.showing_period",
             start: @start_date.strftime("%b %-d, %Y"),
             end: @end_date.strftime("%b %-d, %Y")) %>

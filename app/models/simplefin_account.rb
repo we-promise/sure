@@ -1,4 +1,13 @@
 class SimplefinAccount < ApplicationRecord
+  include Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+    encrypts :raw_holdings_payload
+  end
+
   belongs_to :simplefin_item
 
   # Legacy association via foreign key (will be removed after migration)

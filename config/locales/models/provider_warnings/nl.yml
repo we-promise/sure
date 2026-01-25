@@ -1,0 +1,4 @@
+---
+nl:
+  provider_warnings:
+    limited_investment_data: "Investeringsgegevens van deze provider zijn beperkt. Activiteitslabels (Koop, Verkoop, Dividend) zijn niet beschikbaar, wat de nauwkeurigheid van het budget kan beïnvloeden. Overweeg regels te maken om investeringstransacties uit te sluiten of te categoriseren."

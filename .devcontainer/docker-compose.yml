@@ -21,7 +21,7 @@ services:
       - ..:/workspace:cached
       - bundle_cache:/bundle
     ports:
-      - "3000:3000"
+      - ${PORT:-3000}:3000
     command: sleep infinity
     environment:
       <<: *rails_env

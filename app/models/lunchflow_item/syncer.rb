@@ -36,6 +36,9 @@ class LunchflowItem::Syncer
       lunchflow_item.process_accounts
       Rails.logger.info "LunchflowItem::Syncer - Finished processing accounts"
 
+      # Warn about limited investment data for investment/crypto accounts
+      collect_investment_data_quality_warning(sync, linked_accounts)
+
       # Phase 4: Schedule balance calculations for linked accounts
       sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
       lunchflow_item.schedule_account_syncs(
@@ -61,4 +64,26 @@ class LunchflowItem::Syncer
   def perform_post_sync
     # no-op
   end
+
+  private
+
+    # Collects a data quality warning if any linked accounts are investment or crypto accounts.
+    # Lunchflow cannot provide activity labels (Buy, Sell, Dividend, etc.) for investment transactions,
+    # which may affect budget accuracy.
+    def collect_investment_data_quality_warning(sync, linked_lunchflow_accounts)
+      investment_accounts = linked_lunchflow_accounts.select do |la|
+        account = la.current_account
+        account&.accountable_type.in?(%w[Investment Crypto])
+      end
+
+      return if investment_accounts.empty?
+
+      collect_data_quality_stats(sync,
+        warnings: investment_accounts.size,
+        details: [ {
+          message: I18n.t("provider_warnings.limited_investment_data"),
+          severity: "warning"
+        } ]
+      )
+    end
 end

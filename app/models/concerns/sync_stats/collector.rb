@@ -105,6 +105,32 @@ module SyncStats
       holdings_stats
     end
 
+    # Collects trades statistics (investment activities like buy/sell).
+    #
+    # @param sync [Sync] The sync record to update
+    # @param account_ids [Array<String>] The account IDs to count trades for
+    # @param source [String] The trade source (e.g., "snaptrade", "plaid")
+    # @param window_start [Time, nil] Start of the sync window (defaults to sync.created_at or 30 minutes ago)
+    # @param window_end [Time, nil] End of the sync window (defaults to Time.current)
+    # @return [Hash] The trades stats that were collected
+    def collect_trades_stats(sync, account_ids:, source:, window_start: nil, window_end: nil)
+      return {} unless sync.respond_to?(:sync_stats)
+      return {} if account_ids.empty?
+
+      window_start ||= sync.created_at || 30.minutes.ago
+      window_end ||= Time.current
+
+      trade_scope = Entry.where(account_id: account_ids, source: source, entryable_type: "Trade")
+      trades_imported = trade_scope.where(created_at: window_start..window_end).count
+
+      trades_stats = {
+        "trades_imported" => trades_imported
+      }
+
+      merge_sync_stats(sync, trades_stats)
+      trades_stats
+    end
+
     # Collects health/error statistics.
     #
     # @param sync [Sync] The sync record to update

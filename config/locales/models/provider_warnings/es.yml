@@ -1,0 +1,4 @@
+---
+es:
+  provider_warnings:
+    limited_investment_data: "Los datos de inversión de este proveedor son limitados. Las etiquetas de actividad (Compra, Venta, Dividendo) no están disponibles, lo que puede afectar la precisión del presupuesto. Considere crear reglas para excluir o categorizar las transacciones de inversión."

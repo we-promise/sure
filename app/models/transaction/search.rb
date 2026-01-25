@@ -44,10 +44,18 @@ class Transaction::Search
   end
 
   # Computes totals for the specific search
+  # Note: Excludes tax-advantaged accounts (401k, IRA, etc.) from totals calculation
+  # because those transactions are retirement savings, not daily income/expenses.
   def totals
     @totals ||= begin
       Rails.cache.fetch("transaction_search_totals/#{cache_key_base}") do
-        result = transactions_scope
+        scope = transactions_scope
+
+        # Exclude tax-advantaged accounts from totals calculation
+        tax_advantaged_ids = family.tax_advantaged_account_ids
+        scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
+
+        result = scope
                   .select(
                     "COALESCE(SUM(CASE WHEN transactions.kind = 'investment_contribution' THEN ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
                     "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
@@ -74,7 +82,8 @@ class Transaction::Search
     [
       family.id,
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
-      family.entries_cache_version
+      family.entries_cache_version,
+      Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json) # stable across processes
     ].join("/")
   end
 
