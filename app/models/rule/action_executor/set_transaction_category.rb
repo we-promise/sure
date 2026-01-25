@@ -4,7 +4,7 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
   end
 
   def options
-    family.categories.alphabetically_by_hierarchy.map { |c| [c.name_with_indent, c.id] }
+    family.categories.alphabetically_by_hierarchy.map { |c| [ c.name_with_indent, c.id ] }
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)

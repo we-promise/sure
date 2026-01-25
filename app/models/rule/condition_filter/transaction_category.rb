@@ -4,7 +4,7 @@ class Rule::ConditionFilter::TransactionCategory < Rule::ConditionFilter
   end
 
   def options
-    family.categories.alphabetically_by_hierarchy.map { |c| [c.name_with_indent, c.id] }
+    family.categories.alphabetically_by_hierarchy.map { |c| [ c.name_with_indent, c.id ] }
   end
 
   def prepare(scope)
