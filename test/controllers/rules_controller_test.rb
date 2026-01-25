@@ -24,7 +24,8 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name*='[value]'][value='Starbucks']"
     assert_select "select[name*='[condition_type]'] option[selected][value='transaction_name']"
     assert_select "select[name*='[action_type]'] option[selected][value='set_transaction_category']"
-    assert_select "select[name*='[value]'] option[selected][value='#{category.id}']"
+    # Combobox uses hidden input instead of select option
+    assert_select "input[type='hidden'][name*='[value]'][value='#{category.id}']"
   end
 
   test "should get edit" do
