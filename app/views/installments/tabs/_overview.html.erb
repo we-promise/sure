@@ -1,0 +1,32 @@
+<%# locals: (account:) %>
+<div class="space-y-6 mb-6">
+  <%= render Installments::OverviewComponent.new(installment: account.accountable) %>
+</div>
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: t(".original_principal") do %>
+    <%= format_money account.accountable.calculate_original_balance, currency: account.currency %>
+  <% end %>
+  <%= summary_card title: t(".remaining_principal") do %>
+    <%= format_money account.remaining_principal_money %>
+  <% end %>
+  <%= summary_card title: t(".monthly_payment") do %>
+    <%= format_money(account.accountable.installment_cost, currency: account.currency) %>
+  <% end %>
+  <%= summary_card title: t(".term") do %>
+    <%= pluralize(account.accountable.total_term, account.accountable.payment_period.chomp("ly").tr("_", "-")) %>
+  <% end %>
+  <%= summary_card title: t(".payments_remaining") do %>
+    <%= account.accountable.payments_remaining %>
+  <% end %>
+  <%= summary_card title: t(".payment_period") do %>
+    <%= account.accountable.payment_period.titleize.tr("_", " ") %>
+  <% end %>
+</div>
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: t(".edit_details"),
+    variant: "ghost",
+    href: edit_installment_path(account),
+    frame: :modal
+  ) %>
+</div>

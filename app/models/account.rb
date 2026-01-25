@@ -13,7 +13,6 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
-  has_one :installment, dependent: :destroy
 
   monetize :balance, :cash_balance
 
@@ -41,23 +40,15 @@ class Account < ApplicationRecord
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
 
-  # Reader for subtype: check accounts.subtype first (for "installment"),
-  # then fall back to accountable.subtype
+  # Reader for subtype: delegates to accountable
   def subtype
     read_attribute(:subtype) || accountable&.subtype
   end
 
   # Writer for subtype that delegates to the accountable
-  # This allows forms to set subtype directly on the account
-  # Special case: "installment" is stored on the accounts table for SQL queries
   def subtype=(value)
-    if value == "installment"
-      write_attribute(:subtype, value)
-    else
-      # Clear accounts.subtype to ensure getter delegates to accountable
-      write_attribute(:subtype, nil)
-      accountable&.subtype = value
-    end
+    write_attribute(:subtype, nil)
+    accountable&.subtype = value
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
@@ -101,7 +92,7 @@ class Account < ApplicationRecord
         # For Loans, we want the opening balance to match the current balance provided by the user,
         # not necessarily the original loan amount (initial_balance).
         # However, for other account types, initial_balance might be the intended opening balance.
-        opening_balance = if account.loan?
+        opening_balance = if account.loan? || account.installment?
           account.balance
         else
           initial_balance || account.balance
@@ -131,7 +122,7 @@ class Account < ApplicationRecord
 
       # SimpleFin returns negative balances for credit cards (liabilities)
       # But Sure expects positive balances for liabilities
-      if account_type == "CreditCard" || account_type == "Loan"
+      if account_type.in?(%w[CreditCard Loan Installment])
         balance = balance.abs
       end
 
@@ -173,7 +164,7 @@ class Account < ApplicationRecord
 
       # Enable Banking may return negative balances for liabilities
       # Sure expects positive balances for liabilities
-      if account_type == "CreditCard" || account_type == "Loan"
+      if account_type.in?(%w[CreditCard Loan Installment])
         balance = balance.abs
       end
 
@@ -263,11 +254,11 @@ class Account < ApplicationRecord
 
   # Returns the calculated balance for installment accounts, or the regular balance for others
   def calculated_balance
-    installment ? installment.calculate_current_balance : balance
+    installment? ? accountable.calculate_current_balance : balance
   end
 
   def remaining_principal_money
-    installment ? installment.remaining_principal_money : balance_money
+    installment? ? accountable.remaining_principal_money : balance_money
   end
 
   # Returns the synced balance from bank providers (Plaid/SimpleFIN)
@@ -322,15 +313,11 @@ class Account < ApplicationRecord
 
   # Get short version of the subtype label
   def short_subtype_label
-    return installment_label if installment_subtype?
-
     accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
   end
 
   # Get long version of the subtype label
   def long_subtype_label
-    return installment_label if installment_subtype?
-
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
   end
 
@@ -340,14 +327,6 @@ class Account < ApplicationRecord
     return true if investment?
     return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
     false
-  end
-
-  def installment_subtype?
-    read_attribute(:subtype) == "installment"
-  end
-
-  def installment_label
-    I18n.t("accounts.types.installment", default: "Installment")
   end
 
   # The balance type determines which "component" of balance is being tracked.
@@ -360,7 +339,7 @@ class Account < ApplicationRecord
     case accountable_type
     when "Depository", "CreditCard"
       :cash
-    when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
+    when "Property", "Vehicle", "OtherAsset", "Loan", "Installment", "OtherLiability"
       :non_cash
     when "Investment", "Crypto"
       :investment

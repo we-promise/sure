@@ -2,138 +2,40 @@
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
 <% end %>
-<% installment_mode = params[:installment].present? || account.installment.present? %>
-<% form_data = { turbo: false } %>
-<% form_data[:controller] = "loan-form" if installment_mode %>
-<%= styled_form_with model: account, url: url, scope: :account, data: form_data, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+<%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
   <%= form.hidden_field :accountable_type %>
   <%= form.hidden_field :return_to, value: params[:return_to] %>
-  <% if installment_mode %>
-    <%= form.hidden_field :currency, value: account.currency.presence || Current.family.currency %>
-  <% end %>
   <div class="grow space-y-2">
-    <% if installment_mode %>
-      <%# Account Name %>
-      <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
-      <%= render "shared/ruler", classes: "my-2" %>
-      <%# Installment-specific fields %>
-      <%= form.fields_for :installment_attributes, account.installment || account.build_installment do |inst_form| %>
-        <%# Installment Cost %>
-        <%= inst_form.money_field :installment_cost,
-                                  label: t("loans.form.installment.cost_label"),
-                                  help_text: t("loans.form.installment.cost_help"),
-                                  default_currency: Current.family.currency,
-                                  data: {
-                                    loan_form_target: "installmentCost",
-                                    action: "input->loan-form#calculateBalance"
-                                  } %>
-        <%# Total Term + Payment Period (same row) %>
-        <div class="flex items-center gap-2">
-          <%= inst_form.number_field :total_term,
-                                     label: t("loans.form.installment.total_term_label"),
-                                     help_text: t("loans.form.installment.total_term_help"),
-                                     placeholder: "6",
-                                     min: 1,
-                                     data: {
-                                       loan_form_target: "totalTerm",
-                                       action: "input->loan-form#calculateBalance"
-                                     } %>
-          <%= inst_form.select :payment_period,
-                              installment_period_options,
-                              {
-                                label: t("loans.form.installment.payment_period_label"),
-                                help_text: t("loans.form.installment.payment_period_help")
-                              },
-                              {
-                                include_blank: false,
-                                data: {
-                                  loan_form_target: "paymentPeriod",
-                                  action: "change->loan-form#calculateFirstPaymentDate"
-                                }
-                              } %>
-        </div>
-        <%# Current Term + Payment Day (same row) %>
-        <div class="flex items-center gap-2">
-          <%= inst_form.number_field :current_term,
-                                     label: t("loans.form.installment.current_term_label"),
-                                     help_text: t("loans.form.installment.current_term_help"),
-                                     placeholder: "0",
-                                     min: 0,
-                                     value: inst_form.object&.current_term || 0,
-                                     data: {
-                                       loan_form_target: "currentTerm",
-                                       action: "input->loan-form#calculateBalance input->loan-form#calculateFirstPaymentDate"
-                                     } %>
-          <%= inst_form.number_field :payment_day,
-                                     label: t("loans.form.installment.payment_day_label"),
-                                     help_text: t("loans.form.installment.payment_day_help"),
-                                     placeholder: "15",
-                                     min: 1,
-                                     max: 31,
-                                     maxlength: 2,
-                                     data: {
-                                       loan_form_target: "paymentDay",
-                                       action: "input->loan-form#calculateFirstPaymentDate"
-                                     } %>
-        </div>
-        <%# First Payment Date (calculated, read-only) %>
-        <%# Hidden field for form submission (disabled fields are not submitted) %>
-        <%= inst_form.hidden_field :first_payment_date, data: { loan_form_target: "firstPaymentDate" } %>
-        <%# Visible disabled field for display only %>
-        <%= inst_form.date_field :first_payment_date,
-                                label: t("loans.form.installment.first_payment_date_label"),
-                                help_text: t("loans.form.installment.first_payment_date_help"),
-                                disabled: true,
-                                id: "first_payment_date_display",
-                                name: "_first_payment_date_display",
-                                data: { loan_form_target: "firstPaymentDateDisplay" } %>
-        <%# Current Balance (calculated, read-only) %>
-        <%= inst_form.money_field :current_balance,
-                                 label: t("loans.form.installment.current_balance_label"),
-                                 help_text: t("loans.form.installment.current_balance_help"),
+    <%# Account Name %>
+    <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
+    <%# Balance (for non-linked accounts) %>
+    <% unless account.linked? %>
+      <%= form.money_field :balance, label: t("accounts.form.balance"), required: true, default_currency: Current.family.currency %>
+    <% end %>
+    <%= render "shared/ruler", classes: "my-2" %>
+    <%# Loan-specific fields %>
+    <%= form.fields_for :accountable do |loan_form| %>
+      <div class="flex items-center gap-2">
+        <%= loan_form.money_field :initial_balance,
+                                 label: t("loans.form.initial_balance"),
                                  default_currency: Current.family.currency,
-                                 disabled: true,
-                                 data: { loan_form_target: "currentBalance" } %>
-        <%# Original Balance (calculated, read-only) %>
-        <%= inst_form.money_field :original_balance,
-                                 label: t("loans.form.installment.original_balance_label"),
-                                 help_text: t("loans.form.installment.original_balance_help"),
-                                 default_currency: Current.family.currency,
-                                 disabled: true,
-                                 data: { loan_form_target: "originalBalance" } %>
-      <% end %>
-    <% else %>
-      <%# Account Name %>
-      <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
-      <%# Balance (for non-linked accounts) %>
-      <% unless account.linked? %>
-        <%= form.money_field :balance, label: t("accounts.form.balance"), required: true, default_currency: Current.family.currency %>
-      <% end %>
-      <%= render "shared/ruler", classes: "my-2" %>
-      <%# Loan-specific fields %>
-      <%= form.fields_for :accountable do |loan_form| %>
-        <div class="flex items-center gap-2">
-          <%= loan_form.money_field :initial_balance,
-                                   label: t("loans.form.initial_balance"),
-                                   default_currency: Current.family.currency,
-                                   required: true %>
-        </div>
-        <div class="flex items-center gap-2">
-          <%= loan_form.number_field :interest_rate,
-                                   label: t("loans.form.interest_rate"),
-                                   placeholder: t("loans.form.interest_rate_placeholder"),
-                                   min: 0,
-                                   step: 0.005 %>
-          <%= loan_form.select :rate_type,
-                             [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
-                             { label: t("loans.form.rate_type") } %>
-        </div>
-        <div class="flex items-center gap-2">
-          <%= loan_form.number_field :term_months,
-                                   label: t("loans.form.term_months"),
-                                   placeholder: t("loans.form.term_months_placeholder") %>
-        </div>
-      <% end %>
+                                 required: true %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= loan_form.number_field :interest_rate,
+                                 label: t("loans.form.interest_rate"),
+                                 placeholder: t("loans.form.interest_rate_placeholder"),
+                                 min: 0,
+                                 step: 0.005 %>
+        <%= loan_form.select :rate_type,
+                           [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
+                           { label: t("loans.form.rate_type") } %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= loan_form.number_field :term_months,
+                                 label: t("loans.form.term_months"),
+                                 placeholder: t("loans.form.term_months_placeholder") %>
+      </div>
     <% end %>
     <%# Additional Details (collapsed) %>
     <details class="group">

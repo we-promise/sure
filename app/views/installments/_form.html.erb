@@ -1,0 +1,118 @@
+<%# locals: (account:, url:) %>
+<% if @error_message.present? %>
+  <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+<% end %>
+<%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false, controller: "loan-form" }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+  <%= form.hidden_field :accountable_type, value: "Installment" %>
+  <%= form.hidden_field :return_to, value: params[:return_to] %>
+  <%= form.hidden_field :currency, value: account.currency.presence || Current.family.currency %>
+  <div class="grow space-y-2">
+    <%# Account Name %>
+    <%= form.text_field :name, placeholder: t("accounts.form.name_placeholder"), required: "required", label: t("accounts.form.name_label") %>
+    <%= render "shared/ruler", classes: "my-2" %>
+    <%# Installment fields (as accountable_attributes) %>
+    <%= form.fields_for :accountable_attributes, account.accountable || Installment.new do |inst_form| %>
+      <%# Installment Cost %>
+      <%= inst_form.money_field :installment_cost,
+                                label: t("installments.form.cost_label"),
+                                help_text: t("installments.form.cost_help"),
+                                default_currency: Current.family.currency,
+                                data: {
+                                  loan_form_target: "installmentCost",
+                                  action: "input->loan-form#calculateBalance"
+                                } %>
+      <%# Total Term + Payment Period (same row) %>
+      <div class="flex items-center gap-2">
+        <%= inst_form.number_field :total_term,
+                                   label: t("installments.form.total_term_label"),
+                                   help_text: t("installments.form.total_term_help"),
+                                   placeholder: "6",
+                                   min: 1,
+                                   data: {
+                                     loan_form_target: "totalTerm",
+                                     action: "input->loan-form#calculateBalance"
+                                   } %>
+        <%= inst_form.select :payment_period,
+                            installment_period_options,
+                            {
+                              label: t("installments.form.payment_period_label"),
+                              help_text: t("installments.form.payment_period_help")
+                            },
+                            {
+                              include_blank: false,
+                              data: {
+                                loan_form_target: "paymentPeriod",
+                                action: "change->loan-form#calculateFirstPaymentDate"
+                              }
+                            } %>
+      </div>
+      <%# Current Term + Payment Day (same row) %>
+      <div class="flex items-center gap-2">
+        <%= inst_form.number_field :current_term,
+                                   label: t("installments.form.current_term_label"),
+                                   help_text: t("installments.form.current_term_help"),
+                                   placeholder: "0",
+                                   min: 0,
+                                   value: inst_form.object&.current_term || 0,
+                                   data: {
+                                     loan_form_target: "currentTerm",
+                                     action: "input->loan-form#calculateBalance input->loan-form#calculateFirstPaymentDate"
+                                   } %>
+        <%= inst_form.number_field :payment_day,
+                                   label: t("installments.form.payment_day_label"),
+                                   help_text: t("installments.form.payment_day_help"),
+                                   placeholder: "15",
+                                   min: 1,
+                                   max: 31,
+                                   maxlength: 2,
+                                   data: {
+                                     loan_form_target: "paymentDay",
+                                     action: "input->loan-form#calculateFirstPaymentDate"
+                                   } %>
+      </div>
+      <%# First Payment Date (calculated, read-only) %>
+      <%= inst_form.hidden_field :first_payment_date, data: { loan_form_target: "firstPaymentDate" } %>
+      <%= inst_form.date_field :first_payment_date,
+                              label: t("installments.form.first_payment_date_label"),
+                              help_text: t("installments.form.first_payment_date_help"),
+                              disabled: true,
+                              id: "first_payment_date_display",
+                              name: "_first_payment_date_display",
+                              data: { loan_form_target: "firstPaymentDateDisplay" } %>
+      <%# Current Balance (calculated, read-only) %>
+      <%= inst_form.money_field :current_balance,
+                               label: t("installments.form.current_balance_label"),
+                               help_text: t("installments.form.current_balance_help"),
+                               default_currency: Current.family.currency,
+                               disabled: true,
+                               data: { loan_form_target: "currentBalance" } %>
+      <%# Original Balance (calculated, read-only) %>
+      <%= inst_form.money_field :original_balance,
+                               label: t("installments.form.original_balance_label"),
+                               help_text: t("installments.form.original_balance_help"),
+                               default_currency: Current.family.currency,
+                               disabled: true,
+                               data: { loan_form_target: "originalBalance" } %>
+    <% end %>
+    <%# Additional Details (collapsed) %>
+    <details class="group">
+      <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
+        <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
+        <%= t("accounts.form.additional_details") %>
+      </summary>
+      <div class="space-y-2 mt-2 pl-4 border-l border-primary">
+        <%= form.text_field :institution_name,
+            label: t("accounts.form.institution_name_label"),
+            placeholder: t("accounts.form.institution_name_placeholder") %>
+        <%= form.text_field :institution_domain,
+            label: t("accounts.form.institution_domain_label"),
+            placeholder: t("accounts.form.institution_domain_placeholder") %>
+        <%= form.text_area :notes,
+            label: t("accounts.form.notes_label"),
+            placeholder: t("accounts.form.notes_placeholder"),
+            rows: 4 %>
+      </div>
+    </details>
+  </div>
+  <%= form.submit %>
+<% end %>

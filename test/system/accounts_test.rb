@@ -93,7 +93,7 @@ class AccountsTest < ApplicationSystemTestCase
 
   test "can create installment account" do
     assert_account_created "Installment" do
-      fill_in "account[installment_attributes][installment_cost]", with: 200
+      fill_in "account[accountable_attributes][installment_cost]", with: 200
       fill_in "Total Term", with: 6
       select "Monthly", from: "Payment Period"
       fill_in "Current Term", with: 0
@@ -115,16 +115,8 @@ class AccountsTest < ApplicationSystemTestCase
     end
 
     def assert_account_created(accountable_type, &block)
-      if accountable_type == "Installment"
-        click_link "Installment"
-        click_link "Enter account balance"
-      elsif accountable_type == "Loan"
-        click_link "Loan"
-        click_link "Enter account balance"
-      else
-        click_link Accountable.from_type(accountable_type).display_name.singularize
-        click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto CreditCard])
-      end
+      click_link Accountable.from_type(accountable_type).display_name.singularize
+      click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto CreditCard Loan Installment])
 
       account_name = "[system test] #{accountable_type} Account"
       institution_name = "[system test] Institution"
@@ -144,12 +136,8 @@ class AccountsTest < ApplicationSystemTestCase
 
       within_testid("account-sidebar-tabs") do
         click_on "All"
-        group_label = if accountable_type == "Installment"
-          I18n.t("accounts.types.installment", default: "Installment")
-        else
-          key = accountable_type.underscore
-          I18n.t("accounts.types.#{key}", default: Accountable.from_type(accountable_type).display_name)
-        end
+        key = accountable_type.underscore
+        group_label = I18n.t("accounts.types.#{key}", default: Accountable.from_type(accountable_type).display_name)
         find("details", text: group_label).click
         assert_text account_name
       end

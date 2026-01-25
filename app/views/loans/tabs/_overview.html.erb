@@ -1,17 +1,7 @@
 <%# locals: (account:) %>
-<% if account.installment.present? %>
-  <div class="space-y-6 mb-6">
-    <%# Installment Overview %>
-    <%= render Installments::OverviewComponent.new(installment: account.installment) %>
-  </div>
-<% end %>
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".original_principal") do %>
-    <% if account.installment.present? %>
-      <%= format_money account.installment.calculate_original_balance, currency: account.currency %>
-    <% else %>
-      <%= format_money account.loan.original_balance %>
-    <% end %>
+    <%= format_money account.loan.original_balance %>
   <% end %>
   <%= summary_card title: t(".remaining_principal") do %>
     <%= format_money account.remaining_principal_money %>
@@ -24,9 +14,7 @@
     <% end %>
   <% end %>
   <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.installment.present? %>
-      <%= format_money(account.installment.installment_cost, currency: account.currency) %>
-    <% elsif account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
+    <% if account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
       <%= t(".not_applicable") %>
     <% elsif account.loan.rate_type == 'fixed' && account.loan.monthly_payment.present? %>
       <%= format_money(account.loan.monthly_payment) %>
@@ -35,9 +23,7 @@
     <% end %>
   <% end %>
   <%= summary_card title: t(".term") do %>
-    <% if account.installment.present? %>
-      <%= pluralize(account.installment.total_term, account.installment.payment_period.chomp('ly').tr('_', '-')) %>
-    <% elsif account.loan.term_months.present? %>
+    <% if account.loan.term_months.present? %>
       <% if account.loan.term_months < 12 %>
         <%= pluralize(account.loan.term_months, "month") %>
       <% else %>
@@ -53,7 +39,7 @@
 </div>
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(
-    text: "Edit loan details",
+    text: t(".edit_details"),
     variant: "ghost",
     href: edit_loan_path(account),
     frame: :modal

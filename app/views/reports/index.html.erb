@@ -97,14 +97,17 @@
 <% end %>
 
 <div class="w-full space-y-6 lg:pb-6">
-  <% if Current.family.transactions.any? %>
-    <%# Summary Dashboard - Always visible, not collapsible %>
-    <section>
-      <%= render partial: "reports/summary_dashboard", locals: {
-        metrics: @summary_metrics,
-        period_type: @period_type
-      } %>
-    </section>
+  <% has_any_data = Current.family.accounts.any? || Current.family.transactions.any? %>
+  <% if has_any_data %>
+    <% if Current.family.transactions.any? %>
+      <%# Summary Dashboard - Only shown when there are transactions %>
+      <section>
+        <%= render partial: "reports/summary_dashboard", locals: {
+          metrics: @summary_metrics,
+          period_type: @period_type
+        } %>
+      </section>
+    <% end %>
 
     <%# Collapsible & Reorderable Sections %>
     <div data-controller="reports-sortable" data-action="dragover->reports-sortable#dragOver drop->reports-sortable#drop" role="list" aria-label="Reports sections">

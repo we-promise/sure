@@ -33,7 +33,7 @@
     </div>
   </div>
   <%# Edit Button %>
-  <%= link_to edit_loan_path(installment.account),
+  <%= link_to edit_installment_path(installment.account),
               class: "btn btn-secondary w-full mt-4 inline-flex items-center justify-center",
               data: { turbo_frame: :modal } do %>
     <%= helpers.icon "pencil", size: "sm", class: "mr-2" %>

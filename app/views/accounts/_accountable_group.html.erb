@@ -46,7 +46,7 @@
       <% end %>
     </div>
     <div class="my-2">
-      <% new_account_group_path = account_group.key == "installment" ? new_loan_path(step: "method_select", installment: true) : new_polymorphic_path(account_group.key, step: "method_select") %>
+      <% new_account_group_path = new_polymorphic_path(account_group.key, step: "method_select") %>
       <%= render DS::Link.new(
       href: new_account_group_path,
       text: t("accounts.sidebar.new_account_group", account_group: account_group.name.downcase.singularize),

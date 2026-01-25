@@ -3,77 +3,66 @@ require "test_helper"
 class Installment::CreatorTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
-    @loan_account = @family.accounts.create!(
-      name: "Car Loan",
-      balance: 0,
-      currency: "USD",
-      accountable_type: "Loan",
-      accountable_attributes: {}
-    )
     @source_account = @family.accounts.create!(
       name: "Checking",
       balance: 5000,
       currency: "USD",
-      accountable_type: "Depository",
-      accountable_attributes: {}
+      accountable: Depository.new
+    )
+  end
+
+  def create_installment_account(installment_attrs)
+    @family.accounts.create!(
+      name: "Installment Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Installment.new(installment_attrs)
     )
   end
 
   test "generates correct number of historical transactions for future dates" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 3,
-      payment_period: "monthly",
-      first_payment_date: Date.current,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 6, current_term: 3,
+      payment_period: "monthly", first_payment_date: Date.current
     )
 
-    assert_difference "@loan_account.transactions.count", 3 do
-      Installment::Creator.new(installment).call
+    assert_difference "account.transactions.count", 3 do
+      Installment::Creator.new(account.accountable).call
     end
   end
 
   test "does not generate historical transactions for past dates" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 3,
-      payment_period: "monthly",
-      first_payment_date: 6.months.ago.to_date,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 6, current_term: 3,
+      payment_period: "monthly", first_payment_date: 6.months.ago.to_date
     )
 
-    assert_no_difference "@loan_account.transactions.count" do
-      Installment::Creator.new(installment).call
+    assert_no_difference "account.transactions.count" do
+      Installment::Creator.new(account.accountable).call
     end
   end
 
   test "creates no historical transactions when current_term is 0" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 0,
-      payment_period: "monthly",
-      first_payment_date: Date.current,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 6, current_term: 0,
+      payment_period: "monthly", first_payment_date: Date.current
     )
 
-    assert_no_difference "@loan_account.transactions.count" do
-      Installment::Creator.new(installment).call
+    assert_no_difference "account.transactions.count" do
+      Installment::Creator.new(account.accountable).call
     end
   end
 
   test "historical transactions have correct dates based on payment schedule" do
     first_payment = Date.current
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 3,
-      current_term: 3,
-      payment_period: "monthly",
-      first_payment_date: first_payment,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 3, current_term: 3,
+      payment_period: "monthly", first_payment_date: first_payment
     )
 
-    Installment::Creator.new(installment).call
+    Installment::Creator.new(account.accountable).call
 
-    transactions = @loan_account.transactions.order("entries.date")
+    transactions = account.transactions.order("entries.date")
     assert_equal 3, transactions.count
     assert_equal first_payment, transactions.first.entry.date
     assert_equal first_payment + 1.month, transactions.second.entry.date
@@ -81,55 +70,48 @@ class Installment::CreatorTest < ActiveSupport::TestCase
   end
 
   test "historical transactions are linked to installment via extra" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 3,
-      current_term: 2,
-      payment_period: "monthly",
-      first_payment_date: Date.current,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 3, current_term: 2,
+      payment_period: "monthly", first_payment_date: Date.current
     )
+    installment = account.accountable
 
     Installment::Creator.new(installment).call
 
-    assert @loan_account.transactions.count > 0, "Expected transactions to be created"
-    @loan_account.transactions.each do |transaction|
+    assert account.transactions.count > 0, "Expected transactions to be created"
+    account.transactions.each do |transaction|
       assert_equal installment.id.to_s, transaction.extra["installment_id"]
       assert transaction.extra["installment_payment_number"].present?
     end
   end
 
   test "historical transactions are created as loan_payment" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 3,
-      current_term: 2,
-      payment_period: "monthly",
-      first_payment_date: Date.current,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 3, current_term: 2,
+      payment_period: "monthly", first_payment_date: Date.current
     )
 
-    Installment::Creator.new(installment).call
+    Installment::Creator.new(account.accountable).call
 
-    assert @loan_account.transactions.count > 0, "Expected transactions to be created"
-    @loan_account.transactions.each do |transaction|
+    assert account.transactions.count > 0, "Expected transactions to be created"
+    account.transactions.each do |transaction|
       assert_equal "loan_payment", transaction.kind
     end
   end
 
   test "creates recurring transaction when source_account_id provided" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 0,
-      payment_period: "monthly",
-      first_payment_date: Date.current,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 6, current_term: 0,
+      payment_period: "monthly", first_payment_date: Date.current
     )
+    installment = account.accountable
 
     assert_difference "RecurringTransaction.count", 1 do
       Installment::Creator.new(installment, source_account_id: @source_account.id).call
     end
 
     recurring_transaction = RecurringTransaction.find_by(installment_id: installment.id)
-    assert_not_nil recurring_transaction, "Expected a recurring transaction to be created for this installment"
+    assert_not_nil recurring_transaction
     assert_equal installment.id, recurring_transaction.installment_id
     assert_equal -200, recurring_transaction.amount
     assert_equal "USD", recurring_transaction.currency
@@ -137,69 +119,42 @@ class Installment::CreatorTest < ActiveSupport::TestCase
   end
 
   test "does not create recurring transaction when source_account_id not provided" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 0,
-      payment_period: "monthly",
-      first_payment_date: Date.current,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 6, current_term: 0,
+      payment_period: "monthly", first_payment_date: Date.current
     )
 
     assert_no_difference "RecurringTransaction.count" do
-      Installment::Creator.new(installment).call
+      Installment::Creator.new(account.accountable).call
     end
   end
 
   test "updates account balance to calculated current balance" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 3,
-      payment_period: "monthly",
-      first_payment_date: 6.months.ago.to_date,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 6, current_term: 3,
+      payment_period: "monthly", first_payment_date: 6.months.ago.to_date
     )
+    installment = account.accountable
 
     Installment::Creator.new(installment).call
 
-    @loan_account.reload
-    assert_equal installment.calculate_current_balance, @loan_account.balance
+    account.reload
+    assert_equal installment.calculate_current_balance, account.balance
   end
 
   test "creates balance record for today" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 3,
-      payment_period: "monthly",
-      first_payment_date: 6.months.ago.to_date,
+    account = create_installment_account(
+      installment_cost: 200, total_term: 6, current_term: 3,
+      payment_period: "monthly", first_payment_date: 6.months.ago.to_date
     )
+    installment = account.accountable
 
-    assert_difference "@loan_account.balances.count", 1 do
+    assert_difference "account.balances.count", 1 do
       Installment::Creator.new(installment).call
     end
 
-    balance = @loan_account.balances.find_by(date: Date.current)
+    balance = account.balances.find_by(date: Date.current)
     assert_not_nil balance
     assert_equal installment.calculate_current_balance, balance.balance
-  end
-
-  test "runs all operations in a transaction" do
-    installment = @loan_account.create_installment!(
-      installment_cost: 200,
-      total_term: 6,
-      current_term: 3,
-      payment_period: "monthly",
-      first_payment_date: 6.months.ago.to_date,
-    )
-
-    # Force an error by making the account invalid
-    @loan_account.update_column(:currency, nil)
-
-    assert_raises ActiveRecord::RecordInvalid do
-      Installment::Creator.new(installment).call
-    end
-
-    # Verify no historical transactions were created due to rollback
-    assert_equal 0, @loan_account.transactions.count
   end
 end

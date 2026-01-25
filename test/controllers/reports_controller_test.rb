@@ -43,13 +43,23 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "index shows empty state when no transactions" do
-    # Delete all transactions for the family by deleting from accounts
-    @family.accounts.each { |account| account.entries.destroy_all }
+  test "index shows empty state when no accounts" do
+    # Delete all accounts for the family
+    @family.accounts.destroy_all
 
     get reports_path
     assert_response :ok
     assert_select "h3", text: I18n.t("reports.empty_state.title")
+  end
+
+  test "index shows net worth when accounts exist but no transactions" do
+    # Delete all entries but keep accounts
+    @family.accounts.each { |account| account.entries.destroy_all }
+
+    get reports_path
+    assert_response :ok
+    # Should show net worth section, not empty state
+    assert_select "h2", text: I18n.t("reports.net_worth.title")
   end
 
   test "index with budget performance for current month" do

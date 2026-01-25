@@ -89,3 +89,12 @@ crypto:
   accountable_type: Crypto
   accountable: one
   status: active
+
+installment:
+  family: dylan_family
+  name: Phone Installment
+  balance: 1800
+  currency: USD
+  accountable_type: Installment
+  accountable: one
+  status: active

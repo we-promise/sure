@@ -101,7 +101,7 @@ class Transfer < ApplicationRecord
   end
 
   def categorizable?
-    to_account&.accountable_type == "Loan"
+    to_account&.accountable_type.in?(%w[Loan Installment])
   end
 
   private

@@ -1,1 +1,6 @@
-# Empty fixture to ensure table is cleaned
+one:
+  installment_cost: 200
+  total_term: 12
+  current_term: 3
+  payment_period: monthly
+  first_payment_date: <%= 6.months.ago.to_date %>

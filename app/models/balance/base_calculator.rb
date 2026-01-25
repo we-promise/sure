@@ -70,7 +70,7 @@ class Balance::BaseCalculator
       trade_cash_inflow_sum = entries.select { |e| e.amount < 0 && e.trade? }.sum(&:amount)
       trade_cash_outflow_sum = entries.select { |e| e.amount >= 0 && e.trade? }.sum(&:amount)
 
-      if account.balance_type == :non_cash && account.accountable_type == "Loan"
+      if account.balance_type == :non_cash && account.accountable_type.in?(%w[Loan Installment])
         non_cash_inflows = txn_inflow_sum.abs
         non_cash_outflows = txn_outflow_sum
       elsif account.balance_type != :non_cash
@@ -102,8 +102,8 @@ class Balance::BaseCalculator
 
     def derive_non_cash_balance(non_cash_balance, date, direction: :forward)
       entries = sync_cache.get_entries(date)
-      # Loans are a special case (loan payment reducing principal, which is non-cash)
-      if account.balance_type == :non_cash && account.accountable_type == "Loan"
+      # Loans/Installments are a special case (payment reducing principal, which is non-cash)
+      if account.balance_type == :non_cash && account.accountable_type.in?(%w[Loan Installment])
         non_cash_balance + signed_entry_flows(entries)
       elsif account.balance_type == :investment
         # For reverse calculations, we need the previous day's holdings

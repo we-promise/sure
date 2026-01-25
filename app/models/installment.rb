@@ -1,10 +1,23 @@
 class Installment < ApplicationRecord
-  belongs_to :account
+  include Accountable
 
-  after_create :ensure_account_subtype
-  after_destroy :clear_account_subtype
+  has_many :recurring_transactions, dependent: :destroy
 
-  delegate :currency, to: :account
+  SUBTYPES = {}.freeze
+
+  class << self
+    def color
+      "#F59E0B"
+    end
+
+    def icon
+      "calendar-check"
+    end
+
+    def classification
+      "liability"
+    end
+  end
 
   # Virtual attributes (used during creation, not persisted)
   attr_accessor :source_account_id, :payment_day
@@ -22,12 +35,13 @@ class Installment < ApplicationRecord
   validates :current_term, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :payment_period, presence: true
   validates :first_payment_date, presence: true
-  # Note: most_recent_payment_date is now calculated, not required
   validate :current_term_not_greater_than_total_term
-  validate :installment_cost_seems_reasonable
+
+  def currency
+    account&.currency
+  end
 
   # Calculate most_recent_payment_date from first_payment_date + current_term
-  # This replaces the stored value - Payment Date serves as both first and recurring date
   def calculated_most_recent_payment_date
     return nil if current_term.zero?
     calculate_payment_date_for_term(current_term)
@@ -108,16 +122,6 @@ class Installment < ApplicationRecord
 
   private
 
-    def ensure_account_subtype
-      return if account.subtype == "installment"
-
-      account.update!(subtype: "installment")
-    end
-
-    def clear_account_subtype
-      account.update_column(:subtype, nil)
-    end
-
     def advance_date(date)
       case payment_period
       when "weekly"
@@ -140,17 +144,6 @@ class Installment < ApplicationRecord
 
       if current_term > total_term
         errors.add(:current_term, "cannot be greater than total term")
-      end
-    end
-
-    def installment_cost_seems_reasonable
-      return if installment_cost.nil? || total_term.nil?
-
-      # Warn if installment seems too large relative to number of payments
-      # For example, a $10,000 payment with only 2 total payments might be unusual
-      # Check if payment is more than $10,000 and term is less than 3
-      if installment_cost > 10_000 && total_term < 3
-        errors.add(:installment_cost, "seems unusually high relative to total loan amount")
       end
     end
 end

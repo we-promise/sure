@@ -74,7 +74,7 @@ class Transfer::Creator
 
     # The "expense" side of a transfer is treated different in analytics based on where it goes.
     def outflow_transaction_kind
-      if destination_account.loan?
+      if destination_account.loan? || destination_account.installment?
         "loan_payment"
       elsif destination_account.liability?
         "cc_payment"

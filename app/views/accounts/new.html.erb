@@ -12,22 +12,8 @@
     <% end %>
     <% unless params[:classification] == "asset" %>
       <%= render "account_type", accountable: CreditCard.new %>
-      <%= link_to new_loan_path(step: "method_select", return_to: params[:return_to]),
-                  class: "flex items-center gap-4 w-full text-center focus:outline-hidden hover:bg-surface-hover focus:bg-surface-hover fg-primary border border-transparent block px-2 rounded-lg p-2" do %>
-        <%= render DS::FilledIcon.new(
-          icon: "hand-coins",
-          hex_color: "#D444F1",
-        ) %>
-        <%= t("accounts.types.loan") %>
-      <% end %>
-      <%= link_to new_loan_path(step: "method_select", return_to: params[:return_to], installment: "true"),
-                  class: "flex items-center gap-4 w-full text-center focus:outline-hidden hover:bg-surface-hover focus:bg-surface-hover fg-primary border border-transparent block px-2 rounded-lg p-2" do %>
-        <%= render DS::FilledIcon.new(
-          icon: "calendar-check",
-          hex_color: "#F59E0B",
-        ) %>
-        <%= t("accounts.types.installment", default: "Installment") %>
-      <% end %>
+      <%= render "account_type", accountable: Loan.new %>
+      <%= render "account_type", accountable: Installment.new %>
     <% end %>
     <% unless params[:classification] == "liability" %>
       <%= render "account_type", accountable: OtherAsset.new %>

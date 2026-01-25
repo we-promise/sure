@@ -1,0 +1,13 @@
+<% if params[:step] == "method_select" %>
+  <%= render "accounts/new/method_selector",
+             path: new_installment_path(return_to: params[:return_to]),
+             provider_configs: @provider_configs,
+             accountable_type: "Installment" %>
+<% else %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t("installments.new.title")) %>
+    <% dialog.with_body do %>
+      <%= render "installments/form", account: @account, url: installments_path %>
+    <% end %>
+  <% end %>
+<% end %>

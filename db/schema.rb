@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_22_134110) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_24_141145) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -39,7 +39,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_22_134110) do
     t.uuid "accountable_id"
     t.decimal "balance", precision: 19, scale: 4
     t.string "currency"
-    t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.uuid "import_id"
     t.uuid "plaid_account_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
@@ -49,6 +48,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_22_134110) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.virtual "classification", type: :text, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY ((ARRAY['Loan'::character varying, 'CreditCard'::character varying, 'OtherLiability'::character varying, 'Installment'::character varying])::text[])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -658,7 +658,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_22_134110) do
   end
 
   create_table "installments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
     t.decimal "installment_cost", precision: 19, scale: 4, null: false
     t.integer "total_term", null: false
     t.integer "current_term", default: 0, null: false
@@ -667,7 +666,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_22_134110) do
     t.date "most_recent_payment_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_installments_on_account_id"
+    t.string "subtype"
+    t.jsonb "locked_attributes", default: {}
     t.check_constraint "current_term <= total_term", name: "current_term_lte_total_term"
     t.check_constraint "current_term >= 0", name: "current_term_gte_zero"
     t.check_constraint "installment_cost > 0::numeric", name: "installment_cost_positive"
@@ -1369,7 +1369,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_22_134110) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
   add_foreign_key "imports", "families"
-  add_foreign_key "installments", "accounts"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "llm_usages", "families"
