@@ -1,6 +1,21 @@
 <%# locals: (simplefin_item:) %>
 
 <%= tag.div id: dom_id(simplefin_item) do %>
+  <%# Compute unlinked count early so it's available for both menu and bottom section %>
+  <% unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
+       @simplefin_unlinked_count_map[simplefin_item.id] || 0
+     else
+       begin
+         simplefin_item.simplefin_accounts
+           .left_joins(:account, :account_provider)
+           .where(accounts: { id: nil }, account_providers: { id: nil })
+           .count
+       rescue => e
+         Rails.logger.warn("SimpleFin card: unlinked_count fallback failed: #{e.class} - #{e.message}")
+         0
+       end
+     end %>
+
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
     <summary class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
@@ -16,31 +31,9 @@
           <% end %>
         </div>
 
-        <%# Compute unlinked count early for badge display %>
-        <% header_unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
-             @simplefin_unlinked_count_map[simplefin_item.id] || 0
-           else
-             begin
-               simplefin_item.simplefin_accounts
-                 .left_joins(:account, :account_provider)
-                 .where(accounts: { id: nil }, account_providers: { id: nil })
-                 .count
-             rescue => e
-               0
-             end
-           end %>
-
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
             <%= tag.p simplefin_item.name, class: "font-medium text-primary" %>
-            <% if header_unlinked_count.to_i > 0 %>
-              <%= link_to setup_accounts_simplefin_item_path(simplefin_item),
-                          data: { turbo_frame: :modal },
-                          class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors" do %>
-                <%= icon "alert-circle", size: "xs" %>
-                <span><%= header_unlinked_count %> <%= header_unlinked_count == 1 ? "account" : "accounts" %> need setup</span>
-              <% end %>
-            <% end %>
             <% if simplefin_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
@@ -49,25 +42,25 @@
             <p class="text-xs text-secondary">
               <%= simplefin_item.institution_summary %>
             </p>
-            <%# Extra inline badges from latest sync stats %>
+            <%# Extra inline badges from latest sync stats - only show warnings %>
             <% stats = (@simplefin_sync_stats_map || {})[simplefin_item.id] || {} %>
-            <% if stats.present? %>
+            <% has_warnings = stats["accounts_skipped"].to_i > 0 ||
+                              stats["rate_limited"].present? ||
+                              stats["rate_limited_at"].present? ||
+                              stats["total_errors"].to_i > 0 ||
+                              (stats["errors"].is_a?(Array) && stats["errors"].any?) %>
+            <% if has_warnings %>
               <div class="flex items-center gap-2 mt-1">
-                <% if stats["unlinked_accounts"].to_i > 0 %>
-                  <%= render DS::Tooltip.new(text: "Accounts need setup", icon: "link-2", size: "sm") %>
-                  <span class="text-xs text-secondary">Unlinked: <%= stats["unlinked_accounts"].to_i %></span>
-                <% end %>
-
                 <% if stats["accounts_skipped"].to_i > 0 %>
-                  <%= render DS::Tooltip.new(text: "Some accounts were skipped due to errors during sync", icon: "alert-triangle", size: "sm", color: "warning") %>
-                  <span class="text-xs text-warning">Skipped: <%= stats["accounts_skipped"].to_i %></span>
+                  <%= render DS::Tooltip.new(text: t(".accounts_skipped_tooltip"), icon: "alert-triangle", size: "sm", color: "warning") %>
+                  <span class="text-xs text-warning"><%= t(".accounts_skipped_label", count: stats["accounts_skipped"].to_i) %></span>
                 <% end %>
 
                 <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
                   <% ts = stats["rate_limited_at"] %>
                   <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
                   <%= render DS::Tooltip.new(
-                        text: (ago ? "Rate limited (" + ago + " ago)" : "Rate limited recently"),
+                        text: (ago ? t(".rate_limited_ago", time: ago) : t(".rate_limited_recently")),
                         icon: "clock",
                         size: "sm",
                         color: "warning"
@@ -79,10 +72,6 @@
                   <% if tooltip_text.present? %>
                     <%= render DS::Tooltip.new(text: tooltip_text, icon: "alert-octagon", size: "sm", color: "warning") %>
                   <% end %>
-                <% end %>
-
-                <% if stats["total_accounts"].to_i > 0 %>
-                  <span class="text-xs text-secondary">Total: <%= stats["total_accounts"].to_i %></span>
                 <% end %>
               </div>
             <% end %>
@@ -163,15 +152,25 @@
             href: edit_simplefin_item_path(simplefin_item),
             frame: "modal"
           ) %>
-        <% elsif Rails.env.development? %>
+        <% else %>
           <%= icon(
             "refresh-cw",
             as_button: true,
-            href: sync_simplefin_item_path(simplefin_item)
+            href: sync_simplefin_item_path(simplefin_item),
+            disabled: simplefin_item.syncing?
           ) %>
         <% end %>
 
         <%= render DS::Menu.new do |menu| %>
+          <% if unlinked_count.to_i > 0 %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".setup_accounts_menu"),
+              icon: "settings",
+              href: setup_accounts_simplefin_item_path(simplefin_item),
+              frame: :modal
+            ) %>
+          <% end %>
           <% menu.with_item(
             variant: "button",
             text: t(".delete"),
@@ -205,23 +204,8 @@
           institutions_count: simplefin_item.connected_institutions.size
         ) %>
 
-        <%# Compute unlinked SimpleFin accounts (no legacy account and no AccountProvider link)
-           # Prefer controller-provided map; fallback to a local query so the card stays accurate after Turbo broadcasts %>
-        <% unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
-             @simplefin_unlinked_count_map[simplefin_item.id] || 0
-           else
-             begin
-               simplefin_item.simplefin_accounts
-                 .left_joins(:account, :account_provider)
-                 .where(accounts: { id: nil }, account_providers: { id: nil })
-                 .count
-             rescue => e
-               Rails.logger.warn("SimpleFin card: unlinked_count fallback failed: #{e.class} - #{e.message}")
-               0
-             end
-           end %>
-
-        <% if unlinked_count.to_i > 0 %>
+        <% if unlinked_count.to_i > 0 && simplefin_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
             <p class="text-secondary text-sm"><%= t(".setup_description") %></p>

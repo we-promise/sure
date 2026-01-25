@@ -53,6 +53,7 @@ gem "image_processing", ">= 1.2"
 gem "ostruct"
 gem "bcrypt", "~> 3.1"
 gem "jwt"
+gem "ed25519" # For Coinbase CDP API authentication
 gem "jbuilder"
 gem "countries"
 
@@ -73,6 +74,7 @@ gem "rchardet" # Character encoding detection
 gem "redcarpet"
 gem "stripe"
 gem "plaid"
+gem "snaptrade", "~> 2.0"
 gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"

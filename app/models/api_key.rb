@@ -1,8 +1,12 @@
 class ApiKey < ApplicationRecord
+  include Encryptable
+
   belongs_to :user
 
-  # Use Rails built-in encryption for secure storage
-  encrypts :display_key, deterministic: true
+  # Encrypt display_key if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :display_key, deterministic: true
+  end
 
   # Constants
   SOURCES = [ "web", "mobile" ].freeze

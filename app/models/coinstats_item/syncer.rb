@@ -1,6 +1,8 @@
 # Orchestrates the sync process for a CoinStats connection.
 # Imports data, processes holdings, and schedules account syncs.
 class CoinstatsItem::Syncer
+  include SyncStats::Collector
+
   attr_reader :coinstats_item
 
   # @param coinstats_item [CoinstatsItem] Item to sync
@@ -40,6 +42,10 @@ class CoinstatsItem::Syncer
       sync.update!(status_text: I18n.t("models.coinstats_item.syncer.processing_holdings")) if sync.respond_to?(:status_text)
       coinstats_item.process_accounts
 
+      # CoinStats provides transactions but not activity labels (Buy, Sell, Dividend, etc.)
+      # Warn users that this may affect budget accuracy
+      collect_investment_data_quality_warning(sync, linked_accounts)
+
       # Phase 4: Schedule balance calculations for linked accounts
       sync.update!(status_text: I18n.t("models.coinstats_item.syncer.calculating_balances")) if sync.respond_to?(:status_text)
       coinstats_item.schedule_account_syncs(
@@ -58,4 +64,22 @@ class CoinstatsItem::Syncer
   def perform_post_sync
     # no-op
   end
+
+  private
+
+    # Collects a data quality warning for all CoinStats accounts.
+    # CoinStats cannot provide activity labels (Buy, Sell, Dividend, etc.) for transactions,
+    # which may affect budget accuracy.
+    def collect_investment_data_quality_warning(sync, linked_coinstats_accounts)
+      # All CoinStats accounts are crypto/investment accounts
+      return if linked_coinstats_accounts.empty?
+
+      collect_data_quality_stats(sync,
+        warnings: linked_coinstats_accounts.size,
+        details: [ {
+          message: I18n.t("provider_warnings.limited_investment_data"),
+          severity: "warning"
+        } ]
+      )
+    end
 end

@@ -15,6 +15,7 @@ en:
       imported: "Imported: %{count}"
       updated: "Updated: %{count}"
       skipped: "Skipped: %{count}"
+      fetching: "Fetching from brokerage..."
       protected:
         one: "%{count} entry protected (not overwritten)"
         other: "%{count} entries protected (not overwritten)"
@@ -28,6 +29,11 @@ en:
       title: Holdings
       found: "Found: %{count}"
       processed: "Processed: %{count}"
+    trades:
+      title: Trades
+      imported: "Imported: %{count}"
+      skipped: "Skipped: %{count}"
+      fetching: "Fetching activities from brokerage..."
     health:
       title: Health
       view_error_details: View error details

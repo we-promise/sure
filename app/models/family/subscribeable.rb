@@ -41,12 +41,20 @@ module Family::Subscribeable
     subscription&.active?
   end
 
+  def can_manage_subscription?
+    stripe_customer_id.present?
+  end
+
   def needs_subscription?
     subscription.nil? && !self_hoster?
   end
 
   def next_payment_date
     subscription&.current_period_ends_at
+  end
+
+  def subscription_pending_cancellation?
+    subscription&.pending_cancellation?
   end
 
   def start_subscription!(stripe_subscription_id)

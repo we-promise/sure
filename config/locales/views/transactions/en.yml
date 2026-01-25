@@ -40,6 +40,16 @@ en:
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
       convert_to_trade_button: Convert to Trade
+      merchant_label: Merchant
+      name_label: Name
+      nature: Type
+      none: "(none)"
+      note_label: Notes
+      note_placeholder: Enter a note
+      overview: Overview
+      settings: Settings
+      tags_label: Tags
+      uncategorized: "(uncategorized)"
     activity_labels:
       buy: Buy
       sell: Sell
@@ -57,16 +67,6 @@ en:
     mark_recurring: Mark as Recurring
     mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
     mark_recurring_title: Recurring Transaction
-    merchant_label: Merchant
-    name_label: Name
-    nature: Type
-    none: "(none)"
-    note_label: Notes
-    note_placeholder: Enter a note
-    overview: Overview
-    settings: Settings
-    tags_label: Tags
-    uncategorized: "(uncategorized)"
     potential_duplicate_title: Possible duplicate detected
     potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
     merge_duplicate: Yes, merge them
@@ -137,6 +137,7 @@ en:
       cancel: Cancel
       submit: Convert to Trade
       success: Transaction converted to trade
+      conversion_note: "Converted from transaction: %{original_name} (%{original_date})"
       errors:
         not_investment_account: Only transactions in investment accounts can be converted to trades
         already_converted: This transaction has already been converted or excluded

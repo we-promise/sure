@@ -1,0 +1,6 @@
+one:
+  family: dylan_family
+  name: "Test Mercury Connection"
+  token: "test_mercury_token_123"
+  base_url: "https://api-sandbox.mercury.com/api/v1"
+  status: good
