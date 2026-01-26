@@ -42,7 +42,8 @@ class BudgetCategory < ApplicationRecord
   end
 
   def category
-    super || budget.family.categories.uncategorized
+    return @category if defined?(@category)
+    @category = super || Category.uncategorized
   end
 
   def name
@@ -50,7 +51,7 @@ class BudgetCategory < ApplicationRecord
   end
 
   def actual_spending
-    budget.budget_category_actual_spending(self)
+    @actual_spending ||= budget.budget_category_actual_spending(self)
   end
 
   def avg_monthly_expense
@@ -85,10 +86,20 @@ class BudgetCategory < ApplicationRecord
   # Returns the parent budget category if this is a subcategory
   def parent_budget_category
     return nil unless subcategory?
-    @parent_budget_category ||= budget.budget_categories.find { |bc| bc.category.id == category.parent_id }
+    @parent_budget_category ||= budget.budget_categories_by_category_id[category.parent_id]
   end
 
   def available_to_spend
+    @available_to_spend ||= calculate_available_to_spend
+  end
+
+  def percent_of_budget_spent
+    @percent_of_budget_spent ||= calculate_percent_of_budget_spent
+  end
+
+  private
+
+  def calculate_available_to_spend
     if inherits_parent_budget?
       # Subcategories using parent budget share the parent's available_to_spend
       parent = parent_budget_category
@@ -124,7 +135,7 @@ class BudgetCategory < ApplicationRecord
     end
   end
 
-  def percent_of_budget_spent
+  def calculate_percent_of_budget_spent
     if inherits_parent_budget?
       # For subcategories using parent budget, show their spending as percentage of parent's budget
       parent = parent_budget_category
@@ -195,7 +206,7 @@ class BudgetCategory < ApplicationRecord
   def max_allocation
     return nil unless subcategory?
 
-    parent_budget_cat = budget.budget_categories.find { |bc| bc.category.id == category.parent_id }
+    parent_budget_cat = budget.budget_categories_by_category_id[category.parent_id]
     return nil unless parent_budget_cat
 
     parent_budget = parent_budget_cat[:budgeted_spending] || 0
@@ -208,10 +219,8 @@ class BudgetCategory < ApplicationRecord
   end
 
   def subcategories
-    return BudgetCategory.none unless category.parent_id.nil?
+    return [] unless category.parent_id.nil?
 
-    budget.budget_categories
-      .joins(:category)
-      .where(categories: { parent_id: category.id })
+    @subcategories ||= budget.budget_categories.select { |bc| bc.category.parent_id == category.id }
   end
 end
