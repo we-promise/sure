@@ -331,4 +331,93 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 4, filtered.count
     assert_not filtered.map(&:id).include?(transaction_entry.transaction.id)
   end
+
+  test "applies transaction_type condition for income" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "income"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # transaction2 has amount -200 (income)
+    assert_equal 1, filtered.count
+    assert filtered.all? { |t| t.entry.amount.negative? }
+  end
+
+  test "applies transaction_type condition for expense" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "expense"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # transaction1, 3, 4, 5 have positive amounts (expenses)
+    assert_equal 4, filtered.count
+    assert filtered.all? { |t| t.entry.amount.positive? && !t.transfer? }
+  end
+
+  test "applies transaction_type condition for transfer" do
+    scope = @rule_scope
+
+    # Create a transfer transaction
+    transfer_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      amount: 500,
+      name: "Transfer to savings"
+    )
+    transfer_entry.transaction.update!(kind: "funds_movement")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "transfer"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 1, filtered.count
+    assert_equal transfer_entry.transaction.id, filtered.first.id
+    assert filtered.first.transfer?
+  end
+
+  test "transaction_type expense excludes transfers" do
+    scope = @rule_scope
+
+    # Create a transfer with positive amount (would look like expense)
+    transfer_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      amount: 500,
+      name: "Transfer to savings"
+    )
+    transfer_entry.transaction.update!(kind: "funds_movement")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "expense"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Should NOT include the transfer even though it has positive amount
+    assert_not filtered.map(&:id).include?(transfer_entry.transaction.id)
+  end
 end
