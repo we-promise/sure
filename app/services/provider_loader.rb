@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Service class to load SSO provider configurations from either YAML or database
-# based on the :db_sso_providers feature flag.
+# based on AUTH_PROVIDERS_SOURCE environment variable or app_mode configuration.
 #
 # Usage:
 #   providers = ProviderLoader.load_providers
@@ -11,6 +11,20 @@ class ProviderLoader
   CACHE_EXPIRES_IN = 5.minutes
 
   class << self
+    # Check if database-backed providers are enabled
+    # This is used by the admin UI to show configuration status
+    def database_providers_enabled?
+      return false if Rails.env.test?
+
+      auth_source = ENV["AUTH_PROVIDERS_SOURCE"]
+      if auth_source.present?
+        return auth_source.downcase == "db"
+      end
+
+      # Default: "db" for self-hosted, "yaml" for managed
+      Rails.configuration.app_mode.self_hosted?
+    end
+
     # Load providers from either DB or YAML based on feature flag
     # Returns an array of provider configuration hashes
     def load_providers
@@ -36,22 +50,7 @@ class ProviderLoader
 
     private
       def use_database_providers?
-        return false if Rails.env.test?
-
-        # Fast path: Check environment variable first to avoid database queries
-        # This prevents expensive Flipper queries during initialization
-        auth_source = ENV["AUTH_PROVIDERS_SOURCE"]
-        if auth_source.present?
-          return auth_source.downcase == "db"
-        end
-
-        # Fallback: Use app_mode configuration
-        # Default: "db" for self-hosted, "yaml" for managed
-        if Rails.configuration.app_mode.self_hosted?
-          true
-        else
-          false
-        end
+        database_providers_enabled?
       end
 
       def load_from_database
