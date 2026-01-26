@@ -30,4 +30,3 @@ class SyncJobTest < ActiveJob::TestCase
     end
   end
 end
-
