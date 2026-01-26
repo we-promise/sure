@@ -70,6 +70,7 @@ class EnableBankingEntry::Processor
     def name
       # Build name from available Enable Banking transaction fields
       # Priority: counterparty name > bank_transaction_code description > remittance_information
+      # Note: Technical counterparty IDs like CARD-xxxxxxx are ignored in favor of remittance_information
 
       # Determine counterparty based on transaction direction
       # For outgoing payments (DBIT), counterparty is the creditor (who we paid)
@@ -80,15 +81,21 @@ class EnableBankingEntry::Processor
         data.dig(:creditor, :name) || data[:creditor_name]
       end
 
-      return counterparty if counterparty.present?
+      # Check if counterparty is a technical ID (e.g., CARD-1234567890) and should be ignored
+      # If so, skip it and prefer remittance_information
+      if counterparty.present? && !counterparty.to_s.match?(/\ACARD-\d+\z/i)
+        return counterparty
+      end
+
+      # If counterparty is a technical ID or missing, check remittance_information first
+      remittance = data[:remittance_information]
+      if remittance.is_a?(Array) && remittance.first.present?
+        return remittance.first.truncate(100)
+      end
 
       # Fall back to bank_transaction_code description
       bank_tx_description = data.dig(:bank_transaction_code, :description)
       return bank_tx_description if bank_tx_description.present?
-
-      # Fall back to remittance_information
-      remittance = data[:remittance_information]
-      return remittance.first.truncate(100) if remittance.is_a?(Array) && remittance.first.present?
 
       # Final fallback: use transaction type indicator
       credit_debit_indicator == "CRDT" ? "Incoming Transfer" : "Outgoing Transfer"
