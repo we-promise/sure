@@ -181,6 +181,7 @@ class Provider::Openai < Provider
     instructions: nil,
     functions: [],
     function_results: [],
+    messages: nil,
     streamer: nil,
     previous_response_id: nil,
     session_id: nil,
@@ -194,6 +195,7 @@ class Provider::Openai < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
+        messages: messages,
         streamer: streamer,
         session_id: session_id,
         user_identifier: user_identifier,
@@ -206,6 +208,7 @@ class Provider::Openai < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
+        messages: messages,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: session_id,
@@ -224,6 +227,7 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
+      messages: nil,
       streamer: nil,
       previous_response_id: nil,
       session_id: nil,
@@ -252,17 +256,29 @@ class Provider::Openai < Provider
           nil
         end
 
-        input_payload = chat_config.build_input(prompt)
+        use_history = messages.present? && function_results.blank?
+        input_prompt = use_history ? nil : prompt
+
+        input_payload = chat_config.build_input(
+          prompt: input_prompt,
+          messages: use_history ? messages : nil
+        )
 
         begin
-          raw_response = client.responses.create(parameters: {
+          params = {
             model: model,
             input: input_payload,
             instructions: instructions,
             tools: chat_config.tools,
-            previous_response_id: previous_response_id,
             stream: stream_proxy
-          })
+          }
+
+          # Only send previous_response_id when we're not explicitly providing full history
+          if previous_response_id.present? && (!use_history || function_results.present?)
+            params[:previous_response_id] = previous_response_id
+          end
+
+          raw_response = client.responses.create(parameters: params)
 
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)
@@ -318,6 +334,7 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
+      messages: nil,
       streamer: nil,
       session_id: nil,
       user_identifier: nil,
@@ -327,7 +344,8 @@ class Provider::Openai < Provider
         messages = build_generic_messages(
           prompt: prompt,
           instructions: instructions,
-          function_results: function_results
+          function_results: function_results,
+          messages: messages
         )
 
         tools = build_generic_tools(functions)
@@ -386,16 +404,20 @@ class Provider::Openai < Provider
       end
     end
 
-    def build_generic_messages(prompt:, instructions: nil, function_results: [])
-      messages = []
+    def build_generic_messages(prompt:, instructions: nil, function_results: [], messages: nil)
+      payload = []
 
       # Add system message if instructions present
       if instructions.present?
-        messages << { role: "system", content: instructions }
+        payload << { role: "system", content: instructions }
       end
 
-      # Add user prompt
-      messages << { role: "user", content: prompt }
+      # Add conversation history or user prompt
+      if messages.present?
+        payload.concat(messages.map { |msg| { role: msg[:role], content: msg[:content] } })
+      elsif prompt.present?
+        payload << { role: "user", content: prompt }
+      end
 
       # If there are function results, we need to add the assistant message that made the tool calls
       # followed by the tool messages with the results
@@ -416,7 +438,7 @@ class Provider::Openai < Provider
           }
         end
 
-        messages << {
+        payload << {
           role: "assistant",
           content: "",  # Some OpenAI-compatible APIs require string, not null
           tool_calls: tool_calls
@@ -436,7 +458,7 @@ class Provider::Openai < Provider
             output.to_json
           end
 
-          messages << {
+          payload << {
             role: "tool",
             tool_call_id: fn_result[:call_id],
             name: fn_result[:name],
@@ -445,7 +467,7 @@ class Provider::Openai < Provider
         end
       end
 
-      messages
+      payload
     end
 
     def build_generic_tools(functions)
