@@ -133,6 +133,10 @@ class Category < ApplicationRecord
     parent.present?
   end
 
+  def to_combobox_option
+    Category::ComboboxOption.new(category: self)
+  end
+
   private
     def category_level_limit
       if (subcategory? && parent.subcategory?) || (parent? && subcategory?)

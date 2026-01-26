@@ -42,7 +42,17 @@
 .combobox {
   .hw-combobox__main__wrapper,
   .hw-combobox__input {
-    @apply bg-container text-primary w-full;
+    @apply bg-container text-primary w-full text-sm;
+  }
+
+  .hw-combobox__input::placeholder {
+    @apply text-sm text-black;
+  }
+
+  @variant theme-dark {
+    .hw-combobox__input::placeholder {
+      color: #737373 !important;
+    }
   }
 
   .hw-combobox__main__wrapper {
@@ -50,13 +60,52 @@
   }
 
   .hw-combobox__listbox {
-    @apply absolute top-[160%] right-0 w-full bg-transparent rounded z-30;
+    @apply absolute top-[160%] right-0 w-full bg-white rounded-md z-[9999];
+
+    @variant theme-dark {
+      @apply bg-gray-900 border-white/15;
+    }
+  }
+
+  /* Special handling for combobox inside dialogs and modals */
+  dialog .hw-combobox__listbox,
+  .dialog .hw-combobox__listbox,
+  [data-controller*="combobox-dialog"] .hw-combobox__listbox {
+    /* JavaScript controller will handle positioning and styling */
+    z-index: 99999 !important;
+    background-color: var(--color-white) !important;
+    border: 1px solid var(--color-alpha-black-200) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    overflow-y: auto !important;
+  }
+
+  @variant theme-dark {
+    .hw-combobox__dialog{
+      @apply bg-gray-900;
+    }
+
+    .hw-combobox__dialog__label{
+      @apply text-gray-400;
+    }
+
+    .hw-combobox__dialog__input {
+      @apply bg-gray-900 text-white border-gray-600;
+    }
+  }
+
+  /* Ensure combobox container doesn't clip the listbox */
+  dialog .form-field.combobox,
+  .dialog .form-field.combobox,
+  [data-controller*="combobox-dialog"] {
+    overflow: visible !important;
+    position: relative;
   }
 
   .hw-combobox__label {
     @apply block text-xs text-gray-500 peer-disabled:text-gray-400;
   }
-  
+
   .hw-combobox__option {
     @apply bg-container hover:bg-container-hover;
   }
@@ -77,7 +126,7 @@
 
 /* Typography */
 .prose {
-  @apply max-w-none text-primary; 
+  @apply max-w-none text-primary;
 
   a {
     @apply text-link;
@@ -142,7 +191,7 @@
 
   ::-webkit-scrollbar-thumb {
     background-color: rgba(156, 163, 175, 0.5);
-    border-radius: 3px; 
+    border-radius: 3px;
   }
 }
 
@@ -159,7 +208,7 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: #a6a6a6;
-  }  
+  }
 }
 
 .scrollbar {

@@ -3,7 +3,7 @@
 <div id="<%= dom_id(category) %>" class="flex justify-between items-center px-4 pb-4 <%= "pt-4" unless category.subcategory? %> <%= "pb-4" unless category.subcategories.any? %> bg-container">
   <div class="flex flex-1 min-w-0 items-center gap-2.5 pr-2">
     <% if category.subcategory? %>
-      <span style="color: <%= category.color %>">
+      <span class="self-start mt-[6px]" style="color: <%= category.color %>">
         <%= icon "corner-down-right", size: "sm", color: "current", class: "ml-2" %>
       </span>
     <% end %>
