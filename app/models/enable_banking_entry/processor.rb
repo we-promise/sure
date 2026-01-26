@@ -81,9 +81,12 @@ class EnableBankingEntry::Processor
         data.dig(:creditor, :name) || data[:creditor_name]
       end
 
+      # Normalize counterparty by trimming whitespace
+      counterparty = counterparty.to_s.strip if counterparty.present?
+
       # Check if counterparty is a technical ID (e.g., CARD-1234567890) and should be ignored
       # If so, skip it and prefer remittance_information
-      if counterparty.present? && !counterparty.to_s.match?(/\ACARD-\d+\z/i)
+      if counterparty.present? && !counterparty.match?(/\ACARD-\d+\z/i)
         return counterparty
       end
 
