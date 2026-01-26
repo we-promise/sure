@@ -15,10 +15,10 @@ class SyncJobTest < ActiveJob::TestCase
     # Verify that SyncJob has a rescue handler for Provider::TwelveData::RateLimitError
     # The retry_on declaration adds a rescue_from handler
     handler_found = SyncJob.rescue_handlers.any? do |handler|
-      handler.is_a?(Hash) && 
+      handler.is_a?(Hash) &&
       handler[:exception] == Provider::TwelveData::RateLimitError
     end
-    
+
     assert handler_found, "SyncJob should have retry_on configured for Provider::TwelveData::RateLimitError"
   end
 end
