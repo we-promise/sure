@@ -41,7 +41,11 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
           else
-            VERSION="0.0.0-nightly.$(date -u +'%Y%m%d.%H%M%S')"
+            BASE_VERSION="$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -n 1)"
+            if [[ -z "${BASE_VERSION}" ]]; then
+              BASE_VERSION="0.0.0"
+            fi
+            VERSION="${BASE_VERSION}-nightly.$(date -u +'%Y%m%d.%H%M%S')"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
