@@ -8,6 +8,6 @@ class Security::ComboboxOption
   end
 
   def to_combobox_display
-    "#{name}"
+    "#{symbol} - #{name} (#{exchange_operating_mic})"
   end
 end
