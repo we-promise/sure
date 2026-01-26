@@ -205,3 +205,4 @@ en:
         one: "File (1)"
         other: "Files (%{count})"
       browse_to_add: "Browse to add files"
+      max_reached: "Maximum file limit reached (%{count}/%{max}). Delete an existing file to upload another."
