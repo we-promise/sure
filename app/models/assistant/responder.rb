@@ -79,6 +79,7 @@ class Assistant::Responder
         instructions: instructions,
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
+        messages: conversation_history,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: chat_session_id,
@@ -113,5 +114,13 @@ class Assistant::Responder
 
     def chat
       @chat ||= message.chat
+    end
+
+    def conversation_history
+      chat.conversation_messages.ordered.map do |chat_message|
+        next if chat_message.content.blank?
+
+        { role: chat_message.role, content: chat_message.content }
+      end.compact
     end
 end
