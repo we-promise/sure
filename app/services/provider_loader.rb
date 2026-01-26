@@ -48,9 +48,9 @@ class ProviderLoader
         # Fallback: Use app_mode configuration
         # Default: "db" for self-hosted, "yaml" for managed
         if Rails.configuration.app_mode.self_hosted?
-          return true
+          true
         else
-          return false
+          false
         end
       end
 
