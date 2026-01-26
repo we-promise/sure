@@ -412,6 +412,69 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "re-raises rate limit errors from TwelveData provider" do
+    Security::Price.delete_all
+
+    # Create a rate limit error wrapped in a failed response
+    rate_limit_error = Provider::TwelveData::RateLimitError.new(
+      "TwelveData rate limit exceeded: You have run out of API credits for the current minute.",
+      details: { code: 429 }
+    )
+    provider_response = Provider::Response.new(
+      success?: false,
+      data: nil,
+      error: rate_limit_error
+    )
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(2.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    importer = Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current
+    )
+
+    # The rate limit error should be re-raised so the job can retry
+    assert_raises(Provider::TwelveData::RateLimitError) do
+      importer.import_provider_prices
+    end
+  end
+
+  test "does not re-raise non-rate-limit errors from provider" do
+    Security::Price.delete_all
+
+    # Create a regular error (not rate limit)
+    regular_error = Provider::TwelveData::Error.new("API error", details: { code: 500 })
+    provider_response = Provider::Response.new(
+      success?: false,
+      data: nil,
+      error: regular_error
+    )
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(2.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    importer = Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current
+    )
+
+    # Regular errors should not be re-raised, just logged
+    # The method returns 0 (no prices imported)
+    assert_nothing_raised do
+      result = importer.import_provider_prices
+      assert_equal 0, result
+    end
+  end
+
   private
     def get_provider_fetch_start_date(start_date)
       start_date - Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
