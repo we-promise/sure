@@ -239,10 +239,10 @@ class Provider::TwelveData < Provider
         response_body = error.response&.dig(:body)
         status_code = error.response&.dig(:status)
 
-        # Detect 429 rate limit errors
+        # Detect 429 rate limit errors and return RateLimitError
         if status_code == 429
           message = extract_error_message(response_body) || error.message
-          raise RateLimitError.new(
+          return RateLimitError.new(
             "TwelveData rate limit exceeded: #{message}",
             details: response_body
           )
