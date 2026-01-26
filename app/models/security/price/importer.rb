@@ -113,7 +113,14 @@ class Security::Price::Importer
         if response.success?
           response.data.index_by(&:date)
         else
-          Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{response.error.message}")
+          error = response.error
+
+          # If this is a rate limit error, re-raise it so the job can be retried
+          if error.is_a?(Provider::TwelveData::RateLimitError)
+            raise error
+          end
+
+          Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{error.message}")
           Sentry.capture_exception(MissingSecurityPriceError.new("Could not fetch prices for ticker"), level: :warning) do |scope|
             scope.set_tags(security_id: security.id)
             scope.set_context("security", { id: security.id, start_date: start_date, end_date: end_date })
