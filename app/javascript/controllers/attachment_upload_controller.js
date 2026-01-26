@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class AttachmentUploadController extends Controller {
-  static targets = ["fileInput", "submitButton"]
+  static targets = ["fileInput", "submitButton", "fileName", "uploadText"]
   static values = {
     maxFiles: Number,
     maxSize: Number
@@ -9,6 +9,10 @@ export default class AttachmentUploadController extends Controller {
 
   connect() {
     this.updateSubmitButton()
+  }
+
+  triggerFileInput() {
+    this.fileInputTarget.click()
   }
 
   updateSubmitButton() {
@@ -20,6 +24,14 @@ export default class AttachmentUploadController extends Controller {
     let errorMessage = ""
 
     if (hasFiles) {
+      if (this.hasUploadTextTarget) this.uploadTextTarget.classList.add("hidden")
+      if (this.hasFileNameTarget) {
+        const filenames = files.map(f => f.name).join(", ")
+        const textElement = this.fileNameTarget.querySelector("p")
+        if (textElement) textElement.textContent = filenames
+        this.fileNameTarget.classList.remove("hidden")
+      }
+
       // Check file count
       if (files.length > this.maxFilesValue) {
         isValid = false
@@ -32,6 +44,9 @@ export default class AttachmentUploadController extends Controller {
         isValid = false
         errorMessage = `File too large (max ${Math.round(this.maxSizeValue / 1024 / 1024)}MB)`
       }
+    } else {
+      if (this.hasUploadTextTarget) this.uploadTextTarget.classList.remove("hidden")
+      if (this.hasFileNameTarget) this.fileNameTarget.classList.add("hidden")
     }
 
     this.submitButtonTarget.disabled = !isValid

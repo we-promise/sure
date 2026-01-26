@@ -204,3 +204,4 @@ en:
       files:
         one: "File (1)"
         other: "Files (%{count})"
+      browse_to_add: "Browse to add files"
