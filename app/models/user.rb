@@ -156,7 +156,7 @@ class User < ApplicationRecord
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
-  before_destroy :purge_active_storage_attachments
+  after_destroy_commit :purge_active_storage_attachments
 
   def deactivate
     update active: false, email: deactivated_email
@@ -343,7 +343,7 @@ class User < ApplicationRecord
     end
 
     def purge_active_storage_attachments
-      ActiveStorage::Attachment.where(record: self).find_each(&:purge)
+      ActiveStorage::Attachment.where(record: self).find_each(&:purge_later)
     end
 
     def totp
