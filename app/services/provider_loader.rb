@@ -38,16 +38,19 @@ class ProviderLoader
       def use_database_providers?
         return false if Rails.env.test?
 
-        begin
-          # Check if feature exists, create if not (defaults to disabled)
-          unless Flipper.exist?(:db_sso_providers)
-            Flipper.add(:db_sso_providers)
-          end
-          Flipper.enabled?(:db_sso_providers)
-        rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid, StandardError => e
-          # Database not ready or other error, fall back to YAML
-          Rails.logger.warn("[ProviderLoader] Could not check feature flag (#{e.class}), falling back to YAML providers")
-          false
+        # Fast path: Check environment variable first to avoid database queries
+        # This prevents expensive Flipper queries during initialization
+        auth_source = ENV["AUTH_PROVIDERS_SOURCE"]
+        if auth_source.present?
+          return auth_source.downcase == "db"
+        end
+
+        # Fallback: Use app_mode configuration
+        # Default: "db" for self-hosted, "yaml" for managed
+        if Rails.configuration.app_mode.self_hosted?
+          return true
+        else
+          return false
         end
       end
 
