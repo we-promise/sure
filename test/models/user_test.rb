@@ -332,6 +332,46 @@ class UserTest < ActiveSupport::TestCase
     assert_includes user.errors[:password], "can't be blank"
   end
 
+  test "purging a user removes attached files" do
+    user = users(:family_admin)
+    user.profile_image.attach(
+      io: StringIO.new("profile-image"),
+      filename: "profile.png",
+      content_type: "image/png"
+    )
+
+    attachment_id = user.profile_image.id
+    assert ActiveStorage::Attachment.exists?(attachment_id)
+
+    user.purge
+
+    assert_not User.exists?(user.id)
+    assert_not ActiveStorage::Attachment.exists?(attachment_id)
+  end
+
+  test "purging the last user removes family export attachments" do
+    family = Family.create!(name: "Solo Family", locale: "en", date_format: "%m-%d-%Y")
+    user = User.create!(
+      family: family,
+      email: "solo@example.com",
+      password: "password"
+    )
+    export = family.family_exports.create!
+    export.export_file.attach(
+      io: StringIO.new("export"),
+      filename: "export.zip",
+      content_type: "application/zip"
+    )
+
+    export_attachment_id = export.export_file.id
+    assert ActiveStorage::Attachment.exists?(export_attachment_id)
+
+    user.purge
+
+    assert_not Family.exists?(family.id)
+    assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
+  end
+
   # First user role assignment tests
   test "role_for_new_family_creator returns super_admin when no users exist" do
     # Delete all users to simulate fresh instance
