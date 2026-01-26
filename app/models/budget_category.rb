@@ -97,6 +97,21 @@ class BudgetCategory < ApplicationRecord
     @percent_of_budget_spent ||= calculate_percent_of_budget_spent
   end
 
+  def max_allocation
+    return nil unless subcategory?
+
+    parent_budget_cat = budget.budget_categories_by_category_id[category.parent_id]
+    return nil unless parent_budget_cat
+
+    parent_budget = parent_budget_cat[:budgeted_spending] || 0
+
+    # Sum budgets of siblings that have individual limits (excluding those that inherit)
+    siblings_with_limits = siblings.reject(&:inherits_parent_budget?)
+    siblings_budget = siblings_with_limits.sum { |s| s[:budgeted_spending] || 0 }
+
+    [ parent_budget - siblings_budget, 0 ].max
+  end
+
   private
 
     def calculate_available_to_spend
@@ -201,21 +216,6 @@ class BudgetCategory < ApplicationRecord
 
     def siblings
       budget.budget_categories.select { |bc| bc.category.parent_id == category.parent_id && bc.id != id }
-    end
-
-    def max_allocation
-      return nil unless subcategory?
-
-      parent_budget_cat = budget.budget_categories_by_category_id[category.parent_id]
-      return nil unless parent_budget_cat
-
-      parent_budget = parent_budget_cat[:budgeted_spending] || 0
-
-      # Sum budgets of siblings that have individual limits (excluding those that inherit)
-      siblings_with_limits = siblings.reject(&:inherits_parent_budget?)
-      siblings_budget = siblings_with_limits.sum { |s| s[:budgeted_spending] || 0 }
-
-      [ parent_budget - siblings_budget, 0 ].max
     end
 
     def subcategories
