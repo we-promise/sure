@@ -30,6 +30,18 @@ class TransactionAttachmentsControllerTest < ActionDispatch::IntegrationTest
     assert_match "2 attachments uploaded successfully", flash[:notice]
   end
 
+  test "should ignore blank attachments in array" do
+    file = fixture_file_upload("test.txt", "application/pdf")
+
+    assert_difference "@transaction.attachments.count", 1 do
+      # Simulate Rails behavior where an empty string is often sent in the array
+      post transaction_attachments_path(@transaction), params: { attachments: [ file, "" ] }
+    end
+
+    assert_redirected_to transaction_path(@transaction)
+    assert_match "Attachment uploaded successfully", flash[:notice] # Should be singular
+  end
+
   test "should handle upload with no files" do
     assert_no_difference "@transaction.attachments.count" do
       post transaction_attachments_path(@transaction), params: {}
