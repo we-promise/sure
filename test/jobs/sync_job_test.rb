@@ -11,22 +11,14 @@ class SyncJobTest < ActiveJob::TestCase
     SyncJob.perform_now(sync)
   end
 
-  test "retries on TwelveData rate limit error" do
-    syncable = accounts(:depository)
-    sync = syncable.syncs.create!(window_start_date: 2.days.ago.to_date)
-
-    # Create a rate limit error
-    rate_limit_error = Provider::TwelveData::RateLimitError.new(
-      "TwelveData rate limit exceeded",
-      details: { code: 429 }
-    )
-
-    # Mock sync.perform to raise the rate limit error
-    sync.stubs(:perform).raises(rate_limit_error)
-
-    # Verify the job is configured to retry on this error
-    assert_raises(Provider::TwelveData::RateLimitError) do
-      SyncJob.perform_now(sync)
+  test "configured to retry on TwelveData rate limit error" do
+    # Verify that SyncJob has a rescue handler for Provider::TwelveData::RateLimitError
+    # The retry_on declaration adds a rescue_from handler
+    handler_found = SyncJob.rescue_handlers.any? do |handler|
+      handler.is_a?(Hash) && 
+      handler[:exception] == Provider::TwelveData::RateLimitError
     end
+    
+    assert handler_found, "SyncJob should have retry_on configured for Provider::TwelveData::RateLimitError"
   end
 end
