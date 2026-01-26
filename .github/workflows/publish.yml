@@ -258,6 +258,52 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4.2.0
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
+          helm repo add ot-helm https://ot-container-kit.github.io/helm-charts
+          helm repo update
+
+      - name: Build Helm dependencies
+        run: |
+          helm dependency build charts/sure
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p "${{ runner.temp }}/release-assets"
+          helm package charts/sure -d "${{ runner.temp }}/release-assets"
+
+      - name: Publish Helm chart to GitHub Pages
+        env:
+          GIT_USER_NAME: github-actions[bot]
+          GIT_USER_EMAIL: github-actions[bot]@users.noreply.github.com
+        run: |
+          git config user.name "$GIT_USER_NAME"
+          git config user.email "$GIT_USER_EMAIL"
+
+          git fetch origin gh-pages
+          git worktree add gh-pages origin/gh-pages
+
+          cp "${{ runner.temp }}/release-assets/"*.tgz gh-pages/
+          helm repo index gh-pages --url https://we-promise.github.io/sure --merge gh-pages/index.yaml
+
+          cd gh-pages
+          git add .
+          if git diff --cached --quiet; then
+            echo "No Helm chart updates to publish."
+            exit 0
+          fi
+          git commit -m "Release chart for ${{ github.ref_name }}"
+          git push origin HEAD:gh-pages
+
       - name: Download Android APK artifact
         uses: actions/download-artifact@v4.3.0
         with:
