@@ -420,4 +420,82 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     # Should NOT include the transfer even though it has positive amount
     assert_not filtered.map(&:id).include?(transfer_entry.transaction.id)
   end
+
+  test "transaction_type income excludes transfers" do
+    scope = @rule_scope
+
+    # Create a transfer inflow (negative amount)
+    transfer_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      amount: -500,
+      name: "Transfer from savings"
+    )
+    transfer_entry.transaction.update!(kind: "funds_movement")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "income"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Should NOT include the transfer even though it has negative amount
+    assert_not filtered.map(&:id).include?(transfer_entry.transaction.id)
+  end
+
+  test "transaction_type expense includes investment_contribution regardless of amount sign" do
+    scope = @rule_scope
+
+    # Create investment contribution with negative amount (inflow from provider)
+    contribution_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      amount: -1000,
+      name: "401k contribution"
+    )
+    contribution_entry.transaction.update!(kind: "investment_contribution")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "expense"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Should include investment_contribution even with negative amount
+    assert filtered.map(&:id).include?(contribution_entry.transaction.id)
+  end
+
+  test "transaction_type income excludes investment_contribution" do
+    scope = @rule_scope
+
+    # Create investment contribution with negative amount
+    contribution_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      amount: -1000,
+      name: "401k contribution"
+    )
+    contribution_entry.transaction.update!(kind: "investment_contribution")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "income"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Should NOT include investment_contribution even with negative amount
+    assert_not filtered.map(&:id).include?(contribution_entry.transaction.id)
+  end
 end

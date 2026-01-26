@@ -37,3 +37,9 @@ en:
         pending: Pending
         success: Success
         failed: Failed
+    condition_filters:
+      transaction_type:
+        income: Income
+        expense: Expense
+        transfer: Transfer
+        equal_to: Equal to

@@ -8,14 +8,14 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
 
   def options
     [
-      [ "Income", "income" ],
-      [ "Expense", "expense" ],
-      [ "Transfer", "transfer" ]
+      [ I18n.t("rules.condition_filters.transaction_type.income"), "income" ],
+      [ I18n.t("rules.condition_filters.transaction_type.expense"), "expense" ],
+      [ I18n.t("rules.condition_filters.transaction_type.transfer"), "transfer" ]
     ]
   end
 
   def operators
-    [ [ "Equal to", "=" ] ]
+    [ [ I18n.t("rules.condition_filters.transaction_type.equal_to"), "=" ] ]
   end
 
   def prepare(scope)
@@ -23,11 +23,16 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
   end
 
   def apply(scope, operator, value)
+    # Logic matches Transaction::Search#apply_type_filter for consistency
     case value
     when "income"
+      # Negative amounts, excluding transfers and investment_contribution
       scope.where("entries.amount < 0")
+           .where.not(kind: TRANSFER_KINDS + %w[investment_contribution])
     when "expense"
-      scope.where("entries.amount > 0").where.not(kind: TRANSFER_KINDS)
+      # Positive amounts OR investment_contribution (regardless of sign), excluding transfers
+      scope.where("entries.amount >= 0 OR transactions.kind = 'investment_contribution'")
+           .where.not(kind: TRANSFER_KINDS)
     when "transfer"
       scope.where(kind: TRANSFER_KINDS)
     else
