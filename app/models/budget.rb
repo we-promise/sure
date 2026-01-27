@@ -139,7 +139,7 @@ class Budget < ApplicationRecord
       current_period = family.current_custom_month_period
       start_date == current_period.start_date && end_date == current_period.end_date
     else
-      start_date == Date.today.beginning_of_month && end_date == Date.today.end_of_month
+      start_date == Date.current.beginning_of_month && end_date == Date.current.end_of_month
     end
   end
 
