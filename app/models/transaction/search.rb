@@ -105,7 +105,7 @@ class Transaction::Search
       # Remove "Uncategorized" from category names to query the database
       uncategorized_name = Category.uncategorized.name
       include_uncategorized = categories.include?(uncategorized_name)
-      real_categories = categories - [uncategorized_name]
+      real_categories = categories - [ uncategorized_name ]
 
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
