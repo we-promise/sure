@@ -150,6 +150,13 @@ class Transaction::SearchTest < ActiveSupport::TestCase
   end
 
   test "filtering for Uncategorized plus a real category returns both" do
+    # Create a travel category for testing
+    travel_category = @family.categories.create!(
+      name: "Travel",
+      color: "#3b82f6",
+      classification: "expense"
+    )
+
     # Create transactions with different categories
     food_transaction = create_transaction(
       account: @checking_account,
@@ -160,7 +167,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     travel_transaction = create_transaction(
       account: @checking_account,
       amount: 150,
-      category: categories(:travel)
+      category: travel_category
     )
 
     uncategorized = create_transaction(
