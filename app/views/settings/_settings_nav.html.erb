@@ -85,7 +85,7 @@ nav_sections = [
     </section>
   </nav>
   <nav class="space-y-4 overflow-x-auto md:hidden no-scrollbar overscroll-none" id="mobile-settings-nav" data-controller="preserve-scroll scroll-on-connect">
-    <ul class="flex space-y-1">
+    <ul class="flex flex-nowrap space-x-1">
       <li>
         <%= render DS::Link.new(
           text: t("settings.settings_nav_link_large.previous"),

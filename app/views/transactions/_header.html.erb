@@ -1,6 +1,6 @@
 <%# locals: (entry:) %>
 
-<div class="flex items-start justify-between gap-4">
+<div class="flex items-start justify-between gap-4" id="<%= dom_id(entry, :header) %>">
   <div>
     <h3 class="font-medium">
       <span class="text-2xl text-primary">
@@ -12,9 +12,18 @@
       </span>
     </h3>
 
-    <span class="text-sm text-secondary">
-      <%= I18n.l(entry.date, format: :long) %>
-    </span>
+    <div class="flex items-center gap-2">
+      <span class="text-sm text-secondary">
+        <%= I18n.l(entry.date, format: :long) %>
+      </span>
+
+      <% if entry.transaction.pending? %>
+        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
+          <%= icon "clock", size: "sm", color: "current" %>
+          <%= t("transactions.transaction.pending") %>
+        </span>
+      <% end %>
+    </div>
   </div>
 
   <div class="flex items-start gap-2">
@@ -28,6 +37,6 @@
       </span>
     <% end %>
 
-    <%= render DS::Button.new(variant: "icon", icon: "x", tabindex: "-1", data: { action: "DS--dialog#close" }) %>
+    <%= render DS::Button.new(variant: "icon", icon: "x", data: { action: "DS--dialog#close" }) %>
   </div>
 </div>
