@@ -58,7 +58,7 @@ class Security::PlanRestrictionTrackerTest < ActiveSupport::TestCase
     Security.record_plan_restriction(security_id: 1001, error_message: "available starting with Grow", provider: "TwelveData")
     Security.record_plan_restriction(security_id: 1002, error_message: "available starting with Pro", provider: "TwelveData")
 
-    restrictions = Security.plan_restrictions_for([1001, 1002, 9999], provider: "TwelveData")
+    restrictions = Security.plan_restrictions_for([ 1001, 1002, 9999 ], provider: "TwelveData")
 
     assert_equal 2, restrictions.keys.count
     assert_equal "Grow", restrictions[1001][:required_plan]
@@ -67,7 +67,7 @@ class Security::PlanRestrictionTrackerTest < ActiveSupport::TestCase
   end
 
   test "plan_restrictions_for returns empty hash for empty input" do
-    assert_equal({}, Security.plan_restrictions_for([], provider: "TwelveData"))
+    assert_equal({}, Security.plan_restrictions_for([ ], provider: "TwelveData"))
     assert_equal({}, Security.plan_restrictions_for(nil, provider: "TwelveData"))
   end
 
