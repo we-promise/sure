@@ -31,7 +31,6 @@ class Budget < ApplicationRecord
     def budget_date_valid?(date, family:)
       if family.uses_custom_month_start?
         budget_start = family.custom_month_start_for(date)
-        budget_end = family.custom_month_end_for(date)
         budget_start >= oldest_valid_budget_date(family) && budget_start <= family.custom_month_end_for(Date.current)
       else
         beginning_of_month = date.beginning_of_month
