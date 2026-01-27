@@ -23,10 +23,12 @@ namespace :demo_data do
   task default: :environment do
     start    = Time.now
     seed     = ENV.fetch("SEED", Random.new_seed)
+    clear_all = ActiveModel::Type::Boolean.new.cast(ENV["CLEAR_ALL"] || ENV["DEMO_DATA_CLEAR_ALL"])
     puts "🚀 Loading FULL demo data (seed=#{seed})…"
+    puts "🧨 CLEAR_ALL enabled: this will remove all data" if clear_all
 
     generator = Demo::Generator.new(seed: seed)
-    generator.generate_default_data!
+    generator.generate_default_data!(clear_all: clear_all)
 
     validate_demo_data
 

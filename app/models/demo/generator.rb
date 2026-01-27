@@ -26,18 +26,17 @@ class Demo::Generator
     # Array#sample, Kernel.rand in invoked libraries, etc.) remain
     # deterministic for the lifetime of this generator instance.
     srand(@seed)
+
+    @run_id = SecureRandom.uuid
   end
 
   # Expose the seed so callers can reproduce a run if necessary.
-  attr_reader :seed
+  attr_reader :seed, :run_id
 
   # Generate empty family - no financial data
   def generate_empty_data!(skip_clear: false)
     with_timing(__method__) do
-      unless skip_clear
-        puts "🧹 Clearing existing data..."
-        clear_all_data!
-      end
+      clear_existing_data! unless skip_clear
 
       puts "👥 Creating empty family..."
       create_family_and_users!("Demo Family", "user@example.com", onboarded: true, subscribed: true)
@@ -49,10 +48,7 @@ class Demo::Generator
   # Generate new user family - no financial data, needs onboarding
   def generate_new_user_data!(skip_clear: false)
     with_timing(__method__) do
-      unless skip_clear
-        puts "🧹 Clearing existing data..."
-        clear_all_data!
-      end
+      clear_existing_data! unless skip_clear
 
       puts "👥 Creating new user family..."
       create_family_and_users!("Demo Family", "user@example.com", onboarded: false, subscribed: false)
@@ -81,12 +77,11 @@ class Demo::Generator
   end
 
   # Generate comprehensive realistic demo data with multi-currency
-  def generate_default_data!(skip_clear: false, email: "user@example.com")
+  def generate_default_data!(skip_clear: false, email: "user@example.com", clear_all: false)
     if skip_clear
       puts "⏭️  Skipping data clearing (appending new family)..."
     else
-      puts "🧹 Clearing existing data..."
-      clear_all_data!
+      clear_existing_data!(clear_all: clear_all)
     end
 
     with_timing(__method__, max_seconds: 1000) do
@@ -131,12 +126,22 @@ class Demo::Generator
 
 
 
-    def clear_all_data!
-      family_count = Family.count
-      if family_count > 50
-        raise "Too much data to clear efficiently (#{family_count} families). Run 'rails db:reset' instead."
+    def clear_existing_data!(clear_all: false)
+      if clear_all
+        puts "🧨 CLEAR_ALL enabled: removing all data..."
+        ensure_clear_all_safe!
+        Demo::DataCleaner.new(include_all: true).destroy_everything!
+      else
+        puts "🧹 Clearing prior demo data..."
+        Demo::DataCleaner.new.destroy_demo_data!
       end
-      Demo::DataCleaner.new.destroy_everything!
+    end
+
+    def ensure_clear_all_safe!
+      family_count = Family.count
+      return if family_count <= 50
+
+      raise "Too much data to clear efficiently (#{family_count} families). Run 'rails db:reset' instead."
     end
 
     def ensure_admin_user!(family, email)
@@ -165,7 +170,8 @@ class Demo::Generator
         last_name: "Bogle",
         role: "admin",
         password: "Password1!",
-        onboarded_at: onboarded ? Time.current : nil
+        onboarded_at: onboarded ? Time.current : nil,
+        preferences: demo_preferences
       )
 
       # Member user
@@ -175,10 +181,18 @@ class Demo::Generator
         last_name: "Bogle",
         role: "member",
         password: "Password1!",
-        onboarded_at: onboarded ? Time.current : nil
+        onboarded_at: onboarded ? Time.current : nil,
+        preferences: demo_preferences
       )
 
       family
+    end
+
+    def demo_preferences
+      {
+        Demo::DataCleaner::DEMO_GENERATED_KEY => true,
+        "demo_run_id" => run_id
+      }
     end
 
     def create_realistic_categories!(family)
