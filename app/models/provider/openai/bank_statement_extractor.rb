@@ -22,7 +22,9 @@ class Provider::Openai::BankStatementExtractor
       Rails.logger.info("BankStatementExtractor: Processing chunk #{index + 1}/#{chunks.size}")
       result = process_chunk(chunk, index == 0)
 
-      all_transactions.concat(result[:transactions] || [])
+      # Tag transactions with chunk index for deduplication
+      tagged_transactions = (result[:transactions] || []).map { |t| t.merge(chunk_index: index) }
+      all_transactions.concat(tagged_transactions)
 
       if index == 0
         metadata = {
@@ -127,7 +129,21 @@ class Provider::Openai::BankStatementExtractor
     end
 
     def deduplicate_transactions(transactions)
-      transactions.uniq { |t| [ t[:date], t[:amount], t[:name] ] }
+      # Only deduplicate transactions that appear in consecutive chunks
+      # (likely chunking artifacts). Keep all transactions within same chunk.
+      seen = Set.new
+      transactions.select do |t|
+        # Create key without chunk_index for deduplication
+        key = [ t[:date], t[:amount], t[:name], t[:chunk_index] ]
+
+        # Check if we've seen this exact transaction in a different chunk
+        duplicate = seen.any? do |prev_key|
+          prev_key[0..2] == key[0..2] && (prev_key[3] - key[3]).abs <= 1
+        end
+
+        seen << key
+        !duplicate
+      end.map { |t| t.except(:chunk_index) }
     end
 
     def normalize_transactions(transactions)
