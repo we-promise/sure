@@ -17,11 +17,14 @@ class PdfImport < Import
     provider = Provider::Registry.get_provider(:openai)
     raise "AI provider not configured" unless provider
 
-    result = provider.process_pdf(
+    response = provider.process_pdf(
       pdf_content: pdf_file_content,
       family: family
     )
 
+    raise response.error.message unless response.success?
+
+    result = response.data
     update!(
       ai_summary: result.summary,
       document_type: result.document_type
@@ -61,11 +64,9 @@ class PdfImport < Import
     []
   end
 
-  private
+  def pdf_file_content
+    return nil unless pdf_file.attached?
 
-    def pdf_file_content
-      return nil unless pdf_file.attached?
-
-      pdf_file.download
-    end
+    pdf_file.download
+  end
 end
