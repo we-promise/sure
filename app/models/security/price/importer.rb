@@ -111,7 +111,7 @@ class Security::Price::Importer
         )
 
         if response.success?
-          Security.clear_plan_restriction(security.id)
+          Security.clear_plan_restriction(security.id, provider: security_provider.class.name.demodulize)
           response.data.index_by(&:date)
         else
           error_message = response.error.message
