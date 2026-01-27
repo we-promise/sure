@@ -47,6 +47,11 @@ class Transaction < ApplicationRecord
     SQL
   }
 
+  # Family-scoped query for Enrichable#clear_ai_cache
+  def self.family_scope(family)
+    joins(entry: :account).where(accounts: { family_id: family.id })
+  end
+
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     funds_movement? || cc_payment? || loan_payment?
