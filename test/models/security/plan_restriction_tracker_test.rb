@@ -87,23 +87,29 @@ class Security::PlanRestrictionTrackerTest < ActiveSupport::TestCase
   end
 
   test "restrictions are scoped by provider" do
+    # Record restriction for TwelveData
     Security.record_plan_restriction(security_id: 999, error_message: "available starting with Grow", provider: "TwelveData")
-    Security.record_plan_restriction(security_id: 999, error_message: "available starting with Pro", provider: "Yahoo")
+
+    # Simulate a different provider by directly writing to cache (tests cache key scoping)
+    Rails.cache.write("security_plan_restriction/otherprovider/999", { required_plan: "Pro", provider: "OtherProvider" }, expires_in: 7.days)
 
     twelve_data_restriction = Security.plan_restriction_for(999, provider: "TwelveData")
-    yahoo_restriction = Security.plan_restriction_for(999, provider: "Yahoo")
+    other_restriction = Security.plan_restriction_for(999, provider: "OtherProvider")
 
     assert_equal "Grow", twelve_data_restriction[:required_plan]
-    assert_equal "Pro", yahoo_restriction[:required_plan]
+    assert_equal "Pro", other_restriction[:required_plan]
   end
 
   test "clearing restriction for one provider does not affect another" do
+    # Record restriction for TwelveData
     Security.record_plan_restriction(security_id: 999, error_message: "available starting with Grow", provider: "TwelveData")
-    Security.record_plan_restriction(security_id: 999, error_message: "available starting with Pro", provider: "Yahoo")
+
+    # Simulate another provider by directly writing to cache
+    Rails.cache.write("security_plan_restriction/otherprovider/999", { required_plan: "Pro", provider: "OtherProvider" }, expires_in: 7.days)
 
     Security.clear_plan_restriction(999, provider: "TwelveData")
 
     assert_nil Security.plan_restriction_for(999, provider: "TwelveData")
-    assert_not_nil Security.plan_restriction_for(999, provider: "Yahoo")
+    assert_not_nil Security.plan_restriction_for(999, provider: "OtherProvider")
   end
 end
