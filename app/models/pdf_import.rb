@@ -22,7 +22,10 @@ class PdfImport < Import
       family: family
     )
 
-    raise response.error.message unless response.success?
+    unless response.success?
+      error_message = response.error&.message || "Unknown PDF processing error"
+      raise error_message
+    end
 
     result = response.data
     update!(

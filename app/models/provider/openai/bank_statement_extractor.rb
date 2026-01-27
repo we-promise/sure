@@ -1,3 +1,5 @@
+require "set"
+
 class Provider::Openai::BankStatementExtractor
   MAX_CHARS_PER_CHUNK = 3000
   attr_reader :client, :pdf_content, :model
@@ -75,6 +77,14 @@ class Provider::Openai::BankStatementExtractor
       current_size = 0
 
       pages.each do |page_text|
+        if page_text.length > MAX_CHARS_PER_CHUNK
+          chunks << current_chunk.join("\n\n") if current_chunk.any?
+          current_chunk = []
+          current_size = 0
+          chunks << page_text
+          next
+        end
+
         if current_size + page_text.length > MAX_CHARS_PER_CHUNK && current_chunk.any?
           chunks << current_chunk.join("\n\n")
           current_chunk = []
@@ -124,7 +134,7 @@ class Provider::Openai::BankStatementExtractor
       cleaned = content.gsub(%r{^```json\s*}i, "").gsub(/```\s*$/, "").strip
       JSON.parse(cleaned)
     rescue JSON::ParserError => e
-      Rails.logger.error("BankStatementExtractor JSON parse error: #{e.message}\nContent: #{content[0..500]}")
+      Rails.logger.error("BankStatementExtractor JSON parse error: #{e.message} (content_length=#{content.to_s.bytesize})")
       { "transactions" => [] }
     end
 

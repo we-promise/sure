@@ -137,6 +137,27 @@ class Provider::Openai < Provider
     end
   end
 
+  def extract_bank_statement(pdf_content:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.extract_bank_statement",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = BankStatementExtractor.new(
+        client: client,
+        pdf_content: pdf_content,
+        model: effective_model
+      ).extract
+
+      trace&.update(output: { transaction_count: result[:transactions].size })
+
+      result
+    end
+  end
+
   def chat_response(
     prompt,
     model:,
