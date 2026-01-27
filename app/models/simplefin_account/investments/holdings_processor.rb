@@ -63,8 +63,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
           0
         end
 
-        # Use best-known date: created -> updated_at -> as_of -> date -> today
-        holding_date = parse_holding_date(any_of(simplefin_holding, %w[created updated_at as_of date])) || Date.current
+        # SimpleFIN holdings represent a current snapshot, not historical positions.
+        # Always use today's date regardless of the `created` timestamp (which is when
+        # the holding was first seen by SimpleFIN, not when we observed it).
+        holding_date = Date.current
 
         # Skip zero positions with no value to avoid invisible rows
         next if qty.to_d.zero? && computed_amount.to_d.zero?

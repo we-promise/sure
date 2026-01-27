@@ -1,8 +1,9 @@
 class SimplefinAccount::Transactions::Processor
-  attr_reader :simplefin_account
+  attr_reader :simplefin_account, :skipped_entries
 
   def initialize(simplefin_account)
     @simplefin_account = simplefin_account
+    @skipped_entries = []
   end
 
   def process
@@ -24,12 +25,16 @@ class SimplefinAccount::Transactions::Processor
     processed_count = 0
     error_count = 0
 
+    # Use a shared adapter to accumulate skipped entries across all transactions
+    adapter = Account::ProviderImportAdapter.new(acct) if acct
+
     # Each entry is processed inside a transaction, but to avoid locking up the DB when
     # there are hundreds or thousands of transactions, we process them individually.
     transactions.each do |transaction_data|
       SimplefinEntry::Processor.new(
         transaction_data,
-        simplefin_account: simplefin_account
+        simplefin_account: simplefin_account,
+        import_adapter: adapter
       ).process
       processed_count += 1
     rescue => e
@@ -39,7 +44,10 @@ class SimplefinAccount::Transactions::Processor
       Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
     end
 
-    Rails.logger.info "SimplefinAccount::Transactions::Processor - Completed for simplefin_account #{simplefin_account.id}: #{processed_count} processed, #{error_count} errors"
+    # Collect skipped entries from shared adapter
+    @skipped_entries = adapter&.skipped_entries || []
+
+    Rails.logger.info "SimplefinAccount::Transactions::Processor - Completed for simplefin_account #{simplefin_account.id}: #{processed_count} processed, #{error_count} errors, #{@skipped_entries.size} skipped (protected)"
   end
 
   private

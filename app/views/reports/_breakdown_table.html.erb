@@ -1,0 +1,61 @@
+<%# Renders a breakdown table for income or expense groups %>
+<%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction %>
+
+<%
+  color_class = type == :income ? "text-success" : "text-destructive"
+  icon_name = type == :income ? "trending-up" : "trending-down"
+  title_key = type == :income ? "reports.transactions_breakdown.table.income" : "reports.transactions_breakdown.table.expense"
+%>
+
+<div>
+  <div class="text-large mb-4 flex items-center gap-2 text-lg">
+    <%= icon(icon_name, class: "w-5 h-5") %>
+    <span><%= t(title_key) %>:</span>
+    <span class="font-medium text-secondary <%= color_class %>"> <%= Money.new(total, Current.family.currency).format %></span>
+  </div>
+
+  <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+    <div class="w-max sm:w-full">
+      <div class="grid grid-cols-4 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
+        <div class="col-span-2 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.category") %></div>
+        <div class="col-span-1 text-right font-medium text-secondary">
+          <%= link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do %>
+            <%= t("reports.transactions_breakdown.table.amount") %>
+            <% if current_sort_by == "amount" %>
+              <%= icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") %>
+            <% end %>
+          <% end %>
+        </div>
+        <div class="col-span-1 text-right font-medium text-secondary"><%= t("reports.transactions_breakdown.table.percentage") %></div>
+      </div>
+
+      <div class="bg-container rounded-lg shadow-border-xs">
+        <% groups.each_with_index do |group, idx| %>
+          <%= render "reports/category_row",
+            item: group,
+            total: total,
+            color_class: color_class,
+            level: :category
+          %>
+          <% if idx < group.size - 1 %>
+            <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+          <% end %>
+          <%# Render subcategories if present %>
+          <% if group[:subcategories].present? && group[:subcategories].any? %>
+            <% group[:subcategories].each_with_index do |subcategory, idx| %>
+              <%= render "reports/category_row",
+                item: subcategory,
+                total: total,
+                color_class: color_class,
+                level: :subcategory
+              %>
+            <% end %>
+            <% if idx < group.size - 1 %>
+              <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

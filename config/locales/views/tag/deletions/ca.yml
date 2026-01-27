@@ -8,8 +8,8 @@ ca:
         delete_and_leave_uncategorized: Elimina "%{tag_name}"
         delete_and_recategorize: Elimina "%{tag_name}" i assigna una nova etiqueta
         delete_tag: Vols eliminar l'etiqueta?
-        explanation: "%{tag_name} s'eliminarà de les transaccions i altres entitats etiquetables. 
-        En comptes de deixar-les sense etiqueta, pots assignar-ne una de nova a continuació."
+        explanation: "%{tag_name} s'eliminarà de les transaccions i altres entitats
+          etiquetables. En comptes de deixar-les sense etiqueta, pots assignar-ne
+          una de nova a continuació."
         replacement_tag_prompt: Selecciona una etiqueta
         tag: Etiqueta
-

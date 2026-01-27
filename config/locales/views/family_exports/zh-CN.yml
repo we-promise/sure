@@ -1,7 +1,31 @@
 ---
 zh-CN:
   family_exports:
-    list:
-      complete: 已完成
-      failed: 已失败
-      in_progress: 进行中
+    access_denied: 访问被拒绝
+    create:
+      success: 导出已开始。您很快就能下载它。
+    delete_confirmation: 确定要删除此导出吗？此操作无法撤销。
+    delete_failed_confirmation: 确定要删除此失败的导出吗？
+    destroy:
+      success: 导出已成功删除
+    export_not_ready: 导出尚未准备好下载
+    exporting: 正在导出...
+    index:
+      title: 导出
+      new: 新建导出
+    table:
+      title: 导出
+      header:
+        date: 日期
+        filename: 文件名
+        status: 状态
+        actions: 操作
+      row:
+        status:
+          complete: 已完成
+          failed: 已失败
+          in_progress: 进行中
+        actions:
+          delete: 删除
+          download: 下载
+      empty: 暂无导出记录

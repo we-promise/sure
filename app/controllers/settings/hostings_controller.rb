@@ -25,6 +25,7 @@ class Settings::HostingsController < ApplicationController
     if @show_twelve_data_settings
       twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
       @twelve_data_usage = twelve_data_provider&.usage
+      @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
     end
 
     if @show_yahoo_finance_settings
@@ -44,6 +45,10 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:brand_fetch_client_id)
       Setting.brand_fetch_client_id = hosting_params[:brand_fetch_client_id]
+    end
+
+    if hosting_params.key?(:brand_fetch_high_res_logos)
+      Setting.brand_fetch_high_res_logos = hosting_params[:brand_fetch_high_res_logos] == "1"
     end
 
     if hosting_params.key?(:twelve_data_api_key)
@@ -126,7 +131,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
     end
 
     def ensure_admin

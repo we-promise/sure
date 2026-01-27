@@ -77,21 +77,40 @@
 
     <%# Investment Activity Summary %>
     <% totals = investment_statement.totals(period: period) %>
-    <% if totals.trades_count > 0 %>
-      <div class="px-4 pt-2">
-        <p class="text-xs text-secondary uppercase font-medium mb-2"><%= t(".period_activity", period: period.label) %></p>
-        <div class="flex gap-4 text-sm">
-          <div>
-            <span class="text-secondary"><%= t(".contributions") %>:</span>
-            <span class="font-medium text-primary"><%= format_money(totals.contributions) %></span>
-          </div>
-          <div>
-            <span class="text-secondary"><%= t(".withdrawals") %>:</span>
-            <span class="font-medium text-primary"><%= format_money(totals.withdrawals) %></span>
-          </div>
-          <div>
-            <span class="text-secondary"><%= t(".trades") %>:</span>
-            <span class="font-medium text-primary"><%= totals.trades_count %></span>
+    <% if totals.trades_count > 0 || totals.contributions.to_f > 0 || totals.withdrawals.to_f > 0 %>
+      <div class="bg-container-inset rounded-xl p-1 mx-4">
+        <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
+          <%= t(".period_activity", period: period.label) %>
+        </div>
+        <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
+          <div class="p-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                <%= icon "trending-up", size: "sm", color: "green" %>
+              </div>
+              <div>
+                <p class="text-xs text-secondary"><%= t(".contributions") %></p>
+                <p class="font-medium text-green-600"><%= format_money(totals.contributions) %></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <%= icon "trending-down", size: "sm", color: "orange" %>
+              </div>
+              <div>
+                <p class="text-xs text-secondary"><%= t(".withdrawals") %></p>
+                <p class="font-medium text-orange-600"><%= format_money(totals.withdrawals) %></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <%= icon "arrow-left-right", size: "sm", color: "blue" %>
+              </div>
+              <div>
+                <p class="text-xs text-secondary"><%= t(".trades") %></p>
+                <p class="font-medium text-primary"><%= totals.trades_count %></p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -97,8 +97,8 @@ ca:
         one: "%{count} segon"
         other: "%{count} segons"
       x_years:
-        one: "%{count} year"
-        other: "%{count} years"
+        one: "%{count} any"
+        other: "%{count} anys"
     prompts:
       day: dia
       hour: hora
@@ -106,6 +106,9 @@ ca:
       month: mes
       second: segon
       year: any
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -118,6 +121,7 @@ ca:
       exclusion: està reservat
       greater_than: ha de ser més gran que %{count}
       greater_than_or_equal_to: ha de ser més gran o igual a %{count}
+      in: ha d'estar entre %{count}
       inclusion: no està inclós a la llista
       invalid: no és vàlid
       less_than: ha de ser menor que %{count}
@@ -154,16 +158,12 @@ ca:
   number:
     currency:
       format:
-        delimiter: "."
-        format: "%n %u"
-        precision: 2
-        separator: ","
         significant: false
         strip_insignificant_zeros: false
-        unit: "€"
     format:
       delimiter: "."
       precision: 3
+      round_mode: default
       separator: ","
       significant: false
       strip_insignificant_zeros: false

@@ -6,7 +6,7 @@
       <% if pagy.prev %>
         <%= link_to pagy_url_for(pagy, pagy.prev),
               data: { turbo_frame: :_top },
-              class: "inline-flex items-center p-2 text-sm font-medium text-secondary bg-container-inset hover:border-secondary hover:text-secondary" do %>
+              class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
           <%= icon("chevron-left") %>
         <% end %>
       <% else %>
@@ -50,7 +50,7 @@
   </div>
   <div class="flex items-center gap-4">
     <%= select_tag :per_page,
-                   options_for_select(["10", "20", "30", "50"], pagy.limit),
+                   options_for_select(["10", "20", "30", "50", "100"], pagy.limit),
                    data: { controller: "selectable-link" },
                    class: "py-1.5 pr-8 text-sm text-primary font-medium bg-container-inset border border-secondary rounded-lg focus:border-secondary focus:ring-secondary focus-visible:ring-secondary" %>
   </div>

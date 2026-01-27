@@ -44,26 +44,30 @@ de:
         instructions_5: Keine Kommas, Währungssymbole oder Klammern in Zahlen verwenden.
         title: Daten importieren
   imports:
-    empty:
-      message: Noch keine Importe vorhanden.
-      new: Neuer Import
-    import:
-      complete: Abgeschlossen
-      delete: Löschen
-      failed: Fehlgeschlagen
-      in_progress: Wird ausgeführt
-      label: "%{type}: %{datetime}"
-      revert_failed: Rückgängig machen fehlgeschlagen
-      reverting: Wird rückgängig gemacht
-      uploading: Zeilen werden verarbeitet
-      view: Anzeigen
     index:
-      imports: Importe
+      title: Importe
       new: Neuer Import
-      title: Import/Export
-      exports: Exporte
-      new_export: Neuer Export
-      no_exports: Noch keine Exporte vorhanden.
+    table:
+      title: Importe
+      header:
+        date: Datum
+        operation: Operation
+        status: Status
+        actions: Aktionen
+      row:
+        status:
+          in_progress: Wird ausgeführt
+          uploading: Zeilen werden verarbeitet
+          reverting: Wird rückgängig gemacht
+          revert_failed: Rückgängig machen fehlgeschlagen
+          complete: Abgeschlossen
+          failed: Fehlgeschlagen
+        actions:
+          revert: Zurücksetzen
+          confirm_revert: Dadurch werden importierte Transaktionen gelöscht, Sie können Ihre Daten aber jederzeit wieder einsehen und erneut importieren.
+          delete: Löschen
+          view: Anzeigen
+      empty: Noch keine Importe vorhanden.
     new:
       description: Du kannst verschiedene Datentypen manuell über CSV importieren oder eine unserer Importvorlagen wie Mint verwenden.
       import_accounts: Konten importieren

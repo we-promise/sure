@@ -2,6 +2,6 @@
 ca:
   invite_codes:
     index:
-      invite_code_description: Genera un nou codi per veure'l aquí. Els codis generats que s'hagin utilitzat ja no es mostraran.
+      invite_code_description: Genera un nou codi per veure'l aquí. Els codis generats
+        que s'hagin utilitzat ja no es mostraran.
       no_invite_codes: No hi ha codis per mostrar
-

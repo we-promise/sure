@@ -1,0 +1,14 @@
+---
+nl:
+  entries:
+    create:
+      success: Item aangemaakt
+    destroy:
+      success: Item verwijderd
+    empty:
+      description: Probeer een item toe te voegen, filters te bewerken of uw zoekopdracht te verfijnen
+      title: Geen items gevonden
+    loading:
+      loading: Items laden...
+    update:
+      success: Item bijgewerkt

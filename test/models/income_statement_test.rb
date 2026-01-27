@@ -286,7 +286,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1050, @family.currency), totals.expense_money # 900 + 150
   end
 
-  test "excludes investment_contribution transactions from income statement" do
+  test "includes investment_contribution transactions as expenses in income statement" do
     # Create a transfer to investment account (marked as investment_contribution)
     investment_contribution = create_transaction(
       account: @checking_account,
@@ -298,9 +298,263 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # investment_contribution should be excluded (it's in the exclusion list)
+    # investment_contribution should be included as an expense (visible in cashflow)
+    assert_equal 5, totals.transactions_count # Original 4 + investment_contribution
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000 investment
+  end
+
+  test "includes provider-imported investment_contribution inflows as expenses" do
+    # Simulates a 401k contribution that was auto-deducted from payroll
+    # Provider imports this as an inflow to the investment account (negative amount)
+    # but it should still appear as an expense in cashflow
+
+    investment_account = @family.accounts.create!(
+      name: "401k",
+      currency: @family.currency,
+      balance: 10000,
+      accountable: Investment.new
+    )
+
+    # Provider-imported contribution shows as inflow (negative amount) to the investment account
+    # kind is investment_contribution, which should be treated as expense regardless of sign
+    provider_contribution = create_transaction(
+      account: investment_account,
+      amount: -500, # Negative = inflow to account
+      category: nil,
+      kind: "investment_contribution"
+    )
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # The provider-imported contribution should appear as an expense
+    assert_equal 5, totals.transactions_count # Original 4 + provider contribution
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(1400, @family.currency), totals.expense_money # 900 + 500 (abs of -500)
+  end
+
+  # Tax-Advantaged Account Exclusion Tests
+  test "excludes transactions from tax-advantaged Roth IRA accounts" do
+    # Create a Roth IRA (tax-exempt) investment account
+    roth_ira = @family.accounts.create!(
+      name: "Roth IRA",
+      currency: @family.currency,
+      balance: 50000,
+      accountable: Investment.new(subtype: "roth_ira")
+    )
+
+    # Create a dividend transaction in the Roth IRA
+    # This should NOT appear in budget totals
+    create_transaction(account: roth_ira, amount: -200, category: @income_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # The Roth IRA dividend should be excluded
     assert_equal 4, totals.transactions_count # Only original 4 transactions
     assert_equal Money.new(1000, @family.currency), totals.income_money
     assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "excludes transactions from tax-deferred 401k accounts" do
+    # Create a 401k (tax-deferred) investment account
+    account_401k = @family.accounts.create!(
+      name: "Company 401k",
+      currency: @family.currency,
+      balance: 100000,
+      accountable: Investment.new(subtype: "401k")
+    )
+
+    # Create a dividend transaction in the 401k
+    # This should NOT appear in budget totals
+    create_transaction(account: account_401k, amount: -500, category: @income_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # The 401k dividend should be excluded
+    assert_equal 4, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "includes transactions from taxable brokerage accounts" do
+    # Create a taxable brokerage account
+    brokerage = @family.accounts.create!(
+      name: "Brokerage",
+      currency: @family.currency,
+      balance: 25000,
+      accountable: Investment.new(subtype: "brokerage")
+    )
+
+    # Create a dividend transaction in the taxable account
+    # This SHOULD appear in budget totals
+    create_transaction(account: brokerage, amount: -300, category: @income_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # The brokerage dividend SHOULD be included
+    assert_equal 5, totals.transactions_count
+    assert_equal Money.new(1300, @family.currency), totals.income_money # 1000 + 300
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "includes transactions from default taxable crypto accounts" do
+    # Create a crypto account (default taxable)
+    crypto_account = @family.accounts.create!(
+      name: "Coinbase",
+      currency: @family.currency,
+      balance: 5000,
+      accountable: Crypto.new
+    )
+
+    # Create a transaction in the crypto account
+    create_transaction(account: crypto_account, amount: 100, category: @groceries_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # Crypto transaction SHOULD be included (default is taxable)
+    assert_equal 5, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.expense_money # 900 + 100
+  end
+
+  test "excludes transactions from tax-deferred crypto accounts" do
+    # Create a crypto account in a tax-deferred retirement account
+    crypto_in_ira = @family.accounts.create!(
+      name: "Crypto IRA",
+      currency: @family.currency,
+      balance: 10000,
+      accountable: Crypto.new(tax_treatment: "tax_deferred")
+    )
+
+    # Create a transaction in the tax-deferred crypto account
+    create_transaction(account: crypto_in_ira, amount: 250, category: @groceries_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # The tax-deferred crypto transaction should be excluded
+    assert_equal 4, totals.transactions_count
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "family.tax_advantaged_account_ids returns correct accounts" do
+    # Create various accounts
+    roth_ira = @family.accounts.create!(
+      name: "Roth IRA",
+      currency: @family.currency,
+      balance: 50000,
+      accountable: Investment.new(subtype: "roth_ira")
+    )
+
+    traditional_ira = @family.accounts.create!(
+      name: "Traditional IRA",
+      currency: @family.currency,
+      balance: 30000,
+      accountable: Investment.new(subtype: "ira")
+    )
+
+    brokerage = @family.accounts.create!(
+      name: "Brokerage",
+      currency: @family.currency,
+      balance: 25000,
+      accountable: Investment.new(subtype: "brokerage")
+    )
+
+    crypto_taxable = @family.accounts.create!(
+      name: "Crypto Taxable",
+      currency: @family.currency,
+      balance: 5000,
+      accountable: Crypto.new
+    )
+
+    crypto_deferred = @family.accounts.create!(
+      name: "Crypto IRA",
+      currency: @family.currency,
+      balance: 10000,
+      accountable: Crypto.new(tax_treatment: "tax_deferred")
+    )
+
+    # Clear the memoized value
+    @family.instance_variable_set(:@tax_advantaged_account_ids, nil)
+
+    tax_advantaged_ids = @family.tax_advantaged_account_ids
+
+    # Should include Roth IRA, Traditional IRA, and tax-deferred Crypto
+    assert_includes tax_advantaged_ids, roth_ira.id
+    assert_includes tax_advantaged_ids, traditional_ira.id
+    assert_includes tax_advantaged_ids, crypto_deferred.id
+
+    # Should NOT include taxable accounts
+    refute_includes tax_advantaged_ids, brokerage.id
+    refute_includes tax_advantaged_ids, crypto_taxable.id
+
+    # Should NOT include non-investment accounts
+    refute_includes tax_advantaged_ids, @checking_account.id
+    refute_includes tax_advantaged_ids, @credit_card_account.id
+  end
+
+  test "returns zero totals when family has only tax-advantaged accounts" do
+    # Create a fresh family with ONLY tax-advantaged accounts
+    family_only_retirement = Family.create!(
+      name: "Retirement Only Family",
+      currency: "USD",
+      locale: "en",
+      date_format: "%Y-%m-%d"
+    )
+
+    # Create a 401k account (tax-deferred)
+    retirement_account = family_only_retirement.accounts.create!(
+      name: "401k",
+      currency: "USD",
+      balance: 100000,
+      accountable: Investment.new(subtype: "401k")
+    )
+
+    # Create a Roth IRA account (tax-exempt)
+    roth_account = family_only_retirement.accounts.create!(
+      name: "Roth IRA",
+      currency: "USD",
+      balance: 50000,
+      accountable: Investment.new(subtype: "roth_ira")
+    )
+
+    # Add transactions to these accounts (would normally be contributions/trades)
+    # Using standard kind to simulate transactions that would normally appear
+    Entry.create!(
+      account: retirement_account,
+      name: "401k Contribution",
+      date: 5.days.ago,
+      amount: 500,
+      currency: "USD",
+      entryable: Transaction.new(kind: "standard")
+    )
+
+    Entry.create!(
+      account: roth_account,
+      name: "Roth IRA Contribution",
+      date: 3.days.ago,
+      amount: 200,
+      currency: "USD",
+      entryable: Transaction.new(kind: "standard")
+    )
+
+    # Verify the accounts are correctly identified as tax-advantaged
+    tax_advantaged_ids = family_only_retirement.tax_advantaged_account_ids
+    assert_equal 2, tax_advantaged_ids.count
+    assert_includes tax_advantaged_ids, retirement_account.id
+    assert_includes tax_advantaged_ids, roth_account.id
+
+    # Get income statement totals
+    income_statement = IncomeStatement.new(family_only_retirement)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    # All transactions should be excluded, resulting in zero totals
+    assert_equal 0, totals.transactions_count
+    assert_equal Money.new(0, "USD"), totals.income_money
+    assert_equal Money.new(0, "USD"), totals.expense_money
   end
 end

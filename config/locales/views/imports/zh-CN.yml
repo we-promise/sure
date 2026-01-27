@@ -52,26 +52,30 @@ zh-CN:
         instructions_5: 数字中请勿包含逗号、货币符号或括号。
         title: 导入数据
   imports:
-    empty:
-      message: 暂无导入记录。
-      new: 新建导入
-    import:
-      complete: 已完成
-      delete: 删除
-      failed: 已失败
-      in_progress: 进行中
-      label: "%{type}：%{datetime}"
-      revert_failed: 回滚失败
-      reverting: 回滚中
-      uploading: 处理行数据中
-      view: 查看
     index:
-      exports: 导出记录
-      imports: 导入记录
+      title: 导入记录
       new: 新建导入
-      new_export: 新建导出
-      no_exports: 暂无导出记录
-      title: 导入/导出管理
+    table:
+      title: 导入记录
+      header:
+        date: 日期
+        operation: 操作
+        status: 状态
+        actions: 操作
+      row:
+        status:
+          in_progress: 进行中
+          uploading: 处理行数据中
+          reverting: 回滚中
+          revert_failed: 回滚失败
+          complete: 已完成
+          failed: 已失败
+        actions:
+          revert: 恢复
+          confirm_revert: 这将删除已导入的交易记录，但您仍然可以随时查看和重新导入您的数据。
+          delete: 删除
+          view: 查看
+      empty: 暂无导入记录。
     new:
       description: 您可以通过 CSV 手动导入多种类型数据，或使用我们的导入模板（如 Mint 格式）。
       import_accounts: 导入账户

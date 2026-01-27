@@ -48,26 +48,30 @@ es:
         instructions_5: Sin comas, sin símbolos de moneda y sin paréntesis en los números.
         title: Importa tus datos
   imports:
-    empty:
-      message: Aún no hay importaciones.
-      new: Nueva importación
-    import:
-      complete: Completado
-      delete: Eliminar
-      failed: Fallido
-      in_progress: En progreso
-      label: "%{type}: %{datetime}"
-      revert_failed: Reversión fallida
-      reverting: Revirtiendo
-      uploading: Procesando filas
-      view: Ver
     index:
-      imports: Importaciones
+      title: Importaciones
       new: Nueva importación
-      title: Importar/Exportar
-      exports: Exportaciones
-      new_export: Nueva exportación
-      no_exports: Aún no hay exportaciones.
+    table:
+      title: Imports
+      header:
+        date: Fecha
+        operation: Operation
+        status: Estado
+        actions: Acciones
+      row:
+        status:
+          in_progress: En progreso
+          uploading: Procesando filas
+          reverting: Revirtiendo
+          revert_failed: Reversión fallida
+          complete: Completado
+          failed: Fallido
+        actions:
+          revert: Revertir
+          confirm_revert: Esto eliminará las transacciones que se importaron, pero aún podrá revisar y volver a importar sus datos en cualquier momento.
+          delete: Eliminar
+          view: Ver
+      empty: Aún no hay importaciones.
     new:
       description: Puedes importar manualmente varios tipos de datos mediante CSV o usar una de nuestras plantillas de importación como Mint.
       import_accounts: Importar cuentas

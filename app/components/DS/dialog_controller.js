@@ -7,6 +7,7 @@ export default class extends Controller {
   static values = {
     autoOpen: { type: Boolean, default: false },
     reloadOnClose: { type: Boolean, default: false },
+    disableClickOutside: { type: Boolean, default: false },
   };
 
   connect() {
@@ -18,6 +19,7 @@ export default class extends Controller {
   
   // If the user clicks anywhere outside of the visible content, close the dialog
   clickOutside(e) {
+    if (this.disableClickOutsideValue) return;
     if (!this.contentTarget.contains(e.target)) {
       this.close();
     }

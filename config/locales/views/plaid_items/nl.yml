@@ -1,0 +1,28 @@
+---
+nl:
+  plaid_items:
+    create:
+      success: Account succesvol gekoppeld. Wacht tot accounts zijn gesynchroniseerd.
+    destroy:
+      success: Accounts ingepland voor verwijdering.
+    plaid_item:
+      add_new: Nieuwe verbinding toevoegen
+      confirm_accept: Instelling verwijderen
+      confirm_body: Dit verwijdert permanent alle accounts in deze groep en alle bijbehorende gegevens.
+      confirm_title: Instelling verwijderen?
+      connection_lost: Verbinding verloren
+      connection_lost_description: Deze verbinding is niet meer geldig. U moet deze verbinding verwijderen en opnieuw toevoegen om door te gaan met het synchroniseren van gegevens.
+      delete: Verwijderen
+      error: Fout opgetreden tijdens synchroniseren van gegevens
+      no_accounts_description: We konden geen accounts laden van deze financiële instelling.
+      no_accounts_title: Geen accounts gevonden
+      requires_update: Opnieuw verbinden
+      status: Laatst gesynchroniseerd %{timestamp} geleden
+      status_never: Vereist gegevenssynchronisatie
+      syncing: Synchroniseren...
+      update: Bijwerken
+    select_existing_account:
+      title: "%{account_name} koppelen aan Plaid"
+      description: Selecteer een Plaid account om te koppelen aan uw bestaande account
+      cancel: Annuleren
+      link_account: Account koppelen

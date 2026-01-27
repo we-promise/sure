@@ -6,7 +6,7 @@ module SettingsHelper
     { name: "Preferences", path: :settings_preferences_path },
     { name: "Profile Info", path: :settings_profile_path },
     { name: "Security", path: :settings_security_path },
-    { name: "Billing", path: :settings_billing_path, condition: :not_self_hosted? },
+    { name: "Payment", path: :settings_payment_path, condition: :not_self_hosted? },
     # Transactions section
     { name: "Categories", path: :categories_path },
     { name: "Tags", path: :tags_path },
@@ -20,6 +20,7 @@ module SettingsHelper
     { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
     { name: "Providers", path: :settings_providers_path, condition: :admin_user? },
     { name: "Imports", path: :imports_path, condition: :admin_user? },
+    { name: "Exports", path: :family_exports_path, condition: :admin_user? },
     # More section
     { name: "Guides", path: :settings_guides_path },
     { name: "What's new", path: :changelog_path },
@@ -43,9 +44,9 @@ module SettingsHelper
     }
   end
 
-  def settings_section(title:, subtitle: nil, collapsible: false, open: true, &block)
+  def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, &block)
     content = capture(&block)
-    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open }
+    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param }
   end
 
   def settings_nav_footer

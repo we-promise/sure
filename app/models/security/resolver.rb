@@ -63,7 +63,7 @@ class Security::Resolver
         exchange_matches = s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s
 
         if country_code && exchange_operating_mic
-          ticker_matches && exchange_matches && s.country_code.upcase.to_s == country_code.upcase.to_s
+          ticker_matches && exchange_matches && s.country_code&.upcase.to_s == country_code.upcase.to_s
         else
           ticker_matches && exchange_matches
         end
@@ -79,14 +79,16 @@ class Security::Resolver
 
       # If a country code is specified, we MUST find a match with the same code
       if country_code.present?
-        filtered_candidates = filtered_candidates.select { |s| s.country_code.upcase.to_s == country_code.upcase.to_s }
+        filtered_candidates = filtered_candidates.select { |s| s.country_code&.upcase.to_s == country_code.upcase.to_s }
       end
 
-      # 1. Prefer exact exchange_operating_mic matches (if one was provided)
-      # 2. Rank by country relevance (lower index in the list is more relevant)
-      # 3. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
+      # 1. Prefer exact ticker matches (MSTR before MSTRX when searching for "MSTR")
+      # 2. Prefer exact exchange_operating_mic matches (if one was provided)
+      # 3. Rank by country relevance (lower index in the list is more relevant)
+      # 4. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
       sorted_candidates = filtered_candidates.sort_by do |s|
         [
+          s.ticker.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
           exchange_operating_mic.present? && s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s ? 0 : 1,
           sorted_country_codes_by_relevance.index(s.country_code&.upcase.to_s) || sorted_country_codes_by_relevance.length,
           sorted_exchange_operating_mics_by_relevance.index(s.exchange_operating_mic&.upcase.to_s) || sorted_exchange_operating_mics_by_relevance.length
@@ -122,9 +124,17 @@ class Security::Resolver
     end
 
     # Non-exhaustive list of common country codes for help in choosing "close" matches
-    # These are generally sorted by market cap.
+    # User's country (if provided) is prioritized first, then sorted by market cap.
     def sorted_country_codes_by_relevance
-      %w[US CN JP IN GB CA FR DE CH SA TW AU NL SE KR IE ES AE IT HK BR DK SG MX RU IL ID BE TH NO]
+      base_order = %w[US CN JP IN GB CA FR DE CH SA TW AU NL SE KR IE ES AE IT HK BR DK SG MX RU IL ID BE TH NO]
+
+      # Prioritize user's country if provided
+      if country_code.present?
+        user_country = country_code.upcase
+        [ user_country ] + (base_order - [ user_country ])
+      else
+        base_order
+      end
     end
 
     # Non-exhaustive list of common exchange operating MICs for help in choosing "close" matches

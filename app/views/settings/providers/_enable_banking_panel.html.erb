@@ -36,6 +36,44 @@
                        method: is_new_record ? :post : :patch,
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
+
+    <%= form.select :country_code,
+                  options_for_select([
+                    ["Austria (AT)", "AT"],
+                    ["Belgium (BE)", "BE"],
+                    ["Bulgaria (BG)", "BG"],
+                    ["Croatia (HR)", "HR"],
+                    ["Cyprus (CY)", "CY"],
+                    ["Czech Republic (CZ)", "CZ"],
+                    ["Denmark (DK)", "DK"],
+                    ["Estonia (EE)", "EE"],
+                    ["Finland (FI)", "FI"],
+                    ["France (FR)", "FR"],
+                    ["Germany (DE)", "DE"],
+                    ["Greece (GR)", "GR"],
+                    ["Hungary (HU)", "HU"],
+                    ["Iceland (IS)", "IS"],
+                    ["Ireland (IE)", "IE"],
+                    ["Italy (IT)", "IT"],
+                    ["Latvia (LV)", "LV"],
+                    ["Liechtenstein (LI)", "LI"],
+                    ["Lithuania (LT)", "LT"],
+                    ["Luxembourg (LU)", "LU"],
+                    ["Malta (MT)", "MT"],
+                    ["Netherlands (NL)", "NL"],
+                    ["Norway (NO)", "NO"],
+                    ["Poland (PL)", "PL"],
+                    ["Portugal (PT)", "PT"],
+                    ["Romania (RO)", "RO"],
+                    ["Slovakia (SK)", "SK"],
+                    ["Slovenia (SI)", "SI"],
+                    ["Spain (ES)", "ES"],
+                    ["Sweden (SE)", "SE"],
+                    ["United Kingdom (GB)", "GB"]
+                  ], enable_banking_item.country_code),
+                  { label: true, include_blank: "Select country..." },
+                  { label: "Country", class: "form-field__input" } %>
+
     <% if has_authenticated_connections && !is_new_record %>
       <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
         <p class="font-medium">Configuration locked</p>
@@ -43,50 +81,11 @@
       </div>
     <% end %>
 
-    <div class="grid grid-cols-2 gap-3">
-      <%= form.select :country_code,
-                      options_for_select([
-                        ["Austria (AT)", "AT"],
-                        ["Belgium (BE)", "BE"],
-                        ["Bulgaria (BG)", "BG"],
-                        ["Croatia (HR)", "HR"],
-                        ["Cyprus (CY)", "CY"],
-                        ["Czech Republic (CZ)", "CZ"],
-                        ["Denmark (DK)", "DK"],
-                        ["Estonia (EE)", "EE"],
-                        ["Finland (FI)", "FI"],
-                        ["France (FR)", "FR"],
-                        ["Germany (DE)", "DE"],
-                        ["Greece (GR)", "GR"],
-                        ["Hungary (HU)", "HU"],
-                        ["Iceland (IS)", "IS"],
-                        ["Ireland (IE)", "IE"],
-                        ["Italy (IT)", "IT"],
-                        ["Latvia (LV)", "LV"],
-                        ["Liechtenstein (LI)", "LI"],
-                        ["Lithuania (LT)", "LT"],
-                        ["Luxembourg (LU)", "LU"],
-                        ["Malta (MT)", "MT"],
-                        ["Netherlands (NL)", "NL"],
-                        ["Norway (NO)", "NO"],
-                        ["Poland (PL)", "PL"],
-                        ["Portugal (PT)", "PT"],
-                        ["Romania (RO)", "RO"],
-                        ["Slovakia (SK)", "SK"],
-                        ["Slovenia (SI)", "SI"],
-                        ["Spain (ES)", "ES"],
-                        ["Sweden (SE)", "SE"],
-                        ["United Kingdom (GB)", "GB"]
-                      ], enable_banking_item.country_code),
-                      { label: true, include_blank: "Select country..." },
-                      { label: "Country", class: "form-field__input", disabled: has_authenticated_connections && !is_new_record } %>
-
-      <%= form.text_field :application_id,
-                          label: "Application ID",
-                          placeholder: is_new_record ? "Enter application ID" : "Enter new ID to update",
-                          value: enable_banking_item.application_id,
-                          disabled: has_authenticated_connections && !is_new_record %>
-    </div>
+    <%= form.text_field :application_id,
+                        label: "Application ID",
+                        placeholder: is_new_record ? "Enter application ID" : "Enter new ID to update",
+                        value: enable_banking_item.application_id,
+                        disabled: has_authenticated_connections && !is_new_record %>
 
     <%= form.text_area :client_certificate,
                         label: "Client Certificate (with Private Key)",
@@ -95,12 +94,10 @@
                         class: "form-field__input font-mono text-xs",
                         disabled: has_authenticated_connections && !is_new_record %>
 
-    <% unless has_authenticated_connections && !is_new_record %>
-      <div class="flex justify-end">
-        <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
-                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
-      </div>
-    <% end %>
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800" %>
+    </div>
   <% end %>
 
   <% items = local_assigns[:enable_banking_items] || @enable_banking_items || Current.family.enable_banking_items.where.not(client_certificate: nil) %>

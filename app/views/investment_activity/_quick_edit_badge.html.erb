@@ -1,0 +1,95 @@
+<%# locals: (entry:, entryable:) %>
+<%
+  label = entryable.investment_activity_label
+  has_label = label.present?
+
+  # Build the correct URL based on entryable type
+  update_url = entryable.is_a?(Transaction) ? transaction_path(entry) : trade_path(entry)
+
+  # Color mapping for different investment activity labels using design system tokens
+  color = if has_label
+    case label
+    when "Buy"
+      "var(--color-blue-500)"
+    when "Sell"
+      "var(--color-red-500)"
+    when "Dividend", "Interest"
+      "var(--color-green-500)"
+    when "Contribution"
+      "var(--color-violet-500)"
+    when "Withdrawal"
+      "var(--color-orange-500)"
+    when "Fee"
+      "var(--color-gray-500)"
+    when "Transfer", "Sweep In", "Sweep Out", "Exchange"
+      "var(--color-gray-500)"
+    when "Reinvestment"
+      "var(--color-blue-500)"
+    else
+      "var(--color-gray-500)" # for "Other"
+    end
+  else
+    "var(--color-gray-400)" # slightly lighter for empty state
+  end
+
+  activity_labels = entryable.is_a?(Trade) ? Trade::ACTIVITY_LABELS : Transaction::ACTIVITY_LABELS
+  entryable_type = entryable.is_a?(Trade) ? "Trade" : "Transaction"
+  convert_url = entryable.is_a?(Transaction) ? convert_to_trade_transaction_path(entryable) : nil
+%>
+
+<div class="relative"
+     data-controller="activity-label-quick-edit"
+     data-activity-label-quick-edit-url-value="<%= update_url %>"
+     data-activity-label-quick-edit-entryable-id-value="<%= entryable.id %>"
+     data-activity-label-quick-edit-current-label-value="<%= label %>"
+     data-activity-label-quick-edit-entryable-type-value="<%= entryable_type %>"
+     <% if convert_url %>
+     data-activity-label-quick-edit-convert-url-value="<%= convert_url %>"
+     <% end %>>
+
+  <button type="button"
+          class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 cursor-pointer hover:opacity-80 transition-opacity"
+          style="<% if has_label %>
+            background-color: color-mix(in oklab, <%= color %> 15%, transparent);
+            border: 1px solid color-mix(in oklab, <%= color %> 25%, transparent);
+            color: <%= color %>;
+          <% else %>
+            background-color: var(--color-surface-inset);
+            border: 1px solid var(--color-border-secondary);
+            color: var(--color-text-secondary);
+          <% end %>"
+          data-action="click->activity-label-quick-edit#toggle"
+          data-activity-label-quick-edit-target="badge"
+          title="<%= has_label ? t("transactions.transaction.activity_type_tooltip") : t("transactions.show.activity_type") %>">
+    <% if has_label %>
+      <%= label %>
+    <% else %>
+      <%= icon "tag", size: "xs", color: "current" %>
+      <span><%= t("transactions.show.activity_type") %></span>
+    <% end %>
+    <%= icon "chevron-down", size: "xs", color: "current" %>
+  </button>
+
+  <!-- Dropdown menu -->
+  <div class="hidden absolute right-0 z-50 mt-1 w-44 rounded-lg border border-primary bg-container shadow-lg"
+       data-activity-label-quick-edit-target="dropdown">
+    <div class="py-1 max-h-64 overflow-y-auto">
+      <% if has_label %>
+        <button type="button"
+                class="w-full text-left px-3 py-1.5 text-sm text-secondary hover:bg-surface-inset transition-colors border-b border-primary"
+                data-action="click->activity-label-quick-edit#select"
+                data-label="">
+          <span class="italic"><%= t("transactions.form.none") %></span>
+        </button>
+      <% end %>
+      <% activity_labels.each do |activity_label| %>
+        <button type="button"
+                class="w-full text-left px-3 py-1.5 text-sm text-primary hover:bg-surface-inset transition-colors <%= activity_label == label ? "font-semibold bg-surface-inset" : "" %>"
+                data-action="click->activity-label-quick-edit#select"
+                data-label="<%= activity_label %>">
+          <%= activity_label %>
+        </button>
+      <% end %>
+    </div>
+  </div>
+</div>

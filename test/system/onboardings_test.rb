@@ -115,7 +115,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "DD/MM/YYYY", from: "user_family_attributes_date_format"
     select "Dark", from: "user_theme"
 
-    click_button "Complete"
+    # Button text is in Spanish due to locale preview
+    click_button I18n.t("onboardings.preferences.submit", locale: :es)
 
     # Wait for redirect to goals page to ensure form was submitted
     assert_current_path goals_onboarding_path
@@ -144,7 +145,7 @@ class OnboardingsTest < ApplicationSystemTestCase
   test "trial page renders correctly" do
     visit trial_onboarding_path
 
-    assert_text "trial" # Adjust based on actual content
+    assert_text "Try Sure"
   end
 
   test "navigation between onboarding steps" do

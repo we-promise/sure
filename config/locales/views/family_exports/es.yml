@@ -1,7 +1,31 @@
 ---
 es:
   family_exports:
-    list:
-      in_progress: En progreso
-      complete: Completo
-      failed: Fallido
+    access_denied: Acceso denegado
+    create:
+      success: Exportación iniciada. Podrás descargarla en breve.
+    delete_confirmation: ¿Estás seguro de que quieres eliminar esta exportación? Esta acción no se puede deshacer.
+    delete_failed_confirmation: ¿Estás seguro de que quieres eliminar esta exportación fallida?
+    destroy:
+      success: Exportación eliminada con éxito
+    export_not_ready: La exportación no está lista para descargar
+    exporting: Exportando...
+    index:
+      title: Exportaciones
+      new: Nueva exportación
+    table:
+      title: Exportaciones
+      header:
+        date: Fecha
+        filename: Nombre del archivo
+        status: Estado
+        actions: Acciones
+      row:
+        status:
+          in_progress: En progreso
+          complete: Completo
+          failed: Fallido
+        actions:
+          delete: Eliminar
+          download: Descargar
+      empty: Aún no hay exportaciones.

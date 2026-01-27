@@ -165,7 +165,8 @@ module LanguagesHelper
     "ro",   # Romanian - 62 translation files
     "pt-BR", # Brazilian Portuguese - 60 translation files
     "zh-CN", # Chinese (Simplified) - 59 translation files
-    "zh-TW"  # Chinese (Traditional) - 63 translation files
+    "zh-TW",  # Chinese (Traditional) - 63 translation files
+    "nl"   # Dutch - 73 translation files
   ].freeze
 
   COUNTRY_MAPPING = {

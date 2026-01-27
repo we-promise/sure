@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
 class SsoProvider < ApplicationRecord
-  # Encrypt sensitive credentials using Rails 7.2 built-in encryption
-  encrypts :client_secret, deterministic: false
+  include Encryptable
+
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :client_secret, deterministic: false
+  end
 
   # Default enabled to true for new providers
   attribute :enabled, :boolean, default: true

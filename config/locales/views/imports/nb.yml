@@ -57,26 +57,30 @@ nb:
         instructions_5: Ingen komma, ingen valutasymboler og ingen parenteser i tall.
         title: Importer dataene dine
   imports:
-    empty:
-      message: Ingen importer ennå.
-      new: Ny Import
-    import:
-      complete: Fullført
-      delete: Slett
-      failed: Mislykket
-      in_progress: Pågår
-      label: "%{type}: %{datetime}"
-      revert_failed: Tilbakestilling mislykket
-      reverting: Tilbakestiller
-      uploading: Behandler rader
-      view: Vis
     index:
-      imports: Importer
-      new: Ny Import
       title: Importer
-      exports: Eksporter
-      new_export: Ny Eksport
-      no_exports: Ingen eksporter ennå.
+      new: Ny Import
+    table:
+      title: Imports
+      header:
+        date: Dato
+        operation: Operasjon
+        status: Status
+        actions: Handlinger
+      row:
+        status:
+          in_progress: Pågår
+          uploading: Behandler rader
+          reverting: Tilbakestiller
+          revert_failed: Tilbakestilling mislykket
+          complete: Fullført
+          failed: Mislykket
+        actions:
+          revert: Gå tilbake
+          confirm_revert: Dette vil slette transaksjoner som ble importert, men du vil fortsatt kunne se gjennom og importere dataene dine på nytt når som helst.
+          delete: Slett
+          view: Vis
+      empty: Ingen importer ennå.
     new:
       description: Du kan manuelt importere ulike typer data via CSV eller bruke en av
         våre importmaler som Mint.

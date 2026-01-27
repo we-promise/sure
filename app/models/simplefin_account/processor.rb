@@ -1,9 +1,10 @@
 class SimplefinAccount::Processor
   include SimplefinNumericHelpers
-  attr_reader :simplefin_account
+  attr_reader :simplefin_account, :skipped_entries
 
   def initialize(simplefin_account)
     @simplefin_account = simplefin_account
+    @skipped_entries = []
   end
 
   # Each step represents different SimpleFin data processing
@@ -144,7 +145,9 @@ class SimplefinAccount::Processor
     end
 
     def process_transactions
-      SimplefinAccount::Transactions::Processor.new(simplefin_account).process
+      processor = SimplefinAccount::Transactions::Processor.new(simplefin_account)
+      processor.process
+      @skipped_entries.concat(processor.skipped_entries)
     rescue => e
       report_exception(e, "transactions")
     end

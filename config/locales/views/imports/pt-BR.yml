@@ -62,26 +62,30 @@ pt-BR:
         instructions_5: Sem vírgulas (para separar milhares), sem símbolos de moeda e sem parênteses em números.
         title: Importar seus dados
   imports:
-    empty:
-      message: Nenhuma importação ainda.
-      new: Nova Importação
-    import:
-      complete: Concluída
-      delete: Excluir
-      failed: Falhou
-      in_progress: Em andamento
-      label: "%{type}: %{datetime}"
-      revert_failed: Falha na reversão
-      reverting: Revertendo
-      uploading: Processando linhas
-      view: Visualizar
     index:
-      imports: Importações
+      title: Importações
       new: Nova Importação
-      title: Importar/Exportar
-      exports: Exportações
-      new_export: Nova Exportação
-      no_exports: Nenhuma exportação ainda.
+    table:
+      title: Importações
+      header:
+        date: Data
+        operation: Operação
+        status: Estado
+        actions: Ações
+      row:
+        status:
+          in_progress: Em andamento
+          uploading: Processando linhas
+          reverting: Revertendo
+          revert_failed: Falha na reversão
+          complete: Concluída
+          failed: Falhou
+        actions:
+          revert: Reverter
+          confirm_revert: Isso excluirá as transações importadas, mas você ainda poderá revisar e importar seus dados novamente a qualquer momento.
+          delete: Excluir
+          view: Visualizar
+      empty: Nenhuma importação ainda.
     new:
       description: Você pode importar manualmente vários tipos de dados via CSV ou usar um
         de nossos modelos de importação, como o do Mint.

@@ -3,25 +3,45 @@
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t("accounts.show.activity.title"), class: "font-medium text-lg" %>
 
-      <% if account.manual? %>
+      <%# Show menu if: manual (can add balance) OR non-crypto (can add transactions) %>
+      <%# This hides the menu only for linked crypto accounts who have no actions %>
+      <% if !account.linked? || !account.crypto? %>
         <%= render DS::Menu.new(variant: "button") do |menu| %>
           <% menu.with_button(text: t("accounts.show.activity.new"), variant: "secondary", icon: "plus") %>
 
-          <% menu.with_item(
-              variant: "link",
-              text: t("accounts.show.activity.new_balance"),
-              icon: "circle-dollar-sign",
-              href: new_valuation_path(account_id: account.id),
-              data: { turbo_frame: :modal }) %>
-
-          <% unless account.crypto? %>
+          <% unless account.linked? %>
             <% menu.with_item(
                 variant: "link",
-                text: t("accounts.show.activity.new_transaction"),
-                icon: "credit-card",
-                href: account.investment? ? new_trade_path(account_id: account.id) : new_transaction_path(account_id: account.id),
+                text: t("accounts.show.activity.new_balance"),
+                icon: "circle-dollar-sign",
+                href: new_valuation_path(account_id: account.id),
                 data: { turbo_frame: :modal }) %>
           <% end %>
+
+          <% unless account.crypto? %>
+            <% if account.investment? %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t("accounts.show.activity.new_activity"),
+                  icon: "arrow-left-right",
+                  href: new_trade_path(account_id: account.id),
+                  data: { turbo_frame: :modal }) %>
+            <% else %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t("accounts.show.activity.new_transaction"),
+                  icon: "credit-card",
+                  href: new_transaction_path(account_id: account.id),
+                  data: { turbo_frame: :modal }) %>
+            <% end %>
+          <% end %>
+
+          <% menu.with_item(
+              variant: "link",
+              text: t("accounts.show.activity.new_transfer"),
+              icon: "arrow-right-left",
+              href: new_transfer_path(from_account_id: account.id),
+              data: { turbo_frame: :modal }) %>
         <% end %>
       <% end %>
     </div>

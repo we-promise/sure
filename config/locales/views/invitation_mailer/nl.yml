@@ -1,0 +1,8 @@
+---
+nl:
+  invitation_mailer:
+    invite_email:
+      accept_button: Accepteer uitnodiging
+      body: "%{inviter} heeft u uitgenodigd om lid te worden van de %{family} familie op %{product_name}!"
+      expiry_notice: Deze uitnodiging verloopt over %{days} dagen
+      greeting: Welkom bij %{product_name}!

@@ -72,7 +72,8 @@ class PlaidAccount::Investments::TransactionsProcessor
         currency: transaction["iso_currency_code"],
         date: transaction["date"],
         name: transaction["name"],
-        source: "plaid"
+        source: "plaid",
+        activity_label: label_from_plaid_type(transaction)
       )
     end
 
@@ -97,7 +98,7 @@ class PlaidAccount::Investments::TransactionsProcessor
     end
 
     def transactions
-      plaid_account.raw_investments_payload["transactions"] || []
+      plaid_account.raw_holdings_payload&.dig("transactions") || []
     end
 
     # Plaid unfortunately returns incorrect signage on some `quantity` values. They claim all "sell" transactions

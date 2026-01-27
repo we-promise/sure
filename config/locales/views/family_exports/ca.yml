@@ -1,8 +1,31 @@
 ---
 ca:
   family_exports:
-    list:
-      in_progress: En curs
-      complete: Completat
-      failed: Error
-
+    access_denied: Accés denegat
+    create:
+      success: Exportació iniciada. Podràs descarregar-la aviat.
+    delete_confirmation: Estàs segur que vols eliminar aquesta exportació? Aquesta acció no es pot desfer.
+    delete_failed_confirmation: Estàs segur que vols eliminar aquesta exportació fallida?
+    destroy:
+      success: Exportació eliminada amb èxit
+    export_not_ready: L'exportació no està llesta per descarregar
+    exporting: Exportant...
+    index:
+      title: Exportacions
+      new: Nova exportació
+    table:
+      title: Exportacions
+      header:
+        date: Data
+        filename: Nom del fitxer
+        status: Estat
+        actions: Accions
+      row:
+        status:
+          in_progress: En curs
+          complete: Completat
+          failed: Error
+        actions:
+          delete: Elimina
+          download: Descarregar
+      empty: Encara no hi ha exportacions.

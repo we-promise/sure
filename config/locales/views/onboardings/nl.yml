@@ -1,0 +1,27 @@
+---
+nl:
+  onboardings:
+    header:
+      sign_out: Uitloggen
+    preferences:
+      currency: Valuta
+      date_format: Datumformaat
+      example: Voorbeeldaccount
+      locale: Taal
+      preview: Voorbeeld van hoe gegevens worden weergegeven op basis van voorkeuren.
+      submit: Voltooien
+      subtitle: Laten we uw voorkeuren configureren.
+      title: Configureer uw voorkeuren
+    profile:
+      country: Land
+      first_name: Voornaam
+      household_name: Naam van huishouden
+      last_name: Achternaam
+      profile_image: Profielfoto
+      submit: Doorgaan
+      subtitle: Laten we uw profiel voltooien.
+      title: Laten we de basis instellen
+    show:
+      message: We zijn erg blij dat u hier bent. In de volgende stap stellen we u een paar vragen om uw profiel te voltooien en u helemaal klaar te maken.
+      setup: Account instellen
+      title: Maak kennis met %{product_name}

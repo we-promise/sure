@@ -1,19 +1,19 @@
 <%# locals: (recurring_transaction:) %>
 
-<div class="grid grid-cols-12 items-center text-subdued text-sm font-medium p-4 lg:p-4 bg-container-inset rounded">
-  <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
+<div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4">
+  <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
     <div class="max-w-full">
-      <%= content_tag :div, class: ["flex items-center gap-2"] do %>
+      <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
         <% if recurring_transaction.merchant.present? %>
           <% if recurring_transaction.merchant.logo_url.present? %>
-            <%= image_tag recurring_transaction.merchant.logo_url,
-                class: "w-6 h-6 rounded-full",
+            <%= image_tag Setting.transform_brand_fetch_url(recurring_transaction.merchant.logo_url),
+                class: "w-9 h-9 rounded-full",
                 loading: "lazy" %>
           <% else %>
             <%= render DS::FilledIcon.new(
               variant: :text,
               text: recurring_transaction.merchant.name,
-              size: "sm",
+              size: "lg",
               rounded: true
             ) %>
           <% end %>
@@ -21,27 +21,28 @@
           <%= render DS::FilledIcon.new(
             variant: :text,
             text: recurring_transaction.name,
-            size: "sm",
+            size: "lg",
             rounded: true
           ) %>
         <% end %>
 
         <div class="truncate">
           <div class="space-y-0.5">
-            <div class="flex items-center gap-2 min-w-0">
+            <div class="flex items-center gap-1 min-w-0">
               <div class="truncate flex-shrink">
                 <%= recurring_transaction.merchant.present? ? recurring_transaction.merchant.name : recurring_transaction.name %>
               </div>
 
               <div class="flex items-center gap-1 flex-shrink-0">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-tint-10 text-link">
                   <%= t("recurring_transactions.projected") %>
                 </span>
               </div>
             </div>
 
             <div class="text-secondary text-xs font-normal">
-              <%= t("recurring_transactions.expected_on", date: l(recurring_transaction.next_expected_date, format: :short)) %>
+              <%= days_left = (recurring_transaction.next_expected_date.to_date - Time.zone.today).to_i
+              days_left.zero? ? t("recurring_transactions.expected_today") : t("recurring_transactions.expected_in", count: days_left) %>
             </div>
           </div>
         </div>
@@ -53,7 +54,7 @@
     <span class="text-xs text-secondary"><%= t("recurring_transactions.recurring") %></span>
   </div>
 
-  <div class="col-span-2 ml-auto text-right">
+  <div class="col-span-2 ml-auto text-right shrink-0">
     <% display_amount = recurring_transaction.manual? && recurring_transaction.expected_amount_avg.present? ? recurring_transaction.expected_amount_avg : recurring_transaction.amount %>
     <%= content_tag :p, format_money(-Money.new(display_amount, recurring_transaction.currency)), class: ["font-medium", display_amount.negative? ? "text-success" : "text-subdued"] %>
   </div>

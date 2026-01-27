@@ -85,7 +85,8 @@ class CoinstatsItem::WalletLinker
           name: account_name,
           currency: "USD",
           current_balance: current_balance,
-          account_id: token_id
+          account_id: token_id,
+          wallet_address: address
         )
 
         # Store wallet metadata for future syncs

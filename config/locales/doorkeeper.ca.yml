@@ -1,3 +1,4 @@
+---
 ca:
   activerecord:
     attributes:
@@ -9,120 +10,133 @@ ca:
         doorkeeper/application:
           attributes:
             redirect_uri:
+              forbidden_uri: està prohibit pel servidor.
               fragment_present: no pot contenir un fragment.
               invalid_uri: ha de ser un URI vàlid.
-              unspecified_scheme: cal especificar un esquema.
               relative_uri: ha de ser un URI absolut.
               secured_uri: ha de ser un URI HTTPS/SSL.
-              forbidden_uri: està prohibit pel servidor.
+              unspecified_scheme: cal especificar un esquema.
             scopes:
               not_match_configured: no coincideix amb la configuració del servidor.
-
   doorkeeper:
     applications:
+      buttons:
+        authorize: Autoritza
+        cancel: Cancel·la
+        destroy: Elimina
+        edit: Edita
+        submit: Desa
       confirmations:
         destroy: Segur que vols continuar?
-      buttons:
-        edit: Edita
-        destroy: Elimina
-        submit: Desa
-        cancel: Cancel·la
-        authorize: Autoritza
+      edit:
+        title: Edita aplicació
       form:
         error: Ups! Revisa el formulari per possibles errors
       help:
-        confidential: L'aplicació s'utilitzarà on el secret del client es pugui mantenir confidencial. Les apps mòbils natives i les SPA es consideren no confidencials.
+        blank_redirect_uri: Deixa-ho en blanc si el teu proveïdor està configurat
+          per utilitzar Client Credentials, Resource Owner Password Credentials o
+          qualsevol altre grant que no requereixi URI de redirecció.
+        confidential: L'aplicació s'utilitzarà on el secret del client es pugui mantenir
+          confidencial. Les apps mòbils natives i les SPA es consideren no confidencials.
         redirect_uri: Utilitza una línia per URI
-        blank_redirect_uri: Deixa-ho en blanc si el teu proveïdor està configurat per utilitzar Client Credentials, Resource Owner Password Credentials o qualsevol altre grant que no requereixi URI de redirecció.
-        scopes: Separa els escopos amb espais. Deixa-ho en blanc per utilitzar els escopos per defecte.
-      edit:
-        title: Edita aplicació
+        scopes: Separa els àmbits amb espais. Deixa-ho en blanc per utilitzar els
+          àmbits per defecte.
       index:
-        title: Les teves aplicacions
-        new: Nova aplicació
-        name: Nom
+        actions: Accions
         callback_url: URL de retorn
         confidential: Confidencial?
-        actions: Accions
         confidentiality:
-          'yes': Sí
           'no': No
+          'yes': Sí
+        name: Nom
+        new: Nova aplicació
+        title: Les teves aplicacions
       new:
         title: Nova aplicació
       show:
-        title: "Aplicació: %{name}"
+        actions: Accions
         application_id: UID
+        callback_urls: URLs de retorn
+        confidential: Confidencial
+        not_defined: No definit
+        scopes: Àmbits
         secret: Secret
         secret_hashed: Secret xifrat
-        scopes: Escopos
-        confidential: Confidencial
-        callback_urls: URLs de retorn
-        actions: Accions
-        not_defined: No definit
-
+        title: 'Aplicació: %{name}'
     authorizations:
       buttons:
         authorize: Autoritza
         deny: Denega
       error:
         title: S'ha produït un error
-      new:
-        title: Autorització requerida
-        prompt: Autoritzes %{client_name} a utilitzar el teu compte?
-        able_to: Aquesta aplicació podrà
-      show:
-        title: Codi d'autorització
       form_post:
         title: Envia aquest formulari
-
+      new:
+        able_to: Aquesta aplicació podrà
+        prompt: Autoritzes %{client_name} a utilitzar el teu compte?
+        title: Autorització requerida
+      show:
+        title: Codi d'autorització
     authorized_applications:
-      confirmations:
-        revoke: Segur que vols continuar?
       buttons:
         revoke: Revoca
+      confirmations:
+        revoke: Segur que vols continuar?
       index:
-        title: Les teves aplicacions autoritzades
         application: Aplicació
         created_at: Creat el
-        date_format: '%Y-%m-%d %H:%M:%S'
-
-    pre_authorization:
-      status: Preautorització
-
+        date_format: "%Y-%m-%d %H:%M:%S"
+        title: Les teves aplicacions autoritzades
     errors:
       messages:
-        invalid_request:
-          unknown: La sol·licitud manca d'un paràmetre requerit, inclou un valor no suportat o està mal formada.
-          missing_param: "Falta el paràmetre requerit: %{value}."
-          request_not_authorized: La sol·licitud necessita autorització. Falta o és invàlid el paràmetre requerit per autoritzar la sol·licitud.
-          invalid_code_challenge: Es requereix el code challenge.
-        invalid_redirect_uri: L'URI de redirecció sol·licitat està mal format o no coincideix amb el client.
-        unauthorized_client: El client no està autoritzat a fer aquesta sol·licitud amb aquest mètode.
-        access_denied: El propietari del recurs o el servidor d'autorització ha denegat la sol·licitud.
-        invalid_scope: L'escop sol·licitat és invàlid, desconegut o mal format.
+        access_denied: El propietari del recurs o el servidor d'autorització ha denegat
+          la sol·licitud.
+        admin_authenticator_not_configured: L'accés al panell d'administració està
+          prohibit perquè Doorkeeper.configure.admin_authenticator no està configurat.
+        credential_flow_not_configured: El flux Resource Owner Password Credentials
+          ha fallat perquè Doorkeeper.configure.resource_owner_from_credentials no
+          està configurat.
+        forbidden_token:
+          missing_scope: L'accés a aquest recurs requereix l'àmbit "%{oauth_scopes}".
+        invalid_client: L'autenticació del client ha fallat per client desconegut,
+          sense autenticació o mètode no suportat.
         invalid_code_challenge_method:
-          zero: El servidor d'autorització no suporta PKCE perquè no hi ha valors acceptats per code_challenge_method.
           one: El code_challenge_method ha de ser %{challenge_methods}.
-          other: "El code_challenge_method ha de ser un dels següents: %{challenge_methods}."
-        server_error: El servidor d'autorització ha trobat una condició inesperada que ha impedit completar la sol·licitud.
-        temporarily_unavailable: El servidor d'autorització no pot gestionar la sol·licitud temporalment per sobrecàrrega o manteniment.
-        credential_flow_not_configured: El flux Resource Owner Password Credentials ha fallat perquè Doorkeeper.configure.resource_owner_from_credentials no està configurat.
-        resource_owner_authenticator_not_configured: No s'ha pogut trobar el propietari del recurs perquè Doorkeeper.configure.resource_owner_authenticator no està configurat.
-        admin_authenticator_not_configured: L'accés al panell d'administració està prohibit perquè Doorkeeper.configure.admin_authenticator no està configurat.
-        unsupported_response_type: El servidor d'autorització no suporta aquest tipus de resposta.
-        unsupported_response_mode: El servidor d'autorització no suporta aquest mode de resposta.
-        invalid_client: L'autenticació del client ha fallat per client desconegut, sense autenticació o mètode no suportat.
-        invalid_grant: El grant d'autorització proporcionat és invàlid, caducat, revocat, no coincideix amb l'URI de redirecció o s'ha emès a un altre client.
-        unsupported_grant_type: El tipus de grant no és suportat pel servidor d'autorització.
+          other: 'El code_challenge_method ha de ser un dels següents: %{challenge_methods}.'
+          zero: El servidor d'autorització no suporta PKCE perquè no hi ha valors
+            acceptats per code_challenge_method.
+        invalid_grant: El grant d'autorització proporcionat és invàlid, caducat, revocat,
+          no coincideix amb l'URI de redirecció o s'ha emès a un altre client.
+        invalid_redirect_uri: L'URI de redirecció sol·licitat està mal format o no
+          coincideix amb el client.
+        invalid_request:
+          invalid_code_challenge: Es requereix el code challenge.
+          missing_param: 'Falta el paràmetre requerit: %{value}.'
+          request_not_authorized: La sol·licitud necessita autorització. Falta o és
+            invàlid el paràmetre requerit per autoritzar la sol·licitud.
+          unknown: La sol·licitud manca d'un paràmetre requerit, inclou un valor no
+            suportat o està mal formada.
+        invalid_scope: L'àmbit sol·licitat és invàlid, desconegut o mal format.
         invalid_token:
-          revoked: El token d'accés ha estat revocat
           expired: El token d'accés ha caducat
+          revoked: El token d'accés ha estat revocat
           unknown: El token d'accés no és vàlid
+        resource_owner_authenticator_not_configured: No s'ha pogut trobar el propietari
+          del recurs perquè Doorkeeper.configure.resource_owner_authenticator no està
+          configurat.
         revoke:
           unauthorized: No estàs autoritzat/da a revocar aquest token
-        forbidden_token:
-          missing_scope: L'accés a aquest recurs requereix l'escop "%{oauth_scopes}".
-
+        server_error: El servidor d'autorització ha trobat una condició inesperada
+          que ha impedit completar la sol·licitud.
+        temporarily_unavailable: El servidor d'autorització no pot gestionar la sol·licitud
+          temporalment per sobrecàrrega o manteniment.
+        unauthorized_client: El client no està autoritzat a fer aquesta sol·licitud
+          amb aquest mètode.
+        unsupported_grant_type: El tipus de grant no és suportat pel servidor d'autorització.
+        unsupported_response_mode: El servidor d'autorització no suporta aquest mode
+          de resposta.
+        unsupported_response_type: El servidor d'autorització no suporta aquest tipus
+          de resposta.
     flash:
       applications:
         create:
@@ -134,14 +148,14 @@ ca:
       authorized_applications:
         destroy:
           notice: Aplicació revocada.
-
     layouts:
       admin:
-        title: Doorkeeper
         nav:
-          oauth2_provider: Proveïdor OAuth2
           applications: Aplicacions
           home: Inici
+          oauth2_provider: Proveïdor OAuth2
+        title: Doorkeeper
       application:
         title: Autorització OAuth requerida
-
+    pre_authorization:
+      status: Preautorització

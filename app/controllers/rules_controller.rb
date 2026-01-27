@@ -20,7 +20,7 @@ class RulesController < ApplicationController
                           .recent
                           .includes(:rule)
 
-    @pagy, @recent_runs = pagy(recent_runs_scope, limit: params[:per_page] || 20, page_param: :runs_page)
+    @pagy, @recent_runs = pagy(recent_runs_scope, limit: safe_per_page, page_param: :runs_page)
 
     render layout: "settings"
   end
@@ -126,6 +126,11 @@ class RulesController < ApplicationController
   def apply_all
     ApplyAllRulesJob.perform_later(Current.family)
     redirect_back_or_to rules_path, notice: t("rules.apply_all.success")
+  end
+
+  def clear_ai_cache
+    ClearAiCacheJob.perform_later(Current.family)
+    redirect_to rules_path, notice: t("rules.clear_ai_cache.success")
   end
 
   private

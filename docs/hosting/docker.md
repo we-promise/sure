@@ -26,7 +26,7 @@ docker run hello-world
 Open your terminal and create a directory where your app will run. Below is an example command with a recommended directory:
 
 ```bash
-# Create a directory on your computer for Docker files (name whatever you'd like)
+# Create a directory on your computer for Docker files (name it whatever you like)
 mkdir -p ~/docker-apps/sure
 
 # Once created, navigate your current working directory to the new folder
@@ -51,7 +51,8 @@ At this point, the only file in your current working directory should be `compos
 
 ### Step 3 (optional): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
+By default, our `compose.example.yml` file runs without any configuration.  
+That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
 
 If you're running the app locally and don't care much about security, you can skip this step.
 
@@ -59,10 +60,10 @@ If you're running the app locally and don't care much about security, you can sk
 
 In order to configure the app, you will need to create a file called `.env`, which is where Docker will read environment variables from.
 
-To do this, run the following command:
+To do this, you should get our .env.example as a starting point:
 
 ```bash
-touch .env
+curl -o .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
 #### Generate the app secret key
@@ -92,6 +93,22 @@ Fill in this file with the following variables:
 ```txt
 SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
+```
+
+#### Using HTTPS
+
+Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  
+The Docker instance runs in plain HTTP and you need to tell it that you are redirecting your HTTPS stream to the HTTP one.  
+To do this, edit the `compose.yml` file and find the line stating:  
+
+```yaml
+RAILS_ASSUME_SSL: "false"
+```
+
+and change it to `true`
+
+```yaml
+RAILS_ASSUME_SSL: "true"
 ```
 
 ### Step 4: Run the app

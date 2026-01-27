@@ -1,0 +1,15 @@
+---
+nl:
+  password_resets:
+    disabled: Wachtwoord opnieuw instellen via %{product_name} is uitgeschakeld. Stel uw wachtwoord opnieuw in via uw identiteitsprovider.
+    sso_only_user: Uw account gebruikt SSO voor authenticatie. Neem contact op met uw beheerder om uw inloggegevens te beheren.
+    edit:
+      title: Wachtwoord opnieuw instellen
+    new:
+      requested: Controleer uw e-mail voor een link om uw wachtwoord opnieuw in te stellen.
+      submit: Wachtwoord opnieuw instellen
+      title: Wachtwoord opnieuw instellen
+      back: Terug
+    update:
+      invalid_token: Ongeldige token.
+      success: Uw wachtwoord is opnieuw ingesteld.

@@ -1,0 +1,50 @@
+---
+nl:
+  pages:
+    changelog:
+      title: Wat is er nieuw
+    dashboard:
+      welcome: "Welkom terug, %{name}"
+      subtitle: "Dit gebeurt er met uw financiën"
+      new: "Nieuw"
+      drag_to_reorder: "Sleep om sectie te herschikken"
+      toggle_section: "Zichtbaarheid sectie wijzigen"
+      net_worth_chart:
+        data_not_available: Gegevens niet beschikbaar voor de geselecteerde periode
+        title: Netto vermogen
+      no_account_empty_state:
+        new_account: Nieuw account
+        no_account_subtitle: Omdat er geen accounts zijn toegevoegd, zijn er geen gegevens om weer te geven. Voeg uw eerste accounts toe om dashboardgegevens te bekijken.
+        no_account_title: Nog geen accounts
+      balance_sheet:
+        title: "Balans"
+        no_items: "Nog geen %{name}"
+        add_accounts: "Voeg uw %{name} accounts toe om een volledig overzicht te zien"
+      cashflow_sankey:
+        title: "Cashflow"
+        no_data_title: "Geen cashflow gegevens voor deze periode"
+        no_data_description: "Voeg transacties toe om cashflow gegevens weer te geven of vergroot de periode"
+        add_transaction: "Transactie toevoegen"
+      no_accounts:
+        title: "Nog geen accounts"
+        description: "Voeg accounts toe om netto vermogen gegevens weer te geven"
+        add_account: "Account toevoegen"
+      outflows_donut:
+        title: "Uitgaven"
+        total_outflows: "Totale uitgaven"
+        categories: "Categorieën"
+        value: "Waarde"
+        weight: "Gewicht"
+      investment_summary:
+        title: "Investeringen"
+        total_return: "Totaal rendement"
+        holding: "Bezit"
+        weight: "Gewicht"
+        value: "Waarde"
+        return: "Rendement"
+        period_activity: "%{period} Activiteit"
+        contributions: "Stortingen"
+        withdrawals: "Opnames"
+        trades: "Transacties"
+        no_investments: "Geen beleggingsrekeningen"
+        add_investment: "Voeg een beleggingsrekening toe om uw portfolio te volgen"

@@ -14,7 +14,7 @@ en:
         invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
         token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
         create_failed: "Failed to connect: %{message}"
-        unexpected: An unexpected error occurred. Please try again or contact support.
+        unexpected: An unexpected error occurred. Please try again.
     destroy:
       success: SimpleFIN connection will be removed
     update:
@@ -24,7 +24,7 @@ en:
         invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
         token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
         update_failed: "Failed to update connection: %{message}"
-        unexpected: An unexpected error occurred. Please try again or contact support.
+        unexpected: An unexpected error occurred. Please try again.
     edit:
       setup_token:
         label: "SimpleFIN Setup Token:"
@@ -65,6 +65,14 @@ en:
       setup_needed: New accounts ready to set up
       setup_description: Choose account types for your newly imported SimpleFIN accounts.
       setup_action: Set Up New Accounts
+      setup_accounts_menu: Set Up Accounts
+      more_accounts_available:
+        one: "%{count} more account available to set up"
+        other: "%{count} more accounts available to set up"
+      accounts_skipped_tooltip: "Some accounts were skipped due to errors during sync"
+      accounts_skipped_label: "Skipped: %{count}"
+      rate_limited_ago: "Rate limited (%{time} ago)"
+      rate_limited_recently: "Rate limited recently"
       status: Last synced %{timestamp} ago
       status_never: Never synced
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"

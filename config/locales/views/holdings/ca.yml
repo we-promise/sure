@@ -3,11 +3,27 @@ ca:
   holdings:
     cash:
       brokerage_cash: Efectiu de broker
+    cost_basis_cell:
+      cancel: Cancel·la
+      or_per_share_label: 'O entra per acció:'
+      overwrite_confirm_body: Això reemplaçarà el cost base actual de %{current}.
+      overwrite_confirm_title: Reemplaça el cost base?
+      per_share: per acció
+      save: Desa
+      set_cost_basis_header: Estableix el cost base per %{ticker} (%{qty} accions)
+      total_cost_basis_label: Cost base total
+      unknown: "--"
+    cost_basis_sources:
+      calculated: Des de les operacions
+      manual: Establert per l'usuari
+      provider: Des del proveïdor
     destroy:
       success: Posició eliminada
     holding:
+      no_cost_basis: Sense cost base
       per_share: per acció
       shares: "%{qty} accions"
+      unknown: "--"
     index:
       average_cost: Cost mitjà
       holdings: Posicions
@@ -17,20 +33,33 @@ ca:
       return: Rendiment total
       weight: Pes
     missing_price_tooltip:
-      description: Aquesta inversió té valors que falten i no hem pogut calcular-ne el rendiment o el valor.
+      description: Aquesta inversió té valors que falten i no hem pogut calcular-ne
+        el rendiment o el valor.
       missing_data: Falten dades
     show:
       avg_cost_label: Cost mitjà
+      cost_basis_locked_description: El cost base establert manualment no canviarà
+        amb les sincronitzacions.
+      cost_basis_locked_label: El cost base està bloquejat
       current_market_price_label: Preu de mercat actual
       delete: Elimina
-      delete_subtitle: Això eliminarà la posició i totes les operacions associades d'aquest compte. Aquesta acció no es pot desfer.
+      delete_subtitle: Això eliminarà la posició i totes les operacions associades
+        d'aquest compte. Aquesta acció no es pot desfer.
       delete_title: Elimina posició
       history: Historial
       overview: Resum
       portfolio_weight_label: Pes al portafolis
       settings: Configuració
       ticker_label: Ticker
-      trade_history_entry: "%{qty} accions de %{security} a %{price}"
       total_return_label: Rendiment total
+      trade_history_entry: "%{qty} accions de %{security} a %{price}"
       unknown: Desconegut
-
+      unlock_confirm_body: Això permetrà que el cost base s'actualitzi per sincronitzacions
+        del proveïdor o càlculs d'operacions.
+      unlock_confirm_title: Desbloqueja el cost base?
+      unlock_cost_basis: Desbloqueja
+    unlock_cost_basis:
+      success: El cost base s'ha desbloquejat. Pot actualitzar-se en la següent sincronització.
+    update:
+      error: Valor de cost base no vàlid.
+      success: Cost base desat.

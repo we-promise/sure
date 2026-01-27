@@ -1,39 +1,131 @@
-<%= settings_section title: t(".imports") do %>
+<%= settings_section title: t(".title") do %>
   <div class="space-y-4">
-    <% if @imports.empty? %>
-      <%= render partial: "imports/empty" %>
-    <% else %>
-      <div class="bg-container rounded-lg shadow-border-xs">
-        <%= render partial: "imports/import", collection: @imports.ordered %>
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p>
+          <%= t("imports.table.title") %>
+        </p>
+        <span class="text-subdued">&middot;</span>
+        <p><%= @pagy.count %></p>
       </div>
-    <% end %>
 
-    <%= link_to new_import_path,
-        class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
-        data: { turbo_frame: :modal } do %>
-      <%= icon("plus") %>
-      <%= t(".new") %>
-    <% end %>
-  </div>
-<% end %>
+      <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+        <% if @imports.any? %>
+          <table class="w-full overflow-x-auto">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th class="px-2 py-3 text-left min-w-44">
+                  <%= t("imports.table.header.date") %>
+                </th>
+                <th class="px-2 py-3 text-left min-w-32">
+                  <%= t("imports.table.header.operation") %>
+                </th>
+                <th class="px-2 py-3 text-left min-w-24">
+                  <%= t("imports.table.header.status") %>
+                </th>
+                <th class="px-2 py-3 text-right min-w-20">
+                  <%= t("imports.table.header.actions") %>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+            <% @imports.ordered.each do |import| %>
+              <tr id="<%= dom_id import %>" class="border-b border-subdued hover:bg-surface-hover">
+                <td class="px-2 py-3">
+                  <span class="text-sm text-secondary">
+                    <%= l(import.updated_at, format: :long) %>
+                  </span>
+                </td>
+                <td class="px-2 py-3">
+                  <%= link_to import_path(import), class: "font-medium text-sm text-primary hover:underline" do %>
+                    <% if import.account.present? %>
+                      <%= import.account.name + " " %>
+                    <% end %>
+                    <%= import.type.titleize.gsub(/ Import\z/, "") %>
+                  <% end %>
+                </td>
+                <td class="px-2 py-3">
+                  <% if import.pending? %>
+                    <%= render "shared/badge" do %>
+                      <%= t("imports.table.row.status.in_progress") %>
+                    <% end %>
+                  <% elsif import.importing? %>
+                    <%= render "shared/badge", color: "warning", pulse: true do %>
+                      <%= t("imports.table.row.status.uploading") %>
+                    <% end %>
+                  <% elsif import.failed? %>
+                    <%= render "shared/badge", color: "error" do %>
+                      <%= t("imports.table.row.status.failed") %>
+                    <% end %>
+                  <% elsif import.reverting? %>
+                    <%= render "shared/badge", color: "warning" do %>
+                      <%= t("imports.table.row.status.reverting") %>
+                    <% end %>
+                  <% elsif import.revert_failed? %>
+                    <%= render "shared/badge", color: "error" do %>
+                      <%= t("imports.table.row.status.revert_failed") %>
+                    <% end %>
+                  <% elsif import.complete? %>
+                    <%= render "shared/badge", color: "success" do %>
+                      <%= t("imports.table.row.status.complete") %>
+                    <% end %>
+                  <% end %>
+                </td>
+                <td class="px-2 py-3 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <% if import.complete? || import.revert_failed? %>
+                      <%= button_to revert_import_path(import),
+                                    method: :put,
+                                    class: "flex items-center gap-2",
+                                    aria: { label: t("imports.table.row.actions.revert") },
+                                    data: {
+                                      turbo_confirm: t("imports.table.row.actions.confirm_revert")
+                                    } do %>
+                        <%= icon "rotate-ccw", class: "w-5 h-5 text-destructive" %>
+                      <% end %>
 
-<% if Current.user.admin? %>
-  <%= settings_section title: t(".exports") do %>
-    <div class="space-y-4">
-      <div class="bg-container rounded-lg shadow-border-xs">
-        <%= turbo_frame_tag "family_exports", src: family_exports_path, loading: :lazy do %>
-          <div class="mt-4 text-center text-secondary py-8">
-            <div class="animate-spin inline-block h-4 w-4 border-2 border-secondary border-t-transparent rounded-full"></div>
-          </div>
+                    <% else %>
+                      <%= button_to import_path(import),
+                                    method: :delete,
+                                    class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
+                                    aria: { label: t("imports.table.row.actions.delete") },
+                                    data: {
+                                      turbo_confirm: CustomConfirm.for_resource_deletion("import")
+                                    } do %>
+                        <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
+                      <% end %>
+                    <% end %>
+
+                    <%= link_to import_path(import),
+                                aria: { label: t("imports.table.row.actions.view") },
+                                class: "flex items-center gap-2 text-primary hover:text-primary-hover" do %>
+                      <%= icon "eye", class: "w-5 h-5" %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <p class="text-sm text-secondary text-center py-8 font-medium">
+            <%= t("imports.table.empty") %>
+          </p>
         <% end %>
       </div>
-
-      <%= link_to new_family_export_path,
-          class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
-          data: { turbo_frame: :modal } do %>
-        <%= icon("plus") %>
-        <%= t(".new_export") %>
-      <% end %>
     </div>
+
+    <% if @pagy.pages > 1 %>
+      <div class="mt-4">
+        <%= render "shared/pagination", pagy: @pagy %>
+      </div>
+    <% end %>
+  </div>
+
+  <%= link_to new_import_path,
+              class: "bg-container-inset inline-flex items-center justify-center gap-2 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full font-medium text-primary text-sm text-center",
+              data: { turbo_frame: :modal } do %>
+    <%= icon("plus") %>
+    <%= t("imports.index.new") %>
   <% end %>
 <% end %>

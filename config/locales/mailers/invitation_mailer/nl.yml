@@ -1,0 +1,5 @@
+---
+nl:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} heeft u uitgenodigd om lid te worden van hun huishouden op %{product_name}!"

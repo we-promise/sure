@@ -66,6 +66,11 @@ class Entry < ApplicationRecord
     pending.where("entries.date < ?", days.days.ago.to_date)
   }
 
+  # Family-scoped query for Enrichable#clear_ai_cache
+  def self.family_scope(family)
+    joins(:account).where(accounts: { family_id: family.id })
+  end
+
   # Auto-exclude stale pending transactions for an account
   # Called during sync to clean up pending transactions that never posted
   # @param account [Account] The account to clean up
@@ -243,6 +248,67 @@ class Entry < ApplicationRecord
     external_id.present?
   end
 
+  # Checks if entry should be protected from provider sync overwrites.
+  # This does NOT prevent user from editing - only protects from automated sync.
+  #
+  # @return [Boolean] true if entry should be skipped during provider sync
+  def protected_from_sync?
+    excluded? || user_modified? || import_locked?
+  end
+
+  # Marks entry as user-modified after manual edit.
+  # Called when user edits any field to prevent provider sync from overwriting.
+  #
+  # @return [Boolean] true if successfully marked
+  def mark_user_modified!
+    return true if user_modified?
+    update!(user_modified: true)
+  end
+
+  # Returns the reason this entry is protected from sync, or nil if not protected.
+  # Priority: excluded > user_modified > import_locked
+  #
+  # @return [Symbol, nil] :excluded, :user_modified, :import_locked, or nil
+  def protection_reason
+    return :excluded if excluded?
+    return :user_modified if user_modified?
+    return :import_locked if import_locked?
+    nil
+  end
+
+  # Returns array of field names that are locked on entry and entryable.
+  #
+  # @return [Array<String>] locked field names
+  def locked_field_names
+    entry_keys = locked_attributes&.keys || []
+    entryable_keys = entryable&.locked_attributes&.keys || []
+    (entry_keys + entryable_keys).uniq
+  end
+
+  # Returns hash of locked field names to their lock timestamps.
+  # Combines locked_attributes from both entry and entryable.
+  # Parses ISO8601 timestamps stored in locked_attributes.
+  #
+  # @return [Hash{String => Time}] field name to lock timestamp
+  def locked_fields_with_timestamps
+    combined = (locked_attributes || {}).merge(entryable&.locked_attributes || {})
+    combined.transform_values do |timestamp|
+      Time.zone.parse(timestamp.to_s) rescue timestamp
+    end
+  end
+
+  # Clears protection flags so provider sync can update this entry again.
+  # Clears user_modified, import_locked flags, and all locked_attributes
+  # on both the entry and its entryable.
+  #
+  # @return [void]
+  def unlock_for_sync!
+    self.class.transaction do
+      update!(user_modified: false, import_locked: false, locked_attributes: {})
+      entryable&.update!(locked_attributes: {})
+    end
+  end
+
   class << self
     def search(params)
       EntrySearch.new(params).build_query(all)
@@ -272,6 +338,7 @@ class Entry < ApplicationRecord
           entry.update! bulk_attributes
 
           entry.lock_saved_attributes!
+          entry.mark_user_modified!
           entry.entryable.lock_attr!(:tag_ids) if entry.transaction? && entry.transaction.tags.any?
         end
       end

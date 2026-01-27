@@ -2,3 +2,13 @@
 nb:
   subscriptions:
     self_hosted_alert: "%{product_name} er ikke tilgjengelig i selvhostet modus."
+    upgrade:
+      contribute_and_support_sure: "Bidra og støtt Sure"
+      cta: "Fortsett å støtte utviklingen av denne kodebasen!"
+      header:
+        support: "Støtt"
+        sure: "Sure"
+        today: "i dag"
+      redirect_to_stripe: "I neste trinn vil du bli omdirigert til Stripe, som håndterer kredittkort for oss."
+      trialing: "Dataene dine vil bli slettet om %{days} dager"
+      trial_over: "Prøveperioden din er over"

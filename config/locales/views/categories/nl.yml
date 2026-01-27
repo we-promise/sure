@@ -1,0 +1,34 @@
+---
+nl:
+  categories:
+    bootstrap:
+      success: Standaardcategorieën succesvol aangemaakt
+    category:
+      delete: Categorie verwijderen
+      edit: Categorie bewerken
+    create:
+      success: Categorie succesvol aangemaakt
+    destroy:
+      success: Categorie succesvol verwijderd
+    edit:
+      edit: Categorie bewerken
+    form:
+      placeholder: Categorienaam
+    index:
+      bootstrap: Gebruik standaardinstellingen (aanbevolen)
+      categories: Categorieën
+      categories_expenses: Uitgavencategorieën
+      categories_incomes: Inkomenscategorieën
+      empty: Geen categorieën gevonden
+      new: Nieuwe categorie
+    menu:
+      loading: Laden...
+    new:
+      new_category: Nieuwe categorie
+    update:
+      success: Categorie succesvol bijgewerkt
+  category:
+    dropdowns:
+      show:
+        bootstrap: Standaardcategorieën genereren
+        empty: Geen categorieën gevonden

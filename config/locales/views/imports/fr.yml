@@ -55,26 +55,30 @@ fr:
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
         title: Importez vos données
   imports:
-    empty:
-      message: Aucune importation pour l'instant.
-      new: Nouvelle importation
-    import:
-      complete: Terminé
-      delete: Supprimer
-      failed: Échoué
-      in_progress: En cours
-      label: "%{type} : %{datetime}"
-      revert_failed: Annulation échouée
-      reverting: Annulation en cours
-      uploading: Traitement des lignes
-      view: Afficher
     index:
-      imports: Importations
+      imports: Imports
       new: Nouvelle importation
-      title: Import/Export
-      exports: Exportations
-      new_export: Nouvelle exportation
-      no_exports: Aucune exportation pour l'instant.
+    table:
+      title: Imports
+      header:
+        date: Date
+        operation: Opération
+        status: Statut
+        actions: Actions
+      row:
+        status:
+          in_progress: En cours
+          uploading: Traitement des lignes
+          reverting: Annulation en cours
+          revert_failed: Annulation échouée
+          complete: Terminé
+          failed: Échoué
+        actions:
+          revert: Revenir
+          confirm_revert: Cette opération supprimera les transactions importées, mais vous pourrez toujours consulter et réimporter vos données à tout moment.
+          delete: Supprimer
+          view: Afficher
+      empty: Aucune importation pour l'instant.
     new:
       description: Vous pouvez manuellement importer divers types de données via CSV ou utiliser un des modèles d'importation que nous proposons comme Mint.
       import_accounts: Importer les comptes

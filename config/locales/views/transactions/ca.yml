@@ -1,6 +1,9 @@
 ---
 ca:
   transactions:
+    dismiss_duplicate:
+      failure: No s'ha pogut rebutjar la suggerència de duplicat
+      success: Mantingudes com a transaccions separades
     form:
       account: Compte
       account_prompt: Selecciona un compte
@@ -10,35 +13,15 @@ ca:
       date: Data
       description: Descripció
       description_placeholder: Descriu la transacció
+      details: Detalls
       expense: Despesa
       income: Ingrés
-      none: (cap)
+      none: "(cap)"
       note_label: Notes
       note_placeholder: Introdueix una nota
       submit: Afegeix transacció
       tags_label: Etiquetes
       transfer: Transferència
-    new:
-      new_transaction: Nova transacció
-    show:
-      account_label: Compte
-      amount: Import
-      category_label: Categoria
-      date_label: Data
-      delete: Elimina
-      delete_subtitle: Això eliminarà permanentment la transacció, afectarà els teus saldos històrics i no es podrà desfer.
-      delete_title: Eliminar transacció
-      details: Detalls
-      merchant_label: Comerciant
-      name_label: Nom
-      nature: Tipus
-      none: "(cap)"
-      note_label: Notes
-      note_placeholder: Introdueix una nota
-      overview: Resum
-      settings: Configuració
-      tags_label: Etiquetes
-      uncategorized: "(sense categoritzar)"
     header:
       edit_categories: Edita categories
       edit_imports: Edita importacions
@@ -46,8 +29,24 @@ ca:
       edit_tags: Edita etiquetes
       import: Importa
     index:
+      import: Importa
       transaction: transacció
       transactions: transaccions
+    merge_duplicate:
+      failure: No s'han pogut fusionar les transaccions
+      success: Les transaccions s'han fusionat correctament
+    new:
+      new_transaction: Nova transacció
+    search:
+      filters:
+        account: Compte
+        amount: Import
+        category: Categoria
+        date: Data
+        merchant: Comerciant
+        status: Estat
+        tag: Etiqueta
+        type: Tipus
     searches:
       filters:
         amount_filter:
@@ -56,15 +55,22 @@ ca:
           less_than: Menor que
           placeholder: '0'
         badge:
+          confirmed: Confirmada
           expense: Despesa
           income: Ingrés
           on_or_after: el %{date} o després
           on_or_before: el %{date} o abans
+          pending: Pendent
           transfer: Transferència
+        status_filter:
+          confirmed: Confirmada
+          pending: Pendent
         type_filter:
           expense: Despesa
           income: Ingrés
           transfer: Transferència
+      form:
+        toggle_selection_checkboxes: Commuta totes les caselles
       menu:
         account_filter: Compte
         amount_filter: Import
@@ -74,11 +80,51 @@ ca:
         clear_filters: Neteja filtres
         date_filter: Data
         merchant_filter: Comerciant
+        status_filter: Estat
         tag_filter: Etiqueta
         type_filter: Tipus
       search:
         equal_to: igual a
         greater_than: major que
         less_than: menor que
-      form:
-        toggle_selection_checkboxes: Commuta totes les caselles
+    show:
+      account_label: Compte
+      amount: Import
+      category_label: Categoria
+      date_label: Data
+      delete: Elimina
+      delete_subtitle: Això eliminarà permanentment la transacció, afectarà els teus
+        saldos històrics i no es podrà desfer.
+      delete_title: Eliminar transacció
+      details: Detalls
+      keep_both: No, mantenir ambdós
+      mark_recurring: Marcar com a recurrent
+      mark_recurring_subtitle: Segueix-ho com a transacció recurrent. La variància d'import
+        es calcula automàticament a partir dels últims 6 mesos de transaccions similars.
+      mark_recurring_title: Transacció recurrent
+      merchant_label: Comerciant
+      merge_duplicate: Sí, fusiona-les
+      name_label: Nom
+      nature: Tipus
+      none: "(cap)"
+      note_label: Notes
+      note_placeholder: Introdueix una nota
+      overview: Resum
+      potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa que
+        la transacció publicada a sota. Si és així, fusiona-les per evitar comptabilitzar dues vegades.
+      potential_duplicate_title: S'ha detectat duplicat possible
+      settings: Configuració
+      tags_label: Etiquetes
+      uncategorized: "(sense categoritzar)"
+      loan_payment: Pagament de préstec
+      transfer: Transferència
+    toggle_recurring_section: Mostra/Amaga les transaccions recurrents properes
+    transaction:
+      pending: Pendent
+      pending_tooltip: Transacció pendent — pot canviar quan es publiqui
+      possible_duplicate: Duplicat?
+      potential_duplicate_tooltip: Això pot ser un duplicat d'una altra transacció
+      review_recommended: Revisa
+      review_recommended_tooltip: Diferència d'import important — es recomana revisar
+        per comprovar si és un duplicat
+    unknown_name: Transacció desconeguda

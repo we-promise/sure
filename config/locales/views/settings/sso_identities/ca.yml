@@ -1,0 +1,7 @@
+---
+ca:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: No es pot desvincular l'últim
+        success: Èxit

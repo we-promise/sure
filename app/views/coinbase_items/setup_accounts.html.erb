@@ -1,0 +1,104 @@
+<% content_for :title, t(".title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "bitcoin", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_account_setup_coinbase_item_path(@coinbase_item),
+                  method: :post,
+                  local: true,
+                  id: "coinbase-setup-form",
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t(".creating"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+            <div>
+              <p class="text-sm text-primary">
+                <%= t(".instructions") %>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <% if @coinbase_accounts.empty? %>
+          <div class="text-center py-8">
+            <p class="text-secondary"><%= t(".no_accounts") %></p>
+          </div>
+        <% else %>
+          <div data-controller="select-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-secondary">
+                <%= t(".accounts_count", count: @coinbase_accounts.count) %>
+              </span>
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox"
+                       id="coinbase-select-all"
+                       data-action="change->select-all#toggle"
+                       class="checkbox checkbox--dark">
+                <span class="text-secondary"><%= t(".select_all") %></span>
+              </label>
+            </div>
+
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+              <% @coinbase_accounts.each do |coinbase_account| %>
+                <label for="cb_<%= coinbase_account.id %>" class="flex items-center gap-3 p-3 border border-primary rounded-lg hover:bg-surface transition-colors cursor-pointer">
+                  <%= check_box_tag "selected_accounts[]",
+                                    coinbase_account.id,
+                                    false,
+                                    id: "cb_#{coinbase_account.id}",
+                                    class: "checkbox checkbox--dark",
+                                    data: { select_all_target: "checkbox" } %>
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-primary truncate">
+                    <%= coinbase_account.name %>
+                  </p>
+                  <p class="text-xs text-secondary">
+                    <%= coinbase_account.currency %>
+                  </p>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <p class="text-sm font-medium text-primary">
+                    <%= number_with_delimiter(coinbase_account.current_balance || 0, delimiter: ",") %>
+                  </p>
+                  <p class="text-xs text-secondary">
+                    <%= coinbase_account.currency %>
+                  </p>
+                </div>
+              </label>
+            <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: t(".import_selected"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          data: { loading_button_target: "button" }
+        ) %>
+        <%= render DS::Link.new(
+          text: t(".cancel"),
+          variant: "secondary",
+          href: accounts_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

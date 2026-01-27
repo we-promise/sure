@@ -1,0 +1,7 @@
+---
+ca:
+  chats:
+    demo_banner_message: "Estàs utilitzant un LLM Qwen3 de pesos oberts amb crèdits proporcionats
+      per Cloudflare Workers AI. Els resultats poden variar ja que el codi es va provar
+      principalment amb `gpt-4.1` però els teus tokens no van a cap altre lloc per ser entrenats! 🤖"
+    demo_banner_title: Mode de demostració

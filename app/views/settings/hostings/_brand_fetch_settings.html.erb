@@ -39,4 +39,21 @@
                         disabled: ENV["BRAND_FETCH_CLIENT_ID"].present?,
                         data: { "auto-submit-form-target": "auto" } %>
   <% end %>
+
+  <div class="flex items-center justify-between mt-4">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".high_res_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".high_res_description") %></p>
+    </div>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.toggle :brand_fetch_high_res_logos,
+                      checked: ENV["BRAND_FETCH_HIGH_RES_LOGOS"].present? ? ENV["BRAND_FETCH_HIGH_RES_LOGOS"] == "true" : Setting.brand_fetch_high_res_logos,
+                      disabled: ENV["BRAND_FETCH_HIGH_RES_LOGOS"].present?,
+                      data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
 </div>

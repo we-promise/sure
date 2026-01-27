@@ -14,6 +14,8 @@ ca:
       valuations: Valor
       value: valor
     new:
+      amount: Import
+      submit: Afegeix actualització de saldo
       title: Nou saldo
     show:
       amount: Import
@@ -28,4 +30,3 @@ ca:
       note_placeholder: Afegeix qualsevol detall addicional sobre aquesta entrada
       overview: Resum
       settings: Configuració
-

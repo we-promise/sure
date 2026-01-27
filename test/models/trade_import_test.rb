@@ -63,20 +63,13 @@ class TradeImportTest < ActiveSupport::TestCase
     assert_equal "complete", @import.status
   end
 
-  test "auto-categorizes buy trades and leaves sell trades uncategorized" do
+  test "auto-assigns investment activity labels to buy and sell trades" do
     aapl = securities(:aapl)
     aapl_resolver = mock
     aapl_resolver.stubs(:resolve).returns(aapl)
     Security::Resolver.stubs(:new).returns(aapl_resolver)
 
-    # Create the investment category if it doesn't exist
     account = accounts(:depository)
-    family = account.family
-    savings_category = family.categories.find_or_create_by!(name: "Savings & Investments") do |c|
-      c.color = "#059669"
-      c.classification = "expense"
-      c.lucide_icon = "piggy-bank"
-    end
 
     import = <<~CSV
       date,ticker,qty,price,currency,name
@@ -109,7 +102,7 @@ class TradeImportTest < ActiveSupport::TestCase
 
     assert_not_nil buy_trade, "Buy trade should have been created"
     assert_not_nil sell_trade, "Sell trade should have been created"
-    assert_equal savings_category, buy_trade.category, "Buy trade should be auto-categorized as Savings & Investments"
-    assert_nil sell_trade.category, "Sell trade should not be auto-categorized"
+    assert_equal "Buy", buy_trade.investment_activity_label, "Buy trade should have 'Buy' activity label"
+    assert_equal "Sell", sell_trade.investment_activity_label, "Sell trade should have 'Sell' activity label"
   end
 end
