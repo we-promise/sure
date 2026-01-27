@@ -63,9 +63,9 @@ class PdfImport < Import
 
   private
 
-  def pdf_file_content
-    return nil unless pdf_file.attached?
+    def pdf_file_content
+      return nil unless pdf_file.attached?
 
-    pdf_file.download
-  end
+      pdf_file.download
+    end
 end

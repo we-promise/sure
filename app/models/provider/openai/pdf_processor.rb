@@ -87,224 +87,224 @@ class Provider::Openai::PdfProcessor
 
   private
 
-  PdfProcessingResult = Provider::LlmConcept::PdfProcessingResult
+    PdfProcessingResult = Provider::LlmConcept::PdfProcessingResult
 
-  def process_native
-    effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
+    def process_native
+      effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
 
-    # Encode PDF content as base64 for the API
-    pdf_base64 = Base64.strict_encode64(pdf_content)
+      # Encode PDF content as base64 for the API
+      pdf_base64 = Base64.strict_encode64(pdf_content)
 
-    response = client.responses.create(parameters: {
-      model: effective_model,
-      input: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "file",
-              file: {
-                filename: "document.pdf",
-                file_data: "data:application/pdf;base64,#{pdf_base64}"
+      response = client.responses.create(parameters: {
+        model: effective_model,
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "file",
+                file: {
+                  filename: "document.pdf",
+                  file_data: "data:application/pdf;base64,#{pdf_base64}"
+                }
+              },
+              {
+                type: "text",
+                text: "Please analyze this PDF document and provide a structured summary."
               }
-            },
-            {
-              type: "text",
-              text: "Please analyze this PDF document and provide a structured summary."
-            }
-          ]
+            ]
+          }
+        ],
+        instructions: instructions,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "pdf_analysis_result",
+            strict: true,
+            schema: json_schema
+          }
         }
-      ],
-      instructions: instructions,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "pdf_analysis_result",
-          strict: true,
-          schema: json_schema
-        }
+      })
+
+      Rails.logger.info("Tokens used to process PDF: #{response.dig("usage", "total_tokens")}")
+
+      record_usage(
+        effective_model,
+        response.dig("usage"),
+        operation: "process_pdf",
+        metadata: { pdf_size: pdf_content&.bytesize }
+      )
+
+      parse_response_native(response)
+    end
+
+    def process_generic
+      effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
+
+      # Encode PDF content as base64 for the API
+      pdf_base64 = Base64.strict_encode64(pdf_content)
+
+      params = {
+        model: effective_model,
+        messages: [
+          { role: "system", content: instructions },
+          {
+            role: "user",
+            content: [
+              {
+                type: "file",
+                file: {
+                  filename: "document.pdf",
+                  file_data: "data:application/pdf;base64,#{pdf_base64}"
+                }
+              },
+              {
+                type: "text",
+                text: "Please analyze this PDF document and provide a structured summary."
+              }
+            ]
+          }
+        ]
       }
-    })
 
-    Rails.logger.info("Tokens used to process PDF: #{response.dig("usage", "total_tokens")}")
+      response = client.chat(parameters: params)
 
-    record_usage(
-      effective_model,
-      response.dig("usage"),
-      operation: "process_pdf",
-      metadata: { pdf_size: pdf_content&.bytesize }
-    )
+      Rails.logger.info("Tokens used to process PDF: #{response.dig("usage", "total_tokens")}")
 
-    parse_response_native(response)
-  end
+      record_usage(
+        effective_model,
+        response.dig("usage"),
+        operation: "process_pdf",
+        metadata: { pdf_size: pdf_content&.bytesize }
+      )
 
-  def process_generic
-    effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
+      parse_response_generic(response)
+    end
 
-    # Encode PDF content as base64 for the API
-    pdf_base64 = Base64.strict_encode64(pdf_content)
+    def parse_response_native(response)
+      message_output = response["output"]&.find { |o| o["type"] == "message" }
+      raw = message_output&.dig("content", 0, "text")
 
-    params = {
-      model: effective_model,
-      messages: [
-        { role: "system", content: instructions },
-        {
-          role: "user",
-          content: [
-            {
-              type: "file",
-              file: {
-                filename: "document.pdf",
-                file_data: "data:application/pdf;base64,#{pdf_base64}"
+      raise Provider::Openai::Error, "No message content found in response" if raw.nil?
+
+      build_result(JSON.parse(raw))
+    rescue JSON::ParserError => e
+      raise Provider::Openai::Error, "Invalid JSON in PDF processing response: #{e.message}"
+    end
+
+    def parse_response_generic(response)
+      raw = response.dig("choices", 0, "message", "content")
+      parsed = parse_json_flexibly(raw)
+
+      build_result(parsed)
+    end
+
+    def build_result(parsed)
+      PdfProcessingResult.new(
+        summary: parsed["summary"],
+        document_type: normalize_document_type(parsed["document_type"]),
+        extracted_data: parsed["extracted_data"] || {}
+      )
+    end
+
+    def normalize_document_type(doc_type)
+      return "other" if doc_type.blank?
+
+      normalized = doc_type.to_s.strip.downcase.gsub(/\s+/, "_")
+      Import::DOCUMENT_TYPES.include?(normalized) ? normalized : "other"
+    end
+
+    def parse_json_flexibly(raw)
+      return {} if raw.blank?
+
+      # Try direct parse first
+      JSON.parse(raw)
+    rescue JSON::ParserError
+      # Try to extract JSON from markdown code blocks
+      if raw =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Continue to next strategy
+        end
+      end
+
+      # Try to find any JSON object
+      if raw =~ /(\{[\s\S]*\})/m
+        begin
+          return JSON.parse($1)
+        rescue JSON::ParserError
+          # Fall through to error
+        end
+      end
+
+      raise Provider::Openai::Error, "Could not parse JSON from PDF processing response: #{raw.truncate(200)}"
+    end
+
+    def json_schema
+      {
+        type: "object",
+        properties: {
+          document_type: {
+            type: "string",
+            enum: Import::DOCUMENT_TYPES,
+            description: "The type of financial document"
+          },
+          summary: {
+            type: "string",
+            description: "A concise summary of the document contents"
+          },
+          extracted_data: {
+            type: "object",
+            properties: {
+              institution_name: {
+                type: [ "string", "null" ],
+                description: "Name of the issuing institution"
+              },
+              statement_period_start: {
+                type: [ "string", "null" ],
+                description: "Start date of statement period (YYYY-MM-DD)"
+              },
+              statement_period_end: {
+                type: [ "string", "null" ],
+                description: "End date of statement period (YYYY-MM-DD)"
+              },
+              transaction_count: {
+                type: [ "integer", "null" ],
+                description: "Number of transactions in the statement"
+              },
+              opening_balance: {
+                type: [ "number", "null" ],
+                description: "Opening balance amount"
+              },
+              closing_balance: {
+                type: [ "number", "null" ],
+                description: "Closing balance amount"
+              },
+              currency: {
+                type: [ "string", "null" ],
+                description: "Currency code (e.g., USD, EUR)"
+              },
+              account_holder: {
+                type: [ "string", "null" ],
+                description: "Name of the account holder"
               }
             },
-            {
-              type: "text",
-              text: "Please analyze this PDF document and provide a structured summary."
-            }
-          ]
-        }
-      ]
-    }
-
-    response = client.chat(parameters: params)
-
-    Rails.logger.info("Tokens used to process PDF: #{response.dig("usage", "total_tokens")}")
-
-    record_usage(
-      effective_model,
-      response.dig("usage"),
-      operation: "process_pdf",
-      metadata: { pdf_size: pdf_content&.bytesize }
-    )
-
-    parse_response_generic(response)
-  end
-
-  def parse_response_native(response)
-    message_output = response["output"]&.find { |o| o["type"] == "message" }
-    raw = message_output&.dig("content", 0, "text")
-
-    raise Provider::Openai::Error, "No message content found in response" if raw.nil?
-
-    build_result(JSON.parse(raw))
-  rescue JSON::ParserError => e
-    raise Provider::Openai::Error, "Invalid JSON in PDF processing response: #{e.message}"
-  end
-
-  def parse_response_generic(response)
-    raw = response.dig("choices", 0, "message", "content")
-    parsed = parse_json_flexibly(raw)
-
-    build_result(parsed)
-  end
-
-  def build_result(parsed)
-    PdfProcessingResult.new(
-      summary: parsed["summary"],
-      document_type: normalize_document_type(parsed["document_type"]),
-      extracted_data: parsed["extracted_data"] || {}
-    )
-  end
-
-  def normalize_document_type(doc_type)
-    return "other" if doc_type.blank?
-
-    normalized = doc_type.to_s.strip.downcase.gsub(/\s+/, "_")
-    Import::DOCUMENT_TYPES.include?(normalized) ? normalized : "other"
-  end
-
-  def parse_json_flexibly(raw)
-    return {} if raw.blank?
-
-    # Try direct parse first
-    JSON.parse(raw)
-  rescue JSON::ParserError
-    # Try to extract JSON from markdown code blocks
-    if raw =~ /```(?:json)?\s*(\{[\s\S]*?\})\s*```/m
-      begin
-        return JSON.parse($1)
-      rescue JSON::ParserError
-        # Continue to next strategy
-      end
-    end
-
-    # Try to find any JSON object
-    if raw =~ /(\{[\s\S]*\})/m
-      begin
-        return JSON.parse($1)
-      rescue JSON::ParserError
-        # Fall through to error
-      end
-    end
-
-    raise Provider::Openai::Error, "Could not parse JSON from PDF processing response: #{raw.truncate(200)}"
-  end
-
-  def json_schema
-    {
-      type: "object",
-      properties: {
-        document_type: {
-          type: "string",
-          enum: Import::DOCUMENT_TYPES,
-          description: "The type of financial document"
+            required: [
+              "institution_name",
+              "statement_period_start",
+              "statement_period_end",
+              "transaction_count",
+              "opening_balance",
+              "closing_balance",
+              "currency",
+              "account_holder"
+            ],
+            additionalProperties: false
+          }
         },
-        summary: {
-          type: "string",
-          description: "A concise summary of the document contents"
-        },
-        extracted_data: {
-          type: "object",
-          properties: {
-            institution_name: {
-              type: [ "string", "null" ],
-              description: "Name of the issuing institution"
-            },
-            statement_period_start: {
-              type: [ "string", "null" ],
-              description: "Start date of statement period (YYYY-MM-DD)"
-            },
-            statement_period_end: {
-              type: [ "string", "null" ],
-              description: "End date of statement period (YYYY-MM-DD)"
-            },
-            transaction_count: {
-              type: [ "integer", "null" ],
-              description: "Number of transactions in the statement"
-            },
-            opening_balance: {
-              type: [ "number", "null" ],
-              description: "Opening balance amount"
-            },
-            closing_balance: {
-              type: [ "number", "null" ],
-              description: "Closing balance amount"
-            },
-            currency: {
-              type: [ "string", "null" ],
-              description: "Currency code (e.g., USD, EUR)"
-            },
-            account_holder: {
-              type: [ "string", "null" ],
-              description: "Name of the account holder"
-            }
-          },
-          required: [
-            "institution_name",
-            "statement_period_start",
-            "statement_period_end",
-            "transaction_count",
-            "opening_balance",
-            "closing_balance",
-            "currency",
-            "account_holder"
-          ],
-          additionalProperties: false
-        }
-      },
-      required: [ "document_type", "summary", "extracted_data" ],
-      additionalProperties: false
-    }
-  end
+        required: [ "document_type", "summary", "extracted_data" ],
+        additionalProperties: false
+      }
+    end
 end
