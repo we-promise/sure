@@ -21,14 +21,15 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
           name: "New Family Name",
           country: "US",
           date_format: "%m/%d/%Y",
-          currency: "USD",
-          locale: "en"
-        }
+          currency: "USD"
+        },
+        locale: "es"
       }
     }
 
     assert_redirected_to settings_profile_url
     assert_equal "Your profile has been updated.", flash[:notice]
+    assert_equal "es", @user.reload.locale
   end
 
   test "admin can reset family data" do

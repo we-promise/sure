@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_24_180211) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -943,7 +943,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.datetime "updated_at", null: false
     t.jsonb "raw_payload", default: {}
     t.jsonb "raw_transactions_payload", default: {}
-    t.jsonb "raw_investments_payload", default: {}
+    t.jsonb "raw_holdings_payload", default: {}
     t.jsonb "raw_liabilities_payload", default: {}
     t.index ["plaid_id"], name: "index_plaid_accounts_on_plaid_id", unique: true
     t.index ["plaid_item_id"], name: "index_plaid_accounts_on_plaid_item_id"
@@ -1402,9 +1402,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.datetime "set_onboarding_goals_at"
     t.string "default_account_order", default: "name_asc"
     t.jsonb "preferences", default: {}, null: false
+    t.string "locale"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"
+    t.index ["locale"], name: "index_users_on_locale"
     t.index ["otp_secret"], name: "index_users_on_otp_secret", unique: true, where: "(otp_secret IS NOT NULL)"
     t.index ["preferences"], name: "index_users_on_preferences", using: :gin
   end

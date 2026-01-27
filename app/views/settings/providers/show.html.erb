@@ -67,7 +67,7 @@
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "SnapTrade (beta)", collapsible: true, open: false do %>
+    <%= settings_section title: "SnapTrade (beta)", collapsible: true, open: false, auto_open_param: "manage" do %>
       <turbo-frame id="snaptrade-providers-panel">
         <%= render "settings/providers/snaptrade_panel" %>
       </turbo-frame>
