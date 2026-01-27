@@ -126,6 +126,83 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes uncategorized_ids, uncategorized_transfer.entryable.id
   end
 
+  test "filtering for only Uncategorized returns only uncategorized transactions" do
+    # Create a mix of categorized and uncategorized transactions
+    categorized = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink)
+    )
+
+    uncategorized = create_transaction(
+      account: @checking_account,
+      amount: 200
+    )
+
+    # Filter for only uncategorized
+    results = Transaction::Search.new(@family, filters: { categories: [ "Uncategorized" ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should only include uncategorized transaction
+    assert_includes result_ids, uncategorized.entryable.id
+    assert_not_includes result_ids, categorized.entryable.id
+    assert_equal 1, result_ids.size
+  end
+
+  test "filtering for Uncategorized plus a real category returns both" do
+    # Create transactions with different categories
+    food_transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink)
+    )
+
+    travel_transaction = create_transaction(
+      account: @checking_account,
+      amount: 150,
+      category: categories(:travel)
+    )
+
+    uncategorized = create_transaction(
+      account: @checking_account,
+      amount: 200
+    )
+
+    # Filter for food category + uncategorized
+    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink", "Uncategorized" ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should include both food and uncategorized
+    assert_includes result_ids, food_transaction.entryable.id
+    assert_includes result_ids, uncategorized.entryable.id
+    # Should NOT include travel
+    assert_not_includes result_ids, travel_transaction.entryable.id
+    assert_equal 2, result_ids.size
+  end
+
+  test "filtering excludes uncategorized when not in filter" do
+    # Create a mix of transactions
+    categorized = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink)
+    )
+
+    uncategorized = create_transaction(
+      account: @checking_account,
+      amount: 200
+    )
+
+    # Filter for only food category (without Uncategorized)
+    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink" ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should only include categorized transaction
+    assert_includes result_ids, categorized.entryable.id
+    assert_not_includes result_ids, uncategorized.entryable.id
+    assert_equal 1, result_ids.size
+  end
+
   test "new family-based API works correctly" do
     # Create transactions for testing
     transaction1 = create_transaction(
