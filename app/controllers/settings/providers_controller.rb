@@ -10,6 +10,9 @@ class Settings::ProvidersController < ApplicationController
     ]
 
     prepare_show_context
+  rescue ActiveRecord::Encryption::Errors::Configuration => e
+    Rails.logger.error("Active Record Encryption not configured: #{e.message}")
+    @encryption_error = true
   end
 
   def update

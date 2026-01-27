@@ -1,6 +1,7 @@
 class TransactionsController < ApplicationController
   include EntryableResource
 
+  before_action :set_entry_for_unlock, only: :unlock
   before_action :store_params!, only: :index
 
   def new
@@ -68,6 +69,7 @@ class TransactionsController < ApplicationController
     if @entry.save
       @entry.sync_account_later
       @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       flash[:notice] = "Transaction created"
@@ -98,6 +100,9 @@ class TransactionsController < ApplicationController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later
 
+      # Reload to ensure fresh state for turbo stream rendering
+      @entry.reload
+
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
         format.turbo_stream do
@@ -106,6 +111,11 @@ class TransactionsController < ApplicationController
               dom_id(@entry, :header),
               partial: "transactions/header",
               locals: { entry: @entry }
+            ),
+            turbo_stream.replace(
+              dom_id(@entry, :protection),
+              partial: "entries/protection_indicator",
+              locals: { entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) }
             ),
             turbo_stream.replace(@entry),
             *flash_notification_stream_items
@@ -206,7 +216,7 @@ class TransactionsController < ApplicationController
         original_name: @entry.name,
         original_date: I18n.l(@entry.date, format: :long))
 
-      @entry.account.entries.create!(
+      new_entry = @entry.account.entries.create!(
         name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
         date: @entry.date,
         amount: signed_amount,
@@ -221,6 +231,10 @@ class TransactionsController < ApplicationController
         )
       )
 
+      # Mark the new trade as user-modified to protect from sync
+      new_entry.lock_saved_attributes!
+      new_entry.mark_user_modified!
+
       # Mark original transaction as excluded (soft delete)
       @entry.update!(excluded: true)
     end
@@ -233,6 +247,13 @@ class TransactionsController < ApplicationController
   rescue StandardError => e
     flash[:alert] = t("transactions.convert_to_trade.errors.unexpected_error", error: e.message)
     redirect_back_or_to transactions_path, status: :see_other
+  end
+
+  def unlock
+    @entry.unlock_for_sync!
+    flash[:notice] = t("entries.unlock.success")
+
+    redirect_back_or_to transactions_path
   end
 
   def mark_as_recurring
@@ -286,6 +307,11 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def set_entry_for_unlock
+      transaction = Current.family.transactions.find(params[:id])
+      @entry = transaction.entry
+    end
+
     def needs_rule_notification?(transaction)
       return false if Current.user.rule_prompts_disabled
 

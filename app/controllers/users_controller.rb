@@ -105,8 +105,8 @@ class UsersController < ApplicationController
     def user_params
       params.require(:user).permit(
         :first_name, :last_name, :email, :profile_image, :redirect_to, :delete_profile_image, :onboarded_at,
-        :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at,
-        family_attributes: [ :name, :currency, :country, :locale, :date_format, :timezone, :id ],
+        :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at, :locale,
+        family_attributes: [ :name, :currency, :country, :date_format, :timezone, :locale, :id ],
         goals: []
       )
     end

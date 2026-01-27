@@ -82,11 +82,21 @@
       <div class="items-center gap-2 text-sm <%= @import.entity_type_col_label.nil? ? "hidden" : "flex" %>" data-import-target="amountTypeValue">
         <span class="shrink-0 text-secondary">↪</span>
         <span class="text-secondary">Set</span>
-        <%= form.select :amount_type_inflow_value,
+        <%= form.select :amount_type_identifier_value,
                         @import.selectable_amount_type_values,
-                        { prompt: "Select column", container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
+                        { prompt: "Select value", container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
+                        required: @import.amount_type_strategy == "custom_column",
+                        data: { action: "import#handleAmountTypeIdentifierChange" } %>
+        <span class="text-secondary">as identifier value</span>
+      </div>
+
+      <div class="items-center gap-2 text-sm <%= @import.amount_type_identifier_value.nil? ? "hidden" : "flex" %>" data-import-target="amountTypeInflowValue">
+        <span class="shrink-0 text-secondary">↪</span>
+        <span class="text-secondary">Treat "<span class="font-medium"><%= @import.amount_type_identifier_value %></span>" as</span>
+        <%= form.select :amount_type_inflow_value,
+                        [["Income (inflow)", "inflows_positive"], ["Expense (outflow)", "inflows_negative"]],
+                        { prompt: "Select type", container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
                         required: @import.amount_type_strategy == "custom_column" %>
-        <span class="text-secondary">as "income" (inflow) value</span>
       </div>
     </div>
   <% end %>
