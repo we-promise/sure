@@ -90,6 +90,11 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Build a hash index for fast budget category lookups by category ID
+  def budget_categories_by_category_id
+    @budget_categories_by_category_id ||= budget_categories.index_by(&:category_id)
+  end
+
   def transactions
     family.transactions.visible.in_period(period)
   end
@@ -159,7 +164,7 @@ class Budget < ApplicationRecord
   end
 
   def budget_category_actual_spending(budget_category)
-    expense_totals.category_totals.find { |ct| ct.category.id == budget_category.category.id }&.total || 0
+    expense_totals_by_category_id[budget_category.category.id]&.total || 0
   end
 
   def category_median_monthly_expense(category)
@@ -241,6 +246,10 @@ class Budget < ApplicationRecord
 
     def expense_totals
       @expense_totals ||= income_statement.expense_totals(period: period)
+    end
+
+    def expense_totals_by_category_id
+      @expense_totals_by_category_id ||= expense_totals.category_totals.index_by { |ct| ct.category.id }
     end
 
     def income_totals
