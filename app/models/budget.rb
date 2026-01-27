@@ -113,9 +113,13 @@ class Budget < ApplicationRecord
 
   def name
     if family.uses_custom_month_start?
-      "#{start_date.strftime('%b %d')} - #{end_date.strftime('%b %d, %Y')}"
+      I18n.t(
+        "budgets.name.custom_range",
+        start: start_date.strftime("%b %d"),
+        end_date: end_date.strftime("%b %d, %Y")
+      )
     else
-      start_date.strftime("%B %Y")
+      I18n.t("budgets.name.month_year", month: start_date.strftime("%B %Y"))
     end
   end
 
