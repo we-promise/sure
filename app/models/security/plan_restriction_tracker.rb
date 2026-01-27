@@ -10,8 +10,10 @@ module Security::PlanRestrictionTracker
   CACHE_KEY_PREFIX = "security_plan_restriction"
   CACHE_EXPIRY = 7.days
 
-  # Pattern to detect TwelveData plan upgrade errors
-  PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
+  # Map provider names to their classes for plan detection
+  PROVIDER_CLASSES = {
+    "TwelveData" => Provider::TwelveData
+  }.freeze
 
   class_methods do
     # Records that a security requires a higher plan to fetch data
@@ -19,7 +21,10 @@ module Security::PlanRestrictionTracker
     # @param error_message [String] The error message from the provider
     # @param provider [String] The provider name (e.g., "TwelveData")
     def record_plan_restriction(security_id:, error_message:, provider:)
-      required_plan = extract_required_plan(error_message)
+      provider_class = PROVIDER_CLASSES[provider]
+      return unless provider_class&.respond_to?(:extract_required_plan)
+
+      required_plan = provider_class.extract_required_plan(error_message)
       return unless required_plan
 
       cache_key = plan_restriction_cache_key(provider, security_id)
@@ -59,22 +64,19 @@ module Security::PlanRestrictionTracker
       restrictions
     end
 
-    # Checks if an error message indicates a plan upgrade is required
-    def plan_upgrade_required?(error_message)
-      return false if error_message.blank?
-      error_message.match?(PLAN_UPGRADE_PATTERN)
+    # Checks if an error message indicates a plan upgrade is required for a provider
+    # @param error_message [String] The error message
+    # @param provider [String] The provider name
+    def plan_upgrade_required?(error_message, provider:)
+      provider_class = PROVIDER_CLASSES[provider]
+      return false unless provider_class&.respond_to?(:plan_upgrade_required?)
+      provider_class.plan_upgrade_required?(error_message)
     end
 
     private
 
       def plan_restriction_cache_key(provider, security_id)
         "#{CACHE_KEY_PREFIX}/#{provider.downcase}/#{security_id}"
-      end
-
-      def extract_required_plan(error_message)
-        return nil if error_message.blank?
-        match = error_message.match(PLAN_UPGRADE_PATTERN)
-        match ? match[1] : nil
       end
   end
 end

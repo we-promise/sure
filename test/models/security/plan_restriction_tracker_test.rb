@@ -13,21 +13,26 @@ class Security::PlanRestrictionTrackerTest < ActiveSupport::TestCase
 
   test "plan_upgrade_required? detects Grow plan message" do
     message = "This endpoint is available starting with Grow subscription."
-    assert Security.plan_upgrade_required?(message)
+    assert Security.plan_upgrade_required?(message, provider: "TwelveData")
   end
 
   test "plan_upgrade_required? detects Pro plan message" do
     message = "API error (code: 400): available starting with Pro plan"
-    assert Security.plan_upgrade_required?(message)
+    assert Security.plan_upgrade_required?(message, provider: "TwelveData")
   end
 
   test "plan_upgrade_required? returns false for other errors" do
     message = "Some other error message"
-    assert_not Security.plan_upgrade_required?(message)
+    assert_not Security.plan_upgrade_required?(message, provider: "TwelveData")
   end
 
   test "plan_upgrade_required? returns false for nil" do
-    assert_not Security.plan_upgrade_required?(nil)
+    assert_not Security.plan_upgrade_required?(nil, provider: "TwelveData")
+  end
+
+  test "plan_upgrade_required? returns false for unknown provider" do
+    message = "This endpoint is available starting with Grow subscription."
+    assert_not Security.plan_upgrade_required?(message, provider: "UnknownProvider")
   end
 
   test "record_plan_restriction stores restriction in cache" do

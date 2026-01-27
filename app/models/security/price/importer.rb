@@ -117,7 +117,7 @@ class Security::Price::Importer
           error_message = response.error.message
           Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{error_message}")
 
-          if Security.plan_upgrade_required?(error_message)
+          if Security.plan_upgrade_required?(error_message, provider: security_provider.class.name.demodulize)
             Security.record_plan_restriction(
               security_id: security.id,
               error_message: error_message,
