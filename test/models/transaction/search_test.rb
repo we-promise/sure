@@ -114,7 +114,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Search for uncategorized transactions
-    uncategorized_results = Transaction::Search.new(@family, filters: { categories: [ "Uncategorized" ] }).transactions_scope
+    uncategorized_results = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] }).transactions_scope
     uncategorized_ids = uncategorized_results.pluck(:id)
 
     # Should include standard uncategorized transactions
@@ -140,7 +140,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Filter for only uncategorized
-    results = Transaction::Search.new(@family, filters: { categories: [ "Uncategorized" ] }).transactions_scope
+    results = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] }).transactions_scope
     result_ids = results.pluck(:id)
 
     # Should only include uncategorized transaction
@@ -169,7 +169,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Filter for food category + uncategorized
-    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink", "Uncategorized" ] }).transactions_scope
+    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink", Category.uncategorized.name ] }).transactions_scope
     result_ids = results.pluck(:id)
 
     # Should include both food and uncategorized
