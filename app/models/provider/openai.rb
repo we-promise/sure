@@ -18,6 +18,7 @@ class Provider::Openai < Provider
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
+    client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 600).to_i
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = uri_base
