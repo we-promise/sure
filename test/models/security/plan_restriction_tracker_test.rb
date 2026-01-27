@@ -67,7 +67,7 @@ class Security::PlanRestrictionTrackerTest < ActiveSupport::TestCase
   end
 
   test "plan_restrictions_for returns empty hash for empty input" do
-    assert_equal({}, Security.plan_restrictions_for([ ], provider: "TwelveData"))
+    assert_equal({}, Security.plan_restrictions_for([], provider: "TwelveData"))
     assert_equal({}, Security.plan_restrictions_for(nil, provider: "TwelveData"))
   end
 
