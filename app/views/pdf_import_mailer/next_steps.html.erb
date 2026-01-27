@@ -3,7 +3,7 @@
 <p><%= t(".intro", product: product_name) %></p>
 
 <h2><%= t(".document_type_label") %></h2>
-<p><strong><%= t("imports.document_types.#{@pdf_import.document_type}") %></strong></p>
+<p><strong><%= @pdf_import.document_type.present? ? t("imports.document_types.#{@pdf_import.document_type}") : t("imports.document_types.other") %></strong></p>
 
 <h2><%= t(".summary_label") %></h2>
 <p><%= @pdf_import.ai_summary %></p>

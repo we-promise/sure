@@ -90,14 +90,32 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       }
     end
 
-    # Extract transactions from the PDF
-    extractor = Provider::Openai::BankStatementExtractor.new(
-      client: openai_client,
+    # Extract transactions from the PDF using provider
+    provider = Provider::Registry.get_provider(:openai)
+    unless provider
+      return {
+        success: false,
+        error: "provider_not_configured",
+        message: "OpenAI provider is not configured"
+      }
+    end
+
+    response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,
-      model: openai_model
+      model: openai_model,
+      family: family
     )
 
-    result = extractor.extract
+    unless response.success?
+      error_message = response.error&.message || "Unknown extraction error"
+      return {
+        success: false,
+        error: "extraction_failed",
+        message: "Failed to extract transactions: #{error_message}"
+      }
+    end
+
+    result = response.data
 
     if result[:transactions].blank?
       return {
@@ -160,12 +178,6 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
           ]
         end
       end
-    end
-
-    def openai_client
-      provider = Provider::Registry.get_provider(:openai)
-      raise "OpenAI provider not configured" unless provider
-      provider.send(:client)
     end
 
     def openai_model
