@@ -22,7 +22,7 @@ class Budget < ApplicationRecord
     def param_to_date(param, family: nil)
       base_date = Date.strptime(param, PARAM_DATE_FORMAT)
       if family&.uses_custom_month_start?
-        family.custom_month_start_for(base_date)
+        Date.new(base_date.year, base_date.month, family.month_start_day)
       else
         base_date.beginning_of_month
       end
