@@ -21,9 +21,10 @@
   <meta name="apple-mobile-web-app-title" content="<%= product_name %>">
   <meta name="color-scheme" content="dark light">
 
-  <%# Use a dark surface color so iOS PWA chrome matches the app theme %>
+  <%# Use theme colors that match both light and dark modes %>
   <meta name="msapplication-TileColor" content="#0B0B0B">
-  <meta name="theme-color" content="#0B0B0B">
+  <meta name="theme-color" content="#F9F9F9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B0B0B" media="(prefers-color-scheme: dark)">
 
   <link rel="manifest" href="<%= pwa_manifest_path %>">
   <%# Provide multiple iOS icons (standard 180x180 and larger) %>

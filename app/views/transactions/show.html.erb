@@ -1,5 +1,5 @@
-<%= render DS::Dialog.new(variant: "drawer") do |dialog| %>
-  <% dialog.with_header do %>
+<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
+  <% dialog.with_header(hide_close_icon: true) do %>
     <%= render "transactions/header", entry: @entry %>
   <% end %>
 

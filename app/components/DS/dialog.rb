@@ -83,7 +83,7 @@ class DS::Dialog < DesignSystemComponent
 
   def dialog_inner_classes
     variant_classes = if drawer?
-      "lg:w-[550px] h-full"
+      "lg:w-[550px] h-full pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     else
       class_names(
         "max-h-full",
@@ -92,7 +92,7 @@ class DS::Dialog < DesignSystemComponent
     end
 
     class_names(
-      "flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+      "flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full overflow-hidden",
       variant_classes
     )
   end
