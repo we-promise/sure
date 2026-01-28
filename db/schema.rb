@@ -25,7 +25,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_24_180211) do
     t.uuid "provider_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "provider_type"], name: "index_account_providers_on_account_and_provider_type", unique: true
+    t.index ["account_id", "provider_type"], name: "index_account_providers_on_account_id_and_provider_type", unique: true
     t.index ["provider_type", "provider_id"], name: "index_account_providers_on_provider_type_and_provider_id", unique: true
   end
 
@@ -1401,6 +1401,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_24_180211) do
     t.datetime "set_onboarding_preferences_at"
     t.datetime "set_onboarding_goals_at"
     t.string "default_account_order", default: "name_asc"
+    t.string "ui_layout"
     t.jsonb "preferences", default: {}, null: false
     t.string "locale"
     t.index ["email"], name: "index_users_on_email", unique: true
