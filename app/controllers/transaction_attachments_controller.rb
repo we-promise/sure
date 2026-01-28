@@ -86,11 +86,11 @@ class TransactionAttachmentsController < ApplicationController
 
     def attachment_params
       if params.has_key?(:attachments)
-        Array(params.require(:attachments)).reject(&:blank?).map do |param|
+        Array(params.fetch(:attachments, [])).reject(&:blank?).map do |param|
           param.respond_to?(:permit) ? param.permit(:file, :filename, :content_type, :description, :metadata) : param
         end
       elsif params.has_key?(:attachment)
-        param = params.require(:attachment)
+        param = params[:attachment]
         return nil if param.blank?
         param.respond_to?(:permit) ? param.permit(:file, :filename, :content_type, :description, :metadata) : param
       end
