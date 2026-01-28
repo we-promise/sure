@@ -4,77 +4,121 @@
 
 <%= content_for :previous_path, imports_path %>
 
-<div class="space-y-4" data-controller="drag-and-drop-import">
-  <!-- Overlay -->
-  <%= render "imports/drag_drop_overlay", title: "Drop CSV to upload", subtitle: "Your file will be uploaded automatically" %>
+<% if @import.type == "BulkImport" %>
+  <div class="space-y-4" data-controller="drag-and-drop-import">
+    <!-- Overlay -->
+    <%= render "imports/drag_drop_overlay", title: t("import.uploads.bulk_import.drop_title"), subtitle: t("import.uploads.bulk_import.drop_subtitle") %>
 
-  <div class="space-y-4 mx-auto max-w-md">
-    <div class="text-center space-y-2">
-      <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
-      <p class="text-secondary text-sm"><%= t(".description") %></p>
+    <div class="space-y-4 mx-auto max-w-md">
+      <div class="text-center space-y-2">
+        <h1 class="text-3xl text-primary font-medium"><%= t("import.uploads.bulk_import.title") %></h1>
+        <p class="text-secondary text-sm"><%= t("import.uploads.bulk_import.description") %></p>
+      </div>
+
+      <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2", data: { drag_and_drop_import_target: "form" } do |form| %>
+        <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
+          <div class="flex flex-col items-center justify-center pt-5 pb-6">
+            <div data-file-upload-target="uploadText" class="flex flex-col items-center">
+              <%= icon("database", size: "lg", class: "mb-4 mx-auto") %>
+              <p class="mb-2 text-md text-gray text-center">
+                <span class="font-medium text-primary"><%= t("import.uploads.bulk_import.browse") %></span> <%= t("import.uploads.bulk_import.browse_hint") %>
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-4 items-center hidden mb-2" data-file-upload-target="fileName">
+              <span class="text-primary">
+                <%= icon("file-text", size: "lg", color: "current") %>
+              </span>
+              <p class="text-md font-medium text-primary"></p>
+            </div>
+
+            <%= form.file_field :csv_file, class: "hidden", accept: ".ndjson,.json", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
+          </div>
+        </div>
+
+        <%= form.submit t("import.uploads.bulk_import.upload_button"), disabled: @import.complete? %>
+      <% end %>
     </div>
 
-    <%= render DS::Tabs.new(active_tab: params[:tab] || "csv-upload", url_param_key: "tab", testid: "import-tabs") do |tabs| %>
-      <% tabs.with_nav do |nav| %>
-        <% nav.with_btn(id: "csv-upload", label: "Upload CSV") %>
-        <% nav.with_btn(id: "csv-paste", label: "Copy & Paste") %>
-      <% end %>
+    <div class="flex justify-center">
+      <span class="text-secondary text-sm">
+        <%= t("import.uploads.bulk_import.hint_html") %>
+      </span>
+    </div>
+  </div>
+<% else %>
+  <div class="space-y-4" data-controller="drag-and-drop-import">
+    <!-- Overlay -->
+    <%= render "imports/drag_drop_overlay", title: "Drop CSV to upload", subtitle: "Your file will be uploaded automatically" %>
 
-      <% tabs.with_panel(tab_id: "csv-upload") do %>
-        <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2", data: { drag_and_drop_import_target: "form" } do |form| %>
-          <%= form.select :col_sep, Import::SEPARATORS, label: true %>
+    <div class="space-y-4 mx-auto max-w-md">
+      <div class="text-center space-y-2">
+        <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
+        <p class="text-secondary text-sm"><%= t(".description") %></p>
+      </div>
 
-          <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
-            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
-          <% end %>
+      <%= render DS::Tabs.new(active_tab: params[:tab] || "csv-upload", url_param_key: "tab", testid: "import-tabs") do |tabs| %>
+        <% tabs.with_nav do |nav| %>
+          <% nav.with_btn(id: "csv-upload", label: "Upload CSV") %>
+          <% nav.with_btn(id: "csv-paste", label: "Copy & Paste") %>
+        <% end %>
 
-          <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
-            <div class="flex flex-col items-center justify-center pt-5 pb-6">
-              <div data-file-upload-target="uploadText" class="flex flex-col items-center">
-                <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
-                <p class="mb-2 text-md text-gray text-center">
-                  <span class="font-medium text-primary">Browse</span> to add your CSV file here
-                </p>
+        <% tabs.with_panel(tab_id: "csv-upload") do %>
+          <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2", data: { drag_and_drop_import_target: "form" } do |form| %>
+            <%= form.select :col_sep, Import::SEPARATORS, label: true %>
+
+            <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
+              <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+            <% end %>
+
+            <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
+              <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <div data-file-upload-target="uploadText" class="flex flex-col items-center">
+                  <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
+                  <p class="mb-2 text-md text-gray text-center">
+                    <span class="font-medium text-primary">Browse</span> to add your CSV file here
+                  </p>
+                </div>
+
+                <div class="flex flex-col gap-4 items-center hidden mb-2" data-file-upload-target="fileName">
+                  <span class="text-primary">
+                    <%= icon("file-text", size: "lg", color: "current") %>
+                  </span>
+                  <p class="text-md font-medium text-primary"></p>
+                </div>
+
+                <%= form.file_field :csv_file, class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
               </div>
-
-              <div class="flex flex-col gap-4 items-center hidden mb-2" data-file-upload-target="fileName">
-                <span class="text-primary">
-                  <%= icon("file-text", size: "lg", color: "current") %>
-                </span>
-                <p class="text-md font-medium text-primary"></p>
-              </div>
-
-              <%= form.file_field :csv_file, class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
             </div>
-          </div>
 
-          <%= form.submit "Upload CSV", disabled: @import.complete? %>
-        <% end %>
-      <% end %>
-
-      <% tabs.with_panel(tab_id: "csv-paste") do %>
-        <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2" do |form| %>
-          <%= form.select :col_sep, Import::SEPARATORS, label: true %>
-
-          <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
-            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+            <%= form.submit "Upload CSV", disabled: @import.complete? %>
           <% end %>
+        <% end %>
 
-          <%= form.text_area :raw_file_str,
-                       rows: 10,
-                       required: true,
-                       placeholder: "Paste your CSV file contents here",
-                       "data-auto-submit-form-target": "auto" %>
+        <% tabs.with_panel(tab_id: "csv-paste") do %>
+          <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2" do |form| %>
+            <%= form.select :col_sep, Import::SEPARATORS, label: true %>
 
-          <%= form.submit "Upload CSV", disabled: @import.complete? %>
+            <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
+              <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+            <% end %>
+
+            <%= form.text_area :raw_file_str,
+                         rows: 10,
+                         required: true,
+                         placeholder: "Paste your CSV file contents here",
+                         "data-auto-submit-form-target": "auto" %>
+
+            <%= form.submit "Upload CSV", disabled: @import.complete? %>
+          <% end %>
         <% end %>
       <% end %>
-    <% end %>
-  </div>
+    </div>
 
-  <div class="flex justify-center">
-    <span class="text-secondary text-sm">
-      <%= link_to "Download a sample CSV", "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false } %> to see the required CSV format
-    </span>
+    <div class="flex justify-center">
+      <span class="text-secondary text-sm">
+        <%= link_to "Download a sample CSV", "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false } %> to see the required CSV format
+      </span>
+    </div>
   </div>
-</div>
+<% end %>

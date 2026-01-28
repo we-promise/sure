@@ -36,7 +36,12 @@ module ImportsHelper
       accounts: DryRunResource.new(label: "Accounts", icon: "layers", text_class: "text-orange-500", bg_class: "bg-orange-500/5"),
       categories: DryRunResource.new(label: "Categories", icon: "shapes", text_class: "text-blue-500", bg_class: "bg-blue-500/5"),
       tags: DryRunResource.new(label: "Tags", icon: "tags", text_class: "text-violet-500", bg_class: "bg-violet-500/5"),
-      rules: DryRunResource.new(label: "Rules", icon: "workflow", text_class: "text-green-500", bg_class: "bg-green-500/5")
+      rules: DryRunResource.new(label: "Rules", icon: "workflow", text_class: "text-green-500", bg_class: "bg-green-500/5"),
+      merchants: DryRunResource.new(label: "Merchants", icon: "store", text_class: "text-amber-500", bg_class: "bg-amber-500/5"),
+      trades: DryRunResource.new(label: "Trades", icon: "arrow-left-right", text_class: "text-emerald-500", bg_class: "bg-emerald-500/5"),
+      valuations: DryRunResource.new(label: "Valuations", icon: "trending-up", text_class: "text-pink-500", bg_class: "bg-pink-500/5"),
+      budgets: DryRunResource.new(label: "Budgets", icon: "wallet", text_class: "text-indigo-500", bg_class: "bg-indigo-500/5"),
+      budget_categories: DryRunResource.new(label: "Budget Categories", icon: "pie-chart", text_class: "text-teal-500", bg_class: "bg-teal-500/5")
     }
 
     map[key]
