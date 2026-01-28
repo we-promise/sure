@@ -662,8 +662,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_27_213817) do
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
     t.string "amount_type_identifier_value"
-    t.text "ai_summary"
-    t.string "document_type"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
