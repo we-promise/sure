@@ -1,0 +1,13 @@
+emergency_contribution_1:
+  saving_goal: emergency_fund
+  amount: 500
+  month: <%= 1.month.ago.beginning_of_month %>
+  source: manual
+  currency: USD
+
+vacation_contribution_1:
+  saving_goal: vacation_fund
+  amount: 200
+  month: <%= Date.current.beginning_of_month %>
+  source: auto
+  currency: USD
