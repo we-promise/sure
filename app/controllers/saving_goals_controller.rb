@@ -3,8 +3,11 @@ class SavingGoalsController < ApplicationController
 
   def index
     @saving_goals = Current.family.saving_goals.order(created_at: :desc)
-    if params[:status].present?
+    
+    if params[:status].present? && params[:status] != "all"
       @saving_goals = @saving_goals.where(status: params[:status])
+    elsif params[:status] == "all"
+      # No filter
     else
       @saving_goals = @saving_goals.active
     end

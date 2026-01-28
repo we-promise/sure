@@ -1,0 +1,120 @@
+<div class="max-w-3xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex items-start justify-between gap-4">
+    <%= link_to saving_goals_path, class: "p-2 -ml-2 text-subdued hover:text-primary transition-colors" do %>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+      </svg>
+    <% end %>
+
+    <div class="flex-1">
+      <h1 class="text-2xl font-bold text-primary mb-1"><%= @saving_goal.name %></h1>
+      <div class="flex items-center gap-2 text-sm text-secondary">
+        <% if @saving_goal.target_date %>
+          <span><%= t(".target_date", date: l(@saving_goal.target_date, format: :long)) %></span>
+          <span>•</span>
+        <% end %>
+        <span class="<%= @saving_goal.active? ? (@saving_goal.on_track? ? "text-green-500" : "text-yellow-500") : "text-secondary" %>">
+          <%= t("saving_goals.status.#{@saving_goal.status}") %>
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1">
+      <%= render DS::Link.new(
+        variant: :icon,
+        icon: "pencil",
+        href: edit_saving_goal_path(@saving_goal),
+        title: t("common.edit")
+      ) %>
+
+      <% if @saving_goal.active? %>
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "pause",
+          href: pause_saving_goal_path(@saving_goal),
+          method: :post,
+          title: t(".pause")
+        ) %>
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "check",
+          href: complete_saving_goal_path(@saving_goal),
+          method: :post,
+          class: "hover:bg-green-500/10 hover:text-green-500",
+          title: t(".complete")
+        ) %>
+      <% elsif @saving_goal.paused? %>
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "play",
+          href: resume_saving_goal_path(@saving_goal),
+          method: :post,
+          title: t(".resume")
+        ) %>
+      <% end %>
+
+      <%= render DS::Button.new(
+        variant: :icon,
+        icon: "trash",
+        href: saving_goal_path(@saving_goal),
+        method: :delete,
+        confirm: t("common.are_you_sure"),
+        title: t("common.delete"),
+        class: "hover:text-destructive hover:bg-destructive/10"
+      ) %>
+    </div>
+  </div>
+
+  <!-- Main Card -->
+  <div class="bg-container rounded-xl shadow-border-xs p-6 md:p-8">
+    <div class="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+      <div class="shrink-0">
+        <%
+            color = case @saving_goal.status
+                    when "completed" then "green"
+                    when "active" then "green"
+                    else "zinc"
+                    end
+        %>
+        <%= render "progress_ring", percent: @saving_goal.progress_percent, size: 160, stroke_width: 12, color: color %>
+      </div>
+
+      <div class="flex-1 text-center md:text-left space-y-4">
+        <div>
+          <p class="text-sm text-secondary mb-1"><%= t(".current_balance") %></p>
+          <p class="text-4xl font-bold text-primary"><%= format_money(@saving_goal.current_amount_money) %></p>
+          <p class="text-sm text-subdued mt-1">
+             <%= t(".of_target", amount: format_money(@saving_goal.target_amount_money)) %>
+          </p>
+        </div>
+
+        <% if @saving_goal.active? && @saving_goal.target_date %>
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <% if @saving_goal.on_track? %>
+               <div class="flex items-center gap-2 text-green-500 font-medium mb-1">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                 </svg>
+                 <%= t(".on_track") %>
+               </div>
+               <p class="text-sm text-secondary">
+                 <%= t(".on_track_description") %>
+               </p>
+            <% else %>
+               <div class="flex items-center gap-2 text-yellow-500 font-medium mb-1">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+                   <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                 </svg>
+                 <%= t(".off_track") %>
+               </div>
+               <p class="text-sm text-secondary">
+                 <%= t(".off_track_description") %>
+               </p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

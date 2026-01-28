@@ -17,7 +17,9 @@ en:
     index:
       title: "Saving Goals"
       new_goal: "New Goal"
-      no_goals: "You haven't set any saving goals yet."
+      empty:
+        title: "No saving goals yet"
+        description: "Set a financial target and track your progress."
       filters:
         all: "All"
         active: "Active"
@@ -35,15 +37,43 @@ en:
       edit: "Edit Goal"
       delete: "Delete Goal"
     form:
+      errors_title: "Please fix the following errors:"
       name_label: "Goal Name"
-      name_placeholder: "e.g., Emergency Fund"
+      name_placeholder: "e.g., Emergency Fund, Vacation"
       target_amount_label: "Target Amount"
-      target_date_label: "Target Date (optional)"
+      target_date_label: "Target Date"
+      target_date_hint: "Optional. Set a deadline to track whether you're on pace."
       priority_label: "Priority"
       notes_label: "Notes"
+      notes_placeholder: "Add any notes about this goal..."
       save: "Save Goal"
+      create: "Create Goal"
+      update: "Save Changes"
+      cancel: "Cancel"
+    new:
+      title: "New Saving Goal"
+    edit:
+      title: "Edit Saving Goal"
+    actions:
+      pause: "Pause Goal"
+      resume: "Resume Goal"
+      complete: "Complete Goal"
+      archive: "Archive Goal"
     status:
       active: "Active"
       paused: "Paused"
       completed: "Completed"
       archived: "Archived"
+    goal_card:
+      target_date: "Target: %{date}"
+    show:
+      target_date: "Target date: %{date}"
+      current_balance: "Current Balance"
+      of_target: "of %{amount} goal"
+      on_track: "On Track"
+      on_track_description: "You are saving enough to reach your goal on time."
+      off_track: "Behind Schedule"
+      off_track_description: "Consider increasing your monthly savings to catch up."
+      pause: "Pause"
+      resume: "Resume"
+      complete: "Mark Complete"

@@ -1,0 +1,11 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-6">
+    <%= link_to saving_goals_path, class: "text-sm text-secondary hover:text-primary flex items-center gap-1 mb-2" do %>
+      <%= icon "arrow-left", size: :sm %>
+      Back to goals
+    <% end %>
+    <h1 class="text-2xl font-bold text-primary"><%= t(".title") %></h1>
+  </div>
+
+  <%= render "form", saving_goal: @saving_goal %>
+</div>

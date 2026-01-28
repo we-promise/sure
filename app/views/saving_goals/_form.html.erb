@@ -1,0 +1,68 @@
+<%# locals: (saving_goal:) %>
+<div class="max-w-2xl mx-auto bg-container p-6 rounded-xl shadow-border-xs">
+  <%= form_with(model: saving_goal, class: "space-y-6") do |form| %>
+    <% if saving_goal.errors.any? %>
+      <div class="bg-destructive/10 text-destructive p-4 rounded-lg">
+        <p class="font-medium"><%= t("saving_goals.form.errors_title") %></p>
+        <ul class="list-disc list-inside mt-2 text-sm">
+          <% saving_goal.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label :name, t("saving_goals.form.name_label"), class: "block text-sm font-medium text-primary mb-1" %>
+      <%= form.text_field :name,
+          class: "w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-surface",
+          placeholder: t("saving_goals.form.name_placeholder"),
+          required: true,
+          autofocus: true %>
+    </div>
+
+    <div>
+      <%= form.label :target_amount, t("saving_goals.form.target_amount_label"), class: "block text-sm font-medium text-primary mb-1" %>
+      <div class="relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-secondary font-medium">
+          <%= Money::Currency.new(saving_goal.currency || Current.family.currency).symbol %>
+        </span>
+        <%= form.number_field :target_amount,
+            class: "w-full pl-8 pr-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-primary bg-surface",
+            step: "0.01",
+            min: "0.01",
+            required: true,
+            placeholder: "0.00" %>
+      </div>
+    </div>
+
+    <div>
+      <%= form.label :target_date, t("saving_goals.form.target_date_label"), class: "block text-sm font-medium text-primary mb-1" %>
+      <%= form.date_field :target_date,
+          class: "w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-primary bg-surface",
+          min: Date.current %>
+      <p class="mt-1 text-xs text-subdued"><%= t("saving_goals.form.target_date_hint") %></p>
+    </div>
+
+    <div>
+      <%= form.label :notes, t("saving_goals.form.notes_label"), class: "block text-sm font-medium text-primary mb-1" %>
+      <%= form.text_area :notes,
+          class: "w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-primary bg-surface",
+          rows: 3,
+          placeholder: t("saving_goals.form.notes_placeholder") %>
+    </div>
+
+    <div class="flex items-center gap-3 pt-4 border-t border-subdued">
+      <%= render DS::Button.new(
+        text: saving_goal.persisted? ? t("saving_goals.form.update") : t("saving_goals.form.create"),
+        type: "submit",
+        variant: :primary
+      ) %>
+      <%= render DS::Link.new(
+        text: t("saving_goals.form.cancel"),
+        href: saving_goal.persisted? ? saving_goal_path(saving_goal) : saving_goals_path,
+        variant: :secondary
+      ) %>
+    </div>
+  <% end %>
+</div>
