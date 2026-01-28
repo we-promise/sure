@@ -199,6 +199,15 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
+  resources :saving_goals do
+    member do
+      post :pause
+      post :resume
+      post :complete
+      post :archive
+    end
+  end
+
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge

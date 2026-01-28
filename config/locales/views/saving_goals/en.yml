@@ -1,0 +1,49 @@
+en:
+  saving_goals:
+    create:
+      success: "Saving goal created successfully."
+    update:
+      success: "Saving goal updated successfully."
+    destroy:
+      success: "Saving goal deleted successfully."
+    pause:
+      success: "Saving goal paused."
+    resume:
+      success: "Saving goal resumed."
+    complete:
+      success: "Saving goal completed! 🎉"
+    archive:
+      success: "Saving goal archived."
+    index:
+      title: "Saving Goals"
+      new_goal: "New Goal"
+      no_goals: "You haven't set any saving goals yet."
+      filters:
+        all: "All"
+        active: "Active"
+        paused: "Paused"
+        completed: "Completed"
+        archived: "Archived"
+    show:
+      progress: "%{percent}% saved"
+      target: "Target: %{amount}"
+      deadline: "Deadline: %{date}"
+      on_track: "On track"
+      behind: "Behind schedule"
+      contributions: "Contributions"
+      actions: "Actions"
+      edit: "Edit Goal"
+      delete: "Delete Goal"
+    form:
+      name_label: "Goal Name"
+      name_placeholder: "e.g., Emergency Fund"
+      target_amount_label: "Target Amount"
+      target_date_label: "Target Date (optional)"
+      priority_label: "Priority"
+      notes_label: "Notes"
+      save: "Save Goal"
+    status:
+      active: "Active"
+      paused: "Paused"
+      completed: "Completed"
+      archived: "Archived"
