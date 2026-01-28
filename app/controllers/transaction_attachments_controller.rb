@@ -23,6 +23,7 @@ class TransactionAttachmentsController < ApplicationController
         return
       end
 
+      existing_ids = @transaction.attachments.pluck(:id)
       attachment_proxy = @transaction.attachments.attach(attachments)
 
       if @transaction.valid?
@@ -34,7 +35,8 @@ class TransactionAttachmentsController < ApplicationController
         end
       else
         # Remove invalid attachments
-        Array(attachment_proxy).each(&:purge)
+        newly_added = Array(attachment_proxy).reject { |a| existing_ids.include?(a.id) }
+        newly_added.each(&:purge)
         error_messages = @transaction.errors.full_messages_for(:attachments).join(", ")
         respond_to do |format|
           format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.failed_upload", error: error_messages) }
