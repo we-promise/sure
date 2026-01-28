@@ -234,6 +234,31 @@ class Budget < ApplicationRecord
     remaining_expected_income.abs / expected_income.to_f * 100
   end
 
+  # =============================================================================
+  # Savings Goals: Monthly surplus and allocations to goals
+  # =============================================================================
+  def monthly_surplus
+    actual_income - actual_spending
+  end
+
+  monetize :monthly_surplus
+
+  def allocated_to_goals
+    SavingContribution
+      .joins(:saving_goal)
+      .where(saving_goals: { family_id: family_id })
+      .where(month: start_date.beginning_of_month)
+      .sum(:amount)
+  end
+
+  def available_for_goals
+    [monthly_surplus - allocated_to_goals, 0].max
+  end
+
+  def family_active_saving_goals
+    family.saving_goals.active.order(created_at: :asc)
+  end
+
   private
     def income_statement
       @income_statement ||= family.income_statement

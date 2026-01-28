@@ -1,0 +1,83 @@
+<%# locals: (budget:) %>
+<% surplus = budget.monthly_surplus %>
+<% allocated = budget.allocated_to_goals %>
+<% available = budget.available_for_goals %>
+<% goals = budget.family_active_saving_goals %>
+
+<div class="w-full bg-container rounded-xl shadow-border-xs p-4">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-medium"><%= t("budgets.show.savings_goals.title") %></h2>
+    <%= render DS::Link.new(
+      text: t("budgets.show.savings_goals.manage"),
+      variant: "secondary",
+      icon: "settings-2",
+      href: saving_goals_path
+    ) %>
+  </div>
+
+  <% if goals.any? %>
+    <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-surface-inset rounded-lg">
+      <div>
+        <p class="text-xs text-subdued"><%= t("budgets.show.savings_goals.surplus") %></p>
+        <p class="text-sm font-medium <%= surplus.positive? ? 'text-green-500' : 'text-destructive' %>">
+          <%= format_money(budget.monthly_surplus_money) %>
+        </p>
+      </div>
+      <div>
+        <p class="text-xs text-subdued"><%= t("budgets.show.savings_goals.allocated") %></p>
+        <p class="text-sm font-medium"><%= format_money(Money.new(allocated, budget.currency)) %></p>
+      </div>
+      <div>
+        <p class="text-xs text-subdued"><%= t("budgets.show.savings_goals.available") %></p>
+        <p class="text-sm font-medium"><%= format_money(Money.new(available, budget.currency)) %></p>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <% goals.each do |goal| %>
+        <% contribution = goal.saving_contributions.find_by(month: budget.start_date.beginning_of_month) %>
+        <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-inset transition-colors">
+          <%= render "saving_goals/progress_ring", percent: goal.progress_percent, size: 32, stroke_width: 3, color: "green" %>
+          
+          <div class="flex-1 min-w-0">
+            <%= link_to goal.name, saving_goal_path(goal), class: "font-medium text-primary hover:underline truncate block" %>
+            <p class="text-xs text-subdued">
+              <%= format_money(goal.current_amount_money) %> / <%= format_money(goal.target_amount_money) %>
+            </p>
+          </div>
+
+          <div class="text-right shrink-0">
+            <% if contribution %>
+              <p class="text-sm font-medium text-green-500">
+                +<%= format_money(contribution.amount_money) %>
+              </p>
+            <% else %>
+              <p class="text-xs text-subdued"><%= t("budgets.show.savings_goals.no_contribution") %></p>
+            <% end %>
+          </div>
+
+          <%# TODO: Task 7 - Add allocate button when contribution routes are implemented %>
+          <%# if available.positive? %>
+            <%#= render DS::Link.new(
+              text: t("budgets.show.savings_goals.allocate"),
+              href: new_saving_goal_saving_contribution_path(goal, budget_id: budget.id),
+              variant: "outline",
+              size: "sm"
+            ) %>
+          <%# end %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="text-center py-8">
+      <%= icon "piggy-bank", class: "mx-auto text-subdued", size: "2xl" %>
+      <p class="mt-2 text-sm text-secondary"><%= t("budgets.show.savings_goals.empty") %></p>
+      <%= render DS::Link.new(
+        text: t("budgets.show.savings_goals.create_first"),
+        href: new_saving_goal_path,
+        variant: "secondary",
+        class: "mt-2 inline-block"
+      ) %>
+    </div>
+  <% end %>
+</div>

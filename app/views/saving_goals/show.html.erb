@@ -1,7 +1,7 @@
 <div class="max-w-3xl mx-auto space-y-6">
   <!-- Header -->
   <div class="flex items-start justify-between gap-4">
-    <%= link_to saving_goals_path, class: "p-2 -ml-2 text-subdued hover:text-primary transition-colors" do %>
+    <%= link_to params[:return_to] || request.referer || saving_goals_path, class: "p-2 -ml-2 text-subdued hover:text-primary transition-colors" do %>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
       </svg>
