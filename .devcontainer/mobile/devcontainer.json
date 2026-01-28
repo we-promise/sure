@@ -1,0 +1,32 @@
+{
+  "name": "Sure Mobile (Flutter)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "USERNAME": "${localEnv:USER}${localEnv:USERNAME}"
+    }
+  },
+  "containerEnv": {
+    "SHELL": "/bin/bash"
+  },
+  "runArgs": [
+    "--platform",
+    "linux/amd64",
+    "--name",
+    "${localWorkspaceFolderBasename}_flutter_devcontainer"
+  ],
+  "onCreateCommand": "bash ./.devcontainer/mobile/on-create.sh",
+  "remoteUser": "${localEnv:USER}${localEnv:USERNAME}",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.dart-code",
+        "Dart-Code.flutter"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "dart.flutterSdkPath": "/home/${localEnv:USER}${localEnv:USERNAME}/flutter"
+      }
+    }
+  }
+}
