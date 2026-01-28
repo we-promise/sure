@@ -26,13 +26,13 @@
     </div>
   </div>
 
-  <div class="flex items-start gap-2">
+  <div class="flex items-center gap-2">
     <% if entry.transaction.transfer? %>
-      <%= icon "arrow-left-right", class: "mt-1" %>
+      <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
     <% end %>
 
     <% if entry.linked? %>
-      <span title="<%= t('transactions.transaction.linked_with_plaid') %>">
+      <span title="<%= t('transactions.transaction.linked_with_plaid') %>" class="text-secondary">
         <%= icon("refresh-ccw", size: "sm") %>
       </span>
     <% end %>
