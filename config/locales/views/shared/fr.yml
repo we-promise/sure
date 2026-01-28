@@ -13,6 +13,10 @@ fr:
     imports: Importations
     chats: Assistant
   shared:
+    transaction_tabs:
+      expense: "Dépense"
+      income: "Revenu"
+      transfer: "Virement"
     confirm_modal:
       accept: Confirmer
       body_html: "<p>Vous ne pourrez pas annuler cette action</p>"

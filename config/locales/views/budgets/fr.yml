@@ -1,0 +1,42 @@
+---
+fr:
+  budgets:
+    budget_header:
+      today: "Aujourd'hui"
+    budget_nav:
+      setup: "Configuration"
+      categories: "Catégories"
+    show:
+      categories: "Catégories"
+      tabs:
+        budgeted: "Budgétisé"
+        actual: "Réel"
+    budgeted_summary:
+      expected_income: "Revenu prévu"
+      earned: "gagné"
+      over: "de plus"
+      left: "restant"
+      budgeted: "Budgétisé"
+      spent: "dépensé"
+    actuals_summary:
+      income: "Revenus"
+      expenses: "Dépenses"
+    budget_categories:
+      categories: "Catégories"
+      amount: "Montant"
+    budget_donut:
+      spent: "Dépensé"
+      of: "sur %{amount}"
+      new_budget: "Nouveau budget"
+      unused: "Non utilisé"
+    over_allocation_warning:
+      message: "Vous avez sur-alloué votre budget. Veuillez corriger vos allocations."
+      fix_allocations: "Corriger les allocations"
+    edit:
+      title: "Configurez votre budget"
+      subtitle: "Entrez vos revenus mensuels et vos dépenses prévues ci-dessous pour configurer votre budget."
+      budgeted_spending_label: "Dépenses budgétisées"
+      expected_income_label: "Revenu prévu"
+      autosuggest_title: "Suggérer automatiquement les revenus et dépenses"
+      autosuggest_description: "Ceci sera basé sur l'historique des transactions. L'IA peut faire des erreurs, vérifiez avant de continuer."
+      continue: "Continuer"

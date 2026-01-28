@@ -34,6 +34,7 @@ fr:
       budgeted: Budgété
       remaining: Restant
       over_by: Dépassé de
+      shared: partagé
       suggested_daily: "%{amount} suggéré par jour pour les %{days} jours restants"
       no_budgets: Aucune catégorie de budget définie pour ce mois
       status:
@@ -134,6 +135,28 @@ fr:
       value: Valeur
       return: Rendement
       accounts: Comptes d'investissement
+      gains_by_tax_treatment: Gains par traitement fiscal
+      unrealized_gains: Gains non réalisés
+      realized_gains: Gains réalisés
+      total_gains: Gains totaux
+      taxable_realized_note: Ces gains peuvent être soumis à l'impôt
+      no_data: "-"
+      view_details: Voir les détails
+      holdings_count:
+        one: "%{count} position"
+        other: "%{count} positions"
+      sells_count:
+        one: "%{count} vente"
+        other: "%{count} ventes"
+      holdings: Positions
+      sell_trades: Transactions de vente
+      and_more: "+%{count} de plus"
+    investment_flows:
+      title: Flux d'investissement
+      description: Suivez l'argent entrant et sortant de vos comptes d'investissement
+      contributions: Contributions
+      withdrawals: Retraits
+      net_flow: Flux net
     google_sheets_instructions:
       title_with_key: "✅ Copier l'URL pour Google Sheets"
       title_no_key: "⚠️ Clé API requise"
@@ -199,3 +222,8 @@ fr:
         amount: Montant
         percent: "%"
         more_categories: "+ %{count} autres catégories"
+
+
+
+
+

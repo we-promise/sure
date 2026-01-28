@@ -1,6 +1,10 @@
 ---
 en:
   shared:
+    transaction_tabs:
+      expense: "Expense"
+      income: "Income"
+      transfer: "Transfer"
     confirm_modal:
       accept: Confirm
       body_html: "<p>You will not be able to undo this decision</p>"

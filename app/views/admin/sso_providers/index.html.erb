@@ -1,10 +1,10 @@
-<%= content_for :page_title, "SSO Providers" %>
+<%= content_for :page_title, t(".page_title") %>
 
 <div class="space-y-4">
   <p class="text-secondary mb-4">
-    Manage single sign-on authentication providers for your instance.
+    <%= t(".description") %>
     <% unless Flipper.enabled?(:db_sso_providers) %>
-      <span class="text-warning">Changes require a server restart to take effect.</span>
+      <span class="text-warning"><%= t(".restart_required") %></span>
     <% end %>
   </p>
 
@@ -27,20 +27,20 @@
             <div class="flex items-center gap-2">
               <% if provider.enabled? %>
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                  Enabled
+                  <%= t(".enabled") %>
                 </span>
               <% else %>
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-secondary">
-                  Disabled
+                  <%= t(".disabled") %>
                 </span>
               <% end %>
-              <%= link_to edit_admin_sso_provider_path(provider), class: "p-1 text-secondary hover:text-primary", title: "Edit" do %>
+              <%= link_to edit_admin_sso_provider_path(provider), class: "p-1 text-secondary hover:text-primary", title: t(".edit") do %>
                 <%= icon "pencil", class: "w-4 h-4" %>
               <% end %>
-              <%= button_to toggle_admin_sso_provider_path(provider), method: :patch, class: "p-1 text-secondary hover:text-primary", title: provider.enabled? ? "Disable" : "Enable", form: { data: { turbo_confirm: "Are you sure you want to #{provider.enabled? ? 'disable' : 'enable'} this provider?" } } do %>
+              <%= button_to toggle_admin_sso_provider_path(provider), method: :patch, class: "p-1 text-secondary hover:text-primary", title: provider.enabled? ? t(".disable") : t(".enable"), form: { data: { turbo_confirm: t(".toggle_confirm", action: provider.enabled? ? t(".action_disable") : t(".action_enable")) } } do %>
                 <%= icon provider.enabled? ? "toggle-right" : "toggle-left", class: "w-4 h-4" %>
               <% end %>
-              <%= button_to admin_sso_provider_path(provider), method: :delete, class: "p-1 text-destructive hover:text-destructive", title: "Delete", form: { data: { turbo_confirm: "Are you sure you want to delete this provider? This action cannot be undone." } } do %>
+              <%= button_to admin_sso_provider_path(provider), method: :delete, class: "p-1 text-destructive hover:text-destructive", title: t(".delete"), form: { data: { turbo_confirm: t(".delete_confirm") } } do %>
                 <%= icon "trash-2", class: "w-4 h-4" %>
               <% end %>
             </div>
@@ -50,14 +50,14 @@
     <% else %>
       <div class="text-center py-6">
         <%= icon "key", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
-        <p class="text-secondary">No SSO providers configured yet.</p>
+        <p class="text-secondary"><%= t(".no_providers") %></p>
       </div>
     <% end %>
 
     <div class="pt-4 border-t border-primary">
       <%= link_to new_admin_sso_provider_path, class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-secondary" do %>
         <%= icon "plus", class: "w-4 h-4" %>
-        Add Provider
+        <%= t(".add_provider") %>
       <% end %>
     </div>
   <% end %>

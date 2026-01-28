@@ -115,8 +115,19 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       label_text = options[:label]
 
       if options[:required]
+        # Si label_text est true, on laisse Rails gérer la traduction via label()
+        # et on ajoute l'astérisque après
+        if label_text == true
+          return @template.content_tag(:span, class: "form-field__label") do
+            @template.safe_join([
+              label(method).html_safe.gsub(/<label[^>]*>(.*)<\/label>/m, '\1'),
+              @template.tag.span("*", class: "text-red-500 ml-0.5")
+            ])
+          end.html_safe
+        end
+        
         label_text = @template.safe_join([
-          label_text == true ? method.to_s.humanize : label_text,
+          label_text,
           @template.tag.span("*", class: "text-red-500 ml-0.5")
         ])
       end

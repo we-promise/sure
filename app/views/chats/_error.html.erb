@@ -8,10 +8,10 @@
   <% end %>
 
   <div class="flex items-center justify-between gap-2">
-    <p class="text-xs text-red-500">Failed to generate response.  Please try again.</p>
+    <p class="text-xs text-red-500"><%= t(".message") %></p>
 
     <%= render DS::Button.new(
-      text: "Retry",
+      text: t(".retry"),
       href: retry_chat_path(chat),
     ) %>
   </div>

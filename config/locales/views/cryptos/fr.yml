@@ -3,5 +3,18 @@ fr:
   cryptos:
     edit:
       edit: Éditer %{account}
+    form:
+      subtype_label: Type de compte
+      subtype_prompt: Sélectionnez un type...
+      subtype_none: Non spécifié
+      tax_treatment_label: Traitement fiscal
+      tax_treatment_hint: La plupart des cryptomonnaies sont détenues dans des comptes imposables. Sélectionnez une option différente si elles sont détenues dans un compte à avantage fiscal comme un IRA auto-géré.
     new:
       title: Saisir le solde du compte
+    subtypes:
+      wallet:
+        short: Portefeuille
+        long: Portefeuille crypto
+      exchange:
+        short: Plateforme
+        long: Plateforme d'échange crypto

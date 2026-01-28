@@ -17,6 +17,10 @@ class AccountsController < ApplicationController
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.accounts"), nil ]
+    ]
 
     # Prevent Turbo Drive from caching this page to ensure fresh account lists
     expires_now

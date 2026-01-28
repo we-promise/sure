@@ -1,5 +1,9 @@
 ---
 fr:
+  balance_sheet:
+    classification_groups:
+      asset: "Actifs"
+      liability: "Passifs"
   accounts:
     account:
       link_lunchflow: Lier avec Lunch Flow
@@ -56,8 +60,11 @@ fr:
         entry: entrée
         filter: Filtrer
         new: Nouveau
+        new_activity: Nouvelle activité
         new_balance: Nouveau solde
+        new_trade: Nouvelle transaction boursière
         new_transaction: Nouvelle transaction
+        new_transfer: Nouveau transfert
         no_entries: Aucune entrée trouvée
         pending: En attente
         search:
@@ -74,6 +81,8 @@ fr:
         confirm_title: Supprimer le compte ?
         edit: Modifier
         import: Importer des transactions
+        import_trades: Importer des transactions boursières
+        import_transactions: Importer des transactions
         manage: Gérer les comptes
     update:
       success: "Compte %{type} mis à jour"
@@ -99,6 +108,23 @@ fr:
       credit_card: Carte de crédit
       loan: Prêt
       other_liability: Autre passif
+    tax_treatments:
+      taxable: Imposable
+      tax_deferred: Impôt différé
+      tax_exempt: Exonéré d'impôt
+      tax_advantaged: Avantage fiscal
+    tax_treatment_descriptions:
+      taxable: Gains imposés lors de la réalisation
+      tax_deferred: Contributions déductibles, imposées au retrait
+      tax_exempt: Contributions après impôt, gains non imposés
+      tax_advantaged: Avantages fiscaux spéciaux avec conditions
+    subtype_regions:
+      us: États-Unis
+      uk: Royaume-Uni
+      ca: Canada
+      au: Australie
+      eu: Europe
+      generic: Général
     confirm_unlink:
       title: Délier le compte du fournisseur ?
       description_html: "Vous êtes sur le point de délier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel."
@@ -123,3 +149,7 @@ fr:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.
       success_login: Votre email a été confirmé. Veuillez vous identifier avec votre nouvelle adresse email.
+
+
+
+

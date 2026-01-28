@@ -4,6 +4,7 @@ fr:
     settings:
       payments:
         renewal: "Votre contribution se poursuit le %{date}."
+        cancellation: "Votre contribution se termine le %{date}."
   settings:
     ai_prompts:
       show:
@@ -54,7 +55,7 @@ fr:
           body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
           title: Supprimer le compte?
         confirm_reset:
-          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, vendeurs, étiquettes et autres données. Cette action ne peut pas être annulée.
+          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, marchands, étiquettes et autres données. Cette action ne peut pas être annulée.
           title: Réinitialiser le compte?
         confirm_reset_with_sample_data:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
@@ -69,7 +70,7 @@ fr:
         delete_account: Supprimer le compte
         delete_account_warning: La suppression de votre compte entraînera la suppression permanente de toutes vos données et ne pourra pas être annulée.
         reset_account: Réinitialiser le compte
-        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, vendeurs, étiquettes et autres données, mais gardera votre compte utilisateur intact.
+        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, marchands, étiquettes et autres données, mais gardera votre compte utilisateur intact.
         reset_account_with_sample_data: Réinitialiser et précharger
         reset_account_with_sample_data_warning: Supprime toutes vos données existantes puis charge des données d'exemple afin que vous puissiez explorer avec un environnement pré-rempli.
         email: E-mail
@@ -85,6 +86,8 @@ fr:
         pending: En attente
         profile_subtitle: Personnalisez l'apparence de votre profil sur %{product_name}
         profile_title: Personnel
+        email_confirmation_message_html: "Vous avez demandé à changer votre e-mail pour %{email}. Veuillez consulter votre boîte mail et confirmer pour que le changement prenne effet. Si vous n'avez pas reçu l'e-mail, veuillez vérifier votre dossier spam, ou %{link}."
+        resend_confirmation: "demander un nouvel e-mail de confirmation"
         remove_invitation: Supprimer l'invitation
         remove_member: Supprimer le membre
         save: Enregistrer
@@ -118,8 +121,9 @@ fr:
       feedback_label: Retour d'information
       general_section_title: Général
       imports_label: Importer/Exporter
+      exports_label: Exports
       logout: Se déconnecter
-      merchants_label: Vendeurs
+      merchants_label: Marchands
       guides_label: Guides
       other_section_title: Plus
       preferences_label: Préférences
@@ -132,7 +136,11 @@ fr:
       transactions_section_title: Transactions
       whats_new_label: Dernières nouvelles
       api_keys_label: Clés API
-      bank_sync_label: Synchronisation de la banque
+      bank_sync_label: Synchronisation bancaire
+      llm_usage_label: Utilisation LLM
+      providers_label: Fournisseurs de synchronisation
+      sso_providers_label: Fournisseurs SSO
+      users_label: Utilisateurs
     settings_nav_link_large:
       next: Suivant
       previous: Précédent
@@ -141,3 +149,149 @@ fr:
       choose: Charger une photo
       choose_label: (facultatif)
       change: Changer de photo
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Configuration du chiffrement requise
+        message: "Les clés de chiffrement Active Record ne sont pas configurées. Veuillez vous assurer que les identifiants de chiffrement (active_record_encryption.primary_key, active_record_encryption.deterministic_key et active_record_encryption.key_derivation_salt) sont correctement configurés dans vos identifiants Rails ou variables d'environnement avant d'utiliser les fournisseurs de synchronisation."
+      coinbase_panel:
+        setup_instructions: "Pour connecter Coinbase :"
+        step1_html: Allez sur <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Paramètres API Coinbase</a>
+        step2: Créez une nouvelle clé API avec des permissions en lecture seule (voir les comptes, voir les transactions)
+        step3: Copiez votre clé API et votre secret API et collez-les ci-dessous
+        api_key_label: Clé API
+        api_key_placeholder: Entrez votre clé API Coinbase
+        api_secret_label: Secret API
+        api_secret_placeholder: Entrez votre secret API Coinbase
+        connect_button: Connecter Coinbase
+        syncing: Synchronisation...
+        sync: Synchroniser
+        disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
+        status_connected: Coinbase est connecté et synchronise vos avoirs crypto.
+        status_not_connected: Non connecté. Entrez vos identifiants API ci-dessus pour commencer.
+    bank_sync:
+      show:
+        page_title: "Synchronisation bancaire"
+        providers: "FOURNISSEURS"
+        no_providers: "Aucun fournisseur configuré"
+        no_providers_message: "Configurez des fournisseurs pour lier vos comptes bancaires."
+    llm_usages:
+      show:
+        title: "Utilisation et coûts LLM"
+        subtitle: "Suivez votre utilisation de l'IA et les coûts estimés"
+        start_date: "Date de début"
+        end_date: "Date de fin"
+        filter_button: "Filtrer"
+        total_requests: "Total de requêtes"
+        total_tokens: "Total de tokens"
+        prompt: "prompt"
+        completion: "complétion"
+        total_cost: "Coût total"
+        avg_cost_request: "Coût moy./requête"
+        based_on_requests: "Basé sur %{with_cost} des %{total} requêtes avec données de coût"
+        cost_by_operation: "Coût par opération"
+        cost_by_model: "Coût par modèle"
+        recent_usage: "Utilisation récente"
+        table_date: "Date"
+        table_operation: "Opération"
+        table_model: "Modèle"
+        table_tokens: "Tokens"
+        table_cost: "Coût"
+        failed: "Échoué"
+        http_status: "Statut HTTP"
+        no_data: "Aucune donnée d'utilisation trouvée pour la période sélectionnée"
+        cost_info_title: "À propos des estimations de coût"
+        cost_info_message: "Les coûts sont estimés sur la base des tarifs d'OpenAI à partir de 2025. Les coûts réels peuvent varier. Le tarif est par million de tokens et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront \"N/A\" et ne sont pas inclus dans les totaux de coût."
+    providers:
+      show:
+        page_title: "Fournisseurs de synchronisation"
+        description: "Configurez les identifiants pour les fournisseurs de synchronisation tiers. Les paramètres configurés ici remplaceront les variables d'environnement."
+    api_keys:
+      show:
+        created_title: "Clé API créée avec succès"
+        created_success: "Clé API créée avec succès !"
+        created_message: "Votre nouvelle clé API \"%{name}\" a été créée et est prête à l'emploi."
+        your_api_key: "Votre clé API"
+        copy_key_message: "Copiez et stockez cette clé en toute sécurité. Vous en aurez besoin pour authentifier vos requêtes API."
+        copy_api_key: "Copier la clé API"
+        how_to_use: "Comment utiliser votre clé API"
+        include_header: "Incluez votre clé API dans l'en-tête X-Api-Key lors de vos requêtes :"
+        continue_settings: "Continuer vers les paramètres de clé API"
+        main_title: "Votre clé API"
+        create_new_key: "Créer une nouvelle clé"
+        created_ago: "Créée il y a %{time}"
+        last_used_ago: "Dernière utilisation il y a %{time}"
+        never_used: "Jamais utilisée"
+        active: "Active"
+        permissions: "Permissions"
+        scope_read_only: "Lecture seule"
+        scope_read_write: "Lecture/Écriture"
+        revoke_key: "Révoquer la clé"
+        revoke_confirm: "Êtes-vous sûr(e) de vouloir révoquer cette clé API ?"
+        no_key_title: "Clés API"
+        no_key_create_button: "Créer une clé API"
+        no_key_heading: "Accédez à vos données %{product_name} par programmation"
+        no_key_description: "Obtenez un accès programmatique à vos données Sure avec une clé API sécurisée."
+        no_key_what_you_can_do: "Ce que vous pouvez faire avec l'API :"
+        no_key_feature_1: "Accéder à vos données de compte par programmation"
+        no_key_feature_2: "Créer des intégrations et applications personnalisées"
+        no_key_feature_3: "Automatiser la récupération et l'analyse de données"
+        no_key_security_title: "Sécurité avant tout"
+        no_key_security_note: "Votre clé API aura des permissions restreintes selon les scopes que vous sélectionnez. Vous ne pouvez avoir qu'une seule clé API active à la fois."
+  admin:
+    sso_providers:
+      index:
+        page_title: "Fournisseurs SSO"
+        description: "Gérez les fournisseurs d'authentification unique pour votre instance."
+        restart_required: "Les modifications nécessitent un redémarrage du serveur pour prendre effet."
+        enabled: "Activé"
+        disabled: "Désactivé"
+        edit: "Modifier"
+        disable: "Désactiver"
+        enable: "Activer"
+        action_disable: "désactiver"
+        action_enable: "activer"
+        toggle_confirm: "Êtes-vous sûr(e) de vouloir %{action} ce fournisseur ?"
+        delete: "Supprimer"
+        delete_confirm: "Êtes-vous sûr(e) de vouloir supprimer ce fournisseur ? Cette action ne peut pas être annulée."
+        no_providers: "Aucun fournisseur SSO configuré pour le moment."
+        add_provider: "Ajouter un fournisseur"
+        legacy_providers_title: "Fournisseurs hérités"
+        legacy_providers_notice: "Ces fournisseurs sont définis dans votre configuration et ne peuvent pas être modifiés ici."
+  rules:
+    index:
+      title: "Règles"
+      clear_cache_button: "Vider le cache IA"
+      clear_cache_confirm_title: "Vider le cache IA ?"
+      clear_cache_confirm_body: "Cela supprimera tous les résultats de catégorisation et de marchands mis en cache. Les prochaines actions nécessiteront de nouvelles requêtes API."
+      clear_cache_confirm_button: "Vider le cache"
+      delete_all: "Supprimer toutes les règles"
+      apply_all_button: "Appliquer toutes les règles"
+      new_rule: "Nouvelle règle"
+      ai_cost_warning: "Les actions de règles activées par l'IA coûteront de l'argent. Assurez-vous de filtrer le plus étroitement possible pour éviter des coûts inutiles."
+      rules: "Règles"
+      sort_by: "Trier par"
+      sort_name: "Nom"
+      sort_updated: "Mis à jour le"
+      toggle_sort: "Inverser l'ordre de tri"
+      no_rules_title: "Aucune règle pour le moment"
+      no_rules_message: "Configurez des règles pour effectuer des actions sur vos transactions et autres données lors de chaque synchronisation de compte."
+      recent_runs_title: "Exécutions récentes"
+      recent_runs_description: "Historique des exécutions de règles avec détails"
+      column_date_time: "Date/Heure"
+      column_execution_type: "Type d'exécution"
+      column_status: "Statut"
+      column_rule_name: "Nom de la règle"
+      column_queued: "En file"
+      column_processed: "Traitées"
+      column_modified: "Modifiées"
+      execution_type_manual: "Manuel"
+      execution_type_automatic: "Automatique"
+      status_pending: "En attente"
+      status_success: "Succès"
+      status_failed: "Échoué"
+      unnamed_rule: "Règle sans nom"
+
+
+

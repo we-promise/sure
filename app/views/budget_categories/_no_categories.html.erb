@@ -1,18 +1,18 @@
 <div class="flex justify-center items-center">
   <div class="text-center flex flex-col items-center max-w-[500px]">
-    <h2 class="text-lg text-primary font-medium">Oops!</h2>
+    <h2 class="text-lg text-primary font-medium"><%= t(".title") %></h2>
     <p class="text-secondary text-sm max-w-sm mx-auto mb-4">
-      You have not created or assigned any expense categories to your transactions yet.
+      <%= t(".message") %>
     </p>
 
     <div class="flex items-center gap-2">
       <%= render DS::Button.new(
-        text: "Use defaults (recommended)",
+        text: t(".use_defaults"),
         href: bootstrap_categories_path,
       ) %>
 
       <%= render DS::Link.new(
-        text: "New category",
+        text: t(".new_category"),
         variant: "outline",
         icon: "plus",
         href: new_category_path,

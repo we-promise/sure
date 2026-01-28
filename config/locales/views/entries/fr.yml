@@ -12,3 +12,12 @@ fr:
       loading: Chargement des entrées...
     update:
       success: Entrée mise à jour
+    unlock:
+      success: Entrée déverrouillée. Elle pourra être mise à jour lors de la prochaine synchronisation.
+    protection:
+      tooltip: Protégé de la synchronisation
+      title: Protégé de la synchronisation
+      description: Vos modifications de cette entrée ne seront pas écrasées par la synchronisation du fournisseur.
+      locked_fields_label: "Champs verrouillés :"
+      unlock_button: Autoriser la synchronisation à mettre à jour
+      unlock_confirm: Autoriser la synchronisation à mettre à jour cette entrée ? Vos modifications peuvent être écrasées lors de la prochaine synchronisation.

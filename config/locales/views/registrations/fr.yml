@@ -3,6 +3,8 @@ fr:
   helpers:
     label:
       user:
+        email: Adresse e-mail
+        password: Mot de passe
         invite_code: Code d'invitation
     submit:
       user:
@@ -21,5 +23,11 @@ fr:
       submit: Créer un compte
       title: Créez votre compte
       welcome_body: Pour commencer, vous devez créer un nouveau compte. Vous pourrez ensuite configurer des paramètres supplémentaires à l'intérieur de l'application.
-      welcome_title: Bienvenue sur %{product_name} !
+      welcome_title: Bienvenue sur votre instance auto-hébergée de %{product_name} !
       password_placeholder: Entrez votre mot de passe
+      password_requirements:
+        minimum_characters: Minimum 8 caractères
+        case_letters: Lettres majuscules et minuscules
+        number: Un chiffre (0-9)
+        special_character: Un caractère spécial (!, @, #, $, %, etc)
+

@@ -2,27 +2,27 @@
   <%= render "chats/ai_avatar" %>
 
   <div class="max-w-[85%] text-sm space-y-4 text-primary">
-    <p>Hey <%= Current.user&.first_name || "there" %>! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data.</p>
+    <p><%= t(".greeting", name: Current.user&.first_name || t(".default_name")) %></p>
 
     <p>
-      You can use <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> to access commands
+      <%= t(".command_hint_html").html_safe %>
     </p>
 
     <div class="space-y-3">
-      <p>Here's a few questions you can ask:</p>
+      <p><%= t(".questions_header") %></p>
 
       <% questions = [
         {
           icon: "chart-area",
-          text: "Evaluate investment portfolio"
+          text: t(".question_portfolio")
         },
         {
           icon: "wallet-minimal",
-          text: "Show spending insights"
+          text: t(".question_insights")
         },
         {
           icon: "alert-triangle",
-          text: "Find unusual patterns"
+          text: t(".question_patterns")
         }
       ] %>
 

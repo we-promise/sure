@@ -3,7 +3,7 @@ fr:
   activerecord:
     attributes:
       user:
-        email: Adresse mail
+        email: Adresse e-mail
         family: Famille
         family_id: Famille
         first_name: Prénom

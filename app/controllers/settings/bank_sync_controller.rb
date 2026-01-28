@@ -2,6 +2,10 @@ class Settings::BankSyncController < ApplicationController
   layout "settings"
 
   def show
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.bank_sync"), nil ]
+    ]
     @providers = [
       {
         name: "Lunch Flow",

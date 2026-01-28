@@ -33,9 +33,10 @@
     </div>
 
     <div class="grid grid-cols-3 gap-2 text-sm text-center font-medium">
-      <% Date::ABBR_MONTHNAMES.compact.each do |month_name| %>
-        <% date = Date.strptime("#{month_name}-#{year}", "%b-%Y") %>
+      <% (1..12).each do |month| %>
+        <% date = Date.new(year, month, 1) %>
         <% param_key = Budget.date_to_param(date) %>
+        <% month_name = I18n.l(date, format: "%b") %>
 
         <% if Budget.budget_date_valid?(date, family: family) %>
           <%= render DS::Link.new(

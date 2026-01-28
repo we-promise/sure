@@ -3,8 +3,8 @@ class Settings::LlmUsagesController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "LLM Usage", nil ]
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.llm_usages"), nil ]
     ]
     @family = Current.family
 

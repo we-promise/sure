@@ -89,6 +89,8 @@ en:
         pending: Pending
         profile_subtitle: Customize how you appear on %{product_name}
         profile_title: Personal
+        email_confirmation_message_html: "You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{link}."
+        resend_confirmation: "request a new confirmation email"
         remove_invitation: Remove Invitation
         remove_member: Remove Member
         save: Save
@@ -138,6 +140,10 @@ en:
       whats_new_label: What's new
       api_keys_label: API Key
       bank_sync_label: Bank Sync
+      llm_usage_label: LLM Usage
+      providers_label: Providers
+      sso_providers_label: SSO Providers
+      users_label: Users
     settings_nav_link_large:
       next: Next
       previous: Back
@@ -167,3 +173,125 @@ en:
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
         status_connected: Coinbase is connected and syncing your crypto holdings.
         status_not_connected: Not connected. Enter your API credentials above to get started.
+    bank_sync:
+      show:
+        page_title: "Bank Sync"
+        providers: "PROVIDERS"
+        no_providers: "No providers configured"
+        no_providers_message: "Configure providers to link your bank accounts."
+    llm_usages:
+      show:
+        title: "LLM Usage & Costs"
+        subtitle: "Track your AI usage and estimated costs"
+        start_date: "Start Date"
+        end_date: "End Date"
+        filter_button: "Filter"
+        total_requests: "Total Requests"
+        total_tokens: "Total Tokens"
+        prompt: "prompt"
+        completion: "completion"
+        total_cost: "Total Cost"
+        avg_cost_request: "Avg Cost/Request"
+        based_on_requests: "Based on %{with_cost} of %{total} requests with cost data"
+        cost_by_operation: "Cost by Operation"
+        cost_by_model: "Cost by Model"
+        recent_usage: "Recent Usage"
+        table_date: "Date"
+        table_operation: "Operation"
+        table_model: "Model"
+        table_tokens: "Tokens"
+        table_cost: "Cost"
+        failed: "Failed"
+        http_status: "HTTP Status"
+        no_data: "No usage data found for the selected period"
+        cost_info_title: "About Cost Estimates"
+        cost_info_message: "Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
+    providers:
+      show:
+        page_title: "Sync Providers"
+        description: "Configure credentials for third-party sync providers. Settings configured here will override environment variables."
+    api_keys:
+      show:
+        created_title: "API Key Created Successfully"
+        created_success: "API Key Created Successfully!"
+        created_message: "Your new API key \"%{name}\" has been created and is ready to use."
+        your_api_key: "Your API Key"
+        copy_key_message: "Copy and store this key securely. You'll need it to authenticate your API requests."
+        copy_api_key: "Copy API Key"
+        how_to_use: "How to use your API key"
+        include_header: "Include your API key in the X-Api-Key header when making requests:"
+        continue_settings: "Continue to API Key Settings"
+        main_title: "Your API Key"
+        create_new_key: "Create New Key"
+        created_ago: "Created %{time} ago"
+        last_used_ago: "Last used %{time} ago"
+        never_used: "Never used"
+        active: "Active"
+        permissions: "Permissions"
+        scope_read_only: "Read Only"
+        scope_read_write: "Read/Write"
+        revoke_key: "Revoke Key"
+        revoke_confirm: "Are you sure you want to revoke this API key?"
+        no_key_title: "API Keys"
+        no_key_create_button: "Create API Key"
+        no_key_heading: "Access your %{product_name} data programmatically"
+        no_key_description: "Get programmatic access to your Sure data with a secure API key."
+        no_key_what_you_can_do: "What you can do with the API:"
+        no_key_feature_1: "Access your account data programmatically"
+        no_key_feature_2: "Build custom integrations and applications"
+        no_key_feature_3: "Automate data retrieval and analysis"
+        no_key_security_title: "Security First"
+        no_key_security_note: "Your API key will have restricted permissions based on the scopes you select. You can only have one active API key at a time."
+  admin:
+    sso_providers:
+      index:
+        page_title: "SSO Providers"
+        description: "Manage single sign-on authentication providers for your instance."
+        restart_required: "Changes require a server restart to take effect."
+        enabled: "Enabled"
+        disabled: "Disabled"
+        edit: "Edit"
+        disable: "Disable"
+        enable: "Enable"
+        action_disable: "disable"
+        action_enable: "enable"
+        toggle_confirm: "Are you sure you want to %{action} this provider?"
+        delete: "Delete"
+        delete_confirm: "Are you sure you want to delete this provider? This action cannot be undone."
+        no_providers: "No SSO providers configured yet."
+        add_provider: "Add Provider"
+        legacy_providers_title: "Legacy Providers"
+        legacy_providers_notice: "These providers are defined in your configuration and cannot be edited here."
+  rules:
+    index:
+      title: "Rules"
+      clear_cache_button: "Clear AI Cache"
+      clear_cache_confirm_title: "Clear AI Cache?"
+      clear_cache_confirm_body: "This will remove all cached categorization and merchant results. Future actions will require fresh API requests."
+      clear_cache_confirm_button: "Clear Cache"
+      delete_all: "Delete all rules"
+      apply_all_button: "Apply All Rules"
+      new_rule: "New rule"
+      ai_cost_warning: "AI-enabled rule actions will cost money. Be sure to filter as narrowly as possible to avoid unnecessary costs."
+      rules: "Rules"
+      sort_by: "Sort by"
+      sort_name: "Name"
+      sort_updated: "Updated At"
+      toggle_sort: "Toggle sort direction"
+      no_rules_title: "No rules yet"
+      no_rules_message: "Set up rules to perform actions to your transactions and other data on every account sync."
+      recent_runs_title: "Recent Runs"
+      recent_runs_description: "History of rule executions with details"
+      column_date_time: "Date/Time"
+      column_execution_type: "Execution Type"
+      column_status: "Status"
+      column_rule_name: "Rule Name"
+      column_queued: "Queued"
+      column_processed: "Processed"
+      column_modified: "Modified"
+      execution_type_manual: "Manual"
+      execution_type_automatic: "Automatic"
+      status_pending: "Pending"
+      status_success: "Success"
+      status_failed: "Failed"
+      unnamed_rule: "Unnamed rule"

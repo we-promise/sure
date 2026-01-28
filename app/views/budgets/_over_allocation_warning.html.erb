@@ -2,10 +2,10 @@
 
 <div class="flex flex-col gap-4 items-center justify-center h-full">
   <%= icon "alert-triangle", size: "lg", color: "destructive" %>
-  <p class="text-secondary text-sm text-center">You have over-allocated your budget.  Please fix your allocations.</p>
+  <p class="text-secondary text-sm text-center"><%= t(".message") %></p>
 
   <%= render DS::Link.new(
-    text: "Fix allocations",
+    text: t(".fix_allocations"),
     variant: "secondary",
     size: "sm",
     icon: "pencil",

@@ -1,5 +1,9 @@
 ---
 en:
+  balance_sheet:
+    classification_groups:
+      asset: "Assets"
+      liability: "Liabilities"
   accounts:
     account:
       link_lunchflow: Link with Lunch Flow

@@ -1,4 +1,4 @@
-<%= content_for :page_title, "Sync Providers" %>
+<%= content_for :page_title, t(".page_title") %>
 
 <div class="space-y-4">
   <% if @encryption_error %>
@@ -14,7 +14,7 @@
   <% else %>
     <div>
       <p class="text-secondary mb-4">
-        Configure credentials for third-party sync providers. Settings configured here will override environment variables.
+        <%= t(".description") %>
       </p>
     </div>
   <% end %>

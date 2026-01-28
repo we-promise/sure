@@ -12,3 +12,4 @@ fr:
         explanation: En supprimant cette catégorie, chaque transaction qui a la catégorie "%{category_name}"
           sera non catégorisée. Au lieu de les laisser non catégorisées, vous pouvez également attribuer une nouvelle catégorie ci-dessous.
         replacement_category_prompt: Sélectionnez la catégorie
+

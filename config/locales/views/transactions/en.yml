@@ -1,6 +1,15 @@
 ---
 en:
   transactions:
+    selection_bar:
+      edit: "Edit"
+      delete: "Delete"
+    summary:
+      total_transactions: "Total transactions"
+      income: "Income"
+      expenses: "Expenses"
+    new:
+      title: "New transaction"
     unknown_name: Unknown transaction
     form:
       account: Account
@@ -19,8 +28,6 @@ en:
       submit: Add transaction
       tags_label: Tags
       transfer: Transfer
-    new:
-      new_transaction: New transaction
     show:
       account_label: Account
       amount: Amount
@@ -88,16 +95,23 @@ en:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
     header:
+      new_rule: New rule
+      edit_rules: Edit rules
       edit_categories: Edit categories
       edit_imports: Edit imports
       edit_merchants: Edit merchants
       edit_tags: Edit tags
       import: Import
     index:
+      title: Transactions
+      new_transaction: New transaction
       transaction: transaction
       transactions: transactions
       import: Import
     list:
+      header_transaction: "Transaction"
+      header_category: "Category"
+      header_amount: "Amount"
       drag_drop_title: Drop CSV to import
       drag_drop_subtitle: Upload transactions directly
       transaction: transaction
@@ -157,6 +171,17 @@ en:
         unexpected_error: "Unexpected error during conversion: %{error}"
     searches:
       filters:
+        account_filter:
+          filter_placeholder: "Filter accounts"
+        category_filter:
+          filter_placeholder: "Filter category"
+        date_filter:
+          start_date_placeholder: "Start date"
+          end_date_placeholder: "End date"
+        merchant_filter:
+          filter_placeholder: "Filter merchants"
+        tag_filter:
+          filter_placeholder: "Filter tags"
         amount_filter:
           equal_to: Equal to
           greater_than: Greater than
@@ -194,4 +219,6 @@ en:
         greater_than: greater than
         less_than: less than
       form:
+        search_placeholder: "Search transactions..."
+        filter: "Filter"
         toggle_selection_checkboxes: Toggle all checkboxes

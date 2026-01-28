@@ -5,9 +5,37 @@ fr:
       brokerage_cash: Liquidités de courtage
     destroy:
       success: Position supprimée
+    update:
+      success: Prix de revient enregistré.
+      error: Valeur de prix de revient invalide.
+    unlock_cost_basis:
+      success: Prix de revient déverrouillé. Il peut être mis à jour lors de la prochaine synchronisation.
+    remap_security:
+      success: Titre mis à jour avec succès.
+      security_not_found: Impossible de trouver le titre sélectionné.
+    reset_security:
+      success: Titre réinitialisé à la valeur du fournisseur.
+    errors:
+      security_collision: "Impossible de remapper : vous avez déjà une position pour %{ticker} le %{date}."
+    cost_basis_sources:
+      manual: Défini par l'utilisateur
+      calculated: À partir des transactions
+      provider: Du fournisseur
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Définir le prix de revient pour %{ticker} (%{qty} actions)"
+      total_cost_basis_label: Prix de revient total
+      or_per_share_label: "Ou entrez par action :"
+      per_share: par action
+      cancel: Annuler
+      save: Enregistrer
+      overwrite_confirm_title: Écraser le prix de revient ?
+      overwrite_confirm_body: "Cela remplacera le prix de revient actuel de %{current}."
     holding:
       per_share: par action
       shares: "%{qty} actions"
+      unknown: "--"
+      no_cost_basis: Pas de prix de revient
     index:
       average_cost: Coût moyen
       holdings: Positions
@@ -24,13 +52,31 @@ fr:
       avg_cost_label: Coût moyen
       current_market_price_label: Prix de marché actuel
       delete: Supprimer
-      delete_subtitle: Cela supprimera la position et toutes vos opérations associées sur ce compte. Cette action ne peut pas être annulée.
-      delete_title: Supprimer la position
+      edit_security: Modifier le titre
       history: Historique
+      no_trade_history: Aucun historique de transactions disponible pour cette position.
       overview: Aperçu
       portfolio_weight_label: Poids du portefeuille
       settings: Paramètres
+      security_label: Titre
+      originally: "était %{ticker}"
+      search_security: Rechercher un titre
+      search_security_placeholder: Rechercher par ticker ou nom
+      cancel: Annuler
+      remap_security: Enregistrer
+      no_security_provider: Fournisseur de titres non configuré. Impossible de rechercher des titres.
+      security_remapped_label: Titre remappé
+      provider_sent: "Fournisseur a envoyé : %{ticker}"
+      reset_to_provider: Réinitialiser au fournisseur
+      reset_confirm_title: Réinitialiser le titre au fournisseur ?
+      reset_confirm_body: "Cela changera le titre de %{current} vers %{original} et déplacera toutes les transactions associées."
       ticker_label: Ticker
       trade_history_entry: "%{qty} actions de %{security} à %{price}"
       total_return_label: Rendement total
       unknown: Inconnu
+      cost_basis_locked_label: Le prix de revient est verrouillé
+      cost_basis_locked_description: Votre prix de revient défini manuellement ne sera pas modifié par les synchronisations.
+      unlock_cost_basis: Déverrouiller
+      unlock_confirm_title: Déverrouiller le prix de revient ?
+      unlock_confirm_body: Cela permettra au prix de revient d'être mis à jour par les synchronisations du fournisseur ou les calculs de transactions.
+

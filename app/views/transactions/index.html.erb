@@ -1,16 +1,16 @@
 <div class="space-y-4 pb-6 lg:pb-12 flex flex-col">
   <header class="flex justify-between items-center text-primary font-medium">
-    <h1 class="text-xl">Transactions</h1>
+    <h1 class="text-xl"><%= t(".title") %></h1>
     <div class="flex items-center gap-5">
       <div class="flex items-center gap-2">
         <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(variant: "link", text: "New rule", href: new_rule_path(resource_type: "transaction"), icon: "plus", data: { turbo_frame: :modal }) %>
-          <% menu.with_item(variant: "link", text: "Edit rules", href: rules_path, icon: "git-branch", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit categories", href: categories_path, icon: "shapes", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit tags", href: tags_path, icon: "tags", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit merchants", href: family_merchants_path, icon: "store", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Edit imports", href: imports_path, icon: "hard-drive-upload", data: { turbo_frame: :_top }) %>
-          <% menu.with_item(variant: "link", text: "Import", href: new_import_path, icon: "download", data: { turbo_frame: "modal", class_name: "md:!hidden" }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.new_rule"), href: new_rule_path(resource_type: "transaction"), icon: "plus", data: { turbo_frame: :modal }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_rules"), href: rules_path, icon: "git-branch", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_categories"), href: categories_path, icon: "shapes", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_tags"), href: tags_path, icon: "tags", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_merchants"), href: family_merchants_path, icon: "store", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.edit_imports"), href: imports_path, icon: "hard-drive-upload", data: { turbo_frame: :_top }) %>
+          <% menu.with_item(variant: "link", text: t("transactions.header.import"), href: new_import_path, icon: "download", data: { turbo_frame: "modal", class_name: "md:!hidden" }) %>
         <% end %>
 
         <div class="hidden md:flex">
@@ -24,7 +24,7 @@
         </div>
 
         <%= render DS::Link.new(
-            text: "New transaction",
+            text: t(".new_transaction"),
             icon: "plus",
             variant: "primary",
             href: new_transaction_path,

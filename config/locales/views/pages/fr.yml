@@ -3,15 +3,22 @@ fr:
   pages:
     changelog:
       title: Nouveautés
+    privacy:
+      title: Politique de confidentialité
+      heading: Politique de confidentialité
+      placeholder: Le contenu de la politique de confidentialité sera affiché ici.
+    terms:
+      title: Conditions d'utilisation
+      heading: Conditions d'utilisation
+      placeholder: Le contenu des conditions d'utilisation sera affiché ici.
     dashboard:
+      welcome: "Bienvenue, %{name}"
+      subtitle: "Voici ce qui se passe avec vos finances"
       welcome_back: Content de vous revoir
       happening_with_finance: Voici ce qui se passe avec vos finances
       new: Nouveau
-      cashflow:
-        title: Flux de trésorerie
-        no_cashflow: Aucune donnée de flux de trésorerie pour cette période
-        add_transactions_to_display_cashflow: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendre la période
-        new: Ajouter une transaction
+      drag_to_reorder: "Glisser pour réordonner la section"
+      toggle_section: "Basculer la visibilité de la section"
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée
         title: Valeur nette
@@ -19,7 +26,42 @@ fr:
         new_account: Nouveau compte
         no_account_subtitle: Comme aucun compte n'a été ajouté, il n'y a pas de données à afficher. Ajoutez vos premiers comptes pour commencer à consulter les données du tableau de bord.
         no_account_title: Pas encore de comptes
+      balance_sheet:
+        title: "Bilan"
+        name: "Nom"
+        weight: "Poids"
+        value: "Valeur"
+        no_items: "Aucun %{name} pour l'instant"
+        add_accounts: "Ajoutez vos comptes %{name} pour voir une répartition complète"
+      cashflow_sankey:
+        title: "Flux de trésorerie"
+        no_data_title: "Aucune donnée de flux de trésorerie pour cette période"
+        no_data_description: "Ajoutez des transactions pour afficher les données de flux de trésorerie ou élargissez la période"
+        add_transaction: "Ajouter une transaction"
+      no_accounts:
+        title: "Pas encore de comptes"
+        description: "Ajoutez des comptes pour afficher les données de valeur nette"
+        add_account: "Ajouter un compte"
       no_account_graph_placeholder:
         no_account_yet: Pas encore de compte
         add_account_to_display: Ajouter des comptes pour afficher les données de valeur nette
         new: Ajouter un compte
+      outflows_donut:
+        title: "Sorties"
+        total_outflows: "Total des sorties"
+        categories: "Catégories"
+        value: "Valeur"
+        weight: "Poids"
+      investment_summary:
+        title: "Investissements"
+        total_return: "Rendement total"
+        holding: "Position"
+        weight: "Poids"
+        value: "Valeur"
+        return: "Rendement"
+        period_activity: "Activité sur %{period}"
+        contributions: "Contributions"
+        withdrawals: "Retraits"
+        trades: "Transactions"
+        no_investments: "Aucun compte d'investissement"
+        add_investment: "Ajoutez un compte d'investissement pour suivre votre portefeuille"

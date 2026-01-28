@@ -3,5 +3,9 @@ class Settings::PreferencesController < ApplicationController
 
   def show
     @user = Current.user
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.preferences"), nil ]
+    ]
   end
 end

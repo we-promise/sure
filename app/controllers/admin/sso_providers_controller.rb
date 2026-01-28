@@ -13,6 +13,10 @@ module Admin
       @runtime_providers = Rails.configuration.x.auth.sso_providers || []
       db_provider_names = @sso_providers.pluck(:name)
       @legacy_providers = @runtime_providers.reject { |p| db_provider_names.include?(p[:name].to_s) }
+      @breadcrumbs = [
+        [ t("breadcrumbs.home"), root_path ],
+        [ t("breadcrumbs.sso_providers"), nil ]
+      ]
     end
 
     def show

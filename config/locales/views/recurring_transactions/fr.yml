@@ -5,7 +5,10 @@ fr:
     upcoming: Transactions récurrentes à venir
     projected: Projeté
     recurring: Récurrent
-    expected_on: Attendu le %{date}
+    expected_today: "Attendu aujourd'hui"
+    expected_in:
+      one: "Attendu dans %{count} jour"
+      other: "Attendu dans %{count} jours"
     day_of_month: Jour %{day} du mois
     identify_patterns: Identifier les modèles
     cleanup_stale: Nettoyer les obsolètes

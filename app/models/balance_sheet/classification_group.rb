@@ -13,7 +13,7 @@ class BalanceSheet::ClassificationGroup
   end
 
   def name
-    classification.titleize.pluralize
+    I18n.t("balance_sheet.classification_groups.#{classification}", default: classification.titleize.pluralize)
   end
 
   def icon

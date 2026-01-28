@@ -2,7 +2,7 @@
 
 <div>
   <div class="p-4 border-b border-secondary">
-    <h3 class="text-sm text-secondary mb-2">Income</h3>
+    <h3 class="text-sm text-secondary mb-2"><%= t(".income") %></h3>
 
     <span class="inline-block mb-2 text-xl font-medium text-primary">
       <%= budget.actual_income_money.format %>
@@ -30,7 +30,7 @@
   </div>
 
   <div class="p-4">
-    <h3 class="text-sm text-secondary mb-2">Expenses</h3>
+    <h3 class="text-sm text-secondary mb-2"><%= t(".expenses") %></h3>
 
     <span class="inline-block mb-2 text-xl font-medium text-primary"><%= budget.actual_spending_money.format %></span>
 

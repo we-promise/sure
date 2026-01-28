@@ -5,6 +5,10 @@ class CategoriesController < ApplicationController
 
   def index
     @categories = Current.family.categories.alphabetically
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.categories"), nil ]
+    ]
 
     render layout: "settings"
   end

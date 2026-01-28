@@ -8,3 +8,5 @@ fr:
         enable_mfa: Activer la 2FA
         mfa_description: Ajoutez une couche supplémentaire de sécurité à votre compte en exigeant un code de votre application d'authentificateur lors de la connexion
         mfa_title: Authentification à deux facteurs
+
+

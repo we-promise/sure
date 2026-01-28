@@ -9,10 +9,10 @@
     <% end %>
 
     <% if budget.available_to_allocate.negative? %>
-      <p class="text-primary text-sm">&gt; 100% set</p>
+      <p class="text-primary text-sm">&gt; 100% <%= t(".set") %></p>
     <% else %>
       <p class="text-secondary text-sm">
-        <%= number_to_percentage(budget.allocated_percent, precision: 0) %> set
+        <%= number_to_percentage(budget.allocated_percent, precision: 0) %> <%= t(".set") %>
       </p>
     <% end %>
 
@@ -34,11 +34,11 @@
   <div class="text-sm">
     <% if budget.available_to_allocate.negative? %>
       <p class="text-secondary">
-        Budget exceeded by <span class="text-red-500"><%= format_money(budget.available_to_allocate_money.abs) %></span>
+        <%= t(".budget_exceeded_by") %> <span class="text-red-500"><%= format_money(budget.available_to_allocate_money.abs) %></span>
       </p>
     <% else %>
       <span class="text-primary"><%= format_money(budget.available_to_allocate_money) %></span>
-      <span class="text-secondary">left to allocate</span>
+      <span class="text-secondary"><%= t(".left_to_allocate") %></span>
     <% end %>
   </div>
 </div>

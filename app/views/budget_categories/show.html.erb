@@ -1,7 +1,7 @@
 <%= render DS::Dialog.new(variant: :drawer) do |dialog| %>
   <% dialog.with_header do %>
     <div>
-      <p class="text-sm text-secondary">Category</p>
+      <p class="text-sm text-secondary"><%= t(".category") %></p>
       <h3 class="text-2xl font-medium text-primary">
         <%= @budget_category.name %>
       </h3>
@@ -26,12 +26,12 @@
   <% end %>
 
   <% dialog.with_body do %>
-    <% dialog.with_section(title: "Overview", open: true) do %>
+    <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4">
         <dl class="space-y-3 px-3 py-2">
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary">
-              <%= @budget_category.budget.start_date.strftime("%b %Y") %> spending
+              <%= @budget_category.budget.start_date.strftime("%b %Y") %> <%= t(".spending") %>
             </dt>
             <dd class="text-primary font-medium">
               <%= format_money @budget_category.actual_spending_money %>
@@ -40,30 +40,30 @@
 
           <% if @budget_category.budget.initialized? %>
             <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary">Status</dt>
+              <dt class="text-secondary"><%= t(".status") %></dt>
               <% if @budget_category.available_to_spend.negative? %>
                 <dd class="flex items-center gap-1 text-red-500 font-medium">
                   <%= icon "alert-circle", size: "sm", color: "destructive" %>
                   <%= format_money @budget_category.available_to_spend_money.abs %>
-                  <span>overspent</span>
+                  <span><%= t(".overspent") %></span>
                 </dd>
               <% elsif @budget_category.available_to_spend.zero? %>
                 <dd class="flex items-center gap-1 text-orange-500 font-medium">
                   <%= icon "x-circle", size: "sm", color: "warning" %>
                   <%= format_money @budget_category.available_to_spend_money %>
-                  <span>left</span>
+                  <span><%= t(".left") %></span>
                 </dd>
               <% else %>
                 <dd class="text-primary flex items-center gap-1 text-green-500 font-medium">
                   <%= icon "check-circle", size: "sm", color: "success" %>
                   <%= format_money @budget_category.available_to_spend_money %>
-                  <span>left</span>
+                  <span><%= t(".left") %></span>
                 </dd>
               <% end %>
             </div>
 
             <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary">Budgeted</dt>
+              <dt class="text-secondary"><%= t(".budgeted") %></dt>
               <dd class="text-primary font-medium">
                 <%= format_money @budget_category.budgeted_spending_money %>
               </dd>
@@ -71,14 +71,14 @@
           <% end %>
 
           <div class="flex items-center justify-between text-sm">
-            <dt class="text-secondary">Monthly average spending</dt>
+            <dt class="text-secondary"><%= t(".monthly_average_spending") %></dt>
             <dd class="text-primary font-medium">
               <%= @budget_category.avg_monthly_expense_money.format %>
             </dd>
           </div>
 
           <div class="flex items-center justify-between text-sm">
-            <dt class="text-secondary">Monthly median spending</dt>
+            <dt class="text-secondary"><%= t(".monthly_median_spending") %></dt>
             <dd class="text-primary font-medium">
               <%= @budget_category.median_monthly_expense_money.format %>
             </dd>
@@ -87,7 +87,7 @@
       </div>
     <% end %>
 
-    <% dialog.with_section(title: "Recent Transactions", open: true) do %>
+    <% dialog.with_section(title: t(".recent_transactions"), open: true) do %>
       <div class="space-y-2">
         <div class="px-3 py-4 space-y-2">
           <% if @recent_transactions.any? %>
@@ -120,7 +120,7 @@
             </ul>
 
             <%= render DS::Link.new(
-              text: "View all category transactions",
+              text: t(".view_all_transactions"),
               variant: "outline",
               full_width: true,
               href: transactions_path(q: {
@@ -132,7 +132,7 @@
             ) %>
           <% else %>
             <p class="text-secondary text-sm mb-4">
-              No transactions found for this budget period.
+              <%= t(".no_transactions") %>
             </p>
           <% end %>
         </div>

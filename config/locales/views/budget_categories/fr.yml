@@ -1,0 +1,36 @@
+---
+fr:
+  budget_categories:
+    allocation_progress:
+      set: "défini"
+      budget_exceeded_by: "Budget dépassé de"
+      left_to_allocate: "restant à allouer"
+    budget_category_form:
+      per_month_avg: "/m moy"
+      shared: "Partagé"
+      shared_tooltip: "Laisser vide pour partager le budget du parent"
+    index:
+      title: "Modifiez vos budgets de catégories"
+      subtitle: "Ajustez les budgets de catégories pour définir des limites de dépenses. Les fonds non alloués seront automatiquement assignés comme non catégorisés."
+    no_categories:
+      title: "Oups !"
+      message: "Vous n'avez pas encore créé ou assigné de catégories de dépenses à vos transactions."
+      use_defaults: "Utiliser les valeurs par défaut (recommandé)"
+      new_category: "Nouvelle catégorie"
+    confirm_button:
+      confirm: "Confirmer"
+    uncategorized_budget_category_form:
+      per_month_avg: "/m moy"
+    show:
+      category: "Catégorie"
+      overview: "Aperçu"
+      spending: "dépenses"
+      status: "Statut"
+      overspent: "dépassé"
+      left: "restant"
+      budgeted: "Budgétisé"
+      monthly_average_spending: "Dépenses mensuelles moyennes"
+      monthly_median_spending: "Dépenses mensuelles médianes"
+      recent_transactions: "Transactions récentes"
+      view_all_transactions: "Voir toutes les transactions de la catégorie"
+      no_transactions: "Aucune transaction trouvée pour cette période budgétaire."

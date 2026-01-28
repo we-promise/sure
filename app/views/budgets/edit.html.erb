@@ -8,24 +8,24 @@
 <div>
   <div class="space-y-4">
     <div class="text-center space-y-2">
-      <h1 class="text-3xl text-primary font-medium">Setup your budget</h1>
+      <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
       <p class="text-secondary text-sm max-w-sm mx-auto">
-        Enter your monthly earnings and planned spending below to setup your budget.
+        <%= t(".subtitle") %>
       </p>
     </div>
 
     <div class="mx-auto max-w-lg">
       <%= styled_form_with model: @budget, class: "space-y-3", data: { controller: "budget-form" } do |f| %>
-        <%= f.money_field :budgeted_spending, label: "Budgeted spending", required: true, disable_currency: true %>
-        <%= f.money_field :expected_income, label: "Expected income", required: true, disable_currency: true %>
+        <%= f.money_field :budgeted_spending, label: t(".budgeted_spending_label"), required: true, disable_currency: true %>
+        <%= f.money_field :expected_income, label: t(".expected_income_label"), required: true, disable_currency: true %>
 
         <% if @budget.estimated_income && @budget.estimated_spending %>
           <div class="border border-tertiary rounded-lg p-3 flex">
             <%= icon "sparkles" %>
             <div class="ml-2 space-y-1 text-sm">
-              <h4 class="text-primary">Autosuggest income & spending budget</h4>
+              <h4 class="text-primary"><%= t(".autosuggest_title") %></h4>
               <p class="text-secondary">
-                This will be based on transaction history. AI can make mistakes, verify before continuing.
+                <%= t(".autosuggest_description") %>
               </p>
             </div>
 
@@ -40,7 +40,7 @@
           </div>
         <% end %>
 
-        <%= f.submit "Continue" %>
+        <%= f.submit t(".continue") %>
       <% end %>
     </div>
   </div>

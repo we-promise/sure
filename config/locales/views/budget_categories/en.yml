@@ -1,0 +1,36 @@
+---
+en:
+  budget_categories:
+    allocation_progress:
+      set: "set"
+      budget_exceeded_by: "Budget exceeded by"
+      left_to_allocate: "left to allocate"
+    budget_category_form:
+      per_month_avg: "/m avg"
+      shared: "Shared"
+      shared_tooltip: "Leave empty to share parent's budget"
+    index:
+      title: "Edit your category budgets"
+      subtitle: "Adjust category budgets to set spending limits. Unallocated funds will be automatically assigned as uncategorized."
+    no_categories:
+      title: "Oops!"
+      message: "You have not created or assigned any expense categories to your transactions yet."
+      use_defaults: "Use defaults (recommended)"
+      new_category: "New category"
+    confirm_button:
+      confirm: "Confirm"
+    uncategorized_budget_category_form:
+      per_month_avg: "/m avg"
+    show:
+      category: "Category"
+      overview: "Overview"
+      spending: "spending"
+      status: "Status"
+      overspent: "overspent"
+      left: "left"
+      budgeted: "Budgeted"
+      monthly_average_spending: "Monthly average spending"
+      monthly_median_spending: "Monthly median spending"
+      recent_transactions: "Recent Transactions"
+      view_all_transactions: "View all category transactions"
+      no_transactions: "No transactions found for this budget period."

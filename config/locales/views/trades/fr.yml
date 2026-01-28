@@ -24,6 +24,8 @@ fr:
       title: Nouvelle transaction
     show:
       additional: Détails supplémentaires
+      buy: Achat
+      category_label: Catégorie
       cost_per_share_label: Coût par action
       date_label: Date
       delete: Supprimer
@@ -32,7 +34,10 @@ fr:
       details: Détails
       exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et les calculs
       exclude_title: Exclure des analyses
+      no_category: Aucune catégorie
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...
       quantity_label: Quantité
+      sell: Vente
       settings: Paramètres
+      type_label: Type

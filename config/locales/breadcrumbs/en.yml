@@ -1,6 +1,30 @@
 ---
 en:
   breadcrumbs:
+    budgets: Budgets
+    dashboard: Dashboard
     exports: Exports
     home: Home
     imports: Imports
+    merchants: Merchants
+    reports: Reports
+    transactions: Transactions
+    api_keys: API Keys
+    profiles: Profile Info
+    ai_prompts: AI Prompts
+    providers: Sync Providers
+    hostings: Self-Hosting
+    securities: Security
+    guides: Guides
+    llm_usages: LLM Usage
+    accounts: Accounts
+    bank_sync: Bank Sync
+    preferences: Preferences
+    categories: Categories
+    tags: Tags
+    rules: Rules
+    recurring_transactions: Recurring Transactions
+    payments: Payments
+    changelog: What's new
+    feedback: Feedback
+    sso_providers: SSO Providers

@@ -1,34 +1,36 @@
 module SettingsHelper
-  SETTINGS_ORDER = [
-    # General section
-    { name: "Accounts", path: :accounts_path },
-    { name: "Bank Sync", path: :settings_bank_sync_path },
-    { name: "Preferences", path: :settings_preferences_path },
-    { name: "Profile Info", path: :settings_profile_path },
-    { name: "Security", path: :settings_security_path },
-    { name: "Payment", path: :settings_payment_path, condition: :not_self_hosted? },
-    # Transactions section
-    { name: "Categories", path: :categories_path },
-    { name: "Tags", path: :tags_path },
-    { name: "Rules", path: :rules_path },
-    { name: "Merchants", path: :family_merchants_path },
-    { name: "Recurring", path: :recurring_transactions_path },
-    # Advanced section
-    { name: "AI Prompts", path: :settings_ai_prompts_path, condition: :admin_user? },
-    { name: "LLM Usage", path: :settings_llm_usage_path, condition: :admin_user? },
-    { name: "API Key", path: :settings_api_key_path, condition: :admin_user? },
-    { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
-    { name: "Providers", path: :settings_providers_path, condition: :admin_user? },
-    { name: "Imports", path: :imports_path, condition: :admin_user? },
-    { name: "Exports", path: :family_exports_path, condition: :admin_user? },
-    # More section
-    { name: "Guides", path: :settings_guides_path },
-    { name: "What's new", path: :changelog_path },
-    { name: "Feedback", path: :feedback_path }
-  ]
+  def settings_order
+    [
+      # General section
+      { name: I18n.t("breadcrumbs.accounts"), path: :accounts_path },
+      { name: I18n.t("breadcrumbs.bank_sync"), path: :settings_bank_sync_path },
+      { name: I18n.t("breadcrumbs.preferences"), path: :settings_preferences_path },
+      { name: I18n.t("breadcrumbs.profiles"), path: :settings_profile_path },
+      { name: I18n.t("breadcrumbs.securities"), path: :settings_security_path },
+      { name: I18n.t("breadcrumbs.payments"), path: :settings_payment_path, condition: :not_self_hosted? },
+      # Transactions section
+      { name: I18n.t("breadcrumbs.categories"), path: :categories_path },
+      { name: I18n.t("breadcrumbs.tags"), path: :tags_path },
+      { name: I18n.t("breadcrumbs.rules"), path: :rules_path },
+      { name: I18n.t("breadcrumbs.merchants"), path: :family_merchants_path },
+      { name: I18n.t("breadcrumbs.recurring_transactions"), path: :recurring_transactions_path },
+      # Advanced section
+      { name: I18n.t("breadcrumbs.ai_prompts"), path: :settings_ai_prompts_path, condition: :admin_user? },
+      { name: I18n.t("breadcrumbs.llm_usages"), path: :settings_llm_usage_path, condition: :admin_user? },
+      { name: I18n.t("breadcrumbs.api_keys"), path: :settings_api_key_path, condition: :admin_user? },
+      { name: I18n.t("breadcrumbs.hostings"), path: :settings_hosting_path, condition: :self_hosted_and_admin? },
+      { name: I18n.t("breadcrumbs.providers"), path: :settings_providers_path, condition: :admin_user? },
+      { name: I18n.t("breadcrumbs.imports"), path: :imports_path, condition: :admin_user? },
+      { name: I18n.t("breadcrumbs.exports"), path: :family_exports_path, condition: :admin_user? },
+      # More section
+      { name: I18n.t("breadcrumbs.guides"), path: :settings_guides_path },
+      { name: I18n.t("breadcrumbs.changelog"), path: :changelog_path },
+      { name: I18n.t("breadcrumbs.feedback"), path: :feedback_path }
+    ]
+  end
 
   def adjacent_setting(current_path, offset)
-    visible_settings = SETTINGS_ORDER.select { |setting| setting[:condition].nil? || send(setting[:condition]) }
+    visible_settings = settings_order.select { |setting| setting[:condition].nil? || send(setting[:condition]) }
     current_index = visible_settings.index { |setting| send(setting[:path]) == current_path }
     return nil unless current_index
 

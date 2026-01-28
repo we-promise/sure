@@ -3,6 +3,10 @@ class TagsController < ApplicationController
 
   def index
     @tags = Current.family.tags.alphabetically
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.tags"), nil ]
+    ]
 
     render layout: "settings"
   end

@@ -12,6 +12,10 @@ class RulesController < ApplicationController
     @direction = "asc" unless [ "asc", "desc" ].include?(@direction)
 
     @rules = Current.family.rules.order(@sort_by => @direction)
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.rules"), nil ]
+    ]
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun

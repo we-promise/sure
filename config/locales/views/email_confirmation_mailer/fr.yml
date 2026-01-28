@@ -7,3 +7,4 @@ fr:
       expiry_notice: Ce lien expirera dans %{hours} heures.
       greeting: Bonjour !
       subject: '%{product_name} : Confirmez le changement de votre adresse mail'
+

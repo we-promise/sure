@@ -1,29 +1,29 @@
 <header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium">Rules</h1>
+  <h1 class="text-primary text-xl font-medium"><%= t(".title") %></h1>
   <div class="flex items-center gap-2">
     <% if @rules.any? %>
       <%= render DS::Menu.new do |menu| %>
         <% menu.with_item(
           variant: "button",
-          text: t("rules.clear_ai_cache.button"),
+          text: t(".clear_cache_button"),
           href: clear_ai_cache_rules_path,
           icon: "refresh-cw",
           method: :post,
           confirm: CustomConfirm.new(
-            title: t("rules.clear_ai_cache.confirm_title"),
-            body: t("rules.clear_ai_cache.confirm_body"),
-            btn_text: t("rules.clear_ai_cache.confirm_button")
+            title: t(".clear_cache_confirm_title"),
+            body: t(".clear_cache_confirm_body"),
+            btn_text: t(".clear_cache_confirm_button")
           )) %>
         <% menu.with_item(
           variant: "button",
-          text: "Delete all rules",
+          text: t(".delete_all"),
           href: destroy_all_rules_path,
           icon: "trash-2",
           method: :delete,
           confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
       <% end %>
       <%= render DS::Link.new(
-        text: t("rules.apply_all.button"),
+        text: t(".apply_all_button"),
         variant: "secondary",
         href: confirm_all_rules_path,
         icon: "play",
@@ -31,7 +31,7 @@
       ) %>
     <% end %>
     <%= render DS::Link.new(
-      text: "New rule",
+      text: t(".new_rule"),
       variant: "primary",
       href: new_rule_path(resource_type: "transaction"),
       icon: "plus",
@@ -43,7 +43,7 @@
   <div class="flex items-center gap-2 mb-2 py-4">
     <%= icon("circle-alert", size: "sm") %>
     <p class="text-sm text-secondary">
-      AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
+      <%= t(".ai_cost_warning") %>
     </p>
   </div>
 <% end %>
@@ -52,15 +52,15 @@
     <div class="bg-container-inset rounded-xl">
       <div class="flex justify-between px-4 py-2 text-xs uppercase">
         <div class="flex items-center gap-1.5 font-medium text-secondary">
-          <p>Rules</p>
+          <p><%= t(".rules") %></p>
           <span class="text-subdued">&middot;</span>
           <p><%= @rules.count %></p>
         </div>
         <div class="flex items-center gap-1">
-          <span class="text-secondary">Sort by:</span>
+          <span class="text-secondary"><%= t(".sort_by") %>:</span>
           <%= form_with url: rules_path, method: :get, local: true, class: "flex items-center", data: { controller: "auto-submit-form" } do |form| %>
             <%= form.select :sort_by,
-                      options_for_select([["Name", "name"], ["Updated At", "updated_at"]], @sort_by),
+                      options_for_select([[t(".sort_name"), "name"], [t(".sort_updated"), "updated_at"]], @sort_by),
                       {},
                       class: "min-w-[120px] bg-transparent rounded border-none cursor-pointer text-primary uppercase text-xs w-auto",
                       data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
@@ -71,7 +71,7 @@
             variant: "icon",
             icon: "arrow-up-down",
             size: :sm,
-            title: "Toggle sort direction"
+            title: t(".toggle_sort")
           ) %>
         </div>
       </div>
@@ -84,11 +84,11 @@
   <% else %>
     <div class="flex justify-center items-center py-20">
       <div class="text-center flex flex-col items-center max-w-[500px]">
-        <p class="text-sm text-primary font-medium mb-1">No rules yet</p>
-        <p class="text-sm text-secondary mb-4">Set up rules to perform actions to your transactions and other data on every account sync.</p>
+        <p class="text-sm text-primary font-medium mb-1"><%= t(".no_rules_title") %></p>
+        <p class="text-sm text-secondary mb-4"><%= t(".no_rules_message") %></p>
         <div class="flex items-center gap-2">
           <%= render DS::Link.new(
-            text: "New rule",
+            text: t(".new_rule"),
             variant: "primary",
             href: new_rule_path(resource_type: "transaction"),
             icon: "plus",
@@ -104,8 +104,8 @@
 <% if @recent_runs.any? %>
   <div class="mt-6 bg-container rounded-xl shadow-border-xs p-4">
     <div class="mb-4">
-      <h2 class="text-primary text-lg font-medium mb-1"><%= t("rules.recent_runs.title") %></h2>
-      <p class="text-sm text-secondary"><%= t("rules.recent_runs.description") %></p>
+      <h2 class="text-primary text-lg font-medium mb-1"><%= t(".recent_runs_title") %></h2>
+      <p class="text-sm text-secondary"><%= t(".recent_runs_description") %></p>
     </div>
 
     <div class="overflow-x-auto">
@@ -113,22 +113,22 @@
         <thead class="bg-surface-default border-b border-primary">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-              <%= t("rules.recent_runs.columns.date_time") %>
+              <%= t(".column_date_time") %>
             </th>
             <th class="px-4 py-3 text-center text-xs font-medium text-secondary uppercase tracking-wider">
-              <%= t("rules.recent_runs.columns.execution_type") %>
+              <%= t(".column_execution_type") %>
             </th>
             <th class="px-4 py-3 text-center text-xs font-medium text-secondary uppercase tracking-wider">
-              <%= t("rules.recent_runs.columns.status") %>
+              <%= t(".column_status") %>
             </th>
             <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-              <%= t("rules.recent_runs.columns.rule_name") %>
+              <%= t(".column_rule_name") %>
             </th>
             <th class="px-4 py-3 text-center text-xs font-medium text-secondary uppercase tracking-wider">
               <div class="flex flex-col leading-tight">
-                <div><%= t("rules.recent_runs.columns.transactions_counts.queued") %></div>
-                <div><%= t("rules.recent_runs.columns.transactions_counts.processed") %></div>
-                <div><%= t("rules.recent_runs.columns.transactions_counts.modified") %></div>
+                <div><%= t(".column_queued") %></div>
+                <div><%= t(".column_processed") %></div>
+                <div><%= t(".column_modified") %></div>
               </div>
             </th>
           </tr>
@@ -141,22 +141,22 @@
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center">
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.execution_type == "manual" ? "bg-blue-50 text-blue-700 theme-dark:bg-blue-950/30 theme-dark:text-blue-400" : "bg-purple-50 text-purple-700 theme-dark:bg-purple-950/30 theme-dark:text-purple-400" %>">
-                  <%= t("rules.recent_runs.execution_types.#{run.execution_type}") %>
+                  <%= t(".execution_type_#{run.execution_type}") %>
                 </span>
               </td>
               <td class="px-4 py-3 text-sm text-center">
                 <div class="flex items-center justify-center gap-2">
                   <% if run.pending? %>
                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700 theme-dark:bg-yellow-950/30 theme-dark:text-yellow-400">
-                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                      <%= t(".status_#{run.status}") %>
                     </span>
                   <% elsif run.success? %>
                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 theme-dark:bg-green-950/30 theme-dark:text-green-400">
-                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                      <%= t(".status_#{run.status}") %>
                     </span>
                   <% else %>
                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 theme-dark:bg-red-950/30 theme-dark:text-red-400">
-                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
+                      <%= t(".status_#{run.status}") %>
                     </span>
                   <% end %>
                   <% if run.failed? && run.error_message.present? %>
@@ -167,7 +167,7 @@
                 </div>
               </td>
               <td class="px-4 py-3 text-sm text-primary">
-                <%= run.rule_name.presence || run.rule&.name.presence || t("rules.recent_runs.unnamed_rule") %>
+                <%= run.rule_name.presence || run.rule&.name.presence || t(".unnamed_rule") %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center tabular-nums">
                 <%= "#{number_with_delimiter(run.transactions_queued)} / #{number_with_delimiter(run.transactions_processed)} / #{number_with_delimiter(run.transactions_modified)}" %>

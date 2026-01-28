@@ -6,3 +6,5 @@ fr:
       ignore_if_not_requested: Si vous n'avez pas fait cette demande, vous pouvez ignorer cet e-mail.
       request_made: Une demande a été faite pour réinitialiser votre mot de passe %{product_name}. Cliquez sur le lien pour le réinitialiser.
       subject: '%{product_name} : Réinitialiser votre mot de passe'
+
+

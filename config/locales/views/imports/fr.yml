@@ -56,6 +56,7 @@ fr:
         title: Importez vos données
   imports:
     index:
+      title: Importations
       imports: Imports
       new: Nouvelle importation
     table:
@@ -93,3 +94,20 @@ fr:
     ready:
       description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
       title: Confirmez vos données d'importation
+    errors:
+      custom_column_requires_inflow: "Les importations de colonnes personnalisées nécessitent qu'une colonne d'entrée soit sélectionnée"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

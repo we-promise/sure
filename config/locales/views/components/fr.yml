@@ -15,12 +15,28 @@ fr:
       imported: "Importées : %{count}"
       updated: "Mises à jour : %{count}"
       skipped: "Ignorées : %{count}"
+      fetching: "Récupération depuis la maison de courtage..."
+      protected:
+        one: "%{count} entrée protégée (non écrasée)"
+        other: "%{count} entrées protégées (non écrasées)"
+      view_protected: Voir les entrées protégées
+    skip_reasons:
+      excluded: Exclue
+      user_modified: Modifiée par l'utilisateur
+      import_locked: Import CSV
+      protected: Protégée
     holdings:
       title: Avoirs
       found: "Trouvés : %{count}"
       processed: "Traités : %{count}"
+    trades:
+      title: Transactions boursières
+      imported: "Importées : %{count}"
+      skipped: "Ignorées : %{count}"
+      fetching: "Récupération des activités depuis la maison de courtage..."
     health:
       title: Santé
+      view_error_details: Voir les détails des erreurs
       rate_limited: "Limité %{time_ago}"
       recently: récemment
       errors: "Erreurs : %{count}"

@@ -1,6 +1,16 @@
 ---
 fr:
   transactions:
+    selection_bar:
+      edit: "Éditer"
+      delete: "Supprimer"
+    summary:
+      total_transactions: "Total transactions"
+      income: "Revenus"
+      expenses: "Dépenses"
+    new:
+      title: "Nouvelle transaction"
+    unknown_name: Transaction inconnue
     form:
       account: Compte
       account_prompt: Sélectionnez un compte
@@ -17,9 +27,7 @@ fr:
       note_placeholder: Entrez une note
       submit: Ajouter la transaction
       tags_label: Étiquettes
-      transfer: Transfert
-    new:
-      new_transaction: Nouvelle transaction
+      transfer: Virement
     show:
       account_label: Compte
       amount: Montant
@@ -29,6 +37,15 @@ fr:
       delete_subtitle: Cette action supprime définitivement la transaction, affecte vos soldes historiques et ne peut pas être annulée.
       delete_title: Supprimer la transaction
       details: Détails
+      exclude: Exclure
+      exclude_description: Les transactions exclues seront retirées des calculs budgétaires et des rapports.
+      activity_type: Type d'activité
+      activity_type_description: Type d'activité d'investissement (Achat, Vente, Dividende, etc.). Détecté automatiquement ou défini manuellement.
+      one_time_title: "%{type} unique"
+      one_time_description: Les transactions uniques seront exclues de certains calculs budgétaires et rapports pour vous aider à voir ce qui est vraiment important.
+      convert_to_trade_title: Convertir en transaction boursière
+      convert_to_trade_description: Convertir cette transaction en une transaction d'achat ou de vente avec des détails de titre pour le suivi du portefeuille.
+      convert_to_trade_button: Convertir en transaction
       merchant_label: Marchand
       name_label: Nom
       nature: Type
@@ -38,18 +55,132 @@ fr:
       overview: Aperçu
       settings: Paramètres
       tags_label: Étiquettes
+      tab_transactions: Transactions
+      tab_upcoming: À venir
       uncategorized: "(non catégorisée)"
+    activity_labels:
+      buy: Achat
+      sell: Vente
+      sweep_in: Balayage entrant
+      sweep_out: Balayage sortant
+      dividend: Dividende
+      reinvestment: Réinvestissement
+      interest: Intérêt
+      fee: Frais
+      transfer: Transfert
+      contribution: Contribution
+      withdrawal: Retrait
+      exchange: Échange
+      other: Autre
+    mark_recurring: Marquer comme récurrent
+    mark_recurring_subtitle: Suivre cette transaction comme récurrente. La variance du montant est automatiquement calculée à partir des 6 derniers mois de transactions similaires.
+    mark_recurring_title: Transaction récurrente
+    potential_duplicate_title: Doublon possible détecté
+    potential_duplicate_description: Cette transaction en attente peut être identique à la transaction validée ci-dessous. Si c'est le cas, fusionnez-les pour éviter un double comptage.
+    merge_duplicate: Oui, les fusionner
+    keep_both: Non, garder les deux
+    transaction:
+      pending: En attente
+      pending_tooltip: Transaction en attente — peut changer une fois validée
+      activity_type_tooltip: Type d'activité d'investissement
+      possible_duplicate: Doublon ?
+      potential_duplicate_tooltip: Ceci peut être un doublon d'une autre transaction
+      review_recommended: À vérifier
+      review_recommended_tooltip: Grande différence de montant — vérification recommandée pour confirmer s'il s'agit d'un doublon
+    merge_duplicate:
+      success: Transactions fusionnées avec succès
+      failure: Impossible de fusionner les transactions
+    dismiss_duplicate:
+      success: Conservées comme transactions séparées
+      failure: Impossible de rejeter la suggestion de doublon
     header:
+      new_rule: Nouvelle règle
+      edit_rules: Modifier les règles
       edit_categories: Modifier les catégories
       edit_imports: Modifier les importations
       edit_merchants: Modifier les marchands
       edit_tags: Modifier les étiquettes
       import: Importer
     index:
+      title: Transactions
+      new_transaction: Nouvelle transaction
       transaction: transaction
       transactions: transactions
+      import: Importer
+    list:
+      header_transaction: "Transaction"
+      header_category: "Catégorie"
+      header_amount: "Montant"
+      drag_drop_title: Déposer un fichier CSV pour importer
+      drag_drop_subtitle: Télécharger les transactions directement
+      transaction: transaction
+      transactions: transactions
+    toggle_recurring_section: Afficher/masquer les transactions récurrentes à venir
+    search:
+      filters:
+        account: Compte
+        date: Date
+        type: Type
+        status: Statut
+        amount: Montant
+        category: Catégorie
+        tag: Étiquette
+        merchant: Marchand
+    convert_to_trade:
+      title: Convertir en transaction boursière
+      description: Convertir cette transaction en une transaction avec des détails de titre
+      date_label: "Date :"
+      account_label: "Compte :"
+      amount_label: "Montant :"
+      security_label: Titre
+      security_prompt: Sélectionnez un titre...
+      security_custom: "+ Entrer un ticker personnalisé"
+      security_not_listed_hint: Vous ne voyez pas votre titre ? Sélectionnez "Entrer un ticker personnalisé" en bas de la liste.
+      ticker_placeholder: AAPL
+      ticker_hint: Entrez le symbole ticker de l'action/ETF (par ex., AAPL, MSFT)
+      ticker_search_placeholder: Rechercher un ticker...
+      ticker_search_hint: Recherchez par symbole ticker ou nom d'entreprise, ou tapez un ticker personnalisé
+      price_mismatch_title: Le prix peut ne pas correspondre
+      price_mismatch_message: "Votre prix (%{entered_price}/action) diffère significativement du prix de marché actuel de %{ticker} (%{market_price}). Si cela semble incorrect, vous avez peut-être sélectionné le mauvais titre — essayez d'utiliser \"Entrer un ticker personnalisé\" pour spécifier le bon."
+      quantity_label: Quantité (Actions)
+      quantity_placeholder: ex. 20
+      quantity_hint: Nombre d'actions échangées
+      price_label: Prix par action
+      price_placeholder: ex. 52,15
+      price_hint: Prix par action (%{currency})
+      qty_or_price_hint: Entrez au moins la quantité OU le prix. L'autre sera calculé à partir du montant de la transaction (%{amount}).
+      trade_type_label: Type de transaction
+      trade_type_hint: Achat ou vente d'actions d'un titre
+      exchange_label: Bourse (Facultatif)
+      exchange_placeholder: XNAS
+      exchange_hint: Laisser vide pour détection automatique
+      cancel: Annuler
+      submit: Convertir en transaction
+      success: Transaction convertie en transaction boursière
+      conversion_note: "Converti depuis la transaction : %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Seules les transactions des comptes d'investissement peuvent être converties en transactions boursières
+        already_converted: Cette transaction a déjà été convertie ou exclue
+        enter_ticker: Veuillez entrer un symbole ticker
+        security_not_found: Le titre sélectionné n'existe plus. Veuillez en sélectionner un autre.
+        select_security: Veuillez sélectionner ou entrer un titre
+        enter_qty_or_price: Veuillez entrer soit la quantité soit le prix par action. L'autre sera calculé à partir du montant de la transaction.
+        invalid_qty_or_price: Quantité ou prix invalide. Veuillez entrer des valeurs positives valides.
+        conversion_failed: "Échec de la conversion de la transaction : %{error}"
+        unexpected_error: "Erreur inattendue lors de la conversion : %{error}"
     searches:
       filters:
+        account_filter:
+          filter_placeholder: "Filtrer les comptes"
+        category_filter:
+          filter_placeholder: "Filtrer les catégories"
+        date_filter:
+          start_date_placeholder: "Date de début"
+          end_date_placeholder: "Date de fin"
+        merchant_filter:
+          filter_placeholder: "Filtrer les marchands"
+        tag_filter:
+          filter_placeholder: "Filtrer les étiquettes"
         amount_filter:
           equal_to: Égal à
           greater_than: Supérieur à
@@ -61,10 +192,15 @@ fr:
           on_or_after: le %{date} et après
           on_or_before: le %{date} et avant
           transfer: Transfert
+          confirmed: Confirmé
+          pending: En attente
         type_filter:
           expense: Dépense
           income: Revenu
           transfer: Transfert
+        status_filter:
+          confirmed: Confirmé
+          pending: En attente
       menu:
         account_filter: Compte
         amount_filter: Montant
@@ -74,9 +210,15 @@ fr:
         clear_filters: Effacer les filtres
         date_filter: Date
         merchant_filter: Marchand
+        status_filter: Statut
         tag_filter: Étiquette
         type_filter: Type
       search:
         equal_to: égal à
         greater_than: supérieur à
         less_than: inférieur à
+      form:
+        search_placeholder: "Rechercher des transactions..."
+        filter: "Filtrer"
+        toggle_selection_checkboxes: Basculer toutes les cases à cocher
+

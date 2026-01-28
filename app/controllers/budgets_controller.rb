@@ -2,10 +2,12 @@ class BudgetsController < ApplicationController
   before_action :set_budget, only: %i[show edit update]
 
   def index
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.budgets"), nil ] ]
     redirect_to_current_month_budget
   end
 
   def show
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.budgets"), nil ] ]
   end
 
   def edit

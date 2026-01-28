@@ -1,0 +1,7 @@
+en:
+  accounts:
+    new:
+      container:
+        select: "Select"
+        navigate: "Navigate"
+        close: "Close"

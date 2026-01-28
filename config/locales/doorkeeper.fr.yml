@@ -1,0 +1,155 @@
+fr:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Nom'
+        redirect_uri: 'URI de redirection'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'ne peut pas contenir de fragment.'
+              invalid_uri: 'doit être une URI valide.'
+              unspecified_scheme: 'doit spécifier un schéma.'
+              relative_uri: 'doit être une URI absolue.'
+              secured_uri: 'doit être une URI HTTPS/SSL.'
+              forbidden_uri: 'est interdite par le serveur.'
+            scopes:
+              not_match_configured: "ne correspond pas à la configuration du serveur."
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Êtes-vous sûr ?'
+      buttons:
+        edit: 'Modifier'
+        destroy: 'Supprimer'
+        submit: 'Soumettre'
+        cancel: 'Annuler'
+        authorize: 'Autoriser'
+      form:
+        error: 'Oups ! Vérifiez votre formulaire pour les erreurs possibles'
+      help:
+        confidential: "L'application sera utilisée là où le secret client peut être gardé confidentiel. Les applications mobiles natives et les applications monopages sont considérées comme non confidentielles."
+        redirect_uri: 'Utilisez une ligne par URI'
+        blank_redirect_uri: "Laissez vide si vous avez configuré votre fournisseur pour utiliser les informations d'identification du client, les informations d'identification du mot de passe du propriétaire de la ressource ou tout autre type d'octroi qui ne nécessite pas d'URI de redirection."
+        scopes: 'Séparez les scopes par des espaces. Laissez vide pour utiliser les scopes par défaut.'
+      edit:
+        title: "Modifier l'application"
+      index:
+        title: 'Vos applications'
+        new: 'Nouvelle application'
+        name: 'Nom'
+        callback_url: 'URL de rappel'
+        confidential: 'Confidentielle ?'
+        actions: 'Actions'
+        confidentiality:
+          'yes': 'Oui'
+          'no': 'Non'
+      new:
+        title: 'Nouvelle application'
+      show:
+        title: 'Application : %{name}'
+        application_id: 'UID'
+        secret: 'Secret'
+        secret_hashed: 'Secret haché'
+        scopes: 'Scopes'
+        confidential: 'Confidentielle'
+        callback_urls: 'URLs de rappel'
+        actions: 'Actions'
+        not_defined: 'Non défini'
+
+    authorizations:
+      buttons:
+        authorize: 'Autoriser'
+        deny: 'Refuser'
+      error:
+        title: "Une erreur s'est produite"
+      new:
+        title: 'Autorisation requise'
+        prompt: 'Autoriser %{client_name} à utiliser votre compte ?'
+        able_to: 'Cette application pourra'
+      show:
+        title: "Code d'autorisation"
+      form_post:
+        title: 'Soumettre ce formulaire'
+
+    authorized_applications:
+      confirmations:
+        revoke: 'Êtes-vous sûr ?'
+      buttons:
+        revoke: 'Révoquer'
+      index:
+        title: 'Vos applications autorisées'
+        application: 'Application'
+        created_at: 'Créée le'
+        date_format: '%d/%m/%Y %H:%M:%S'
+
+    pre_authorization:
+      status: 'Pré-autorisation'
+
+    errors:
+      messages:
+        # Messages d'erreur courants
+        invalid_request:
+          unknown: "La requête manque d'un paramètre requis, inclut une valeur de paramètre non prise en charge ou est mal formée."
+          missing_param: 'Paramètre requis manquant : %{value}.'
+          request_not_authorized: "La requête doit être autorisée. Le paramètre requis pour l'autorisation de la requête est manquant ou invalide."
+          invalid_code_challenge: 'Le code challenge est requis.'
+        invalid_redirect_uri: "L'URI de redirection demandée est mal formée ou ne correspond pas à l'URI de redirection du client."
+        unauthorized_client: "Le client n'est pas autorisé à effectuer cette requête en utilisant cette méthode."
+        access_denied: "Le propriétaire de la ressource ou le serveur d'autorisation a refusé la requête."
+        invalid_scope: 'Le scope demandé est invalide, inconnu ou mal formé.'
+        invalid_code_challenge_method:
+          zero: "Le serveur d'autorisation ne prend pas en charge PKCE car il n'y a pas de valeurs code_challenge_method acceptées."
+          one: 'Le code_challenge_method doit être %{challenge_methods}.'
+          other: 'Le code_challenge_method doit être l''un de %{challenge_methods}.'
+        server_error: "Le serveur d'autorisation a rencontré une condition inattendue qui l'a empêché de traiter la requête."
+        temporarily_unavailable: "Le serveur d'autorisation est actuellement incapable de traiter la requête en raison d'une surcharge temporaire ou d'une maintenance du serveur."
+
+        # Messages d'erreur de configuration
+        credential_flow_not_configured: "Le flux d'informations d'identification du mot de passe du propriétaire de la ressource a échoué car Doorkeeper.configure.resource_owner_from_credentials n'est pas configuré."
+        resource_owner_authenticator_not_configured: "La recherche du propriétaire de la ressource a échoué car Doorkeeper.configure.resource_owner_authenticator n'est pas configuré."
+        admin_authenticator_not_configured: "L'accès au panneau d'administration est interdit car Doorkeeper.configure.admin_authenticator n'est pas configuré."
+
+        # Erreurs d'octroi d'accès
+        unsupported_response_type: "Le serveur d'autorisation ne prend pas en charge ce type de réponse."
+        unsupported_response_mode: "Le serveur d'autorisation ne prend pas en charge ce mode de réponse."
+
+        # Erreurs de jeton d'accès
+        invalid_client: "L'authentification du client a échoué en raison d'un client inconnu, d'une absence d'authentification du client ou d'une méthode d'authentification non prise en charge."
+        invalid_grant: "L'octroi d'autorisation fourni est invalide, expiré, révoqué, ne correspond pas à l'URI de redirection utilisée dans la requête d'autorisation ou a été émis à un autre client."
+        unsupported_grant_type: "Le type d'octroi d'autorisation n'est pas pris en charge par le serveur d'autorisation."
+
+        invalid_token:
+          revoked: "Le jeton d'accès a été révoqué"
+          expired: "Le jeton d'accès a expiré"
+          unknown: "Le jeton d'accès est invalide"
+        revoke:
+          unauthorized: "Vous n'êtes pas autorisé à révoquer ce jeton"
+
+        forbidden_token:
+          missing_scope: 'L''accès à cette ressource nécessite le scope "%{oauth_scopes}".'
+
+    flash:
+      applications:
+        create:
+          notice: 'Application créée.'
+        destroy:
+          notice: 'Application supprimée.'
+        update:
+          notice: 'Application mise à jour.'
+      authorized_applications:
+        destroy:
+          notice: 'Application révoquée.'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'Fournisseur OAuth2'
+          applications: 'Applications'
+          home: 'Accueil'
+      application:
+        title: 'Autorisation OAuth requise'

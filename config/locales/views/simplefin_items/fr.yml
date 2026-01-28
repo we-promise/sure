@@ -1,6 +1,12 @@
 ---
 fr:
   simplefin_items:
+    new:
+      title: Connecter SimpleFIN
+      setup_token: Jeton de configuration
+      setup_token_placeholder: collez votre jeton de configuration SimpleFIN
+      connect: Connecter
+      cancel: Annuler
     create:
       success: Connexion SimpleFIN ajoutée avec succès ! Vos comptes apparaîtront sous peu lors de la synchronisation en arrière-plan.
       errors:
@@ -24,8 +30,27 @@ fr:
         label: "Jeton de configuration SimpleFIN :"
         placeholder: "Collez votre jeton de configuration SimpleFIN ici..."
         help_text: "Le jeton doit être une longue chaîne commençant par des lettres et des chiffres"
+    setup_accounts:
+      stale_accounts:
+        title: "Comptes qui ne sont plus dans SimpleFIN"
+        description: "Ces comptes existent dans votre base de données mais ne sont plus fournis par SimpleFIN. Cela peut se produire lorsque les configurations de compte changent en amont."
+        action_prompt: "Que souhaitez-vous faire ?"
+        action_delete: "Supprimer le compte et toutes les transactions"
+        action_move: "Déplacer les transactions vers :"
+        action_skip: "Ignorer pour le moment"
+        transaction_count:
+          one: "%{count} transaction"
+          other: "%{count} transactions"
     complete_account_setup:
-      success: Les comptes SimpleFIN ont été configurés avec succès ! Vos transactions et positions sont en cours d'importation en arrière-plan.
+      all_skipped: "Tous les comptes ont été ignorés. Aucun compte n'a été créé."
+      no_accounts: "Aucun compte à configurer."
+      success:
+        one: "%{count} compte SimpleFIN créé avec succès ! Vos transactions et avoirs sont en cours d'importation en arrière-plan."
+        other: "%{count} comptes SimpleFIN créés avec succès ! Vos transactions et avoirs sont en cours d'importation en arrière-plan."
+      stale_accounts_processed: "Comptes obsolètes : %{deleted} supprimés, %{moved} déplacés."
+      stale_accounts_errors:
+        one: "%{count} action de compte obsolète a échoué. Consultez les journaux pour plus de détails."
+        other: "%{count} actions de comptes obsolètes ont échoué. Consultez les journaux pour plus de détails."
     simplefin_item:
       add_new: Ajouter une nouvelle connexion
       confirm_accept: Supprimer la connexion
@@ -40,8 +65,44 @@ fr:
       setup_needed: Nouveaux comptes prêts à être configurés
       setup_description: Choisissez les types de comptes pour vos comptes SimpleFIN nouvellement importés.
       setup_action: Configurer les nouveaux comptes
+      setup_accounts_menu: Configurer les comptes
+      more_accounts_available:
+        one: "%{count} compte supplémentaire disponible à configurer"
+        other: "%{count} comptes supplémentaires disponibles à configurer"
+      accounts_skipped_tooltip: "Certains comptes ont été ignorés en raison d'erreurs lors de la synchronisation"
+      accounts_skipped_label: "Ignorés : %{count}"
+      rate_limited_ago: "Limite de taux atteinte (il y a %{time})"
+      rate_limited_recently: "Limite de taux atteinte récemment"
       status: Dernière synchronisation il y a %{timestamp}
       status_never: Jamais synchronisé
       status_with_summary: "Dernière synchronisation il y a %{timestamp} • %{summary}"
       syncing: Synchronisation...
       update: Mettre à jour la connexion
+      stale_pending_note: "(exclu des budgets)"
+      stale_pending_accounts: "dans : %{accounts}"
+      reconciled_details_note: "(voir le résumé de synchronisation pour les détails)"
+      duplicate_accounts_skipped: "Certains comptes ont été ignorés comme doublons — utilisez 'Lier des comptes existants' pour fusionner."
+    select_existing_account:
+      title: "Lier %{account_name} à SimpleFIN"
+      description: Sélectionnez un compte SimpleFIN à lier à votre compte existant
+      cancel: Annuler
+      link_account: Lier le compte
+      no_accounts_found: Aucun compte SimpleFIN trouvé pour cette famille.
+      wait_for_sync: Si vous venez de vous connecter ou de synchroniser, réessayez après la fin de la synchronisation.
+      unlink_to_move: Pour déplacer un lien, dissociez-le d'abord depuis le menu actions du compte.
+      all_accounts_already_linked: Tous les comptes SimpleFIN semblent déjà liés.
+      currently_linked_to: "Actuellement lié à : %{account_name}"
+    link_existing_account:
+      success: Compte lié avec succès à SimpleFIN
+      errors:
+        only_manual: Seuls les comptes manuels peuvent être liés
+        invalid_simplefin_account: Compte SimpleFIN invalide sélectionné
+    reconciled_status:
+      message:
+        one: "%{count} transaction en attente dupliquée réconciliée"
+        other: "%{count} transactions en attente dupliquées réconciliées"
+    stale_pending_status:
+      message:
+        one: "%{count} transaction en attente de plus de %{days} jours"
+        other: "%{count} transactions en attente de plus de %{days} jours"
+

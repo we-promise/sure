@@ -3,6 +3,8 @@ en:
   helpers:
     label:
       user:
+        email: Email address
+        password: Password
         invite_code: Invite Code
     submit:
       user:
@@ -24,3 +26,8 @@ en:
         then be able to configure additional settings within the app.
       welcome_title: Welcome to Self Hosted %{product_name}!
       password_placeholder: Enter your password
+      password_requirements:
+        minimum_characters: Minimum 8 characters
+        case_letters: Upper and lowercase letters
+        number: A number (0-9)
+        special_character: A special character (!, @, #, $, %, etc)

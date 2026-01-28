@@ -10,8 +10,118 @@ fr:
       title: Saisir le solde du compte
     show:
       chart_title: Valeur totale
+    subtypes:
+      # États-Unis
+      brokerage:
+        short: Courtage
+        long: Compte de courtage
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: IRA traditionnel
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: Plan 529
+        long: Plan d'épargne études 529
+      hsa:
+        short: HSA
+        long: Compte d'épargne santé
+      ugma:
+        short: UGMA
+        long: Compte de garde UGMA
+      utma:
+        short: UTMA
+        long: Compte de garde UTMA
+      # Royaume-Uni
+      isa:
+        short: ISA
+        long: Compte d'épargne individuel
+      lisa:
+        short: LISA
+        long: ISA à vie
+      sipp:
+        short: SIPP
+        long: Pension personnelle autogérée
+      workplace_pension_uk:
+        short: Pension
+        long: Pension d'entreprise
+      # Canada
+      rrsp:
+        short: REER
+        long: Régime enregistré d'épargne-retraite
+      tfsa:
+        short: CELI
+        long: Compte d'épargne libre d'impôt
+      resp:
+        short: REEE
+        long: Régime enregistré d'épargne-études
+      lira:
+        short: CRI
+        long: Compte de retraite immobilisé
+      rrif:
+        short: FERR
+        long: Fonds enregistré de revenu de retraite
+      # Australie
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Fonds de superannuation autogéré
+      # Europe
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pilier 3a
+        long: Prévoyance privée (Pilier 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      # Générique
+      pension:
+        short: Pension
+        long: Pension de retraite
+      retirement:
+        short: Retraite
+        long: Compte de retraite
+      mutual_fund:
+        short: Fonds commun
+        long: Fonds commun de placement
+      angel:
+        short: Angel
+        long: Investissement Angel
+      trust:
+        short: Trust
+        long: Fiducie
+      other:
+        short: Autre
+        long: Autre investissement
     value_tooltip:
       cash: Liquidités
       holdings: Titres
       total: Valeur totale du portefeuille
       total_value_tooltip: Le solde total du portefeuille correspond à la somme des liquidités (disponibles pour la négociation) et de la valeur marchande actuelle de vos titres.
+

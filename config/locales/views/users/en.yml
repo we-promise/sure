@@ -1,6 +1,13 @@
 ---
 en:
   users:
+    user_menu:
+      version: "Version"
+      settings: "Settings"
+      changelog: "Changelog"
+      feedback: "Feedback"
+      contact: "Contact"
+      log_out: "Log out"
     destroy:
       success: Your account has been deleted.
     update:

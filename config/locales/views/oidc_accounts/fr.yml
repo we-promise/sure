@@ -3,3 +3,14 @@ fr:
   oidc_accounts:
     link:
       account_creation_disabled: La création de nouveaux comptes via l'authentification unique est désactivée. Veuillez contacter un administrateur pour créer votre compte.
+    new_user:
+      title: Complétez votre compte
+      heading: Créez votre compte
+      description: Veuillez confirmer vos informations pour finaliser la création de votre compte avec votre identité %{provider}.
+      email_label: Email (provenant du fournisseur SSO)
+      first_name_label: Prénom
+      first_name_placeholder: Entrez votre prénom
+      last_name_label: Nom
+      last_name_placeholder: Entrez votre nom
+      submit: Créer le compte
+      cancel: Annuler

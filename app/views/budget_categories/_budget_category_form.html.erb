@@ -8,7 +8,7 @@
   <div class="text-sm mr-3">
     <p class="text-primary font-medium mb-0.5"><%= budget_category.category.name %></p>
 
-    <p class="text-secondary"><%= budget_category.median_monthly_expense_money.format(precision: 0) %>/m avg</p>
+    <p class="text-secondary"><%= budget_category.median_monthly_expense_money.format(precision: 0) %><%= t(".per_month_avg") %></p>
   </div>
 
   <div class="ml-auto">
@@ -18,13 +18,13 @@
           <span class="text-secondary text-sm mr-2"><%= currency.symbol %></span>
           <%= f.number_field :budgeted_spending,
                             class: "form-field__input text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            placeholder: budget_category.subcategory? ? "Shared" : "0",
+                            placeholder: budget_category.subcategory? ? t(".shared") : "0",
                             step: currency.step,
                             id: dom_id(budget_category, :budgeted_spending),
                             min: 0,
                             max: budget_category.max_allocation,
                             data: { auto_submit_form_target: "auto" },
-                            title: budget_category.subcategory? ? "Leave empty to share parent's budget" : nil %>
+                            title: budget_category.subcategory? ? t(".shared_tooltip") : nil %>
         </div>
       </div>
     <% end %>

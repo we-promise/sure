@@ -6,6 +6,10 @@ class RecurringTransactionsController < ApplicationController
                                     .includes(:merchant)
                                     .order(status: :asc, next_expected_date: :asc)
     @family = Current.family
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.recurring_transactions"), nil ]
+    ]
   end
 
   def update_settings

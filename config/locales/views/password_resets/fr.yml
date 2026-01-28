@@ -1,6 +1,8 @@
 ---
 fr:
   password_resets:
+    disabled: La réinitialisation du mot de passe via Sure est désactivée. Veuillez réinitialiser votre mot de passe via votre fournisseur d'identité.
+    sso_only_user: Votre compte utilise SSO pour l'authentification. Veuillez contacter votre administrateur pour gérer vos identifiants.
     edit:
       title: Réinitialiser votre mot de passe
     new:

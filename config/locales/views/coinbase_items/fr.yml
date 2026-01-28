@@ -1,0 +1,78 @@
+---
+fr:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Connexion réussie à Coinbase ! Vos comptes sont en cours de synchronisation.
+    update:
+      success: Configuration Coinbase mise à jour avec succès.
+    destroy:
+      success: Connexion Coinbase programmée pour suppression.
+    setup_accounts:
+      title: Importer les portefeuilles Coinbase
+      subtitle: Sélectionnez les portefeuilles à suivre
+      instructions: Sélectionnez les portefeuilles que vous souhaitez importer. Les portefeuilles non sélectionnés resteront disponibles si vous voulez les ajouter plus tard.
+      no_accounts: Tous les portefeuilles ont été importés.
+      accounts_count:
+        one: "%{count} portefeuille disponible"
+        other: "%{count} portefeuilles disponibles"
+      select_all: Tout sélectionner
+      import_selected: Importer la sélection
+      cancel: Annuler
+      creating: Importation...
+    complete_account_setup:
+      success:
+        one: "%{count} portefeuille importé"
+        other: "%{count} portefeuilles importés"
+      none_selected: Aucun portefeuille sélectionné
+      no_accounts: Aucun portefeuille à importer
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Synchronisation...
+      reconnect: Les identifiants doivent être mis à jour
+      deletion_in_progress: Suppression...
+      sync_status:
+        no_accounts: Aucun compte trouvé
+        all_synced:
+          one: "%{count} compte synchronisé"
+          other: "%{count} comptes synchronisés"
+        partial_sync: "%{linked_count} synchronisés, %{unlinked_count} nécessitent une configuration"
+      status: "Dernière synchronisation il y a %{timestamp}"
+      status_with_summary: "Dernière synchronisation il y a %{timestamp} - %{summary}"
+      status_never: Jamais synchronisé
+      update_credentials: Mettre à jour les identifiants
+      delete: Supprimer
+      no_accounts_title: Aucun compte trouvé
+      no_accounts_message: Vos portefeuilles Coinbase apparaîtront ici après la synchronisation.
+      setup_needed: Portefeuilles prêts à importer
+      setup_description: Sélectionnez les portefeuilles Coinbase que vous souhaitez suivre.
+      setup_action: Importer les portefeuilles
+      import_wallets_menu: Importer les portefeuilles
+      more_wallets_available:
+        one: "%{count} portefeuille supplémentaire disponible à l'importation"
+        other: "%{count} portefeuilles supplémentaires disponibles à l'importation"
+    select_existing_account:
+      title: Lier un compte Coinbase
+      no_accounts_found: Aucun compte Coinbase trouvé.
+      wait_for_sync: Attendez que Coinbase termine la synchronisation
+      check_provider_health: Vérifiez que vos identifiants API Coinbase sont valides
+      balance: Solde
+      currently_linked_to: "Actuellement lié à : %{account_name}"
+      link: Lier
+      cancel: Annuler
+    link_existing_account:
+      success: Lié avec succès au compte Coinbase
+      errors:
+        only_manual: Seuls les comptes manuels peuvent être liés à Coinbase
+        invalid_coinbase_account: Compte Coinbase invalide
+  coinbase_item:
+    syncer:
+      checking_credentials: Vérification des identifiants...
+      credentials_invalid: Identifiants API invalides. Veuillez vérifier votre clé et secret API.
+      importing_accounts: Importation des comptes depuis Coinbase...
+      checking_configuration: Vérification de la configuration du compte...
+      accounts_need_setup:
+        one: "%{count} compte nécessite une configuration"
+        other: "%{count} comptes nécessitent une configuration"
+      processing_accounts: Traitement des données de compte...
+      calculating_balances: Calcul des soldes...

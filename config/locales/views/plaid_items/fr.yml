@@ -21,3 +21,11 @@ fr:
       status_never: Synchronisation de données requise
       syncing: Synchronisation...
       update: Mettre à jour la connexion
+    select_existing_account:
+      title: "Lier %{account_name} à Plaid"
+      description: Sélectionnez un compte Plaid à lier à votre compte existant
+      cancel: Annuler
+      link_account: Lier le compte
+
+
+

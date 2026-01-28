@@ -47,7 +47,7 @@
     <%# Bottom Section: Categories full width %>
     <div class="w-full bg-container rounded-xl shadow-border-xs p-4">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-medium">Categories</h2>
+        <h2 class="text-lg font-medium"><%= t(".categories") %></h2>
 
         <% if @budget.initialized? %>
           <%= render DS::Link.new(

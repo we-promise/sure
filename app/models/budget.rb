@@ -95,7 +95,7 @@ class Budget < ApplicationRecord
   end
 
   def name
-    start_date.strftime("%B %Y")
+    I18n.l(start_date, format: "%B %Y").capitalize
   end
 
   def initialized?

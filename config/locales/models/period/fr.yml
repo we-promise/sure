@@ -1,0 +1,52 @@
+fr:
+  periods:
+    custom: "Période personnalisée"
+    custom_short: "Perso"
+    last_day:
+      label: "Dernier jour"
+      label_short: "1J"
+      comparison_label: "vs. hier"
+    current_week:
+      label: "Semaine en cours"
+      label_short: "SDC"
+      comparison_label: "vs. début de semaine"
+    last_7_days:
+      label: "7 derniers jours"
+      label_short: "7J"
+      comparison_label: "vs. semaine dernière"
+    current_month:
+      label: "Mois en cours"
+      label_short: "MDC"
+      comparison_label: "vs. début du mois"
+    last_month:
+      label: "Mois dernier"
+      label_short: "MD"
+      comparison_label: "vs. mois dernier"
+    last_30_days:
+      label: "30 derniers jours"
+      label_short: "30J"
+      comparison_label: "vs. 30 derniers jours"
+    last_90_days:
+      label: "90 derniers jours"
+      label_short: "90J"
+      comparison_label: "vs. trimestre dernier"
+    current_year:
+      label: "Année en cours"
+      label_short: "AC"
+      comparison_label: "vs. début d'année"
+    last_365_days:
+      label: "365 derniers jours"
+      label_short: "365J"
+      comparison_label: "vs. il y a 1 an"
+    last_5_years:
+      label: "5 dernières années"
+      label_short: "5A"
+      comparison_label: "vs. il y a 5 ans"
+    last_10_years:
+      label: "10 dernières années"
+      label_short: "10A"
+      comparison_label: "vs. il y a 10 ans"
+    all_time:
+      label: "Depuis le début"
+      label_short: "Tout"
+      comparison_label: "vs. le début"

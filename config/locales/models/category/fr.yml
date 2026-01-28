@@ -2,6 +2,28 @@
 fr:
   models:
     category:
-      uncategorized: Non catégorisé
+      uncategorized: Non catégorisée
       other_investments: Autres investissements
       investment_contributions: Contributions aux investissements
+      defaults:
+        income: "Revenus"
+        food_drink: "Restaurants & Sorties"
+        groceries: "Épicerie"
+        shopping: "Shopping"
+        transportation: "Transport"
+        travel: "Voyages"
+        entertainment: "Divertissement"
+        healthcare: "Santé"
+        personal_care: "Soins personnels"
+        home_improvement: "Travaux & Bricolage"
+        mortgage_rent: "Logement"
+        utilities: "Services publics"
+        subscriptions: "Abonnements"
+        insurance: "Assurance"
+        sports_fitness: "Sports et fitness"
+        gifts_donations: "Cadeaux et dons"
+        taxes: "Impôts"
+        loan_payments: "Remboursements de prêts"
+        services: "Services"
+        fees: "Frais"
+        savings_investments: "Épargne et investissements"
