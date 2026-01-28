@@ -1,6 +1,24 @@
 class PlaidAccount::Investments::TransactionsProcessor
   SecurityNotFoundError = Class.new(StandardError)
 
+  # Map Plaid investment transaction types to activity labels
+  # All values must be valid Transaction::ACTIVITY_LABELS
+  PLAID_TYPE_TO_LABEL = {
+    "buy" => "Buy",
+    "sell" => "Sell",
+    "cancel" => "Other",
+    "cash" => "Other",
+    "fee" => "Fee",
+    "transfer" => "Transfer",
+    "dividend" => "Dividend",
+    "interest" => "Interest",
+    "contribution" => "Contribution",
+    "withdrawal" => "Withdrawal",
+    "dividend reinvestment" => "Reinvestment",
+    "spin off" => "Other",
+    "split" => "Other"
+  }.freeze
+
   def initialize(plaid_account, security_resolver:)
     @plaid_account = plaid_account
     @security_resolver = security_resolver
@@ -54,7 +72,8 @@ class PlaidAccount::Investments::TransactionsProcessor
         currency: transaction["iso_currency_code"],
         date: transaction["date"],
         name: transaction["name"],
-        source: "plaid"
+        source: "plaid",
+        activity_label: label_from_plaid_type(transaction)
       )
     end
 
@@ -68,12 +87,18 @@ class PlaidAccount::Investments::TransactionsProcessor
         currency: transaction["iso_currency_code"],
         date: transaction["date"],
         name: transaction["name"],
-        source: "plaid"
+        source: "plaid",
+        investment_activity_label: label_from_plaid_type(transaction)
       )
     end
 
+    def label_from_plaid_type(transaction)
+      plaid_type = transaction["type"]&.downcase
+      PLAID_TYPE_TO_LABEL[plaid_type] || "Other"
+    end
+
     def transactions
-      plaid_account.raw_investments_payload["transactions"] || []
+      plaid_account.raw_holdings_payload&.dig("transactions") || []
     end
 
     # Plaid unfortunately returns incorrect signage on some `quantity` values. They claim all "sell" transactions

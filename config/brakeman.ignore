@@ -3,6 +3,29 @@
     {
       "warning_type": "Redirect",
       "warning_code": 18,
+      "fingerprint": "556f2fdd1f091ed50811cb2cce28dd2b987cd0a2eed4d19bea138c8c083a3a5d",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/snaptrade_items_controller.rb",
+      "line": 125,
+      "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
+      "code": "redirect_to(Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id)), :allow_other_host => true)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SnaptradeItemsController",
+        "method": "connect"
+      },
+      "user_input": "Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id))",
+      "confidence": "Weak",
+      "cwe_id": [
+        601
+      ],
+      "note": "Intentional redirect to SnapTrade's external OAuth portal for brokerage connection"
+    },
+    {
+      "warning_type": "Redirect",
+      "warning_code": 18,
       "fingerprint": "723b1970ca6bf16ea0c2c1afa0c00d3c54854a16568d6cb933e497947565d9ab",
       "check_name": "Redirect",
       "message": "Possible unprotected redirect",
@@ -68,6 +91,29 @@
         915
       ],
       "note": ""
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "01a88a0a17848e70999c17f6438a636b00e01da39a2c0aa0c46f20f0685c7202",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/admin/users_controller.rb",
+      "line": 35,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params.require(:user).permit(:role)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Admin::UsersController",
+        "method": "user_params"
+      },
+      "user_input": ":role",
+      "confidence": "Medium",
+      "cwe_id": [
+        915
+      ],
+      "note": "Protected by Pundit authorization - UserPolicy requires super_admin and prevents users from changing their own role"
     },
     {
       "warning_type": "Dangerous Eval",

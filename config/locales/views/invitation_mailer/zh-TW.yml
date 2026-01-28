@@ -1,0 +1,8 @@
+---
+zh-TW:
+  invitation_mailer:
+    invite_email:
+      accept_button: 接受邀請
+      body: "%{inviter} 邀請您加入 %{family} 家庭，共同使用 %{product_name}！"
+      expiry_notice: 此邀請將在 %{days} 天後過期
+      greeting: 歡迎使用 %{product_name}！

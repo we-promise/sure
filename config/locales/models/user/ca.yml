@@ -15,7 +15,8 @@ ca:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: L'administrador no pot eliminar el compte mentre hi hagi altres usuaris. Elimina tots els membres primer.
+              cannot_deactivate_admin_with_other_users: L'administrador no pot eliminar
+                el compte mentre hi hagi altres usuaris. Elimina tots els membres
+                primer.
             profile_image:
               invalid_file_size: la mida del fitxer ha de ser inferior a %{max_megabytes}MB
-

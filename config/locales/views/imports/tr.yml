@@ -44,26 +44,30 @@ tr:
         instructions_5: Sayılarda virgül, para birimi simgesi veya parantez kullanmayın.
         title: Verilerinizi içe aktarın
   imports:
-    empty:
-      message: Henüz hiç içe aktarma yok.
-      new: Yeni İçe Aktarma
-    import:
-      complete: Tamamlandı
-      delete: Sil
-      failed: Başarısız
-      in_progress: Devam ediyor
-      label: "%{type}: %{datetime}"
-      revert_failed: Geri alma başarısız
-      reverting: Geri alınıyor
-      uploading: Satırlar işleniyor
-      view: Görüntüle
     index:
-      imports: İçe aktarmalar
-      new: Yeni İçe Aktarma
       title: İçe aktarmalar
-      exports: Dışa aktarmalar
-      new_export: Yeni Dışa Aktarma
-      no_exports: Henüz hiç dışa aktarma yok.
+      new: Yeni İçe Aktarma
+    table:
+      title: İçe aktarmalar
+      header:
+        date: Tarih
+        operation: Operasyon
+        status: Durum
+        actions: Eylemler
+      row:
+        status:
+          in_progress: Devam ediyor
+          uploading: Satırlar işleniyor
+          reverting: Geri alınıyor
+          revert_failed: Geri alma başarısız
+          complete: Tamamlandı
+          failed: Başarısız
+        actions:
+          revert: Geri al
+          confirm_revert: Bu işlem, içe aktarılan işlemleri silecektir, ancak verilerinizi istediğiniz zaman inceleyebilir ve yeniden içe aktarabilirsiniz.
+          delete: Sil
+          view: Görüntüle
+      empty: Henüz hiç içe aktarma yok.
     new:
       description: Farklı veri türlerini CSV ile manuel olarak içe aktarabilir veya Mint gibi içe aktarma şablonlarımızı kullanabilirsiniz.
       import_accounts: Hesapları içe aktar

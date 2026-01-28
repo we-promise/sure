@@ -14,7 +14,7 @@ de:
         invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFin Bridge kopiert hast.
         token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
         create_failed: "Verbindung konnte nicht hergestellt werden: %{message}"
-        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere den Support.
+        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
     destroy:
       success: SimpleFin-Verbindung wird entfernt.
     update:
@@ -24,7 +24,7 @@ de:
         invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFin Bridge kopiert hast.
         token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
         update_failed: "Verbindung konnte nicht aktualisiert werden: %{message}"
-        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere den Support.
+        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
     edit:
       setup_token:
         label: "SimpleFin-Setup-Token:"

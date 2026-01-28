@@ -1,0 +1,13 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      import:
+        currency: 货币
+        number_format: 数字格式
+    errors:
+      models:
+        import:
+          attributes:
+            raw_file_str:
+              invalid_csv_format: 格式无效，不是合法的CSV格式

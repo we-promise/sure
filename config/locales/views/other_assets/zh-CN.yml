@@ -1,0 +1,9 @@
+---
+zh-CN:
+  other_assets:
+    edit:
+      balance_tracking_info: 其他资产通过'新增余额'功能手动估值追踪，而非交易记录。现金流不会影响账户余额。
+      edit: 编辑%{account}
+    new:
+      balance_tracking_info: 其他资产通过'新增余额'功能手动估值追踪，而非交易记录。现金流不会影响账户余额。
+      title: 请输入资产详情

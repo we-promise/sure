@@ -182,13 +182,18 @@ class LunchflowItemsController < ApplicationController
       end
 
       # Create the internal Account with proper balance initialization
+      # Use lunchflow_account.currency (already parsed) and skip initial sync
+      # because the provider sync will set the correct currency from the balance API
       account = Account.create_and_sync(
-        family: Current.family,
-        name: account_data[:name],
-        balance: 0, # Initial balance will be set during sync
-        currency: account_data[:currency] || "USD",
-        accountable_type: accountable_type,
-        accountable_attributes: {}
+        {
+          family: Current.family,
+          name: account_data[:name],
+          balance: 0, # Initial balance will be set during sync
+          currency: lunchflow_account.currency || "USD",
+          accountable_type: accountable_type,
+          accountable_attributes: {}
+        },
+        skip_initial_sync: true
       )
 
       # Link account to lunchflow_account via account_providers join table
@@ -605,13 +610,17 @@ class LunchflowItemsController < ApplicationController
           selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
 
           # Create account with user-selected type and subtype (raises on failure)
+          # Skip initial sync - provider sync will handle balance creation with correct currency
           account = Account.create_and_sync(
-            family: Current.family,
-            name: lunchflow_account.name,
-            balance: lunchflow_account.current_balance || 0,
-            currency: lunchflow_account.currency || "USD",
-            accountable_type: selected_type,
-            accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
+            {
+              family: Current.family,
+              name: lunchflow_account.name,
+              balance: lunchflow_account.current_balance || 0,
+              currency: lunchflow_account.currency || "USD",
+              accountable_type: selected_type,
+              accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
+            },
+            skip_initial_sync: true
           )
 
           # Link account to lunchflow_account via account_providers join table (raises on failure)

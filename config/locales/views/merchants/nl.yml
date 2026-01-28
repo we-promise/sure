@@ -1,0 +1,61 @@
+---
+nl:
+  family_merchants:
+    create:
+      error: 'Fout bij aanmaken handelaar: %{error}'
+      success: Nieuwe handelaar succesvol aangemaakt
+    destroy:
+      success: Handelaar succesvol verwijderd
+      unlinked_success: Handelaar verwijderd van uw transacties
+    edit:
+      title: Handelaar bewerken
+    form:
+      name_placeholder: Handelaar naam
+      website_placeholder: Website (bijv. starbucks.com)
+      website_hint: Voer de website van de handelaar in om automatisch hun logo weer te geven
+    index:
+      empty: Nog geen handelaren
+      new: Nieuwe handelaar
+      merge: Handelaren samenvoegen
+      title: Handelaren
+      family_title: Familiehandelaren
+      family_empty: Nog geen familiehandelaren
+      provider_title: Provider handelaren
+      provider_empty: Nog geen provider handelaren gekoppeld aan deze familie
+      provider_read_only: Provider handelaren worden gesynchroniseerd vanuit uw verbonden instellingen. Ze kunnen hier niet worden bewerkt.
+      provider_info: Deze handelaren zijn automatisch gedetecteerd door uw bankverbindingen of AI. U kunt ze bewerken om uw eigen kopie aan te maken, of verwijderen om ze los te koppelen van uw transacties.
+      unlinked_title: Recent losgekoppeld
+      unlinked_info: Deze handelaren zijn recent verwijderd van uw transacties. Ze verdwijnen uit deze lijst na 30 dagen tenzij ze opnieuw worden toegewezen aan een transactie.
+      table:
+        merchant: Handelaar
+        actions: Acties
+        source: Bron
+    merchant:
+      confirm_accept: Handelaar verwijderen
+      confirm_body: Weet u zeker dat u deze handelaar wilt verwijderen? Het verwijderen van deze handelaar zal alle bijbehorende transacties ontkoppelen en kan uw rapportage beïnvloeden.
+      confirm_title: Handelaar verwijderen?
+      delete: Handelaar verwijderen
+      edit: Handelaar bewerken
+    merge:
+      title: Handelaren samenvoegen
+      description: Selecteer een doelhandelaar en de handelaren om samen te voegen. Alle transacties van samengevoegde handelaren worden opnieuw toegewezen aan het doel.
+      target_label: Samenvoegen in (doel)
+      select_target: Selecteer doelhandelaar...
+      sources_label: Samen te voegen handelaren
+      sources_hint: Geselecteerde handelaren worden samengevoegd in het doel. Familiehandelaren worden verwijderd, provider handelaren worden losgekoppeld.
+      submit: Geselecteerde samenvoegen
+    new:
+      title: Nieuwe handelaar
+    perform_merge:
+      success: Succesvol %{count} handelaren samengevoegd
+      no_merchants_selected: Geen handelaren geselecteerd om samen te voegen
+      target_not_found: Doelhandelaar niet gevonden
+      invalid_merchants: Ongeldige handelaren geselecteerd
+    provider_merchant:
+      edit: Bewerken
+      remove: Verwijderen
+      remove_confirm_title: Handelaar verwijderen?
+      remove_confirm_body: Weet u zeker dat u %{name} wilt verwijderen? Dit zal alle bijbehorende transacties loskoppelen van deze handelaar maar zal de handelaar zelf niet verwijderen.
+    update:
+      success: Handelaar succesvol bijgewerkt
+      converted_success: Handelaar succesvol geconverteerd en bijgewerkt

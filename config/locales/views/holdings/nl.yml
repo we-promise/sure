@@ -1,0 +1,61 @@
+---
+nl:
+  holdings:
+    cash:
+      brokerage_cash: Makelaar liquiditeiten
+    destroy:
+      success: Bezit verwijderd
+    update:
+      success: Kostprijs opgeslagen.
+      error: Ongeldige kostprijs waarde.
+    unlock_cost_basis:
+      success: Kostprijs ontgrendeld. Kan worden bijgewerkt bij volgende sync.
+    cost_basis_sources:
+      manual: Gebruiker ingesteld
+      calculated: Uit transacties
+      provider: Van provider
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Kostprijs instellen voor %{ticker} (%{qty} aandelen)"
+      total_cost_basis_label: Totale kostprijs
+      or_per_share_label: "Of voer per aandeel in:"
+      per_share: per aandeel
+      cancel: Annuleren
+      save: Opslaan
+      overwrite_confirm_title: Kostprijs overschrijven?
+      overwrite_confirm_body: "Dit vervangt de huidige kostprijs van %{current}."
+    holding:
+      per_share: per aandeel
+      shares: "%{qty} aandelen"
+      unknown: "--"
+      no_cost_basis: Geen kostprijs
+    index:
+      average_cost: Gemiddelde kostprijs
+      holdings: Bezittingen
+      name: Naam
+      new_holding: Nieuwe transactie
+      no_holdings: Geen bezittingen om weer te geven.
+      return: Totaal rendement
+      weight: Gewicht
+    missing_price_tooltip:
+      description: Deze investering heeft ontbrekende waarden en we konden het rendement of de waarde niet berekenen.
+      missing_data: Ontbrekende gegevens
+    show:
+      avg_cost_label: Gemiddelde kostprijs
+      current_market_price_label: Huidige marktprijs
+      delete: Verwijderen
+      delete_subtitle: Dit verwijdert het bezit en al uw bijbehorende transacties op dit account. Deze actie kan niet ongedaan worden gemaakt.
+      delete_title: Bezit verwijderen
+      history: Geschiedenis
+      overview: Overzicht
+      portfolio_weight_label: Portfolio gewicht
+      settings: Instellingen
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} aandelen van %{security} tegen %{price}"
+      total_return_label: Totaal rendement
+      unknown: Onbekend
+      cost_basis_locked_label: Kostprijs is vergrendeld
+      cost_basis_locked_description: Uw handmatig ingestelde kostprijs wordt niet gewijzigd door synchronisaties.
+      unlock_cost_basis: Ontgrendelen
+      unlock_confirm_title: Kostprijs ontgrendelen?
+      unlock_confirm_body: Dit maakt het mogelijk dat de kostprijs wordt bijgewerkt door provider syncs of transactieberekeningen.

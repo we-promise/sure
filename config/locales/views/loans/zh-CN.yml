@@ -1,0 +1,33 @@
+---
+zh-CN:
+  loans:
+    edit:
+      edit: 编辑%{account}
+    form:
+      initial_balance: 原始贷款余额
+      interest_rate: 利率
+      interest_rate_placeholder: '5.25'
+      rate_type: 利率类型
+      term_months: 期限（月）
+      term_months_placeholder: '360'
+    new:
+      title: 请输入贷款详情
+    overview:
+      interest_rate: 利率
+      monthly_payment: 月还款额
+      not_applicable: 不适用
+      original_principal: 原始本金
+      remaining_principal: 剩余本金
+      term: 期限
+      type: 类型
+      unknown: 未知
+    tabs:
+      overview:
+        interest_rate: 利率
+        monthly_payment: 月供
+        not_applicable: 不适用
+        original_principal: 原始本金
+        remaining_principal: 剩余本金
+        term: 期限
+        type: 类型
+        unknown: 未知

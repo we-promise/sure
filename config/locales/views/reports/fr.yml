@@ -1,0 +1,201 @@
+---
+fr:
+  reports:
+    index:
+      title: Rapports
+      subtitle: Aperçus complets de votre santé financière
+      export: Exporter CSV
+      print_report: Imprimer le rapport
+      drag_to_reorder: "Glisser pour réorganiser la section"
+      toggle_section: "Basculer la visibilité de la section"
+      periods:
+        monthly: Mensuel
+        quarterly: Trimestriel
+        ytd: Depuis le début de l'année
+        last_6_months: 6 derniers mois
+        custom: Plage personnalisée
+      date_range:
+        from: Du
+        to: Au
+      showing_period: "Affichage des données du %{start} au %{end}"
+    invalid_date_range: "La date de fin ne peut pas être antérieure à la date de début. Les dates ont été inversées."
+    summary:
+      total_income: Revenus totaux
+      total_expenses: Dépenses totales
+      net_savings: Épargne nette
+      budget_performance: Performance budgétaire
+      vs_previous: vs période précédente
+      income_minus_expenses: Revenus moins dépenses
+      of_budget_used: du budget utilisé
+      no_budget_data: Aucune donnée budgétaire pour cette période
+    budget_performance:
+      title: Performance budgétaire
+      spent: Dépensé
+      budgeted: Budgété
+      remaining: Restant
+      over_by: Dépassé de
+      suggested_daily: "%{amount} suggéré par jour pour les %{days} jours restants"
+      no_budgets: Aucune catégorie de budget définie pour ce mois
+      status:
+        good: En bonne voie
+        warning: Proche de la limite
+        over: Budget dépassé
+    trends:
+      title: Tendances et aperçus
+      monthly_breakdown: Répartition mensuelle
+      month: Mois
+      income: Revenus
+      expenses: Dépenses
+      net: Net
+      savings_rate: Taux d'épargne
+      current: actuel
+      avg_monthly_income: Revenu mensuel moyen
+      avg_monthly_expenses: Dépenses mensuelles moyennes
+      avg_monthly_savings: Épargne mensuelle moyenne
+      no_data: Aucune donnée de tendance disponible
+      spending_patterns: Modèles de dépenses
+      weekday_spending: Dépenses en semaine
+      weekend_spending: Dépenses le week-end
+      total: Total
+      avg_per_transaction: Moy. par transaction
+      transactions: Transactions
+      insight_title: Aperçu
+      insight_higher_weekend: "Vous dépensez %{percent}% de plus par transaction le week-end qu'en semaine"
+      insight_higher_weekday: "Vous dépensez %{percent}% de plus par transaction en semaine que le week-end"
+      insight_similar: "Vos dépenses par transaction sont similaires en semaine et le week-end"
+      no_spending_data: Aucune donnée de dépenses disponible pour cette période
+    empty_state:
+      title: Aucune donnée disponible
+      description: Commencez à suivre vos finances en ajoutant des transactions ou en connectant vos comptes pour voir des rapports complets
+      add_transaction: Ajouter une transaction
+      add_account: Ajouter un compte
+    transactions_breakdown:
+      title: Répartition des activités
+      no_transactions: Aucune activité trouvée pour la période et les filtres sélectionnés
+      filters:
+        title: Filtres
+        category: Catégorie
+        account: Compte
+        tag: Étiquette
+        amount_min: Montant min
+        amount_max: Montant max
+        date_range: Plage de dates
+        all_categories: Toutes les catégories
+        all_accounts: Tous les comptes
+        all_tags: Toutes les étiquettes
+        apply: Appliquer les filtres
+        clear: Effacer les filtres
+      sort:
+        label: Trier par
+        date_desc: Date (Plus récent)
+        amount_desc: Montant (Élevé à faible)
+        amount_asc: Montant (Faible à élevé)
+      export:
+        label: Exporter
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Ouvrir dans Google Sheets
+      table:
+        category: Catégorie
+        amount: Montant
+        type: Type
+        expense: Dépenses
+        income: Revenus
+        uncategorized: Non catégorisé
+        entries:
+          one: entrée
+          other: entrées
+        percentage: "% du total"
+      pagination:
+        showing:
+          one: Affichage de %{count} entrée
+          other: Affichage de %{count} entrées
+        previous: Précédent
+        next: Suivant
+    net_worth:
+      title: Valeur nette
+      current_net_worth: Valeur nette actuelle
+      period_change: Variation sur la période
+      assets_vs_liabilities: Actifs vs Passifs
+      total_assets: Actifs
+      total_liabilities: Passifs
+      no_assets: Aucun actif
+      no_liabilities: Aucun passif
+    investment_performance:
+      title: Performance des investissements
+      portfolio_value: Valeur du portefeuille
+      total_return: Rendement total
+      contributions: Contributions de la période
+      withdrawals: Retraits de la période
+      top_holdings: Principaux avoirs
+      holding: Avoir
+      weight: Poids
+      value: Valeur
+      return: Rendement
+      accounts: Comptes d'investissement
+    google_sheets_instructions:
+      title_with_key: "✅ Copier l'URL pour Google Sheets"
+      title_no_key: "⚠️ Clé API requise"
+      ready: Votre URL CSV (avec clé API) est prête.
+      steps: "Pour importer dans Google Sheets :\n1. Créez une nouvelle feuille Google\n2. Dans la cellule A1, entrez la formule ci-dessous\n3. Appuyez sur Entrée"
+      security_warning: "Cette URL inclut votre clé API. Gardez-la en sécurité !"
+      need_key: Pour importer des données dans Google Sheets, vous avez besoin d'une clé API.
+      step1: "Allez dans Paramètres → Clés API"
+      step2: "Créez une nouvelle clé API avec la permission \"lecture\""
+      step3: Copiez la clé API
+      step4: "Ajoutez-la à cette URL comme : ?api_key=VOTRE_CLÉ"
+      example: Exemple
+      then_use: Ensuite, utilisez l'URL complète avec =IMPORTDATA() dans Google Sheets.
+      open_sheets: Ouvrir Google Sheets
+      go_to_api_keys: Aller aux clés API
+      close: Compris
+    print:
+      document_title: Rapport financier
+      title: Rapport financier
+      generated_on: "Généré le %{date}"
+      summary:
+        title: Résumé
+        income: Revenus
+        expenses: Dépenses
+        net_savings: Épargne nette
+        budget: Budget
+        vs_prior: "%{percent}% vs précédent"
+        of_income: "%{percent}% des revenus"
+        used: utilisé
+      net_worth:
+        title: Valeur nette
+        current_balance: Solde actuel
+        this_period: cette période
+        assets: Actifs
+        liabilities: Passifs
+        no_liabilities: Aucun passif
+      trends:
+        title: Tendances mensuelles
+        month: Mois
+        income: Revenus
+        expenses: Dépenses
+        net: Net
+        savings_rate: Taux d'épargne
+        average: Moyenne
+        current_month_note: "* Mois en cours (données partielles)"
+      investments:
+        title: Investissements
+        portfolio_value: Valeur du portefeuille
+        total_return: Rendement total
+        contributions: Contributions
+        withdrawals: Retraits
+        this_period: cette période
+        top_holdings: Principaux avoirs
+        holding: Avoir
+        weight: Poids
+        value: Valeur
+        return: Rendement
+      spending:
+        title: Dépenses par catégorie
+        income: Revenus
+        expenses: Dépenses
+        category: Catégorie
+        amount: Montant
+        percent: "%"
+        more_categories: "+ %{count} autres catégories"

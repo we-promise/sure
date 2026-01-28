@@ -1,0 +1,10 @@
+---
+zh-TW:
+  passwords:
+    edit:
+      password: 新密碼
+      password_challenge: 目前密碼
+      submit: 重設密碼
+      title: 更新密碼
+    update:
+      success: 您的密碼已重設。

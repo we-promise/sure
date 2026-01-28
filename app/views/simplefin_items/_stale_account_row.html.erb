@@ -1,0 +1,65 @@
+<% account = simplefin_account.current_account %>
+<% transaction_count = account&.entries&.where(entryable_type: "Transaction")&.count || 0 %>
+
+<div class="rounded-lg p-4 border border-warning/50 bg-warning/5 mb-4"
+     data-controller="stale-account-action"
+     data-stale-account-action-account-id-value="<%= simplefin_account.id %>">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h3 class="font-medium text-primary">
+        <%= simplefin_account.name %>
+        <% if simplefin_account.org_data.present? && simplefin_account.org_data['name'].present? %>
+          <span class="text-secondary">• <%= simplefin_account.org_data["name"] %></span>
+        <% end %>
+      </h3>
+      <p class="text-sm text-secondary">
+        <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency || "USD") %>
+        <span class="mx-1">•</span>
+        <%= t("simplefin_items.setup_accounts.stale_accounts.transaction_count", count: transaction_count) %>
+      </p>
+    </div>
+  </div>
+
+  <fieldset class="space-y-3">
+    <legend class="text-sm text-secondary mb-2">
+      <%= t("simplefin_items.setup_accounts.stale_accounts.action_prompt") %>
+    </legend>
+
+    <label class="flex items-center gap-2 cursor-pointer">
+      <%= radio_button_tag "stale_account_actions[#{simplefin_account.id}][action]",
+                           "delete",
+                           false,
+                           class: "form-radio accent-primary",
+                           data: { action: "change->stale-account-action#updateTargetVisibility" } %>
+      <span class="text-sm text-primary"><%= t("simplefin_items.setup_accounts.stale_accounts.action_delete") %></span>
+    </label>
+
+    <% if target_accounts&.any? %>
+      <div class="flex flex-col gap-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <%= radio_button_tag "stale_account_actions[#{simplefin_account.id}][action]",
+                               "move",
+                               false,
+                               class: "form-radio accent-primary",
+                               data: { action: "change->stale-account-action#updateTargetVisibility",
+                                       stale_account_action_target: "moveRadio" } %>
+          <span class="text-sm text-primary"><%= t("simplefin_items.setup_accounts.stale_accounts.action_move") %></span>
+        </label>
+        <%= select_tag "stale_account_actions[#{simplefin_account.id}][target_account_id]",
+                       options_from_collection_for_select(target_accounts, :id, :name),
+                       class: "appearance-none bg-container border border-primary rounded-md px-2 py-1 text-sm text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none ml-6 max-w-[200px] truncate disabled:opacity-50 disabled:cursor-not-allowed",
+                       disabled: true,
+                       data: { stale_account_action_target: "targetSelect" } %>
+      </div>
+    <% end %>
+
+    <label class="flex items-center gap-2 cursor-pointer">
+      <%= radio_button_tag "stale_account_actions[#{simplefin_account.id}][action]",
+                           "skip",
+                           true,
+                           class: "form-radio accent-primary",
+                           data: { action: "change->stale-account-action#updateTargetVisibility" } %>
+      <span class="text-sm text-primary"><%= t("simplefin_items.setup_accounts.stale_accounts.action_skip") %></span>
+    </label>
+  </fieldset>
+</div>

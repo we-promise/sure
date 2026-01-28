@@ -23,9 +23,6 @@
 
   <%
     # Get or initialize a lunchflow_item for this family
-    # - If family has an item WITH credentials, use it (for updates)
-    # - If family has an item WITHOUT credentials, use it (to add credentials)
-    # - If family has no items at all, create a new one
     lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunch Flow Connection")
     is_new_record = lunchflow_item.new_record?
   %>
@@ -52,7 +49,7 @@
     </div>
   <% end %>
 
-  <% items = local_assigns[:lunchflow_items] || @lunchflow_items || Current.family.lunchflow_items.where.not(api_key: [nil, ""]) %>
+  <% items = local_assigns[:lunchflow_items] || @lunchflow_items || Current.family.lunchflow_items.where.not(api_key: nil) %>
   <div class="flex items-center gap-2">
     <% if items&.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>

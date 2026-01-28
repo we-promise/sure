@@ -19,6 +19,9 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
   end
 
   test "materializes holdings from raw_holdings_payload and is idempotent" do
+    # Clear existing fixture holdings so we can test clean creation
+    @account.holdings.delete_all
+
     # Two holdings: one AAPL (existing security), one NEWCO (should be created)
     @sfa.update!(
       raw_holdings_payload: [
@@ -27,16 +30,14 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
           "symbol" => "AAPL",
           "quantity" => 10,
           "market_value" => 2000,
-          "currency" => "USD",
-          "as_of" => (Date.current - 2.days).to_s
+          "currency" => "USD"
         },
         {
           "id" => "h2",
           "symbol" => "NEWCO",
           "quantity" => 5,
           "market_value" => 500,
-          "currency" => "USD",
-          "as_of" => Date.current.to_s
+          "currency" => "USD"
         }
       ]
     )

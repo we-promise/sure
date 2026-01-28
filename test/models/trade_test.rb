@@ -30,7 +30,8 @@ class TradeTest < ActiveSupport::TestCase
       security: security,
       price: precise_price,
       qty: 10000,
-      currency: "USD"
+      currency: "USD",
+      investment_activity_label: "Buy"
     )
 
     trade.reload
@@ -47,7 +48,8 @@ class TradeTest < ActiveSupport::TestCase
       security: security,
       price: price_with_too_many_decimals,
       qty: 1,
-      currency: "USD"
+      currency: "USD",
+      investment_activity_label: "Buy"
     )
 
     trade.reload

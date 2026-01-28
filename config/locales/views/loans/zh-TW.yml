@@ -1,0 +1,23 @@
+---
+zh-TW:
+  loans:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      interest_rate: 利率
+      interest_rate_placeholder: '5.25'
+      initial_balance: 原始貸款餘額
+      rate_type: 利率類型
+      term_months: 貸款期限（月）
+      term_months_placeholder: '360'
+    new:
+      title: 輸入貸款詳情
+    overview:
+      interest_rate: 利率
+      monthly_payment: 每月還款額
+      not_applicable: 不適用
+      original_principal: 原始本金
+      remaining_principal: 剩餘本金
+      term: 貸款期限
+      type: 類型
+      unknown: 未知

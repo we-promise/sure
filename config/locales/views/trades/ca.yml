@@ -24,6 +24,7 @@ ca:
       title: Nova transacció
     show:
       additional: Addicional
+      category_label: Categoria
       cost_per_share_label: Cost per acció
       date_label: Data
       delete: Elimina
@@ -32,8 +33,8 @@ ca:
       details: Detalls
       exclude_subtitle: Aquesta operació no s'inclourà en informes ni càlculs
       exclude_title: Exclou de l'analítica
+      no_category: Sense categoria
       note_label: Nota
       note_placeholder: Afegeix aquí qualsevol nota addicional...
       quantity_label: Quantitat
       settings: Configuració
-

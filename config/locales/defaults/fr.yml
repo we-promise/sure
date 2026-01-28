@@ -1,5 +1,8 @@
 ---
 fr:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
   activerecord:
     errors:
       messages:
@@ -178,10 +181,14 @@ fr:
         format: "%n %u"
         units:
           billion: milliard
-          million: million
+          million:
+            one: million
+            other: millions
           quadrillion: million de milliards
           thousand: millier
-          trillion: billion
+          trillion:
+            one: billion
+            other: billions
           unit: ''
       format:
         delimiter: ''

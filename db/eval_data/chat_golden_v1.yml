@@ -1,0 +1,825 @@
+---
+name: chat_golden_v1
+description: Golden dataset for chat/assistant function calling evaluation
+eval_type: chat
+version: "1.0"
+metadata:
+  created_at: "2024-12-01"
+  source: manual_curation
+
+samples:
+  # ===== EASY - Simple single function calls =====
+  - id: chat_easy_001
+    difficulty: easy
+    tags: [get_accounts, simple]
+    input:
+      prompt: "What accounts do I have?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_002
+    difficulty: easy
+    tags: [get_accounts, simple]
+    input:
+      prompt: "Show me my accounts"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_003
+    difficulty: easy
+    tags: [get_accounts, balance]
+    input:
+      prompt: "What's my account balance?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_004
+    difficulty: easy
+    tags: [get_transactions, simple]
+    input:
+      prompt: "Show me my recent transactions"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_005
+    difficulty: easy
+    tags: [get_transactions, simple]
+    input:
+      prompt: "What are my latest transactions?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_006
+    difficulty: easy
+    tags: [get_balance_sheet, simple]
+    input:
+      prompt: "What's my net worth?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_007
+    difficulty: easy
+    tags: [get_balance_sheet, simple]
+    input:
+      prompt: "Show me my assets and liabilities"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_008
+    difficulty: easy
+    tags: [get_income_statement, simple]
+    input:
+      prompt: "What were my expenses last month?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_009
+    difficulty: easy
+    tags: [get_income_statement, simple]
+    input:
+      prompt: "How much income did I make this month?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_010
+    difficulty: easy
+    tags: [get_accounts, simple]
+    input:
+      prompt: "How many accounts do I have?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_011
+    difficulty: easy
+    tags: [get_transactions, simple]
+    input:
+      prompt: "List my transactions"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_012
+    difficulty: easy
+    tags: [get_balance_sheet, simple]
+    input:
+      prompt: "How much do I owe?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_013
+    difficulty: easy
+    tags: [get_balance_sheet, simple]
+    input:
+      prompt: "What are my total assets?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_014
+    difficulty: easy
+    tags: [get_income_statement, simple]
+    input:
+      prompt: "Show my spending"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_015
+    difficulty: easy
+    tags: [get_income_statement, simple]
+    input:
+      prompt: "How much did I spend?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  # ===== MEDIUM - With filtering or specific parameters =====
+  - id: chat_medium_001
+    difficulty: medium
+    tags: [get_transactions, filtering]
+    input:
+      prompt: "Show me my restaurant spending"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_002
+    difficulty: medium
+    tags: [get_transactions, filtering]
+    input:
+      prompt: "What did I spend on groceries?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_003
+    difficulty: medium
+    tags: [get_transactions, filtering]
+    input:
+      prompt: "Show transactions over $100"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_004
+    difficulty: medium
+    tags: [get_transactions, filtering]
+    input:
+      prompt: "What did I spend at Amazon?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_005
+    difficulty: medium
+    tags: [get_transactions, date_range]
+    input:
+      prompt: "Show me last week's transactions"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_006
+    difficulty: medium
+    tags: [get_income_statement, date_range]
+    input:
+      prompt: "What was my income in January?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_007
+    difficulty: medium
+    tags: [get_income_statement, comparison]
+    input:
+      prompt: "How much did I save last month?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_008
+    difficulty: medium
+    tags: [get_accounts, specific]
+    input:
+      prompt: "What's the balance in my checking account?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_009
+    difficulty: medium
+    tags: [get_accounts, specific]
+    input:
+      prompt: "How much do I have in savings?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_010
+    difficulty: medium
+    tags: [get_transactions, category]
+    input:
+      prompt: "Show me all my subscription payments"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_011
+    difficulty: medium
+    tags: [get_transactions, search]
+    input:
+      prompt: "Find transactions from Uber"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_012
+    difficulty: medium
+    tags: [get_income_statement, category]
+    input:
+      prompt: "How much do I spend on entertainment?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_013
+    difficulty: medium
+    tags: [get_balance_sheet, trend]
+    input:
+      prompt: "How has my net worth changed over time?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_014
+    difficulty: medium
+    tags: [get_transactions, amount]
+    input:
+      prompt: "What's my largest expense this month?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_015
+    difficulty: medium
+    tags: [get_income_statement, breakdown]
+    input:
+      prompt: "Break down my expenses by category"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_016
+    difficulty: medium
+    tags: [get_transactions, recurring]
+    input:
+      prompt: "Show me my recurring payments"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_017
+    difficulty: medium
+    tags: [get_accounts, credit]
+    input:
+      prompt: "What's my credit card balance?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_018
+    difficulty: medium
+    tags: [get_income_statement, specific]
+    input:
+      prompt: "How much did I spend on food last month?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_019
+    difficulty: medium
+    tags: [get_transactions, date]
+    input:
+      prompt: "Show transactions from December"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_020
+    difficulty: medium
+    tags: [get_balance_sheet, liability]
+    input:
+      prompt: "What are my debts?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  # ===== HARD - Analysis, comparisons, insights =====
+  - id: chat_hard_001
+    difficulty: hard
+    tags: [analysis, spending_trend]
+    input:
+      prompt: "Am I spending more than I make?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_002
+    difficulty: hard
+    tags: [comparison, month_over_month]
+    input:
+      prompt: "How does my spending this month compare to last month?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_003
+    difficulty: hard
+    tags: [analysis, budget]
+    input:
+      prompt: "Where can I cut expenses?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_004
+    difficulty: hard
+    tags: [analysis, savings]
+    input:
+      prompt: "What's my savings rate?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_005
+    difficulty: hard
+    tags: [analysis, trend]
+    input:
+      prompt: "Are my expenses trending up or down?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_006
+    difficulty: hard
+    tags: [analysis, category]
+    input:
+      prompt: "What category do I spend the most on?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_007
+    difficulty: hard
+    tags: [analysis, unusual]
+    input:
+      prompt: "Are there any unusual transactions this month?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_008
+    difficulty: hard
+    tags: [analysis, debt]
+    input:
+      prompt: "How long will it take to pay off my credit card?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_009
+    difficulty: hard
+    tags: [analysis, financial_health]
+    input:
+      prompt: "What's my debt-to-income ratio?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_010
+    difficulty: hard
+    tags: [analysis, goals]
+    input:
+      prompt: "Can I afford to save $500 more per month?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_011
+    difficulty: hard
+    tags: [comparison, year_over_year]
+    input:
+      prompt: "How does this year compare to last year?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_012
+    difficulty: hard
+    tags: [analysis, pattern]
+    input:
+      prompt: "Do I have any spending patterns I should know about?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_013
+    difficulty: hard
+    tags: [advice, budget]
+    input:
+      prompt: "How should I allocate my income?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_014
+    difficulty: hard
+    tags: [analysis, efficiency]
+    input:
+      prompt: "Am I overspending on subscriptions?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_015
+    difficulty: hard
+    tags: [forecast, projection]
+    input:
+      prompt: "At this rate, how much will I have saved by year end?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  # ===== EDGE CASES - Unclear intent, no function needed =====
+  - id: chat_edge_001
+    difficulty: edge_case
+    tags: [no_function, greeting]
+    input:
+      prompt: "Hello"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: chat_edge_002
+    difficulty: edge_case
+    tags: [no_function, thanks]
+    input:
+      prompt: "Thank you!"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: chat_edge_003
+    difficulty: edge_case
+    tags: [no_function, general]
+    input:
+      prompt: "What can you help me with?"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: chat_edge_004
+    difficulty: edge_case
+    tags: [no_function, advice]
+    input:
+      prompt: "Should I invest in stocks?"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: chat_edge_005
+    difficulty: edge_case
+    tags: [no_function, external]
+    input:
+      prompt: "What's the weather like?"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: chat_edge_006
+    difficulty: edge_case
+    tags: [ambiguous]
+    input:
+      prompt: "Tell me about my money"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_edge_007
+    difficulty: edge_case
+    tags: [ambiguous]
+    input:
+      prompt: "How am I doing financially?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_edge_008
+    difficulty: edge_case
+    tags: [ambiguous]
+    input:
+      prompt: "Give me a summary"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_edge_009
+    difficulty: edge_case
+    tags: [no_function, off_topic]
+    input:
+      prompt: "What's 2 + 2?"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: chat_edge_010
+    difficulty: edge_case
+    tags: [no_function, general]
+    input:
+      prompt: "Who are you?"
+    expected:
+      functions: []
+      response_contains: []
+
+  # Additional samples
+  - id: chat_easy_016
+    difficulty: easy
+    tags: [get_transactions]
+    input:
+      prompt: "Pull up my transactions"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_017
+    difficulty: easy
+    tags: [get_accounts]
+    input:
+      prompt: "Show all my bank accounts"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_018
+    difficulty: easy
+    tags: [get_balance_sheet]
+    input:
+      prompt: "What do I own?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_019
+    difficulty: easy
+    tags: [get_income_statement]
+    input:
+      prompt: "What's my income?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_easy_020
+    difficulty: easy
+    tags: [get_transactions]
+    input:
+      prompt: "Recent purchases"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_021
+    difficulty: medium
+    tags: [get_transactions, merchant]
+    input:
+      prompt: "How much have I spent at Starbucks?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_022
+    difficulty: medium
+    tags: [get_transactions, category]
+    input:
+      prompt: "Show transportation expenses"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_023
+    difficulty: medium
+    tags: [get_income_statement, period]
+    input:
+      prompt: "Quarterly expense report"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_024
+    difficulty: medium
+    tags: [get_accounts, type]
+    input:
+      prompt: "Show my investment accounts"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_medium_025
+    difficulty: medium
+    tags: [get_transactions, amount]
+    input:
+      prompt: "Transactions under $50"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_016
+    difficulty: hard
+    tags: [analysis, discretionary]
+    input:
+      prompt: "How much discretionary spending do I have?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_017
+    difficulty: hard
+    tags: [analysis, fixed_vs_variable]
+    input:
+      prompt: "What are my fixed vs variable expenses?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_018
+    difficulty: hard
+    tags: [analysis, emergency_fund]
+    input:
+      prompt: "Do I have enough for an emergency fund?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_019
+    difficulty: hard
+    tags: [analysis, liquidity]
+    input:
+      prompt: "How liquid are my assets?"
+    expected:
+      functions:
+        - name: "get_accounts"
+          params: {}
+      response_contains: []
+
+  - id: chat_hard_020
+    difficulty: hard
+    tags: [comparison, benchmark]
+    input:
+      prompt: "Am I spending too much on housing?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params: {}
+      response_contains: []

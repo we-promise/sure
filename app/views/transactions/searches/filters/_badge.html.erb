@@ -35,6 +35,11 @@
                                           end %>"></div>
       <p><%= t(".#{param_value.downcase}") %></p>
     </div>
+  <% elsif param_key == "status" %>
+    <div class="flex items-center gap-2 px-1">
+      <%= icon(param_value.downcase == "pending" ? "clock" : "check", size: "sm") %>
+      <p><%= t(".#{param_value.downcase}") %></p>
+    </div>
   <% else %>
     <div class="flex items-center gap-2">
       <p><%= param_value %></p>

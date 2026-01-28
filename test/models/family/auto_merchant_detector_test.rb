@@ -9,6 +9,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     @llm_provider = mock
     Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
     Setting.stubs(:brand_fetch_client_id).returns("123")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
   end
 
   test "auto detects transaction merchants" do

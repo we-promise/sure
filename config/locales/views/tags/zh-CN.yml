@@ -1,0 +1,23 @@
+---
+zh-CN:
+  tags:
+    create:
+      created: 标签已创建
+      error: 创建标签失败：%{error}
+    destroy:
+      deleted: 标签已删除
+    edit:
+      edit: 编辑标签
+    form:
+      placeholder: 标签名称
+    index:
+      empty: 暂无标签
+      new: 新建标签
+      tags: 标签管理
+    new:
+      new: 新建标签
+    tag:
+      delete: 删除
+      edit: 编辑
+    update:
+      updated: 标签已更新

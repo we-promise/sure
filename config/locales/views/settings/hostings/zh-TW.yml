@@ -1,0 +1,78 @@
+---
+zh-TW:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: 控制新使用者註冊您的 %{product} 實例 (Instance) 的方式。
+        email_confirmation_description: 啟用後，使用者在更改電子郵件地址時必須進行驗證。
+        email_confirmation_title: 需要電子郵件驗證
+        generate_tokens: 產生新代碼
+        generated_tokens: 已產生的代碼
+        title: 加入流程
+        states:
+          open: 開放註冊
+          closed: 關閉註冊
+          invite_only: 僅限邀請
+      show:
+        general: 一般設定
+        financial_data_providers: 金融資料提供商
+        invites: 邀請碼
+        title: 自行代管 (Self-Hosting)
+        danger_zone: 危險區域
+        clear_cache: 清除資料快取
+        clear_cache_warning: 清除資料快取將會移除所有匯率、證券價格、帳戶餘額等資料。這不會刪除帳戶、交易紀錄、類別或其他使用者擁有的資料。
+        confirm_clear_cache:
+          title: 清除資料快取？
+          body: 您確定要清除資料快取嗎？這將移除所有匯率、證券價格、帳戶餘額及其他暫存資料。此操作無法復原。
+      provider_selection:
+        title: 提供商選擇
+        description: 選擇用於獲取匯率和證券價格的服務。Yahoo Finance 是免費的且不需要 API 金鑰。Twelve Data 需要免費的 API 金鑰，但可能提供更廣的資料涵蓋範圍。
+        exchange_rate_provider_label: 匯率資料提供商
+        securities_provider_label: 證券（股價）資料提供商
+        env_configured_message: 提供商選擇已被停用，因為已設定環境變數 (EXCHANGE_RATE_PROVIDER 或 SECURITIES_PROVIDER)。若要在此處啟用選擇，請從系統配置中移除這些環境變數。
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+      brand_fetch_settings:
+        description: 輸入 Brand Fetch 提供的 Client ID
+        label: Client ID
+        placeholder: 在此輸入您的 Client ID
+        title: Brand Fetch 設定
+      openai_settings:
+        description: 輸入存取權杖 (Access Token)，並可選擇配置自定義的 OpenAI 相容提供商。
+        env_configured_message: 已透過環境變數成功配置。
+        access_token_label: 存取權杖 (Access Token)
+        access_token_placeholder: 在此輸入您的存取權杖
+        uri_base_label: API 基礎 URL（選填）
+        uri_base_placeholder: "預設為 https://api.openai.com/v1"
+        model_label: 模型名稱（選填）
+        model_placeholder: "預設為 gpt-4.1"
+        json_mode_label: JSON 模式
+        json_mode_auto: 自動（建議）
+        json_mode_strict: 嚴格 (Strict) - 最適合思考模型
+        json_mode_none: 無 (None) - 最適合標準模型
+        json_mode_json_object: JSON 物件 (JSON Object)
+        json_mode_help: "「嚴格模式」最適合思考模型（如 qwen-thinking, deepseek-reasoner）。「無模式」最適合標準模型（如 llama, mistral, gpt-oss）。"
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance 提供免費的股票價格、匯率和金融資料存取，且不需要 API 金鑰。
+        status_active: Yahoo Finance 已啟用且運作正常
+        status_inactive: Yahoo Finance 連線失敗
+        connection_failed: 無法連線至 Yahoo Finance
+        troubleshooting: 請檢查您的網路連線與防火牆設定。Yahoo Finance 可能暫時無法使用。
+      twelve_data_settings:
+        api_calls_used: "每日 API 呼叫已使用 %{used} / %{limit} (%{percentage})"
+        description: 輸入 Twelve Data 提供的 API 金鑰
+        env_configured_message: 已透過 TWELVE_DATA_API_KEY 環境變數成功配置。
+        label: API 金鑰
+        placeholder: 在此輸入您的 API 金鑰
+        plan: "%{plan} 方案"
+        title: Twelve Data
+      update:
+        failure: 設定值無效
+        success: 設定已更新
+        invalid_onboarding_state: 註冊狀態無效
+      clear_cache:
+        cache_cleared: 資料快取已清除。這可能需要幾分鐘的時間來完成。
+      not_authorized: 您沒有權限執行此操作

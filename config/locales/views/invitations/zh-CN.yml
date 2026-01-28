@@ -1,0 +1,19 @@
+---
+zh-CN:
+  invitations:
+    create:
+      failure: 发送邀请失败
+      success: 邀请发送成功
+    destroy:
+      failure: 删除邀请时出现问题。
+      not_authorized: 您没有管理邀请的权限。
+      success: 邀请已成功删除。
+    new:
+      email_label: 邮箱地址
+      email_placeholder: 请输入邮箱地址
+      role_admin: 管理员
+      role_label: 角色
+      role_member: 成员
+      submit: 发送邀请
+      subtitle: 发送邀请，让对方加入您在 %{product_name} 的家庭账户
+      title: 邀请成员

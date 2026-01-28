@@ -1,0 +1,182 @@
+name: Flutter Mobile Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+    paths:
+      - 'mobile/lib/**'
+      - 'mobile/android/**'
+      - 'mobile/ios/**'
+      - 'mobile/pubspec.yaml'
+      - '.github/workflows/flutter-build.yml'
+  pull_request:
+    paths:
+      - 'mobile/lib/**'
+      - 'mobile/android/**'
+      - 'mobile/ios/**'
+      - 'mobile/pubspec.yaml'
+      - '.github/workflows/flutter-build.yml'
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.4'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Generate app icons
+        working-directory: mobile
+        run: flutter pub run flutter_launcher_icons
+
+      - name: Analyze code
+        working-directory: mobile
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        working-directory: mobile
+        run: flutter test
+
+      - name: Check if keystore secrets exist
+        id: check_secrets
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "has_keystore=true" >> $GITHUB_OUTPUT
+            echo "✓ Keystore secrets found, will build signed APK"
+          else
+            echo "has_keystore=false" >> $GITHUB_OUTPUT
+            echo "⚠ No keystore secrets, will build unsigned debug APK"
+          fi
+
+      - name: Decode and setup keystore
+        if: steps.check_secrets.outputs.has_keystore == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > mobile/android/app/upload-keystore.jks
+          echo "storePassword=$KEY_STORE_PASSWORD" > mobile/android/key.properties
+          echo "keyPassword=$KEY_PASSWORD" >> mobile/android/key.properties
+          echo "keyAlias=$KEY_ALIAS" >> mobile/android/key.properties
+          echo "storeFile=upload-keystore.jks" >> mobile/android/key.properties
+          echo "✓ Keystore configured successfully"
+
+      - name: Build APK (Release)
+        working-directory: mobile
+        run: |
+          if [ "${{ steps.check_secrets.outputs.has_keystore }}" == "true" ]; then
+            echo "Building signed release APK..."
+            flutter build apk --release
+          else
+            echo "Building debug-signed APK..."
+            flutter build apk --debug
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: |
+            mobile/build/app/outputs/flutter-apk/app-release.apk
+            mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Build App Bundle (Release)
+        if: steps.check_secrets.outputs.has_keystore == 'true'
+        working-directory: mobile
+        run: flutter build appbundle --release
+
+      - name: Upload AAB artifact
+        if: steps.check_secrets.outputs.has_keystore == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: mobile/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.4'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Generate app icons
+        working-directory: mobile
+        run: flutter pub run flutter_launcher_icons
+
+      - name: Install CocoaPods dependencies
+        working-directory: mobile/ios
+        run: pod install
+
+      - name: Analyze code
+        working-directory: mobile
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        working-directory: mobile
+        run: flutter test
+
+      - name: Build iOS (No Code Signing)
+        working-directory: mobile
+        run: flutter build ios --release --no-codesign
+
+      - name: Create IPA archive info
+        working-directory: mobile
+        run: |
+          echo "iOS build completed successfully" > build/ios-build-info.txt
+          echo "Build date: $(date)" >> build/ios-build-info.txt
+          echo "Note: This build is not code-signed and cannot be installed on physical devices" >> build/ios-build-info.txt
+          echo "For distribution, you need to configure code signing with Apple certificates" >> build/ios-build-info.txt
+
+      - name: Upload iOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-unsigned
+          path: |
+            mobile/build/ios/iphoneos/Runner.app
+            mobile/build/ios-build-info.txt
+          retention-days: 30

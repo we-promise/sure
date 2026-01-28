@@ -1,0 +1,24 @@
+---
+zh-CN:
+  rules:
+    no_action: 无操作
+    recent_runs:
+      columns:
+        date_time: 日期/时间
+        execution_type: 执行类型
+        rule_name: 规则名称
+        status: 状态
+        transactions_counts:
+          modified: 已修改
+          processed: 已处理
+          queued: 待处理
+      description: 查看规则的执行历史，包括成功/失败状态和交易处理数量。
+      execution_types:
+        manual: 手动执行
+        scheduled: 计划执行
+      statuses:
+        failed: 失败
+        pending: 等待中
+        success: 成功
+      title: 最近执行记录
+      unnamed_rule: 未命名规则

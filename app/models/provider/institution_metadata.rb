@@ -27,6 +27,12 @@ module Provider::InstitutionMetadata
     nil
   end
 
+  # Returns the institution/account logo URL (direct image URL)
+  # @return [String, nil] The logo URL or nil if not available
+  def logo_url
+    nil
+  end
+
   # Returns a hash of all institution metadata
   # @return [Hash] Hash containing institution metadata
   def institution_metadata
@@ -34,7 +40,8 @@ module Provider::InstitutionMetadata
       domain: institution_domain,
       name: institution_name,
       url: institution_url,
-      color: institution_color
+      color: institution_color,
+      logo_url: logo_url
     }.compact
   end
 end

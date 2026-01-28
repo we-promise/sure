@@ -14,9 +14,19 @@ de:
       empty: Noch keine Händler vorhanden
       new: Neuer Händler
       title: Händler
+      family_title: Händler der Familie
+      family_empty: Noch keine Händler der Familie vorhanden
+      provider_title: Anbieter-Händler
+      provider_empty: Noch keine Anbieter-Händler mit dieser Familie verbunden
+      provider_read_only: Anbieter-Händler werden von deinen verbundenen Institutionen synchronisiert. Sie können hier nicht bearbeitet werden.
+      table:
+        merchant: Händler
+        actions: Aktionen
+        source: Quelle
     merchant:
       confirm_accept: Händler löschen
-      confirm_body: Bist du sicher dass du diesen Händler löschen möchtest Das Entfernen dieses Händlers wird alle zugehörigen Transaktionen trennen und kann deine Auswertungen beeinflussen
+      confirm_body: Bist du sicher, dass du diesen Händler löschen möchtest? Das Entfernen dieses Händlers
+        wird alle zugehörigen Transaktionen trennen und kann deine Auswertungen beeinflussen.
       confirm_title: Händler löschen
       delete: Händler löschen
       edit: Händler bearbeiten

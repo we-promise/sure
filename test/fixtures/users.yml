@@ -43,6 +43,17 @@ new_email:
   last_name: User
   email: user@example.com
   unconfirmed_email: new@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla 
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   onboarded_at: <%= Time.current %>
+  ai_enabled: true
+
+# SSO-only user: created via JIT provisioning, no local password
+sso_only:
+  family: empty
+  first_name: SSO
+  last_name: User
+  email: sso-user@example.com
+  password_digest: ~
+  role: admin
+  onboarded_at: <%= 1.day.ago %>
   ai_enabled: true

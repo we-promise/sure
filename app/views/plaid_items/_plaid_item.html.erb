@@ -80,7 +80,20 @@
       <div class="space-y-4 mt-4">
         <% if plaid_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: plaid_item.accounts %>
-        <% else %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@plaid_sync_stats_map) && @plaid_sync_stats_map
+             @plaid_sync_stats_map[plaid_item.id] || {}
+           else
+             plaid_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: plaid_item
+        ) %>
+
+        <% if plaid_item.accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
             <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>

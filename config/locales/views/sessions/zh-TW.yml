@@ -1,0 +1,26 @@
+---
+zh-TW:
+  sessions:
+    create:
+      invalid_credentials: 電子郵件或密碼無效。
+      local_login_disabled: 本地密碼登入功能已停用。請使用單一登入 (SSO)。
+    destroy:
+      logout_successful: 您已成功登出。
+    openid_connect:
+      failed: 無法透過 OpenID Connect 進行驗證。
+    failure:
+      failed: 無法進行驗證。
+    new:
+      email: 電子郵件地址
+      email_placeholder: you@example.com
+      forgot_password: 忘記密碼？
+      password: 密碼
+      submit: 登入
+      title: 登入
+      password_placeholder: 輸入您的密碼
+      openid_connect: 透過 OpenID Connect 登入
+      google_auth_connect: 透過 Google 帳號登入
+      local_login_admin_only: 本地登入僅限管理員使用。
+      no_auth_methods_enabled: 目前未啟用任何驗證方式。請聯絡管理員。
+      demo_banner_title: "示範模式已啟用"
+      demo_banner_message: "這是示範環境。為了方便使用，登入資訊已預先填寫。請勿在此輸入真實或敏感資料。"

@@ -1,0 +1,17 @@
+---
+pt-BR:
+  users:
+    destroy:
+      success: Sua conta foi excluída.
+    update:
+      email_change_failed: Falha ao alterar endereço de e-mail.
+      email_change_initiated: Por favor, verifique seu novo endereço de e-mail para instruções de confirmação.
+      success: Seu perfil foi atualizado.
+    resend_confirmation_email:
+      success: Um novo e-mail de confirmação está na fila para envio.
+      no_pending_change: Nenhuma alteração de e-mail está pendente no momento!
+    reset:
+      success: Sua conta foi resetada. Os dados serão excluídos em segundo plano em algum tempo.
+      unauthorized: Você não está autorizado a realizar esta ação
+    reset_with_sample_data:
+      success: Sua conta foi resetada e os dados de exemplo estão sendo preparados. Você verá os dados de demonstração em breve.

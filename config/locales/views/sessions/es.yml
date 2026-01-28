@@ -3,6 +3,7 @@ es:
   sessions:
     create:
       invalid_credentials: Correo electrónico o contraseña inválidos.
+      local_login_disabled: El inicio de sesión con contraseña local está deshabilitado. Utiliza el inicio de sesión único (SSO).
     destroy:
       logout_successful: Has cerrado sesión con éxito.
     openid_connect:
@@ -19,3 +20,5 @@ es:
       password_placeholder: Introduce tu contraseña
       openid_connect: Inicia sesión con OpenID Connect
       google_auth_connect: Inicia sesión con Google
+      local_login_admin_only: El inicio de sesión local está restringido a administradores.
+      no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Ponte en contacto con un administrador.

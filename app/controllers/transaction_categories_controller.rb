@@ -11,7 +11,8 @@ class TransactionCategoriesController < ApplicationController
       flash[:cta] = {
         type: "category_rule",
         category_id: transaction.category_id,
-        category_name: transaction.category.name
+        category_name: transaction.category.name,
+        merchant_name: @entry.name
       }
     end
 
@@ -23,8 +24,18 @@ class TransactionCategoriesController < ApplicationController
       format.turbo_stream do
         render turbo_stream: [
           turbo_stream.replace(
-            dom_id(transaction, :category_menu),
-            partial: "categories/menu",
+            dom_id(transaction, "category_menu_mobile"),
+            partial: "transactions/transaction_category",
+            locals: { transaction: transaction, variant: "mobile" }
+          ),
+          turbo_stream.replace(
+            dom_id(transaction, "category_menu_desktop"),
+            partial: "transactions/transaction_category",
+            locals: { transaction: transaction, variant: "desktop" }
+          ),
+          turbo_stream.replace(
+            "category_name_mobile_#{transaction.id}",
+            partial: "categories/category_name_mobile",
             locals: { transaction: transaction }
           ),
           *flash_notification_stream_items

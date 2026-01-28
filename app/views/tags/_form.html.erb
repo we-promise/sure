@@ -1,7 +1,7 @@
 <div data-controller="color-avatar">
   <%= styled_form_with model: tag, class: "space-y-4", data: { turbo_frame: :_top } do |f| %>
     <section class="space-y-4">
-      <div class="w-fit m-auto">
+      <div class="w-fit m-auto mb-4">
         <%= render partial: "shared/color_avatar", locals: { name: tag.name, color: tag.color } %>
       </div>
       <div class="flex gap-2 items-center justify-center">

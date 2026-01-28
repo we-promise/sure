@@ -19,11 +19,11 @@ en:
       no_accounts_description: We could not load any accounts from this financial
         institution.
       no_accounts_title: No accounts found
-      requires_update: Requires re-authentication
+      requires_update: Reconnect
       status: Last synced %{timestamp} ago
       status_never: Requires data sync
       syncing: Syncing...
-      update: Update connection
+      update: Update
     select_existing_account:
       title: "Link %{account_name} to Plaid"
       description: Select a Plaid account to link to your existing account

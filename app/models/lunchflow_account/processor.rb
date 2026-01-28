@@ -25,6 +25,7 @@ class LunchflowAccount::Processor
     end
 
     process_transactions
+    process_investments
   end
 
   private
@@ -65,6 +66,16 @@ class LunchflowAccount::Processor
       LunchflowAccount::Transactions::Processor.new(lunchflow_account).process
     rescue => e
       report_exception(e, "transactions")
+    end
+
+    def process_investments
+      # Only process holdings for investment/crypto accounts with holdings support
+      return unless lunchflow_account.holdings_supported?
+      return unless [ "Investment", "Crypto" ].include?(lunchflow_account.current_account&.accountable_type)
+
+      LunchflowAccount::Investments::HoldingsProcessor.new(lunchflow_account).process
+    rescue => e
+      report_exception(e, "holdings")
     end
 
     def report_exception(error, context)

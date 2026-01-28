@@ -1,0 +1,77 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+        <% error_msg = local_assigns[:error_message] || @error_message %>
+        <% if error_msg.present? %>
+          <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden mb-3">
+            <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+          </div>
+        <% end %>
+
+        <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: nil) %>
+        <% if items&.any? %>
+          <% selected_item = items.first %>
+          <% blockchains = local_assigns[:blockchains] || @blockchains || [] %>
+          <% address_value = local_assigns[:address] || @address %>
+          <% blockchain_value = local_assigns[:blockchain] || @blockchain %>
+          <%= styled_form_with url: link_wallet_coinstats_items_path,
+                              method: :post,
+                              data: { turbo: true },
+                              class: "space-y-3" do |form| %>
+            <%= form.hidden_field :coinstats_item_id, value: selected_item.id %>
+
+            <%= form.text_field :address,
+                                label: t(".address_label"),
+                                placeholder: t(".address_placeholder"),
+                                value: address_value %>
+
+            <% if blockchains.present? %>
+              <%= form.select :blockchain,
+                              options_for_select(blockchains, blockchain_value),
+                              { include_blank: t(".blockchain_select_blank") },
+                              label: t(".blockchain_label"),
+                              class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+            <% else %>
+              <%= form.text_field :blockchain,
+                                  label: t(".blockchain_label"),
+                                  placeholder: t(".blockchain_placeholder"),
+                                  value: blockchain_value %>
+            <% end %>
+
+            <div class="flex justify-end">
+              <%= form.submit t(".link"),
+                              class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+            </div>
+          <% end %>
+        <% else %>
+            <div class="space-y-4">
+                <div class="flex items-start gap-3">
+                <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
+                <div class="text-sm text-secondary">
+                    <p class="font-medium text-primary mb-2"><%= t(".not_configured_title") %></p>
+                    <p><%= t(".not_configured_message") %></p>
+                </div>
+                </div>
+
+                <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+                <ol class="list-decimal list-inside space-y-1 text-secondary">
+                    <li><%= t(".not_configured_step1_html").html_safe %></li>
+                    <li><%= t(".not_configured_step2_html").html_safe %></li>
+                    <li><%= t(".not_configured_step3_html").html_safe %></li>
+                </ol>
+                </div>
+
+                <div class="mt-4">
+                <%= link_to settings_providers_path,
+                            class: "w-full inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap rounded-lg hidden md:inline-flex px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
+                            data: { turbo: false } do %>
+                    <%= t(".go_to_settings") %>
+                <% end %>
+                </div>
+            </div>
+        <% end %>
+    <% end %>
+  <% end %>
+<% end %>

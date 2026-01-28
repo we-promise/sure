@@ -1,0 +1,1117 @@
+---
+name: merchant_detection_golden_v1
+description: Golden dataset for merchant name and URL detection evaluation
+eval_type: merchant_detection
+version: "1.0"
+metadata:
+  created_at: "2024-12-01"
+  source: manual_curation
+
+context:
+  merchants:
+    - id: "mcdonalds"
+      name: "McDonald's"
+    - id: "starbucks"
+      name: "Starbucks"
+    - id: "amazon"
+      name: "Amazon"
+    - id: "netflix"
+      name: "Netflix"
+    - id: "uber"
+      name: "Uber"
+    - id: "spotify"
+      name: "Spotify"
+    - id: "target"
+      name: "Target"
+    - id: "costco"
+      name: "Costco"
+    - id: "apple"
+      name: "Apple"
+    - id: "google"
+      name: "Google"
+
+samples:
+  # ===== EASY - Clear global brands =====
+  - id: merch_easy_001
+    difficulty: easy
+    tags: [fast_food, global_brand]
+    input:
+      id: txn_001
+      amount: 12.99
+      classification: expense
+      description: "MCDONALD'S #12345 SPRINGFIELD IL"
+    expected:
+      business_name: "McDonald's"
+      business_url: "mcdonalds.com"
+
+  - id: merch_easy_002
+    difficulty: easy
+    tags: [coffee, global_brand]
+    input:
+      id: txn_002
+      amount: 5.75
+      classification: expense
+      description: "STARBUCKS STORE #9876"
+    expected:
+      business_name: "Starbucks"
+      business_url: "starbucks.com"
+
+  - id: merch_easy_003
+    difficulty: easy
+    tags: [ecommerce, global_brand]
+    input:
+      id: txn_003
+      amount: 89.99
+      classification: expense
+      description: "AMAZON.COM*1A2B3C4D AMZN.COM/BILL"
+    expected:
+      business_name: "Amazon"
+      business_url: "amazon.com"
+
+  - id: merch_easy_004
+    difficulty: easy
+    tags: [streaming, global_brand]
+    input:
+      id: txn_004
+      amount: 15.99
+      classification: expense
+      description: "NETFLIX.COM"
+    expected:
+      business_name: "Netflix"
+      business_url: "netflix.com"
+
+  - id: merch_easy_005
+    difficulty: easy
+    tags: [rideshare, global_brand]
+    input:
+      id: txn_005
+      amount: 23.50
+      classification: expense
+      description: "UBER *TRIP HELP.UBER.COM"
+    expected:
+      business_name: "Uber"
+      business_url: "uber.com"
+
+  - id: merch_easy_006
+    difficulty: easy
+    tags: [streaming, global_brand]
+    input:
+      id: txn_006
+      amount: 14.99
+      classification: expense
+      description: "SPOTIFY USA"
+    expected:
+      business_name: "Spotify"
+      business_url: "spotify.com"
+
+  - id: merch_easy_007
+    difficulty: easy
+    tags: [retail, global_brand]
+    input:
+      id: txn_007
+      amount: 156.78
+      classification: expense
+      description: "TARGET #1234"
+    expected:
+      business_name: "Target"
+      business_url: "target.com"
+
+  - id: merch_easy_008
+    difficulty: easy
+    tags: [retail, global_brand]
+    input:
+      id: txn_008
+      amount: 234.56
+      classification: expense
+      description: "COSTCO WHSE #5678"
+    expected:
+      business_name: "Costco"
+      business_url: "costco.com"
+
+  - id: merch_easy_009
+    difficulty: easy
+    tags: [tech, global_brand]
+    input:
+      id: txn_009
+      amount: 9.99
+      classification: expense
+      description: "APPLE.COM/BILL"
+    expected:
+      business_name: "Apple"
+      business_url: "apple.com"
+
+  - id: merch_easy_010
+    difficulty: easy
+    tags: [tech, global_brand]
+    input:
+      id: txn_010
+      amount: 12.99
+      classification: expense
+      description: "GOOGLE *STORAGE"
+    expected:
+      business_name: "Google"
+      business_url: "google.com"
+
+  - id: merch_easy_011
+    difficulty: easy
+    tags: [fast_food, global_brand]
+    input:
+      id: txn_011
+      amount: 8.50
+      classification: expense
+      description: "BURGER KING #456"
+    expected:
+      business_name: "Burger King"
+      business_url: "bk.com"
+
+  - id: merch_easy_012
+    difficulty: easy
+    tags: [fast_food, global_brand]
+    input:
+      id: txn_012
+      amount: 9.99
+      classification: expense
+      description: "TACO BELL #789"
+    expected:
+      business_name: "Taco Bell"
+      business_url: "tacobell.com"
+
+  - id: merch_easy_013
+    difficulty: easy
+    tags: [fast_food, global_brand]
+    input:
+      id: txn_013
+      amount: 11.50
+      classification: expense
+      description: "WENDYS #456"
+    expected:
+      business_name: "Wendy's"
+      business_url: "wendys.com"
+
+  - id: merch_easy_014
+    difficulty: easy
+    tags: [coffee, global_brand]
+    input:
+      id: txn_014
+      amount: 4.25
+      classification: expense
+      description: "DUNKIN #12345"
+    expected:
+      business_name: "Dunkin'"
+      business_url: "dunkindonuts.com"
+
+  - id: merch_easy_015
+    difficulty: easy
+    tags: [grocery, global_brand]
+    input:
+      id: txn_015
+      amount: 156.32
+      classification: expense
+      description: "WHOLE FOODS MKT #10234"
+    expected:
+      business_name: "Whole Foods Market"
+      business_url: "wholefoodsmarket.com"
+
+  - id: merch_easy_016
+    difficulty: easy
+    tags: [grocery, global_brand]
+    input:
+      id: txn_016
+      amount: 87.45
+      classification: expense
+      description: "TRADER JOE'S #567"
+    expected:
+      business_name: "Trader Joe's"
+      business_url: "traderjoes.com"
+
+  - id: merch_easy_017
+    difficulty: easy
+    tags: [gas, global_brand]
+    input:
+      id: txn_017
+      amount: 45.00
+      classification: expense
+      description: "SHELL OIL 573849234"
+    expected:
+      business_name: "Shell"
+      business_url: "shell.com"
+
+  - id: merch_easy_018
+    difficulty: easy
+    tags: [gas, global_brand]
+    input:
+      id: txn_018
+      amount: 52.30
+      classification: expense
+      description: "CHEVRON STATION #1234"
+    expected:
+      business_name: "Chevron"
+      business_url: "chevron.com"
+
+  - id: merch_easy_019
+    difficulty: easy
+    tags: [rideshare, global_brand]
+    input:
+      id: txn_019
+      amount: 18.75
+      classification: expense
+      description: "LYFT *RIDE SAT 7PM"
+    expected:
+      business_name: "Lyft"
+      business_url: "lyft.com"
+
+  - id: merch_easy_020
+    difficulty: easy
+    tags: [electronics, global_brand]
+    input:
+      id: txn_020
+      amount: 299.99
+      classification: expense
+      description: "BEST BUY 00000456"
+    expected:
+      business_name: "Best Buy"
+      business_url: "bestbuy.com"
+
+  # ===== MEDIUM - Less obvious merchants =====
+  - id: merch_medium_001
+    difficulty: medium
+    tags: [restaurant, chain]
+    input:
+      id: txn_021
+      amount: 67.50
+      classification: expense
+      description: "OLIVE GARDEN #456"
+    expected:
+      business_name: "Olive Garden"
+      business_url: "olivegarden.com"
+
+  - id: merch_medium_002
+    difficulty: medium
+    tags: [restaurant, chain]
+    input:
+      id: txn_022
+      amount: 45.00
+      classification: expense
+      description: "CHEESECAKE FACTORY"
+    expected:
+      business_name: "The Cheesecake Factory"
+      business_url: "thecheesecakefactory.com"
+
+  - id: merch_medium_003
+    difficulty: medium
+    tags: [pharmacy, chain]
+    input:
+      id: txn_023
+      amount: 24.99
+      classification: expense
+      description: "CVS/PHARMACY #4567"
+    expected:
+      business_name: "CVS Pharmacy"
+      business_url: "cvs.com"
+
+  - id: merch_medium_004
+    difficulty: medium
+    tags: [pharmacy, chain]
+    input:
+      id: txn_024
+      amount: 35.50
+      classification: expense
+      description: "WALGREENS #12345"
+    expected:
+      business_name: "Walgreens"
+      business_url: "walgreens.com"
+
+  - id: merch_medium_005
+    difficulty: medium
+    tags: [fitness, chain]
+    input:
+      id: txn_025
+      amount: 39.99
+      classification: expense
+      description: "PLANET FITNESS MONTHLY"
+    expected:
+      business_name: "Planet Fitness"
+      business_url: "planetfitness.com"
+
+  - id: merch_medium_006
+    difficulty: medium
+    tags: [airline, brand]
+    input:
+      id: txn_026
+      amount: 345.00
+      classification: expense
+      description: "UNITED AIRLINES 0162345678"
+    expected:
+      business_name: "United Airlines"
+      business_url: "united.com"
+
+  - id: merch_medium_007
+    difficulty: medium
+    tags: [hotel, brand]
+    input:
+      id: txn_027
+      amount: 189.00
+      classification: expense
+      description: "MARRIOTT HOTELS NYC"
+    expected:
+      business_name: "Marriott"
+      business_url: "marriott.com"
+
+  - id: merch_medium_008
+    difficulty: medium
+    tags: [retail, chain]
+    input:
+      id: txn_028
+      amount: 234.56
+      classification: expense
+      description: "WALMART SUPERCENTER #1234"
+    expected:
+      business_name: "Walmart"
+      business_url: "walmart.com"
+
+  - id: merch_medium_009
+    difficulty: medium
+    tags: [streaming]
+    input:
+      id: txn_029
+      amount: 6.99
+      classification: expense
+      description: "HULU LLC"
+    expected:
+      business_name: "Hulu"
+      business_url: "hulu.com"
+
+  - id: merch_medium_010
+    difficulty: medium
+    tags: [streaming]
+    input:
+      id: txn_030
+      amount: 8.99
+      classification: expense
+      description: "DISNEY PLUS"
+    expected:
+      business_name: "Disney+"
+      business_url: "disneyplus.com"
+
+  - id: merch_medium_011
+    difficulty: medium
+    tags: [clothing, brand]
+    input:
+      id: txn_031
+      amount: 89.99
+      classification: expense
+      description: "ZARA USA INC"
+    expected:
+      business_name: "Zara"
+      business_url: "zara.com"
+
+  - id: merch_medium_012
+    difficulty: medium
+    tags: [clothing, brand]
+    input:
+      id: txn_032
+      amount: 65.00
+      classification: expense
+      description: "H&M HENNES MAURITZ"
+    expected:
+      business_name: "H&M"
+      business_url: "hm.com"
+
+  - id: merch_medium_013
+    difficulty: medium
+    tags: [utility]
+    input:
+      id: txn_033
+      amount: 145.00
+      classification: expense
+      description: "XFINITY INTERNET"
+    expected:
+      business_name: "Xfinity"
+      business_url: "xfinity.com"
+
+  - id: merch_medium_014
+    difficulty: medium
+    tags: [telecom]
+    input:
+      id: txn_034
+      amount: 89.00
+      classification: expense
+      description: "AT&T WIRELESS"
+    expected:
+      business_name: "AT&T"
+      business_url: "att.com"
+
+  - id: merch_medium_015
+    difficulty: medium
+    tags: [telecom]
+    input:
+      id: txn_035
+      amount: 112.00
+      classification: expense
+      description: "VERIZON WIRELESS"
+    expected:
+      business_name: "Verizon"
+      business_url: "verizon.com"
+
+  - id: merch_medium_016
+    difficulty: medium
+    tags: [ecommerce]
+    input:
+      id: txn_036
+      amount: 45.00
+      classification: expense
+      description: "ETSY.COM"
+    expected:
+      business_name: "Etsy"
+      business_url: "etsy.com"
+
+  - id: merch_medium_017
+    difficulty: medium
+    tags: [ecommerce]
+    input:
+      id: txn_037
+      amount: 89.00
+      classification: expense
+      description: "WAYFAIR*PURCHASE"
+    expected:
+      business_name: "Wayfair"
+      business_url: "wayfair.com"
+
+  - id: merch_medium_018
+    difficulty: medium
+    tags: [home, brand]
+    input:
+      id: txn_038
+      amount: 123.00
+      classification: expense
+      description: "IKEA US EAST LLC"
+    expected:
+      business_name: "IKEA"
+      business_url: "ikea.com"
+
+  - id: merch_medium_019
+    difficulty: medium
+    tags: [hotel]
+    input:
+      id: txn_039
+      amount: 234.00
+      classification: expense
+      description: "AIRBNB *HMQT5J6QQJ"
+    expected:
+      business_name: "Airbnb"
+      business_url: "airbnb.com"
+
+  - id: merch_medium_020
+    difficulty: medium
+    tags: [entertainment]
+    input:
+      id: txn_040
+      amount: 45.00
+      classification: expense
+      description: "AMC THEATRES #1234"
+    expected:
+      business_name: "AMC Theatres"
+      business_url: "amctheatres.com"
+
+  # ===== HARD - Delivery services, subsidiaries =====
+  - id: merch_hard_001
+    difficulty: hard
+    tags: [delivery, aggregator]
+    input:
+      id: txn_041
+      amount: 45.00
+      classification: expense
+      description: "DOORDASH*CHIPOTLE"
+    expected:
+      business_name: "DoorDash"
+      business_url: "doordash.com"
+
+  - id: merch_hard_002
+    difficulty: hard
+    tags: [delivery, aggregator]
+    input:
+      id: txn_042
+      amount: 67.00
+      classification: expense
+      description: "GRUBHUB*THAI KITCHEN"
+    expected:
+      business_name: "Grubhub"
+      business_url: "grubhub.com"
+
+  - id: merch_hard_003
+    difficulty: hard
+    tags: [delivery, aggregator]
+    input:
+      id: txn_043
+      amount: 89.00
+      classification: expense
+      description: "UBEREATS *UBER EATS"
+    expected:
+      business_name: "Uber Eats"
+      business_url: "ubereats.com"
+
+  - id: merch_hard_004
+    difficulty: hard
+    tags: [delivery, grocery]
+    input:
+      id: txn_044
+      amount: 234.00
+      classification: expense
+      description: "INSTACART*SAFEWAY"
+    expected:
+      business_name: "Instacart"
+      business_url: "instacart.com"
+
+  - id: merch_hard_005
+    difficulty: hard
+    tags: [subscription, variant]
+    input:
+      id: txn_045
+      amount: 156.00
+      classification: expense
+      description: "AMAZON PRIME*1A2B3C"
+    expected:
+      business_name: "Amazon"
+      business_url: "amazon.com"
+
+  - id: merch_hard_006
+    difficulty: hard
+    tags: [payment_processor]
+    input:
+      id: txn_046
+      amount: 45.00
+      classification: expense
+      description: "SQ *DOWNTOWN CAFE"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_hard_007
+    difficulty: hard
+    tags: [streaming, variant]
+    input:
+      id: txn_047
+      amount: 19.99
+      classification: expense
+      description: "HBO MAX"
+    expected:
+      business_name: "Max"
+      business_url: "max.com"
+
+  - id: merch_hard_008
+    difficulty: hard
+    tags: [tech, variant]
+    input:
+      id: txn_048
+      amount: 1299.00
+      classification: expense
+      description: "APPLE STORE #R123"
+    expected:
+      business_name: "Apple"
+      business_url: "apple.com"
+
+  - id: merch_hard_009
+    difficulty: hard
+    tags: [food, variant]
+    input:
+      id: txn_049
+      amount: 34.50
+      classification: expense
+      description: "PANERA BREAD #567"
+    expected:
+      business_name: "Panera Bread"
+      business_url: "panerabread.com"
+
+  - id: merch_hard_010
+    difficulty: hard
+    tags: [convenience]
+    input:
+      id: txn_050
+      amount: 12.50
+      classification: expense
+      description: "7-ELEVEN #34567"
+    expected:
+      business_name: "7-Eleven"
+      business_url: "7-eleven.com"
+
+  # ===== EDGE CASES - Should return null =====
+  - id: merch_edge_001
+    difficulty: edge_case
+    tags: [should_be_null, generic]
+    input:
+      id: txn_051
+      amount: 15.00
+      classification: expense
+      description: "POS DEBIT 12345"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_002
+    difficulty: edge_case
+    tags: [should_be_null, generic]
+    input:
+      id: txn_052
+      amount: 100.00
+      classification: expense
+      description: "ACH WITHDRAWAL"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_003
+    difficulty: edge_case
+    tags: [should_be_null, payment]
+    input:
+      id: txn_053
+      amount: 78.00
+      classification: expense
+      description: "PAYPAL *JOHNSMITH"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_004
+    difficulty: edge_case
+    tags: [should_be_null, transfer]
+    input:
+      id: txn_054
+      amount: 500.00
+      classification: expense
+      description: "ONLINE TRANSFER TO CHK 1234"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_005
+    difficulty: edge_case
+    tags: [should_be_null, atm]
+    input:
+      id: txn_055
+      amount: 200.00
+      classification: expense
+      description: "ATM WITHDRAWAL 12345"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_006
+    difficulty: edge_case
+    tags: [should_be_null, generic]
+    input:
+      id: txn_056
+      amount: 75.00
+      classification: expense
+      description: "MISC SERVICES LLC"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_007
+    difficulty: edge_case
+    tags: [should_be_null, wire]
+    input:
+      id: txn_057
+      amount: 1500.00
+      classification: expense
+      description: "WIRE TRANSFER OUT"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_008
+    difficulty: edge_case
+    tags: [should_be_null, check]
+    input:
+      id: txn_058
+      amount: 350.00
+      classification: expense
+      description: "CHECK #1234"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_009
+    difficulty: edge_case
+    tags: [should_be_null, fee]
+    input:
+      id: txn_059
+      amount: 35.00
+      classification: expense
+      description: "SERVICE CHARGE"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_010
+    difficulty: edge_case
+    tags: [should_be_null, p2p]
+    input:
+      id: txn_060
+      amount: 250.00
+      classification: expense
+      description: "ZELLE TO JOHN DOE"
+    expected:
+      business_name: null
+      business_url: null
+
+  # Additional samples
+  - id: merch_easy_021
+    difficulty: easy
+    tags: [fast_food]
+    input:
+      id: txn_061
+      amount: 14.99
+      classification: expense
+      description: "CHIPOTLE ONLINE"
+    expected:
+      business_name: "Chipotle"
+      business_url: "chipotle.com"
+
+  - id: merch_easy_022
+    difficulty: easy
+    tags: [fast_food]
+    input:
+      id: txn_062
+      amount: 8.99
+      classification: expense
+      description: "SUBWAY #12345"
+    expected:
+      business_name: "Subway"
+      business_url: "subway.com"
+
+  - id: merch_easy_023
+    difficulty: easy
+    tags: [coffee]
+    input:
+      id: txn_063
+      amount: 6.50
+      classification: expense
+      description: "PEETS COFFEE #456"
+    expected:
+      business_name: "Peet's Coffee"
+      business_url: "peets.com"
+
+  - id: merch_easy_024
+    difficulty: easy
+    tags: [grocery]
+    input:
+      id: txn_064
+      amount: 145.67
+      classification: expense
+      description: "KROGER #456"
+    expected:
+      business_name: "Kroger"
+      business_url: "kroger.com"
+
+  - id: merch_easy_025
+    difficulty: easy
+    tags: [grocery]
+    input:
+      id: txn_065
+      amount: 98.34
+      classification: expense
+      description: "PUBLIX SUPER MARKET"
+    expected:
+      business_name: "Publix"
+      business_url: "publix.com"
+
+  - id: merch_medium_021
+    difficulty: medium
+    tags: [restaurant]
+    input:
+      id: txn_066
+      amount: 123.45
+      classification: expense
+      description: "RUTH'S CHRIS STEAK"
+    expected:
+      business_name: "Ruth's Chris Steak House"
+      business_url: "ruthschris.com"
+
+  - id: merch_medium_022
+    difficulty: medium
+    tags: [restaurant]
+    input:
+      id: txn_067
+      amount: 89.00
+      classification: expense
+      description: "P.F. CHANGS #234"
+    expected:
+      business_name: "P.F. Chang's"
+      business_url: "pfchangs.com"
+
+  - id: merch_medium_023
+    difficulty: medium
+    tags: [gas]
+    input:
+      id: txn_068
+      amount: 48.50
+      classification: expense
+      description: "EXXONMOBIL 12345"
+    expected:
+      business_name: "ExxonMobil"
+      business_url: "exxon.com"
+
+  - id: merch_medium_024
+    difficulty: medium
+    tags: [gas]
+    input:
+      id: txn_069
+      amount: 55.00
+      classification: expense
+      description: "BP#1234567"
+    expected:
+      business_name: "BP"
+      business_url: "bp.com"
+
+  - id: merch_medium_025
+    difficulty: medium
+    tags: [hotel]
+    input:
+      id: txn_070
+      amount: 245.00
+      classification: expense
+      description: "HILTON HOTELS"
+    expected:
+      business_name: "Hilton"
+      business_url: "hilton.com"
+
+  - id: merch_hard_011
+    difficulty: hard
+    tags: [payment_processor]
+    input:
+      id: txn_071
+      amount: 34.00
+      classification: expense
+      description: "VENMO *PIZZA PLACE"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_hard_012
+    difficulty: hard
+    tags: [subscription]
+    input:
+      id: txn_072
+      amount: 14.99
+      classification: expense
+      description: "APPLE.COM/BILL ONE"
+    expected:
+      business_name: "Apple"
+      business_url: "apple.com"
+
+  - id: merch_hard_013
+    difficulty: hard
+    tags: [tech]
+    input:
+      id: txn_073
+      amount: 99.99
+      classification: expense
+      description: "MICROSOFT*OFFICE 365"
+    expected:
+      business_name: "Microsoft"
+      business_url: "microsoft.com"
+
+  - id: merch_hard_014
+    difficulty: hard
+    tags: [gaming]
+    input:
+      id: txn_074
+      amount: 59.99
+      classification: expense
+      description: "STEAMPOWERED.COM"
+    expected:
+      business_name: "Steam"
+      business_url: "steampowered.com"
+
+  - id: merch_hard_015
+    difficulty: hard
+    tags: [subscription]
+    input:
+      id: txn_075
+      amount: 10.99
+      classification: expense
+      description: "YOUTUBE PREMIUM"
+    expected:
+      business_name: "YouTube"
+      business_url: "youtube.com"
+
+  - id: merch_easy_026
+    difficulty: easy
+    tags: [airline]
+    input:
+      id: txn_076
+      amount: 456.00
+      classification: expense
+      description: "DELTA AIR LINES"
+    expected:
+      business_name: "Delta Air Lines"
+      business_url: "delta.com"
+
+  - id: merch_easy_027
+    difficulty: easy
+    tags: [airline]
+    input:
+      id: txn_077
+      amount: 389.00
+      classification: expense
+      description: "SOUTHWEST AIRLINES"
+    expected:
+      business_name: "Southwest Airlines"
+      business_url: "southwest.com"
+
+  - id: merch_easy_028
+    difficulty: easy
+    tags: [hotel]
+    input:
+      id: txn_078
+      amount: 178.00
+      classification: expense
+      description: "HYATT REGENCY"
+    expected:
+      business_name: "Hyatt"
+      business_url: "hyatt.com"
+
+  - id: merch_medium_026
+    difficulty: medium
+    tags: [fitness]
+    input:
+      id: txn_079
+      amount: 29.99
+      classification: expense
+      description: "LA FITNESS CLUB"
+    expected:
+      business_name: "LA Fitness"
+      business_url: "lafitness.com"
+
+  - id: merch_medium_027
+    difficulty: medium
+    tags: [fitness]
+    input:
+      id: txn_080
+      amount: 49.99
+      classification: expense
+      description: "ORANGETHEORY FITNESS"
+    expected:
+      business_name: "Orangetheory Fitness"
+      business_url: "orangetheory.com"
+
+  - id: merch_edge_011
+    difficulty: edge_case
+    tags: [should_be_null]
+    input:
+      id: txn_081
+      amount: 1.00
+      classification: expense
+      description: "PENDING AUTHORIZATION"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_edge_012
+    difficulty: edge_case
+    tags: [should_be_null]
+    input:
+      id: txn_082
+      amount: 0.00
+      classification: expense
+      description: "VOID TRANSACTION"
+    expected:
+      business_name: null
+      business_url: null
+
+  - id: merch_medium_028
+    difficulty: medium
+    tags: [entertainment]
+    input:
+      id: txn_083
+      amount: 89.00
+      classification: expense
+      description: "TICKETMASTER *EVENT"
+    expected:
+      business_name: "Ticketmaster"
+      business_url: "ticketmaster.com"
+
+  - id: merch_medium_029
+    difficulty: medium
+    tags: [entertainment]
+    input:
+      id: txn_084
+      amount: 150.00
+      classification: expense
+      description: "STUBHUB INC"
+    expected:
+      business_name: "StubHub"
+      business_url: "stubhub.com"
+
+  - id: merch_medium_030
+    difficulty: medium
+    tags: [car_rental]
+    input:
+      id: txn_085
+      amount: 56.00
+      classification: expense
+      description: "HERTZ RENT-A-CAR"
+    expected:
+      business_name: "Hertz"
+      business_url: "hertz.com"
+
+  - id: merch_easy_029
+    difficulty: easy
+    tags: [grocery]
+    input:
+      id: txn_086
+      amount: 178.90
+      classification: expense
+      description: "SAM'S CLUB #8765"
+    expected:
+      business_name: "Sam's Club"
+      business_url: "samsclub.com"
+
+  - id: merch_easy_030
+    difficulty: easy
+    tags: [pharmacy]
+    input:
+      id: txn_087
+      amount: 67.89
+      classification: expense
+      description: "RITE AID #1234"
+    expected:
+      business_name: "Rite Aid"
+      business_url: "riteaid.com"
+
+  - id: merch_hard_016
+    difficulty: hard
+    tags: [aggregator]
+    input:
+      id: txn_088
+      amount: 234.00
+      classification: expense
+      description: "COSTCO.COM"
+    expected:
+      business_name: "Costco"
+      business_url: "costco.com"
+
+  - id: merch_hard_017
+    difficulty: hard
+    tags: [fitness]
+    input:
+      id: txn_089
+      amount: 150.00
+      classification: expense
+      description: "EQUINOX MEMBERSHIP"
+    expected:
+      business_name: "Equinox"
+      business_url: "equinox.com"
+
+  - id: merch_hard_018
+    difficulty: hard
+    tags: [subscription]
+    input:
+      id: txn_090
+      amount: 4.99
+      classification: expense
+      description: "PARAMOUNT+ ESSENTIAL"
+    expected:
+      business_name: "Paramount+"
+      business_url: "paramountplus.com"

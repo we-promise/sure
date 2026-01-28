@@ -37,7 +37,14 @@ class RecurringTransaction < ApplicationRecord
   scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
 
   # Class methods for identification and cleanup
+  # Schedules pattern identification with debounce to run after all syncs complete
   def self.identify_patterns_for(family)
+    IdentifyRecurringTransactionsJob.schedule_for(family)
+    0 # Return immediately, actual count will be determined by the job
+  end
+
+  # Synchronous pattern identification (for manual triggers from UI)
+  def self.identify_patterns_for!(family)
     Identifier.new(family).identify_recurring_patterns
   end
 

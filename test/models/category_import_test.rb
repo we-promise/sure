@@ -69,4 +69,29 @@ class CategoryImportTest < ActiveSupport::TestCase
     assert_equal "#bbbbbb", snacks.color
     assert_equal "pizza", snacks.lucide_icon
   end
+
+  test "accepts required headers with an asterisk suffix" do
+    csv = <<~CSV
+      name*,color,parent_category,classification,icon
+      Food & Drink,#f97316,,expense,carrot
+    CSV
+
+    import = @family.imports.create!(type: "CategoryImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_equal 1, import.rows.count
+    assert_equal "Food & Drink", import.rows.first.name
+  end
+
+  test "fails fast when required headers are missing" do
+    csv = <<~CSV
+      title,color,parent_category,classification,icon
+      Food & Drink,#f97316,,expense,carrot
+    CSV
+
+    import = @family.imports.create!(type: "CategoryImport", raw_file_str: csv, col_sep: ",")
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { import.generate_rows_from_csv }
+    assert_includes error.message, "Missing required columns: name"
+  end
 end

@@ -1,0 +1,51 @@
+---
+fr:
+  provider_sync_summary:
+    title: Résumé de la synchronisation
+    last_sync: "Dernière synchronisation : il y a %{time_ago}"
+    accounts:
+      title: Comptes
+      total: "Total : %{count}"
+      linked: "Liés : %{count}"
+      unlinked: "Non liés : %{count}"
+      institutions: "Institutions : %{count}"
+    transactions:
+      title: Transactions
+      seen: "Vues : %{count}"
+      imported: "Importées : %{count}"
+      updated: "Mises à jour : %{count}"
+      skipped: "Ignorées : %{count}"
+    holdings:
+      title: Avoirs
+      found: "Trouvés : %{count}"
+      processed: "Traités : %{count}"
+    health:
+      title: Santé
+      rate_limited: "Limité %{time_ago}"
+      recently: récemment
+      errors: "Erreurs : %{count}"
+      pending_reconciled:
+        one: "%{count} transaction en attente dupliquée réconciliée"
+        other: "%{count} transactions en attente dupliquées réconciliées"
+      view_reconciled: Voir les transactions réconciliées
+      duplicate_suggestions:
+        one: "%{count} doublon possible nécessite une vérification"
+        other: "%{count} doublons possibles nécessitent une vérification"
+      view_duplicate_suggestions: Voir les doublons suggérés
+      stale_pending:
+        one: "%{count} transaction en attente obsolète (exclue des budgets)"
+        other: "%{count} transactions en attente obsolètes (exclues des budgets)"
+      view_stale_pending: Voir les comptes affectés
+      stale_pending_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      stale_unmatched:
+        one: "%{count} transaction en attente nécessite une vérification manuelle"
+        other: "%{count} transactions en attente nécessitent une vérification manuelle"
+      view_stale_unmatched: Voir les transactions à vérifier
+      stale_unmatched_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      data_warnings: "Avertissements de données : %{count}"
+      notices: "Notifications : %{count}"
+      view_data_quality: Voir les détails de qualité des données

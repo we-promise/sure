@@ -1,0 +1,11 @@
+---
+nl:
+  category:
+    dropdowns:
+      row:
+        delete: Categorie verwijderen
+        edit: Categorie bewerken
+      show:
+        clear: Categorie wissen
+        no_categories: Geen categorieën gevonden
+        search_placeholder: Zoeken

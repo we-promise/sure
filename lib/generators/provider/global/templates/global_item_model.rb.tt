@@ -1,0 +1,33 @@
+class <%= class_name %>Item < ApplicationRecord
+  include Syncable, Provided
+
+  enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+
+  validates :name, presence: true
+
+  belongs_to :family
+  has_one_attached :logo
+
+  has_many :<%= file_name %>_accounts, dependent: :destroy
+  has_many :accounts, through: :<%= file_name %>_accounts
+
+  scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :ordered, -> { order(created_at: :desc) }
+  scope :needs_update, -> { where(status: :requires_update) }
+
+  def destroy_later
+    update!(scheduled_for_deletion: true)
+    DestroyJob.perform_later(self)
+  end
+
+  # NOTE: This is a GLOBAL provider
+  # Credentials are configured globally in /settings/providers (self-hosted mode)
+  # or via environment variables
+  # This model stores the per-family connection, but not credentials
+
+  # TODO: Implement provider-specific methods
+  # - import_latest_<%= file_name %>_data
+  # - process_accounts
+  # - schedule_account_syncs
+  # - See <%= class_name %>Item::Provided for provider instantiation
+end

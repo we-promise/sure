@@ -1,0 +1,14 @@
+---
+zh-TW:
+  entries:
+    create:
+      success: 記錄已建立
+    destroy:
+      success: 記錄已刪除
+    empty:
+      description: 嘗試新增記錄、編輯篩選條件或最佳化搜尋詞
+      title: 未找到相關記錄
+    loading:
+      loading: 正在載入記錄...
+    update:
+      success: 記錄已更新

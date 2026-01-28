@@ -114,7 +114,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Search for uncategorized transactions
-    uncategorized_results = Transaction::Search.new(@family, filters: { categories: [ "Uncategorized" ] }).transactions_scope
+    uncategorized_results = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] }).transactions_scope
     uncategorized_ids = uncategorized_results.pluck(:id)
 
     # Should include standard uncategorized transactions
@@ -124,6 +124,90 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # Should exclude transfer transactions even if uncategorized
     assert_not_includes uncategorized_ids, uncategorized_transfer.entryable.id
+  end
+
+  test "filtering for only Uncategorized returns only uncategorized transactions" do
+    # Create a mix of categorized and uncategorized transactions
+    categorized = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink)
+    )
+
+    uncategorized = create_transaction(
+      account: @checking_account,
+      amount: 200
+    )
+
+    # Filter for only uncategorized
+    results = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should only include uncategorized transaction
+    assert_includes result_ids, uncategorized.entryable.id
+    assert_not_includes result_ids, categorized.entryable.id
+    assert_equal 1, result_ids.size
+  end
+
+  test "filtering for Uncategorized plus a real category returns both" do
+    # Create a travel category for testing
+    travel_category = @family.categories.create!(
+      name: "Travel",
+      color: "#3b82f6",
+      classification: "expense"
+    )
+
+    # Create transactions with different categories
+    food_transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink)
+    )
+
+    travel_transaction = create_transaction(
+      account: @checking_account,
+      amount: 150,
+      category: travel_category
+    )
+
+    uncategorized = create_transaction(
+      account: @checking_account,
+      amount: 200
+    )
+
+    # Filter for food category + uncategorized
+    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink", Category.uncategorized.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should include both food and uncategorized
+    assert_includes result_ids, food_transaction.entryable.id
+    assert_includes result_ids, uncategorized.entryable.id
+    # Should NOT include travel
+    assert_not_includes result_ids, travel_transaction.entryable.id
+    assert_equal 2, result_ids.size
+  end
+
+  test "filtering excludes uncategorized when not in filter" do
+    # Create a mix of transactions
+    categorized = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink)
+    )
+
+    uncategorized = create_transaction(
+      account: @checking_account,
+      amount: 200
+    )
+
+    # Filter for only food category (without Uncategorized)
+    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink" ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should only include categorized transaction
+    assert_includes result_ids, categorized.entryable.id
+    assert_not_includes result_ids, uncategorized.entryable.id
+    assert_equal 1, result_ids.size
   end
 
   test "new family-based API works correctly" do
@@ -267,6 +351,48 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 
+  test "category filter includes subcategories" do
+    # Create a transaction with the parent category
+    parent_entry = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    # Create a transaction with the subcategory (fixture :subcategory has name "Restaurants", parent "Food & Drink")
+    subcategory_entry = create_transaction(
+      account: @checking_account,
+      amount: 75,
+      category: categories(:subcategory),
+      kind: "standard"
+    )
+
+    # Create a transaction with a different category
+    other_entry = create_transaction(
+      account: @checking_account,
+      amount: 50,
+      category: categories(:income),
+      kind: "standard"
+    )
+
+    # Filter by parent category only - should include both parent and subcategory transactions
+    search = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink" ] })
+    results = search.transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should include both parent and subcategory transactions
+    assert_includes result_ids, parent_entry.entryable.id
+    assert_includes result_ids, subcategory_entry.entryable.id
+    # Should not include transactions with different category
+    assert_not_includes result_ids, other_entry.entryable.id
+
+    # Verify totals also include subcategory transactions
+    totals = search.totals
+    assert_equal 2, totals.count
+    assert_equal Money.new(175, "USD"), totals.expense_money # 100 + 75
+  end
+
   test "totals respects type filters" do
     # Create expense and income transactions
     expense_entry = create_transaction(
@@ -297,5 +423,75 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal 0, totals.count
     assert_equal Money.new(0, "USD"), totals.expense_money
     assert_equal Money.new(0, "USD"), totals.income_money
+  end
+
+  test "category filter handles non-existent category names without SQL error" do
+    # Create a transaction with an existing category
+    existing_entry = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    # Search for non-existent category names (parent_category_ids will be empty)
+    # This should not cause a SQL error with "IN ()"
+    search = Transaction::Search.new(@family, filters: { categories: [ "Non-Existent Category 1", "Non-Existent Category 2" ] })
+    results = search.transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should not include any transactions since categories don't exist
+    assert_not_includes result_ids, existing_entry.entryable.id
+    assert_equal 0, result_ids.length
+
+    # Verify totals also work without error
+    totals = search.totals
+    assert_equal 0, totals.count
+    assert_equal Money.new(0, "USD"), totals.expense_money
+  end
+
+  test "search matches entries name OR notes with ILIKE" do
+    # Transaction with matching text in name only
+    name_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Grocery Store"
+    )
+
+    # Transaction with matching text in notes only
+    notes_match = create_transaction(
+      account: @checking_account,
+      amount: 50,
+      kind: "standard",
+      name: "Credit Card Payment",
+      notes: "Payment of 50 USD at Grocery Mart on 2026-11-01"
+    )
+
+    # Transaction with no matching text
+    no_match = create_transaction(
+      account: @checking_account,
+      amount: 75,
+      kind: "standard",
+      name: "Gas station",
+      notes: "Fuel refill"
+    )
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "grocery" }
+    )
+
+    results = search.transactions_scope
+    result_ids = results.pluck(:id)
+
+    # Should match name
+    assert_includes result_ids, name_match.entryable.id
+
+    # Should match notes
+    assert_includes result_ids, notes_match.entryable.id
+
+    # Should not match unrelated transactions
+    assert_not_includes result_ids, no_match.entryable.id
   end
 end

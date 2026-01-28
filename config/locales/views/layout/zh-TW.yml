@@ -1,0 +1,23 @@
+---
+zh-TW:
+  layouts:
+    application:
+      nav:
+        assistant: 助手
+        budgets: 預算
+        home: 首頁
+        reports: 報表
+        transactions: 交易紀錄
+    auth:
+      existing_account: 已經有帳號了？
+      no_account: 第一次使用 %{product_name} 嗎？
+      sign_in: 登入
+      sign_up: 建立帳號
+    shared:
+      footer:
+        privacy_policy: 隱私權政策
+        terms_of_service: 服務條款
+    trial:
+      open_demo: 開放示範
+      data_deleted_in_days: 資料將在 %{days} 天後刪除
+      contribute: 貢獻

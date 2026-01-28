@@ -1,7 +1,7 @@
 <%# locals: (family_merchant:) %>
 
 <div data-controller="color-avatar">
-  <%= styled_form_with model: family_merchant, class: "space-y-4" do |f| %>
+  <%= styled_form_with model: family_merchant, url: family_merchant.persisted? ? family_merchant_path(family_merchant) : family_merchants_path, class: "space-y-4" do |f| %>
     <section class="space-y-4">
       <% if family_merchant.errors.any? %>
         <%= render "shared/form_errors", model: family_merchant %>
@@ -21,6 +21,12 @@
       <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
         <%= f.text_field :name, placeholder: t(".name_placeholder"), autofocus: true, required: true, data: { color_avatar_target: "name" } %>
       </div>
+      <% if family_merchant.is_a?(FamilyMerchant) %>
+        <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
+          <%= f.text_field :website_url, placeholder: t(".website_placeholder") %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".website_hint") %></p>
+      <% end %>
     </section>
 
     <section>

@@ -1,0 +1,15 @@
+---
+zh-CN:
+  impersonation_sessions:
+    approve:
+      success: 请求已批准
+    complete:
+      success: 会话已完成
+    create:
+      success: 请求已发送给用户，等待批准中
+    join:
+      success: 已加入会话
+    leave:
+      success: 已离开会话
+    reject:
+      success: 请求已拒绝

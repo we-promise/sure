@@ -1,0 +1,6 @@
+---
+nl:
+  invite_codes:
+    index:
+      invite_code_description: Genereer een nieuwe code om deze hier te zien. Gegenereerde codes die zijn gebruikt, worden niet langer weergegeven.
+      no_invite_codes: Geen codes om te tonen

@@ -1,0 +1,2 @@
+# Empty fixture to ensure the simplefin_accounts table is truncated during tests.
+# Tests create SimplefinAccount records explicitly in setup.

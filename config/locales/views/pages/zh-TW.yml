@@ -1,0 +1,37 @@
+---
+zh-TW:
+  pages:
+    changelog:
+      title: 更新日誌
+    dashboard:
+      welcome: "歡迎回來，%{name}"
+      subtitle: "這是您目前的財務概況"
+      new: "最新"
+      drag_to_reorder: "拖曳以重新排列區塊"
+      toggle_section: "切換區塊顯示狀態"
+      net_worth_chart:
+        data_not_available: 所選時段內無資料
+        title: 淨值
+      no_account_empty_state:
+        new_account: 新增帳戶
+        no_account_subtitle: 尚未新增任何帳戶，因此目前無資料可顯示。請新增您的第一個帳戶以開始查看儀表板內容。
+        no_account_title: 尚無帳戶
+      balance_sheet:
+        title: "資產負債表"
+        no_items: "尚無 %{name}"
+        add_accounts: "新增您的 %{name} 帳戶以查看詳細分析"
+      cashflow_sankey:
+        title: "現金流"
+        no_data_title: "此時段內無現金流資料"
+        no_data_description: "新增交易紀錄以顯示現金流資料，或擴大時間範圍"
+        add_transaction: "新增交易"
+      no_accounts:
+        title: "尚無帳戶"
+        description: "新增帳戶以顯示淨值資料"
+        add_account: "新增帳戶"
+      outflows_donut:
+        title: "現金流出"
+        total_outflows: "總流出量"
+        categories: "類別"
+        value: "金額"
+        weight: "占比"

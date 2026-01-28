@@ -1,0 +1,18 @@
+---
+zh-CN:
+  no_pending_change: 当前没有待处理的邮箱更改请求！
+  users:
+    destroy:
+      success: 您的账户已删除。
+    resend_confirmation_email:
+      no_pending_change: 当前没有待处理的邮箱更改请求！
+      success: 新的确认邮件已加入发送队列。
+    reset:
+      success: 账户重置成功。相关数据将在后台逐步删除。
+      unauthorized: 您没有执行此操作的权限。
+    reset_with_sample_data:
+      success: 账户已重置，正在准备示例数据。您将很快看到演示数据。
+    update:
+      email_change_failed: 邮箱地址更改失败。
+      email_change_initiated: 请查收新邮箱地址的确认邮件以完成更改。
+      success: 个人资料已更新成功。

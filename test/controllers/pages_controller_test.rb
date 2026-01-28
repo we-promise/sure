@@ -1,13 +1,30 @@
 require "test_helper"
 
 class PagesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in @user = users(:family_admin)
+    @family = @user.family
   end
 
   test "dashboard" do
     get root_path
     assert_response :ok
+  end
+
+  test "dashboard renders sankey chart with subcategories" do
+    # Create parent category with subcategory
+    parent_category = @family.categories.create!(name: "Shopping", classification: "expense", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "Groceries", classification: "expense", parent: parent_category, color: "#33FF57")
+
+    # Create transactions using helper
+    create_transaction(account: @family.accounts.first, name: "General shopping", amount: 100, category: parent_category)
+    create_transaction(account: @family.accounts.first, name: "Grocery store", amount: 50, category: subcategory)
+
+    get root_path
+    assert_response :ok
+    assert_select "[data-controller='sankey-chart']"
   end
 
   test "changelog" do

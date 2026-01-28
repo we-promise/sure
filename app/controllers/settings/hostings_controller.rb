@@ -25,6 +25,7 @@ class Settings::HostingsController < ApplicationController
     if @show_twelve_data_settings
       twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
       @twelve_data_usage = twelve_data_provider&.usage
+      @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
     end
 
     if @show_yahoo_finance_settings
@@ -46,6 +47,10 @@ class Settings::HostingsController < ApplicationController
       Setting.brand_fetch_client_id = hosting_params[:brand_fetch_client_id]
     end
 
+    if hosting_params.key?(:brand_fetch_high_res_logos)
+      Setting.brand_fetch_high_res_logos = hosting_params[:brand_fetch_high_res_logos] == "1"
+    end
+
     if hosting_params.key?(:twelve_data_api_key)
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
     end
@@ -56,6 +61,33 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:securities_provider)
       Setting.securities_provider = hosting_params[:securities_provider]
+    end
+
+    if hosting_params.key?(:syncs_include_pending)
+      Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
+    end
+
+    sync_settings_changed = false
+
+    if hosting_params.key?(:auto_sync_enabled)
+      Setting.auto_sync_enabled = hosting_params[:auto_sync_enabled] == "1"
+      sync_settings_changed = true
+    end
+
+    if hosting_params.key?(:auto_sync_time)
+      time_value = hosting_params[:auto_sync_time]
+      unless Setting.valid_auto_sync_time?(time_value)
+        flash[:alert] = t(".invalid_sync_time")
+        return redirect_to settings_hosting_path
+      end
+
+      Setting.auto_sync_time = time_value
+      Setting.auto_sync_timezone = current_user_timezone
+      sync_settings_changed = true
+    end
+
+    if sync_settings_changed
+      sync_auto_sync_scheduler!
     end
 
     if hosting_params.key?(:openai_access_token)
@@ -82,6 +114,10 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_model = hosting_params[:openai_model]
     end
 
+    if hosting_params.key?(:openai_json_mode)
+      Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
+    end
+
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
     flash.now[:alert] = error.message
@@ -95,10 +131,22 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :exchange_rate_provider, :securities_provider)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
     end
 
     def ensure_admin
       redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+    end
+
+    def sync_auto_sync_scheduler!
+      AutoSyncScheduler.sync!
+    rescue StandardError => error
+      Rails.logger.error("[AutoSyncScheduler] Failed to sync scheduler: #{error.message}")
+      Rails.logger.error(error.backtrace.join("\n"))
+      flash[:alert] = t(".scheduler_sync_failed")
+    end
+
+    def current_user_timezone
+      Current.family&.timezone.presence || "UTC"
     end
 end

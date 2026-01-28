@@ -1,0 +1,32 @@
+{{- $url := include "sure.redisUrl" . -}}
+{{- if $url }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "sure.fullname" . }}-test-redis-auth
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test-success
+    # Auto-clean both successful and failed test Pods; logs remain in `kubectl logs` history
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  restartPolicy: Never
+  containers:
+    - name: redis-cli
+      image: docker.io/redis:7.2-alpine
+      imagePullPolicy: IfNotPresent
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "Pinging Redis at $REDIS_URL";
+          redis-cli -u "$REDIS_URL" -a "$REDIS_PASSWORD" PING | grep -q PONG && echo OK || (echo FAILED && exit 1)
+      env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "sure.redisSecretName" . }}
+              key: {{ include "sure.redisPasswordKey" . }}
+        - name: REDIS_URL
+          value: {{ $url | quote }}
+{{- end }}

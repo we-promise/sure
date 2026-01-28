@@ -1,0 +1,28 @@
+---
+zh-CN:
+  plaid_items:
+    create:
+      success: 账户已成功关联，请等待账户同步完成。
+    destroy:
+      success: 账户已计划删除。
+    plaid_item:
+      add_new: 新增连接
+      confirm_accept: 确认删除
+      confirm_body: 此操作将永久删除该组下的所有账户及相关数据。
+      confirm_title: 确认删除机构？
+      connection_lost: 连接已断开
+      connection_lost_description: 此连接已失效。您需要删除当前连接并重新添加才能继续同步数据。
+      delete: 删除
+      error: 数据同步时发生错误
+      no_accounts_description: 无法从该金融机构加载任何账户。
+      no_accounts_title: 未找到账户
+      requires_update: 重新连接
+      status: 上次同步于 %{timestamp} 前
+      status_never: 需要数据同步
+      syncing: 同步中...
+      update: 更新
+    select_existing_account:
+      cancel: 取消
+      description: 选择一个 Plaid 账户与您的现有账户关联
+      link_account: 关联账户
+      title: 将 %{account_name} 关联到 Plaid

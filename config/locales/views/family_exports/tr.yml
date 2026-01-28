@@ -1,7 +1,31 @@
 ---
 tr:
   family_exports:
-    list:
-      in_progress: Devam ediyor
-      complete: Tamamlandı
-      failed: Başarısız
+    access_denied: Erişim reddedildi
+    create:
+      success: Dışa aktarma başladı. Kısa süre içinde indirebileceksiniz.
+    delete_confirmation: Bu dışa aktarma işlemini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+    delete_failed_confirmation: Bu başarısız dışa aktarma işlemini silmek istediğinizden emin misiniz?
+    destroy:
+      success: Dışa aktarma başarıyla silindi
+    export_not_ready: Dışa aktarma henüz indirmeye hazır değil
+    exporting: Dışa aktarılıyor...
+    index:
+      title: Dışa aktarmalar
+      new: Yeni Dışa Aktarma
+    table:
+      title: Dışa aktarmalar
+      header:
+        date: Tarih
+        filename: Dosya adı
+        status: Durum
+        actions: Eylemler
+      row:
+        status:
+          in_progress: Devam ediyor
+          complete: Tamamlandı
+          failed: Başarısız
+        actions:
+          delete: Sil
+          download: İndirmek
+      empty: Henüz hiç dışa aktarma yok.

@@ -1,15 +1,21 @@
 ---
 ca:
+  no_pending_change: No hi ha canvis pendents
   users:
     destroy:
       success: El teu compte s'ha eliminat.
-    update:
-      email_change_failed: No s'ha pogut canviar l'adreça de correu electrònic.
-      email_change_initiated: Revisa el teu nou correu electrònic per instruccions de confirmació.
-      success: El teu perfil s'ha actualitzat.
+    resend_confirmation_email:
+      no_pending_change: No hi ha canvi de correu electrònic actualment pendent!
+      success: S'ha posat a cua un nou correu electrònic de confirmació per ser enviat.
     reset:
-      success: El teu compte s'ha restablert. Les dades s'eliminaran en segon pla en uns instants.
+      success: El teu compte s'ha restablert. Les dades s'eliminaran en segon pla
+        en uns instants.
       unauthorized: No estàs autoritzat/da per realitzar aquesta acció.
     reset_with_sample_data:
-      success: El teu compte s'ha restablert i s'estan preparant dades de mostra. Veureu dades de demostració en breu.
-
+      success: El teu compte s'ha restablert i s'estan preparant dades de mostra.
+        Veureu dades de demostració en breu.
+    update:
+      email_change_failed: No s'ha pogut canviar l'adreça de correu electrònic.
+      email_change_initiated: Revisa el teu nou correu electrònic per instruccions
+        de confirmació.
+      success: El teu perfil s'ha actualitzat.

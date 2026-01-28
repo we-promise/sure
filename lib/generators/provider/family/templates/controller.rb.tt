@@ -1,0 +1,344 @@
+# frozen_string_literal: true
+
+class <%= class_name %>ItemsController < ApplicationController
+  ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
+
+  before_action :set_<%= file_name %>_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+
+  def index
+    @<%= table_name %> = Current.family.<%= table_name %>.ordered
+  end
+
+  def show
+  end
+
+  def new
+    @<%= file_name %>_item = Current.family.<%= table_name %>.build
+  end
+
+  def edit
+  end
+
+  def create
+    @<%= file_name %>_item = Current.family.<%= table_name %>.build(<%= file_name %>_item_params)
+    @<%= file_name %>_item.name ||= "<%= class_name %> Connection"
+
+    if @<%= file_name %>_item.save
+      if turbo_frame_request?
+        flash.now[:notice] = t(".success", default: "Successfully configured <%= class_name %>.")
+        @<%= table_name %> = Current.family.<%= table_name %>.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "<%= file_name %>-providers-panel",
+            partial: "settings/providers/<%= file_name %>_panel",
+            locals: { <%= file_name %>_items: @<%= table_name %> }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
+      end
+    else
+      @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "<%= file_name %>-providers-panel",
+          partial: "settings/providers/<%= file_name %>_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+      end
+    end
+  end
+
+  def update
+    if @<%= file_name %>_item.update(<%= file_name %>_item_params)
+      if turbo_frame_request?
+        flash.now[:notice] = t(".success", default: "Successfully updated <%= class_name %> configuration.")
+        @<%= table_name %> = Current.family.<%= table_name %>.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "<%= file_name %>-providers-panel",
+            partial: "settings/providers/<%= file_name %>_panel",
+            locals: { <%= file_name %>_items: @<%= table_name %> }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
+      end
+    else
+      @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
+
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "<%= file_name %>-providers-panel",
+          partial: "settings/providers/<%= file_name %>_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+      end
+    end
+  end
+
+  def destroy
+    @<%= file_name %>_item.destroy_later
+    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled <%= class_name %> connection for deletion.")
+  end
+
+  def sync
+    unless @<%= file_name %>_item.syncing?
+      @<%= file_name %>_item.sync_later
+    end
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path }
+      format.json { head :ok }
+    end
+  end
+
+  # Collection actions for account linking flow
+
+  def preload_accounts
+    # Trigger a sync to fetch accounts from the provider
+    <%= file_name %>_item = Current.family.<%= file_name %>_items.first
+    unless <%= file_name %>_item&.credentials_configured?
+      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      return
+    end
+
+    <%= file_name %>_item.sync_later unless <%= file_name %>_item.syncing?
+    redirect_to select_accounts_<%= file_name %>_items_path(accountable_type: params[:accountable_type], return_to: params[:return_to])
+  end
+
+  def select_accounts
+    @accountable_type = params[:accountable_type]
+    @return_to = params[:return_to]
+
+    <%= file_name %>_item = Current.family.<%= file_name %>_items.first
+    unless <%= file_name %>_item&.credentials_configured?
+      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      return
+    end
+
+    @<%= file_name %>_accounts = <%= file_name %>_item.<%= file_name %>_accounts
+                                                .left_joins(:account_provider)
+                                                .where(account_providers: { id: nil })
+                                                .order(:name)
+  end
+
+  def link_accounts
+    <%= file_name %>_item = Current.family.<%= file_name %>_items.first
+    unless <%= file_name %>_item&.credentials_configured?
+      redirect_to settings_providers_path, alert: t(".no_api_key")
+      return
+    end
+
+    selected_ids = params[:selected_account_ids] || []
+    if selected_ids.empty?
+      redirect_to select_accounts_<%= file_name %>_items_path, alert: t(".no_accounts_selected")
+      return
+    end
+
+    accountable_type = params[:accountable_type] || "Depository"
+    created_count = 0
+    already_linked_count = 0
+    invalid_count = 0
+
+    <%= file_name %>_item.<%= file_name %>_accounts.where(id: selected_ids).find_each do |<%= file_name %>_account|
+      # Skip if already linked
+      if <%= file_name %>_account.account_provider.present?
+        already_linked_count += 1
+        next
+      end
+
+      # Skip if invalid name
+      if <%= file_name %>_account.name.blank?
+        invalid_count += 1
+        next
+      end
+
+      # Create Sure account and link
+      link_<%= file_name %>_account(<%= file_name %>_account, accountable_type)
+      created_count += 1
+    rescue => e
+      Rails.logger.error "<%= class_name %>ItemsController#link_accounts - Failed to link account: #{e.message}"
+    end
+
+    if created_count > 0
+      <%= file_name %>_item.sync_later unless <%= file_name %>_item.syncing?
+      redirect_to accounts_path, notice: t(".success", count: created_count)
+    else
+      redirect_to select_accounts_<%= file_name %>_items_path, alert: t(".link_failed")
+    end
+  end
+
+  def select_existing_account
+    @account = Current.family.accounts.find(params[:account_id])
+    @<%= file_name %>_item = Current.family.<%= file_name %>_items.first
+
+    unless @<%= file_name %>_item&.credentials_configured?
+      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      return
+    end
+
+    @<%= file_name %>_accounts = @<%= file_name %>_item.<%= file_name %>_accounts
+                                                      .left_joins(:account_provider)
+                                                      .where(account_providers: { id: nil })
+                                                      .order(:name)
+  end
+
+  def link_existing_account
+    account = Current.family.accounts.find(params[:account_id])
+    <%= file_name %>_item = Current.family.<%= file_name %>_items.first
+
+    unless <%= file_name %>_item&.credentials_configured?
+      redirect_to settings_providers_path, alert: t(".no_api_key")
+      return
+    end
+
+    <%= file_name %>_account = <%= file_name %>_item.<%= file_name %>_accounts.find(params[:<%= file_name %>_account_id])
+
+    if <%= file_name %>_account.account_provider.present?
+      redirect_to account_path(account), alert: t(".provider_account_already_linked")
+      return
+    end
+
+    <%= file_name %>_account.ensure_account_provider!(account)
+    <%= file_name %>_item.sync_later unless <%= file_name %>_item.syncing?
+
+    redirect_to account_path(account), notice: t(".success", account_name: account.name)
+  end
+
+  def setup_accounts
+    @unlinked_accounts = @<%= file_name %>_item.unlinked_<%= file_name %>_accounts.order(:name)
+
+    if @unlinked_accounts.empty?
+      redirect_to accounts_path, notice: t(".all_accounts_linked")
+    end
+  end
+
+  def complete_account_setup
+    account_configs = params[:accounts] || {}
+
+    if account_configs.empty?
+      redirect_to setup_accounts_<%= file_name %>_item_path(@<%= file_name %>_item), alert: t(".no_accounts")
+      return
+    end
+
+    created_count = 0
+    skipped_count = 0
+
+    account_configs.each do |<%= file_name %>_account_id, config|
+      next if config[:account_type] == "skip"
+
+      <%= file_name %>_account = @<%= file_name %>_item.<%= file_name %>_accounts.find_by(id: <%= file_name %>_account_id)
+      next unless <%= file_name %>_account
+      next if <%= file_name %>_account.account_provider.present?
+
+      accountable_type = infer_accountable_type(config[:account_type], config[:subtype])
+      account = create_account_from_<%= file_name %>(<%= file_name %>_account, accountable_type, config)
+
+      if account&.persisted?
+        <%= file_name %>_account.ensure_account_provider!(account)
+        <%= file_name %>_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
+        created_count += 1
+      else
+        skipped_count += 1
+      end
+    rescue => e
+      Rails.logger.error "<%= class_name %>ItemsController#complete_account_setup - Error: #{e.message}"
+      skipped_count += 1
+    end
+
+    if created_count > 0
+      @<%= file_name %>_item.sync_later unless @<%= file_name %>_item.syncing?
+      redirect_to accounts_path, notice: t(".success", count: created_count)
+    elsif skipped_count > 0 && created_count == 0
+      redirect_to accounts_path, notice: t(".all_skipped")
+    else
+      redirect_to setup_accounts_<%= file_name %>_item_path(@<%= file_name %>_item), alert: t(".creation_failed", error: "Unknown error")
+    end
+  end
+
+  private
+
+    def set_<%= file_name %>_item
+      @<%= file_name %>_item = Current.family.<%= table_name %>.find(params[:id])
+    end
+
+    def <%= file_name %>_item_params
+      params.require(:<%= file_name %>_item).permit(
+        :name,
+        :sync_start_date<% parsed_fields.each do |field| %>,
+        :<%= field[:name] %><% end %>
+      )
+    end
+
+    def link_<%= file_name %>_account(<%= file_name %>_account, accountable_type)
+      accountable_class = validated_accountable_class(accountable_type)
+
+      account = Current.family.accounts.create!(
+        name: <%= file_name %>_account.name,
+        balance: <%= file_name %>_account.current_balance || 0,
+        currency: <%= file_name %>_account.currency || "USD",
+        accountable: accountable_class.new
+      )
+
+      <%= file_name %>_account.ensure_account_provider!(account)
+      account
+    end
+
+    def create_account_from_<%= file_name %>(<%= file_name %>_account, accountable_type, config)
+      accountable_class = validated_accountable_class(accountable_type)
+      accountable_attrs = {}
+
+      # Set subtype if the accountable supports it
+      if config[:subtype].present? && accountable_class.respond_to?(:subtypes)
+        accountable_attrs[:subtype] = config[:subtype]
+      end
+
+      Current.family.accounts.create!(
+        name: <%= file_name %>_account.name,
+        balance: config[:balance].present? ? config[:balance].to_d : (<%= file_name %>_account.current_balance || 0),
+        currency: <%= file_name %>_account.currency || "USD",
+        accountable: accountable_class.new(accountable_attrs)
+      )
+    end
+
+    def infer_accountable_type(account_type, subtype = nil)
+      case account_type&.downcase
+      when "depository"
+        "Depository"
+      when "credit_card"
+        "CreditCard"
+      when "investment"
+        "Investment"
+      when "loan"
+        "Loan"
+      when "other_asset"
+        "OtherAsset"
+      when "other_liability"
+        "OtherLiability"
+      when "crypto"
+        "Crypto"
+      when "property"
+        "Property"
+      when "vehicle"
+        "Vehicle"
+      else
+        "Depository"
+      end
+    end
+
+    def validated_accountable_class(accountable_type)
+      unless ALLOWED_ACCOUNTABLE_TYPES.include?(accountable_type)
+        raise ArgumentError, "Invalid accountable type: #{accountable_type}"
+      end
+
+      accountable_type.constantize
+    end
+end

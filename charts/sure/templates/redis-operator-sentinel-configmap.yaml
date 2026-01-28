@@ -1,0 +1,19 @@
+{{- if and .Values.redisOperator.enabled .Values.redisOperator.managed.enabled (eq (.Values.redisOperator.mode | default "sentinel") "sentinel") }}
+{{- $name := .Values.redisOperator.name | default (printf "%s-redis" (include "sure.fullname" .)) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-sentinel-config" $name }}
+  labels:
+    app.kubernetes.io/component: redis
+    {{- include "sure.labels" . | nindent 4 }}
+data:
+  sentinel.conf: |
+    port 26379
+    daemonize no
+    protected-mode no
+    sentinel monitor {{ (.Values.redisOperator.sentinel.masterGroupName | default "mymaster") }} {{ printf "%s-master" $name }} 6379 2
+    sentinel down-after-milliseconds {{ (.Values.redisOperator.sentinel.masterGroupName | default "mymaster") }} 10000
+    sentinel failover-timeout {{ (.Values.redisOperator.sentinel.masterGroupName | default "mymaster") }} 60000
+    sentinel parallel-syncs {{ (.Values.redisOperator.sentinel.masterGroupName | default "mymaster") }} 1
+{{- end }}

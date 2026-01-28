@@ -1,5 +1,9 @@
 ---
 es:
+  views:
+    settings:
+      payments:
+        renewal: "Tu contribución continúa el %{date}."
   settings:
     ai_prompts:
       show:
@@ -16,10 +20,10 @@ es:
         merchant_detector:
           title: Detector de Comerciantes
           subtitle: La IA identifica y enriquece los datos de transacciones con información de comerciantes
-    billings:
+    payments:
       show:
-        page_title: Facturación
-        subscription_subtitle: Actualiza tu suscripción y detalles de facturación
+        page_title: Pago
+        subscription_subtitle: Actualiza tu suscripción y detalles de pago
         subscription_title: Gestionar suscripción
     preferences:
       show:
@@ -31,6 +35,7 @@ es:
         default_period: Periodo Predeterminado
         default_account_order: Orden Predeterminado de Cuentas
         language: Idioma
+        language_auto: Idioma del navegador
         page_title: Preferencias
         theme_dark: Oscuro
         theme_light: Claro
@@ -91,11 +96,12 @@ es:
       advanced_section_title: Avanzado
       ai_prompts_label: Indicaciones de IA
       api_key_label: Clave API
-      billing_label: Facturación
+      payment_label: Pago
       categories_label: Categorías
       feedback_label: Comentarios
       general_section_title: General
-      imports_label: Importar/Exportar
+      imports_label: Importaciones
+      exports_label: Exportaciones
       logout: Cerrar sesión
       merchants_label: Comerciantes
       guides_label: Guías

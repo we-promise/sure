@@ -1,0 +1,19 @@
+{{- if .Values.redisSimple.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sure.fullname" . }}-redis
+  labels:
+    app.kubernetes.io/component: redis
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: redis
+    {{- include "sure.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: redis
+      port: {{ .Values.redisSimple.service.port | default 6379 }}
+      targetPort: redis
+      protocol: TCP
+{{- end }}

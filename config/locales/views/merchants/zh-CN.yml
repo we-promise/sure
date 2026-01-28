@@ -1,0 +1,35 @@
+---
+zh-CN:
+  family_merchants:
+    create:
+      error: 创建商户失败：%{error}
+      success: 商户创建成功
+    destroy:
+      success: 商户删除成功
+    edit:
+      title: 编辑商户
+    form:
+      name_placeholder: 商户名称
+    index:
+      empty: 暂无商户
+      family_empty: 暂无家庭商户
+      family_title: 家庭商户
+      new: 新建商户
+      provider_empty: 此家庭尚未关联任何服务提供商商户
+      provider_read_only: 服务提供商商户从您关联的金融机构同步而来，无法在此编辑。
+      provider_title: 服务提供商商户
+      table:
+        actions: 操作
+        merchant: 商户名称
+        source: 来源
+      title: 商户管理
+    merchant:
+      confirm_accept: 确认删除
+      confirm_body: 确定要删除此商户吗？删除后将解除所有关联交易，并可能影响您的报表数据。
+      confirm_title: 确认删除商户？
+      delete: 删除商户
+      edit: 编辑商户
+    new:
+      title: 新建商户
+    update:
+      success: 商户更新成功

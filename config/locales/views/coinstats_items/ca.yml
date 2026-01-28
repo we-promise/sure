@@ -1,0 +1,63 @@
+---
+ca:
+  coinstats_items:
+    coinstats_item:
+      delete: Elimina
+      deletion_in_progress: S'estan esborrant les dades de la cartera de criptomonedes...
+      no_wallets_message: Actualment no hi ha carteres de criptomonedes connectades a CoinStats.
+      no_wallets_title: No hi ha carteres de criptomonedes connectades
+      provider_name: CoinStats
+      reconnect: Torna a connectar
+      status: Sincronitzat per última vegada %{timestamp} fa
+      status_never: Mai sincronitzat
+      status_with_summary: Sincronitzat per última vegada %{timestamp} fa • %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} cartera de criptomonedes sincronitzada"
+          other: "%{count} carteres de criptomonedes sincronitzades"
+        no_accounts: No s'han trobat carteres de criptomonedes
+        partial_sync: "%{linked_count} carteres de criptomonedes sincronitzades, %{unlinked_count} necessiten configuració"
+      syncing: Sincronitzant...
+      update_api_key: Actualitzar clau API
+    create:
+      default_name: Connexió CoinStats
+      errors:
+        validation_failed: "La validació ha fallat: %{message}."
+      success: La connexió amb el proveïdor CoinStats s'ha configurat correctament.
+    destroy:
+      success: La connexió amb el proveïdor CoinStats està programada per a la seva eliminació.
+    link_wallet:
+      error: "L'enllaç de la cartera de criptomonedes ha fallat: %{message}."
+      failed: L'enllaç de la cartera de criptomonedes ha fallat.
+      missing_params: "Falten els paràmetres requerits: adreça i blockchain."
+      success: "%{count} cartera(s) de criptomonedes enllaçades correctament."
+    new:
+      address_label: Adreça
+      address_placeholder: Requerit
+      api_key_label: Clau API
+      api_key_placeholder: Requerit
+      blockchain_fetch_error: No s'han pogut carregar els Blockchains. Torna a intentar-ho més tard.
+      blockchain_label: Blockchain
+      blockchain_placeholder: Requerit
+      blockchain_select_blank: Selecciona un Blockchain
+      configure: Configura
+      default_name: Connexió CoinStats
+      go_to_settings: Anar a la configuració del proveïdor
+      link: Enllaça una cartera de criptomonedes
+      not_configured_message: Per enllaçar una cartera de criptomonedes, primer has de configurar la connexió amb el proveïdor CoinStats.
+      not_configured_step1_html: Ves a <strong>Configuració → Proveïdors</strong>
+      not_configured_step2_html: Localitza el proveïdor <strong>CoinStats</strong>
+      not_configured_step3_html: Segueix les <strong>instruccions de configuració</strong> proporcionades per completar la configuració del proveïdor
+      not_configured_title: La connexió amb el proveïdor CoinStats no està configurada
+      setup_instructions: "Instruccions de configuració:"
+      status_configured_html: Llest per utilitzar
+      status_not_configured: No configurat
+      step1_html: Ves al <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">Panell de l'API Pública de CoinStats</a> per obtenir una clau API.
+      step2: Introdueix la teva clau API a continuació i fes clic a Configura.
+      step3_html: Després d'una connexió reeixida, ves a la pestanya <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Comptes</a> per configurar les carteres de criptomonedes.
+      title: Enllaça una cartera de criptomonedes amb CoinStats
+      update_configuration: Torna a configurar
+    update:
+      errors:
+        validation_failed: "La validació ha fallat: %{message}."
+      success: La connexió amb el proveïdor CoinStats s'ha actualitzat correctament.

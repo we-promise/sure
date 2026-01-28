@@ -18,6 +18,9 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
           name: "Vehicle",
           balance: 30000,
           currency: "USD",
+          institution_name: "Auto Lender",
+          institution_domain: "autolender.example",
+          notes: "Lease notes",
           accountable_type: "Vehicle",
           accountable_attributes: {
             make: "Toyota",
@@ -32,6 +35,12 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
 
     created_account = Account.order(:created_at).last
 
+    assert_equal "Vehicle", created_account.name
+    assert_equal 30000, created_account.balance
+    assert_equal "USD", created_account.currency
+    assert_equal "Auto Lender", created_account[:institution_name]
+    assert_equal "autolender.example", created_account[:institution_domain]
+    assert_equal "Lease notes", created_account[:notes]
     assert_equal "Toyota", created_account.accountable.make
     assert_equal "Camry", created_account.accountable.model
     assert_equal 2020, created_account.accountable.year
@@ -50,6 +59,9 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
           name: "Updated Vehicle",
           balance: 28000,
           currency: "USD",
+          institution_name: "Updated Lender",
+          institution_domain: "updatedlender.example",
+          notes: "Updated lease notes",
           accountable_type: "Vehicle",
           accountable_attributes: {
             id: @account.accountable_id,
@@ -63,6 +75,13 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
+
+    @account.reload
+    assert_equal "Updated Vehicle", @account.name
+    assert_equal 28000, @account.balance
+    assert_equal "Updated Lender", @account[:institution_name]
+    assert_equal "updatedlender.example", @account[:institution_domain]
+    assert_equal "Updated lease notes", @account[:notes]
 
     assert_redirected_to account_path(@account)
     assert_equal "Vehicle account updated", flash[:notice]

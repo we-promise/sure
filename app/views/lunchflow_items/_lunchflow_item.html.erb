@@ -82,6 +82,18 @@
           <%= render "accounts/index/account_groups", accounts: lunchflow_item.accounts %>
         <% end %>
 
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@lunchflow_sync_stats_map) && @lunchflow_sync_stats_map
+             @lunchflow_sync_stats_map[lunchflow_item.id] || {}
+           else
+             lunchflow_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: lunchflow_item,
+          institutions_count: lunchflow_item.connected_institutions.size
+        ) %>
+
         <%# Use model methods for consistent counts %>
         <% unlinked_count = lunchflow_item.unlinked_accounts_count %>
         <% linked_count = lunchflow_item.linked_accounts_count %>

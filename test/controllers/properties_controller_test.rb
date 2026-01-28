@@ -14,6 +14,9 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
         account: {
           name: "New Property",
           subtype: "house",
+          institution_name: "Property Lender",
+          institution_domain: "propertylender.example",
+          notes: "Property notes",
           accountable_type: "Property",
           accountable_attributes: {
             year_built: 1990,
@@ -28,6 +31,9 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert created_account.accountable.is_a?(Property)
     assert_equal "draft", created_account.status
     assert_equal 0, created_account.balance
+    assert_equal "Property Lender", created_account[:institution_name]
+    assert_equal "propertylender.example", created_account[:institution_domain]
+    assert_equal "Property notes", created_account[:notes]
     assert_equal 1990, created_account.accountable.year_built
     assert_equal 1200, created_account.accountable.area_value
     assert_equal "sqft", created_account.accountable.area_unit
@@ -39,6 +45,9 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       patch property_path(@account), params: {
         account: {
           name: "Updated Property",
+          institution_name: "Updated Lender",
+          institution_domain: "updatedlender.example",
+          notes: "Updated property notes",
           accountable_attributes: {
             id: @account.accountable.id,
             subtype: "condominium"
@@ -50,6 +59,9 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     @account.reload
     assert_equal "Updated Property", @account.name
     assert_equal "condominium", @account.subtype
+    assert_equal "Updated Lender", @account[:institution_name]
+    assert_equal "updatedlender.example", @account[:institution_domain]
+    assert_equal "Updated property notes", @account[:notes]
 
     # If account is active, it renders edit view; otherwise redirects to balances
     if @account.active?

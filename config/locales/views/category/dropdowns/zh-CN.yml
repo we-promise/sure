@@ -1,0 +1,11 @@
+---
+zh-CN:
+  category:
+    dropdowns:
+      row:
+        delete: 删除分类
+        edit: 编辑分类
+      show:
+        clear: 清空分类
+        no_categories: 暂无分类
+        search_placeholder: 搜索分类

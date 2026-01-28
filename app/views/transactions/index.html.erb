@@ -1,4 +1,4 @@
-<div class="space-y-4 pb-20 flex flex-col">
+<div class="space-y-4 pb-6 lg:pb-12 flex flex-col">
   <header class="flex justify-between items-center text-primary font-medium">
     <h1 class="text-xl">Transactions</h1>
     <div class="flex items-center gap-5">
@@ -44,60 +44,26 @@
   </header>
 
   <%= render "summary", totals: @search.totals %>
+  <% if Current.family.recurring_transactions_disabled? %>
+    <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+  <% else %>
+    <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
+      <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
+        <% nav.with_btn(id: "transactions", label: t("transactions.show.tab_transactions"), classes: "px-6") %>
+        <% nav.with_btn(id: "upcoming", label: t("transactions.show.tab_upcoming"), classes: "px-6") %>
+      <% end %>
 
-  <div id="transactions"
-       data-controller="bulk-select"
-       data-bulk-select-singular-label-value="<%= t(".transaction") %>"
-       data-bulk-select-plural-label-value="<%= t(".transactions") %>"
-       class="flex flex-col bg-container rounded-xl shadow-border-xs p-4">
-    <%= render "transactions/searches/search" %>
-
-    <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
-      <%= render "transactions/selection_bar" %>
-    </div>
-
-    <% if @pagy.count > 0 || (@projected_recurring.any? && @q.blank?) %>
-      <div class="grow overflow-y-auto">
-        <% if @transactions.any? %>
-          <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
-            <div class="pl-0.5 col-span-8 flex items-center gap-4">
-              <%= check_box_tag "selection_entry",
-                                class: "checkbox checkbox--light",
-                                data: { action: "bulk-select#togglePageSelection" } %>
-              <p>transaction</p>
-            </div>
-
-            <p class="col-span-2 md:block hidden">category</p>
-            <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block">amount</p>
-          </div>
-        <% end %>
-
-        <div class="space-y-6">
-          <% if @projected_recurring.any? && @q.blank? %>
-            <div class="space-y-2">
-              <h3 class="text-xs uppercase font-medium text-secondary px-2"><%= t("recurring_transactions.upcoming") %></h3>
-              <% @projected_recurring.group_by(&:next_expected_date).sort.each do |date, transactions| %>
-                <div class="space-y-2">
-                  <div class="text-xs text-secondary px-2 pt-2"><%= l(date, format: :long) %></div>
-                  <% transactions.each do |recurring_transaction| %>
-                    <%= render "recurring_transactions/projected_transaction", recurring_transaction: recurring_transaction %>
-                  <% end %>
-                </div>
-              <% end %>
-            </div>
-          <% end %>
-
-          <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
-            <%= render entries %>
-          <% end %>
+      <% tabs.with_panel(tab_id: "transactions") do %>
+        <div class="bg-container rounded-xl shadow-border-xs">
+          <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
         </div>
-      </div>
-    <% else %>
-      <%= render "entries/empty" %>
-    <% end %>
+      <% end %>
 
-    <div class="pt-4">
-      <%= render "shared/pagination", pagy: @pagy %>
-    </div>
-  </div>
+      <% tabs.with_panel(tab_id: "upcoming") do %>
+        <div class="bg-container rounded-xl shadow-border-xs">
+          <%= render "transactions/upcoming" %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
 </div>

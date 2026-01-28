@@ -1,0 +1,49 @@
+---
+zh-CN:
+  enable_banking_items:
+    authorize:
+      authorization_failed: 启动授权失败
+      bank_required: 请选择一家银行。
+      invalid_redirect: 收到的授权 URL 无效。请重试或联系支持人员。
+      redirect_uri_not_allowed: 不允许重定向。请在 Enable Banking 应用设置中配置 `%{callback_url}`。
+      unexpected_error: 发生意外错误。请重试。
+    callback:
+      authorization_error: 授权失败
+      invalid_callback: 回调参数无效。
+      item_not_found: 未找到连接。
+      session_failed: 无法完成授权
+      success: 已成功连接到您的银行。您的账户正在同步中。
+      unexpected_error: 发生意外错误。请重试。
+    complete_account_setup:
+      all_skipped: 已跳过所有账户。您可以稍后在账户页面进行设置。
+      no_accounts: 没有可设置的账户。
+      success: 成功创建了 %{count} 个账户！
+    create:
+      success: Enable Banking 配置成功。
+    destroy:
+      success: Enable Banking 连接已加入删除队列。
+    link_accounts:
+      already_linked: 所选账户已关联。
+      link_failed: 关联账户失败
+      no_accounts_selected: 未选择任何账户。
+      no_session: 无活跃的 Enable Banking 连接。请先连接一家银行。
+      success: 成功关联了 %{count} 个账户。
+    link_existing_account:
+      errors:
+        invalid_enable_banking_account: 所选 Enable Banking 账户无效
+        only_manual: 只能关联手动账户
+      success: 账户已成功关联到 Enable Banking
+    new:
+      link_enable_banking_title: 关联 Enable Banking
+    reauthorize:
+      invalid_redirect: 收到的授权 URL 无效。请重试或联系支持人员。
+      reauthorization_failed: 重新授权失败
+    select_bank:
+      cancel: 取消
+      check_country: 请检查您的国家代码设置。
+      credentials_required: 请先配置您的 Enable Banking 凭据。
+      description: 选择您想要连接到账户的银行。
+      no_banks: 该国家/地区暂无可用银行。
+      title: 选择您的银行
+    update:
+      success: Enable Banking 配置已更新。

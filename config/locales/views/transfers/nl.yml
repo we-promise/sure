@@ -1,0 +1,31 @@
+---
+nl:
+  transfers:
+    create:
+      success: Overboeking aangemaakt
+    destroy:
+      success: Overboeking verwijderd
+    form:
+      amount: Bedrag
+      date: Datum
+      expense: Uitgave
+      from: Van
+      income: Inkomsten
+      select_account: Selecteer account
+      submit: Maak overboeking aan
+      to: Naar
+      transfer: Overboeking
+    new:
+      title: Nieuwe overboeking
+    show:
+      delete: Verwijder overboeking
+      delete_subtitle: Dit verwijdert de overboeking. Het verwijdert niet de onderliggende
+        transacties.
+      delete_title: Overboeking verwijderen?
+      details: Details
+      note_label: Notities
+      note_placeholder: Voeg een notitie toe aan deze overboeking
+      overview: Overzicht
+      settings: Instellingen
+    update:
+      success: Overboeking bijgewerkt

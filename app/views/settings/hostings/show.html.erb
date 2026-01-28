@@ -16,6 +16,9 @@
     <% end %>
   </div>
 <% end %>
+<%= settings_section title: t(".sync_settings") do %>
+  <%= render "settings/hostings/sync_settings" %>
+<% end %>
 <%= settings_section title: t(".invites") do %>
   <%= render "settings/hostings/invite_code_settings" %>
 <% end %>

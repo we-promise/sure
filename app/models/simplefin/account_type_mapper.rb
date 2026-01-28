@@ -12,6 +12,11 @@ module Simplefin
     CREDIT_NAME_KEYWORDS = /\b(credit|card)\b/i.freeze
     CREDIT_BRAND_KEYWORDS = /\b(visa|mastercard|amex|american express|discover|apple card|freedom unlimited|quicksilver)\b/i.freeze
     LOAN_KEYWORDS = /\b(loan|mortgage|heloc|line of credit|loc)\b/i.freeze
+    CHECKING_KEYWORDS = /\b(checking|chequing|dda|demand deposit)\b/i.freeze
+    SAVINGS_KEYWORDS = /\b(savings|sav|money market|mma|high.yield)\b/i.freeze
+    CRYPTO_KEYWORDS = /\b(bitcoin|btc|ethereum|eth|crypto|cryptocurrency|litecoin|dogecoin|solana)\b/i.freeze
+    # "Cash" as a standalone name (not "cash back", "cash rewards", etc.)
+    CASH_ACCOUNT_PATTERN = /\A\s*cash\s*\z/i.freeze
 
     # Explicit investment subtype tokens mapped to known SUBTYPES keys
     EXPLICIT_INVESTMENT_TOKENS = {
@@ -53,18 +58,23 @@ module Simplefin
         end
       end
 
-      # 1) Holdings present => Investment (high confidence)
+      # 1) Crypto keywords → Crypto account (check before holdings since crypto accounts may have holdings)
+      if CRYPTO_KEYWORDS.match?(nm)
+        return Inference.new(accountable_type: "Crypto", confidence: :high)
+      end
+
+      # 2) Holdings present => Investment (high confidence)
       if holdings_present
         # Do not guess generic retirement; explicit tokens handled above
         return Inference.new(accountable_type: "Investment", subtype: nil, confidence: :high)
       end
 
-      # 2) Name suggests LOAN (high confidence)
+      # 3) Name suggests LOAN (high confidence)
       if LOAN_KEYWORDS.match?(nm)
         return Inference.new(accountable_type: "Loan", confidence: :high)
       end
 
-      # 3) Credit card signals
+      # 4) Credit card signals
       # - Name contains credit/card (medium to high)
       # - Card brands (Visa/Mastercard/Amex/Discover/Apple Card) → high
       # - Or negative balance with available-balance present (medium)
@@ -76,14 +86,26 @@ module Simplefin
         return Inference.new(accountable_type: "CreditCard", confidence: :high)
       end
 
-      # 4) Retirement keywords without holdings still point to Investment (retirement)
+      # 5) Retirement keywords without holdings still point to Investment (retirement)
       if RETIREMENT_KEYWORDS.match?(nm)
         # If the name contains 'brokerage', avoid forcing retirement subtype
         subtype = BROKERAGE_KEYWORD.match?(nm) ? nil : "retirement"
         return Inference.new(accountable_type: "Investment", subtype: subtype, confidence: :high)
       end
 
-      # 5) Default
+      # 6) Checking/Savings/Cash accounts (high confidence when name explicitly says so)
+      if CHECKING_KEYWORDS.match?(nm)
+        return Inference.new(accountable_type: "Depository", subtype: "checking", confidence: :high)
+      end
+      if SAVINGS_KEYWORDS.match?(nm)
+        return Inference.new(accountable_type: "Depository", subtype: "savings", confidence: :high)
+      end
+      # "Cash" as a standalone account name (like Cash App's "Cash" account) → checking
+      if CASH_ACCOUNT_PATTERN.match?(nm)
+        return Inference.new(accountable_type: "Depository", subtype: "checking", confidence: :high)
+      end
+
+      # 7) Default - unknown account type, let user decide
       Inference.new(accountable_type: "Depository", confidence: :low)
     end
   end

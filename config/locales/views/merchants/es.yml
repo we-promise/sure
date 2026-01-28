@@ -14,9 +14,19 @@ es:
       empty: Aún no hay comercios
       new: Nuevo comercio
       title: Comercios
+      family_title: Comercios familiares
+      family_empty: Aún no hay comercios familiares
+      provider_title: Comercios del proveedor
+      provider_empty: Ningún comercio del proveedor vinculado a esta familia todavía
+      provider_read_only: Los comercios del proveedor se sincronizan desde tus instituciones conectadas. No se pueden editar aquí.
+      table:
+        merchant: Comercio
+        actions: Acciones
+        source: Origen
     merchant:
       confirm_accept: Eliminar comercio
-      confirm_body: ¿Estás seguro de que deseas eliminar este comercio? Eliminar este comercio desvinculará todas las transacciones asociadas y puede afectar a tus informes.
+      confirm_body: ¿Estás seguro de que deseas eliminar este comercio? Eliminar este comercio
+        desvinculará todas las transacciones asociadas y puede afectar a tus informes.
       confirm_title: ¿Eliminar comercio?
       delete: Eliminar comercio
       edit: Editar comercio

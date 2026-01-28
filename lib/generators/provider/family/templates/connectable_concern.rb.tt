@@ -1,0 +1,37 @@
+module Family::<%= class_name %>Connectable
+  extend ActiveSupport::Concern
+
+  included do
+    has_many :<%= file_name %>_items, dependent: :destroy
+  end
+
+  def can_connect_<%= file_name %>?
+    # Families can configure their own <%= class_name %> credentials
+    true
+  end
+
+<%
+  # Build method parameters: required params (secrets) come first, then optional params
+  required_params = parsed_fields.select { |f| f[:secret] }.map { |f| "#{f[:name]}:" }
+  optional_params = parsed_fields.reject { |f| f[:secret] }.map { |f| "#{f[:name]}: nil" }
+  all_params = (required_params + optional_params + ["item_name: nil"]).join(", ")
+-%>
+  def create_<%= file_name %>_item!(<%= all_params %>)
+    <%= file_name %>_item = <%= file_name %>_items.create!(
+      name: item_name || "<%= class_name.titleize %> Connection"<%= parsed_fields.map { |f| ",\n      #{f[:name]}: #{f[:name]}" }.join("") %>
+    )
+
+    <%= file_name %>_item.sync_later
+
+    <%= file_name %>_item
+  end
+
+  def has_<%= file_name %>_credentials?
+<% primary_secret = parsed_fields.find { |f| f[:secret] }&.dig(:name) -%>
+<% if primary_secret -%>
+    <%= file_name %>_items.where.not(<%= primary_secret %>: nil).exists?
+<% else -%>
+    <%= file_name %>_items.exists?
+<% end -%>
+  end
+end

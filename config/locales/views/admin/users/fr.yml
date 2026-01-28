@@ -1,0 +1,22 @@
+---
+fr:
+  admin:
+    users:
+      index:
+        title: "Gestion des utilisateurs"
+        description: "Gérez les rôles des utilisateurs pour votre instance. Les super administrateurs peuvent accéder aux paramètres des fournisseurs SSO et à la gestion des utilisateurs."
+        section_title: "Utilisateurs"
+        you: "(Vous)"
+        no_users: "Aucun utilisateur trouvé."
+        role_descriptions_title: "Description des rôles"
+        roles:
+          member: "Membre"
+          admin: "Administrateur"
+          super_admin: "Super Administrateur"
+        role_descriptions:
+          member: "Accès utilisateur de base. Peut gérer ses propres comptes, transactions et paramètres."
+          admin: "Administrateur familial. Peut accéder aux paramètres avancés comme les clés API, les importations et les prompts IA."
+          super_admin: "Administrateur de l'instance. Peut gérer les fournisseurs SSO, les rôles des utilisateurs et usurper l'identité des utilisateurs pour le support."
+      update:
+        success: "Rôle de l'utilisateur mis à jour avec succès."
+        failure: "Échec de la mise à jour du rôle de l'utilisateur."

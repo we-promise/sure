@@ -1,0 +1,34 @@
+---
+zh-CN:
+  categories:
+    bootstrap:
+      success: 默认分类已创建成功
+    category:
+      delete: 删除分类
+      edit: 编辑分类
+    create:
+      success: 分类创建成功
+    destroy:
+      success: 分类删除成功
+    edit:
+      edit: 编辑分类
+    form:
+      placeholder: 分类名称
+    index:
+      bootstrap: 使用默认分类（推荐）
+      categories: 分类管理
+      categories_expenses: 支出分类
+      categories_incomes: 收入分类
+      empty: 暂无分类
+      new: 新建分类
+    menu:
+      loading: 加载中...
+    new:
+      new_category: 新建分类
+    update:
+      success: 分类更新成功
+  category:
+    dropdowns:
+      show:
+        bootstrap: 生成默认分类
+        empty: 暂无分类

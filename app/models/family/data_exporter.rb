@@ -25,6 +25,10 @@ class Family::DataExporter
       zipfile.put_next_entry("categories.csv")
       zipfile.write generate_categories_csv
 
+      # Add rules.csv
+      zipfile.put_next_entry("rules.csv")
+      zipfile.write generate_rules_csv
+
       # Add all.ndjson
       zipfile.put_next_entry("all.ndjson")
       zipfile.write generate_ndjson
@@ -111,6 +115,24 @@ class Family::DataExporter
             category.parent&.name,
             category.classification,
             category.lucide_icon
+          ]
+        end
+      end
+    end
+
+    def generate_rules_csv
+      CSV.generate do |csv|
+        csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions" ]
+
+        # Only export rules belonging to this family
+        @family.rules.includes(conditions: :sub_conditions, actions: []).find_each do |rule|
+          csv << [
+            rule.name,
+            rule.resource_type,
+            rule.active,
+            rule.effective_date&.iso8601,
+            serialize_conditions_for_csv(rule.conditions),
+            serialize_actions_for_csv(rule.actions)
           ]
         end
       end
@@ -234,6 +256,97 @@ class Family::DataExporter
         }.to_json
       end
 
+      # Export rules with versioned schema
+      @family.rules.includes(conditions: :sub_conditions, actions: []).find_each do |rule|
+        lines << {
+          type: "Rule",
+          version: 1,
+          data: serialize_rule_for_export(rule)
+        }.to_json
+      end
+
       lines.join("\n")
+    end
+
+    def serialize_rule_for_export(rule)
+      {
+        name: rule.name,
+        resource_type: rule.resource_type,
+        active: rule.active,
+        effective_date: rule.effective_date&.iso8601,
+        conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },
+        actions: rule.actions.map { |action| serialize_action(action) }
+      }
+    end
+
+    def serialize_condition(condition)
+      data = {
+        condition_type: condition.condition_type,
+        operator: condition.operator,
+        value: resolve_condition_value(condition)
+      }
+
+      if condition.compound? && condition.sub_conditions.any?
+        data[:sub_conditions] = condition.sub_conditions.map { |sub| serialize_condition(sub) }
+      end
+
+      data
+    end
+
+    def serialize_action(action)
+      {
+        action_type: action.action_type,
+        value: resolve_action_value(action)
+      }
+    end
+
+    def resolve_condition_value(condition)
+      return condition.value unless condition.value.present?
+
+      # Map category UUIDs to names for portability
+      if condition.condition_type == "transaction_category" && condition.value.present?
+        category = @family.categories.find_by(id: condition.value)
+        return category&.name || condition.value
+      end
+
+      # Map merchant UUIDs to names for portability
+      if condition.condition_type == "transaction_merchant" && condition.value.present?
+        merchant = @family.merchants.find_by(id: condition.value)
+        return merchant&.name || condition.value
+      end
+
+      condition.value
+    end
+
+    def resolve_action_value(action)
+      return action.value unless action.value.present?
+
+      # Map category UUIDs to names for portability
+      if action.action_type == "set_transaction_category" && action.value.present?
+        category = @family.categories.find_by(id: action.value) || @family.categories.find_by(name: action.value)
+        return category&.name || action.value
+      end
+
+      # Map merchant UUIDs to names for portability
+      if action.action_type == "set_transaction_merchant" && action.value.present?
+        merchant = @family.merchants.find_by(id: action.value) || @family.merchants.find_by(name: action.value)
+        return merchant&.name || action.value
+      end
+
+      # Map tag UUIDs to names for portability
+      if action.action_type == "set_transaction_tags" && action.value.present?
+        tag = @family.tags.find_by(id: action.value) || @family.tags.find_by(name: action.value)
+        return tag&.name || action.value
+      end
+
+      action.value
+    end
+
+    def serialize_conditions_for_csv(conditions)
+      conditions.where(parent_id: nil).map { |c| serialize_condition(c) }.to_json
+    end
+
+    def serialize_actions_for_csv(actions)
+      actions.map { |a| serialize_action(a) }.to_json
     end
 end

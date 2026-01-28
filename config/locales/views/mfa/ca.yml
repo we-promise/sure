@@ -2,10 +2,12 @@
 ca:
   mfa:
     backup_codes:
-      backup_codes_description: Cada codi només es pot utilitzar una vegada. Guarda aquests codis de manera segura.
+      backup_codes_description: Cada codi només es pot utilitzar una vegada. Guarda
+        aquests codis de manera segura.
       backup_codes_title: Els teus codis de recuperació
       continue: Continua a la configuració de seguretat
-      description: Desa aquests codis de recuperació en un lloc segur; els necessitaràs si perds l'accés a l'app d'autenticació
+      description: Desa aquests codis de recuperació en un lloc segur; els necessitaràs
+        si perds l'accés a l'app d'autenticació
       page_title: Codis de recuperació
       title: Desa els teus codis de recuperació
     create:
@@ -15,11 +17,14 @@ ca:
     new:
       code_label: Codi de verificació
       code_placeholder: Introdueix el codi de 6 dígits
-      description: Millora la seguretat del teu compte activant l'autenticació en dos passos
+      description: Millora la seguretat del teu compte activant l'autenticació en
+        dos passos
       page_title: Configuració de l'autenticació en dos passos
-      scan_description: Utilitza una app d'autenticació com Google Authenticator o 1Password per escanejar aquest codi QR
+      scan_description: Utilitza una app d'autenticació com Google Authenticator o
+        1Password per escanejar aquest codi QR
       scan_title: 1. Escaneja el codi QR
-      secret_description: Si no pots escanejar el codi QR, introdueix aquesta clau manualment a la teva app d'autenticació
+      secret_description: Si no pots escanejar el codi QR, introdueix aquesta clau
+        manualment a la teva app d'autenticació
       secret_title: Codi d'entrada manual
       title: Activa l'autenticació en dos passos
       verify_button: Verifica i activa 2FA
@@ -32,4 +37,3 @@ ca:
       verify_button: Verifica
     verify_code:
       invalid_code: Codi d'autenticació invàlid. Torna-ho a provar.
-

@@ -1,0 +1,6 @@
+investment_account:
+  lunchflow_item: one
+  account_id: "lf_acc_investment_1"
+  name: "Test Investment Account"
+  currency: USD
+  holdings_supported: true

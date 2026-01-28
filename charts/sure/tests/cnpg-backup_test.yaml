@@ -1,0 +1,73 @@
+suite: CNPG Cluster backup rendering
+templates:
+  - templates/cnpg-cluster.yaml
+
+tests:
+  - it: renders no spec.backup when cnpg.cluster.backup is unset
+    set:
+      cnpg:
+        cluster:
+          enabled: true
+    asserts:
+      - notExists:
+          path: spec.backup
+
+  - it: defaults method to volumeSnapshot when volumeSnapshot is present
+    set:
+      cnpg:
+        cluster:
+          enabled: true
+          backup:
+            volumeSnapshot:
+              className: longhorn
+    asserts:
+      - equal:
+          path: spec.backup.method
+          value: volumeSnapshot
+      - equal:
+          path: spec.backup.volumeSnapshot.className
+          value: longhorn
+
+  - it: strips unsupported keys (ttl and volumeSnapshot.enabled)
+    set:
+      cnpg:
+        cluster:
+          enabled: true
+          backup:
+            method: volumeSnapshot
+            ttl: 168h
+            volumeSnapshot:
+              enabled: true
+              className: longhorn
+    asserts:
+      - equal:
+          path: spec.backup.method
+          value: volumeSnapshot
+      - notExists:
+          path: spec.backup.ttl
+      - notExists:
+          path: spec.backup.volumeSnapshot.enabled
+
+  - it: fails when volumeSnapshot backups are enabled without className
+    set:
+      cnpg:
+        cluster:
+          enabled: true
+          backup:
+            method: volumeSnapshot
+            volumeSnapshot: {}
+    asserts:
+      - failedTemplate:
+          errorMessage: cnpg.cluster.backup.volumeSnapshot.className is required for volumeSnapshot backups
+
+  - it: renders unknown backup method as-is (CNPG will validate)
+    set:
+      cnpg:
+        cluster:
+          enabled: true
+          backup:
+            method: madeUpMethod
+    asserts:
+      - equal:
+          path: spec.backup.method
+          value: madeUpMethod

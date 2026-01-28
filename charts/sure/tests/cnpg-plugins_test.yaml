@@ -1,0 +1,34 @@
+suite: CNPG Cluster plugins rendering
+templates:
+  - templates/cnpg-cluster.yaml
+
+tests:
+  - it: renders no spec.plugins when cnpg.cluster.plugins is unset
+    set:
+      cnpg:
+        cluster:
+          enabled: true
+    asserts:
+      - notExists:
+          path: spec.plugins
+
+  - it: renders spec.plugins when cnpg.cluster.plugins is set
+    set:
+      cnpg:
+        cluster:
+          enabled: true
+          plugins:
+            - name: barman-cloud.cloudnative-pg.io
+              isWALArchiver: true
+              parameters:
+                barmanObjectName: minio-backups
+    asserts:
+      - equal:
+          path: spec.plugins[0].name
+          value: barman-cloud.cloudnative-pg.io
+      - equal:
+          path: spec.plugins[0].isWALArchiver
+          value: true
+      - equal:
+          path: spec.plugins[0].parameters.barmanObjectName
+          value: minio-backups

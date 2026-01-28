@@ -1,0 +1,90 @@
+---
+zh-CN:
+  transactions:
+    form:
+      account: 账户
+      account_prompt: 选择账户
+      amount: 金额
+      category: 分类
+      category_prompt: 选择分类
+      date: 日期
+      description: 描述
+      description_placeholder: 请输入交易描述
+      details: 详情
+      expense: 支出
+      income: 收入
+      none: "（无）"
+      note_label: 备注
+      note_placeholder: 请输入备注
+      submit: 添加交易
+      tags_label: 标签
+      transfer: 转账
+    header:
+      edit_categories: 编辑分类
+      edit_imports: 编辑导入
+      edit_merchants: 编辑商户
+      edit_tags: 编辑标签
+      import: 导入
+    index:
+      import: 导入
+      transaction: 交易
+      transactions: 交易记录
+    new:
+      new_transaction: 新建交易
+    searches:
+      filters:
+        amount_filter:
+          equal_to: 等于
+          greater_than: 大于
+          less_than: 小于
+          placeholder: '0'
+        badge:
+          expense: 支出
+          income: 收入
+          on_or_after: 在 %{date} 或之后
+          on_or_before: 在 %{date} 或之前
+          transfer: 转账
+        type_filter:
+          expense: 支出
+          income: 收入
+          transfer: 转账
+      menu:
+        account_filter: 账户
+        amount_filter: 金额
+        apply: 应用
+        cancel: 取消
+        category_filter: 分类
+        clear_filters: 清除筛选
+        date_filter: 日期
+        merchant_filter: 商户
+        tag_filter: 标签
+        type_filter: 类型
+      search:
+        equal_to: 等于
+        greater_than: 大于
+        less_than: 小于
+      form:
+        toggle_selection_checkboxes: 切换所有复选框
+    show:
+      account_label: 账户
+      amount: 金额
+      category_label: 分类
+      date_label: 日期
+      delete: 删除
+      delete_subtitle: 此操作将永久删除该交易，影响历史余额数据，且不可恢复。
+      delete_title: 删除交易
+      details: 详情
+      mark_recurring: 标记为定期交易
+      mark_recurring_subtitle: 将此交易标记为定期交易跟踪。金额波动将根据过去6个月的类似交易自动计算。
+      mark_recurring_title: 定期交易设置
+      merchant_label: 商户
+      name_label: 名称
+      nature: 类型
+      none: "（无）"
+      note_label: 备注
+      note_placeholder: 请输入备注
+      overview: 概览
+      settings: 设置
+      tags_label: 标签
+      uncategorized: "（未分类）"
+    toggle_recurring_section: 切换即将发生的定期交易显示

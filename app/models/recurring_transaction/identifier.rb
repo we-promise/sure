@@ -81,35 +81,55 @@ class RecurringTransaction
           find_conditions[:merchant_id] = nil
         end
 
-        recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
+        begin
+          recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
 
-        # Handle manual recurring transactions specially
-        if recurring_transaction.persisted? && recurring_transaction.manual?
-          # Update variance for manual recurring transactions
-          update_manual_recurring_variance(recurring_transaction, pattern)
-          next
-        end
-
-        # Set the name or merchant_id on new records
-        if recurring_transaction.new_record?
-          if pattern[:merchant_id].present?
-            recurring_transaction.merchant_id = pattern[:merchant_id]
-          else
-            recurring_transaction.name = pattern[:name]
+          # Handle manual recurring transactions specially
+          if recurring_transaction.persisted? && recurring_transaction.manual?
+            # Update variance for manual recurring transactions
+            update_manual_recurring_variance(recurring_transaction, pattern)
+            next
           end
-          # New auto-detected recurring transactions are not manual
-          recurring_transaction.manual = false
+
+          # Set the name or merchant_id on new records
+          if recurring_transaction.new_record?
+            if pattern[:merchant_id].present?
+              recurring_transaction.merchant_id = pattern[:merchant_id]
+            else
+              recurring_transaction.name = pattern[:name]
+            end
+            # New auto-detected recurring transactions are not manual
+            recurring_transaction.manual = false
+          end
+
+          recurring_transaction.assign_attributes(
+            expected_day_of_month: pattern[:expected_day_of_month],
+            last_occurrence_date: pattern[:last_occurrence_date],
+            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
+            occurrence_count: pattern[:occurrence_count],
+            status: recurring_transaction.new_record? ? "active" : recurring_transaction.status
+          )
+
+          recurring_transaction.save!
+        rescue ActiveRecord::RecordNotUnique
+          # Race condition: another process created the same record between find and save.
+          # Retry with find to get the existing record and update it.
+          recurring_transaction = family.recurring_transactions.find_by(find_conditions)
+          next unless recurring_transaction
+
+          # Skip manual recurring transactions
+          if recurring_transaction.manual?
+            update_manual_recurring_variance(recurring_transaction, pattern)
+            next
+          end
+
+          recurring_transaction.update!(
+            expected_day_of_month: pattern[:expected_day_of_month],
+            last_occurrence_date: pattern[:last_occurrence_date],
+            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
+            occurrence_count: pattern[:occurrence_count]
+          )
         end
-
-        recurring_transaction.assign_attributes(
-          expected_day_of_month: pattern[:expected_day_of_month],
-          last_occurrence_date: pattern[:last_occurrence_date],
-          next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
-          occurrence_count: pattern[:occurrence_count],
-          status: recurring_transaction.new_record? ? "active" : recurring_transaction.status
-        )
-
-        recurring_transaction.save!
       end
 
       # Also check for manual recurring transactions that might need variance updates

@@ -1,0 +1,25 @@
+---
+zh-TW:
+  helpers:
+    label:
+      user:
+        invite_code: 邀請碼
+    submit:
+      user:
+        create: 繼續
+  registrations:
+    closed: 目前已關閉註冊。
+    create:
+      failure: 註冊時發生問題。
+      invalid_invite_code: 邀請碼無效，請再試一次。
+      success: 您已成功註冊。
+    new:
+      invitation_message: "%{inviter} 已邀請您以 %{role} 身分加入"
+      join_family_title: 加入 %{family}
+      role_admin: 管理員
+      role_member: 成員
+      submit: 建立帳號
+      title: 建立您的帳號
+      welcome_body: 在開始之前，您必須註冊一個新帳號。註冊完成後，您將能在應用程式內進行進階設定。
+      welcome_title: 歡迎使用自行代管的 %{product_name}！
+      password_placeholder: 輸入您的密碼

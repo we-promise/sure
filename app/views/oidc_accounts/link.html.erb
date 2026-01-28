@@ -53,14 +53,20 @@
       <% end %>
     </div>
 
-    <%= render DS::Button.new(
-      text: "Create Account",
-      href: create_user_oidc_account_path,
-      full_width: true,
-      variant: :primary,
-      method: :post,
-      data: { turbo: false }
-    ) %>
+    <% if @allow_account_creation %>
+      <%= render DS::Button.new(
+        text: "Create Account",
+        href: create_user_oidc_account_path,
+        full_width: true,
+        variant: :primary,
+        method: :post,
+        data: { turbo: false }
+      ) %>
+    <% else %>
+      <p class="text-xs text-secondary">
+        <%= t("oidc_accounts.link.account_creation_disabled") %>
+      </p>
+    <% end %>
   </div>
 <% end %>
 

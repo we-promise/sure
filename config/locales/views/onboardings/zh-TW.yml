@@ -1,0 +1,27 @@
+---
+zh-TW:
+  onboardings:
+    header:
+      sign_out: 登出
+    preferences:
+      currency: 幣別
+      date_format: 日期格式
+      example: 帳戶範例
+      locale: 語言
+      preview: 預覽根據偏好設定顯示的資料。
+      submit: 完成
+      subtitle: 讓我們來設定您的偏好設定。
+      title: 設定您的偏好設定
+    profile:
+      country: 國家
+      first_name: 名字
+      household_name: 家戶名稱
+      last_name: 姓氏
+      profile_image: 個人頭像
+      submit: 繼續
+      subtitle: 讓我們完成您的個人資料。
+      title: 進行基礎設定
+    show:
+      message: 我們很高興您的加入！接下來我們會詢問幾個問題來完善您的個人資料，並完成所有設定。
+      setup: 開始設定帳號
+      title: 認識 %{product_name}

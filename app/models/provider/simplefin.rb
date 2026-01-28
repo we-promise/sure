@@ -1,8 +1,29 @@
 class Provider::Simplefin
+  # Pending: some institutions do not return pending transactions even with `pending=1`.
+  # This is provider variability (not a bug). For troubleshooting, you can set
+  # `SIMPLEFIN_INCLUDE_PENDING=1` and/or `SIMPLEFIN_DEBUG_RAW=1` (both default-off).
+  # These are centralized in `Rails.configuration.x.simplefin.*` via
+  # `config/initializers/simplefin.rb`.
   include HTTParty
 
   headers "User-Agent" => "Sure Finance SimpleFin Client"
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
+
+  # Retry configuration for transient network failures
+  MAX_RETRIES = 3
+  INITIAL_RETRY_DELAY = 2 # seconds
+  MAX_RETRY_DELAY = 30 # seconds
+
+  # Errors that are safe to retry (transient network issues)
+  RETRYABLE_ERRORS = [
+    SocketError,
+    Net::OpenTimeout,
+    Net::ReadTimeout,
+    Errno::ECONNRESET,
+    Errno::ECONNREFUSED,
+    Errno::ETIMEDOUT,
+    EOFError
+  ].freeze
 
   def initialize
   end
@@ -11,7 +32,11 @@ class Provider::Simplefin
     # Decode the base64 setup token to get the claim URL
     claim_url = Base64.decode64(setup_token)
 
-    response = HTTParty.post(claim_url)
+    # Use retry logic for transient network failures during token claim
+    # Claim should be fast; keep request-path latency bounded.
+    response = with_retries("POST /claim", max_retries: 1, sleep: false) do
+      HTTParty.post(claim_url, timeout: 15)
+    end
 
     case response.code
     when 200
@@ -44,18 +69,11 @@ class Provider::Simplefin
     accounts_url = "#{access_url}/accounts"
     accounts_url += "?#{URI.encode_www_form(query_params)}" unless query_params.empty?
 
-
     # The access URL already contains HTTP Basic Auth credentials
-    begin
-      response = HTTParty.get(accounts_url)
-    rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-      Rails.logger.error "SimpleFin API: GET /accounts failed: #{e.class}: #{e.message}"
-      raise SimplefinError.new("Exception during GET request: #{e.message}", :request_failed)
-    rescue => e
-      Rails.logger.error "SimpleFin API: Unexpected error during GET /accounts: #{e.class}: #{e.message}"
-      raise SimplefinError.new("Exception during GET request: #{e.message}", :request_failed)
+    # Use retry logic with exponential backoff for transient network failures
+    response = with_retries("GET /accounts") do
+      HTTParty.get(accounts_url)
     end
-
 
     case response.code
     when 200
@@ -67,6 +85,12 @@ class Provider::Simplefin
       raise SimplefinError.new("Access URL is no longer valid", :access_forbidden)
     when 402
       raise SimplefinError.new("Payment required to access this account", :payment_required)
+    when 429
+      Rails.logger.warn "SimpleFin API: Rate limited - #{response.body}"
+      raise SimplefinError.new("SimpleFin rate limit exceeded. Please try again later.", :rate_limited)
+    when 500..599
+      Rails.logger.error "SimpleFin API: Server error - Code: #{response.code}, Body: #{response.body}"
+      raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
     else
       Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
       raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
@@ -92,4 +116,55 @@ class Provider::Simplefin
       @error_type = error_type
     end
   end
+
+  private
+
+    # Execute a block with retry logic and exponential backoff for transient network errors.
+    # This helps handle temporary network issues that cause autosync failures while
+    # manual sync (with user retry) succeeds.
+    def with_retries(operation_name, max_retries: MAX_RETRIES, sleep: true)
+      retries = 0
+
+      begin
+        yield
+      rescue *RETRYABLE_ERRORS => e
+        retries += 1
+
+        if retries <= max_retries
+          delay = calculate_retry_delay(retries)
+          Rails.logger.warn(
+            "SimpleFin API: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
+            "#{e.class}: #{e.message}. Retrying in #{delay}s..."
+          )
+          Kernel.sleep(delay) if sleep && delay.to_f.positive?
+          retry
+        else
+          Rails.logger.error(
+            "SimpleFin API: #{operation_name} failed after #{max_retries} retries: " \
+            "#{e.class}: #{e.message}"
+          )
+          raise SimplefinError.new(
+            "Network error after #{max_retries} retries: #{e.message}",
+            :network_error
+          )
+        end
+      rescue SimplefinError => e
+        # Preserve original error type and message.
+        raise
+      rescue => e
+        # Non-retryable errors are logged and re-raised immediately
+        Rails.logger.error "SimpleFin API: #{operation_name} failed with non-retryable error: #{e.class}: #{e.message}"
+        raise SimplefinError.new("Exception during #{operation_name}: #{e.message}", :request_failed)
+      end
+    end
+
+    # Calculate delay with exponential backoff and jitter
+    def calculate_retry_delay(retry_count)
+      # Exponential backoff: 2^retry * initial_delay
+      base_delay = INITIAL_RETRY_DELAY * (2 ** (retry_count - 1))
+      # Add jitter (0-25% of base delay) to prevent thundering herd
+      jitter = base_delay * rand * 0.25
+      # Cap at max delay
+      [ base_delay + jitter, MAX_RETRY_DELAY ].min
+    end
 end

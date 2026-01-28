@@ -1,0 +1,39 @@
+---
+fr:
+  rules:
+    no_action: Aucune action
+    actions:
+      value_placeholder: Entrez une valeur
+    apply_all:
+      button: Appliquer tout
+      confirm_title: Appliquer toutes les règles
+      confirm_message: Vous êtes sur le point d'appliquer %{count} règles affectant %{transactions} transactions uniques. Veuillez confirmer si vous souhaitez continuer.
+      confirm_button: Confirmer et appliquer tout
+      success: Toutes les règles ont été mises en file d'attente pour exécution
+      ai_cost_title: Estimation du coût IA
+      ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions} transactions.
+      estimated_cost: "Coût estimé : ~%{cost} $"
+      cost_unavailable_model: Estimation du coût non disponible pour le modèle "%{model}".
+      cost_unavailable_no_provider: Estimation du coût non disponible (aucun fournisseur LLM configuré).
+      cost_warning: Vous pourriez encourir des frais, veuillez vérifier auprès du fournisseur du modèle pour les prix les plus récents.
+      view_usage: Voir l'historique d'utilisation
+    recent_runs:
+      title: Exécutions récentes
+      description: Consultez l'historique d'exécution de vos règles, y compris le statut de réussite/échec et le nombre de transactions.
+      unnamed_rule: Règle sans nom
+      columns:
+        date_time: Date/Heure
+        execution_type: Type
+        status: Statut
+        rule_name: Nom de la règle
+        transactions_counts:
+          queued: En file d'attente
+          processed: Traitées
+          modified: Modifiées
+      execution_types:
+        manual: Manuel
+        scheduled: Planifié
+      statuses:
+        pending: En attente
+        success: Réussi
+        failed: Échoué

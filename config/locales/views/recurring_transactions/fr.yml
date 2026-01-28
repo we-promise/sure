@@ -1,0 +1,49 @@
+---
+fr:
+  recurring_transactions:
+    title: Transactions récurrentes
+    upcoming: Transactions récurrentes à venir
+    projected: Projeté
+    recurring: Récurrent
+    expected_on: Attendu le %{date}
+    day_of_month: Jour %{day} du mois
+    identify_patterns: Identifier les modèles
+    cleanup_stale: Nettoyer les obsolètes
+    settings:
+      enable_label: Activer les transactions récurrentes
+      enable_description: Détecter automatiquement les modèles de transactions récurrentes et afficher les transactions projetées à venir.
+    settings_updated: Paramètres des transactions récurrentes mis à jour
+    info:
+      title: Détection automatique des modèles
+      manual_description: Vous pouvez identifier manuellement les modèles ou nettoyer les transactions récurrentes obsolètes en utilisant les boutons ci-dessus.
+      automatic_description: "L'identification automatique s'exécute également après :"
+      triggers:
+        - Les importations CSV sont terminées (transactions, trades, comptes, etc.)
+        - Toute synchronisation de fournisseur est terminée (Plaid, SimpleFIN, etc.)
+    identified: "%{count} modèles de transactions récurrentes identifiés"
+    cleaned_up: "%{count} transactions récurrentes obsolètes nettoyées"
+    marked_inactive: Transaction récurrente marquée comme inactive
+    marked_active: Transaction récurrente marquée comme active
+    deleted: Transaction récurrente supprimée
+    confirm_delete: Êtes-vous sûr(e) de vouloir supprimer cette transaction récurrente ?
+    marked_as_recurring: Transaction marquée comme récurrente
+    already_exists: Une transaction récurrente manuelle existe déjà pour ce modèle
+    creation_failed: Échec de la création de la transaction récurrente. Veuillez vérifier les détails de la transaction et réessayer.
+    unexpected_error: Une erreur inattendue s'est produite lors de la création de la transaction récurrente
+    amount_range: "Plage : %{min} à %{max}"
+    empty:
+      title: Aucune transaction récurrente trouvée
+      description: Cliquez sur "Identifier les modèles" pour détecter automatiquement les transactions récurrentes à partir de votre historique de transactions.
+    table:
+      merchant: Nom
+      amount: Montant
+      expected_day: Jour prévu
+      next_date: Prochaine date
+      last_occurrence: Dernière occurrence
+      status: Statut
+      actions: Actions
+    status:
+      active: Actif
+      inactive: Inactif
+    badges:
+      manual: Manuel

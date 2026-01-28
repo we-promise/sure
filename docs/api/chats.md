@@ -1,228 +1,59 @@
 # Chat API Documentation
 
-The Chat API allows external applications to interact with Sure's AI chat functionality.
+The Chat API allows external applications to interact with Sure's AI chat functionality. The OpenAPI description is generated directly from executable request specs, ensuring it always reflects the behaviour of the running Rails application.
 
-## Authentication
+## Generated OpenAPI specification
 
-All chat endpoints require authentication via OAuth2 or API keys. The chat endpoints also require the user to have AI features enabled (`ai_enabled: true`).
+- The source of truth for the documentation lives in [`spec/requests/api/v1/chats_spec.rb`](../../spec/requests/api/v1/chats_spec.rb). These specs authenticate against the Rails stack, exercise every chat endpoint, and capture real response shapes.
+- Regenerate the OpenAPI document with:
 
-## Endpoints
+  ```sh
+  RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
+  ```
 
-### List Chats
-```
-GET /api/v1/chats
-```
+  The task compiles the request specs and writes the result to [`docs/api/openapi.yaml`](openapi.yaml).
 
-**Required Scope:** `read`
+- Run just the documentation specs with:
 
-**Response:**
-```json
-{
-  "chats": [
-    {
-      "id": "uuid",
-      "title": "Chat title",
-      "last_message_at": "2024-01-01T00:00:00Z",
-      "message_count": 5,
-      "error": null,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "per_page": 20,
-    "total_count": 50,
-    "total_pages": 3
-  }
-}
-```
+  ```sh
+  bundle exec rspec spec/requests/api/v1/chats_spec.rb
+  ```
 
-### Get Chat
-```
-GET /api/v1/chats/:id
-```
+## Authentication requirements
 
-**Required Scope:** `read`
+All chat endpoints require an OAuth2 access token or API key that grants the appropriate scope. The authenticated user must also have AI features enabled (`ai_enabled: true`).
 
-**Response:**
-```json
-{
-  "id": "uuid",
-  "title": "Chat title",
-  "error": null,
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "messages": [
-    {
-      "id": "uuid",
-      "type": "user_message",
-      "role": "user",
-      "content": "Hello AI",
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": "uuid",
-      "type": "assistant_message",
-      "role": "assistant",
-      "content": "Hello! How can I help you?",
-      "model": "gpt-4",
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z",
-      "tool_calls": []
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "per_page": 50,
-    "total_count": 2,
-    "total_pages": 1
-  }
-}
-```
+## Available endpoints
 
-### Create Chat
-```
-POST /api/v1/chats
-```
+| Endpoint | Scope | Description |
+| --- | --- | --- |
+| `GET /api/v1/chats` | `read` | List chats for the authenticated user with pagination metadata. |
+| `GET /api/v1/chats/{id}` | `read` | Retrieve a chat, including ordered messages and optional pagination. |
+| `POST /api/v1/chats` | `write` | Create a chat and optionally seed it with an initial user message. |
+| `PATCH /api/v1/chats/{id}` | `write` | Update a chat title. |
+| `DELETE /api/v1/chats/{id}` | `write` | Permanently delete a chat. |
+| `POST /api/v1/chats/{chat_id}/messages` | `write` | Append a user message to a chat. |
+| `POST /api/v1/chats/{chat_id}/messages/retry` | `write` | Retry the last assistant response in a chat. |
 
-**Required Scope:** `write`
+Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (pagination, errors, messages, tool calls), and security definitions.
 
-**Request Body:**
-```json
-{
-  "title": "Optional chat title",
-  "message": "Initial message to AI",
-  "model": "gpt-4" // optional, defaults to gpt-4
-}
-```
+## AI response behaviour
 
-**Response:** Same as Get Chat endpoint
+- Chat creation and message submission queue AI processing jobs asynchronously; the API responds immediately with the user message payload.
+- Poll `GET /api/v1/chats/{id}` to detect new assistant messages (`type: "assistant_message"`).
+- Supported models today: `gpt-4` (default), `gpt-4-turbo`, and `gpt-3.5-turbo`.
+- Assistant responses may include structured tool calls (`tool_calls`) that reference financial data fetches and their results.
 
-### Update Chat
-```
-PATCH /api/v1/chats/:id
-```
+## Error responses
 
-**Required Scope:** `write`
-
-**Request Body:**
-```json
-{
-  "title": "New chat title"
-}
-```
-
-**Response:** Same as Get Chat endpoint
-
-### Delete Chat
-```
-DELETE /api/v1/chats/:id
-```
-
-**Required Scope:** `write`
-
-**Response:** 204 No Content
-
-### Create Message
-```
-POST /api/v1/chats/:chat_id/messages
-```
-
-**Required Scope:** `write`
-
-**Request Body:**
-```json
-{
-  "content": "User message",
-  "model": "gpt-4" // optional, defaults to gpt-4
-}
-```
-
-**Response:**
-```json
-{
-  "id": "uuid",
-  "chat_id": "uuid",
-  "type": "user_message",
-  "role": "user",
-  "content": "User message",
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "ai_response_status": "pending",
-  "ai_response_message": "AI response is being generated"
-}
-```
-
-### Retry Last Message
-```
-POST /api/v1/chats/:chat_id/messages/retry
-```
-
-**Required Scope:** `write`
-
-Retries the last assistant message in the chat.
-
-**Response:**
-```json
-{
-  "message": "Retry initiated",
-  "message_id": "uuid"
-}
-```
-
-## AI Response Handling
-
-AI responses are processed asynchronously. When you create a message or chat with an initial message, the API returns immediately with the user message. The AI response is generated in the background.
-
-### Checking for AI Responses
-
-Currently, you need to poll the chat endpoint to check for new AI responses. Look for new messages with `type: "assistant_message"`.
-
-### Available AI Models
-
-- `gpt-4` (default)
-- `gpt-4-turbo`
-- `gpt-3.5-turbo`
-
-### Tool Calls
-
-The AI assistant can make tool calls to access user financial data. These appear in the `tool_calls` array of assistant messages:
-
-```json
-{
-  "tool_calls": [
-    {
-      "id": "uuid",
-      "function_name": "get_accounts",
-      "function_arguments": {},
-      "function_result": { ... },
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ]
-}
-```
-
-## Error Handling
-
-All endpoints return standard error responses:
+Errors conform to the shared `ErrorResponse` schema in the OpenAPI document:
 
 ```json
 {
   "error": "error_code",
   "message": "Human readable error message",
-  "details": ["Additional error details"] // optional
+  "details": ["Optional array of extra context"]
 }
 ```
 
-Common error codes:
-- `unauthorized` - Invalid or missing authentication
-- `forbidden` - Insufficient permissions or AI not enabled
-- `not_found` - Resource not found
-- `unprocessable_entity` - Invalid request data
-- `rate_limit_exceeded` - Too many requests
-
-## Rate Limits
-
-Chat API endpoints are subject to the standard API rate limits based on your API key tier.
+Common error codes include `unauthorized`, `forbidden`, `feature_disabled`, `not_found`, `unprocessable_entity`, and `rate_limit_exceeded`.

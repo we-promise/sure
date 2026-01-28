@@ -21,7 +21,7 @@ class RegistrationsController < ApplicationController
     else
       family = Family.new
       @user.family = family
-      @user.role = :admin
+      @user.role = User.role_for_new_family_creator
     end
 
     if @user.save

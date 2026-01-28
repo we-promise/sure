@@ -1,0 +1,19 @@
+---
+nl:
+  invitations:
+    create:
+      failure: Kon uitnodiging niet verzenden
+      success: Uitnodiging succesvol verzonden
+    destroy:
+      failure: Er was een probleem met het verwijderen van de uitnodiging.
+      not_authorized: U bent niet gemachtigd om uitnodigingen te beheren.
+      success: Uitnodiging is succesvol verwijderd.
+    new:
+      email_label: E-mailadres
+      email_placeholder: Voer e-mailadres in
+      role_admin: Administrator
+      role_label: Rol
+      role_member: Lid
+      submit: Verstuur uitnodiging
+      subtitle: Verstuur een uitnodiging om lid te worden van uw familieaccount op %{product_name}
+      title: Nodig iemand uit

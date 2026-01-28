@@ -6,14 +6,18 @@ ca:
         transfer:
           attributes:
             base:
-              inflow_cannot_be_in_multiple_transfers: La transacció d'entrada no pot formar part de múltiples transferències
-              must_be_from_different_accounts: La transferència ha de tenir comptes diferents
+              inflow_cannot_be_in_multiple_transfers: La transacció d'entrada no pot
+                formar part de múltiples transferències
+              must_be_from_different_accounts: La transferència ha de tenir comptes
+                diferents
               must_be_from_same_family: La transferència ha de ser de la mateixa família
-              must_be_within_date_range: Les dates de les transaccions de transferència han d'estar dins d'un marge de 4 dies
-              must_have_opposite_amounts: Les transaccions de transferència han de tenir imports oposats
+              must_be_within_date_range: Les dates de les transaccions de transferència
+                han d'estar dins d'un marge de 4 dies
+              must_have_opposite_amounts: Les transaccions de transferència han de
+                tenir imports oposats
               must_have_single_currency: La transferència ha de tenir una sola moneda
-              outflow_cannot_be_in_multiple_transfers: La transacció de sortida no pot formar part de múltiples transferències
+              outflow_cannot_be_in_multiple_transfers: La transacció de sortida no
+                pot formar part de múltiples transferències
   transfer:
     name: Transferència a %{to_account}
     payment_name: Pagament a %{to_account}
-

@@ -2,30 +2,52 @@
 ca:
   pages:
     changelog:
-      title: "Novetats"
+      title: Novetats
     dashboard:
-      welcome: "Benvingut/da de nou, %{name}"
-      subtitle: "Això és el que està passant amb les teves finances"
-      new: "Nou"
-      net_worth_chart:
-        data_not_available: "Dades no disponibles per al període seleccionat"
-        title: "Patrimoni net"
-      no_account_empty_state:
-        new_account: "Nou compte"
-        no_account_subtitle: "Com que no s'ha afegit cap compte, no hi ha dades per mostrar. Afegeix els teus primers comptes per començar a veure dades al tauler."
-        no_account_title: "Encara no hi ha comptes"
       balance_sheet:
-        no_items: "Encara no hi ha %{name}"
-        add_accounts: "Afegeix els teus comptes de %{name} per veure'n el detall complet"
+        add_accounts: Afegeix els teus comptes de %{name} per veure'n el detall complet
+        no_items: Encara no hi ha %{name}
+        title: Balanç patrimonial
       cashflow_sankey:
-        title: "Flux de caixa"
-        no_data_title: "No hi ha dades de flux de caixa per a aquest període de temps"
-        no_data_description: "Afegeix transaccions per mostrar dades de flux de caixa o amplia el període de temps"
-        add_transaction: "Afegeix una transacció"
+        add_transaction: Afegeix una transacció
+        no_data_description: Afegeix transaccions per mostrar dades de flux de caixa
+          o amplia el període de temps
+        no_data_title: No hi ha dades de flux de caixa per a aquest període de temps
+        title: Flux de caixa
+      drag_to_reorder: Arrossega per reordenar la secció
+      investment_summary:
+        add_investment: Afegeix un compte d'inversió per seguir el teu portafoli
+        contributions: Contribucions
+        holding: Posició
+        no_investments: No hi ha comptes d'inversió
+        period_activity: "Activitat del %{period}"
+        return: Rendiment
+        title: Inversions
+        total_return: Rendiment total
+        trades: Negocis
+        value: Valor
+        weight: Pes
+        withdrawals: Retirades
+      net_worth_chart:
+        data_not_available: Dades no disponibles per al període seleccionat
+        title: Patrimoni net
+      new: Nou
+      no_account_empty_state:
+        new_account: Nou compte
+        no_account_subtitle: Com que no s'ha afegit cap compte, no hi ha dades per
+          mostrar. Afegeix els teus primers comptes per començar a veure dades al
+          tauler.
+        no_account_title: Encara no hi ha comptes
       no_accounts:
-        title: "Encara no hi ha comptes"
-        description: "Afegeix comptes per mostrar dades de patrimoni net"
-        add_account: "Afegeix un compte"
+        add_account: Afegeix un compte
+        description: Afegeix comptes per mostrar dades de patrimoni net
+        title: Encara no hi ha comptes
       outflows_donut:
-        title: "Sortides"
-        total_outflows: "Total sortides"
+        categories: Categories
+        title: Sortides
+        total_outflows: Total sortides
+        value: Valor
+        weight: Pes
+      subtitle: Això és el que està passant amb les teves finances
+      toggle_section: Commuta la visibilitat de la secció
+      welcome: Benvingut/da de nou, %{name}

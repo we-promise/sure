@@ -188,6 +188,9 @@ OPENAI_URI_BASE=http://localhost:11434/v1
 
 # Model you pulled
 OPENAI_MODEL=llama3.1:13b
+
+# Optional: enable debug logging in the AI chat
+AI_DEBUG_MODE=true 
 ```
 
 **Important:** When using Ollama or any custom provider:
@@ -204,6 +207,7 @@ services:
       - OPENAI_ACCESS_TOKEN=ollama-local
       - OPENAI_URI_BASE=http://ollama:11434/v1
       - OPENAI_MODEL=llama3.1:13b
+      - AI_DEBUG_MODE=true # Optional: enable debug logging in the AI chat
     depends_on:
       - ollama
   
@@ -235,7 +239,7 @@ volumes:
 
 ### For Chat Assistant
 
-The AI assistant needs to understand financial context and perform function calling:
+The AI assistant needs to understand financial context and perform **function/tool** calling:
 
 **Cloud:**
 - **Best:** `gpt-4.1` or `gpt-5` - Most reliable, best function calling
@@ -245,7 +249,7 @@ The AI assistant needs to understand financial context and perform function call
 **Local:**
 - **Best:** `qwen3-30b` - Strong function calling and reasoning (24GB+ VRAM, 14GB at 3bit quantised )
 - **Good:** `openai/gpt-oss-20b` - Solid performance (12GB VRAM)
-- **Budget:** `qwen3-8b` - Minimal hardware (8GB VRAM), still supports tool calling
+- **Budget:** `qwen3-8b`, `llama3.1-8b` - Minimal hardware (8GB VRAM), still supports tool calling
 
 ### For Auto-Categorization
 
@@ -282,6 +286,69 @@ For self-hosted deployments, you can configure AI settings through the web inter
    - **OpenAI Model** - Model name (required for custom endpoints)
 
 **Note:** Settings in the UI override environment variables. If you change settings in the UI, those values take precedence.
+
+## AI Cache Management
+
+Sure caches AI-generated results (like auto-categorization and merchant detection) to avoid redundant API calls and costs. However, there are situations where you may want to clear this cache.
+
+### What is the AI Cache?
+
+When AI rules process transactions, Sure stores:
+- **Enrichment records**: Which attributes were set by AI (category, merchant, etc.)
+- **Attribute locks**: Prevents rules from re-processing already-handled transactions
+
+This caching means:
+- Transactions won't be sent to the LLM repeatedly
+- Your API costs are minimized
+- Processing is faster on subsequent rule runs
+
+### When to Reset the AI Cache
+
+You might want to reset the cache when:
+
+1. **Switching LLM models**: Different models may produce better categorizations
+2. **Improving prompts**: After system updates with better prompts
+3. **Fixing miscategorizations**: When AI made systematic errors
+4. **Testing**: During development or evaluation of AI features
+
+> [!CAUTION]
+> Resetting the AI cache will cause all transactions to be re-processed by AI rules on the next run. This **will incur API costs** if using a cloud provider.
+
+### How to Reset the AI Cache
+
+**Via UI (Recommended):**
+1. Go to **Settings** → **Rules**
+2. Click the menu button (three dots)
+3. Select **Reset AI cache**
+4. Confirm the action
+
+The cache is cleared asynchronously in the background. You'll see a confirmation message when the process starts.
+
+**Automatic Reset:**
+The AI cache is automatically cleared for all users when the OpenAI model setting is changed. This ensures that the new model processes transactions fresh.
+
+### What Happens When Cache is Reset
+
+1. **AI-locked attributes are unlocked**: Transactions can be re-enriched
+2. **AI enrichment records are deleted**: The history of AI changes is cleared
+3. **User edits are preserved**: If you manually changed a category after AI set it, your change is kept
+
+### Cost Implications
+
+Before resetting the cache, consider:
+
+| Scenario | Approximate Cost |
+|----------|------------------|
+| 100 transactions | $0.05-0.20 |
+| 1,000 transactions | $0.50-2.00 |
+| 10,000 transactions | $5.00-20.00 |
+
+*Costs vary by model. Use `gpt-4o-mini` for lower costs.*
+
+**Tips to minimize costs:**
+- Use narrow rule filters before running AI actions
+- Reset cache only when necessary
+- Consider using local LLMs for bulk re-processing
 
 ## Observability with Langfuse
 

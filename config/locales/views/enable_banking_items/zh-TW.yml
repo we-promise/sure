@@ -1,0 +1,49 @@
+---
+zh-TW:
+  enable_banking_items:
+    authorize:
+      authorization_failed: 啟動授權失敗
+      bank_required: 請選擇一家銀行。
+      invalid_redirect: 收到的授權 URL 無效。請重試或聯絡支援人員。
+      redirect_uri_not_allowed: 不允許重新導向。請在 Enable Banking 應用設定中設定 `%{callback_url}`。
+      unexpected_error: 發生未預期的錯誤。請重試。
+    callback:
+      authorization_error: 授權失敗
+      invalid_callback: 回呼參數無效。
+      item_not_found: 未找到連線。
+      session_failed: 無法完成授權
+      success: 已成功連線到您的銀行。您的帳戶正在同步中。
+      unexpected_error: 發生未預期的錯誤。請重試。
+    complete_account_setup:
+      all_skipped: 已跳過所有帳戶。您可以稍後在帳戶頁面進行設定。
+      no_accounts: 沒有可設定的帳戶。
+      success: 成功建立了 %{count} 個帳戶！
+    create:
+      success: Enable Banking 設定成功。
+    destroy:
+      success: Enable Banking 連線已加入刪除隊列。
+    link_accounts:
+      already_linked: 所選帳戶已關聯。
+      link_failed: 關聯帳戶失敗
+      no_accounts_selected: 未選擇任何帳戶。
+      no_session: 無活躍的 Enable Banking 連線。請先連線一家銀行。
+      success: 成功關聯了 %{count} 個帳戶。
+    link_existing_account:
+      errors:
+        invalid_enable_banking_account: 所選 Enable Banking 帳戶無效
+        only_manual: 只能關聯手動帳戶
+      success: 帳戶已成功關聯到 Enable Banking
+    new:
+      link_enable_banking_title: 關聯 Enable Banking
+    reauthorize:
+      invalid_redirect: 收到的授權 URL 無效。請重試或聯絡支援人員。
+      reauthorization_failed: 重新授權失敗
+    select_bank:
+      cancel: 取消
+      check_country: 請檢查您的國家代碼設定。
+      credentials_required: 請先設定您的 Enable Banking 憑證。
+      description: 選擇您想要連線到帳戶的銀行。
+      no_banks: 該國家/地區暫無可用銀行。
+      title: 選擇您的銀行
+    update:
+      success: Enable Banking 設定已更新。

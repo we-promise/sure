@@ -27,6 +27,9 @@ class TransactionImport < Import
         category = mappings.categories.mappable_for(row.category)
         tags = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
 
+        # Use account's currency when no currency column was mapped in CSV, with family currency as fallback
+        effective_currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
+
         # Check for duplicate transactions using the adapter's deduplication logic
         # Pass claimed_entry_ids to exclude entries we've already matched in this import
         # This ensures identical rows within the CSV are all imported as separate transactions
@@ -34,7 +37,7 @@ class TransactionImport < Import
         duplicate_entry = adapter.find_duplicate_transaction(
           date: row.date_iso,
           amount: row.signed_amount,
-          currency: row.currency,
+          currency: effective_currency,
           name: row.name,
           exclude_entry_ids: claimed_entry_ids
         )
@@ -45,10 +48,12 @@ class TransactionImport < Import
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.notes = row.notes if row.notes.present?
           duplicate_entry.import = self
+          duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
           claimed_entry_ids.add(duplicate_entry.id)
         else
           # Create new transaction (no duplicate found)
+          # Mark as import_locked to protect from provider sync overwrites
           new_transactions << Transaction.new(
             category: category,
             tags: tags,
@@ -57,9 +62,10 @@ class TransactionImport < Import
               date: row.date_iso,
               amount: row.signed_amount,
               name: row.name,
-              currency: row.currency,
+              currency: effective_currency,
               notes: row.notes,
-              import: self
+              import: self,
+              import_locked: true
             )
           )
         end

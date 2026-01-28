@@ -1,0 +1,126 @@
+---
+nl:
+  investments:
+    edit:
+      edit: "%{account} bewerken"
+    form:
+      none: Geen
+      subtype_prompt: Selecteer investeringstype
+    new:
+      title: Accountsaldo invoeren
+    show:
+      chart_title: Totale waarde
+    subtypes:
+      # United States
+      brokerage:
+        short: Beleggingsrekening
+        long: Beleggingsrekening
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: Traditionele IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529 Plan
+        long: 529 Onderwijs Spaarplan
+      hsa:
+        short: HSA
+        long: Gezondheidsspaarrekening
+      ugma:
+        short: UGMA
+        long: UGMA Bewaarrekening
+      utma:
+        short: UTMA
+        long: UTMA Bewaarrekening
+      # United Kingdom
+      isa:
+        short: ISA
+        long: Individuele Spaarrekening
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Zelfbeheerd Persoonlijk Pensioen
+      workplace_pension_uk:
+        short: Pensioen
+        long: Werknemerspensioen
+      # Canada
+      rrsp:
+        short: RRSP
+        long: Geregistreerd Pensioenspaarplan
+      tfsa:
+        short: TFSA
+        long: Belastingvrije Spaarrekening
+      resp:
+        short: RESP
+        long: Geregistreerd Onderwijs Spaarplan
+      lira:
+        short: LIRA
+        long: Vergrendelde Pensioenrekening
+      rrif:
+        short: RRIF
+        long: Geregistreerd Pensioeninkomen Fonds
+      # Australia
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Zelfbeheerd Super Fonds
+      # Europe
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pijler 3a
+        long: Privé Pensioen (Pijler 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      # Generic
+      pension:
+        short: Pensioen
+        long: Pensioen
+      retirement:
+        short: Pensioen
+        long: Pensioenrekening
+      mutual_fund:
+        short: Beleggingsfonds
+        long: Beleggingsfonds
+      angel:
+        short: Angel
+        long: Angel Investering
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Overig
+        long: Overige investering
+    value_tooltip:
+      cash: Liquiditeiten
+      holdings: Bezittingen
+      total: Portfolio saldo
+      total_value_tooltip: Het totale portfolio saldo is de som van makelaar liquiditeiten (beschikbaar voor handelen) en de huidige marktwaarde van uw bezittingen.

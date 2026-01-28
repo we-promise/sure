@@ -1,0 +1,49 @@
+---
+nl:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Autorisatie starten mislukt
+      bank_required: Selecteer een bank.
+      invalid_redirect: De ontvangen autorisatie URL is ongeldig. Probeer het opnieuw.
+      redirect_uri_not_allowed: Redirect niet toegestaan. Configureer `%{callback_url}` in uw Enable Banking app instellingen.
+      unexpected_error: Er is een onverwachte fout opgetreden. Probeer het opnieuw.
+    callback:
+      authorization_error: Autorisatie mislukt
+      invalid_callback: Ongeldige callback parameters.
+      item_not_found: Verbinding niet gevonden.
+      session_failed: Kan autorisatie niet voltooien
+      success: Succesvol verbonden met uw bank. Uw accounts worden gesynchroniseerd.
+      unexpected_error: Er is een onverwachte fout opgetreden. Probeer het opnieuw.
+    complete_account_setup:
+      all_skipped: Alle accounts zijn overgeslagen. U kunt ze later instellen op de accountpagina.
+      no_accounts: Geen accounts beschikbaar om in te stellen.
+      success: Succesvol %{count} accounts aangemaakt!
+    create:
+      success: Enable Banking configuratie succesvol.
+    destroy:
+      success: Enable Banking verbinding is in de wachtrij voor verwijdering geplaatst.
+    link_accounts:
+      already_linked: De geselecteerde accounts zijn al gekoppeld.
+      link_failed: Accounts koppelen mislukt
+      no_accounts_selected: Geen accounts geselecteerd.
+      no_session: Geen actieve Enable Banking verbinding. Maak eerst verbinding met een bank.
+      success: Succesvol %{count} accounts gekoppeld.
+    link_existing_account:
+      success: Account succesvol gekoppeld aan Enable Banking
+      errors:
+        only_manual: Alleen handmatige accounts kunnen worden gekoppeld
+        invalid_enable_banking_account: Ongeldige Enable Banking account geselecteerd
+    new:
+      link_enable_banking_title: Enable Banking koppelen
+    reauthorize:
+      invalid_redirect: De ontvangen autorisatie URL is ongeldig. Probeer het opnieuw.
+      reauthorization_failed: Opnieuw autoriseren mislukt
+    select_bank:
+      cancel: Annuleren
+      check_country: Controleer uw landcode instellingen.
+      credentials_required: Configureer eerst uw Enable Banking inloggegevens.
+      description: Selecteer de bank die u wilt koppelen aan uw accounts.
+      no_banks: Geen banken beschikbaar voor dit land/deze regio.
+      title: Selecteer uw bank
+    update:
+      success: Enable Banking configuratie bijgewerkt.

@@ -23,7 +23,7 @@
       <%= t(".#{step_mapping_class.name.demodulize.underscore}_title", import_type: @import.type.underscore.humanize) %>
     </h1>
     <p class="text-secondary text-sm">
-      <%= t(".#{step_mapping_class.name.demodulize.underscore}_description", import_type: @import.type.underscore.humanize) %>
+      <%= t(".#{step_mapping_class.name.demodulize.underscore}_description", import_type: @import.type.underscore.humanize, product_name: product_name) %>
     </p>
   </div>
 </div>

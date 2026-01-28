@@ -14,7 +14,7 @@ module Sure
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets tasks generators])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -41,5 +41,9 @@ module Sure
 
     # Enable Rack::Attack middleware for API rate limiting
     config.middleware.use Rack::Attack
+
+    # Handle OmniAuth/OIDC errors gracefully (must be before OmniAuth middleware)
+    require_relative "../app/middleware/omniauth_error_handler"
+    config.middleware.use OmniauthErrorHandler
   end
 end

@@ -9,6 +9,12 @@ class Rack::Attack
     request.ip if request.path == "/oauth/token"
   end
 
+  # Throttle admin endpoints to prevent brute-force attacks
+  # More restrictive than general API limits since admin access is sensitive
+  throttle("admin/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.path.start_with?("/admin/")
+  end
+
   # Determine limits based on self-hosted mode
   self_hosted = Rails.application.config.app_mode.self_hosted?
 

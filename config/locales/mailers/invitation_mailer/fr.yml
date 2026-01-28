@@ -1,0 +1,5 @@
+---
+fr:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} vous a invité à rejoindre sa famille sur %{product_name} !"

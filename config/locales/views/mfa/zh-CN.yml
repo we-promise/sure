@@ -1,0 +1,34 @@
+---
+zh-CN:
+  mfa:
+    backup_codes:
+      backup_codes_description: 每个代码仅能使用一次。请妥善保管这些代码。
+      backup_codes_title: 您的备用代码
+      continue: 继续前往安全设置
+      description: 请将这些备用代码保存在安全的地方——当您无法访问身份验证器应用时将需要它们
+      page_title: 备用代码
+      title: 保存您的备用代码
+    create:
+      invalid_code: 验证码无效，请重试。
+    disable:
+      success: 双重认证已停用
+    new:
+      code_label: 验证码
+      code_placeholder: 请输入6位数字代码
+      description: 设置双重认证以增强账户安全性
+      page_title: 双重认证设置
+      scan_description: 使用 Google Authenticator 或 1Password 等身份验证器应用扫描此二维码
+      scan_title: 1. 扫描二维码
+      secret_description: 如果无法扫描二维码，请在身份验证器应用中手动输入此密钥
+      secret_title: 手动输入密钥
+      title: 设置双重认证
+      verify_button: 验证并启用双重认证
+      verify_description: 请输入来自身份验证器应用的6位数字代码
+      verify_title: 2. 输入验证码
+    verify:
+      description: 请输入身份验证器应用中的代码以继续
+      page_title: 验证双重认证
+      title: 双重认证
+      verify_button: 验证
+    verify_code:
+      invalid_code: 身份验证码无效，请重试。

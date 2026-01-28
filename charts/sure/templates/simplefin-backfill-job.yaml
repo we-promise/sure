@@ -1,0 +1,63 @@
+{{- if and .Values.simplefin.encryption.enabled .Values.simplefin.encryption.backfill.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "sure.fullname" . }}-simplefin-backfill
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        {{- include "sure.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.simplefin.encryption.backfill.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.simplefin.encryption.backfill.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.simplefin.encryption.backfill.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.image.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.image.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: simplefin-backfill
+          image: {{ include "sure.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.simplefin.encryption.backfill.command | nindent 12 }}
+          args:
+            - {{ .Values.simplefin.encryption.backfill.args | quote }}
+          env:
+            {{- include "sure.env" (dict "ctx" . "includeDatabase" true "includeRedis" true) | nindent 12 }}
+            # Expose dry-run also via ENV for the Rake task convenience
+            - name: DRY_RUN
+              value: {{ ternary "true" "false" .Values.simplefin.encryption.backfill.dryRun | quote }}
+          {{- if .Values.rails.extraEnvFrom }}
+          envFrom:
+            {{- toYaml .Values.rails.extraEnvFrom | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.simplefin.encryption.backfill.resources | nindent 12 }}
+      {{- if .Values.rails.extraEnvFrom }}
+      {{/* envFrom applied at container level above in other templates; CronJob/Job supports it similarly, but here we keep explicit list. If needed, we can extend later. */}}
+      {{- end }}
+  ttlSecondsAfterFinished: {{ .Values.simplefin.encryption.backfill.ttlSecondsAfterFinished | default 600 }}
+{{- end }}

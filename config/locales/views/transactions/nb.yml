@@ -81,3 +81,5 @@ nb:
         equal_to: lik
         greater_than: større enn
         less_than: mindre enn
+      form:
+        toggle_selection_checkboxes: Veksle alle avkryssingsbokser

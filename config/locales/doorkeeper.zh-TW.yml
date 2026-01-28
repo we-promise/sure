@@ -1,0 +1,155 @@
+zh-TW:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: '應用程式名稱'
+        redirect_uri: '重新導向 URI'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: '不能包含片段（Fragment, #）。'
+              invalid_uri: '必須是有效的 URI。'
+              unspecified_scheme: '必須指定通訊協定（Scheme）。'
+              relative_uri: '必須是絕對 URI。'
+              secured_uri: '必須是 HTTPS/SSL URI。'
+              forbidden_uri: '此 URI 被伺服器禁止。'
+            scopes:
+              not_match_configured: "與伺服器上配置的權限範圍（Scopes）不符。"
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: '您確定要刪除嗎？'
+      buttons:
+        edit: '編輯'
+        destroy: '刪除'
+        submit: '送出'
+        cancel: '取消'
+        authorize: '授權'
+      form:
+        error: '哎呀！請檢查您的表單是否有誤'
+      help:
+        confidential: '應用程式將用於可以保密客戶端密鑰（Client Secret）的環境。原生行動應用程式（Native mobile apps）和單頁應用程式（SPA）被視為非機密性應用。'
+        redirect_uri: '每行輸入一個 URI'
+        blank_redirect_uri: "如果您設定的授權類型為客戶端憑證（Client Credentials）、資源擁有者密碼憑證（Resource Owner Password Credentials）或其他不需要重新導向 URI 的類型，請留白。"
+        scopes: '以空格分隔權限範圍（Scopes）。留白則使用預設範圍。'
+      edit:
+        title: '編輯應用程式'
+      index:
+        title: '您的應用程式'
+        new: '新增應用程式'
+        name: '名稱'
+        callback_url: '回呼 URL (Callback URL)'
+        confidential: '機密？'
+        actions: '操作'
+        confidentiality:
+          'yes': '是'
+          'no': '否'
+      new:
+        title: '新增應用程式'
+      show:
+        title: '應用程式：%{name}'
+        application_id: '客戶端 ID (UID)'
+        secret: '客戶端密鑰 (Secret)'
+        secret_hashed: '密鑰雜湊值 (Secret hashed)'
+        scopes: '權限範圍 (Scopes)'
+        confidential: '機密性'
+        callback_urls: '回呼 URL'
+        actions: '操作'
+        not_defined: '未定義'
+
+    authorizations:
+      buttons:
+        authorize: '授權'
+        deny: '拒絕'
+      error:
+        title: '發生錯誤'
+      new:
+        title: '需要授權'
+        prompt: '是否授權 %{client_name} 使用您的帳號？'
+        able_to: '此應用程式將能夠'
+      show:
+        title: '授權碼'
+      form_post:
+        title: '送出表單'
+
+    authorized_applications:
+      confirmations:
+        revoke: '您確定要撤銷嗎？'
+      buttons:
+        revoke: '撤銷授權'
+      index:
+        title: '您已授權的應用程式'
+        application: '應用程式'
+        created_at: '授權時間'
+        date_format: '%Y-%m-%d %H:%M:%S'
+
+    pre_authorization:
+      status: '預先授權'
+
+    errors:
+      messages:
+        # 通用錯誤訊息
+        invalid_request:
+          unknown: '請求缺少必要參數、包含不支援的參數值，或格式有誤。'
+          missing_param: '缺少必要參數：%{value}。'
+          request_not_authorized: '請求需要授權。授權請求所需的參數缺失或無效。'
+          invalid_code_challenge: '需要 Code challenge。'
+        invalid_redirect_uri: "要求的重新導向 URI 格式錯誤，或與客戶端設定的 URI 不符。"
+        unauthorized_client: '客戶端未經授權，無法使用此方法執行此請求。'
+        access_denied: '資源擁有者或授權伺服器拒絕了請求。'
+        invalid_scope: '要求的權限範圍（Scope）無效、不明或格式錯誤。'
+        invalid_code_challenge_method:
+          zero: '授權伺服器不支援 PKCE，因為沒有可接受的 code_challenge_method 值。'
+          one: 'code_challenge_method 必須為 %{challenge_methods}。'
+          other: 'code_challenge_method 必須是 %{challenge_methods} 其中之一。'
+        server_error: '授權伺服器遇到預期之外的狀況，導致無法完成請求。'
+        temporarily_unavailable: '由於伺服器暫時超載或維護，授權伺服器目前無法處理請求。'
+
+        # 配置錯誤訊息
+        credential_flow_not_configured: '由於未設定 Doorkeeper.configure.resource_owner_from_credentials，資源擁有者密碼憑證流程失敗。'
+        resource_owner_authenticator_not_configured: '由於未設定 Doorkeeper.configure.resource_owner_authenticator，尋找資源擁有者失敗。'
+        admin_authenticator_not_configured: '由於未設定 Doorkeeper.configure.admin_authenticator，禁止訪問管理介面。'
+
+        # 授權許可錯誤 (Access grant errors)
+        unsupported_response_type: '授權伺服器不支援此回應類型（Response type）。'
+        unsupported_response_mode: '授權伺服器不支援此回應模式（Response mode）。'
+
+        # 存取權杖錯誤 (Access token errors)
+        invalid_client: '客戶端驗證失敗（原因可能是：未知客戶端、未包含客戶端驗證，或驗證方式不支援）。'
+        invalid_grant: '提供的授權許可（Grant）無效、已過期、已撤銷、與授權請求中使用的重新導向 URI 不符，或已核發給其他客戶端。'
+        unsupported_grant_type: '授權伺服器不支援此授權類型（Grant type）。'
+
+        invalid_token:
+          revoked: "存取權杖（Access token）已被撤銷"
+          expired: "存取權杖（Access token）已過期"
+          unknown: "存取權杖（Access token）無效"
+        revoke:
+          unauthorized: "您沒有權限撤銷此權杖"
+
+        forbidden_token:
+          missing_scope: '存取此資源需要權限範圍："%{oauth_scopes}"。'
+
+    flash:
+      applications:
+        create:
+          notice: '應用程式已建立。'
+        destroy:
+          notice: '應用程式已刪除。'
+        update:
+          notice: '應用程式已更新。'
+      authorized_applications:
+        destroy:
+          notice: '應用程式授權已撤銷。'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'OAuth2 提供者'
+          applications: '應用程式管理'
+          home: '首頁'
+      application:
+        title: '需要 OAuth 授權'

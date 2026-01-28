@@ -1,0 +1,95 @@
+---
+nl:
+  import:
+    cleans:
+      show:
+        description: Bewerk uw gegevens in de onderstaande tabel. Rode cellen zijn ongeldig.
+        errors_notice: U heeft fouten in uw gegevens. Beweeg over de fout om details te zien.
+        errors_notice_mobile: U heeft fouten in uw gegevens. Tik op de fout tooltip om details te zien.
+        title: Uw gegevens opschonen
+    configurations:
+      update:
+        success: Import succesvol geconfigureerd.
+      category_import:
+        button_label: Doorgaan
+        description: Upload een eenvoudig CSV-bestand (zoals het bestand dat we genereren wanneer u uw gegevens exporteert). We zullen de kolommen automatisch voor u koppelen.
+        instructions: Selecteer doorgaan om uw CSV te parsen en door te gaan naar de opschoon stap.
+      mint_import:
+        date_format_label: Datumformaat
+      rule_import:
+        description: Configureer uw regel import. Regels worden aangemaakt of bijgewerkt op basis van de CSV-gegevens.
+        process_button: Regels verwerken
+        process_help: Klik op de onderstaande knop om uw CSV te verwerken en regelrijen te genereren.
+      show:
+        description: Selecteer de kolommen die overeenkomen met elk veld in uw CSV.
+        title: Uw import configureren
+      trade_import:
+        date_format_label: Datumformaat
+      transaction_import:
+        date_format_label: Datumformaat
+        rows_to_skip_label: Eerste n rijen overslaan
+    confirms:
+      mappings:
+        create_account: Account aanmaken
+        csv_mapping_label: "%{mapping} in CSV"
+        sure_mapping_label: "%{mapping} in %{product_name}"
+        no_accounts: U heeft nog geen accounts. Maak een account aan dat we kunnen gebruiken voor (niet-toegewezen) rijen in uw CSV of ga terug naar de Opschoon stap en geef een accountnaam op die we kunnen gebruiken.
+        rows_label: Rijen
+        unassigned_account: Moet u een nieuw account aanmaken voor niet-toegewezen rijen?
+      show:
+        account_mapping_description: Wijs alle accounts van uw geïmporteerde bestand toe aan bestaande %{product_name} accounts. U kunt ook nieuwe accounts toevoegen of ze ongecategoriseerd laten.
+        account_mapping_title: Uw accounts toewijzen
+        account_type_mapping_description: Wijs alle accounttypen van uw geïmporteerde bestand toe aan %{product_name} accounttypen
+        account_type_mapping_title: Uw accounttypen toewijzen
+        category_mapping_description: Wijs alle categorieën van uw geïmporteerde bestand toe aan bestaande %{product_name} categorieën. U kunt ook nieuwe categorieën toevoegen of ze ongecategoriseerd laten.
+        category_mapping_title: Uw categorieën toewijzen
+        tag_mapping_description: Wijs alle tags van uw geïmporteerde bestand toe aan bestaande %{product_name} tags. U kunt ook nieuwe tags toevoegen of ze ongecategoriseerd laten.
+        tag_mapping_title: Uw tags toewijzen
+    uploads:
+      show:
+        description: Plak of upload uw CSV-bestand hieronder. Bekijk de instructies in de onderstaande tabel voordat u begint.
+        instructions_1: Hieronder staat een voorbeeld CSV met kolommen die beschikbaar zijn voor import.
+        instructions_2: Uw CSV moet een koptekstrij hebben
+        instructions_3: U kunt uw kolommen elke naam geven die u wilt. U koppelt ze in een latere stap.
+        instructions_4: Kolommen gemarkeerd met een asterisk (*) zijn verplichte gegevens.
+        instructions_5: Geen komma's, geen valutasymbolen en geen haakjes in getallen.
+        title: Uw gegevens importeren
+  imports:
+    index:
+      imports: Imports
+      new: Nieuwe import
+    table:
+      title: Imports
+      header:
+        date: Datum
+        operation: Operatie
+        status: Status
+        actions: Acties
+      row:
+        status:
+          in_progress: Bezig
+          uploading: Rijen verwerken
+          reverting: Terugdraaien
+          revert_failed: Terugdraaien mislukt
+          complete: Voltooid
+          failed: Mislukt
+        actions:
+          revert: Terugdraaien
+          confirm_revert: Hierdoor worden de geïmporteerde transacties verwijderd, maar u kunt uw gegevens nog steeds op elk gewenst moment bekijken en opnieuw importeren.
+          delete: Verwijderen
+          view: Bekijken
+      empty: Nog geen imports.
+    new:
+      description: U kunt handmatig verschillende soorten gegevens importeren via CSV of een van onze importsjablonen zoals Mint gebruiken.
+      import_accounts: Accounts importeren
+      import_categories: Categorieën importeren
+      import_mint: Importeren vanuit Mint
+      import_portfolio: Investeringen importeren
+      import_rules: Regels importeren
+      import_transactions: Transacties importeren
+      resume: "%{type} hervatten"
+      sources: Bronnen
+      title: Nieuwe CSV import
+    ready:
+      description: Hier is een samenvatting van de nieuwe items die aan uw account worden toegevoegd zodra u deze import publiceert.
+      title: Uw importgegevens bevestigen

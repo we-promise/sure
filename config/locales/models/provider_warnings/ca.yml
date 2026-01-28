@@ -1,0 +1,4 @@
+---
+ca:
+  provider_warnings:
+    limited_investment_data: "Les dades d'inversió d'aquest proveïdor són limitades. Les etiquetes d'activitat (Compra, Venda, Dividend) no estan disponibles, cosa que pot afectar la precisió del pressupost. Considereu crear regles per excloure o categoritzar les transaccions d'inversió."

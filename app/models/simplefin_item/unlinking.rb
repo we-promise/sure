@@ -39,8 +39,10 @@ module SimplefinItem::Unlinking
           end
 
           # Legacy FK fallback: ensure any legacy link is cleared
-          if sfa.account_id.present?
-            sfa.update!(account: nil)
+          # NOTE: `SimplefinAccount#account_id` is the provider's external identifier.
+          # The legacy link is `Account.simplefin_account_id` (accessible via `sfa.account`).
+          if sfa.account.present?
+            sfa.account.update!(simplefin_account_id: nil)
           end
         end
       rescue => e

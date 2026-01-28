@@ -19,12 +19,9 @@ class SimplefinItem::BalancesOnlyJob < ApplicationJob
       Rails.logger.warn("SimpleFin BalancesOnlyJob import failed: #{e.class} - #{e.message}")
     end
 
-    # Best-effort freshness update
-    begin
-      item.update!(last_synced_at: Time.current) if item.has_attribute?(:last_synced_at)
-    rescue => e
-      Rails.logger.warn("SimpleFin BalancesOnlyJob last_synced_at update failed: #{e.class} - #{e.message}")
-    end
+    # IMPORTANT: Do NOT update last_synced_at during balances-only discovery.
+    # Leaving last_synced_at nil ensures the next full sync uses the
+    # chunked-history path to fetch historical transactions.
 
     # Refresh the SimpleFin card on Providers/Accounts pages so badges and statuses update without a full reload
     begin

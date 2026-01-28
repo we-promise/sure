@@ -1,0 +1,20 @@
+---
+nl:
+  activerecord:
+    attributes:
+      user:
+        email: Email
+        family: Familie
+        family_id: Familie
+        first_name: Voornaam
+        last_name: Achternaam
+        password: Wachtwoord
+        password_confirmation: Bevestiging wachtwoord
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: Admin kan account niet verwijderen terwijl andere gebruikers aanwezig zijn. Verwijder eerst alle leden.
+            profile_image:
+              invalid_file_size: bestandsgrootte moet minder zijn dan %{max_megabytes} MB

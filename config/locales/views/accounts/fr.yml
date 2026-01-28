@@ -1,0 +1,125 @@
+---
+fr:
+  accounts:
+    account:
+      link_lunchflow: Lier avec Lunch Flow
+      link_provider: Lier avec un fournisseur
+      unlink_provider: Délier du fournisseur
+      troubleshoot: Dépannage
+    chart:
+      data_not_available: Données non disponibles pour la période sélectionnée
+    create:
+      success: "Compte %{type} créé"
+    destroy:
+      success: "Le compte %{type} a été préparé à la suppression"
+      cannot_delete_linked: "Impossible de supprimer un compte lié. Veuillez d'abord le délier."
+    empty:
+      empty_message: Ajoutez un compte via une connexion, une importation ou en entrant manuellement.
+      new_account: Nouveau compte
+      no_accounts: Aucun compte pour l'instant
+    form:
+      balance: Solde actuel
+      name_label: Nom du compte
+      name_placeholder: Nom de compte d'exemple
+      additional_details: Détails supplémentaires
+      institution_name_label: Nom de l'institution
+      institution_name_placeholder: ex., Banque Populaire
+      institution_domain_label: Domaine de l'institution
+      institution_domain_placeholder: ex., banquepopulaire.fr
+      notes_label: Notes
+      notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
+    index:
+      accounts: Comptes
+      manual_accounts:
+        other_accounts: Autres comptes
+      new_account: Nouveau compte
+      sync: Tout synchroniser
+    sync_all:
+      syncing: "Synchronisation des comptes..."
+    new:
+      import_accounts: Importer des comptes
+      method_selector:
+        connected_entry: Lier un compte
+        connected_entry_eu: Lier un compte européen
+        link_with_provider: "Lier avec %{provider}"
+        lunchflow_entry: Lier un compte Lunch Flow
+        manual_entry: Saisir le solde du compte
+        title: Comment voulez-vous l'ajouter ?
+      title: Que voulez-vous ajouter ?
+    show:
+      activity:
+        amount: Montant
+        balance: Solde
+        confirmed: Confirmé
+        date: Date
+        entries: entrées
+        entry: entrée
+        filter: Filtrer
+        new: Nouveau
+        new_balance: Nouveau solde
+        new_transaction: Nouvelle transaction
+        no_entries: Aucune entrée trouvée
+        pending: En attente
+        search:
+          placeholder: Rechercher des entrées par nom
+        status: Statut
+        title: Activité
+      chart:
+        balance: Solde
+        owed: Montant dû
+      menu:
+        confirm_accept: Supprimer "%{name}"
+        confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique de valeur,
+          affectant divers aspects de votre solde global. Cette action aura un impact direct sur vos calculs de valeur nette et les graphiques des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de restaurer l'information du compte car vous aurez besoin d'en ajouter un nouveau.</p>"
+        confirm_title: Supprimer le compte ?
+        edit: Modifier
+        import: Importer des transactions
+        manage: Gérer les comptes
+    update:
+      success: "Compte %{type} mis à jour"
+    sidebar:
+      missing_data: Données historiques manquantes
+      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
+      configure_providers: Configurez vos fournisseurs ici.
+      tabs:
+        all: Tout
+        assets: Actifs
+        debts: Dettes
+      new_asset: Nouvel actif
+      new_debt: Nouvelle dette
+      new_account: Nouveau compte
+      new_account_group: "Nouveau %{account_group}"
+    types:
+      depository: Liquidités
+      investment: Investissement
+      crypto: Crypto
+      property: Propriété
+      vehicle: Véhicule
+      other_asset: Autre actif
+      credit_card: Carte de crédit
+      loan: Prêt
+      other_liability: Autre passif
+    confirm_unlink:
+      title: Délier le compte du fournisseur ?
+      description_html: "Vous êtes sur le point de délier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel."
+      warning_title: Ce que cela signifie
+      warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre fournisseur
+      warning_manual_updates: Vous devrez ajouter des transactions et mettre à jour les soldes manuellement
+      warning_transactions_kept: Toutes les transactions et soldes existants seront conservés
+      warning_can_delete: Après la déliaison, vous pourrez supprimer le compte si nécessaire
+      confirm_button: Confirmer et délier
+    unlink:
+      success: "Compte délié avec succès. C'est maintenant un compte manuel."
+      not_linked: "Le compte n'est pas lié à un fournisseur"
+      error: "Échec de la déliaison du compte : %{error}"
+      generic_error: "Une erreur inattendue s'est produite. Veuillez réessayer."
+    select_provider:
+      title: Sélectionner un fournisseur à lier
+      description: "Choisissez le fournisseur que vous souhaitez utiliser pour lier %{account_name}"
+      already_linked: "Le compte est déjà lié à un fournisseur"
+      no_providers: "Aucun fournisseur n'est actuellement configuré"
+
+  email_confirmations:
+    new:
+      invalid_token: Lien de confirmation invalide ou expiré.
+      success_login: Votre email a été confirmé. Veuillez vous identifier avec votre nouvelle adresse email.

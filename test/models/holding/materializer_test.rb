@@ -26,4 +26,53 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
     end
   end
+
+  test "preserves provider cost_basis when trade-derived cost_basis is nil" do
+    # Simulate a provider-imported holding with cost_basis (e.g., from SimpleFIN)
+    # This is the realistic scenario: linked account with provider holdings but no trades
+    provider_cost_basis = BigDecimal("150.00")
+    holding = Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      date: Date.current,
+      cost_basis: provider_cost_basis
+    )
+
+    # Use :reverse strategy (what linked accounts use) - doesn't purge holdings
+    # The AAPL holding has no trades, so computed cost_basis is nil
+    # The materializer should preserve the provider cost_basis, not overwrite with nil
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    holding.reload
+    assert_equal provider_cost_basis, holding.cost_basis,
+      "Provider cost_basis should be preserved when no trades exist for this security"
+  end
+
+  test "updates cost_basis when trade-derived cost_basis is available" do
+    # Create a holding with provider cost_basis
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      date: Date.current,
+      cost_basis: BigDecimal("150.00")  # Provider says $150
+    )
+
+    # Create a trade that gives us a different cost basis
+    create_trade(@aapl, account: @account, qty: 10, price: 180, date: Date.current)
+
+    # Use :reverse strategy - with trades, it should compute cost_basis from them
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    holding = @account.holdings.find_by(security: @aapl, date: Date.current)
+    assert_equal BigDecimal("180.00"), holding.cost_basis,
+      "Trade-derived cost_basis should override provider cost_basis when available"
+  end
 end

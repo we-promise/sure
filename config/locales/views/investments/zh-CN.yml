@@ -1,0 +1,17 @@
+---
+zh-CN:
+  investments:
+    edit:
+      edit: 编辑%{account}
+    form:
+      none: 无
+      subtype_prompt: 选择投资类型
+    new:
+      title: 请输入账户余额
+    show:
+      chart_title: 总价值
+    value_tooltip:
+      cash: 现金
+      holdings: 持仓
+      total: 投资组合余额
+      total_value_tooltip: 总投资组合余额等于经纪账户现金（可用于交易）与持仓当前市值的总和。

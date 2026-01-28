@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "sure.fullname" . }}-test-connection
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test-success
+    # Auto-clean both successful and failed test Pods to keep the namespace tidy
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: docker.io/library/busybox:1.36
+      imagePullPolicy: IfNotPresent
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "Testing HTTP endpoint on Service {{ include "sure.fullname" . }}";
+          wget -qO- http://{{ include "sure.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}/ > /dev/null && echo "OK" || (echo "FAILED" && exit 1)
