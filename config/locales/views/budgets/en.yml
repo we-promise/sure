@@ -1,0 +1,10 @@
+---
+en:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      tabs:
+        actual: Actual
+        budgeted: Budgeted
