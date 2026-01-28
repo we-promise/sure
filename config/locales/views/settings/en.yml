@@ -89,7 +89,7 @@ en:
         pending: Pending
         profile_subtitle: Customize how you appear on %{product_name}
         profile_title: Personal
-        email_confirmation_message_html: "You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{link}."
+        email_confirmation_message_before: "You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or"
         resend_confirmation: "request a new confirmation email"
         remove_invitation: Remove Invitation
         remove_member: Remove Member

@@ -125,7 +125,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
             ])
           end.html_safe
         end
-        
+
         label_text = @template.safe_join([
           label_text,
           @template.tag.span("*", class: "text-red-500 ml-0.5")

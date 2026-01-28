@@ -86,7 +86,7 @@ fr:
         pending: En attente
         profile_subtitle: Personnalisez l'apparence de votre profil sur %{product_name}
         profile_title: Personnel
-        email_confirmation_message_html: "Vous avez demandé à changer votre e-mail pour %{email}. Veuillez consulter votre boîte mail et confirmer pour que le changement prenne effet. Si vous n'avez pas reçu l'e-mail, veuillez vérifier votre dossier spam, ou %{link}."
+        email_confirmation_message_before: "Vous avez demandé à changer votre e-mail pour %{email}. Veuillez consulter votre boîte mail et confirmer pour que le changement prenne effet. Si vous n'avez pas reçu l'e-mail, veuillez vérifier votre dossier spam, ou"
         resend_confirmation: "demander un nouvel e-mail de confirmation"
         remove_invitation: Supprimer l'invitation
         remove_member: Supprimer le membre

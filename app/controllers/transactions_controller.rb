@@ -12,7 +12,7 @@ class TransactionsController < ApplicationController
 
   def index
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
-    
+
     @q = search_params
     @search = Transaction::Search.new(Current.family, filters: @q)
 
