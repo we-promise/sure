@@ -19,7 +19,8 @@
         <span class="text-xs text-secondary">/ <%= format_money(goal.target_amount_money) %></span>
       </div>
       <% if goal.target_date.present? %>
-        <p class="text-xs text-subdued mt-1"><%= t("saving_goals.goal_card.target_date", date: l(goal.target_date, format: :short)) %></p>
+        <% date_format = goal.target_date.year == Date.current.year ? "%b %d" : "%b %d, %Y" %>
+        <p class="text-xs text-subdued mt-1"><%= t("saving_goals.goal_card.target_date", date: goal.target_date.strftime(date_format)) %></p>
       <% end %>
     </div>
 

@@ -117,4 +117,13 @@
       </div>
     </div>
   </div>
+
+  <% if @saving_goal.notes.present? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-6">
+      <h3 class="text-sm font-medium text-primary mb-2"><%= t("saving_goals.form.notes_label") %></h3>
+      <div class="prose prose-sm text-secondary">
+        <%= simple_format @saving_goal.notes %>
+      </div>
+    </div>
+  <% end %>
 </div>

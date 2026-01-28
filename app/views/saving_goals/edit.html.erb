@@ -1,11 +1,13 @@
-<div class="container mx-auto px-4 py-8">
+<div class="max-w-xl mx-auto">
   <div class="mb-6">
-    <%= link_to saving_goal_path(@saving_goal), class: "text-sm text-secondary hover:text-primary flex items-center gap-1 mb-2" do %>
-      <%= icon "arrow-left", size: :sm %>
-      Back to goal
+    <%= link_to saving_goal_path(@saving_goal), class: "group flex items-center gap-1 text-sm text-subdued hover:text-primary mb-2 inline-block transition-colors" do %>
+      <%= icon "chevron-left", class: "w-4 h-4" %>
+      <span><%= t("common.back") %></span>
     <% end %>
-    <h1 class="text-2xl font-bold text-primary"><%= t(".title") %></h1>
+    <h1 class="text-2xl font-bold text-primary"><%= t("saving_goals.edit.title") %></h1>
   </div>
 
-  <%= render "form", saving_goal: @saving_goal %>
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <%= render "form", saving_goal: @saving_goal %>
+  </div>
 </div>

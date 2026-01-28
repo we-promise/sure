@@ -14,6 +14,9 @@ class SavingGoal < ApplicationRecord
   validates :target_amount, numericality: { greater_than: 0 }
   validates :current_amount, numericality: { greater_than_or_equal_to: 0 }
   validates :currency, presence: true
+  
+  COLORS = %w[blue green indigo purple pink red orange yellow zinc].freeze
+  validates :color, inclusion: { in: COLORS }, allow_nil: true
 
   scope :active, -> { where(status: :active) }
 
