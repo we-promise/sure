@@ -219,6 +219,6 @@ en:
         greater_than: greater than
         less_than: less than
       form:
-        search_placeholder: "Search transactions..."
+        search_placeholder: "Search transactions ..."
         filter: "Filter"
         toggle_selection_checkboxes: Toggle all checkboxes
