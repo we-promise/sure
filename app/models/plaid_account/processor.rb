@@ -30,14 +30,8 @@ class PlaidAccount::Processor
 
     def process_account!
       PlaidAccount.transaction do
-        # Find existing account through account_provider or legacy plaid_account_id
-        account_provider = AccountProvider.find_by(provider: plaid_account)
-        account = if account_provider
-          account_provider.account
-        else
-          # Legacy fallback: find by plaid_account_id if it still exists
-          family.accounts.find_by(plaid_account_id: plaid_account.id)
-        end
+        # Find existing account through account_provider
+        account = plaid_account.current_account
 
         # Initialize new account if not found
         if account.nil?
@@ -77,13 +71,7 @@ class PlaidAccount::Processor
         account.save!
 
         # Create account provider link if it doesn't exist
-        unless account_provider
-          AccountProvider.find_or_create_by!(
-            account: account,
-            provider: plaid_account,
-            provider_type: "PlaidAccount"
-          )
-        end
+        plaid_account.ensure_account_provider!(account)
 
         # Create or update the current balance anchor valuation for event-sourced ledger
         # Note: This is a partial implementation. In the future, we'll introduce HoldingValuation
