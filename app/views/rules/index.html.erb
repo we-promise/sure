@@ -5,6 +5,17 @@
       <%= render DS::Menu.new do |menu| %>
         <% menu.with_item(
           variant: "button",
+          text: t("rules.clear_ai_cache.button"),
+          href: clear_ai_cache_rules_path,
+          icon: "refresh-cw",
+          method: :post,
+          confirm: CustomConfirm.new(
+            title: t("rules.clear_ai_cache.confirm_title"),
+            body: t("rules.clear_ai_cache.confirm_body"),
+            btn_text: t("rules.clear_ai_cache.confirm_button")
+          )) %>
+        <% menu.with_item(
+          variant: "button",
           text: "Delete all rules",
           href: destroy_all_rules_path,
           icon: "trash-2",

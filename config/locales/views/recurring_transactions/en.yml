@@ -5,7 +5,10 @@ en:
     upcoming: Upcoming Recurring Transactions
     projected: Projected
     recurring: Recurring
-    expected_on: Expected on %{date}
+    expected_today: "Expected today"
+    expected_in:
+      one: "Expected in %{count} day"
+      other: "Expected in %{count} days"
     day_of_month: Day %{day} of month
     identify_patterns: Identify Patterns
     cleanup_stale: Clean Up Stale
