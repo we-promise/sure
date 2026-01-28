@@ -14,7 +14,13 @@ module Sure
 
     private
       def semver
-        "0.6.8-alpha.1"
+        # Read from shared VERSION file at repo root
+        version_file = Rails.root.join("VERSION")
+        if version_file.exist?
+          version_file.read.strip
+        else
+          "0.6.8-alpha.1"
+        end
       end
   end
 end

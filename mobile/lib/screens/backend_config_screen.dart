@@ -225,7 +225,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '• https://sure.lazyrhythm.com\n'
+                        '• https://app.sure.am\n'
                         '• https://your-domain.com\n'
                         '• http://localhost:3000',
                         style: TextStyle(
@@ -318,7 +318,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Backend URL',
                     prefixIcon: Icon(Icons.cloud_outlined),
-                    hintText: 'https://sure.lazyrhythm.com',
+                    hintText: 'https://app.sure.am',
                   ),
                   validator: _validateUrl,
                   onFieldSubmitted: (_) => _saveAndContinue(),
