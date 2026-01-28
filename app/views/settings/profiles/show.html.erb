@@ -9,7 +9,7 @@
 
       <% if @user.unconfirmed_email.present? %>
         <p class="mt-2 text-sm text-gray-600">
-          <%= t(".email_confirmation_message_html", email: @user.unconfirmed_email, link: link_to(t(".resend_confirmation"), resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary")).html_safe %>
+          <%= t(".email_confirmation_message_html", email: ERB::Util.html_escape(@user.unconfirmed_email), link: link_to(t(".resend_confirmation"), resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary")).html_safe %>
         </p>
       <% end %>
 
