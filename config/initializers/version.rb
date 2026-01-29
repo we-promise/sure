@@ -8,8 +8,10 @@ module Sure
       if Rails.env.production?
         ENV["BUILD_COMMIT_SHA"]
       else
-        `git rev-parse HEAD`.chomp
+        ENV["BUILD_COMMIT_SHA"] || `git rev-parse HEAD`.chomp
       end
+    rescue Errno::ENOENT
+      ENV.fetch("BUILD_COMMIT_SHA", "unknown")
     end
 
     private
