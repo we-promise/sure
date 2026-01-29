@@ -28,6 +28,6 @@ class CreateSavingGoals < ActiveRecord::Migration[7.2]
     end
 
     add_index :saving_goals, [:family_id, :status]
-    add_index :saving_contributions, [:saving_goal_id, :month], unique: true
+    add_index :saving_contributions, [:saving_goal_id, :month]
   end
 end

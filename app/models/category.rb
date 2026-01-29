@@ -34,11 +34,13 @@ class Category < ApplicationRecord
   TRANSFER_COLOR = "#444CE7"
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
+  SAVINGS_COLOR = "#22C55E"
 
   # Category name keys for i18n
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
   INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
+  SAVINGS_NAME_KEY = "models.category.savings"
 
   class Group
     attr_reader :category, :subcategories
@@ -104,6 +106,14 @@ class Category < ApplicationRecord
       )
     end
 
+    def savings
+      new(
+        name: I18n.t(SAVINGS_NAME_KEY),
+        color: SAVINGS_COLOR,
+        lucide_icon: "piggy-bank"
+      )
+    end
+
     # Helper to get the localized name for uncategorized
     def uncategorized_name
       I18n.t(UNCATEGORIZED_NAME_KEY)
@@ -117,6 +127,11 @@ class Category < ApplicationRecord
     # Helper to get the localized name for investment contributions
     def investment_contributions_name
       I18n.t(INVESTMENT_CONTRIBUTIONS_NAME_KEY)
+    end
+
+    # Helper to get the localized name for savings
+    def savings_name
+      I18n.t(SAVINGS_NAME_KEY)
     end
 
     private
@@ -183,9 +198,14 @@ class Category < ApplicationRecord
     !persisted? && name == I18n.t(OTHER_INVESTMENTS_NAME_KEY)
   end
 
+  # Predicate: is this the synthetic "Savings" category?
+  def savings?
+    !persisted? && name == I18n.t(SAVINGS_NAME_KEY)
+  end
+
   # Predicate: is this any synthetic (non-persisted) category?
   def synthetic?
-    uncategorized? || other_investments?
+    uncategorized? || other_investments? || savings?
   end
 
   private

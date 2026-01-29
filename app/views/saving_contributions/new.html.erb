@@ -1,0 +1,109 @@
+<div class="max-w-2xl mx-auto py-6">
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <h2 class="text-lg font-medium mb-4">
+      <%= t(".title", goal: @saving_goal.name) %>
+    </h2>
+
+    <!-- Goal Progress Summary -->
+    <div class="mb-6 p-4 bg-surface-inset rounded-lg">
+      <div class="flex items-center gap-4">
+        <%= render "saving_goals/progress_ring", percent: @saving_goal.progress_percent, size: 48, stroke_width: 4, color: "green" %>
+        <div class="flex-1">
+          <p class="text-sm text-secondary mb-1"><%= t(".current_progress") %></p>
+          <p class="font-medium text-primary">
+            <%= format_money(@saving_goal.current_amount_money) %> / <%= format_money(@saving_goal.target_amount_money) %>
+          </p>
+          <% if @saving_goal.remaining_amount_money.positive? %>
+            <p class="text-xs text-subdued mt-1">
+              <%= t(".remaining", amount: format_money(@saving_goal.remaining_amount_money)) %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Budget Context Info -->
+    <% if @budget %>
+      <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+        <div class="flex items-start gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+          </svg>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-green-700 dark:text-green-300">
+              <%= t(".available_from_budget", amount: format_money(Money.new(@budget.available_for_goals, @budget.currency))) %>
+            </p>
+            <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+              <%= t(".budget_month", month: @budget.name) %>
+            </p>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Contribution Form -->
+    <%= styled_form_with(model: [@saving_goal, @contribution], class: "space-y-4") do |form| %>
+      <% if @budget %>
+        <%= form.hidden_field :budget_id, value: @budget.id %>
+      <% end %>
+
+      <!-- Amount Input -->
+      <div>
+        <%= form.label :amount, t(".amount_label"), class: "block text-sm font-medium text-primary mb-2" %>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-secondary font-medium">
+            <%= Current.family.currency_symbol %>
+          </span>
+          <%= form.number_field :amount,
+              class: "!pl-10 w-full rounded-md border-subdued bg-surface text-primary focus:ring-primary focus:border-primary",
+              step: "0.01",
+              min: "0.01",
+              max: @budget&.available_for_goals,
+              required: true,
+              autofocus: true,
+              placeholder: "0.00" %>
+        </div>
+        
+        <% if @saving_goal.monthly_target %>
+          <p class="mt-2 text-xs text-subdued">
+            <%= t(".suggested_amount_hint", amount: format_money(Money.new(@saving_goal.monthly_target, @saving_goal.currency))) %>
+            <% if @budget && @saving_goal.monthly_target > @budget.available_for_goals %>
+              <span class="text-yellow-600 dark:text-yellow-400 font-medium">
+                (<%= t(".limited_by_surplus") %>)
+              </span>
+            <% end %>
+          </p>
+        <% end %>
+
+        <% if @contribution.errors[:amount].any? %>
+          <p class="mt-2 text-sm text-destructive"><%= @contribution.errors[:amount].first %></p>
+        <% end %>
+      </div>
+
+      <!-- Source Selector -->
+      <div>
+        <%= form.label :source, t(".source_label"), class: "block text-sm font-medium text-primary mb-2" %>
+        <%= form.select :source,
+            options_for_select([
+              [t(".source_manual"), "manual"],
+              [t(".source_auto"), "auto"]
+            ], @contribution.source || "manual"),
+            {},
+            class: "w-full rounded-md border-subdued bg-surface text-primary focus:ring-primary focus:border-primary" %>
+        <p class="mt-1 text-xs text-subdued">
+          <%= t(".source_help") %>
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 pt-4">
+        <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+        <%= render DS::Link.new(
+          text: t(".cancel"),
+          href: @budget ? budget_path(@budget) : saving_goal_path(@saving_goal),
+          variant: "secondary"
+        ) %>
+      </div>
+    <% end %>
+  </div>
+</div>

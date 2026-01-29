@@ -34,6 +34,15 @@
         min: Date.current,
         label_tooltip: t("saving_goals.form.target_date_hint") %>
 
+    <% unless saving_goal.persisted? %>
+      <%= form.money_field :initial_amount,
+          label: t("saving_goals.form.initial_amount_label"),
+          hide_currency: true,
+          step: "0.01",
+          min: "0",
+          label_tooltip: t("saving_goals.form.initial_amount_hint") %>
+    <% end %>
+
     <%# Custom Color Picker - StyledFormBuilder doesn't wrap radio buttons automatically appropriately for this layout %>
     <div>
       <%= form.label :color, t("saving_goals.form.color_label", default: "Color"), class: "form-field__label mb-2" %>

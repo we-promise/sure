@@ -6,7 +6,7 @@ emergency_fund:
   currency: USD
   target_date: <%= 1.year.from_now.to_date %>
   status: active
-  color: "#22c55e"
+  color: "green"
   icon: "shield-check"
 
 vacation_fund:
@@ -17,5 +17,5 @@ vacation_fund:
   currency: USD
   target_date: <%= 2.years.from_now.to_date %>
   status: active
-  color: "#3b82f6"
+  color: "blue"
   icon: "plane"

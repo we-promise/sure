@@ -126,4 +126,89 @@
       </div>
     </div>
   <% end %>
+
+  <%# Monthly Effort Section %>
+  <% if @saving_goal.active? && @saving_goal.target_date && @saving_goal.monthly_target %>
+    <div class="bg-container rounded-xl shadow-border-xs p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-medium text-primary mb-1"><%= t(".monthly_effort") %></h3>
+          <p class="text-2xl font-bold text-primary">
+            <%= t(".save_per_month", amount: format_money(Money.new(@saving_goal.monthly_target, @saving_goal.currency))) %>
+          </p>
+          <p class="text-sm text-secondary">
+            <%= t(".for_months", count: @saving_goal.months_remaining) %>
+          </p>
+        </div>
+        <%= render DS::Link.new(
+          text: t(".allocate"),
+          href: new_saving_goal_saving_contribution_path(@saving_goal),
+          variant: "primary",
+          size: "md"
+        ) %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Contribution History Section %>
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <h3 class="text-sm font-medium text-primary mb-4"><%= t(".contribution_history") %></h3>
+
+    <% contributions = @saving_goal.saving_contributions.order(month: :desc) %>
+    <% if contributions.any? %>
+      <div class="space-y-3">
+        <% contributions.each do |contribution| %>
+          <div class="flex items-center justify-between p-3 bg-surface-inset rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green-500">
+                  <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p class="font-medium text-primary">+<%= format_money(contribution.amount_money) %></p>
+                <p class="text-xs text-subdued"><%= l(contribution.month, format: :long) %></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="px-2 py-1 text-xs font-medium rounded-full <%= contribution.auto? ? 'bg-blue-500/10 text-blue-500' : 'bg-zinc-500/10 text-zinc-400' %>">
+                <%= contribution.auto? ? t(".auto_source") : t(".manual_source") %>
+              </span>
+
+              <%= render DS::Button.new(
+                variant: :ghost,
+                size: :sm,
+                icon: "trash",
+                href: saving_goal_saving_contribution_path(@saving_goal, contribution),
+                method: :delete,
+                confirm: t("common.are_you_sure"),
+                title: t("common.delete"),
+                class: "text-subdued hover:text-destructive -mr-2"
+              ) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-primary/10">
+        <p class="text-sm text-secondary">
+          <%= t(".total_contributions", amount: format_money(@saving_goal.current_amount_money), count: contributions.count) %>
+        </p>
+      </div>
+    <% else %>
+      <div class="text-center py-6">
+        <%= icon "piggy-bank", class: "mx-auto text-subdued", size: "xl" %>
+        <p class="mt-2 text-sm text-secondary"><%= t(".no_contributions") %></p>
+        <% if @saving_goal.active? %>
+          <%= render DS::Link.new(
+            text: t(".allocate"),
+            href: new_saving_goal_saving_contribution_path(@saving_goal),
+            variant: "secondary",
+            class: "mt-3 inline-block"
+          ) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
 </div>
+

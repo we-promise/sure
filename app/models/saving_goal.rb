@@ -48,9 +48,24 @@ class SavingGoal < ApplicationRecord
     return nil if target_date.nil?
 
     months = months_remaining
-    return remaining_amount if months < 1
+    return remaining_amount_for_month if months < 1
 
-    (remaining_amount / months).round(2)
+    (remaining_amount_for_month / months).round(2)
+  end
+
+  # Remaining amount excluding current month's contribution (if any)
+  # This gives the "effort" needed for the current month
+  def remaining_amount_for_month
+    this_month_contribution = saving_contributions
+      .where(month: Date.current.beginning_of_month)
+      .sum(:amount)
+
+    [ target_amount - (current_amount - this_month_contribution), 0 ].max
+  end
+
+  def months_remaining
+    return nil if target_date.nil?
+    (target_date.year * 12 + target_date.month) - (Date.current.year * 12 + Date.current.month) + 1
   end
 
   def pause!
@@ -84,7 +99,4 @@ class SavingGoal < ApplicationRecord
       (days_elapsed / total_days * 100).clamp(0, 100)
     end
 
-    def months_remaining
-      (target_date.year * 12 + target_date.month) - (Date.current.year * 12 + Date.current.month)
-    end
 end

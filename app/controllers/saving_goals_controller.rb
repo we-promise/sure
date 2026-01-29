@@ -21,8 +21,13 @@ class SavingGoalsController < ApplicationController
   end
 
   def create
-    @saving_goal = Current.family.saving_goals.new(saving_goal_params)
+    @saving_goal = Current.family.saving_goals.new(saving_goal_params.except(:initial_amount))
     @saving_goal.currency = Current.family.currency
+
+    # Set current_amount from initial_amount if provided
+    if saving_goal_params[:initial_amount].present?
+      @saving_goal.current_amount = saving_goal_params[:initial_amount]
+    end
 
     if @saving_goal.save
       redirect_to saving_goals_path, notice: t(".success")
@@ -82,6 +87,6 @@ class SavingGoalsController < ApplicationController
     end
 
     def saving_goal_params
-      params.require(:saving_goal).permit(:name, :target_amount, :target_date, :priority, :color, :icon, :notes)
+      params.require(:saving_goal).permit(:name, :target_amount, :target_date, :priority, :color, :icon, :notes, :initial_amount)
     end
 end

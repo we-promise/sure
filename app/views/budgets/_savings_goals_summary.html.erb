@@ -35,7 +35,7 @@
 
     <div class="space-y-2">
       <% goals.each do |goal| %>
-        <% contribution = goal.saving_contributions.find_by(month: budget.start_date.beginning_of_month) %>
+        <% contribution = budget.goal_contribution_for_month(goal) %>
         <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-inset transition-colors">
           <%= render "saving_goals/progress_ring", percent: goal.progress_percent, size: 32, stroke_width: 3, color: "green" %>
           
@@ -51,20 +51,22 @@
               <p class="text-sm font-medium text-green-500">
                 +<%= format_money(contribution.amount_money) %>
               </p>
+              <% if contribution.source == "auto" %>
+                <span class="text-xs text-subdued"><%= t("budgets.show.savings_goals.auto_funded") %></span>
+              <% end %>
             <% else %>
               <p class="text-xs text-subdued"><%= t("budgets.show.savings_goals.no_contribution") %></p>
             <% end %>
           </div>
 
-          <%# TODO: Task 7 - Add allocate button when contribution routes are implemented %>
-          <%# if available.positive? %>
-            <%#= render DS::Link.new(
-              text: t("budgets.show.savings_goals.allocate"),
+          <% if available.positive? %>
+            <%= render DS::Link.new(
+              text: contribution ? t("budgets.show.savings_goals.add_more") : t("budgets.show.savings_goals.allocate"),
               href: new_saving_goal_saving_contribution_path(goal, budget_id: budget.id),
               variant: "outline",
               size: "sm"
             ) %>
-          <%# end %>
+          <% end %>
         </div>
       <% end %>
     </div>
