@@ -15,8 +15,12 @@ module Provider::LlmConcept
 
   PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data)
 
+  def supports_pdf_processing?
+    false
+  end
+
   def process_pdf(pdf_content:, family: nil)
-    raise NotImplementedError, "Subclasses must implement #process_pdf"
+    raise NotImplementedError, "Provider does not support PDF processing"
   end
 
   ChatMessage = Data.define(:id, :output_text)

@@ -19,10 +19,26 @@ class ProcessPdfJob < ApplicationJob
       end
 
       pdf_import.update!(status: :complete)
-    rescue => e
-      Rails.logger.error("PDF processing failed for import #{pdf_import.id}: #{e.message}")
-      pdf_import.update!(status: :failed, error: e.message)
+    rescue StandardError => e
+      Rails.logger.error("PDF processing failed for import #{pdf_import.id}: #{e.class.name} - #{e.message}")
+      sanitized_error = sanitize_error_message(e)
+      begin
+        pdf_import.update!(status: :failed, error: sanitized_error)
+      rescue StandardError => update_error
+        Rails.logger.error("Failed to update import status: #{update_error.message}")
+      end
       raise
+    end
+  end
+
+  private
+
+  def sanitize_error_message(error)
+    case error
+    when RuntimeError, ArgumentError
+      error.message.truncate(500)
+    else
+      "Processing failed: #{error.class.name.demodulize}"
     end
   end
 end

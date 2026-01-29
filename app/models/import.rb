@@ -25,8 +25,6 @@ class Import < ApplicationRecord
   belongs_to :family
   belongs_to :account, optional: true
 
-  has_one_attached :pdf_file
-
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
 

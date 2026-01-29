@@ -1,3 +1,5 @@
+require "csv"
+
 class Assistant::Function::ImportBankStatement < Assistant::Function
   class << self
     def name
@@ -153,13 +155,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       account_holder: result[:account_holder],
       message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. Review and publish when ready."
     }
-  rescue => e
-    Rails.logger.error("ImportBankStatement error: #{e.message}")
-    Rails.logger.error(e.backtrace.join("\n"))
+  rescue Provider::ProviderError, Faraday::Error, Timeout::Error, RuntimeError => e
+    Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
+    Rails.logger.error(e.backtrace.first(10).join("\n"))
     {
       success: false,
       error: "extraction_failed",
-      message: "Failed to extract transactions: #{e.message}"
+      message: "Failed to extract transactions: #{e.message.truncate(200)}"
     }
   end
 

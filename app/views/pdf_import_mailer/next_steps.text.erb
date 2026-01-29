@@ -3,7 +3,7 @@
 <%= t(".intro", product: product_name) %>
 
 <%= t(".document_type_label") %>
-<%= t("imports.document_types.#{@pdf_import.document_type}") %>
+<%= @pdf_import.document_type ? t("imports.document_types.#{@pdf_import.document_type}") : t("imports.document_types.unknown") %>
 
 <%= t(".summary_label") %>
 <%= @pdf_import.ai_summary %>
