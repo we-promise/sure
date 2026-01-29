@@ -22,7 +22,31 @@ en:
       subtitle: Let's complete your profile.
       title: Let's set up the basics
     show:
-      message: We’re really excited you’re here. In the next step we’ll ask you a
+      title_setup: "Let's set up your account"
+      subtitle_setup: "First things first, let's get your profile set up."
+      first_name: First name
+      first_name_placeholder: First name
+      last_name: Last name
+      last_name_placeholder: Last name
+      household_name: Household name
+      household_name_placeholder: Household name
+      country: Country
+      continue: Continue
+      message: We're really excited you're here. In the next step we'll ask you a
         few questions to complete your profile and then get you all set up.
       setup: Set up account
       title: Meet %{product_name}
+    goals:
+      title: "What brings you here?"
+      description: "Select one or more goals that you have with using %{product_name} as your personal finance tool."
+      goal_unified_accounts: "See all my accounts in one place"
+      goal_cashflow: "Understand cashflow and expenses"
+      goal_budgeting: "Manage financial plans and budgeting"
+      goal_partner: "Manage finances with a partner"
+      goal_investments: "Track investments"
+      goal_ai_insights: "Let AI help me understand my finances"
+      goal_optimization: "Analyze and optimize accounts"
+      goal_reduce_stress: "Reduce financial stress or anxiety"
+      next: Next
+    trial:
+      title: "Start your free trial"

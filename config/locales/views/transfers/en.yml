@@ -38,3 +38,6 @@ en:
       uncategorized: Uncategorized
     update:
       success: Transfer updated
+  transfer_matches:
+    create:
+      created: Transfer created

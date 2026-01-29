@@ -147,6 +147,11 @@ en:
       choose_label: (optional)
       change: Change photo
     providers:
+      not_authorized: "Not authorized"
+      update:
+        updated: "Provider settings updated successfully."
+        no_changes: "No changes were made"
+        update_failed: "Failed to update provider settings: %{error}"
       show:
         coinbase_title: Coinbase
       encryption_error:

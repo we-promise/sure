@@ -43,6 +43,7 @@ en:
         rows_label: Rows
         unassigned_account: Need to create a new account for unassigned rows?
       show:
+        invalid_data: "You have invalid data, please edit until all errors are resolved"
         account_mapping_description: Assign all of your imported file's accounts to
           Maybe's existing accounts.  You can also add new accounts or leave them
           uncategorized.
@@ -58,6 +59,9 @@ en:
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
+      update:
+        csv_uploaded: "CSV uploaded successfully."
+        invalid_csv: "Must be valid CSV with headers and at least one row of data"
       show:
         description: Paste or upload your CSV file below.  Please review the instructions
           in the table below before beginning.
@@ -69,6 +73,25 @@ en:
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
   imports:
+    publish:
+      started: "Your import has started in the background."
+      max_row_count_exceeded:
+        one: "Import exceeds the maximum row count of %{count} row."
+        other: "Import exceeds the maximum row count of %{count} rows."
+    create:
+      csv_uploaded: "CSV uploaded successfully."
+      file_too_large: "File is too large. Maximum size is %{size} MB."
+      invalid_file_type: "Invalid file type. Please upload a CSV file."
+    show:
+      finalize_upload: "Please upload a CSV file before proceeding."
+      finalize_mappings: "Please complete your import configuration before proceeding."
+    revert:
+      reverting: "Your import is being reverted."
+    apply_template:
+      template_applied: "Template applied successfully."
+      no_template: "No matching template found for this import."
+    destroy:
+      deleted: "Import deleted."
     index:
       title: Imports
       new: New Import
