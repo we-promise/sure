@@ -17,6 +17,45 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "custom provider 404 error with tools provides helpful message" do
+    # Create a custom provider (e.g., OpenRouter)
+    custom_provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://openrouter.ai/api/v1",
+      model: "test-model"
+    )
+
+    # Mock a 404 error response from the API
+    mock_response = mock("response")
+    mock_response.stubs(:dig).with(:body).returns({ "error" => "Not Found" })
+
+    error = Faraday::ResourceNotFound.new("the server responded with status 404", response: mock_response)
+    error.stubs(:response).returns(mock_response)
+
+    # Mock the client to raise our 404 error
+    mock_client = mock("openai_client")
+    mock_client.stubs(:chat).raises(error)
+    custom_provider.stubs(:client).returns(mock_client)
+
+    # Make a chat request with tools (function calling)
+    response = custom_provider.chat_response(
+      "Test",
+      model: "test-model",
+      functions: [
+        {
+          name: "test_function",
+          description: "Test function",
+          params_schema: { type: "object", properties: {}, required: [] }
+        }
+      ]
+    )
+
+    assert_not response.success?
+    assert_kind_of Provider::Openai::Error, response.error
+    assert_includes response.error.message, "function calling"
+    assert_includes response.error.message, "tools parameter"
+  end
+
   test "auto categorizes transactions by various attributes" do
     VCR.use_cassette("openai/auto_categorize") do
       input_transactions = [

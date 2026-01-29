@@ -543,4 +543,32 @@ class Provider::Openai < Provider
         nil
       end
     end
+
+    # Override default error transformer to provide better error messages
+    def default_error_transformer(error)
+      if error.is_a?(Faraday::Error)
+        http_status = extract_http_status_code(error)
+        error_body = error.response&.dig(:body)
+
+        # Check if this is a 404 error that might be related to unsupported tools parameter
+        if http_status == 404 && custom_provider?
+          message = build_function_calling_error_message(error)
+          Error.new(message, details: error_body)
+        else
+          Error.new(error.message, details: error_body)
+        end
+      else
+        Error.new(error.message)
+      end
+    end
+
+    def build_function_calling_error_message(error)
+      base_message = "The selected model may not support function calling (tools parameter)."
+      suggestion = "\n\nPlease ensure your model supports the 'tools' parameter, or check your provider's documentation for compatible models."
+
+      # Include original error message for debugging
+      original_error = "\n\nOriginal error: #{error.message}"
+
+      base_message + suggestion + original_error
+    end
 end
