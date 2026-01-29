@@ -19,13 +19,19 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="<%= product_name %>">
+  <meta name="color-scheme" content="dark light">
 
-  <meta name="msapplication-TileColor" content="#F9F9F9">
-  <meta name="theme-color" content="#F9F9F9">
+  <%# Use theme colors that match both light and dark modes %>
+  <meta name="msapplication-TileColor" content="#0B0B0B">
+  <meta name="theme-color" content="#F9F9F9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B0B0B" media="(prefers-color-scheme: dark)">
 
   <link rel="manifest" href="<%= pwa_manifest_path %>">
-  <link rel="apple-touch-icon" href="/logo-pwa.png">
+  <%# Provide multiple iOS icons (standard 180x180 and larger) %>
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="apple-touch-icon" sizes="512x512" href="/logo-pwa.png">
+  <link rel="icon" sizes="192x192" type="image/png" href="/android-chrome-192x192.png">
 
   <% if Rails.env.production? && (posthog_config = Rails.configuration.x.posthog).try(:api_key).present? %>
     <%= render "shared/posthog", posthog_api_key: posthog_config.api_key, posthog_host: posthog_config.host %>
