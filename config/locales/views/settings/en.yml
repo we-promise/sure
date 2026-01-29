@@ -112,6 +112,12 @@ en:
         sso_confirm_body: Are you sure you want to disconnect your %{provider} account? You can reconnect it later by signing in with that provider again.
         sso_confirm_button: Disconnect
         sso_warning_message: This is your only login method. You should set a password in your security settings before disconnecting, otherwise you may be locked out of your account.
+    bank_sync:
+      show:
+        page_title: Bank Sync
+    guides:
+      show:
+        page_title: Guides
     settings_nav:
       accounts_label: Accounts
       advanced_section_title: Advanced

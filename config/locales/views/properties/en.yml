@@ -34,8 +34,8 @@ en:
       name_placeholder: My property
       select_type: Select property type
       property_type: Property type
-      year_built: Year built
-      area: Area
+      year_built: "Year Built (optional)"
+      area: "Area (optional)"
       area_unit: Unit
       square_feet: Square feet
       square_meters: Square meters
