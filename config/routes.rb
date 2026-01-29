@@ -363,6 +363,7 @@ Rails.application.routes.draw do
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
       post :sync, to: "sync#create"
