@@ -138,10 +138,14 @@ class Import < ApplicationRecord
     []
   end
 
+  # Returns false for import types that don't need CSV column mapping (e.g., PdfImport).
+  # Override in subclasses that handle data extraction differently.
   def requires_csv_workflow?
     true
   end
 
+  # Subclasses that require CSV workflow must override this.
+  # Non-CSV imports (e.g., PdfImport) can return [].
   def column_keys
     raise NotImplementedError, "Subclass must implement column_keys"
   end
