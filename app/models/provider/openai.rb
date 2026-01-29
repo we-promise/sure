@@ -113,8 +113,9 @@ class Provider::Openai < Provider
     end
   end
 
+  # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
   def supports_pdf_processing?
-    true
+    ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
   end
 
   def process_pdf(pdf_content:, model: "", family: nil)
