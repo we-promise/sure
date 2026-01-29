@@ -3,10 +3,16 @@
 <%
   # Parse error JSON to extract meaningful error message
   begin
-    error_data = JSON.parse(chat.error) if chat.error.present?
-    error_message = error_data&.dig("message") || "Failed to generate response."
+    if chat.error.present?
+      error_data = JSON.parse(chat.error)
+      # Handle both hash responses (Provider::Error.as_json) and string responses
+      error_message = error_data.is_a?(Hash) ? (error_data["message"] || "Failed to generate response.") : error_data.to_s
+    else
+      error_message = "Failed to generate response."
+    end
   rescue JSON::ParserError
-    error_message = "Failed to generate response."
+    # If JSON parsing fails, display the raw error message or fallback
+    error_message = chat.error.to_s.presence || "Failed to generate response."
   end
 %>
 
