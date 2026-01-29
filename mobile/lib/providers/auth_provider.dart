@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/user.dart';
 import '../models/auth_tokens.dart';
 import '../services/auth_service.dart';
@@ -209,6 +210,55 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       _errorMessage = 'Connection error: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> startSsoLogin(String provider) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final deviceInfo = await _deviceService.getDeviceInfo();
+      final ssoUrl = _authService.buildSsoUrl(
+        provider: provider,
+        deviceInfo: deviceInfo,
+      );
+
+      await launchUrl(Uri.parse(ssoUrl), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      _errorMessage = 'Failed to start sign-in: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> handleSsoCallback(Uri uri) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _authService.handleSsoCallback(uri);
+
+      if (result['success'] == true) {
+        _tokens = result['tokens'] as AuthTokens?;
+        _user = result['user'] as User?;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'] as String?;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Sign-in failed: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
       return false;
