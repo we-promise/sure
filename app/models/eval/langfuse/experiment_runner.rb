@@ -406,41 +406,32 @@ class Eval::Langfuse::ExperimentRunner
     end
 
     def build_available_functions
-      # Simplified function definitions for chat eval
+      # Simplified function definitions for chat eval - mirrors production functions
       [
         {
-          name: "get_accounts",
-          description: "Get user's financial accounts",
-          params_schema: { type: "object", properties: {}, required: [] }
-        },
-        {
           name: "get_transactions",
-          description: "Get transactions with optional filters",
-          params_schema: {
-            type: "object",
-            properties: {
-              account_id: { type: "string" },
-              start_date: { type: "string" },
-              end_date: { type: "string" },
-              category: { type: "string" }
-            }
-          }
+          description: "Get paginated transactions with optional filters",
+          params_schema: { type: "object", properties: {}, additionalProperties: true }
         },
         {
-          name: "get_balance_summary",
-          description: "Get balance summary across accounts",
-          params_schema: { type: "object", properties: {} }
+          name: "get_accounts",
+          description: "Get all accounts with balances and historical data",
+          params_schema: { type: "object", properties: {}, additionalProperties: true }
         },
         {
-          name: "get_spending_by_category",
-          description: "Get spending breakdown by category",
-          params_schema: {
-            type: "object",
-            properties: {
-              start_date: { type: "string" },
-              end_date: { type: "string" }
-            }
-          }
+          name: "get_holdings",
+          description: "Get investment holdings with optional filters for accounts and securities",
+          params_schema: { type: "object", properties: {}, additionalProperties: true }
+        },
+        {
+          name: "get_balance_sheet",
+          description: "Get current net worth, assets, and liabilities",
+          params_schema: { type: "object", properties: {}, additionalProperties: true }
+        },
+        {
+          name: "get_income_statement",
+          description: "Get income and expenses by category for a period",
+          params_schema: { type: "object", properties: {}, additionalProperties: true }
         }
       ]
     end

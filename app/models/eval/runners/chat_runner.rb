@@ -239,6 +239,7 @@ class Eval::Runners::ChatRunner < Eval::Runners::Base
       [
         build_function_definition("get_transactions", "Get paginated transactions with optional filters"),
         build_function_definition("get_accounts", "Get all accounts with balances and historical data"),
+        build_function_definition("get_holdings", "Get investment holdings with optional filters for accounts and securities"),
         build_function_definition("get_balance_sheet", "Get current net worth, assets, and liabilities"),
         build_function_definition("get_income_statement", "Get income and expenses by category for a period")
       ]
