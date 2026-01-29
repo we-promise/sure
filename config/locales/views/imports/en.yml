@@ -130,6 +130,7 @@ en:
       financial_document: Financial Document
       contract: Contract
       other: Other Document
+      unknown: Unknown Document
     pdf_import:
       processing_title: Processing your PDF
       processing_description: We're analyzing your document using AI. This may take a moment. You'll receive an email when the analysis is complete.
