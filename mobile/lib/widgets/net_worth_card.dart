@@ -18,29 +18,9 @@ class NetWorthCard extends StatelessWidget {
     required this.formatAmount,
   });
 
-  double get _totalAssets =>
-      assetTotalsByCurrency.values.fold(0.0, (sum, val) => sum + val);
-
-  double get _totalLiabilities =>
-      liabilityTotalsByCurrency.values.fold(0.0, (sum, val) => sum + val);
-
-  String _getPrimaryCurrency() {
-    // Get the currency with highest asset value, or first available
-    if (assetTotalsByCurrency.isNotEmpty) {
-      final sorted = assetTotalsByCurrency.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      return sorted.first.key;
-    }
-    if (liabilityTotalsByCurrency.isNotEmpty) {
-      return liabilityTotalsByCurrency.keys.first;
-    }
-    return 'USD';
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final primaryCurrency = _getPrimaryCurrency();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

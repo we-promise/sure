@@ -56,7 +56,7 @@ class CurrencyFilter extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              label: Text('All'),
+              label: const Text('All'),
               selected: isAllSelected,
               onSelected: (_) {
                 onSelectionChanged({});
