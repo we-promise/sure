@@ -13,6 +13,8 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
         This is great for answering questions like:
         - What is the user's net worth?  What is it composed of?
         - How has the user's wealth changed over time?
+
+        Note: All monetary values are returned in the user's preferred currency.
       INSTRUCTIONS
     end
   end

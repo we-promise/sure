@@ -21,6 +21,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
         This function is not great for:
         - Large time periods (use the get_income_statement function for this)
 
+        Note: All monetary values are returned in the user's preferred currency.
+
         Note on pagination:
 
         This function can be paginated.  You can expect the following properties in the response:
@@ -169,6 +171,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
     end
 
     {
+      currency: family.currency,
       transactions: normalized_transactions,
       total_results: pagy.count,
       page: pagy.page,

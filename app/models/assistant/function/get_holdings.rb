@@ -22,6 +22,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
         - Viewing investment performance and cost basis
 
         Note: This function only returns holdings from Investment and Crypto accounts.
+        Note: All monetary values are returned in the user's preferred currency.
 
         Note on pagination:
 
@@ -113,6 +114,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
     end
 
     {
+      currency: family.currency,
       holdings: normalized_holdings,
       total_results: pagy.count,
       page: pagy.page,

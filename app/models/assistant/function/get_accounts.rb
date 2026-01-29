@@ -5,13 +5,14 @@ class Assistant::Function::GetAccounts < Assistant::Function
     end
 
     def description
-      "Use this to see what accounts the user has along with their current and historical balances"
+      "Use this to see what accounts the user has along with their current and historical balances. All monetary values are returned in the user's preferred currency."
     end
   end
 
   def call(params = {})
     {
       as_of_date: Date.current,
+      currency: family.currency,
       accounts: family.accounts.includes(:balances, :account_providers).map do |account|
         {
           name: account.name,

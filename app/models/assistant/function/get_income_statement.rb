@@ -15,6 +15,8 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         - What are the user's spending habits?
         - How much income or spending did the user have over a specific time period?
 
+        Note: All monetary values are returned in the user's preferred currency.
+
         Simple example:
 
         ```
