@@ -157,6 +157,48 @@ class BudgetTest < ActiveSupport::TestCase
     )
   end
 
+  test "actual_spending subtracts uncategorized refunds" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    account = accounts(:depository)
+
+    # Create an uncategorized expense
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: nil),
+      date: Date.current,
+      name: "Uncategorized purchase",
+      amount: 400,
+      currency: "USD"
+    )
+
+    # Create an uncategorized refund
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: nil),
+      date: Date.current,
+      name: "Uncategorized refund",
+      amount: -150,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+
+    # The uncategorized refund should reduce overall actual_spending
+    # Other fixtures may contribute spending, so check that the net
+    # uncategorized amount (400 - 150 = 250) is reflected by comparing
+    # with and without the refund rather than asserting an exact total.
+    spending_with_refund = budget.actual_spending
+
+    # Remove the refund and check spending increases
+    Entry.find_by(name: "Uncategorized refund").destroy!
+    budget = Budget.find(budget.id)
+    spending_without_refund = budget.actual_spending
+
+    assert_equal 150, spending_without_refund - spending_with_refund
+  end
+
   test "previous_budget_param returns param when date is valid" do
     budget = Budget.create!(
       family: @family,

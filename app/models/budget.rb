@@ -241,7 +241,7 @@ class Budget < ApplicationRecord
       expense_category_ids = budget_categories.map(&:category_id).to_set
       income_totals.category_totals
         .reject { |ct| ct.category.subcategory? }
-        .select { |ct| expense_category_ids.include?(ct.category.id) }
+        .select { |ct| expense_category_ids.include?(ct.category.id) || ct.category.uncategorized? }
         .sum(&:total)
     end
 
