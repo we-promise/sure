@@ -66,10 +66,6 @@ class PdfImport < Import
     []
   end
 
-  def required_column_keys
-    []
-  end
-
   def requires_csv_workflow?
     false
   end
