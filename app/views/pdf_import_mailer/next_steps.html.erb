@@ -1,0 +1,30 @@
+<h1><%= t(".greeting", name: @user.display_name) %></h1>
+
+<p><%= t(".intro", product: product_name) %></p>
+
+<h2><%= t(".document_type_label") %></h2>
+<p><strong><%= @pdf_import.document_type.present? ? t("imports.document_types.#{@pdf_import.document_type}") : t("imports.document_types.other") %></strong></p>
+
+<h2><%= t(".summary_label") %></h2>
+<p><%= @pdf_import.ai_summary %></p>
+
+<% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+  <p><%= t(".transactions_note") %></p>
+<% else %>
+  <p><%= t(".document_stored_note") %></p>
+<% end %>
+
+<h2><%= t(".next_steps_label") %></h2>
+<p><%= t(".next_steps_intro") %></p>
+
+<ul>
+  <% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+    <li><%= t(".option_extract_transactions") %></li>
+  <% end %>
+  <li><%= t(".option_keep_reference") %></li>
+  <li><%= t(".option_delete") %></li>
+</ul>
+
+<%= link_to t(".view_import_button"), @import_url, class: "button" %>
+
+<p class="footer"><%= t(".footer_note") %></p>

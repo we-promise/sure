@@ -1,0 +1,84 @@
+<%# locals: (import:) %>
+
+<div class="h-full flex flex-col justify-center items-center">
+  <div class="space-y-6 max-w-lg w-full">
+    <% if import.importing? || import.pending? %>
+      <div class="mx-auto bg-gray-500/5 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "loader", class: "animate-pulse" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.processing_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.processing_description") %></p>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.check_status"), href: import_path(import), variant: "primary", full_width: true) %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_dashboard"), href: root_path, variant: "secondary", full_width: true) %>
+      </div>
+
+    <% elsif import.failed? %>
+      <div class="mx-auto bg-destructive/10 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "x", class: "text-destructive" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.failed_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.failed_description") %></p>
+        <% if import.error.present? %>
+          <p class="text-sm text-destructive"><%= import.error %></p>
+        <% end %>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.try_again"), href: new_import_path, variant: "primary", full_width: true) %>
+        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "btn btn--secondary w-full" %>
+      </div>
+
+    <% elsif import.complete? && import.ai_processed? %>
+      <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "check", class: "text-success" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.complete_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.complete_description") %></p>
+      </div>
+
+      <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
+            <%= t("imports.document_types.#{import.document_type}") %>
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.summary_label") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg whitespace-pre-wrap">
+            <%= import.ai_summary %>
+          </p>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.email_sent_notice") %></p>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "primary", full_width: true) %>
+        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "btn btn--secondary w-full" %>
+      </div>
+
+    <% else %>
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.unknown_state_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.unknown_state_description") %></p>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "primary", full_width: true) %>
+      </div>
+    <% end %>
+  </div>
+</div>
