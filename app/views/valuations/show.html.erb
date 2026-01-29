@@ -1,7 +1,7 @@
 <% entry, account = @entry, @entry.account %>
 
-<%= render DS::Dialog.new(variant: "drawer") do |dialog| %>
-  <% dialog.with_header do %>
+<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
+  <% dialog.with_header(hide_close_icon: true) do %>
     <%= render "valuations/header", entry: @entry %>
   <% end %>
 

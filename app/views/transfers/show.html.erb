@@ -1,8 +1,8 @@
-<%= render DS::Dialog.new(variant: "drawer") do |dialog| %>
-  <% dialog.with_header do %>
-    <div class="space-y-1">
-      <div class="flex items-center gap-4">
-        <h3 class="font-medium">
+<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
+  <% dialog.with_header(hide_close_icon: true) do %>
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h3 class="font-medium flex items-center gap-2">
           <span class="text-2xl text-primary">
             <%= format_money @transfer.amount_abs %>
           </span>
@@ -10,14 +10,16 @@
           <span class="text-lg text-secondary">
             <%= @transfer.amount_abs.currency.iso_code %>
           </span>
+
+          <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
         </h3>
 
-        <%= icon "arrow-left-right", size: "sm" %>
+        <span class="text-sm text-secondary">
+          <%= @transfer.name %>
+        </span>
       </div>
 
-      <span class="text-sm text-secondary">
-        <%= @transfer.name %>
-      </span>
+      <%= render DS::Button.new(variant: "icon", icon: "x", data: { action: "DS--dialog#close" }) %>
     </div>
   <% end %>
 
