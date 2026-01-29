@@ -25,10 +25,14 @@ class ImportsController < ApplicationController
   end
 
   def create
-    file = import_params[:csv_file]
+    file = import_params[:import_file]
 
     # Handle PDF file uploads - process with AI
     if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
+      unless valid_pdf_file?(file)
+        redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
+        return
+      end
       create_pdf_import(file)
       return
     end
@@ -102,7 +106,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:csv_file)
+      params.require(:import).permit(:import_file)
     end
 
     def create_pdf_import(file)
@@ -116,5 +120,11 @@ class ImportsController < ApplicationController
       pdf_import.process_with_ai_later
 
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
+    end
+
+    def valid_pdf_file?(file)
+      header = file.read(5)
+      file.rewind
+      header&.start_with?("%PDF-")
     end
 end

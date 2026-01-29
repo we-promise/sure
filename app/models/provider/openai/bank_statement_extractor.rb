@@ -1,5 +1,3 @@
-require "set"
-
 class Provider::Openai::BankStatementExtractor
   MAX_CHARS_PER_CHUNK = 3000
   attr_reader :client, :pdf_content, :model
@@ -139,8 +137,13 @@ class Provider::Openai::BankStatementExtractor
     end
 
     def deduplicate_transactions(transactions)
-      # Only deduplicate transactions that appear in consecutive chunks
-      # (likely chunking artifacts). Keep all transactions within same chunk.
+      # Deduplicates transactions that appear in consecutive chunks (chunking artifacts).
+      #
+      # KNOWN LIMITATION: Legitimate duplicate transactions (same date, amount, merchant)
+      # that happen to appear in adjacent chunks will be incorrectly deduplicated.
+      # This is an acceptable trade-off since chunking artifacts are more common than
+      # true same-day duplicates at chunk boundaries. Transactions within the same
+      # chunk are always preserved regardless of similarity.
       seen = Set.new
       transactions.select do |t|
         # Create key without chunk_index for deduplication

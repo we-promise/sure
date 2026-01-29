@@ -141,7 +141,7 @@
           </li>
         <% end %>
 
-        <% if params[:type].nil? || params[:type] == "PdfImport" %>
+        <% if (params[:type].nil? || params[:type] == "PdfImport") && Provider::Registry.get_provider(:openai)&.supports_pdf_processing? %>
           <li>
             <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full" do |form| %>
               <%= form.hidden_field :type, value: "PdfImport" %>
@@ -162,7 +162,7 @@
                   </div>
                 </div>
                 <%= icon("chevron-right") %>
-                <%= form.file_field :csv_file, accept: "application/pdf", class: "hidden", onchange: "this.form.submit()" %>
+                <%= form.file_field :import_file, accept: "application/pdf", class: "hidden", onchange: "this.form.submit()" %>
               </label>
             <% end %>
 

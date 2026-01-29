@@ -1,4 +1,6 @@
 class PdfImport < Import
+  has_one_attached :pdf_file
+
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
 
   def pdf_uploaded?
@@ -16,6 +18,7 @@ class PdfImport < Import
   def process_with_ai
     provider = Provider::Registry.get_provider(:openai)
     raise "AI provider not configured" unless provider
+    raise "AI provider does not support PDF processing" unless provider.supports_pdf_processing?
 
     response = provider.process_pdf(
       pdf_content: pdf_file_content,

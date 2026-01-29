@@ -35,7 +35,7 @@ class Provider::Openai::PdfProcessor
   end
 
   def instructions
-    <<~INSTRUCTIONS.strip_heredoc
+    <<~INSTRUCTIONS.strip
       You are a financial document analysis assistant. Your job is to analyze uploaded PDF documents
       and provide a structured summary of what the document contains.
 
@@ -261,72 +261,5 @@ class Provider::Openai::PdfProcessor
       end
 
       raise Provider::Openai::Error, "Could not parse JSON from PDF processing response: #{raw.truncate(200)}"
-    end
-
-    def json_schema
-      {
-        type: "object",
-        properties: {
-          document_type: {
-            type: "string",
-            enum: Import::DOCUMENT_TYPES,
-            description: "The type of financial document"
-          },
-          summary: {
-            type: "string",
-            description: "A concise summary of the document contents"
-          },
-          extracted_data: {
-            type: "object",
-            properties: {
-              institution_name: {
-                type: [ "string", "null" ],
-                description: "Name of the issuing institution"
-              },
-              statement_period_start: {
-                type: [ "string", "null" ],
-                description: "Start date of statement period (YYYY-MM-DD)"
-              },
-              statement_period_end: {
-                type: [ "string", "null" ],
-                description: "End date of statement period (YYYY-MM-DD)"
-              },
-              transaction_count: {
-                type: [ "integer", "null" ],
-                description: "Number of transactions in the statement"
-              },
-              opening_balance: {
-                type: [ "number", "null" ],
-                description: "Opening balance amount"
-              },
-              closing_balance: {
-                type: [ "number", "null" ],
-                description: "Closing balance amount"
-              },
-              currency: {
-                type: [ "string", "null" ],
-                description: "Currency code (e.g., USD, EUR)"
-              },
-              account_holder: {
-                type: [ "string", "null" ],
-                description: "Name of the account holder"
-              }
-            },
-            required: [
-              "institution_name",
-              "statement_period_start",
-              "statement_period_end",
-              "transaction_count",
-              "opening_balance",
-              "closing_balance",
-              "currency",
-              "account_holder"
-            ],
-            additionalProperties: false
-          }
-        },
-        required: [ "document_type", "summary", "extracted_data" ],
-        additionalProperties: false
-      }
     end
 end
