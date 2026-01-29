@@ -1,0 +1,23 @@
+ro:
+  saving_contributions:
+    new:
+      title: "Contribuie la %{goal}"
+      current_progress: "Progres curent"
+      remaining: "%{amount} rămase"
+      available_from_budget: "%{amount} disponibile din bugetul acestei luni"
+      budget_month: "Buget pentru %{month}"
+      amount_label: "Sumă contribuție"
+      suggested_amount_hint: "Alocare lunară sugerată: %{amount}"
+      limited_by_surplus: "limitat de surplusul disponibil"
+      source_label: "Sursă"
+      source_manual: "Contribuție manuală"
+      source_auto: "Din surplusul bugetului"
+      source_help: "Alege 'Manual' pentru contribuții unice sau 'Auto' pentru alocări recurente din buget"
+      submit: "Adaugă contribuție"
+      cancel: "Anulează"
+    create:
+      success: "Contribuție adăugată cu succes"
+    destroy:
+      removed: "Contribuție ștearsă"
+    errors:
+      exceeds_surplus: "Suma depășește surplusul bugetar disponibil"

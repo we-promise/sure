@@ -1,0 +1,92 @@
+ca:
+  saving_goals:
+    create:
+      success: "Objectiu d'estalvi creat correctament."
+    update:
+      success: "Objectiu d'estalvi actualitzat correctament."
+    destroy:
+      success: "Objectiu d'estalvi eliminat correctament."
+    pause:
+      success: "Objectiu d'estalvi pausat."
+    resume:
+      success: "Objectiu d'estalvi reprès."
+    complete:
+      success: "Objectiu d'estalvi completat! 🎉"
+    archive:
+      success: "Objectiu d'estalvi arxivat."
+    index:
+      title: "Objectius d'estalvi"
+      new_goal: "Nou objectiu"
+      empty:
+        title: "Encara no hi ha objectius d'estalvi"
+        description: "Establiu un objectiu financer i feu un seguiment del vostre progrés."
+      filters:
+        all: "Tots"
+        active: "Actius"
+        paused: "Pausats"
+        completed: "Completats"
+        archived: "Arxivats"
+    show:
+      progress: "%{percent}% estalviat"
+      target: "Objectiu: %{amount}"
+      deadline: "Data límit: %{date}"
+      on_track: "A temps"
+      behind: "Amb retard"
+      contributions: "Contribucions"
+      actions: "Accions"
+      edit: "Editar objectiu"
+      delete: "Eliminar objectiu"
+    form:
+      errors_title: "Si us plau, corregiu els errors següents:"
+      name_label: "Nom de l'objectiu"
+      name_placeholder: "p. ex. Fons d'emergència, Vacances"
+      target_amount_label: "Quantitat objectiu"
+      target_date_label: "Data objectiu"
+      target_date_hint: "Opcional. Establiu una data límit per fer un seguiment del ritme."
+      initial_amount_label: "Ja estalviat (opcional)"
+      initial_amount_hint: "Si ja heu començat a estalviar per a aquest objectiu"
+      priority_label: "Prioritat"
+      notes_label: "Notes"
+      notes_placeholder: "Afegiu qualsevol nota sobre aquest objectiu..."
+      save: "Desar objectiu"
+      create: "Crear objectiu"
+      update: "Desar canvis"
+      cancel: "Cancel·lar"
+    new:
+      title: "Nou objectiu d'estalvi"
+    edit:
+      title: "Editar objectiu d'estalvi"
+    actions:
+      pause: "Pausar objectiu"
+      resume: "Reprendre objectiu"
+      complete: "Completar objectiu"
+      archive: "Arxivar objectiu"
+    status:
+      active: "Actiu"
+      paused: "Pausat"
+      completed: "Completat"
+      archived: "Arxivat"
+    goal_card:
+      target_date: "Objectiu: %{date}"
+    show:
+      target_date: "Data objectiu: %{date}"
+      current_balance: "Balanç actual"
+      of_target: "de l'objectiu de %{amount}"
+      on_track: "A temps"
+      on_track_description: "Esteu estalviant prou per assolir el vostre objectiu a temps."
+      off_track: "Amb retard"
+      off_track_description: "Considereu augmentar els vostres estalvis mensuals per posar-vos al dia."
+      pause: "Pausar"
+      resume: "Reprendre"
+      complete: "Marcar com a complet"
+      monthly_effort: "Esforç mensual"
+      save_per_month: "Estalvieu %{amount}/mes"
+      for_months: "durant %{count} mesos per assolir el vostre objectiu"
+      allocate: "Assignar"
+      contribution_history: "Historial de contribucions"
+      no_contributions: "Encara no hi ha contribucions. Comenceu a estalviar!"
+      auto_source: "Auto"
+      manual_source: "Manual"
+      total_contributions:
+        one: "Total: %{amount} d'1 contribució"
+        other: "Total: %{amount} de %{count} contribucions"

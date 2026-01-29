@@ -1,0 +1,92 @@
+nb:
+  saving_goals:
+    create:
+      success: "Spar mål opprettet."
+    update:
+      success: "Spar mål oppdatert."
+    destroy:
+      success: "Spar mål slettet."
+    pause:
+      success: "Spar mål satt på pause."
+    resume:
+      success: "Spar mål gjenopptatt."
+    complete:
+      success: "Spar mål fullført! 🎉"
+    archive:
+      success: "Spar mål arkivert."
+    index:
+      title: "Sparmål"
+      new_goal: "Nytt mål"
+      empty:
+        title: "Ingen sparmål ennå"
+        description: "Sett et økonomisk mål og følg fremgangen din."
+      filters:
+        all: "Alle"
+        active: "Aktive"
+        paused: "På pause"
+        completed: "Fullførte"
+        archived: "Arkiverte"
+    show:
+      progress: "%{percent}% spart"
+      target: "Mål: %{amount}"
+      deadline: "Frist: %{date}"
+      on_track: "I rute"
+      behind: "Forsinket"
+      contributions: "Bidrag"
+      actions: "Handlinger"
+      edit: "Rediger mål"
+      delete: "Slett mål"
+    form:
+      errors_title: "Vennligst rett opp følgende feil:"
+      name_label: "Målnavn"
+      name_placeholder: "f.eks. Nødfond, Ferie"
+      target_amount_label: "Målbeløp"
+      target_date_label: "Måldato"
+      target_date_hint: "Valgfritt. Sett en frist for å følge tempoet."
+      initial_amount_label: "Allerede spart (valgfritt)"
+      initial_amount_hint: "Hvis du allerede har begynt å spare til dette målet"
+      priority_label: "Prioritet"
+      notes_label: "Notater"
+      notes_placeholder: "Legg til notater om dette målet..."
+      save: "Lagre mål"
+      create: "Opprett mål"
+      update: "Lagre endringer"
+      cancel: "Avbryt"
+    new:
+      title: "Nytt sparmål"
+    edit:
+      title: "Rediger sparmål"
+    actions:
+      pause: "Sett mål på pause"
+      resume: "Gjenoppta mål"
+      complete: "Fullfør mål"
+      archive: "Arkiver mål"
+    status:
+      active: "Aktiv"
+      paused: "På pause"
+      completed: "Fullført"
+      archived: "Arkivert"
+    goal_card:
+      target_date: "Mål: %{date}"
+    show:
+      target_date: "Måldato: %{date}"
+      current_balance: "Nåværende saldo"
+      of_target: "av %{amount} mål"
+      on_track: "I rute"
+      on_track_description: "Du sparer nok til å nå målet ditt i tide."
+      off_track: "Forsinket"
+      off_track_description: "Vurder å øke de månedlige sparingene dine for å ta igjen."
+      pause: "Pause"
+      resume: "Gjenoppta"
+      complete: "Marker som fullført"
+      monthly_effort: "Månedlig innsats"
+      save_per_month: "Spar %{amount}/måned"
+      for_months: "i %{count} måneder for å nå målet ditt"
+      allocate: "Tildel"
+      contribution_history: "Bidragshistorikk"
+      no_contributions: "Ingen bidrag ennå. Begynn å spare!"
+      auto_source: "Auto"
+      manual_source: "Manuell"
+      total_contributions:
+        one: "Totalt: %{amount} fra 1 bidrag"
+        other: "Totalt: %{amount} fra %{count} bidrag"

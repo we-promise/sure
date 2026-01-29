@@ -1,0 +1,23 @@
+pt-BR:
+  saving_contributions:
+    new:
+      title: "Contribuir para %{goal}"
+      current_progress: "Progresso atual"
+      remaining: "%{amount} restantes"
+      available_from_budget: "%{amount} disponíveis do orçamento deste mês"
+      budget_month: "Orçamento para %{month}"
+      amount_label: "Valor da Contribuição"
+      suggested_amount_hint: "Alocação mensal sugerida: %{amount}"
+      limited_by_surplus: "limitado pelo excedente disponível"
+      source_label: "Origem"
+      source_manual: "Contribuição manual"
+      source_auto: "Do excedente do orçamento"
+      source_help: "Escolha 'Manual' para contribuições únicas ou 'Auto' para alocações recorrentes do orçamento"
+      submit: "Adicionar Contribuição"
+      cancel: "Cancelar"
+    create:
+      success: "Contribuição adicionada com sucesso"
+    destroy:
+      removed: "Contribuição removida"
+    errors:
+      exceeds_surplus: "O valor excede o excedente disponível no orçamento"

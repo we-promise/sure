@@ -1,0 +1,23 @@
+de:
+  saving_contributions:
+    new:
+      title: "Beitrag zu %{goal} leisten"
+      current_progress: "Aktueller Fortschritt"
+      remaining: "%{amount} verbleibend"
+      available_from_budget: "%{amount} aus dem Budget dieses Monats verfügbar"
+      budget_month: "Budget für %{month}"
+      amount_label: "Beitragsbetrag"
+      suggested_amount_hint: "Vorgeschlagene monatliche Zuweisung: %{amount}"
+      limited_by_surplus: "begrenzt durch verfügbaren Überschuss"
+      source_label: "Quelle"
+      source_manual: "Manueller Beitrag"
+      source_auto: "Aus Budgetüberschuss"
+      source_help: "Wählen Sie 'Manuell' für einmalige Beiträge oder 'Auto' für wiederkehrende Budgetzuweisungen"
+      submit: "Beitrag hinzufügen"
+      cancel: "Abbrechen"
+    create:
+      success: "Beitrag erfolgreich hinzugefügt"
+    destroy:
+      removed: "Beitrag entfernt"
+    errors:
+      exceeds_surplus: "Betrag übersteigt verfügbaren Budgetüberschuss"

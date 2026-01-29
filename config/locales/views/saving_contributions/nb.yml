@@ -1,0 +1,23 @@
+nb:
+  saving_contributions:
+    new:
+      title: "Bidra til %{goal}"
+      current_progress: "Nåværende fremgang"
+      remaining: "%{amount} gjenstår"
+      available_from_budget: "%{amount} tilgjengelig fra denne månedens budsjett"
+      budget_month: "Budsjett for %{month}"
+      amount_label: "Bidragsbeløp"
+      suggested_amount_hint: "Foreslått månedlig tildeling: %{amount}"
+      limited_by_surplus: "begrenset av tilgjengelig overskudd"
+      source_label: "Kilde"
+      source_manual: "Manuelt bidrag"
+      source_auto: "Fra budsjettoverskudd"
+      source_help: "Velg 'Manuell' for engangsbidrag eller 'Auto' for gjentakende budsjetttildelinger"
+      submit: "Legg til bidrag"
+      cancel: "Avbryt"
+    create:
+      success: "Bidrag lagt til"
+    destroy:
+      removed: "Bidrag fjernet"
+    errors:
+      exceeds_surplus: "Beløpet overstiger tilgjengelig budsjettoverskudd"

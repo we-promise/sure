@@ -1,0 +1,92 @@
+ro:
+  saving_goals:
+    create:
+      success: "Obiectiv de economisire creat cu succes."
+    update:
+      success: "Obiectiv de economisire actualizat cu succes."
+    destroy:
+      success: "Obiectiv de economisire șters cu succes."
+    pause:
+      success: "Obiectiv de economisire pus pe pauză."
+    resume:
+      success: "Obiectiv de economisire reluat."
+    complete:
+      success: "Obiectiv de economisire finalizat! 🎉"
+    archive:
+      success: "Obiectiv de economisire arhivat."
+    index:
+      title: "Obiective de Economisire"
+      new_goal: "Obiectiv Nou"
+      empty:
+        title: "Niciun obiectiv de economisire încă"
+        description: "Stabilește un obiectiv financiar și urmărește progresul."
+      filters:
+        all: "Toate"
+        active: "Active"
+        paused: "Pe pauză"
+        completed: "Finalizate"
+        archived: "Arhivate"
+    show:
+      progress: "%{percent}% economisit"
+      target: "Țintă: %{amount}"
+      deadline: "Termen limită: %{date}"
+      on_track: "În grafic"
+      behind: "În urmă"
+      contributions: "Contribuții"
+      actions: "Acțiuni"
+      edit: "Editează Obiectiv"
+      delete: "Șterge Obiectiv"
+    form:
+      errors_title: "Te rugăm să corectezi următoarele erori:"
+      name_label: "Nume Obiectiv"
+      name_placeholder: "ex. Fond de urgență, Vacanță"
+      target_amount_label: "Sumă Țintă"
+      target_date_label: "Data Țintă"
+      target_date_hint: "Opțional. Stabilește un termen limită pentru a urmări ritmul."
+      initial_amount_label: "Deja economisit (opțional)"
+      initial_amount_hint: "Dacă ai început deja să economisești pentru acest obiectiv"
+      priority_label: "Prioritate"
+      notes_label: "Note"
+      notes_placeholder: "Adaugă note despre acest obiectiv..."
+      save: "Salvează Obiectiv"
+      create: "Creează Obiectiv"
+      update: "Salvează Modificări"
+      cancel: "Anulează"
+    new:
+      title: "Obiectiv Nou de Economisire"
+    edit:
+      title: "Editează Obiectiv de Economisire"
+    actions:
+      pause: "Pune pe Pauză"
+      resume: "Reia Obiectiv"
+      complete: "Finalizează Obiectiv"
+      archive: "Arhivează Obiectiv"
+    status:
+      active: "Activ"
+      paused: "Pe pauză"
+      completed: "Finalizat"
+      archived: "Arhivat"
+    goal_card:
+      target_date: "Țintă: %{date}"
+    show:
+      target_date: "Data țintă: %{date}"
+      current_balance: "Sold Curent"
+      of_target: "din obiectivul de %{amount}"
+      on_track: "În Grafic"
+      on_track_description: "Economisești suficient pentru a atinge obiectivul la timp."
+      off_track: "În Urmă"
+      off_track_description: "Ia în considerare creșterea economiilor lunare pentru a recupera."
+      pause: "Pauză"
+      resume: "Reia"
+      complete: "Marchează ca Finalizat"
+      monthly_effort: "Efort Lunar"
+      save_per_month: "Economisește %{amount}/lună"
+      for_months: "timp de %{count} luni pentru a atinge obiectivul"
+      allocate: "Alocă"
+      contribution_history: "Istoric Contribuții"
+      no_contributions: "Nicio contribuție încă. Începe să economisești!"
+      auto_source: "Auto"
+      manual_source: "Manual"
+      total_contributions:
+        one: "Total: %{amount} dintr-o contribuție"
+        other: "Total: %{amount} din %{count} contribuții"

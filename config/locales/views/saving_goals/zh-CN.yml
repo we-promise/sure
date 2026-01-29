@@ -1,0 +1,92 @@
+zh-CN:
+  saving_goals:
+    create:
+      success: "储蓄目标创建成功。"
+    update:
+      success: "储蓄目标更新成功。"
+    destroy:
+      success: "储蓄目标删除成功。"
+    pause:
+      success: "储蓄目标已暂停。"
+    resume:
+      success: "储蓄目标已恢复。"
+    complete:
+      success: "储蓄目标已完成！🎉"
+    archive:
+      success: "储蓄目标已归档。"
+    index:
+      title: "储蓄目标"
+      new_goal: "新目标"
+      empty:
+        title: "暂无储蓄目标"
+        description: "设定财务目标并追踪您的进度。"
+      filters:
+        all: "全部"
+        active: "进行中"
+        paused: "已暂停"
+        completed: "已完成"
+        archived: "已归档"
+    show:
+      progress: "已存 %{percent}%"
+      target: "目标：%{amount}"
+      deadline: "截止日期：%{date}"
+      on_track: "按计划进行"
+      behind: "落后于计划"
+      contributions: "存款记录"
+      actions: "操作"
+      edit: "编辑目标"
+      delete: "删除目标"
+    form:
+      errors_title: "请更正以下错误："
+      name_label: "目标名称"
+      name_placeholder: "例如：应急基金、度假"
+      target_amount_label: "目标金额"
+      target_date_label: "目标日期"
+      target_date_hint: "可选。设定截止日期以追踪进度。"
+      initial_amount_label: "已存金额（可选）"
+      initial_amount_hint: "如果您已经开始为该目标储蓄"
+      priority_label: "优先级"
+      notes_label: "备注"
+      notes_placeholder: "添加关于此目标的备注..."
+      save: "保存目标"
+      create: "创建目标"
+      update: "保存更改"
+      cancel: "取消"
+    new:
+      title: "新建储蓄目标"
+    edit:
+      title: "编辑储蓄目标"
+    actions:
+      pause: "暂停目标"
+      resume: "恢复目标"
+      complete: "完成目标"
+      archive: "归档目标"
+    status:
+      active: "进行中"
+      paused: "已暂停"
+      completed: "已完成"
+      archived: "已归档"
+    goal_card:
+      target_date: "目标：%{date}"
+    show:
+      target_date: "目标日期：%{date}"
+      current_balance: "当前余额"
+      of_target: "目标 %{amount}"
+      on_track: "按计划进行"
+      on_track_description: "您目前的储蓄进度足以按时达成目标。"
+      off_track: "落后于计划"
+      off_track_description: "建议增加每月储蓄额以追赶进度。"
+      pause: "暂停"
+      resume: "恢复"
+      complete: "标记为完成"
+      monthly_effort: "每月投入"
+      save_per_month: "每月存入 %{amount}"
+      for_months: "持续 %{count} 个月以达成目标"
+      allocate: "分配"
+      contribution_history: "存款历史"
+      no_contributions: "暂无存款。开始储蓄吧！"
+      auto_source: "自动"
+      manual_source: "手动"
+      total_contributions:
+        one: "总计：%{amount}（来自 1 笔存款）"
+        other: "总计：%{amount}（来自 %{count} 笔存款）"

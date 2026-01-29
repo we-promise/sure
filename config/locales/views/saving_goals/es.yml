@@ -1,0 +1,92 @@
+es:
+  saving_goals:
+    create:
+      success: "Objetivo de ahorro creado correctamente."
+    update:
+      success: "Objetivo de ahorro actualizado correctamente."
+    destroy:
+      success: "Objetivo de ahorro eliminado correctamente."
+    pause:
+      success: "Objetivo de ahorro pausado."
+    resume:
+      success: "Objetivo de ahorro reanudado."
+    complete:
+      success: "¡Objetivo de ahorro completado! 🎉"
+    archive:
+      success: "Objetivo de ahorro archivado."
+    index:
+      title: "Objetivos de ahorro"
+      new_goal: "Nuevo objetivo"
+      empty:
+        title: "Aún no hay objetivos de ahorro"
+        description: "Establezca un objetivo financiero y haga un seguimiento de su progreso."
+      filters:
+        all: "Todos"
+        active: "Activos"
+        paused: "Pausados"
+        completed: "Completados"
+        archived: "Archivados"
+    show:
+      progress: "%{percent}% ahorrado"
+      target: "Objetivo: %{amount}"
+      deadline: "Fecha límite: %{date}"
+      on_track: "A tiempo"
+      behind: "Con retraso"
+      contributions: "Contribuciones"
+      actions: "Acciones"
+      edit: "Editar objetivo"
+      delete: "Eliminar objetivo"
+    form:
+      errors_title: "Por favor, corrija los siguientes errores:"
+      name_label: "Nombre del objetivo"
+      name_placeholder: "ej. Fondo de emergencia, Vacaciones"
+      target_amount_label: "Cantidad objetivo"
+      target_date_label: "Fecha objetivo"
+      target_date_hint: "Opcional. Establezca una fecha límite para hacer un seguimiento del ritmo."
+      initial_amount_label: "Ya ahorrado (opcional)"
+      initial_amount_hint: "Si ya ha comenzado a ahorrar para este objetivo"
+      priority_label: "Prioridad"
+      notes_label: "Notas"
+      notes_placeholder: "Añada cualquier nota sobre este objetivo..."
+      save: "Guardar objetivo"
+      create: "Crear objetivo"
+      update: "Guardar cambios"
+      cancel: "Cancelar"
+    new:
+      title: "Nuevo objetivo de ahorro"
+    edit:
+      title: "Editar objetivo de ahorro"
+    actions:
+      pause: "Pausar objetivo"
+      resume: "Reanudar objetivo"
+      complete: "Completar objetivo"
+      archive: "Archivar objetivo"
+    status:
+      active: "Activo"
+      paused: "Pausado"
+      completed: "Completado"
+      archived: "Archivado"
+    goal_card:
+      target_date: "Objetivo: %{date}"
+    show:
+      target_date: "Fecha objetivo: %{date}"
+      current_balance: "Saldo actual"
+      of_target: "del objetivo de %{amount}"
+      on_track: "A tiempo"
+      on_track_description: "Está ahorrando lo suficiente para alcanzar su objetivo a tiempo."
+      off_track: "Con retraso"
+      off_track_description: "Considere aumentar sus ahorros mensuales para ponerse al día."
+      pause: "Pausar"
+      resume: "Reanudar"
+      complete: "Marcar como completo"
+      monthly_effort: "Esfuerzo mensual"
+      save_per_month: "Ahorre %{amount}/mes"
+      for_months: "durante %{count} meses para alcanzar su objetivo"
+      allocate: "Asignar"
+      contribution_history: "Historial de contribuciones"
+      no_contributions: "Aún no hay contribuciones. ¡Empiece a ahorrar!"
+      auto_source: "Auto"
+      manual_source: "Manual"
+      total_contributions:
+        one: "Total: %{amount} de 1 contribución"
+        other: "Total: %{amount} de %{count} contribuciones"

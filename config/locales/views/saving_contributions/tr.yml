@@ -1,0 +1,23 @@
+tr:
+  saving_contributions:
+    new:
+      title: "%{goal} hedefine katkı yap"
+      current_progress: "Mevcut ilerleme"
+      remaining: "%{amount} kalan"
+      available_from_budget: "%{amount} bu ayın bütçesinden kullanılabilir"
+      budget_month: "%{month} Bütçesi"
+      amount_label: "Katkı Tutarı"
+      suggested_amount_hint: "Önerilen aylık ayırma: %{amount}"
+      limited_by_surplus: "kullanılabilir fazla ile sınırlı"
+      source_label: "Kaynak"
+      source_manual: "Manuel katkı"
+      source_auto: "Bütçe fazlasından"
+      source_help: "Tek seferlik katkılar için 'Manuel' veya tekrarlayan bütçe ayırmaları için 'Otomatik' seçin"
+      submit: "Katkı Ekle"
+      cancel: "İptal"
+    create:
+      success: "Katkı başarıyla eklendi"
+    destroy:
+      removed: "Katkı kaldırıldı"
+    errors:
+      exceeds_surplus: "Tutar kullanılabilir bütçe fazlasını aşıyor"
