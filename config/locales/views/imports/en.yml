@@ -148,3 +148,5 @@ en:
       back_to_imports: Back to imports
       unknown_state_title: Unknown state
       unknown_state_description: This import is in an unexpected state. Please return to imports.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Processing failed: %{error}"
