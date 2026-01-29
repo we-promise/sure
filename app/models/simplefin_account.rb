@@ -10,10 +10,6 @@ class SimplefinAccount < ApplicationRecord
 
   belongs_to :simplefin_item
 
-  # Legacy association via foreign key (will be removed after migration)
-  has_one :account, dependent: :nullify, foreign_key: :simplefin_account_id
-
-  # New association through account_providers
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :linked_account, through: :account_provider, source: :account
 
@@ -21,15 +17,22 @@ class SimplefinAccount < ApplicationRecord
   validates :account_id, uniqueness: { scope: :simplefin_item_id, allow_nil: true }
   validate :has_balance
 
-  # Helper to get account using new system first, falling back to legacy
   def current_account
-    linked_account || account
+    linked_account
   end
 
-  # Ensure there is an AccountProvider link for this SimpleFin account and its current Account.
-  # Safe and idempotent; returns the AccountProvider or nil if no account is associated yet.
-  def ensure_account_provider!
-    acct = current_account
+  # Ensure there is an AccountProvider link for this SimpleFin account.
+  # Safe and idempotent; returns the AccountProvider or nil if no account is provided.
+  def ensure_account_provider!(account = nil)
+    # If already linked and no new account specified, return existing
+    if account_provider.present?
+      if account && account_provider.account_id != account.id
+        account_provider.update!(account: account)
+      end
+      return account_provider
+    end
+
+    acct = account || current_account
     return nil unless acct
 
     provider = AccountProvider

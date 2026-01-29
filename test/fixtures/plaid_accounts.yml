@@ -1,3 +1,7 @@
+# IMPORTANT: plaid_accounts(:one) is PRE-LINKED to accounts(:connected) via account_providers fixture.
+# Tests that need to create custom AccountProvider links should use plaid_accounts(:two) which is UNLINKED.
+# Do NOT add a fixture linking :two, as many tests depend on it being available for custom linking.
+
 one:
   current_balance: 1000
   available_balance: 1000
@@ -5,5 +9,17 @@ one:
   name: Plaid Depository Account
   plaid_item: one
   plaid_id: "acc_mock_1"
+  plaid_type: depository
+  plaid_subtype: checking
+
+# UNLINKED plaid account - intentionally kept unlinked for tests that need to create custom links
+# Do NOT add an AccountProvider fixture linking this account!
+two:
+  current_balance: 2000
+  available_balance: 2000
+  currency: USD
+  name: Plaid Checking Unlinked
+  plaid_item: one
+  plaid_id: "acc_mock_2"
   plaid_type: depository
   plaid_subtype: checking

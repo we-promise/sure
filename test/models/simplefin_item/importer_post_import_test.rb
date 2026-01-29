@@ -17,8 +17,8 @@ class SimplefinItem::ImporterPostImportTest < ActiveSupport::TestCase
       account_type: "credit",
       available_balance: 0
     )
-    # Link via legacy association
-    credit_acct.update!(simplefin_account_id: sfa.id)
+    # Link via AccountProvider
+    AccountProvider.create!(account: credit_acct, provider: sfa)
 
     importer = SimplefinItem::Importer.new(@item, simplefin_provider: mock(), sync: @sync)
 
@@ -46,7 +46,7 @@ class SimplefinItem::ImporterPostImportTest < ActiveSupport::TestCase
       account_type: "investment",
       current_balance: 0
     )
-    invest_acct.update!(simplefin_account_id: sfa.id)
+    AccountProvider.create!(account: invest_acct, provider: sfa)
 
     importer = SimplefinItem::Importer.new(@item, simplefin_provider: mock(), sync: @sync)
 
