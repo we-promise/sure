@@ -48,7 +48,7 @@ en:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
         member_removal_failed: There was a problem removing the member.
-        member_removed: Member was successfully removed.
+        member_removed: Member removed successfully.
         not_authorized: You are not authorized to remove members.
       show:
         confirm_delete:
