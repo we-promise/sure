@@ -11,6 +11,13 @@ class ProcessPdfJob < ApplicationJob
     begin
       pdf_import.process_with_ai
 
+      # For bank statements, extract transactions
+      if pdf_import.bank_statement?
+        Rails.logger.info("ProcessPdfJob: Extracting transactions for bank statement import #{pdf_import.id}")
+        pdf_import.extract_transactions
+        Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_transactions.size} transactions")
+      end
+
       # Find the user who created this import (first admin or any user in the family)
       user = pdf_import.family.users.find_by(role: :admin) || pdf_import.family.users.first
 

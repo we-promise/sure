@@ -39,6 +39,38 @@ class PdfImport < Import
     result
   end
 
+  def extract_transactions
+    return unless bank_statement?
+
+    provider = Provider::Registry.get_provider(:openai)
+    raise "AI provider not configured" unless provider
+
+    response = provider.extract_bank_statement(
+      pdf_content: pdf_file_content,
+      family: family
+    )
+
+    unless response.success?
+      error_message = response.error&.message || "Unknown extraction error"
+      raise error_message
+    end
+
+    update!(extracted_data: response.data)
+    response.data
+  end
+
+  def bank_statement?
+    document_type == "bank_statement"
+  end
+
+  def has_extracted_transactions?
+    extracted_data.present? && extracted_data["transactions"].present?
+  end
+
+  def extracted_transactions
+    extracted_data&.dig("transactions") || []
+  end
+
   def send_next_steps_email(user)
     PdfImportMailer.with(
       user: user,
