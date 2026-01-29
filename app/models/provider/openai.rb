@@ -4,9 +4,7 @@ class Provider::Openai < Provider
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
-  # Supported OpenAI model prefixes (e.g., "gpt-4" matches "gpt-4", "gpt-4.1", "gpt-4-turbo", etc.)
-  DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
-  DEFAULT_MODEL = "gpt-4.1"
+  LLM_FILE_PATH = Rails.root.join("config", "llm.yml")
 
   # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
@@ -14,21 +12,36 @@ class Provider::Openai < Provider
   # Returns the effective model that would be used by the provider
   # Uses the same logic as Provider::Registry and the initializer
   def self.effective_model
-    configured_model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
-    configured_model.presence || DEFAULT_MODEL
+    configured_model = active_provider.fetch(:model, Setting.openai_model)
+    configured_model.presence || active_provider[:default_model]
+  end
+
+  def llm_config
+    @llm_config ||= (YAML.safe_load(
+      File.read(LLM_FILE_PATH),
+      permitted_classes: [],
+      permitted_symbols: [],
+      aliases: true
+    ) || {}).deep_symbolize_keys!
+  end
+
+  def active_provider
+    @active_provider ||= @llm_config.dig("providers", @llm_config.fetch("active_provider", "openai"))
   end
 
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
-    client_options[:uri_base] = uri_base if uri_base.present?
+    llm_uri_base = uri_base.presence || active_provider[:uri_base]
+    llm_model = model.presence || active_provider[:model]
+    client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
 
     @client = ::OpenAI::Client.new(**client_options)
-    @uri_base = uri_base
-    if custom_provider? && model.blank?
+    @uri_base = llm_uri_base
+    if custom_provider? && llm_model.blank?
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"
     end
-    @default_model = model.presence || DEFAULT_MODEL
+    @default_model = llm_model.presence || effective_model
   end
 
   def supports_model?(model)
@@ -36,7 +49,11 @@ class Provider::Openai < Provider
     return true if custom_provider?
 
     # Otherwise, check if model starts with any supported OpenAI prefix
-    DEFAULT_OPENAI_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
+    active_provider[:supported_models].split(/\s+/).any? { |prefix| model.start_with?(prefix) }
+  end
+
+  def supports_responses_endpoint?
+    @supports_responses_endpoint ||= ActiveModel::Type::Boolean.new.cast(active_provider[:supports_responses_endpoint])
   end
 
   def provider_name
@@ -188,20 +205,7 @@ class Provider::Openai < Provider
     user_identifier: nil,
     family: nil
   )
-    if custom_provider?
-      generic_chat_response(
-        prompt: prompt,
-        model: model,
-        instructions: instructions,
-        functions: functions,
-        function_results: function_results,
-        messages: messages,
-        streamer: streamer,
-        session_id: session_id,
-        user_identifier: user_identifier,
-        family: family
-      )
-    else
+    if supports_responses_endpoint?
       native_chat_response(
         prompt: prompt,
         model: model,
@@ -211,6 +215,19 @@ class Provider::Openai < Provider
         messages: messages,
         streamer: streamer,
         previous_response_id: previous_response_id,
+        session_id: session_id,
+        user_identifier: user_identifier,
+        family: family
+      )
+    else
+      generic_chat_response(
+        prompt: prompt,
+        model: model,
+        instructions: instructions,
+        functions: functions,
+        function_results: function_results,
+        messages: messages,
+        streamer: streamer,
         session_id: session_id,
         user_identifier: user_identifier,
         family: family
@@ -227,7 +244,6 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
-      messages: nil,
       streamer: nil,
       previous_response_id: nil,
       session_id: nil,
@@ -256,29 +272,19 @@ class Provider::Openai < Provider
           nil
         end
 
-        use_history = messages.present? && function_results.blank?
-        input_prompt = use_history ? nil : prompt
-
         input_payload = chat_config.build_input(
-          prompt: input_prompt,
-          messages: use_history ? messages : nil
+          prompt: prompt
         )
 
         begin
-          params = {
+          raw_response = client.responses.create(parameters: {
             model: model,
             input: input_payload,
             instructions: instructions,
             tools: chat_config.tools,
+            previous_response_id: previous_response_id,
             stream: stream_proxy
-          }
-
-          # Only send previous_response_id when we're not explicitly providing full history
-          if previous_response_id.present? && (!use_history || function_results.present?)
-            params[:previous_response_id] = previous_response_id
-          end
-
-          raw_response = client.responses.create(parameters: params)
+          })
 
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)

@@ -1,0 +1,17 @@
+active_provider: <%= ENV.fetch("LLM_ACTIVE_PROVIDER") { "openai" } %>
+providers:
+  openai:
+    access_token: <%= ENV.fetch("OPENAI_ACCESS_TOKEN") { nil } %>
+    model:  <%= ENV.fetch("OPENAI_MODEL") { nil } %>
+    default_model:  <%= ENV.fetch("OPENAI_DEFAULT_MODEL") { "gpt-4.1" } %>
+    # Supported OpenAI model prefixes (e.g., "gpt-4" matches "gpt-4", "gpt-4.1", "gpt-4-turbo", etc.)
+    supported_models: <%= ENV.fetch("OPENAI_SUPPORTED_MODELS") {  "gpt-4 gpt-5 o1 o3" } %>
+    uri_base: <%= ENV.fetch("OPENAI_URI_BASE") { nil } %>
+    # - "auto": Tries strict first, falls back to none if >50% fail (recommended default)
+    # - "strict": Best for thinking models (qwen-thinking, deepseek-reasoner) - skips verbose <think> tags
+    # - "none": Best for non-thinking models (gpt-oss, llama, mistral) - allows reasoning in output
+    # - "json_object": Middle ground, broader compatibility than strict
+    json_mode:  <%= ENV.fetch("OPENAI_LLM_JSON_MODE") { ENV.fetch("LLM_JSON_MODE") { nil } } %>
+    # custom / native
+    custom_provider: <%= ENV.fetch("OPENAI_CUSTOM_PROVIDER") { false } %>
+    supports_responses_endpoint: <%= ENV.fetch("OPENAI_SUPPORTS_RESPONSES_ENDPOINT") { nil } %>
