@@ -70,8 +70,7 @@ class ImportsController < ApplicationController
   end
 
   def show
-    # PDF imports have their own flow - show the summary page
-    return if @import.is_a?(PdfImport)
+    return unless @import.requires_csv_workflow?
 
     if !@import.uploaded?
       redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload")

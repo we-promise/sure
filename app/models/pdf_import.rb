@@ -70,6 +70,10 @@ class PdfImport < Import
     []
   end
 
+  def requires_csv_workflow?
+    false
+  end
+
   def pdf_file_content
     return nil unless pdf_file.attached?
 

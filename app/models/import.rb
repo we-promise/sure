@@ -138,6 +138,10 @@ class Import < ApplicationRecord
     []
   end
 
+  def requires_csv_workflow?
+    true
+  end
+
   def column_keys
     raise NotImplementedError, "Subclass must implement column_keys"
   end
