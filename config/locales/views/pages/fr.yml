@@ -3,6 +3,14 @@ fr:
   pages:
     changelog:
       title: Nouveautés
+    privacy:
+      title: Politique de confidentialité
+      heading: Politique de confidentialité
+      placeholder: Le contenu de la politique de confidentialité sera affiché ici.
+    terms:
+      title: Conditions d'utilisation
+      heading: Conditions d'utilisation
+      placeholder: Le contenu des conditions d'utilisation sera affiché ici.
       date_unavailable: Date indisponible
       no_release_notes: Aucune note de version disponible
     feedback:

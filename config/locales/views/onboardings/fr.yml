@@ -8,11 +8,13 @@ fr:
       start: Démarrer
     header:
       sign_out: Déconnexion
+    logout:
+      sign_out: Se déconnecter
     preferences:
       color_theme: Thème de couleur
-      theme_system: Système
-      theme_light: Clair
-      theme_dark: Sombre
+      system: Système
+      light: Clair
+      dark: Sombre
       currency: Monnaie
       date_format: Format de date
       example: Compte d'exemple
@@ -23,7 +25,7 @@ fr:
       title: Configurez vos préférences
     goals:
       title: Qu'est-ce qui vous amène ici ?
-      subtitle: Sélectionnez un ou plusieurs objectifs que vous avez en utilisant %{product_name} comme outil de finances personnelles.
+      description: "Sélectionnez un ou plusieurs objectifs que vous avez en utilisant %{product_name} comme outil de finances personnelles."
       goal_unified_accounts: Voir tous mes comptes en un seul endroit
       goal_cashflow: Comprendre les flux de trésorerie et les dépenses
       goal_budgeting: Gérer les plans financiers et le budget
@@ -52,7 +54,7 @@ fr:
       feature_investments: Performance et rendements des investissements à travers le portefeuille
       feature_transactions: Expérience complète de suivi des transactions
       feature_ai: Accès illimité et conversations avec Sure AI
-      feature_manual_tracking: Suivi manuel des comptes qui fonctionne bien
+      feature_manual: Suivi manuel des comptes qui fonctionne bien
       feature_currencies: Plusieurs devises et couverture quasi mondiale
       feature_early_access: Accès anticipé aux nouvelles fonctionnalités
       feature_support: Support humain prioritaire de l'équipe
@@ -66,12 +68,16 @@ fr:
       subtitle: Complétons votre profil.
       title: Configurons les bases
     show:
-      title: Configurons votre compte
-      subtitle: Premières choses d'abord, configurons votre profil.
+      title_setup: Configurons votre compte
+      subtitle_setup: Premières choses d'abord, configurons votre profil.
       first_name: Prénom
+      first_name_placeholder: Prénom
       last_name: Nom de famille
+      last_name_placeholder: Nom de famille
       household_name: Nom du foyer
+      household_name_placeholder: Nom du foyer
       country: Pays
       continue: Continuer
       message: Nous sommes ravis de vous accueillir. Dans la prochaine étape, nous allons vous poser quelques questions pour compléter votre profil et ensuite configurer votre compte.
       setup: Configurer le compte
+      title: Bienvenue sur %{product_name}

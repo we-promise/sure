@@ -1,5 +1,38 @@
 ---
 fr:
   chats:
-    demo_banner_title: "Mode Démo Actif"
-    demo_banner_message: "Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Cloudflare Workers AI. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés !"
+    demo_banner_title: Mode Démo Actif
+    demo_banner_message: "Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Cloudflare Workers AI. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés ! 🤖"
+    thinking_indicator:
+      thinking: Réflexion en cours...
+    ai_consent:
+      title: Rencontrez votre assistant financier IA
+      description_available: Obtenez des informations personnalisées, des réponses à vos questions et des suggestions intelligentes pour mieux gérer votre argent.
+      description_unavailable_html: Pour utiliser l'assistant IA, vous devez définir la variable d'environnement <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> ou la configurer dans les paramètres d'auto-hébergement de votre instance.
+      enable_button: Activer les chats IA
+      disclaimer: Désactivable à tout moment. Toutes les données envoyées à nos fournisseurs LLM sont anonymisées.
+    ai_greeting:
+      introduction: "Salut %{name} ! Je suis une IA/modèle de langage qui peut vous aider avec vos finances. J'ai accès au web et aux données de votre compte."
+      default_name: ""
+      slash_commands_html: 'Vous pouvez utiliser <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> pour accéder aux commandes'
+      questions_label: "Voici quelques questions que vous pouvez poser :"
+      question_portfolio: Évaluer le portefeuille d'investissement
+      question_spending: Afficher les analyses de dépenses
+      question_patterns: Trouver des tendances inhabituelles
+    chat_title:
+      new_chat: Nouvelle conversation
+    chat:
+      updated_ago: "Il y a %{time}"
+      edit_title: Modifier le titre
+      delete: Supprimer la conversation
+    chat_nav:
+      all_chats: Toutes les conversations
+      start_new: Nouvelle conversation
+      edit_title: Modifier le titre
+      delete: Supprimer la conversation
+    error:
+      error_message: Échec de la génération de la réponse. Veuillez réessayer.
+      retry: Réessayer
+    index:
+      title: Conversations
+      new_chat: Nouvelle conversation
