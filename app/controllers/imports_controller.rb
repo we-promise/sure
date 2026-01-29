@@ -54,7 +54,7 @@ class ImportsController < ApplicationController
         return
       end
 
-      unless Import::ALLOWED_MIME_TYPES.include?(file.content_type)
+      unless Import::ALLOWED_CSV_MIME_TYPES.include?(file.content_type)
         import.destroy
         redirect_to new_import_path, alert: t("imports.create.invalid_file_type")
         return
