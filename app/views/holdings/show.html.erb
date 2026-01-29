@@ -1,5 +1,5 @@
-<%= render DS::Dialog.new(variant: "drawer") do |dialog| %>
-  <% dialog.with_header do %>
+<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
+  <% dialog.with_header(hide_close_icon: true) do %>
     <div class="flex items-center justify-between">
       <div>
         <%= tag.h3 @holding.name, class: "text-2xl font-medium text-primary" %>
