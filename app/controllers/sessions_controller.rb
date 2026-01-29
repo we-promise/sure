@@ -221,6 +221,14 @@ class SessionsController < ApplicationController
       reason: sanitized_reason
     )
 
+    # Mobile SSO: redirect back to the app with error instead of web login page
+    if session[:mobile_sso].present?
+      session.delete(:mobile_sso)
+      redirect_to "sureapp://oauth/callback?error=#{sanitized_reason}&message=#{CGI.escape('SSO authentication failed')}",
+        allow_other_host: true
+      return
+    end
+
     message = case sanitized_reason
     when "sso_provider_unavailable"
       t("sessions.failure.sso_provider_unavailable")
