@@ -33,12 +33,12 @@ class ProcessPdfJob < ApplicationJob
 
   private
 
-  def sanitize_error_message(error)
-    case error
-    when RuntimeError, ArgumentError
-      error.message.truncate(500)
-    else
-      "Processing failed: #{error.class.name.demodulize}"
+    def sanitize_error_message(error)
+      case error
+      when RuntimeError, ArgumentError
+        error.message.truncate(500)
+      else
+        "Processing failed: #{error.class.name.demodulize}"
+      end
     end
-  end
 end
