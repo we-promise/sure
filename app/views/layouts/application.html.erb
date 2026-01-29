@@ -13,10 +13,13 @@
 <%= render "layouts/shared/htmldoc" do %>
   <div
     class="flex flex-col lg:flex-row h-full bg-surface"
-    data-controller="app-layout"
+    data-controller="app-layout resizable-layout"
     data-app-layout-expanded-sidebar-class="<%= expanded_sidebar_class %>"
     data-app-layout-collapsed-sidebar-class="<%= collapsed_sidebar_class %>"
-    data-app-layout-user-id-value="<%= Current.user.id %>">
+    data-app-layout-user-id-value="<%= Current.user.id %>"
+    data-resizable-layout-user-id-value="<%= Current.user.id %>"
+    data-resizable-layout-left-width-value="<%= Current.user.left_sidebar_width %>"
+    data-resizable-layout-right-width-value="<%= Current.user.right_sidebar_width %>">
     <div
       class="hidden fixed inset-0 bg-surface z-20 h-full w-full pt-[calc(env(safe-area-inset-top)+0.75rem)] pr-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pl-3 overflow-y-auto transition-all duration-300"
       data-app-layout-target="mobileSidebar">
@@ -75,15 +78,18 @@
 
     <%# DESKTOP - Left sidebar %>
     <%= tag.div class: class_names(
-        "hidden lg:block py-4 overflow-y-auto shrink-0 max-w-[320px] transition-all duration-300",
-        Current.user.show_sidebar? ? expanded_sidebar_class : collapsed_sidebar_class,
+        "hidden lg:block py-4 overflow-y-auto shrink-0 transition-all duration-300",
+        Current.user.show_sidebar? ? nil : collapsed_sidebar_class,
        ),
-       data: { app_layout_target: "leftSidebar" } do %>
+       style: Current.user.show_sidebar? ? "width: #{Current.user.left_sidebar_width}px" : nil,
+       data: { app_layout_target: "leftSidebar", resizable_layout_target: "leftSidebar" } do %>
       <% if content_for?(:sidebar) %>
-        <%= yield :sidebar %>
+        <div class="w-full h-full">
+          <%= yield :sidebar %>
+        </div>
       <% else %>
-        <div class="h-full flex flex-col">
-          <div class="overflow-y-auto grow">
+        <div class="h-full w-full flex flex-col">
+          <div class="overflow-y-auto grow w-full">
             <%= render "accounts/account_sidebar_tabs", family: Current.family, active_tab: @account_group_tab %>
           </div>
 
@@ -111,6 +117,22 @@
       <% end %>
     <% end %>
 
+    <%# Left resize handle - visible only when left sidebar is expanded %>
+    <%= tag.div class: class_names(
+          "lg:flex items-center justify-center w-3 shrink-0 cursor-col-resize group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+          Current.user.show_sidebar? ? "hidden lg:flex" : "hidden"
+        ),
+        role: "separator",
+        aria: { orientation: "vertical", label: t(".resize_left_sidebar") },
+        tabindex: "0",
+        data: {
+          app_layout_target: "leftHandle",
+          resizable_layout_target: "leftHandle",
+          action: "mousedown->resizable-layout#startLeftDrag touchstart->resizable-layout#startLeftTouch keydown->resizable-layout#handleLeftKeydown"
+        } do %>
+      <div class="w-0.5 h-full bg-transparent group-hover:bg-primary group-focus:bg-primary transition-colors"></div>
+    <% end %>
+
     <%# SHARED - Main content %>
     <%= tag.main class: class_names("grow overflow-y-auto px-3 lg:px-10 py-4 w-full mx-auto max-w-5xl"), data: { app_layout_target: "content" } do %>
       <div class="hidden lg:flex gap-2 items-center justify-between mb-6">
@@ -133,14 +155,31 @@
       <%= yield %>
     <% end %>
 
+    <%# Right resize handle - visible only when right sidebar is expanded %>
+    <%= tag.div class: class_names(
+          "lg:flex items-center justify-center w-3 shrink-0 cursor-col-resize group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+          Current.user.show_ai_sidebar? ? "hidden lg:flex" : "hidden"
+        ),
+        role: "separator",
+        aria: { orientation: "vertical", label: t(".resize_right_sidebar") },
+        tabindex: "0",
+        data: {
+          app_layout_target: "rightHandle",
+          resizable_layout_target: "rightHandle",
+          action: "mousedown->resizable-layout#startRightDrag touchstart->resizable-layout#startRightTouch keydown->resizable-layout#handleRightKeydown"
+        } do %>
+      <div class="w-0.5 h-full bg-transparent group-hover:bg-primary group-focus:bg-primary transition-colors"></div>
+    <% end %>
+
     <%# DESKTOP - Right sidebar %>
     <%= tag.div class: class_names(
-          "hidden lg:block h-full overflow-y-auto shrink-0 max-w-[400px] transition-all duration-300",
-          Current.user.show_ai_sidebar? ? expanded_sidebar_class : collapsed_sidebar_class,
+          "hidden lg:block h-full overflow-y-auto shrink-0 transition-all duration-300",
+          Current.user.show_ai_sidebar? ? nil : collapsed_sidebar_class,
         ),
-        data: { app_layout_target: "rightSidebar" } do %>
-      <%= tag.div id: "chat-container", class: "relative h-full", data: { controller: "chat hotkey", turbo_permanent: true } do %>
-        <div class="flex flex-col h-full justify-between shrink-0">
+        style: Current.user.show_ai_sidebar? ? "width: #{Current.user.right_sidebar_width}px" : nil,
+        data: { app_layout_target: "rightSidebar", resizable_layout_target: "rightSidebar" } do %>
+      <%= tag.div id: "chat-container", class: "relative h-full w-full", data: { controller: "chat hotkey", turbo_permanent: true } do %>
+        <div class="flex flex-col h-full w-full justify-between shrink-0">
           <%= turbo_frame_tag chat_frame, src: chat_view_path(@chat), loading: "lazy", class: "h-full" do %>
             <div class="flex justify-center items-center h-full">
               <%= icon("loader-circle", class: "animate-spin") %>

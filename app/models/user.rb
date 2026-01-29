@@ -107,6 +107,10 @@ class User < ApplicationRecord
     end
   end
 
+  def show_sidebar?
+    show_sidebar
+  end
+
   def show_ai_sidebar?
     show_ai_sidebar
   end
@@ -286,6 +290,28 @@ class User < ApplicationRecord
     end
   end
 
+  # Sidebar width preferences management
+  def sidebar_widths
+    preferences&.[]("sidebar_widths") || default_sidebar_widths
+  end
+
+  def left_sidebar_width
+    sidebar_widths["left_sidebar"]
+  end
+
+  def right_sidebar_width
+    sidebar_widths["right_sidebar"]
+  end
+
+  def update_sidebar_widths(widths)
+    transaction do
+      lock!
+      updated_prefs = (preferences || {}).deep_dup
+      updated_prefs["sidebar_widths"] = (updated_prefs["sidebar_widths"] || {}).merge(widths.stringify_keys)
+      update!(preferences: updated_prefs)
+    end
+  end
+
   private
     def skip_password_validation?
       skip_password_validation == true
@@ -298,6 +324,11 @@ class User < ApplicationRecord
     def default_reports_section_order
       %w[trends_insights transactions_breakdown]
     end
+
+    def default_sidebar_widths
+      { "left_sidebar" => 280, "right_sidebar" => 360 }
+    end
+
     def ensure_valid_profile_image
       return unless profile_image.attached?
 

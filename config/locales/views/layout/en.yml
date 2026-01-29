@@ -8,6 +8,8 @@ en:
         home: Home
         reports: Reports
         transactions: Transactions
+      resize_left_sidebar: Resize accounts sidebar
+      resize_right_sidebar: Resize AI assistant sidebar
     auth:
       existing_account: Already have an account?
       no_account: New to %{product_name}?

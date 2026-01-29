@@ -52,7 +52,7 @@ x-rails-env: &rails_env
   # For Ollama: Set OPENAI_ACCESS_TOKEN=ollama, OPENAI_URI_BASE=http://host.docker.internal:11434/v1
   OPENAI_ACCESS_TOKEN: ollama
   OPENAI_URI_BASE: http://host.docker.internal:11434/v1
-  OPENAI_MODEL: llama3.1:8b
+  OPENAI_MODEL: gpt-oss:20b
   # Add any additional env vars from your .env file here or use env_file
 
 services:

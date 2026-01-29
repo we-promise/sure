@@ -2,7 +2,8 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="dialog"
 export default class extends Controller {
-  static targets = ["leftSidebar", "rightSidebar", "mobileSidebar"];
+  static targets = ["leftSidebar", "rightSidebar", "mobileSidebar", "leftHandle", "rightHandle"];
+  static values = { userId: Number };
   static classes = [
     "expandedSidebar",
     "collapsedSidebar",
@@ -19,15 +20,35 @@ export default class extends Controller {
   }
 
   toggleLeftSidebar() {
-    const isOpen = this.leftSidebarTarget.classList.contains("w-full");
+    const isOpen = !this.leftSidebarTarget.classList.contains("w-0");
     this.#updateUserPreference("show_sidebar", !isOpen);
     this.#toggleSidebarWidth(this.leftSidebarTarget, isOpen);
+
+    if (this.hasLeftHandleTarget) {
+      if (isOpen) {
+        this.leftHandleTarget.classList.add("hidden");
+        this.leftHandleTarget.classList.remove("lg:flex");
+      } else {
+        this.leftHandleTarget.classList.remove("hidden");
+        this.leftHandleTarget.classList.add("lg:flex");
+      }
+    }
   }
 
   toggleRightSidebar() {
-    const isOpen = this.rightSidebarTarget.classList.contains("w-full");
+    const isOpen = !this.rightSidebarTarget.classList.contains("w-0");
     this.#updateUserPreference("show_ai_sidebar", !isOpen);
     this.#toggleSidebarWidth(this.rightSidebarTarget, isOpen);
+
+    if (this.hasRightHandleTarget) {
+      if (isOpen) {
+        this.rightHandleTarget.classList.add("hidden");
+        this.rightHandleTarget.classList.remove("lg:flex");
+      } else {
+        this.rightHandleTarget.classList.remove("hidden");
+        this.rightHandleTarget.classList.add("lg:flex");
+      }
+    }
   }
 
   #toggleSidebarWidth(el, isCurrentlyOpen) {
