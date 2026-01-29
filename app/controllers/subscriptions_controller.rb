@@ -62,7 +62,7 @@ class SubscriptionsController < ApplicationController
 
   private
     def guard_self_hosted
-      render plain: t("subscriptions.self_hosted_alert", product_name: product_name), status: :forbidden
+      render plain: "Feature disabled: subscriptions are not available in self-hosted mode", status: :forbidden
     end
 
     def stripe
