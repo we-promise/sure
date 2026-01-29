@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'charts/**'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -36,13 +38,22 @@ jobs:
         id: version
         run: |
           # Generate version like: 0.0.0-nightly.20251213.173045
-          VERSION="0.0.0-nightly.$(date -u +'%Y%m%d.%H%M%S')"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            BASE_VERSION="$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -n 1)"
+            if [[ -z "${BASE_VERSION}" ]]; then
+              BASE_VERSION="0.0.0"
+            fi
+            VERSION="${BASE_VERSION}-nightly.$(date -u +'%Y%m%d.%H%M%S')"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
       - name: Update Chart.yaml version
         run: |
           sed -i "s/^version:.*/version: ${{ steps.version.outputs.version }}/" charts/sure/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.version }}\"/" charts/sure/Chart.yaml
           cat charts/sure/Chart.yaml
 
       - name: Add Helm repositories
@@ -83,5 +94,20 @@ jobs:
           git config user.name "$GIT_USER_NAME"
           git config user.email "$GIT_USER_EMAIL"
           git add .
-          git commit -m "Release nightly: ${{ steps.version.outputs.version }}"
+          if git diff --cached --quiet; then
+            echo "No Helm chart updates to publish."
+            exit 0
+          fi
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            git commit -m "Release chart for ${{ github.ref_name }}"
+          else
+            git commit -m "Release nightly: ${{ steps.version.outputs.version }}"
+          fi
           git push
+
+      - name: Upload chart to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: .cr-release-packages/*.tgz

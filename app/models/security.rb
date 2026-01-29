@@ -1,5 +1,5 @@
 class Security < ApplicationRecord
-  include Provided
+  include Provided, PlanRestrictionTracker
 
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes

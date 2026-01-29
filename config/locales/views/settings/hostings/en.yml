@@ -72,6 +72,10 @@ en:
         label: API Key
         placeholder: Enter your API key here
         plan: "%{plan} plan"
+        plan_upgrade_warning_title: Some tickers require a paid plan
+        plan_upgrade_warning_description: The following tickers in your portfolio cannot sync prices with your current Twelve Data plan.
+        requires_plan: requires %{plan} plan
+        view_pricing: View Twelve Data pricing
         title: Twelve Data
       update:
         failure: Invalid setting value

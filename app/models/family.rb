@@ -141,6 +141,27 @@ class Family < ApplicationRecord
     (requires_exchange_rates_data_provider? && ExchangeRate.provider.nil?)
   end
 
+  # Returns securities with plan restrictions for a specific provider
+  # @param provider [String] The provider name (e.g., "TwelveData")
+  # @return [Array<Hash>] Array of hashes with ticker, name, required_plan, provider
+  def securities_with_plan_restrictions(provider:)
+    security_ids = trades.joins(:security).pluck("securities.id").uniq
+    return [] if security_ids.empty?
+
+    restrictions = Security.plan_restrictions_for(security_ids, provider: provider)
+    return [] if restrictions.empty?
+
+    Security.where(id: restrictions.keys).map do |security|
+      restriction = restrictions[security.id]
+      {
+        ticker: security.ticker,
+        name: security.name,
+        required_plan: restriction[:required_plan],
+        provider: restriction[:provider]
+      }
+    end
+  end
+
   def oldest_entry_date
     entries.order(:date).first&.date || Date.current
   end
