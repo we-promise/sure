@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
+import '../services/preferences_service.dart';
 import '../widgets/account_card.dart';
 import '../widgets/connectivity_banner.dart';
 import '../widgets/net_worth_card.dart';
@@ -17,10 +18,10 @@ class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  DashboardScreenState createState() => DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class DashboardScreenState extends State<DashboardScreen> {
   final LogService _log = LogService.instance;
   bool _showSyncSuccess = false;
   int _previousPendingCount = 0;
@@ -30,10 +31,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   AccountFilter _accountFilter = AccountFilter.all;
   Set<String> _selectedCurrencies = {};
 
+  // Group by type state
+  bool _groupByType = false;
+  final Set<String> _collapsedGroups = {};
+
   @override
   void initState() {
     super.initState();
     _loadAccounts();
+    _loadPreferences();
 
     // Listen for sync completion to show success indicator
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,6 +100,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (accountsProvider.errorMessage == 'unauthorized') {
       await authProvider.logout();
     }
+  }
+
+  Future<void> _loadPreferences() async {
+    final groupByType = await PreferencesService.instance.getGroupByType();
+    if (mounted) {
+      setState(() {
+        _groupByType = groupByType;
+      });
+    }
+  }
+
+  void reloadPreferences() {
+    _loadPreferences();
   }
 
   Future<void> _handleRefresh() async {
@@ -593,120 +612,191 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Sort accounts: by type, then currency, then balance
     filteredAccounts.sort((a, b) {
-      // Assets before liabilities
       if (a.isAsset && !b.isAsset) return -1;
       if (!a.isAsset && b.isAsset) return 1;
-
-      // Then by currency
+      int typeComparison = a.accountType.compareTo(b.accountType);
+      if (typeComparison != 0) return typeComparison;
       int currencyComparison = a.currency.compareTo(b.currency);
       if (currencyComparison != 0) return currencyComparison;
-
-      // Then by balance (descending)
       return b.balanceAsDouble.compareTo(a.balanceAsDouble);
     });
 
-    // Determine section title
-    String sectionTitle;
-    Color sectionColor;
-    int accountCount = filteredAccounts.length;
-
-    switch (_accountFilter) {
-      case AccountFilter.assets:
-        sectionTitle = 'Assets';
-        sectionColor = Colors.green;
-        break;
-      case AccountFilter.liabilities:
-        sectionTitle = 'Liabilities';
-        sectionColor = Colors.red;
-        break;
-      case AccountFilter.all:
-        sectionTitle = 'All Accounts';
-        sectionColor = Theme.of(context).colorScheme.primary;
-        break;
+    if (_groupByType) {
+      return _buildGroupedAccountsList(filteredAccounts);
     }
 
-    // Add currency info if filtered
-    if (_selectedCurrencies.isNotEmpty) {
-      sectionTitle += ' (${_selectedCurrencies.join(", ")})';
-    }
+    return _buildFlatAccountsList(filteredAccounts);
+  }
 
+  List<Widget> _buildFlatAccountsList(List<Account> accounts) {
     return [
-      SliverToBoxAdapter(
-        child: _SimpleSectionHeader(
-          title: sectionTitle,
-          count: accountCount,
-          color: sectionColor,
-        ),
-      ),
       SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
-              final account = filteredAccounts[index];
+              final account = accounts[index];
               return AccountCard(
                 account: account,
                 onTap: () => _handleAccountTap(account),
                 onSwipe: () => _handleAccountSwipe(account),
               );
             },
-            childCount: filteredAccounts.length,
+            childCount: accounts.length,
           ),
         ),
       ),
     ];
   }
-}
 
-class _SimpleSectionHeader extends StatelessWidget {
-  final String title;
-  final int count;
-  final Color color;
+  List<Widget> _buildGroupedAccountsList(List<Account> accounts) {
+    // Group accounts by accountType
+    final groups = <String, List<Account>>{};
+    for (final account in accounts) {
+      groups.putIfAbsent(account.accountType, () => []).add(account);
+    }
 
-  const _SimpleSectionHeader({
-    required this.title,
-    required this.count,
-    required this.color,
-  });
+    final slivers = <Widget>[];
+    for (final entry in groups.entries) {
+      final accountType = entry.key;
+      final groupAccounts = entry.value;
+      final isCollapsed = _collapsedGroups.contains(accountType);
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 24,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
+      // Use first account to get display name and icon
+      final displayName = groupAccounts.first.displayAccountType;
+
+      slivers.add(
+        SliverToBoxAdapter(
+          child: _CollapsibleTypeHeader(
+            title: displayName,
+            count: groupAccounts.length,
+            accountType: accountType,
+            isCollapsed: isCollapsed,
+            onToggle: () {
+              setState(() {
+                if (isCollapsed) {
+                  _collapsedGroups.remove(accountType);
+                } else {
+                  _collapsedGroups.add(accountType);
+                }
+              });
+            },
           ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              count.toString(),
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+        ),
+      );
+
+      if (!isCollapsed) {
+        slivers.add(
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final account = groupAccounts[index];
+                  return AccountCard(
+                    account: account,
+                    onTap: () => _handleAccountTap(account),
+                    onSwipe: () => _handleAccountSwipe(account),
+                  );
+                },
+                childCount: groupAccounts.length,
               ),
             ),
           ),
-        ],
+        );
+      }
+    }
+
+    return slivers;
+  }
+}
+
+class _CollapsibleTypeHeader extends StatelessWidget {
+  final String title;
+  final int count;
+  final String accountType;
+  final bool isCollapsed;
+  final VoidCallback onToggle;
+
+  const _CollapsibleTypeHeader({
+    required this.title,
+    required this.count,
+    required this.accountType,
+    required this.isCollapsed,
+    required this.onToggle,
+  });
+
+  IconData _getTypeIcon() {
+    switch (accountType) {
+      case 'depository':
+        return Icons.account_balance;
+      case 'credit_card':
+        return Icons.credit_card;
+      case 'investment':
+        return Icons.trending_up;
+      case 'loan':
+        return Icons.receipt_long;
+      case 'property':
+        return Icons.home;
+      case 'vehicle':
+        return Icons.directions_car;
+      case 'crypto':
+        return Icons.currency_bitcoin;
+      case 'other_asset':
+        return Icons.category;
+      case 'other_liability':
+        return Icons.payment;
+      default:
+        return Icons.account_balance_wallet;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onToggle,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Row(
+          children: [
+            Icon(
+              _getTypeIcon(),
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Icon(
+              isCollapsed ? Icons.expand_more : Icons.expand_less,
+              size: 20,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
     );
   }
