@@ -281,10 +281,20 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
     # Apply rules - should handle error gracefully
     result = ApplyRulesToTransactionService.new(entry, execution_type: "manual").call
 
-    # Should have matched but may have errors
-    assert_equal 1, result[:rules_matched]
-    # The rule may still be applied but with an error, or it may fail
-    assert result[:rules_applied] >= 0
+    # Rule should match the transaction
+    assert_equal 1, result[:rules_matched], "Rule should match transaction with matching merchant"
+    
+    # Rule should fail to apply due to invalid category ID
+    assert_equal 0, result[:rules_applied], "Rule should not be applied when category ID is invalid"
+    
+    # Error should be recorded
+    assert_not_empty result[:errors], "Should have errors when category ID is invalid"
+    error = result[:errors].first
+    assert error[:rule_id].present?, "Error should include rule_id"
+    assert error[:rule_name].present?, "Error should include rule_name"
+    assert error[:error].present?, "Error should include error message"
+    # Error message should indicate the problem (NoMethodError or similar)
+    assert_match(/NoMethodError|nil|category/i, error[:error], "Error message should indicate the problem")
   end
 
   test "creates rule run records" do
@@ -872,15 +882,19 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
     result = ApplyRulesToTransactionService.new(entry, execution_type: "manual").call
 
     # Should have matched the rule
-    assert_equal 1, result[:rules_matched]
+    assert_equal 1, result[:rules_matched], "Rule should match transaction"
     
-    # May have errors or may have applied (depending on validation)
-    if result[:errors].any?
-      error = result[:errors].first
-      assert error[:rule_id].present?
-      assert error[:rule_name].present?
-      assert error[:error].present?
-    end
+    # Rule should fail to apply due to invalid category ID
+    assert_equal 0, result[:rules_applied], "Rule should not be applied when category ID is invalid"
+    
+    # Errors must be present when rule application fails
+    assert_not_empty result[:errors], "Errors should be present when rule application fails"
+    
+    # Validate error structure
+    error = result[:errors].first
+    assert error[:rule_id].present?, "Error should include rule_id"
+    assert error[:rule_name].present?, "Error should include rule_name"
+    assert error[:error].present?, "Error should include error message"
   end
 
   test "handles concurrent rule applications" do
