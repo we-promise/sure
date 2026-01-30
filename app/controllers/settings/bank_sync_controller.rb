@@ -5,28 +5,28 @@ class Settings::BankSyncController < ApplicationController
     @providers = [
       {
         name: "Lunch Flow",
-        description: "US, Canada, UK, EU, Brazil and Asia through multiple open banking providers.",
+        description: t("settings.bank_sync.show.lunchflow_description"),
         path: "https://lunchflow.app/features/sure-integration",
         target: "_blank",
         rel: "noopener noreferrer"
       },
       {
         name: "Plaid",
-        description: "US & Canada bank connections with transactions, investments, and liabilities.",
+        description: t("settings.bank_sync.show.plaid_description"),
         path: "https://github.com/we-promise/sure/blob/main/docs/hosting/plaid.md",
         target: "_blank",
         rel: "noopener noreferrer"
       },
       {
         name: "SimpleFIN",
-        description: "US & Canada connections via SimpleFIN protocol.",
+        description: t("settings.bank_sync.show.simplefin_description"),
         path: "https://beta-bridge.simplefin.org",
         target: "_blank",
         rel: "noopener noreferrer"
       },
       {
-        name: "Enable Banking (beta)",
-        description: "European bank connections via open banking APIs across multiple countries.",
+        name: t("settings.bank_sync.show.enable_banking_name"),
+        description: t("settings.bank_sync.show.enable_banking_description"),
         path: "https://enablebanking.com",
         target: "_blank",
         rel: "noopener noreferrer"

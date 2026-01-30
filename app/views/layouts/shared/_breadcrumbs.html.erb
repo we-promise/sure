@@ -2,16 +2,17 @@
 
 <div class="py-2 flex items-center gap-2">
   <% breadcrumbs.each_with_index do |(name, path), index| %>
+    <% display_name = name.is_a?(Symbol) ? t(name, default: name.to_s.split('.').last.titleize) : name %>
     <% if index > 0 %>
       <%= icon("chevron-right", color: "gray", size: "sm") %>
     <% end %>
 
     <% if path.present? && index < breadcrumbs.size - 1 %>
-      <%= link_to name, path, class: "text-sm text-gray-500 font-medium" %>
+      <%= link_to display_name, path, class: "text-sm text-gray-500 font-medium" %>
     <% elsif index == breadcrumbs.size - 1 %>
-      <span class="text-primary font-medium text-sm"><%= name %></span>
+      <span class="text-primary font-medium text-sm"><%= display_name %></span>
     <% else %>
-      <span class="text-sm text-gray-500 font-medium"><%= name %></span>
+      <span class="text-sm text-gray-500 font-medium"><%= display_name %></span>
     <% end %>
   <% end %>
 </div>

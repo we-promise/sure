@@ -12,7 +12,7 @@
             <%= tag.p t(".no_accounts"), class: "text-sm" %>
 
             <%= render DS::Link.new(
-              text: "Create account",
+              text: t(".create_account"),
               variant: "primary",
               href: new_account_path(return_to: import_confirm_path(import)),
               frame: :modal
@@ -60,7 +60,7 @@
 
     <div class="flex justify-center w-full">
       <%= render DS::Link.new(
-        text: "Next",
+        text: t(".next"),
         variant: "primary",
         href: is_last_step ? import_path(import) : url_for(step: step_idx + 2),
         icon: "arrow-right",

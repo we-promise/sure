@@ -16,7 +16,7 @@ class TransferMatchesController < ApplicationController
 
     @transfer.sync_account_later
 
-    redirect_back_or_to transactions_path, notice: "Transfer created"
+    redirect_back_or_to transactions_path, notice: t(".created")
   end
 
   private
