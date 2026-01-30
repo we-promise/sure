@@ -149,7 +149,7 @@ module ApplicationHelper
 
   # Sanitizes return_to param or referrer for safe back links
   def safe_back_path(fallback: root_path)
-    if params[:return_to].present? && params[:return_to].match?(/\A\/[^\/]/)
+    if params[:return_to].present? && params[:return_to].match?(/\A\/(?:$|[^\/])/)
       return params[:return_to]
     end
 

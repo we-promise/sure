@@ -57,7 +57,7 @@
         icon: "trash",
         href: saving_goal_path(@saving_goal),
         method: :delete,
-        confirm: CustomConfirm.for_resource_deletion("saving goal"),
+        confirm: CustomConfirm.for_resource_deletion(t("resources.saving_goal", default: "saving goal")),
         title: t("common.delete"),
         class: "hover:text-destructive hover:bg-destructive/10"
       ) %>
@@ -178,7 +178,7 @@
                 icon: "trash",
                 href: saving_goal_saving_contribution_path(@saving_goal, contribution),
                 method: :delete,
-                confirm: CustomConfirm.for_resource_deletion("contribution"),
+                confirm: CustomConfirm.for_resource_deletion(t("resources.contribution", default: "contribution")),
                 title: t("common.delete"),
                 class: "text-subdued hover:text-destructive -mr-2"
               ) %>
