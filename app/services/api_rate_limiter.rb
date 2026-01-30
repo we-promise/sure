@@ -21,12 +21,6 @@ class ApiRateLimiter
   # Seconds to retain hourly buckets (2 hours for sliding window)
   BUCKET_RETENTION_SECONDS = 7200
 
-  # Retry transient Redis failures up to this many times before failing open
-  REDIS_RETRY_ATTEMPTS = 2
-
-  # Delay in seconds between retries
-  REDIS_RETRY_DELAY = 0.1
-
   def initialize(api_key)
     @api_key = api_key
     @redis = Redis.new
@@ -130,28 +124,19 @@ class ApiRateLimiter
       DEFAULT_TIER
     end
 
-    # Executes the block with Redis, with optional retries and a fallback on failure.
-    # On Redis errors we log once, set @redis_available to false, and return fallback.
-    # This ensures the API remains available when Redis is down or unreachable.
+    # Executes the block with Redis; on failure returns fallback immediately (fail-fast-and-open).
+    # No retries: rate limiting is in the critical request path; retries would amplify load on
+    # a struggling Redis and risk thread pool exhaustion. Failing open on first error is preferred.
     def with_redis(fallback:)
-      attempts = 0
-      begin
-        result = yield @redis
-        @redis_available = true
-        result
-      rescue *REDIS_ERRORS => e
-        attempts += 1
-        if attempts <= REDIS_RETRY_ATTEMPTS
-          sleep(REDIS_RETRY_DELAY)
-          retry
-        end
-
-        @redis_available = false
-        Rails.logger.warn(
-          "ApiRateLimiter: Redis unavailable (#{e.class}: #{e.message}), failing open for api_key_id=#{@api_key&.id}"
-        )
-        fallback
-      end
+      result = yield @redis
+      @redis_available = true
+      result
+    rescue *REDIS_ERRORS => e
+      @redis_available = false
+      Rails.logger.warn(
+        "ApiRateLimiter: Redis unavailable (#{e.class}: #{e.message}), failing open for api_key_id=#{@api_key&.id}"
+      )
+      fallback
     end
 
     # Removes hourly buckets older than BUCKET_RETENTION_SECONDS to prevent unbounded hash growth.
