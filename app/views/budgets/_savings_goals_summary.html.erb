@@ -3,6 +3,7 @@
 <% allocated = budget.allocated_to_goals %>
 <% available = budget.available_for_goals %>
 <% goals = budget.family_active_saving_goals %>
+<% contributions_by_goal = SavingContribution.where(saving_goal_id: goals.map(&:id), month: budget.start_date.beginning_of_month).where.not(source: :initial_balance).group_by(&:saving_goal_id) %>
 
 <div class="w-full bg-container rounded-xl shadow-border-xs p-4">
   <div class="flex items-center justify-between mb-4">
@@ -19,7 +20,7 @@
     <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-surface-inset rounded-lg">
       <div>
         <p class="text-xs text-subdued"><%= t("budgets.show.savings_goals.surplus") %></p>
-        <p class="text-sm font-medium <%= surplus.positive? ? 'text-green-500' : 'text-destructive' %>">
+        <p class="text-sm font-medium <%= surplus.positive? ? 'text-success' : 'text-destructive' %>">
           <%= format_money(budget.monthly_surplus_money) %>
         </p>
       </div>
@@ -35,10 +36,10 @@
 
     <div class="space-y-2">
       <% goals.each do |goal| %>
-      <% contributions = budget.goal_contributions_for_month(goal) %>
-        <% contribution_sum_cents = contributions.sum(:amount) %>
+      <% contributions = contributions_by_goal[goal.id] || [] %>
+        <% contribution_sum = contributions.sum(Money.new(0, goal.currency), &:amount) %>
         <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-inset transition-colors">
-          <%= render "saving_goals/progress_ring", percent: goal.progress_percent, size: 32, stroke_width: 3, color: "green" %>
+          <%= render "saving_goals/progress_ring", percent: goal.progress_percent, size: 32, stroke_width: 3, color: "success" %>
           
           <div class="flex-1 min-w-0">
             <%= link_to goal.name, saving_goal_path(goal), class: "font-medium text-primary hover:underline truncate block" %>
@@ -48,11 +49,11 @@
           </div>
 
           <div class="text-right shrink-0">
-            <% if contribution_sum_cents > 0 %>
-              <p class="text-sm font-medium text-green-500">
-                +<%= format_money(Money.new(contribution_sum_cents, goal.currency)) %>
+            <% if contribution_sum.positive? %>
+              <p class="text-sm font-medium text-success">
+                +<%= format_money(contribution_sum) %>
               </p>
-              <% if contributions.exists?(source: "auto") %>
+              <% if contributions.any?(&:auto?) %>
                 <span class="text-xs text-subdued"><%= t("budgets.show.savings_goals.auto_funded") %></span>
               <% end %>
             <% else %>
@@ -62,7 +63,7 @@
 
           <% if available.positive? %>
             <%= render DS::Link.new(
-              text: contribution_sum_cents > 0 ? t("budgets.show.savings_goals.add_more") : t("budgets.show.savings_goals.allocate"),
+              text: contribution_sum.positive? ? t("budgets.show.savings_goals.add_more") : t("budgets.show.savings_goals.allocate"),
               href: new_saving_goal_saving_contribution_path(goal, budget_id: budget.id),
               variant: "outline",
               size: "sm"

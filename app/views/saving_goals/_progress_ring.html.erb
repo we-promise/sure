@@ -23,5 +23,5 @@
     stroke-dasharray="<%= circumference %>"
     stroke-dashoffset="<%= offset %>"
     stroke-linecap="round"
-    class="text-<%= color %>-500 transition-all duration-500" />
+    class="<%= color == 'success' ? 'text-success' : "text-#{color}-500" %> transition-all duration-500" />
 </svg>

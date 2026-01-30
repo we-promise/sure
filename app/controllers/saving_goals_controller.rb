@@ -24,18 +24,13 @@ class SavingGoalsController < ApplicationController
     @saving_goal = Current.family.saving_goals.new(saving_goal_params.except(:initial_amount))
     @saving_goal.currency = Current.family.currency
 
-    # Create initial contribution if initial_amount is provided
     if saving_goal_params[:initial_amount].present? && saving_goal_params[:initial_amount].to_d > 0
-      @saving_goal.save # Save first to get an ID
-
-      if @saving_goal.persisted?
-        @saving_goal.saving_contributions.create(
-          amount: saving_goal_params[:initial_amount],
-          currency: @saving_goal.currency,
-          month: Date.current.beginning_of_month,
-          source: :initial_balance
-        )
-      end
+      @saving_goal.saving_contributions.build(
+        amount: saving_goal_params[:initial_amount],
+        currency: @saving_goal.currency,
+        month: Date.current.beginning_of_month,
+        source: :initial_balance
+      )
     end
 
     if @saving_goal.save

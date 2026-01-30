@@ -362,6 +362,8 @@ class Budget < ApplicationRecord
   # as it uses a unique index and transaction locking to prevent duplicates.
   # Goals are funded in priority order (created_at ASC) up to their monthly target.
   def ensure_funded!
+    return unless start_date.beginning_of_month == Date.current.beginning_of_month
+
     transaction do
       lock!
       contributions = []
