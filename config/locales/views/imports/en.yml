@@ -1,6 +1,13 @@
 ---
 en:
   import:
+    nav:
+      upload: "Upload"
+      configure: "Configure"
+      clean: "Clean"
+      map: "Map"
+      confirm: "Confirm"
+      step_of: "Step %{step} of %{total}"
     cleans:
       show:
         description: Edit your data in the table below.  Red cells are invalid.
@@ -9,9 +16,24 @@ en:
         errors_notice_mobile: You have errors in your data.  Tap over the error tooltip to see
           details.
         title: Clean your data
+        data_cleaned: "Your data has been cleaned"
+        next_step: "Next step"
+        all_rows: "All rows"
+        error_rows: "Error rows"
     configurations:
       update:
         success: Import configured successfully.
+      account_import:
+        leave_empty: "Leave empty"
+        entity_type: "Entity Type"
+        name: "Name"
+        balance: "Balance"
+        default: "Default"
+        currency: "Currency"
+        balance_date: "Balance Date"
+        date_format: "Date format"
+        select_format: "Select format"
+        apply_configuration: "Apply configuration"
       category_import:
         button_label: Continue
         description: Upload a simple CSV file (like the one we generate when you
@@ -19,6 +41,20 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+        preconfigured_message: "We have pre-configured your Mint import for you. Please proceed to the next step."
+        leave_empty: "Leave empty"
+        date: "Date"
+        amount: "Amount"
+        incomes_negative: "Incomes are negative"
+        incomes_positive: "Incomes are positive"
+        currency: "Currency"
+        format: "Format"
+        select_format: "Select format"
+        account_optional: "Account (optional)"
+        name_optional: "Name (optional)"
+        category_optional: "Category (optional)"
+        tags_optional: "Tags (optional)"
+        apply_configuration: "Apply configuration"
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
           on the CSV data.
@@ -27,8 +63,30 @@ en:
       show:
         description: Select the columns that correspond to each field in your CSV.
         title: Configure your import
+        template_found: "Template configuration found"
+        template_found_description: "We found a configuration from a previous import for this account.  Would you like to apply it to this import?"
+        manually_configure: "Manually configure"
+        apply_template: "Apply template"
+        sample_data_caption: "Sample data from your uploaded CSV"
       trade_import:
         date_format_label: Date format
+        select_column: "Select column"
+        date: "Date"
+        quantity: "Quantity"
+        buys_positive: "Buys are positive qty"
+        buys_negative: "Buys are negative qty"
+        default: "Default"
+        currency: "Currency"
+        format: "Format"
+        select_format: "Select format"
+        ticker: "Ticker"
+        leave_empty: "Leave empty"
+        stock_exchange_code: "Stock exchange code"
+        price: "Price"
+        account: "Account"
+        name: "Name"
+        no_provider_warning_html: '<strong>Note:</strong> The security prices provider is not configured.  Your trade imports will work, but Sure will not backfill price history.  Please go to your settings to configure this.'
+        apply_configuration: "Apply configuration"
       transaction_import:
         date_format_label: Date format
         rows_to_skip_label: Skip first n rows
@@ -42,7 +100,9 @@ en:
           and provide an account name we can use.
         rows_label: Rows
         unassigned_account: Need to create a new account for unassigned rows?
+        next: "Next"
       show:
+        invalid_data: "You have invalid data, please edit until all errors are resolved"
         account_mapping_description: Assign all of your imported file's accounts to
           Maybe's existing accounts.  You can also add new accounts or leave them
           uncategorized.
@@ -58,6 +118,9 @@ en:
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
+      update:
+        csv_uploaded: "CSV uploaded successfully."
+        invalid_csv: "Must be valid CSV with headers and at least one row of data"
       show:
         description: Paste or upload your CSV file below.  Please review the instructions
           in the table below before beginning.
@@ -68,7 +131,37 @@ en:
         instructions_4: Columns marked with an asterisk (*) are required data.
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
+        upload_csv_tab: "Upload CSV"
+        copy_paste_tab: "Copy & Paste"
+        drop_csv_title: "Drop CSV to upload"
+        drop_csv_subtitle: "Your file will be uploaded automatically"
+        browse_to_add_html: '<span class="font-medium text-primary">Browse</span> to add your CSV file here'
+        paste_csv_placeholder: "Paste your CSV file contents here"
+        account_optional: "Account (optional)"
+        multi_account_import: "Multi-account import"
+        upload_csv: "Upload CSV"
+        download_sample_html: "%{download_link} to see the required CSV format"
+        download_sample_link: "Download a sample CSV"
   imports:
+    publish:
+      started: "Your import has started in the background."
+      max_row_count_exceeded:
+        one: "Import exceeds the maximum row count of %{count} row."
+        other: "Import exceeds the maximum row count of %{count} rows."
+    create:
+      csv_uploaded: "CSV uploaded successfully."
+      file_too_large: "File is too large. Maximum size is %{size} MB."
+      invalid_file_type: "Invalid file type. Please upload a CSV file."
+    show:
+      finalize_upload: "Please upload a CSV file before proceeding."
+      finalize_mappings: "Please complete your import configuration before proceeding."
+    revert:
+      reverting: "Your import is being reverted."
+    apply_template:
+      template_applied: "Template applied successfully."
+      no_template: "No matching template found for this import."
+    destroy:
+      deleted: "Import deleted."
     index:
       title: Imports
       new: New Import
@@ -109,5 +202,25 @@ en:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
+      item: "item"
+      count: "count"
+      publish: "Publish import"
+    importing:
+      title: "Import in progress"
+      message: "Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app."
+      check_status: "Check status"
+      back_to_dashboard: "Back to dashboard"
+    success:
+      title: "Import successful"
+      message: "Your imported data has been successfully added to the app and is now ready for use."
+      back_to_dashboard: "Back to dashboard"
+    failure:
+      title: "Import failed"
+      message: "Please check that your file format, for any errors and that all required fields are filled, then come back and try again."
+      try_again: "Try again"
+    revert_failure:
+      title: "Reverting import failed"
+      message: "Please try again or contact support."
+      try_again: "Try again"
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"

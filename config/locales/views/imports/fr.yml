@@ -1,21 +1,57 @@
 ---
 fr:
   import:
+    nav:
+      upload: Téléverser
+      configure: Configurer
+      clean: Nettoyer
+      map: Associer
+      confirm: Confirmer
+      step_of: "Étape %{step} sur %{total}"
     cleans:
       show:
         description: Modifiez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
         errors_notice: Vous avez des erreurs dans vos données. Survolez l'erreur pour voir les détails.
         errors_notice_mobile: Vous avez des erreurs dans vos données. Cliquez sur l'icône d'aide de l'erreur pour voir les détails.
         title: Nettoyez vos données
+        data_cleaned: Vos données ont été nettoyées
+        next_step: Étape suivante
+        all_rows: Toutes les lignes
+        error_rows: Lignes avec erreurs
     configurations:
       update:
         success: Importation configurée avec succès.
+      account_import:
+        leave_empty: Laisser vide
+        entity_type: Type d'entité
+        name: Nom
+        balance: Solde
+        default: Par défaut
+        currency: Devise
+        balance_date: Date du solde
+        date_format: Format de date
+        select_format: Sélectionner le format
+        apply_configuration: Appliquer la configuration
       category_import:
         button_label: Continuer
         description: Téléversez un fichier CSV simple (comme celui que nous générons lorsque vous exportez vos données). Nous mapperons automatiquement les colonnes pour vous.
         instructions: Sélectionnez continuer pour analyser votre CSV et passer à l'étape de nettoyage.
       mint_import:
         date_format_label: Format de date
+        preconfigured_message: Nous avons pré-configuré votre importation Mint pour vous. Veuillez passer à l'étape suivante.
+        leave_empty: Laisser vide
+        date: Date
+        amount: Montant
+        incomes_negative: Les revenus sont négatifs
+        incomes_positive: Les revenus sont positifs
+        currency: Devise
+        format: Format
+        select_format: Sélectionner le format
+        account_optional: Compte (optionnel)
+        name_optional: Nom (optionnel)
+        category_optional: Catégorie (optionnel)
+        tags_optional: Étiquettes (optionnel)
+        apply_configuration: Appliquer la configuration
       rule_import:
         description: Configurez votre importation de règles. Les règles seront créées ou mises à jour en fonction des données CSV.
         process_button: Traiter les règles
@@ -23,8 +59,30 @@ fr:
       show:
         description: Sélectionnez les colonnes qui correspondent à chaque champ dans votre CSV.
         title: Configurez votre importation
+        template_found: Configuration de modèle trouvée
+        template_found_description: Nous avons trouvé une configuration d'une importation précédente pour ce compte. Souhaitez-vous l'appliquer à cette importation ?
+        manually_configure: Configurer manuellement
+        apply_template: Appliquer le modèle
+        sample_data_caption: Exemple de données de votre CSV téléversé
       trade_import:
         date_format_label: Format de date
+        select_column: Sélectionner la colonne
+        date: Date
+        quantity: Quantité
+        buys_positive: Les achats sont en quantité positive
+        buys_negative: Les achats sont en quantité négative
+        default: Par défaut
+        currency: Devise
+        format: Format
+        select_format: Sélectionner le format
+        ticker: Symbole boursier
+        leave_empty: Laisser vide
+        stock_exchange_code: Code de la bourse
+        price: Prix
+        account: Compte
+        name: Nom
+        no_provider_warning_html: '<strong>Note :</strong> Le fournisseur de prix des titres n''est pas configuré. Vos importations de transactions fonctionneront, mais Sure ne complétera pas l''historique des prix. Veuillez aller dans vos paramètres pour configurer ceci.'
+        apply_configuration: Appliquer la configuration
       transaction_import:
         date_format_label: Format de date
         rows_to_skip_label: Ignorer les n premières lignes
@@ -36,7 +94,9 @@ fr:
         no_accounts: Vous n'avez pas encore de comptes. Veuillez créer un compte que nous pouvons utiliser pour les lignes non affectées de votre CSV ou retournez à l'étape Nettoyer et fournissez un nom de compte que nous pouvons utiliser.
         rows_label: Lignes
         unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées ?
+        next: Suivant
       show:
+        invalid_data: Vous avez des données invalides, veuillez corriger jusqu'à ce que toutes les erreurs soient résolues
         account_mapping_description: Affectez tous les comptes de votre fichier importé aux comptes existants. Vous pouvez également ajouter de nouveaux comptes ou les laisser sans catégorie.
         account_mapping_title: Attribuez vos comptes
         account_type_mapping_description: Affectez tous les types de comptes importés dans votre fichier
@@ -46,6 +106,9 @@ fr:
         tag_mapping_description: Affectez toutes les étiquettes importées dans votre fichier aux étiquettes existantes. Vous pouvez également ajouter de nouvelles étiquettes ou les laisser non catégorisées.
         tag_mapping_title: Attribuez vos étiquettes
     uploads:
+      update:
+        csv_uploaded: CSV téléversé avec succès.
+        invalid_csv: Le CSV doit être valide avec des en-têtes et au moins une ligne de données
       show:
         description: Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
         instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
@@ -54,12 +117,42 @@ fr:
         instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
         title: Importez vos données
+        upload_csv_tab: Téléverser un CSV
+        copy_paste_tab: Copier & Coller
+        drop_csv_title: Déposez le CSV pour téléverser
+        drop_csv_subtitle: Votre fichier sera téléversé automatiquement
+        browse_to_add_html: '<span class="font-medium text-primary">Parcourir</span> pour ajouter votre fichier CSV ici'
+        paste_csv_placeholder: Collez le contenu de votre fichier CSV ici
+        account_optional: Compte (optionnel)
+        multi_account_import: Importation multi-comptes
+        upload_csv: Téléverser le CSV
+        download_sample_html: "%{download_link} pour voir le format CSV requis"
+        download_sample_link: Télécharger un exemple de CSV
   imports:
+    publish:
+      started: Votre importation a démarré en arrière-plan.
+      max_row_count_exceeded:
+        one: "L'importation dépasse le nombre maximal de %{count} ligne."
+        other: "L'importation dépasse le nombre maximal de %{count} lignes."
+    create:
+      csv_uploaded: CSV téléversé avec succès.
+      file_too_large: "Le fichier est trop volumineux. La taille maximale est de %{size} Mo."
+      invalid_file_type: Type de fichier invalide. Veuillez téléverser un fichier CSV.
+    show:
+      finalize_upload: Veuillez téléverser un fichier CSV avant de continuer.
+      finalize_mappings: Veuillez terminer la configuration de votre importation avant de continuer.
+    revert:
+      reverting: Votre importation est en cours d'annulation.
+    apply_template:
+      template_applied: Modèle appliqué avec succès.
+      no_template: Aucun modèle correspondant trouvé pour cette importation.
+    destroy:
+      deleted: Importation supprimée.
     index:
-      imports: Imports
+      title: Importations
       new: Nouvelle importation
     table:
-      title: Imports
+      title: Importations
       header:
         date: Date
         operation: Opération
@@ -93,3 +186,25 @@ fr:
     ready:
       description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
       title: Confirmez vos données d'importation
+      item: élément
+      count: nombre
+      publish: Publier l'importation
+    importing:
+      title: Importation en cours
+      message: Votre importation est en cours. Vérifiez le menu des importations pour les mises à jour du statut ou cliquez sur « Vérifier le statut » pour rafraîchir la page. Vous pouvez continuer à utiliser l'application.
+      check_status: Vérifier le statut
+      back_to_dashboard: Retour au tableau de bord
+    success:
+      title: Importation réussie
+      message: Vos données importées ont été ajoutées avec succès à l'application et sont maintenant prêtes à l'emploi.
+      back_to_dashboard: Retour au tableau de bord
+    failure:
+      title: Importation échouée
+      message: Veuillez vérifier le format de votre fichier, les erreurs éventuelles et que tous les champs requis sont remplis, puis revenez et réessayez.
+      try_again: Réessayer
+    revert_failure:
+      title: Annulation de l'importation échouée
+      message: Veuillez réessayer ou contacter le support.
+      try_again: Réessayer
+    errors:
+      custom_column_requires_inflow: Les importations de colonnes personnalisées nécessitent qu'une colonne de recettes soit sélectionnée

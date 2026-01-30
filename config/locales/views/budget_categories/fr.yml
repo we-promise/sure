@@ -1,0 +1,31 @@
+---
+fr:
+  budget_categories:
+    index:
+      title: Modifier vos budgets de catégories
+      description: Ajustez les budgets de catégories pour définir des limites de dépenses. Les fonds non alloués seront automatiquement assignés comme non catégorisés.
+    show:
+      category: Catégorie
+      overview: Aperçu
+      spending: "Dépenses de %{month}"
+      status: Statut
+      overspent: dépassé
+      left: restant
+      budgeted: Budgété
+      monthly_average: Dépenses moyennes mensuelles
+      monthly_median: Dépenses médianes mensuelles
+      recent_transactions: Transactions récentes
+      view_all: Voir toutes les transactions de la catégorie
+      no_transactions: Aucune transaction trouvée pour cette période budgétaire.
+    no_categories:
+      oops: Oups !
+      no_categories_message: Vous n'avez pas encore créé ou assigné de catégories de dépenses à vos transactions.
+      use_defaults: Utiliser les valeurs par défaut (recommandé)
+      new_category: Nouvelle catégorie
+    allocation_progress:
+      percent_set: "%{percent} défini"
+      over_100_set: "> 100% défini"
+      budget_exceeded: Budget dépassé de
+      left_to_allocate: restant à allouer
+    confirm_button:
+      confirm: Confirmer

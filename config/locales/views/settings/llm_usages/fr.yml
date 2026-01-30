@@ -1,0 +1,29 @@
+---
+fr:
+  settings:
+    llm_usages:
+      show:
+        title: Utilisation et coûts LLM
+        subtitle: Suivez votre utilisation de l'IA et les coûts estimés
+        start_date: Date de début
+        end_date: Date de fin
+        filter: Filtrer
+        total_requests: Total des requêtes
+        total_tokens: Total des jetons
+        prompt_completion: "%{prompt} prompt / %{completion} complétion"
+        total_cost: Coût total
+        avg_cost_per_request: Coût moyen/Requête
+        requests_with_cost: "Basé sur %{with_cost} des %{total} requêtes avec données de coût"
+        cost_by_operation: Coût par opération
+        cost_by_model: Coût par modèle
+        recent_usage: Utilisation récente
+        date: Date
+        operation: Opération
+        model: Modèle
+        tokens: Jetons
+        cost: Coût
+        failed: Échoué
+        http_status: "Statut HTTP : %{code}"
+        no_usage_data: Aucune donnée d'utilisation trouvée pour la période sélectionnée
+        about_cost_estimates: À propos des estimations de coûts
+        cost_estimates_description: Les coûts sont estimés sur la base des tarifs d'OpenAI de 2025. Les coûts réels peuvent varier. Les tarifs sont par million de jetons et varient selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne sont pas inclus dans les totaux de coûts.

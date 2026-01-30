@@ -1,0 +1,124 @@
+---
+en:
+  # Controller flash messages
+  valuations:
+    create:
+      account_updated: Account updated
+    update:
+      entry_updated: Entry updated
+
+  chats:
+    update:
+      updated: Chat updated
+    destroy:
+      deleted: Chat was successfully deleted
+
+  transfer_matches:
+    create:
+      created: Transfer created
+
+  rules:
+    apply:
+      activated: "%{resource_type} rule activated"
+    update:
+      updated: Rule updated
+    destroy:
+      deleted: Rule deleted
+    destroy_all:
+      all_deleted: All rules deleted
+
+  tags:
+    destroy_all:
+      all_deleted: All tags deleted
+
+  categories:
+    destroy_all:
+      all_deleted: All categories deleted
+
+  transactions:
+    create:
+      created: Transaction created
+    update:
+      updated: Transaction updated
+
+  holdings:
+    destroy:
+      cannot_delete: You cannot delete this holding
+
+  subscriptions:
+    upgrade:
+      already_subscribed: You are already subscribed.
+    create:
+      welcome: Welcome to Sure!
+      trial_already_used: You have already started or completed a trial. Please upgrade to continue.
+    success:
+      subscription_created: Welcome to Sure! Your subscription has been created.
+      subscription_error: Something went wrong processing your subscription. Please contact us to get this fixed.
+
+  invite_codes:
+    create:
+      not_allowed: You are not allowed to generate invite codes
+      generated: Code generated
+    destroy:
+      deleted: Code deleted
+
+  imports:
+    publish:
+      started: Your import has started in the background.
+      max_row_count_exceeded: Your import exceeds the maximum row count of %{count}.
+    create:
+      file_too_large: "File is too large. Maximum size is %{size}MB."
+      invalid_file_type: Invalid file type. Please upload a CSV file.
+      csv_uploaded: CSV uploaded successfully.
+    show:
+      finalize_upload: Please finalize your file upload.
+      finalize_mappings: Please finalize your mappings before proceeding.
+    revert:
+      reverting: Import is reverting in the background.
+    apply_template:
+      template_applied: Template applied.
+      no_template: No template found, please manually configure your import.
+    destroy:
+      deleted: Your import has been deleted.
+
+  import:
+    uploads:
+      update:
+        csv_uploaded: CSV uploaded successfully.
+        invalid_csv: Must be valid CSV with headers and at least one row of data
+    cleans:
+      show:
+        configure_first: Please configure your import before proceeding.
+    confirms:
+      show:
+        invalid_data: You have invalid data, please edit until all errors are resolved
+
+  family_exports:
+    create:
+      started: Export started. You'll be able to download it shortly.
+    download:
+      not_ready: Export not ready for download
+    destroy:
+      deleted: Export deleted successfully
+    access_denied: Access denied
+
+  settings:
+    api_keys:
+      create:
+        created: Your API key has been created successfully
+      destroy:
+        revoked: API key has been revoked successfully
+        revoke_failed: Failed to revoke API key
+    providers:
+      update:
+        updated: Provider settings updated successfully
+        no_changes: No changes were made
+        update_failed: "Failed to update provider settings: %{error}"
+      not_authorized: Not authorized
+    profiles:
+      destroy:
+        member_removed: Member removed successfully.
+        member_remove_failed: Failed to remove member.
+
+  self_hostable:
+    redis_configured: Redis is now configured properly! You can now setup your Sure application.

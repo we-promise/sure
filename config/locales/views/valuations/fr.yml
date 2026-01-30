@@ -28,3 +28,28 @@ fr:
       note_placeholder: Ajoutez tout détail supplémentaire à ce bilan
       overview: Aperçu
       settings: Paramètres
+      account_value_on_date: Valeur du compte à la date
+      update_value: Mettre à jour la valeur
+    confirm_create:
+      title: Confirmer le nouveau solde
+      confirm: Confirmer
+    confirm_update:
+      title: Mettre à jour le solde
+      update: Mettre à jour
+    confirmation_contents:
+      investment_intro: "Ceci va %{action} la valeur du compte le %{date} à :"
+      total_account_value: Valeur totale du compte
+      holdings_value: Valeur des titres
+      brokerage_cash: Liquidités de courtage
+      account_balance: solde du compte
+      credit_card_balance: solde de carte de crédit
+      loan_balance: solde du prêt
+      property_value: valeur immobilière
+      vehicle_value: valeur du véhicule
+      crypto_balance: solde crypto
+      asset_value: valeur de l'actif
+      liability_balance: solde du passif
+      balance: solde
+      on_date_to: "le %{date} à %{amount}."
+      recalculation_change: Toutes les transactions et soldes futurs seront recalculés en fonction de cette modification.
+      recalculation_update: Toutes les transactions et soldes futurs seront recalculés en fonction de cette mise à jour.

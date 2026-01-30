@@ -1,6 +1,13 @@
 ---
 fr:
   users:
+    user_menu:
+      version: Version
+      settings: Paramètres
+      changelog: Nouveautés
+      feedback: Commentaires
+      contact: Contact
+      log_out: Se déconnecter
     destroy:
       success: Votre compte a été supprimé.
     update:

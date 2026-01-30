@@ -9,6 +9,9 @@ en:
       unlinked_success: Merchant removed from your transactions
     edit:
       title: Edit merchant
+    family_merchant:
+      edit: Edit
+      delete: Delete
     form:
       name_placeholder: Merchant name
       website_placeholder: Website (e.g., starbucks.com)

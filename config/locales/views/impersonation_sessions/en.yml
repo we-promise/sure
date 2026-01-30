@@ -13,3 +13,23 @@ en:
       success: Left session
     reject:
       success: Request rejected
+    super_admin_bar:
+      title: Super Admin
+      jobs: Jobs
+      impersonating: Impersonating
+      leave: Leave
+      terminate: Terminate
+      join_session_prompt: Join a session
+      join: Join
+      uuid_placeholder: UUID
+      request_impersonation: Request Impersonation
+    approval_bar:
+      access: Access
+      session: Session
+      request: Request
+      pending_message: Sure support staff has requested access to your account (likely to help you with a support request). If you approve the request, all activity they take will be logged for security and audit purposes.
+      approve: Approve
+      reject: Reject
+      in_progress_message: Someone from the Sure Finances team is currently viewing your data. You may end the session at any time.
+      end_session: End Session
+      error_message: Something went wrong. Please contact us.

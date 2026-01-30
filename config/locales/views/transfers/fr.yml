@@ -1,6 +1,9 @@
 ---
 fr:
   transfers:
+    account_links:
+      data_error_missing_account: "Erreur de données : compte manquant"
+      transfer_id: "ID du transfert : %{id}"
     create:
       success: Transfert créé
     destroy:
@@ -26,5 +29,11 @@ fr:
       note_placeholder: Ajoutez une note à ce transfert
       overview: Aperçu
       settings: Paramètres
+      from: De
+      to: Vers
+      date: Date
+      amount: Montant
+      category: Catégorie
+      uncategorized: Non catégorisé
     update:
       success: Transfert mis à jour

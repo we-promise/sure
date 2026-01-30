@@ -23,7 +23,7 @@
                                        placeholder: t("properties.form.area_placeholder"),
                                        min: 0 %>
         <%= property_form.select :area_unit,
-                                 [["Square Feet", "sqft"], ["Square Meters", "sqm"]],
+                                 [[t("properties.form.area_unit_square_feet"), "sqft"], [t("properties.form.area_unit_square_meters"), "sqm"]],
                                  { label: t("properties.form.area_unit") } %>
       </div>
 
