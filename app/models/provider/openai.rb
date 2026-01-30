@@ -129,6 +129,8 @@ class Provider::Openai < Provider
   end
 
   def process_pdf(pdf_content:, model: "", family: nil)
+    raise "Model does not support PDF/vision processing" unless supports_pdf_processing?
+
     with_provider_response do
       effective_model = model.presence || @default_model
 
