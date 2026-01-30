@@ -116,6 +116,22 @@ class Period
     def as_options
       all.map { |period| [ period.label_short, period.key ] }
     end
+
+    def current_month_for(family)
+      return from_key("current_month") unless family&.uses_custom_month_start?
+
+      family.current_custom_month_period
+    end
+
+    def last_month_for(family)
+      return from_key("last_month") unless family&.uses_custom_month_start?
+
+      current_start = family.custom_month_start_for(Date.current)
+      last_month_date = current_start - 1.day
+      start_date = family.custom_month_start_for(last_month_date)
+      end_date = family.custom_month_end_for(last_month_date)
+      custom(start_date: start_date, end_date: end_date)
+    end
   end
 
   PERIODS.each do |key, period|

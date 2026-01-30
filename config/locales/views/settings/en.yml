@@ -44,6 +44,9 @@ en:
         theme_system: System
         theme_title: Theme
         timezone: Timezone
+        month_start_day: Budget month starts on
+        month_start_day_hint: Set when your budget month starts (e.g., payday)
+        month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
