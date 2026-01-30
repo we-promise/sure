@@ -1,0 +1,24 @@
+---
+fr:
+  saving_contributions:
+    new:
+      title: "Contribuer à %{goal}"
+      current_progress: "Progrès actuel"
+      remaining: "%{amount} restants"
+      available_from_budget: "%{amount} disponibles sur le budget de ce mois"
+      budget_month: "Budget pour %{month}"
+      amount_label: "Montant de la contribution"
+      suggested_amount_hint: "Contribution mensuelle suggérée : %{amount}"
+      limited_by_surplus: "limité par le surplus disponible"
+      source_label: "Source"
+      source_manual: "Contribution manuelle"
+      source_auto: "Du surplus budgétaire"
+      source_help: "Choisissez 'Manuel' pour une contribution ponctuelle ou 'Auto' pour une allocation récurrente."
+      submit: "Ajouter la contribution"
+      cancel: "Annuler"
+    create:
+      success: "Contribution ajoutée avec succès"
+    destroy:
+      removed: "Contribution supprimée"
+    errors:
+      exceeds_surplus: "Le montant dépasse le surplus budgétaire disponible"

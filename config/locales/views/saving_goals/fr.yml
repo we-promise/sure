@@ -1,0 +1,92 @@
+---
+fr:
+  saving_goals:
+    create:
+      success: "Objectif d'épargne créé avec succès."
+    update:
+      success: "Objectif d'épargne mis à jour avec succès."
+    destroy:
+      success: "Objectif d'épargne supprimé avec succès."
+    pause:
+      success: "Objectif d'épargne mis en pause."
+    resume:
+      success: "Objectif d'épargne repris."
+    complete:
+      success: "Objectif d'épargne atteint ! 🎉"
+    archive:
+      success: "Objectif d'épargne archivé."
+    index:
+      title: "Objectifs d'épargne"
+      new_goal: "Nouvel objectif"
+      empty:
+        title: "Pas encore d'objectif d'épargne"
+        description: "Définissez une projet et suivez vos progrès."
+      filters:
+        all: "Tous"
+        active: "Actifs"
+        paused: "En pause"
+        completed: "Terminés"
+        archived: "Archivés"
+    show:
+      progress: "%{percent}% épargné"
+      target: "Cible : %{amount}"
+      deadline: "Échéance : %{date}"
+      behind: "En retard"
+      contributions: "Contributions au projet"
+      actions: "Actions"
+      edit: "Modifier l'objectif"
+      delete: "Supprimer l'objectif"
+      target_date: "Date cible : %{date}"
+      current_balance: "Solde actuel"
+      of_target: "sur un objectif de %{amount}"
+      on_track: "Sur la bonne voie"
+      on_track_description: "Vous épargnez suffisamment pour atteindre votre objectif à temps."
+      off_track: "En retard"
+      off_track_description: "Envisagez d'augmenter votre épargne mensuelle pour rattraper le retard."
+      pause: "Pause"
+      resume: "Reprendre"
+      complete: "Marquer comme terminé"
+      monthly_effort: "Effort mensuel"
+      save_per_month: "Épargnez %{amount}/mois"
+      for_months: "pendant %{count} mois pour atteindre votre objectif"
+      allocate: "Allouer"
+      contribution_history: "Historique des contributions"
+      no_contributions: "Aucune contribution pour le moment. Commencez à épargner !"
+      auto_source: "Auto"
+      manual_source: "Manuel"
+      initial_balance_source: "Solde initial"
+      total_contributions:
+        one: "Total : %{amount} pour 1 contribution"
+        other: "Total : %{amount} pour %{count} contributions"
+    form:
+      errors_title: "Veuillez corriger les erreurs suivantes :"
+      name_label: "Nom de l'objectif"
+      name_placeholder: "ex : Fonds d'urgence, Vacances"
+      target_amount_label: "Montant cible"
+      target_date_label: "Date cible"
+      target_date_hint: "Facultatif. Fixez une échéance pour suivre votre rythme."
+      initial_amount_label: "Déjà épargné (facultatif)"
+      initial_amount_hint: "Si vous avez déjà commencé à épargner pour cet objectif"
+      priority_label: "Priorité"
+      notes_label: "Notes"
+      notes_placeholder: "Ajoutez des notes sur cet objectif..."
+      save: "Enregistrer l'objectif"
+      create: "Créer l'objectif"
+      update: "Enregistrer les modifications"
+      cancel: "Annuler"
+    new:
+      title: "Nouvel objectif d'épargne"
+    edit:
+      title: "Modifier l'objectif d'épargne"
+    actions:
+      pause: "Mettre en pause"
+      resume: "Reprendre"
+      complete: "Marquer comme terminé"
+      archive: "Archiver"
+    status:
+      active: "Actif"
+      paused: "En pause"
+      completed: "Terminé"
+      archived: "Archivé"
+    goal_card:
+      target_date: "Cible : %{date}"
