@@ -72,6 +72,9 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
+      # Apply rules to the newly created transaction
+      ApplyRulesToTransactionService.new(@entry, execution_type: "manual").call
+
       flash[:notice] = "Transaction created"
 
       respond_to do |format|
@@ -100,7 +103,10 @@ class TransactionsController < ApplicationController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later
 
-      # Reload to ensure fresh state for turbo stream rendering
+      # Apply rules to the updated transaction
+      ApplyRulesToTransactionService.new(@entry, execution_type: "manual").call
+
+      # Reload to ensure fresh state for turbo stream rendering (rules may have modified the transaction)
       @entry.reload
 
       respond_to do |format|
