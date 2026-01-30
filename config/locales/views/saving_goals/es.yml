@@ -48,7 +48,7 @@ es:
       complete: "Marcar como completo"
       monthly_effort: "Esfuerzo mensual"
       save_per_month: "Ahorre %{amount}/mes"
-      for_months: "durant %{count} meses para alcanzar su objetivo"
+      for_months: "durante %{count} meses para alcanzar su objetivo"
       allocate: "Asignar"
       contribution_history: "Historial de contribuciones"
       no_contributions: "Aún no hay contribuciones. ¡Empiece a ahorrar!"
