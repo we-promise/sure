@@ -348,11 +348,20 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
   end
 
   test "respects ignore_attribute_locks parameter" do
+    # Set an initial category to test lock behavior
+    initial_category = @family.categories.create!(name: "Initial Category")
+    
     entry = create_transaction(
       date: Date.current,
       account: @account,
-      merchant: @merchant
+      merchant: @merchant,
+      category: initial_category
     )
+
+    # Capture original category before locking and before running rules
+    entry.reload
+    original_category = entry.transaction.category
+    assert_equal initial_category, original_category, "Should have initial category set"
 
     # Lock an attribute
     entry.transaction.lock_attr!(:category_id)
@@ -380,15 +389,13 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
     # Apply rules without ignoring locks - should not modify locked attribute
     result1 = ApplyRulesToTransactionService.new(entry, execution_type: "manual", ignore_attribute_locks: false).call
     entry.reload
-    original_category = entry.transaction.category
+    assert_equal original_category, entry.transaction.category, "Category should not change when locks are respected (result1)"
 
     # Apply rules with ignoring locks - should modify locked attribute
     result2 = ApplyRulesToTransactionService.new(entry, execution_type: "manual", ignore_attribute_locks: true).call
     entry.reload
-
-    # If locks are respected, category shouldn't change; if ignored, it should
-    # The exact behavior depends on how the action executor handles locks
-    assert result2[:rules_applied] >= 0
+    assert_not_equal original_category, entry.transaction.category, "Category should change when locks are ignored (result2)"
+    assert_equal @groceries_category, entry.transaction.category
   end
 
   test "works with Entry objects" do
@@ -755,7 +762,11 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
 
   test "handles transactions from different families" do
     # This test ensures rules from one family don't affect transactions from another
-    other_family = families(:empty)
+    # Create a different family to properly test cross-family isolation
+    other_family = Family.create!(
+      name: "Other Test Family",
+      currency: "USD"
+    )
     other_account = other_family.accounts.create!(name: "Other Account", balance: 1000, currency: "USD", accountable: Depository.new)
     other_merchant = other_family.merchants.create!(name: "Other Merchant", type: "FamilyMerchant")
     other_entry = create_transaction(
@@ -764,7 +775,7 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
       merchant: other_merchant
     )
 
-    # Create a rule in the original family
+    # Create a rule in the original family (different from other_family)
     rule = Rule.create!(
       family: @family,
       resource_type: "transaction",
@@ -790,7 +801,7 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
     result = ApplyRulesToTransactionService.new(other_entry, execution_type: "manual").call
 
     # Should not match because the rule is for a different family
-    assert_equal 0, result[:rules_matched]
+    assert_equal 0, result[:rules_matched], "Rules from one family should not apply to transactions from another family"
   end
 
   test "handles empty rule conditions gracefully" do

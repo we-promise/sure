@@ -92,8 +92,24 @@ class EnableBankingEntry::Processor
 
       # If counterparty is a technical ID or missing, check remittance_information first
       remittance = data[:remittance_information]
-      if remittance.is_a?(Array) && remittance.first.present?
-        return remittance.first.truncate(100)
+      if remittance.present?
+        # Normalize remittance to handle different data types safely
+        remittance_value = if remittance.is_a?(Array)
+          # Find first non-nil, non-empty element that can be converted to string
+          # Skip non-String/nil entries and convert to string
+          remittance.find { |item| item.present? && (item.is_a?(String) || item.respond_to?(:to_s)) }&.to_s
+        elsif remittance.is_a?(String)
+          # Already a string, use directly
+          remittance
+        else
+          # Handle other types by converting to string
+          remittance.to_s if remittance.respond_to?(:to_s)
+        end
+        
+        # Only use remittance if we have a valid non-empty string value
+        if remittance_value.present? && remittance_value.is_a?(String) && !remittance_value.strip.empty?
+          return remittance_value.truncate(100)
+        end
       end
 
       # Fall back to bank_transaction_code description
