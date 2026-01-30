@@ -29,7 +29,8 @@ class NoopApiRateLimiter
       rate_limit: Float::INFINITY,
       remaining: Float::INFINITY,
       reset_time: 0,
-      tier: :noop
+      tier: :noop,
+      redis_available: true
     }
   end
 
