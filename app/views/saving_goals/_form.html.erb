@@ -45,7 +45,7 @@
 
     <%# Custom Color Picker - StyledFormBuilder doesn't wrap radio buttons automatically appropriately for this layout %>
     <div>
-      <%= form.label :color, t("saving_goals.form.color_label", default: "Color"), class: "form-field__label mb-2" %>
+      <%= form.label :color, t("saving_goals.form.color_label"), class: "form-field__label mb-2" %>
       <div class="flex flex-wrap gap-3">
         <% SavingGoal::COLORS.each do |color| %>
           <label class="cursor-pointer relative group">

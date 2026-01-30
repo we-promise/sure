@@ -147,6 +147,21 @@ module ApplicationHelper
     number_with_precision(qty, precision: precision, strip_insignificant_zeros: true)
   end
 
+  # Sanitizes return_to param or referrer for safe back links
+  def safe_back_path(fallback: root_path)
+    if params[:return_to].present? && params[:return_to].match?(/\A\/[^\/]/)
+      return params[:return_to]
+    end
+
+    if request.referer.present? && URI(request.referer).host == request.host
+      return request.referer
+    end
+
+    fallback
+  rescue URI::InvalidURIError
+    fallback
+  end
+
   private
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries

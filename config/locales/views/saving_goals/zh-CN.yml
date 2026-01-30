@@ -1,3 +1,4 @@
+---
 zh-CN:
   saving_goals:
     create:
@@ -30,7 +31,6 @@ zh-CN:
       progress: "已存 %{percent}%"
       target: "目标：%{amount}"
       deadline: "截止日期：%{date}"
-      on_track: "按计划进行"
       behind: "落后于计划"
       contributions: "存款记录"
       actions: "操作"

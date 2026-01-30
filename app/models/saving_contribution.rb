@@ -19,6 +19,8 @@ class SavingContribution < ApplicationRecord
   private
 
     def update_goal_current_amount
+      return if saving_goal.nil? || saving_goal.destroyed?
+
       saving_goal.update!(current_amount: saving_goal.saving_contributions.sum(:amount))
     end
 end

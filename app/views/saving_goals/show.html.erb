@@ -1,10 +1,8 @@
 <div class="max-w-3xl mx-auto space-y-6">
   <!-- Header -->
   <div class="flex items-start justify-between gap-4">
-    <%= link_to params[:return_to] || request.referer || saving_goals_path, class: "p-2 -ml-2 text-subdued hover:text-primary transition-colors" do %>
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-      </svg>
+    <%= link_to safe_back_path(fallback: saving_goals_path), class: "p-2 -ml-2 text-subdued hover:text-primary transition-colors" do %>
+      <%= icon "arrow-left", class: "w-6 h-6" %>
     <% end %>
 
     <div class="flex-1">
@@ -14,7 +12,7 @@
           <span><%= t(".target_date", date: l(@saving_goal.target_date, format: :long)) %></span>
           <span>•</span>
         <% end %>
-        <span class="<%= @saving_goal.active? ? (@saving_goal.on_track? ? "text-green-500" : "text-yellow-500") : "text-secondary" %>">
+        <span class="<%= @saving_goal.active? ? (@saving_goal.on_track? ? "text-success" : "text-warning") : "text-secondary" %>">
           <%= t("saving_goals.status.#{@saving_goal.status}") %>
         </span>
       </div>
@@ -41,7 +39,7 @@
           icon: "check",
           href: complete_saving_goal_path(@saving_goal),
           method: :post,
-          class: "hover:bg-green-500/10 hover:text-green-500",
+          class: "hover:bg-success/10 hover:text-success",
           title: t(".complete")
         ) %>
       <% elsif @saving_goal.paused? %>
@@ -92,20 +90,16 @@
         <% if @saving_goal.active? && @saving_goal.target_date %>
           <div class="p-4 bg-surface-inset rounded-lg">
             <% if @saving_goal.on_track? %>
-               <div class="flex items-center gap-2 text-green-500 font-medium mb-1">
-                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
-                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
-                 </svg>
+               <div class="flex items-center gap-2 text-success font-medium mb-1">
+                 <%= icon "check-circle", class: "w-5 h-5", variant: :solid %>
                  <%= t(".on_track") %>
                </div>
                <p class="text-sm text-secondary">
                  <%= t(".on_track_description") %>
                </p>
             <% else %>
-               <div class="flex items-center gap-2 text-yellow-500 font-medium mb-1">
-                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
-                   <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                 </svg>
+               <div class="flex items-center gap-2 text-warning font-medium mb-1">
+                 <%= icon "exclamation-circle", class: "w-5 h-5", variant: :solid %>
                  <%= t(".off_track") %>
                </div>
                <p class="text-sm text-secondary">
@@ -160,10 +154,8 @@
         <% contributions.each do |contribution| %>
           <div class="flex items-center justify-between p-3 bg-surface-inset rounded-lg">
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green-500">
-                  <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
-                </svg>
+              <div class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
+                <%= icon "plus", class: "w-4 h-4 text-success", variant: :solid %>
               </div>
               <div>
                 <p class="font-medium text-primary">+<%= format_money(contribution.amount_money) %></p>
@@ -172,9 +164,9 @@
             </div>
             <div class="flex items-center gap-3">
               <% badge_color = case contribution.source
-                 when "auto" then "bg-blue-500/10 text-blue-500"
-                 when "initial_balance" then "bg-purple-500/10 text-purple-500"
-                 else "bg-zinc-500/10 text-zinc-400"
+                 when "auto" then "bg-blue/10 text-blue-500"
+                 when "initial_balance" then "bg-violet/10 text-violet-500"
+                 else "bg-gray/10 text-subdued"
                  end %>
               <span class="px-2 py-1 text-xs font-medium rounded-full <%= badge_color %>">
                 <%= t(".#{contribution.source}_source") %>

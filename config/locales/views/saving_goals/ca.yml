@@ -1,3 +1,4 @@
+---
 ca:
   saving_goals:
     create:
@@ -30,7 +31,7 @@ ca:
       progress: "%{percent}% estalviat"
       target: "Objectiu: %{amount}"
       deadline: "Data límit: %{date}"
-      on_track: "A temps"
+
       behind: "Amb retard"
       contributions: "Contribucions"
       actions: "Accions"

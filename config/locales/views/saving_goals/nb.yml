@@ -1,3 +1,4 @@
+---
 nb:
   saving_goals:
     create:
@@ -30,7 +31,6 @@ nb:
       progress: "%{percent}% spart"
       target: "Mål: %{amount}"
       deadline: "Frist: %{date}"
-      on_track: "I rute"
       behind: "Forsinket"
       contributions: "Bidrag"
       actions: "Handlinger"

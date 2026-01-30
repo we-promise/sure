@@ -1,3 +1,4 @@
+---
 es:
   saving_goals:
     create:
@@ -30,7 +31,6 @@ es:
       progress: "%{percent}% ahorrado"
       target: "Objetivo: %{amount}"
       deadline: "Fecha límite: %{date}"
-      on_track: "A tiempo"
       behind: "Con retraso"
       contributions: "Contribuciones"
       actions: "Acciones"

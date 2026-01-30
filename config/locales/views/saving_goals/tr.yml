@@ -1,3 +1,4 @@
+---
 tr:
   saving_goals:
     create:
@@ -30,7 +31,6 @@ tr:
       progress: "%{percent}% tasarruf edildi"
       target: "Hedef: %{amount}"
       deadline: "Son Tarih: %{date}"
-      on_track: "Yolunda"
       behind: "Geride"
       contributions: "Katkılar"
       actions: "İşlemler"

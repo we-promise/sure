@@ -207,7 +207,7 @@ Rails.application.routes.draw do
       post :archive
     end
 
-    resources :saving_contributions, only: [:new, :create, :destroy]
+    resources :saving_contributions, only: [ :new, :create, :destroy ]
   end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do

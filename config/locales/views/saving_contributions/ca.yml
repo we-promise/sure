@@ -1,7 +1,8 @@
+---
 ca:
   saving_contributions:
     new:
-      title: "Contribuïr a %{goal}"
+      title: "Contribuir a %{goal}"
       current_progress: "Progrés actual"
       remaining: "%{amount} restants"
       available_from_budget: "%{amount} disponibles del pressupost d'aquest mes"
@@ -14,7 +15,7 @@ ca:
       source_auto: "Del superàvit del pressupost"
       source_help: "Trieu 'Manual' per a contribucions puntuals o 'Auto' per a assignacions recurrents del pressupost"
       submit: "Afegir contribució"
-      cancel: "Calcenl·lar"
+      cancel: "Cancel·lar"
     create:
       success: "Contribució afegida correctament"
     destroy:

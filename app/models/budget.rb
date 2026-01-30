@@ -140,7 +140,7 @@ class Budget < ApplicationRecord
       weight: savings_weight
     )
 
-    (adjusted_totals + [savings_category_total]).sort_by(&:weight).reverse
+    (adjusted_totals + [ savings_category_total ]).sort_by(&:weight).reverse
   end
 
   # Actual spending INCLUDING savings contributions
@@ -327,7 +327,7 @@ class Budget < ApplicationRecord
   end
 
   def available_for_goals
-    [monthly_surplus - allocated_to_goals, 0].max
+    [ monthly_surplus - allocated_to_goals, 0 ].max
   end
 
   # Monthly commitment for all active goals with target dates
@@ -342,7 +342,7 @@ class Budget < ApplicationRecord
 
   # Amount of savings commitment that hasn't been funded this month
   def unfunded_savings_this_month
-    [savings_commitment - allocated_to_goals, 0].max
+    [ savings_commitment - allocated_to_goals, 0 ].max
   end
 
   # Adjusted surplus after accounting for savings commitment

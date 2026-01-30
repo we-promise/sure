@@ -27,7 +27,7 @@ class CreateSavingGoals < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :saving_goals, [:family_id, :status]
-    add_index :saving_contributions, [:saving_goal_id, :month]
+    add_index :saving_goals, [ :family_id, :status ]
+    add_index :saving_contributions, [ :saving_goal_id, :month ]
   end
 end

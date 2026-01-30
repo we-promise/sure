@@ -1,3 +1,4 @@
+---
 de:
   saving_goals:
     create:
@@ -39,7 +40,6 @@ de:
       target_date: "Zieldatum: %{date}"
       current_balance: "Aktueller Stand"
       of_target: "von %{amount} Ziel"
-      on_track: "Im Plan"
       on_track_description: "Sie sparen genug, um Ihr Ziel rechtzeitig zu erreichen."
       off_track: "Im Rückstand"
       off_track_description: "Erwägen Sie, Ihre monatlichen Ersparnisse zu erhöhen, um aufzuholen."

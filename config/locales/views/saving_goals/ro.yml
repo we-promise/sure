@@ -1,3 +1,4 @@
+---
 ro:
   saving_goals:
     create:
@@ -30,7 +31,6 @@ ro:
       progress: "%{percent}% economisit"
       target: "Țintă: %{amount}"
       deadline: "Termen limită: %{date}"
-      on_track: "În grafic"
       behind: "În urmă"
       contributions: "Contribuții"
       actions: "Acțiuni"

@@ -1,3 +1,4 @@
+---
 en:
   saving_goals:
     create:
@@ -30,7 +31,6 @@ en:
       progress: "%{percent}% saved"
       target: "Target: %{amount}"
       deadline: "Deadline: %{date}"
-      on_track: "On track"
       behind: "Behind schedule"
       contributions: "Contributions"
       actions: "Actions"
@@ -90,5 +90,4 @@ en:
       archived: "Archived"
     goal_card:
       target_date: "Target: %{date}"
-
 

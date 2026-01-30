@@ -1,3 +1,4 @@
+---
 pt-BR:
   saving_goals:
     create:
@@ -30,7 +31,6 @@ pt-BR:
       progress: "%{percent}% economizado"
       target: "Meta: %{amount}"
       deadline: "Prazo: %{date}"
-      on_track: "No prazo"
       behind: "Atrasado"
       contributions: "Contribuições"
       actions: "Ações"
