@@ -3,6 +3,34 @@ class PdfImport < Import
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
 
+  def import!
+    raise "Account required for PDF import" unless account.present?
+
+    transaction do
+      mappings.each(&:create_mappable!)
+
+      new_transactions = rows.map do |row|
+        category = mappings.categories.mappable_for(row.category)
+
+        Transaction.new(
+          category: category,
+          entry: Entry.new(
+            account: account,
+            date: row.date_iso,
+            amount: row.signed_amount,
+            name: row.name,
+            currency: row.currency,
+            notes: row.notes,
+            import: self,
+            import_locked: true
+          )
+        )
+      end
+
+      Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
+    end
+  end
+
   def pdf_uploaded?
     pdf_file.attached?
   end
@@ -71,6 +99,28 @@ class PdfImport < Import
     extracted_data&.dig("transactions") || []
   end
 
+  def generate_rows_from_extracted_data
+    return unless has_extracted_transactions?
+
+    rows.destroy_all
+
+    currency = account&.currency || family.currency
+
+    mapped_rows = extracted_transactions.map do |txn|
+      {
+        date: format_date_for_import(txn["date"]),
+        amount: txn["amount"].to_s,
+        name: txn["name"].to_s,
+        category: txn["category"].to_s,
+        notes: txn["notes"].to_s,
+        currency: currency
+      }
+    end
+
+    rows.insert_all!(mapped_rows) if mapped_rows.any?
+    update_column(:rows_count, rows.count)
+  end
+
   def send_next_steps_email(user)
     PdfImportMailer.with(
       user: user,
@@ -83,19 +133,19 @@ class PdfImport < Import
   end
 
   def configured?
-    ai_processed?
+    ai_processed? && rows_count > 0
   end
 
   def cleaned?
-    ai_processed?
+    configured? && rows.all?(&:valid?)
   end
 
   def publishable?
-    false
+    bank_statement? && cleaned? && mappings.all?(&:valid?)
   end
 
   def column_keys
-    []
+    %i[date amount name category notes]
   end
 
   def requires_csv_workflow?
@@ -107,4 +157,22 @@ class PdfImport < Import
 
     pdf_file.download
   end
+
+  def required_column_keys
+    %i[date amount]
+  end
+
+  def mapping_steps
+    [ Import::CategoryMapping ]
+  end
+
+  private
+
+    def format_date_for_import(date_str)
+      return "" if date_str.blank?
+
+      Date.parse(date_str).strftime(date_format)
+    rescue ArgumentError
+      date_str.to_s
+    end
 end
