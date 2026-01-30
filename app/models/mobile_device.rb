@@ -11,7 +11,7 @@ class MobileDevice < ApplicationRecord
 
   validates :device_id, presence: true, uniqueness: { scope: :user_id }
   validates :device_name, presence: true
-  validates :device_type, presence: true, inclusion: { in: %w[ios android] }
+  validates :device_type, presence: true, inclusion: { in: %w[ios android web] }
 
   before_validation :set_last_seen_at, on: :create
 
