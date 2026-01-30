@@ -391,8 +391,8 @@ class Budget < ApplicationRecord
     goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance).exists?
   end
 
-  def goal_contribution_for_month(goal)
-    goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance).first
+  def goal_contributions_for_month(goal)
+    goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance)
   end
 
   private

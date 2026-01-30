@@ -31,10 +31,6 @@ class SavingContribution < ApplicationRecord
     def update_goal_current_amount
       return if saving_goal.nil? || saving_goal.destroyed?
 
-      total_amount = saving_goal.saving_contributions.sum do |contribution|
-        contribution.amount_money.exchange_to(saving_goal.currency)
-      end
-
-      saving_goal.update!(current_amount: total_amount.amount)
+      saving_goal.update!(current_amount: saving_goal.saving_contributions.sum(:amount))
     end
 end

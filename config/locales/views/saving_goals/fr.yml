@@ -20,7 +20,7 @@ fr:
       new_goal: "Nouvel objectif"
       empty:
         title: "Pas encore d'objectif d'épargne"
-        description: "Définissez une projet et suivez vos progrès."
+        description: "Définissez un projet et suivez vos progrès."
       filters:
         all: "Tous"
         active: "Actifs"
