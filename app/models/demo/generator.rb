@@ -1,9 +1,9 @@
 require "securerandom"
 
 class Demo::Generator
-  # Deterministic API key for uptime monitoring (instatus.com)
+  # Deterministic API key for uptime monitoring
   # This key is always the same so it can be hardcoded in monitoring tools
-  INSTATUS_API_KEY = "demo_instatus_monitoring_key_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+  MONITORING_API_KEY = "demo_instatus_monitoring_key_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
 
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
@@ -98,7 +98,7 @@ class Demo::Generator
       family = create_family_and_users!("Demo Family", email, onboarded: true, subscribed: true)
 
       puts "🔑 Creating instatus.com monitoring API key..."
-      create_instatus_api_key!(family)
+      create_MONITORING_API_KEY!(family)
 
       puts "📊 Creating realistic financial data..."
       create_realistic_categories!(family)
@@ -188,12 +188,12 @@ class Demo::Generator
       family
     end
 
-    def create_instatus_api_key!(family)
+    def create_MONITORING_API_KEY!(family)
       admin_user = family.users.find_by(role: "admin")
       return unless admin_user
 
       # Find existing key by the deterministic display_key value or create new one
-      existing_key = ApiKey.find_by(display_key: INSTATUS_API_KEY)
+      existing_key = ApiKey.find_by(display_key: MONITORING_API_KEY)
 
       if existing_key
         puts "  → Using existing instatus.com API key"
@@ -205,12 +205,12 @@ class Demo::Generator
 
       api_key = admin_user.api_keys.create!(
         name: "instatus.com",
-        key: INSTATUS_API_KEY,
+        key: MONITORING_API_KEY,
         scopes: [ "read" ],
         source: "web"
       )
 
-      puts "  → Created instatus.com API key: #{INSTATUS_API_KEY}"
+      puts "  → Created instatus.com API key: #{MONITORING_API_KEY}"
       api_key
     end
 
