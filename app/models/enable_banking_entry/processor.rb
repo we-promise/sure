@@ -69,7 +69,7 @@ class EnableBankingEntry::Processor
 
     def name
       # Build name from available Enable Banking transaction fields
-      # Priority: counterparty name > bank_transaction_code description > remittance_information
+      # Priority: counterparty name > remittance_information > bank_transaction_code description
       # Note: Technical counterparty IDs like CARD-xxxxxxx are ignored in favor of remittance_information
 
       # Determine counterparty based on transaction direction
