@@ -271,12 +271,12 @@
         <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
           <div class="flex items-center justify-between gap-2 p-3">
             <div class="text-sm space-y-1">
-              <h4 class="text-primary">Convert to Security Trade</h4>
-              <p class="text-secondary">Convert this transaction into a security trade (buy/sell) by providing ticker, shares, and price.</p>
+              <h4 class="text-primary"><%= t(".convert_to_trade_title") %></h4>
+              <p class="text-secondary"><%= t(".convert_to_trade_description") %></p>
             </div>
 
             <%= render DS::Button.new(
-              text: "Convert",
+              text: t(".convert_to_trade_button"),
               variant: "outline",
               icon: "arrow-right-left",
               href: convert_to_trade_transaction_path(@entry.transaction),
