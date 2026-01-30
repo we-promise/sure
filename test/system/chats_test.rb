@@ -12,7 +12,7 @@ class ChatsTest < ApplicationSystemTestCase
     visit root_path
 
     within "#chat-container" do
-      assert_selector "h3", text: "Enable AI Chats"
+      assert_selector "h3", text: I18n.t("chats.ai_consent.title")
     end
   end
 
@@ -36,6 +36,11 @@ class ChatsTest < ApplicationSystemTestCase
       visit root_url
 
       click_on @user.chats.first.title
+
+      # Wait for chat to load before refreshing
+      within "#chat-container" do
+        assert_selector "h1", text: @user.chats.first.title
+      end
 
       # Page refresh
       visit root_url

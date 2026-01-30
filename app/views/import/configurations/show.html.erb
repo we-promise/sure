@@ -12,14 +12,14 @@
           <%= icon "sparkles" %>
         </span>
 
-        Template configuration found
+        <%= t(".template_found") %>
       </h3>
 
-      <p class="text-sm text-secondary">We found a configuration from a previous import for this account.  Would you like to apply it to this import?</p>
+      <p class="text-sm text-secondary"><%= t(".template_found_description") %></p>
 
       <div class="mt-4 flex gap-2 items-center">
-        <%= render DS::Link.new(text: "Manually configure", href: import_configuration_path(@import), variant: "outline") %>
-        <%= render DS::Button.new(text: "Apply template", href: apply_template_import_path(@import), method: :put, data: { turbo_frame: :_top }) %>
+        <%= render DS::Link.new(text: t(".manually_configure"), href: import_configuration_path(@import), variant: "outline") %>
+        <%= render DS::Button.new(text: t(".apply_template"), href: apply_template_import_path(@import), method: :put, data: { turbo_frame: :_top }) %>
       </div>
     </div>
   </div>
@@ -32,7 +32,7 @@
 
     <div class="mx-auto max-w-lg space-y-4">
       <%= render partial: permitted_import_configuration_path(@import), locals: { import: @import } %>
-      <%= render "imports/table", headers: @import.csv_headers, rows: @import.csv_sample, caption: "Sample data from your uploaded CSV" %>
+      <%= render "imports/table", headers: @import.csv_headers, rows: @import.csv_sample, caption: t(".sample_data_caption") %>
     </div>
   </div>
 <% end %>

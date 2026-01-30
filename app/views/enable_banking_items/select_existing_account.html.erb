@@ -1,15 +1,15 @@
 <%# Modal: Link an existing manual account to a Enable Banking account %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Link Enable Banking account") %>
+    <% dialog.with_header(title: t(".header_title")) %>
 
     <% dialog.with_body do %>
       <% if @available_enable_banking_accounts.blank? %>
         <div class="p-4 text-sm text-secondary">
-          <p class="mb-2">All Enable Banking accounts appear to be linked already.</p>
+          <p class="mb-2"><%= t(".all_linked") %></p>
           <ul class="list-disc list-inside space-y-1">
-            <li>If you just connected or synced, try again after the sync completes.</li>
-            <li>To link a different account, first unlink it from the account’s actions menu.</li>
+            <li><%= t(".try_after_sync") %></li>
+            <li><%= t(".unlink_first") %></li>
           </ul>
         </div>
       <% else %>
@@ -22,7 +22,7 @@
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= eba.name.presence || eba.account_id %></span>
                   <span class="text-xs text-secondary">
-                    <%= eba.currency %> • Balance: <%= number_to_currency((eba.current_balance || 0), unit: eba.currency) %>
+                    <%= eba.currency %> • <%= t(".balance") %> <%= number_to_currency((eba.current_balance || 0), unit: eba.currency) %>
                   </span>
                 </div>
               </label>
@@ -30,8 +30,8 @@
           </div>
 
           <div class="flex items-center justify-end gap-2">
-            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
-            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+            <%= render DS::Button.new(text: t(".link"), variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: t(".cancel"), variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
           </div>
         <% end %>
       <% end %>

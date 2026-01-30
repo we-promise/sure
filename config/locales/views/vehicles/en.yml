@@ -9,6 +9,8 @@ en:
       mileage: Mileage
       mileage_placeholder: '15000'
       mileage_unit: Unit
+      mileage_unit_miles: Miles
+      mileage_unit_kilometers: Kilometers
       model: Model
       model_placeholder: Camry
       year: Year
@@ -23,3 +25,4 @@ en:
       trend: Trend
       unknown: Unknown
       year: Year
+      edit_account_details: Edit account details

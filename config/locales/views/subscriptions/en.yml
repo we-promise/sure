@@ -2,6 +2,7 @@ en:
   subscriptions:
     self_hosted_alert: "%{product_name} is not available in self-hosted mode."
     upgrade:
+      already_subscribed: "You are already contributing. Thank you!"
       contribute_and_support_sure: "Contribute and support Sure"
       cta: "Continue supporting the development of this codebase!"
       header:
@@ -11,3 +12,9 @@ en:
       redirect_to_stripe: "In the next step, you'll be redirected to Stripe which handles credit cards for us."
       trialing: "Your data will be deleted in %{days} days"
       trial_over: "Your trial is over"
+    create:
+      welcome: "Welcome to Sure!"
+      trial_already_used: "You have already started or completed a trial. Please upgrade to continue."
+    success:
+      subscription_created: "Welcome to Sure!  Your contribution is appreciated."
+      subscription_error: "Something went wrong processing your contribution. Please try again."
