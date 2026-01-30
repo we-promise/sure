@@ -24,7 +24,7 @@
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.transactions_extracted", default: "Transactions Extracted") %></h2>
           <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
-            <%= import.rows_count %> transactions
+            <%= t("imports.pdf_import.transactions_extracted_count", count: import.rows_count, default: "%{count} transactions") %>
           </p>
         </div>
       </div>
