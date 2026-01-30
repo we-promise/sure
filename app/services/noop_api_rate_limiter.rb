@@ -23,6 +23,10 @@ class NoopApiRateLimiter
     0
   end
 
+  def redis_available?
+    true
+  end
+
   def usage_info
     {
       current_count: 0,
