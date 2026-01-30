@@ -98,7 +98,7 @@ class Demo::Generator
       family = create_family_and_users!("Demo Family", email, onboarded: true, subscribed: true)
 
       puts "🔑 Creating monitoring API key..."
-      create_MONITORING_API_KEY!(family)
+      create_monitoring_api_key!(family)
 
       puts "📊 Creating realistic financial data..."
       create_realistic_categories!(family)
@@ -188,12 +188,12 @@ class Demo::Generator
       family
     end
 
-    def create_MONITORING_API_KEY!(family)
+    def create_monitoring_api_key!(family)
       admin_user = family.users.find_by(role: "admin")
       return unless admin_user
 
-      # Find existing key by the deterministic display_key value or create new one
-      existing_key = ApiKey.find_by(display_key: MONITORING_API_KEY)
+      # Find existing key scoped to this admin user by the deterministic display_key value
+      existing_key = admin_user.api_keys.find_by(display_key: MONITORING_API_KEY)
 
       if existing_key
         puts "  → Use existing monitoring API key"
