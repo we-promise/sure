@@ -108,6 +108,7 @@ class PdfImport < Import
 
     mapped_rows = extracted_transactions.map do |txn|
       {
+        import_id: id,
         date: format_date_for_import(txn["date"]),
         amount: txn["amount"].to_s,
         name: txn["name"].to_s,
@@ -117,8 +118,8 @@ class PdfImport < Import
       }
     end
 
-    rows.insert_all!(mapped_rows) if mapped_rows.any?
-    update_column(:rows_count, rows.count)
+    Import::Row.insert_all!(mapped_rows) if mapped_rows.any?
+    update_column(:rows_count, rows.reload.count)
   end
 
   def send_next_steps_email(user)
