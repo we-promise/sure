@@ -35,19 +35,19 @@ class NetWorthCard extends StatelessWidget {
         children: [
           // Net Worth Section (Placeholder)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Column(
               children: [
                 Text(
                   'Net Worth',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   '--',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
                       ),
@@ -71,7 +71,6 @@ class NetWorthCard extends StatelessWidget {
                   child: _FilterButton(
                     totals: assetTotalsByCurrency,
                     color: Colors.green,
-                    icon: Icons.trending_up,
                     isSelected: currentFilter == AccountFilter.assets,
                     onTap: () {
                       if (currentFilter == AccountFilter.assets) {
@@ -101,7 +100,6 @@ class NetWorthCard extends StatelessWidget {
                   child: _FilterButton(
                     totals: liabilityTotalsByCurrency,
                     color: Colors.red,
-                    icon: Icons.trending_down,
                     isSelected: currentFilter == AccountFilter.liabilities,
                     onTap: () {
                       if (currentFilter == AccountFilter.liabilities) {
@@ -215,7 +213,6 @@ class NetWorthCard extends StatelessWidget {
 class _FilterButton extends StatelessWidget {
   final Map<String, double> totals;
   final Color color;
-  final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
@@ -224,7 +221,6 @@ class _FilterButton extends StatelessWidget {
   const _FilterButton({
     required this.totals,
     required this.color,
-    required this.icon,
     required this.isSelected,
     required this.onTap,
     required this.onLongPress,
@@ -235,7 +231,6 @@ class _FilterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Sort currencies by value (descending)
     final sortedEntries = totals.entries.toList()
       ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
 
@@ -250,57 +245,56 @@ class _FilterButton extends StatelessWidget {
       ),
       child: Material(
         color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
-        child: InkWell(
+        child: GestureDetector(
           onTap: onTap,
           onLongPress: sortedEntries.isNotEmpty ? onLongPress : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Background icon as visual indicator
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isSelected
-                      ? color
-                      : color.withValues(alpha: 0.4),
-                ),
-                const SizedBox(height: 8),
-
-                // Currency totals
-                if (sortedEntries.isEmpty)
-                  Text(
-                    '--',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                  )
-                else
-                  ...sortedEntries.take(3).map((entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: Text(
-                          formatAmount(entry.key, entry.value),
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                              ),
-                          textAlign: TextAlign.center,
-                        ),
-                      )),
-                if (sortedEntries.length > 3)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            height: 48,
+            child: sortedEntries.isEmpty
+                ? Center(
                     child: Text(
-                      '+${sortedEntries.length - 3} more',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                      '--',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
                           ),
                     ),
-                  ),
-              ],
-            ),
+                  )
+                : sortedEntries.length == 1
+                    ? Center(
+                        child: Text(
+                          formatAmount(sortedEntries.first.key, sortedEntries.first.value),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                        ),
+                      )
+                    : NotificationListener<ScrollNotification>(
+                        onNotification: (_) => true,
+                        child: ListWheelScrollView.useDelegate(
+                          itemExtent: 32,
+                          diameterRatio: 1.5,
+                          perspective: 0.003,
+                          physics: const FixedExtentScrollPhysics(),
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            childCount: sortedEntries.length,
+                            builder: (context, index) {
+                              final entry = sortedEntries[index];
+                              return Center(
+                                child: Text(
+                                  formatAmount(entry.key, entry.value),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
           ),
         ),
       ),
