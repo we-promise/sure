@@ -19,27 +19,33 @@ end
 
 # Initialize feature flags IMMEDIATELY (not in after_initialize)
 # This must happen before OmniAuth initializer runs
-unless Rails.env.test?
-  begin
-    # Feature flag to control SSO provider source (YAML vs DB)
-    # ENV: AUTH_PROVIDERS_SOURCE=db|yaml
-    # Default: "db" for self-hosted, "yaml" for managed
-    auth_source = ENV.fetch("AUTH_PROVIDERS_SOURCE") do
-      Rails.configuration.app_mode.self_hosted? ? "db" : "yaml"
-    end.downcase
-
-    # Ensure feature exists before enabling/disabling
-    Flipper.add(:db_sso_providers) unless Flipper.exist?(:db_sso_providers)
-
-    if auth_source == "db"
-      Flipper.enable(:db_sso_providers)
-    else
-      Flipper.disable(:db_sso_providers)
-    end
-  rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
-    # Database not ready yet (e.g., during initial setup or migrations)
-    # This is expected during db:create or initial setup
-  rescue StandardError => e
-    Rails.logger.warn("[Flipper] Error initializing feature flags: #{e.message}")
-  end
-end
+#
+# NOTE: The :db_sso_providers feature flag is now managed via the AUTH_PROVIDERS_SOURCE
+# environment variable to avoid expensive database queries during initialization.
+# The ProviderLoader service reads AUTH_PROVIDERS_SOURCE directly, so we no longer
+# need to initialize this flag here, which eliminates slow LEFT OUTER JOIN queries
+# on the flipper_features and flipper_gates tables during boot.
+#
+# If you need to manage this flag through the Flipper UI or programmatically,
+# you can uncomment the code below, but be aware it will add ~1-2 seconds to
+# application boot time due to database queries.
+#
+# unless Rails.env.test?
+#   begin
+#     auth_source = ENV.fetch("AUTH_PROVIDERS_SOURCE") do
+#       Rails.configuration.app_mode.self_hosted? ? "db" : "yaml"
+#     end.downcase
+#
+#     Flipper.add(:db_sso_providers) unless Flipper.exist?(:db_sso_providers)
+#
+#     if auth_source == "db"
+#       Flipper.enable(:db_sso_providers)
+#     else
+#       Flipper.disable(:db_sso_providers)
+#     end
+#   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
+#     # Database not ready yet
+#   rescue StandardError => e
+#     Rails.logger.warn("[Flipper] Error initializing feature flags: #{e.message}")
+#   end
+# end
