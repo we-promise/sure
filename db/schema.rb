@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_29_194403) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_29_230808) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1077,6 +1077,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_29_194403) do
     t.datetime "updated_at", null: false
     t.index ["budget_id"], name: "index_saving_contributions_on_budget_id"
     t.index ["saving_goal_id", "month"], name: "index_saving_contributions_on_saving_goal_id_and_month"
+    t.index ["saving_goal_id", "month"], name: "index_unique_auto_contributions", unique: true, where: "((source)::text = 'auto'::text)"
     t.index ["saving_goal_id"], name: "index_saving_contributions_on_saving_goal_id"
   end
 

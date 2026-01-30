@@ -6,7 +6,7 @@ class BudgetsController < ApplicationController
   end
 
   def show
-    @budget.auto_fund_saving_goals!
+    @budget.ensure_funded!
   end
 
   def edit

@@ -26,7 +26,7 @@ class DS::Button < DS::Buttonish
       data = merged_opts.delete(:data) || {}
 
       if confirm.present?
-        data = data.merge(turbo_confirm: confirm)
+        data = data.merge(turbo_confirm: confirm.to_data_attribute)
       end
 
       if frame.present?

@@ -322,6 +322,7 @@ class Budget < ApplicationRecord
       .joins(:saving_goal)
       .where(saving_goals: { family_id: family_id })
       .where(month: start_date.beginning_of_month)
+      .where.not(source: :initial_balance)
       .sum(:amount)
   end
 
@@ -356,37 +357,42 @@ class Budget < ApplicationRecord
     family.saving_goals.active.order(Arel.sql("target_date IS NULL, target_date ASC, created_at ASC"))
   end
 
-  # Automatically fund active saving goals from budget surplus
-  # Goals are funded in priority order (created_at ASC) up to their monthly target
-  def auto_fund_saving_goals!
-    contributions = []
-    remaining = available_for_goals
+  # Automatically fund active saving goals from budget surplus.
+  # This method is idempotent and safe to call multiple times (e.g. in GET requests)
+  # as it uses a unique index and transaction locking to prevent duplicates.
+  # Goals are funded in priority order (created_at ASC) up to their monthly target.
+  def ensure_funded!
+    transaction do
+      lock!
+      contributions = []
+      remaining = available_for_goals
 
-    family_active_saving_goals.each do |goal|
-      break if remaining <= 0
-      next if goal.monthly_target.nil? || goal.monthly_target <= 0
-      next if goal_already_funded_this_month?(goal)
+      family_active_saving_goals.each do |goal|
+        break if remaining <= 0
+        next if goal.monthly_target.nil? || goal.monthly_target <= 0
+        next if goal_already_funded_this_month?(goal)
 
-      amount = [ goal.monthly_target, remaining ].min
-      contribution = goal.saving_contributions.create!(
-        amount: amount,
-        currency: currency,
-        month: start_date.beginning_of_month,
-        source: "auto"
-      )
-      contributions << contribution
-      remaining -= amount
+        amount = [ goal.monthly_target, remaining ].min
+        contribution = goal.saving_contributions.create!(
+          amount: amount,
+          currency: currency,
+          month: start_date.beginning_of_month,
+          source: "auto"
+        )
+        contributions << contribution
+        remaining -= amount
+      end
+
+      contributions
     end
-
-    contributions
   end
 
   def goal_already_funded_this_month?(goal)
-    goal.saving_contributions.where(month: start_date.beginning_of_month).exists?
+    goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance).exists?
   end
 
   def goal_contribution_for_month(goal)
-    goal.saving_contributions.find_by(month: start_date.beginning_of_month)
+    goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance).first
   end
 
   private

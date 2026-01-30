@@ -59,7 +59,7 @@
         icon: "trash",
         href: saving_goal_path(@saving_goal),
         method: :delete,
-        confirm: t("common.are_you_sure"),
+        confirm: CustomConfirm.for_resource_deletion("saving goal"),
         title: t("common.delete"),
         class: "hover:text-destructive hover:bg-destructive/10"
       ) %>
@@ -171,8 +171,13 @@
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <span class="px-2 py-1 text-xs font-medium rounded-full <%= contribution.auto? ? 'bg-blue-500/10 text-blue-500' : 'bg-zinc-500/10 text-zinc-400' %>">
-                <%= contribution.auto? ? t(".auto_source") : t(".manual_source") %>
+              <% badge_color = case contribution.source
+                 when "auto" then "bg-blue-500/10 text-blue-500"
+                 when "initial_balance" then "bg-purple-500/10 text-purple-500"
+                 else "bg-zinc-500/10 text-zinc-400"
+                 end %>
+              <span class="px-2 py-1 text-xs font-medium rounded-full <%= badge_color %>">
+                <%= t(".#{contribution.source}_source") %>
               </span>
 
               <%= render DS::Button.new(
@@ -181,7 +186,7 @@
                 icon: "trash",
                 href: saving_goal_saving_contribution_path(@saving_goal, contribution),
                 method: :delete,
-                confirm: t("common.are_you_sure"),
+                confirm: CustomConfirm.for_resource_deletion("contribution"),
                 title: t("common.delete"),
                 class: "text-subdued hover:text-destructive -mr-2"
               ) %>

@@ -58,6 +58,7 @@ class SavingGoal < ApplicationRecord
   def remaining_amount_for_month
     this_month_contribution = saving_contributions
       .where(month: Date.current.beginning_of_month)
+      .where.not(source: :initial_balance)
       .sum(:amount)
 
     [ target_amount - (current_amount - this_month_contribution), 0 ].max

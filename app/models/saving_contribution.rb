@@ -6,7 +6,7 @@ class SavingContribution < ApplicationRecord
 
   monetize :amount
 
-  enum :source, { manual: "manual", auto: "auto" }, default: :manual
+  enum :source, { manual: "manual", auto: "auto", initial_balance: "initial_balance" }, default: :manual
 
   validates :amount, numericality: { greater_than: 0 }
   validates :month, presence: true

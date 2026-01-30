@@ -23,8 +23,10 @@ class SavingContributionsController < ApplicationController
     # Set budget context if provided
     if params[:saving_contribution][:budget_id].present?
       @budget = Budget.find_by(id: params[:saving_contribution][:budget_id], family: Current.family)
-      
-      if @budget
+    end
+
+    if @budget
+      @budget.with_lock do
         @contribution.month = @budget.start_date.beginning_of_month
         
         # Validate against available surplus
@@ -33,16 +35,22 @@ class SavingContributionsController < ApplicationController
           render :new, status: :unprocessable_entity
           return
         end
+        
+        if @contribution.save
+          redirect_to budget_path(@budget), notice: t(".success")
+        else
+          render :new, status: :unprocessable_entity
+          raise ActiveRecord::Rollback
+        end
       end
     else
       @contribution.month = Date.current.beginning_of_month
-    end
-
-    if @contribution.save
-      redirect_path = @budget ? budget_path(@budget) : saving_goal_path(@saving_goal)
-      redirect_to redirect_path, notice: t(".success")
-    else
-      render :new, status: :unprocessable_entity
+      
+      if @contribution.save
+        redirect_to saving_goal_path(@saving_goal), notice: t(".success")
+      else
+        render :new, status: :unprocessable_entity
+      end
     end
   end
 
