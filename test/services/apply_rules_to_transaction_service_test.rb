@@ -812,7 +812,8 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
     )
 
     # Create a rule with no conditions (should match all transactions)
-    # Note: Rules typically require conditions, but test edge case
+    # When conditions are empty, matching_resources_scope returns the base scope,
+    # meaning the rule matches all transactions in the family after effective_date
     rule = Rule.create!(
       family: @family,
       resource_type: "transaction",
@@ -827,11 +828,17 @@ class ApplyRulesToTransactionServiceTest < ActiveSupport::TestCase
       ]
     )
 
-    # Rules without conditions may behave differently - test handles it
+    # Rules without conditions should match all transactions
     result = ApplyRulesToTransactionService.new(entry, execution_type: "manual").call
 
-    # The exact behavior depends on how rules handle empty conditions
-    assert result[:rules_matched] >= 0
+    # Empty conditions should match all transactions (match-all behavior)
+    assert_equal 1, result[:rules_matched], "Rule with empty conditions should match all transactions"
+    assert_equal 1, result[:rules_applied], "Rule with empty conditions should be applied"
+    assert result[:transactions_modified] > 0, "Rule should have modified the transaction"
+
+    # Verify the rule was actually applied - transaction category should be set
+    entry.reload
+    assert_equal @groceries_category, entry.transaction.category, "Transaction category should be set by rule with empty conditions"
   end
 
   test "returns proper error structure when rule application fails" do
