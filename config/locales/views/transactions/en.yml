@@ -77,6 +77,13 @@ en:
       transfer_question: Transfer or Debt Payment?
       transfer_description: Transfers and payments are special types of transactions that indicate money movement between 2 accounts.
       open_matcher: Open matcher
+      mark_recurring: Mark as Recurring
+      mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
+      mark_recurring_title: Recurring Transaction
+      potential_duplicate_title: Possible duplicate detected
+      potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
+      merge_duplicate: Yes, merge them
+      keep_both: No, keep both
     activity_labels:
       buy: Buy
       sell: Sell
@@ -91,13 +98,6 @@ en:
       withdrawal: Withdrawal
       exchange: Exchange
       other: Other
-    mark_recurring: Mark as Recurring
-    mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
-    mark_recurring_title: Recurring Transaction
-    potential_duplicate_title: Possible duplicate detected
-    potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
-    merge_duplicate: Yes, merge them
-    keep_both: No, keep both
     transaction:
       one_time_income_title: One-time income (excluded from averages)
       one_time_expense_title: One-time expense (excluded from averages)

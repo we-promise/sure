@@ -78,7 +78,7 @@
             <% end %>
           </div>
 
-          <p><%= @transaction.entry.amount.negative? ? t(".one_time_income") : t(".one_time_expense") %></p>
+          <p><%= @transaction.entry.amount.negative? ? t(".one_time_expense") : t(".one_time_income") %></p>
 
           <span class="text-orange-500 ml-auto">
             <%= icon("asterisk", color: "current") %>
