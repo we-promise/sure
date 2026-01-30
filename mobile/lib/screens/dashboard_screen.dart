@@ -505,29 +505,6 @@ class DashboardScreenState extends State<DashboardScreen> {
             onRefresh: _handleRefresh,
             child: CustomScrollView(
               slivers: [
-                // Welcome header
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome${authProvider.user != null ? ', ${authProvider.user!.displayName}' : ''}',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Here\'s your financial overview',
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
                 // Net Worth Card with Asset/Liability filter
                 SliverToBoxAdapter(
                   child: NetWorthCard(
