@@ -142,7 +142,7 @@ class PdfImport < Import
   end
 
   def publishable?
-    bank_statement? && cleaned? && mappings.all?(&:valid?)
+    account.present? && bank_statement? && cleaned? && mappings.all?(&:valid?)
   end
 
   def column_keys
