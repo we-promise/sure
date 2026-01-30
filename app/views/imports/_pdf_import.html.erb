@@ -2,7 +2,39 @@
 
 <div class="h-full flex flex-col justify-center items-center">
   <div class="space-y-6 max-w-lg w-full">
-    <% if import.importing? || import.pending? %>
+    <% if import.pending? && import.rows_count > 0 %>
+      <%# Bank statement with rows ready for review %>
+      <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "check", class: "text-success" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.ready_for_review_title", default: "Ready for Review") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.ready_for_review_description", default: "We extracted %{count} transactions from your bank statement. Review and publish them to add to your account.", count: import.rows_count) %></p>
+      </div>
+
+      <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
+            <%= t("imports.document_types.#{import.document_type}") %>
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.transactions_extracted", default: "Transactions Extracted") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
+            <%= import.rows_count %> transactions
+          </p>
+        </div>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions", default: "Review Transactions"), href: import_confirm_path(import), variant: "primary", full_width: true) %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "secondary", full_width: true) %>
+      </div>
+
+    <% elsif import.importing? || import.pending? %>
       <div class="mx-auto bg-gray-500/5 h-8 w-8 rounded-full flex items-center justify-center">
         <%= icon "loader", class: "animate-pulse" %>
       </div>
