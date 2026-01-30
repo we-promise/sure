@@ -8,6 +8,9 @@ class Provider::Openai < Provider
   DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
   DEFAULT_MODEL = "gpt-4.1"
 
+  # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
+  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
+
   # Returns the effective model that would be used by the provider
   # Uses the same logic as Provider::Registry and the initializer
   def self.effective_model
@@ -114,8 +117,15 @@ class Provider::Openai < Provider
   end
 
   # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
+  # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
   def supports_pdf_processing?
-    ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
+    return false unless ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
+
+    # Custom providers manage their own model capabilities
+    return true if custom_provider?
+
+    # Check if the configured model supports vision/PDF input
+    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| @default_model.start_with?(prefix) }
   end
 
   def process_pdf(pdf_content:, model: "", family: nil)
