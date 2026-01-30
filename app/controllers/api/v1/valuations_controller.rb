@@ -3,7 +3,7 @@
 class Api::V1::ValuationsController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :show ]
   before_action :ensure_write_scope, only: [ :create, :update ]
-  before_action :set_entry, only: [ :show, :update ]
+  before_action :set_valuation, only: [ :show, :update ]
 
   def show
     render :show
@@ -187,8 +187,11 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
   private
 
-    def set_entry
-      @entry = current_resource_owner.family.entries.where(entryable_type: "Valuation").find(params[:id])
+    def set_valuation
+      @entry = current_resource_owner.family
+                 .entries
+                 .where(entryable_type: "Valuation")
+                 .find(params[:id])
       @valuation = @entry.entryable
     rescue ActiveRecord::RecordNotFound
       render json: {

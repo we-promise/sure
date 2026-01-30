@@ -185,6 +185,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     valuation_data = JSON.parse(response.body)
 
     # Basic fields
+    assert_equal entry.id, valuation_data["id"]
     assert valuation_data.key?("id")
     assert valuation_data.key?("date")
     assert valuation_data.key?("amount")

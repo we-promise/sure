@@ -486,6 +486,7 @@ components:
         id:
           type: string
           format: uuid
+          description: Entry ID for the valuation
         date:
           type: string
           format: date

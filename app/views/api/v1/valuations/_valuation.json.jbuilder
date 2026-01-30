@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-json.id valuation.id
+json.id valuation.entry.id
 json.date valuation.entry.date
 json.amount valuation.entry.amount_money.format
 json.currency valuation.entry.currency
