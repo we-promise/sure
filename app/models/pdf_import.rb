@@ -100,26 +100,31 @@ class PdfImport < Import
   end
 
   def generate_rows_from_extracted_data
-    return unless has_extracted_transactions?
+    transaction do
+      rows.destroy_all
 
-    rows.destroy_all
+      unless has_extracted_transactions?
+        update_column(:rows_count, 0)
+        return
+      end
 
-    currency = account&.currency || family.currency
+      currency = account&.currency || family.currency
 
-    mapped_rows = extracted_transactions.map do |txn|
-      {
-        import_id: id,
-        date: format_date_for_import(txn["date"]),
-        amount: txn["amount"].to_s,
-        name: txn["name"].to_s,
-        category: txn["category"].to_s,
-        notes: txn["notes"].to_s,
-        currency: currency
-      }
+      mapped_rows = extracted_transactions.map do |txn|
+        {
+          import_id: id,
+          date: format_date_for_import(txn["date"]),
+          amount: txn["amount"].to_s,
+          name: txn["name"].to_s,
+          category: txn["category"].to_s,
+          notes: txn["notes"].to_s,
+          currency: currency
+        }
+      end
+
+      Import::Row.insert_all!(mapped_rows) if mapped_rows.any?
+      update_column(:rows_count, mapped_rows.size)
     end
-
-    Import::Row.insert_all!(mapped_rows) if mapped_rows.any?
-    update_column(:rows_count, rows.reload.count)
   end
 
   def send_next_steps_email(user)
