@@ -20,7 +20,7 @@ class Provider::Openai::ChatConfig
     input_messages = []
 
     if messages.present?
-      input_messages.concat(messages.map { |msg| { role: msg[:role], content: msg[:content] } })
+      input_messages.concat(messages)
     elsif prompt.present?
       input_messages << { role: "user", content: prompt }
     end
