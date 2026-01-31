@@ -241,6 +241,7 @@ GEM
       thor
     highline (3.1.2)
       reline
+    hkdf (0.3.0)
     hotwire-livereload (2.0.0)
       actioncable (>= 7.0.0)
       listen (>= 3.0.0)
@@ -763,6 +764,9 @@ GEM
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
+    webpush (1.1.0)
+      hkdf (~> 0.2)
+      jwt (~> 2.0)
     websocket (1.2.11)
     websocket-driver (0.8.0)
       base64
@@ -876,6 +880,7 @@ DEPENDENCIES
   web-console
   webauthn (~> 3.0)
   webmock
+  webpush (~> 1.1)
 
 RUBY VERSION
    ruby 3.4.7p58

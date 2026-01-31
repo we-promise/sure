@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_20_181319) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -49,8 +49,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
-    t.jsonb "holdings_snapshot_data"
-    t.datetime "holdings_snapshot_at"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -214,7 +212,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "wallet_address"
-    t.index [ :coinstats_item_id, :account_id, :wallet_address ], name: "index_coinstats_accounts_on_item_account_and_wallet", unique: true
+    t.index ["coinstats_item_id", "account_id", "wallet_address"], name: "index_coinstats_accounts_on_item_account_and_wallet", unique: true
     t.index ["coinstats_item_id"], name: "index_coinstats_accounts_on_coinstats_item_id"
   end
 
@@ -614,8 +612,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
-    t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
+    t.integer "rows_to_skip", default: 0, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -904,6 +902,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.string "area_unit"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "endpoint", null: false
+    t.string "p256dh_key", null: false
+    t.string "auth_key", null: false
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["endpoint"], name: "index_push_subscriptions_on_endpoint", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
   end
 
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1198,15 +1208,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
-    t.decimal "realized_gain", precision: 19, scale: 4
-    t.decimal "cost_basis_amount", precision: 19, scale: 4
-    t.string "cost_basis_currency"
-    t.integer "holding_period_days"
-    t.string "realized_gain_confidence"
-    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
-    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1344,6 +1347,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_17_200000) do
   add_foreign_key "passkeys", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "push_subscriptions", "users"
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"

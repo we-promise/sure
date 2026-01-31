@@ -8,7 +8,9 @@ export default class extends Controller {
     data: Object,
     nodeWidth: { type: Number, default: 15 },
     nodePadding: { type: Number, default: 20 },
-    currencySymbol: { type: String, default: "$" }
+    currencySymbol: { type: String, default: "$" },
+    startDate: String,
+    endDate: String
   };
 
   // Visual constants
@@ -310,7 +312,7 @@ export default class extends Controller {
 
     // Hover on node rectangles (not just text)
     nodeGroups.selectAll("path")
-      .style("cursor", "default")
+      .style("cursor", d => d.clickable ? "pointer" : "default")
       .on("mouseenter", (event, d) => {
         const connectedLinks = sankeyData.links.filter(l => l.source === d || l.target === d);
         applyHover(connectedLinks);
@@ -320,9 +322,11 @@ export default class extends Controller {
       .on("mouseleave", () => {
         resetHover();
         this.#hideTooltip();
-      });
+      })
+      .on("click", (event, d) => this.#handleNodeClick(d));
 
     nodeGroups.selectAll("text")
+      .style("cursor", d => d.clickable ? "pointer" : "default")
       .on("mouseenter", (event, d) => {
         const connectedLinks = sankeyData.links.filter(l => l.source === d || l.target === d);
         applyHover(connectedLinks);
@@ -332,7 +336,20 @@ export default class extends Controller {
       .on("mouseleave", () => {
         resetHover();
         this.#hideTooltip();
-      });
+      })
+      .on("click", (event, d) => this.#handleNodeClick(d));
+  }
+
+  #handleNodeClick(node) {
+    if (!node.clickable || !node.category_name) return;
+    if (!this.startDateValue || !this.endDateValue) return;
+
+    const categoryName = encodeURIComponent(node.category_name);
+    const startDate = this.startDateValue;
+    const endDate = this.endDateValue;
+
+    const url = `/transactions?q[categories][]=${categoryName}&q[start_date]=${startDate}&q[end_date]=${endDate}`;
+    window.location.href = url;
   }
 
   // Tooltip methods

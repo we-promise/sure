@@ -131,9 +131,15 @@ class PagesController < ApplicationController
       links = []
       node_indices = {}
 
-      add_node = ->(unique_key, display_name, value, percentage, color) {
+      add_node = ->(unique_key, display_name, value, percentage, color, category: nil, type: nil) {
         node_indices[unique_key] ||= begin
-          nodes << { name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          node = { name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          if category
+            node[:category_name] = category.name
+            node[:clickable] = type.present? && !category.other_investments?
+            node[:type] = type
+          end
+          nodes << node
           nodes.size - 1
         end
       }
@@ -206,6 +212,8 @@ class PagesController < ApplicationController
     # flow_direction: :inbound (subcategory -> parent -> cash_flow) for income
     #                 :outbound (cash_flow -> parent -> subcategory) for expenses
     def process_category_totals(category_totals:, total:, prefix:, default_color:, add_node:, links:, cash_flow_idx:, flow_direction:)
+      type = prefix == "income" ? "income" : "expense"
+
       # Build lookup of subcategories by parent_id
       subcategories_by_parent = category_totals
         .select { |ct| ct.category.parent_id.present? && ct.total.to_f > 0 }
@@ -224,7 +232,7 @@ class PagesController < ApplicationController
         subs = subcategories_by_parent[ct.category.id] || []
 
         if subs.any?
-          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color, category: ct.category, type: type)
 
           # Link parent to/from cash flow based on direction
           if flow_direction == :inbound
@@ -239,7 +247,7 @@ class PagesController < ApplicationController
             sub_pct = val.zero? ? 0 : (sub_val / val * 100).round(1)
             sub_color = sub_ct.category.color.presence || color
             sub_key = "#{prefix}_sub_#{sub_ct.category.id}"
-            sub_idx = add_node.call(sub_key, sub_ct.category.name, sub_val, sub_pct, sub_color)
+            sub_idx = add_node.call(sub_key, sub_ct.category.name, sub_val, sub_pct, sub_color, category: sub_ct.category, type: type)
 
             # Link subcategory to/from parent based on direction
             if flow_direction == :inbound
@@ -250,7 +258,7 @@ class PagesController < ApplicationController
           end
         else
           # No subcategories, link directly to/from cash flow
-          idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          idx = add_node.call(node_key, ct.category.name, val, percentage, color, category: ct.category, type: type)
 
           if flow_direction == :inbound
             links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }

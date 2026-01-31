@@ -15,6 +15,7 @@ class User < ApplicationRecord
   has_many :oidc_identities, dependent: :destroy
   has_many :passkeys, dependent: :destroy
   has_many :sso_audit_logs, dependent: :nullify
+  has_many :push_subscriptions, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
