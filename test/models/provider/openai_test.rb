@@ -286,4 +286,72 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
     assert_equal "configured model: custom-model", custom_provider.supported_models_description
   end
+
+  test "FunctionCallingNotSupportedError provides helpful message" do
+    error = Provider::Openai::FunctionCallingNotSupportedError.new(
+      model: "test-model",
+      provider_url: "https://openrouter.ai/api/v1"
+    )
+
+    assert_includes error.message, "test-model"
+    assert_includes error.message, "function calling"
+    assert_includes error.message, "openrouter.ai"
+  end
+
+  test "detects 404 error as function calling not supported" do
+    custom_provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://openrouter.ai/api/v1",
+      model: "some-model-without-tools"
+    )
+
+    # Create a mock error with 404 status
+    mock_error = OpenStruct.new(
+      message: "404 Not Found",
+      http_status: 404
+    )
+
+    assert custom_provider.send(:function_calling_not_supported_error?, mock_error)
+  end
+
+  test "detects tool-related error messages as function calling not supported" do
+    custom_provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://openrouter.ai/api/v1",
+      model: "some-model-without-tools"
+    )
+
+    # Test various error message patterns
+    tool_errors = [
+      OpenStruct.new(message: "tools parameter is not supported", http_status: nil),
+      OpenStruct.new(message: "Invalid parameter: tool_choice", http_status: nil),
+      OpenStruct.new(message: "function calling does not support this model", http_status: nil),
+      OpenStruct.new(message: "This model does not support tools", http_status: nil)
+    ]
+
+    tool_errors.each do |error|
+      assert custom_provider.send(:function_calling_not_supported_error?, error),
+        "Expected '#{error.message}' to be detected as function calling not supported"
+    end
+  end
+
+  test "does not flag unrelated errors as function calling not supported" do
+    custom_provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://openrouter.ai/api/v1",
+      model: "some-model"
+    )
+
+    # Test unrelated error messages
+    unrelated_errors = [
+      OpenStruct.new(message: "Rate limit exceeded", http_status: 429),
+      OpenStruct.new(message: "Internal server error", http_status: 500),
+      OpenStruct.new(message: "Invalid API key", http_status: 401)
+    ]
+
+    unrelated_errors.each do |error|
+      assert_not custom_provider.send(:function_calling_not_supported_error?, error),
+        "Did not expect '#{error.message}' to be detected as function calling not supported"
+    end
+  end
 end
