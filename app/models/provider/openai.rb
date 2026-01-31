@@ -30,7 +30,7 @@ class Provider::Openai < Provider
   end
 
   DEFAULT_MODEL = self.active_provider[:default_model]
-  VISION_CAPABLE_MODEL_PREFIXES = self.active_provider[:supported_vision_models].to_s..split(/\s+/).freeze
+  VISION_CAPABLE_MODEL_PREFIXES = self.active_provider[:supported_vision_models].to_s.split(/\s+/).freeze
 
   def active_provider
     self.class.active_provider
