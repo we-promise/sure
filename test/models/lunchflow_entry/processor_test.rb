@@ -195,4 +195,54 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     entries_after = @account.entries.where(source: "lunchflow").count
     assert_equal entries_before, entries_after, "Should not create duplicate entry on re-sync"
   end
+
+  test "does not duplicate pending transaction when user has edited it" do
+    # User imports a pending transaction, then edits it (name, amount, date)
+    # Next sync should update the same entry, not create a duplicate
+    transaction_data = {
+      id: "",
+      accountId: 456,
+      amount: -25.50,
+      currency: "USD",
+      date: "2025-01-20",
+      merchant: "Coffee Shop",
+      description: "Morning coffee",
+      isPending: true
+    }
+
+    # First sync - import the pending transaction
+    result1 = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result1
+    original_external_id = result1.external_id
+
+    # User edits the transaction (common scenario)
+    result1.update!(name: "Coffee Shop Downtown", amount: 26.00)
+    result1.reload
+
+    # Verify the edits were applied
+    assert_equal "Coffee Shop Downtown", result1.name
+    assert_equal 26.00, result1.amount
+
+    entries_before = @account.entries.where(source: "lunchflow").count
+
+    # Second sync - same pending transaction data from provider (unchanged)
+    result2 = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result2
+
+    # Should return the SAME entry (same external_id, not a _1 suffix)
+    assert_equal result1.id, result2.id, "Should reuse existing entry even when user edited it"
+    assert_equal original_external_id, result2.external_id, "Should not create new external_id for user-edited entry"
+
+    # Verify no duplicate was created
+    entries_after = @account.entries.where(source: "lunchflow").count
+    assert_equal entries_before, entries_after, "Should not create duplicate when user has edited pending transaction"
+  end
 end
