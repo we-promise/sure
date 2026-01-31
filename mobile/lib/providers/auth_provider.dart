@@ -164,8 +164,9 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e) {
-      _errorMessage = 'Connection error: ${e.toString()}';
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'API key login error: $e\n$stackTrace');
+      _errorMessage = 'Unable to connect. Please check your network and try again.';
       _isLoading = false;
       notifyListeners();
       return false;
