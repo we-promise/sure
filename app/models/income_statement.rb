@@ -28,12 +28,12 @@ class IncomeStatement
     )
   end
 
-  def expense_totals(period: Period.current_month)
-    build_period_total(classification: "expense", period: period)
+  def expense_totals(period: Period.current_month, budget_mode: false)
+    build_period_total(classification: "expense", period: period, budget_mode: budget_mode)
   end
 
-  def income_totals(period: Period.current_month)
-    build_period_total(classification: "income", period: period)
+  def income_totals(period: Period.current_month, budget_mode: false)
+    build_period_total(classification: "income", period: period, budget_mode: budget_mode)
   end
 
   def median_expense(interval: "month", category: nil)
@@ -65,9 +65,17 @@ class IncomeStatement
       @categories ||= family.categories.all.to_a
     end
 
-    def build_period_total(classification:, period:)
+    def build_period_total(classification:, period:, budget_mode: false)
       # Exclude pending transactions from budget calculations
-      totals = totals_query(transactions_scope: family.transactions.visible.excluding_pending.for_budget_period(period), date_range: period.date_range).select { |t| t.classification == classification }
+      base_scope = family.transactions.visible.excluding_pending
+
+      scoped_transactions = if budget_mode
+        base_scope.for_budget_period(period)
+      else
+        base_scope.in_period(period)
+      end
+
+      totals = totals_query(transactions_scope: scoped_transactions, date_range: period.date_range).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized

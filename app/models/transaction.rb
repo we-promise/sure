@@ -55,6 +55,10 @@ class Transaction < ApplicationRecord
     SQL
   }
 
+  scope :in_period, ->(period) {
+    joins(:entry).where(entries: { date: period.start_date..period.end_date })
+  }
+
   scope :for_budget_period, ->(period) {
     joins(:entry)
     .joins("LEFT JOIN transactions as parent_trans ON parent_trans.id = transactions.original_expense_id")

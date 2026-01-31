@@ -251,11 +251,11 @@ class Budget < ApplicationRecord
     end
 
     def expense_totals
-      @expense_totals ||= income_statement.expense_totals(period: period)
+      @expense_totals ||= income_statement.expense_totals(period: period, budget_mode: true)
     end
 
     def income_totals
-      @income_totals ||= family.income_statement.income_totals(period: period)
+      @income_totals ||= family.income_statement.income_totals(period: period, budget_mode: true)
     end
 
     def expense_totals_by_category
