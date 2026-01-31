@@ -20,7 +20,7 @@ class Budget < ApplicationRecord
     end
 
     def param_to_date(param)
-      Date.strptime(param, PARAM_DATE_FORMAT).beginning_of_month
+      Date.strptime(param.capitalize, PARAM_DATE_FORMAT).beginning_of_month
     end
 
     def budget_date_valid?(date, family:)
