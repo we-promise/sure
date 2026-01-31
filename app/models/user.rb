@@ -51,6 +51,9 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+  enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
+
+  before_validation :apply_ui_layout_defaults, on: :create
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
@@ -137,6 +140,11 @@ class User < ApplicationRecord
 
   def ai_enabled?
     ai_enabled && ai_available?
+  end
+
+  def self.default_ui_layout
+    layout = Rails.application.config.x.ui&.default_layout || "dashboard"
+    layout.in?(%w[intro dashboard]) ? layout : "dashboard"
   end
 
   # SSO-only users have OIDC identities but no local password.
@@ -307,6 +315,16 @@ class User < ApplicationRecord
   end
 
   private
+    def apply_ui_layout_defaults
+      self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
+
+      if ui_layout_intro?
+        self.show_sidebar = false
+        self.show_ai_sidebar = false
+        self.ai_enabled = true
+      end
+    end
+
     def skip_password_validation?
       skip_password_validation == true
     end
