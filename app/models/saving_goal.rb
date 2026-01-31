@@ -4,7 +4,7 @@ class SavingGoal < ApplicationRecord
   class InvalidTransitionError < StandardError; end
 
   belongs_to :family
-  has_many :saving_contributions, dependent: :destroy
+  has_many :saving_contributions, dependent: :destroy, autosave: true
 
   monetize :target_amount, :current_amount, :remaining_amount
 

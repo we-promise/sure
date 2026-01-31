@@ -91,6 +91,6 @@ class SavingGoalsController < ApplicationController
     end
 
     def saving_goal_params
-      params.require(:saving_goal).permit(:name, :target_amount, :target_date, :priority, :color, :icon, :notes, :initial_amount)
+      params.require(:saving_goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :initial_amount)
     end
 end

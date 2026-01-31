@@ -6,7 +6,6 @@ class CreateSavingGoals < ActiveRecord::Migration[7.2]
       t.decimal :target_amount, precision: 19, scale: 4, null: false
       t.decimal :current_amount, precision: 19, scale: 4, default: 0, null: false
       t.date :target_date
-      t.integer :priority, default: 0
       t.string :status, null: false, default: "active"
       t.string :color
       t.string :icon

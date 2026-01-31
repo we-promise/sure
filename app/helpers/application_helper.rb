@@ -162,6 +162,16 @@ module ApplicationHelper
     fallback
   end
 
+  def progress_ring_color_class(color)
+    case color.to_s
+    when "success", "green" then "text-success"
+    when "warning", "yellow" then "text-warning"
+    when "destructive", "red" then "text-destructive"
+    when "info", "blue" then "text-info"
+    else "text-primary"
+    end
+  end
+
   private
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
