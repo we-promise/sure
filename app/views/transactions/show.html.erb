@@ -48,7 +48,7 @@
     <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) %>
 
     <% dialog.with_section(title: t(".overview"), open: true) do %>
-      <div class="pb-4">
+      <div>
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",
@@ -95,49 +95,47 @@
     <% end %>
 
     <% dialog.with_section(title: t(".details")) do %>
-      <div class="pb-4">
-        <%= styled_form_with model: @entry,
-              url: transaction_path(@entry),
-              class: "space-y-2",
-              data: { controller: "auto-submit-form" } do |f| %>
-          <% unless @entry.transaction.transfer? %>
-            <%= f.select :account,
-                options_for_select(
-                  Current.family.accounts.alphabetically.pluck(:name, :id),
-                  @entry.account_id
-                ),
-                { label: t(".account_label") },
-                { disabled: true } %>
+      <%= styled_form_with model: @entry,
+            url: transaction_path(@entry),
+            class: "space-y-2",
+            data: { controller: "auto-submit-form" } do |f| %>
+        <% unless @entry.transaction.transfer? %>
+          <%= f.select :account,
+              options_for_select(
+                Current.family.accounts.alphabetically.pluck(:name, :id),
+                @entry.account_id
+              ),
+              { label: t(".account_label") },
+              { disabled: true } %>
 
-            <%= f.fields_for :entryable do |ef| %>
+          <%= f.fields_for :entryable do |ef| %>
 
-              <%= ef.collection_select :merchant_id,
-                    Current.family.available_merchants.alphabetically,
-                    :id, :name,
-                    { include_blank: t(".none"),
-                      label: t(".merchant_label"),
-                      class: "text-subdued" },
-                    "data-auto-submit-form-target": "auto" %>
-
-              <%= ef.select :tag_ids,
-                    Current.family.tags.alphabetically.pluck(:name, :id),
-                    {
-                      include_blank: t(".none"),
-                      multiple: true,
-                      label:    t(".tags_label")
-                    },
-                    { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
-            <% end %>
-          <% end %>
-
-          <%= f.text_area :notes,
-                  label: t(".note_label"),
-                  placeholder: t(".note_placeholder"),
-                  rows: 5,
+            <%= ef.collection_select :merchant_id,
+                  Current.family.available_merchants.alphabetically,
+                  :id, :name,
+                  { include_blank: t(".none"),
+                    label: t(".merchant_label"),
+                    class: "text-subdued" },
                   "data-auto-submit-form-target": "auto" %>
 
+            <%= ef.select :tag_ids,
+                  Current.family.tags.alphabetically.pluck(:name, :id),
+                  {
+                    include_blank: t(".none"),
+                    multiple: true,
+                    label:    t(".tags_label")
+                  },
+                  { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
+          <% end %>
         <% end %>
-      </div>
+
+        <%= f.text_area :notes,
+                label: t(".note_label"),
+                placeholder: t(".note_placeholder"),
+                rows: 5,
+                "data-auto-submit-form-target": "auto" %>
+
+      <% end %>
     <% end %>
 
     <% if (details = build_transaction_extra_details(@entry)) %>
