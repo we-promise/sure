@@ -6,12 +6,12 @@
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
 
-        <div class="flex items-center justify-center h-8 w-8 bg-primary/10 rounded-full">
+        <div class="flex items-center justify-center h-8 w-8 bg-success/10 rounded-full">
           <% if snaptrade_item.logo.attached? %>
             <%= image_tag snaptrade_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
           <% else %>
             <div class="flex items-center justify-center">
-              <%= tag.p snaptrade_item.name.first.upcase, class: "text-primary text-xs font-medium" %>
+              <%= tag.p snaptrade_item.name.first.upcase, class: "text-success text-xs font-medium" %>
             </div>
           <% end %>
         </div>
@@ -21,14 +21,6 @@
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
             <%= tag.p snaptrade_item.name, class: "font-medium text-primary" %>
-            <% if unlinked_count > 0 %>
-              <%= link_to setup_accounts_snaptrade_item_path(snaptrade_item),
-                          data: { turbo_frame: :modal },
-                          class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors" do %>
-                <%= icon "alert-circle", size: "xs" %>
-                <span><%= t(".accounts_need_setup", count: unlinked_count) %></span>
-              <% end %>
-            <% end %>
             <% if snaptrade_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
@@ -89,6 +81,21 @@
             icon: "plus",
             href: connect_snaptrade_item_path(snaptrade_item)
           ) %>
+          <% if unlinked_count > 0 %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".setup_accounts_menu"),
+              icon: "settings",
+              href: setup_accounts_snaptrade_item_path(snaptrade_item),
+              frame: :modal
+            ) %>
+          <% end %>
+          <% menu.with_item(
+            variant: "link",
+            text: t(".manage_connections"),
+            icon: "cable",
+            href: settings_providers_path(manage: "1")
+          ) %>
           <% menu.with_item(
             variant: "button",
             text: t(".delete"),
@@ -105,13 +112,6 @@
       <div class="space-y-4 mt-4">
         <% if snaptrade_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: snaptrade_item.accounts %>
-          <div class="flex justify-end pt-2">
-            <%= link_to connect_snaptrade_item_path(snaptrade_item),
-                        class: "text-sm text-secondary hover:text-primary flex items-center gap-1 transition-colors" do %>
-              <%= icon "plus", size: "sm" %>
-              <span><%= t(".add_another_brokerage") %></span>
-            <% end %>
-          </div>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -124,7 +124,8 @@
           activities_pending: activities_pending
         ) %>
 
-        <% if unlinked_count > 0 %>
+        <% if unlinked_count > 0 && snaptrade_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
             <p class="text-secondary text-sm"><%= t(".setup_description") %></p>

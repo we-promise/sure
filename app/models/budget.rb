@@ -155,11 +155,14 @@ class Budget < ApplicationRecord
   end
 
   def actual_spending
-    expense_totals.total
+    [ expense_totals.total - refunds_in_expense_categories, 0 ].max
   end
 
   def budget_category_actual_spending(budget_category)
-    expense_totals.category_totals.find { |ct| ct.category.id == budget_category.category.id }&.total || 0
+    cat_id = budget_category.category_id
+    expense = expense_totals_by_category[cat_id]&.total || 0
+    refund = income_totals_by_category[cat_id]&.total || 0
+    [ expense - refund, 0 ].max
   end
 
   def category_median_monthly_expense(category)
@@ -235,6 +238,14 @@ class Budget < ApplicationRecord
   end
 
   private
+    def refunds_in_expense_categories
+      expense_category_ids = budget_categories.map(&:category_id).to_set
+      income_totals.category_totals
+        .reject { |ct| ct.category.subcategory? }
+        .select { |ct| expense_category_ids.include?(ct.category.id) || ct.category.uncategorized? }
+        .sum(&:total)
+    end
+
     def income_statement
       @income_statement ||= family.income_statement
     end
@@ -245,5 +256,13 @@ class Budget < ApplicationRecord
 
     def income_totals
       @income_totals ||= family.income_statement.income_totals(period: period)
+    end
+
+    def expense_totals_by_category
+      @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id }
+    end
+
+    def income_totals_by_category
+      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id }
     end
 end

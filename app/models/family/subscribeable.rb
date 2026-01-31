@@ -53,6 +53,10 @@ module Family::Subscribeable
     subscription&.current_period_ends_at
   end
 
+  def subscription_pending_cancellation?
+    subscription&.pending_cancellation?
+  end
+
   def start_subscription!(stripe_subscription_id)
     if subscription.present?
       subscription.update!(status: "active", stripe_id: stripe_subscription_id)

@@ -1,10 +1,17 @@
 class MobileDevice < ApplicationRecord
+  include Encryptable
+
+  # Encrypt device_id if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :device_id, deterministic: true
+  end
+
   belongs_to :user
   belongs_to :oauth_application, class_name: "Doorkeeper::Application", optional: true
 
   validates :device_id, presence: true, uniqueness: { scope: :user_id }
   validates :device_name, presence: true
-  validates :device_type, presence: true, inclusion: { in: %w[ios android] }
+  validates :device_type, presence: true, inclusion: { in: %w[ios android web] }
 
   before_validation :set_last_seen_at, on: :create
 

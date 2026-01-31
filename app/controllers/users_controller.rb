@@ -24,15 +24,9 @@ class UsersController < ApplicationController
         error_message = @user.errors.any? ? @user.errors.full_messages.to_sentence : t(".email_change_failed")
         redirect_to settings_profile_path, alert: error_message
       end
-    elsif user_params[:sidebar_widths].present?
-      @user.update_sidebar_widths(user_params[:sidebar_widths].to_h)
-      respond_to do |format|
-        format.html { handle_redirect(t(".success")) }
-        format.json { head :ok }
-      end
     else
       was_ai_enabled = @user.ai_enabled
-      @user.update!(user_params.except(:redirect_to, :delete_profile_image, :sidebar_widths))
+      @user.update!(user_params.except(:redirect_to, :delete_profile_image))
       @user.profile_image.purge if should_purge_profile_image?
 
       # Add a special notice if AI was just enabled or disabled
@@ -111,10 +105,9 @@ class UsersController < ApplicationController
     def user_params
       params.require(:user).permit(
         :first_name, :last_name, :email, :profile_image, :redirect_to, :delete_profile_image, :onboarded_at,
-        :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at,
-        family_attributes: [ :name, :currency, :country, :locale, :date_format, :timezone, :id ],
-        goals: [],
-        sidebar_widths: [ :left_sidebar, :right_sidebar ]
+        :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at, :locale,
+        family_attributes: [ :name, :currency, :country, :date_format, :timezone, :locale, :id ],
+        goals: []
       )
     end
 

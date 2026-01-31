@@ -2,16 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Tech Stack
-
-- **Framework**: Ruby on Rails with Hotwire (Turbo/Stimulus)
-- **Database**: PostgreSQL
-- **Background Jobs**: Sidekiq + Redis
-- **Asset Pipeline**: Propshaft + TailwindCSS v4.x
-- **Testing**: Minitest + fixtures + Mocha
-- **Icons**: Lucide Icons (via `icon` helper)
-- **External Services**: Plaid (bank syncing), Stripe (payments), OpenAI (AI chat)
-
 ## Common Development Commands
 
 ### Development Server
@@ -28,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Linting & Formatting
 - `bin/rubocop` - Run Ruby linter
-- `npm run lint` - Check JavaScript/TypeScript code (uses Biome)
+- `npm run lint` - Check JavaScript/TypeScript code
 - `npm run lint:fix` - Fix JavaScript/TypeScript issues
 - `npm run format` - Format JavaScript/TypeScript code
 - `bin/brakeman` - Run security analysis
@@ -41,7 +31,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Setup
 - `bin/setup` - Initial project setup (installs dependencies, prepares database)
-- Dev Containers supported via `.devcontainer` folder for VSCode
 
 ## Pre-Pull Request CI Workflow
 
@@ -68,7 +57,6 @@ Only proceed with pull request creation if ALL checks pass.
 
 ### Development Guidelines
 - Carefully read project conventions and guidelines before generating any code.
-- ActiveRecord migrations must inherit from `ActiveRecord::Migration[7.2]`. Do **not** use version 8.0 yet.
 - Do not run `rails server` in your responses
 - Do not run `touch tmp/restart.txt`
 - Do not run `rails credentials`
@@ -94,6 +82,7 @@ The application provides both internal and external APIs:
 - External API: `/api/v1/` namespace with Doorkeeper OAuth and API key authentication
 - API responses use Jbuilder templates for JSON rendering
 - Rate limiting via Rack Attack with configurable limits per API key
+- **OpenAPI Documentation**: All API endpoints MUST have corresponding OpenAPI specs in `spec/requests/api/` using rswag. See `docs/api/openapi.yaml` for the generated documentation.
 
 ### Sync & Import System
 Two primary data ingestion methods:
@@ -125,7 +114,7 @@ Provider support notes:
 - SimpleFIN: supports pending + FX metadata (stored under `extra["simplefin"]`).
 - Plaid: supports pending when the upstream Plaid payload includes `pending: true` (stored under `extra["plaid"]`).
 - Plaid investments: investment transactions currently do not store pending metadata.
-- Lunchflow: supports pending via `include_pending` query parameter (stored under `extra["lunchflow"]`). Set `LUNCHFLOW_INCLUDE_PENDING=1` to enable, `LUNCHFLOW_DEBUG_RAW=1` for debug logging.
+- Lunchflow: does not currently store pending metadata.
 
 ### Background Processing
 Sidekiq handles asynchronous tasks:
@@ -167,6 +156,17 @@ Sidekiq handles asynchronous tasks:
 - Scoped permissions system for API access
 - Strong parameters and CSRF protection throughout
 
+### Testing Philosophy
+- Comprehensive test coverage using Rails' built-in Minitest
+- Fixtures for test data (avoid FactoryBot)
+- Keep fixtures minimal (2-3 per model for base cases)
+- VCR for external API testing
+- System tests for critical user flows (use sparingly)
+- Test helpers in `test/support/` for common scenarios
+- Only test critical code paths that significantly increase confidence
+- Write tests as you go, when required
+- **API Endpoints require OpenAPI specs** in `spec/requests/api/` for documentation purposes ONLY, not test (uses RSpec + rswag)
+
 ### Performance Considerations
 - Database queries optimized with proper indexes
 - N+1 queries prevented via includes/joins
@@ -177,8 +177,8 @@ Sidekiq handles asynchronous tasks:
 ### Development Workflow
 - Feature branches merged to `main`
 - Docker support for consistent environments
-- Environment variables via `.env` files (start from `.env.local.example`)
-- Lookbook for component development (`/design-system` or `/lookbook`)
+- Environment variables via `.env` files
+- Lookbook for component development (`/lookbook`)
 - Letter Opener for email preview in development
 
 ## Project Conventions
@@ -294,8 +294,7 @@ en:
 - **ALWAYS use Minitest + fixtures** (NEVER RSpec or factories)
 - Keep fixtures minimal (2-3 per model for base cases)
 - Create edge cases on-the-fly within test context
-- Use Rails helpers for large fixture creation needs (see `test/support/`)
-- Use VCR for external API testing
+- Use Rails helpers for large fixture creation needs
 
 ### Test Quality Guidelines
 - **Write minimal, effective tests** - system tests sparingly
@@ -327,3 +326,39 @@ end
 - Use `mocha` gem
 - Prefer `OpenStruct` for mock instances
 - Only mock what's necessary
+
+## API Development Guidelines
+
+### OpenAPI Documentation (MANDATORY)
+When adding or modifying API endpoints in `app/controllers/api/v1/`, you **MUST** create or update corresponding OpenAPI request specs:
+
+1. **Location**: `spec/requests/api/v1/{resource}_spec.rb`
+2. **Framework**: RSpec with rswag for OpenAPI generation
+3. **Schemas**: Define reusable schemas in `spec/swagger_helper.rb`
+4. **Generated Docs**: `docs/api/openapi.yaml`
+
+**Example structure for a new API endpoint:**
+```ruby
+# spec/requests/api/v1/widgets_spec.rb
+require 'swagger_helper'
+
+RSpec.describe 'API V1 Widgets', type: :request do
+  path '/api/v1/widgets' do
+    get 'List widgets' do
+      tags 'Widgets'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+      
+      response '200', 'widgets listed' do
+        schema '$ref' => '#/components/schemas/WidgetCollection'
+        run_test!
+      end
+    end
+  end
+end
+```
+
+**Regenerate OpenAPI docs after changes:**
+```bash
+RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
+```

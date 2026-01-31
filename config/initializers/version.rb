@@ -10,11 +10,13 @@ module Sure
       else
         `git rev-parse HEAD`.chomp
       end
+    rescue Errno::ENOENT
+      nil
     end
 
     private
       def semver
-        "0.6.7-alpha.16"
+        "0.6.8-alpha.3"
       end
   end
 end

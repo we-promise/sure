@@ -19,6 +19,7 @@ nb:
         general_title: Generelt
         default_period: Standardperiode
         language: Språk
+        language_auto: Nettleserens språk
         page_title: Preferanser
         theme_dark: Mørk
         theme_light: Lys

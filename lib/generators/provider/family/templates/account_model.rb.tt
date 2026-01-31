@@ -1,40 +1,63 @@
+# frozen_string_literal: true
+
 class <%= class_name %>Account < ApplicationRecord
   include CurrencyNormalizable
+  include <%= class_name %>Account::DataHelpers
 
   belongs_to :<%= file_name %>_item
 
-  # New association through account_providers
+  # Association through account_providers
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :account, through: :account_provider, source: :account
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
 
+  # Scopes
+  scope :with_linked, -> { joins(:account_provider) }
+  scope :without_linked, -> { left_joins(:account_provider).where(account_providers: { id: nil }) }
+  scope :ordered, -> { order(created_at: :desc) }
+
+  # Callbacks
+  after_destroy :enqueue_connection_cleanup
+
   # Helper to get account using account_providers system
   def current_account
     account
   end
 
-  def upsert_<%= file_name %>_snapshot!(account_snapshot)
-    # Convert to symbol keys or handle both string and symbol keys
-    snapshot = account_snapshot.with_indifferent_access
+  # Idempotently create or update AccountProvider link
+  # CRITICAL: After creation, reload association to avoid stale nil
+  def ensure_account_provider!(linked_account)
+    return nil unless linked_account
 
-    # Map <%= class_name %> field names to our field names
+    provider = account_provider || build_account_provider
+    provider.account = linked_account
+    provider.save!
+
+    # Reload to clear cached nil value
+    reload_account_provider
+    account_provider
+  end
+
+  def upsert_from_<%= file_name %>!(account_data)
+    # Convert SDK object to hash if needed
+    data = sdk_object_to_hash(account_data).with_indifferent_access
+
     # TODO: Customize this mapping based on your provider's API response
     update!(
-      current_balance: snapshot[:balance] || snapshot[:current_balance],
-      currency: parse_currency(snapshot[:currency]) || "USD",
-      name: snapshot[:name],
-      account_id: snapshot[:id]&.to_s,
-      account_status: snapshot[:status],
-      provider: snapshot[:provider],
-      institution_metadata: {
-        name: snapshot[:institution_name],
-        logo: snapshot[:institution_logo]
-      }.compact,
-      raw_payload: account_snapshot
+      <%= file_name %>_account_id: (data[:id] || data[:account_id])&.to_s,
+      name: data[:name] || data[:account_name],
+      current_balance: parse_decimal(data[:balance] || data[:current_balance]),
+      currency: extract_currency(data, fallback: "USD"),
+      account_status: data[:status] || data[:account_status],
+      account_type: data[:type] || data[:account_type],
+      provider: data[:provider] || data[:brokerage_name],
+      institution_metadata: extract_institution_metadata(data),
+      raw_payload: account_data
     )
   end
+<% if banking_provider? -%>
 
   def upsert_<%= file_name %>_transactions_snapshot!(transactions_snapshot)
     assign_attributes(
@@ -43,10 +66,60 @@ class <%= class_name %>Account < ApplicationRecord
 
     save!
   end
+<% end -%>
+<% if investment_provider? -%>
+
+  # Store holdings snapshot - return early if empty to avoid setting timestamps incorrectly
+  def upsert_holdings_snapshot!(holdings_data)
+    return if holdings_data.blank?
+
+    update!(
+      raw_holdings_payload: holdings_data,
+      last_holdings_sync: Time.current
+    )
+  end
+
+  # Store activities snapshot - return early if empty to avoid setting timestamps incorrectly
+  def upsert_activities_snapshot!(activities_data)
+    return if activities_data.blank?
+
+    update!(
+      raw_activities_payload: activities_data,
+      last_activities_sync: Time.current
+    )
+  end
+<% end -%>
 
   private
 
-  def log_invalid_currency(currency_value)
-    Rails.logger.warn("Invalid currency code '#{currency_value}' for <%= class_name %> account #{id}, defaulting to USD")
-  end
+    def extract_institution_metadata(data)
+      {
+        name: data[:institution_name] || data.dig(:institution, :name),
+        logo: data[:institution_logo] || data.dig(:institution, :logo),
+        domain: data[:institution_domain] || data.dig(:institution, :domain)
+      }.compact
+    end
+
+    def enqueue_connection_cleanup
+      return unless <%= file_name %>_item
+
+<% if investment_provider? -%>
+      return unless <%= file_name %>_authorization_id.present?
+
+      <%= class_name %>ConnectionCleanupJob.perform_later(
+        <%= file_name %>_item_id: <%= file_name %>_item.id,
+        authorization_id: <%= file_name %>_authorization_id,
+        account_id: id
+      )
+<% else -%>
+      <%= class_name %>ConnectionCleanupJob.perform_later(
+        <%= file_name %>_item_id: <%= file_name %>_item.id,
+        account_id: id
+      )
+<% end -%>
+    end
+
+    def log_invalid_currency(currency_value)
+      Rails.logger.warn("Invalid currency code '#{currency_value}' for <%= class_name %> account #{id}, defaulting to USD")
+    end
 end

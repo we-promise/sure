@@ -231,7 +231,11 @@ Rails.application.routes.draw do
       post :reset_security
     end
   end
-  resources :trades, only: %i[show new create update destroy]
+  resources :trades, only: %i[show new create update destroy] do
+    member do
+      post :unlock
+    end
+  end
   resources :valuations, only: %i[show new create update destroy] do
     post :confirm_create, on: :collection
     post :confirm_update, on: :member
@@ -257,6 +261,7 @@ Rails.application.routes.draw do
       post :mark_as_recurring
       post :merge_duplicate
       post :dismiss_duplicate
+      post :unlock
     end
   end
 
@@ -292,6 +297,7 @@ Rails.application.routes.draw do
       delete :destroy_all
       get :confirm_all
       post :apply_all
+      post :clear_ai_cache
     end
   end
 
@@ -357,6 +363,7 @@ Rails.application.routes.draw do
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
       post :sync, to: "sync#create"
