@@ -35,26 +35,26 @@
     <h3 class="text-sm text-secondary mb-2">Budgeted</h3>
 
     <span class="inline-block mb-2 text-xl font-medium text-primary">
-      <%= format_money(budget.budgeted_spending_money) %>
+      <%= format_money(budget.budgeted_spending_with_savings_money) %>
     </span>
 
     <div>
       <div class="flex h-1.5 mb-3 gap-1">
-        <% if budget.available_to_spend.negative? %>
-          <div class="rounded-md h-1.5 bg-inverse" style="width: <%= 100 - budget.overage_percent %>%"></div>
-          <div class="rounded-md h-1.5 bg-destructive" style="width: <%= budget.overage_percent %>%"></div>
+        <% if budget.available_to_spend_with_savings.negative? %>
+          <div class="rounded-md h-1.5 bg-inverse" style="width: <%= 100 - budget.overage_percent_with_savings %>%"></div>
+          <div class="rounded-md h-1.5 bg-destructive" style="width: <%= budget.overage_percent_with_savings %>%"></div>
         <% else %>
-          <div class="rounded-md h-1.5 bg-inverse" style="width: <%= budget.percent_of_budget_spent %>%"></div>
-          <div class="rounded-md h-1.5 bg-surface-inset" style="width: <%= 100 - budget.percent_of_budget_spent %>%"></div>
+          <div class="rounded-md h-1.5 bg-inverse" style="width: <%= budget.percent_of_budget_spent_with_savings %>%"></div>
+          <div class="rounded-md h-1.5 bg-surface-inset" style="width: <%= 100 - budget.percent_of_budget_spent_with_savings %>%"></div>
         <% end %>
       </div>
       <div class="flex justify-between text-sm">
-        <p class="text-secondary"><%= format_money(budget.actual_spending_money) %> spent</p>
+        <p class="text-secondary"><%= format_money(budget.actual_spending_with_savings_money) %> spent</p>
         <p class="font-medium">
-          <% if budget.available_to_spend.negative? %>
-            <span class="text-destructive"><%= format_money(budget.available_to_spend_money.abs) %> over</span>
+          <% if budget.available_to_spend_with_savings.negative? %>
+            <span class="text-destructive"><%= format_money(budget.available_to_spend_with_savings_money.abs) %> over</span>
           <% else %>
-            <span class="text-primary"><%= format_money(budget.available_to_spend_money) %> left</span>
+            <span class="text-primary"><%= format_money(budget.available_to_spend_with_savings_money) %> left</span>
           <% end %>
         </p>
       </div>

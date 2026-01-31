@@ -1,0 +1,27 @@
+---
+nb:
+  budgets:
+    show:
+      savings_goals:
+        title: "Sparemål"
+        manage: "Administrer mål"
+        surplus: "Månedlig overskudd"
+        allocated: "Tildelt"
+        available: "Tilgjengelig"
+        allocate: "Tildele"
+        add_more: "Legg til mer"
+        auto_funded: "Autofinansiert"
+        no_contribution: "Ikke finansiert denne måneden"
+        empty: "Ingen aktive sparemål"
+        create_first: "Opprett ditt første mål"
+      savings:
+        title: "Sparing"
+        category_name: "Sparemål"
+        funded: "Finansiert"
+        commitment: "Mål"
+        remaining: "Gjenstående"
+        to_fund: "å finansiere"
+        fully_funded: "Fullfinansiert"
+        partial: "Delvis finansiert"
+        pending: "Venter"
+        manage_goals: "Administrer mål"
