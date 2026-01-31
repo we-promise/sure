@@ -123,7 +123,7 @@ class Assistant::Responder
         if chat_message.tool_calls.any?
           messages << {
             role: chat_message.role,
-            content: chat_message.content,
+            content: chat_message.content || "",
             tool_calls: chat_message.tool_calls.map(&:to_tool_call)
           }
 
@@ -147,7 +147,7 @@ class Assistant::Responder
           end
 
         elsif !chat_message.content.blank?
-          messages << { role: chat_message.role, content: chat_message.content }
+          messages << { role: chat_message.role, content: chat_message.content || "" }
         end
       end
       messages
