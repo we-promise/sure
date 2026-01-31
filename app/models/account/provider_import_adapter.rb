@@ -79,7 +79,8 @@ class Account::ProviderImportAdapter
       # If still a new entry and this is a POSTED transaction, check for matching pending transactions
       incoming_pending = extra.is_a?(Hash) && (
         ActiveModel::Type::Boolean.new.cast(extra.dig("simplefin", "pending")) ||
-        ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending"))
+        ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending")) ||
+        ActiveModel::Type::Boolean.new.cast(extra.dig("lunchflow", "pending"))
       )
 
       if entry.new_record? && !incoming_pending
@@ -686,6 +687,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -731,6 +733,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -799,6 +802,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
