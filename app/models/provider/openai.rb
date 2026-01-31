@@ -12,16 +12,15 @@ class Provider::Openai < Provider
       permitted_classes: [],
       permitted_symbols: [],
       aliases: true
-    ) || {}).with_indifferent_access
+    ) || {}).with_indifferent_access.freeze
   end
 
   def self.active_provider
     provider = llm_config.fetch(:active_provider, "openai")
-    @active_provider ||= (llm_config.dig("providers", provider) || {}).with_indifferent_access
+    @active_provider ||= (llm_config.dig("providers", provider) || {}).with_indifferent_access.freeze
   end
 
   # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
-  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
   # Returns the effective model that would be used by the provider
   # Uses the same logic as Provider::Registry and the initializer
@@ -31,6 +30,7 @@ class Provider::Openai < Provider
   end
 
   DEFAULT_MODEL = self.active_provider[:default_model]
+  VISION_CAPABLE_MODEL_PREFIXES = self.active_provider[:supported_vision_models].to_s..split(/\s+/).freeze
 
   def active_provider
     self.class.active_provider
@@ -152,8 +152,8 @@ class Provider::Openai < Provider
   # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
   # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
   def supports_pdf_processing?
-    return false unless ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
-
+    value = active_provider[:supports_pdf_processing].to_s
+    return ActiveModel::Type::Boolean.new.cast(value) unless value.blank?
     # Custom providers manage their own model capabilities
     return true if custom_provider?
 
