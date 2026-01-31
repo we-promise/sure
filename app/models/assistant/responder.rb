@@ -118,6 +118,7 @@ class Assistant::Responder
 
     def conversation_history
       messages = []
+      return messages unless chat&.messages
 
       chat.messages.eager_load(:tool_calls).where(type: [ "UserMessage", "AssistantMessage" ]).ordered.each do |chat_message|
         if chat_message.tool_calls.any?
