@@ -21,9 +21,16 @@ class SavingGoalTest < ActiveSupport::TestCase
     refute @goal.valid?
   end
 
-  test "invalid without currency" do
+  test "sets currency from family before validation" do
     @goal.currency = nil
+    assert @goal.valid?
+    assert_equal @goal.family.currency, @goal.currency
+  end
+
+  test "invalid if currency does not match family" do
+    @goal.currency = "EUR" # assuming family is USD
     refute @goal.valid?
+    assert_includes @goal.errors[:currency], "must match family currency (#{@goal.family.currency})"
   end
 
   test "associations" do

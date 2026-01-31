@@ -14,6 +14,9 @@ class SavingGoal < ApplicationRecord
   validates :target_amount, numericality: { greater_than: 0 }
   validates :current_amount, numericality: { greater_than_or_equal_to: 0 }
   validates :currency, presence: true
+  validate :currency_matches_family
+
+  before_validation :ensure_family_currency
 
   COLORS = %w[blue green indigo purple pink red orange yellow zinc].freeze
   validates :color, inclusion: { in: COLORS }, allow_nil: true
@@ -111,5 +114,16 @@ class SavingGoal < ApplicationRecord
       days_elapsed = (Date.current - created_at.to_date).to_f
 
       (days_elapsed / total_days * 100).clamp(0, 100)
+    end
+
+    def ensure_family_currency
+      self.currency = family&.currency if currency.blank?
+    end
+
+    def currency_matches_family
+      return if currency.blank? || family.blank?
+      return if currency == family.currency
+
+      errors.add(:currency, "must match family currency (#{family.currency})")
     end
 end

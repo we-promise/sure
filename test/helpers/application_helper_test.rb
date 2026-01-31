@@ -24,4 +24,11 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "$0.00", totals_by_currency(collection: [ Account.new(currency: "USD", balance: 0) ], money_method: :balance_money)
     assert_equal "-$3.00 | €7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money, negate: true)
   end
+
+  test "#progress_ring_color_class(color)" do
+    assert_equal "text-green-600", progress_ring_color_class("green")
+    assert_equal "text-blue-600", progress_ring_color_class("blue")
+    assert_equal "text-primary-600", progress_ring_color_class("invalid_color")
+    assert_equal "text-primary-600", progress_ring_color_class("success") # old color name
+  end
 end

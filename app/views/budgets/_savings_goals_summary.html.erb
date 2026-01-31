@@ -39,7 +39,7 @@
       <% contributions = contributions_by_goal[goal.id] || [] %>
         <% contribution_sum = contributions.sum(Money.new(0, goal.currency), &:amount) %>
         <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-inset transition-colors">
-          <%= render "saving_goals/progress_ring", percent: goal.progress_percent, size: 32, stroke_width: 3, color: "success" %>
+          <%= render "saving_goals/progress_ring", percent: goal.progress_percent, size: 32, stroke_width: 3, color: "green" %>
           
           <div class="flex-1 min-w-0">
             <%= link_to goal.name, saving_goal_path(goal), class: "font-medium text-primary hover:underline truncate block" %>
