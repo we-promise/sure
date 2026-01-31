@@ -1,0 +1,23 @@
+<div class="flex items-center gap-2 max-w-full" style="color: <%= combobox_category.color %>;">
+  <% if combobox_category.parent_id.present? %>
+    <span class="self-start flex-shrink-0">
+      <%= icon "corner-down-right", size: "sm", color: "current", class: "ml-2" %>
+    </span>
+  <% end %>
+
+  <div class="flex flex-col items-start gap-0.5 min-w-0 flex-1">
+    <span class="flex items-center gap-1 text-sm truncate max-w-full">
+      <% if combobox_category.lucide_icon.present? %>
+        <span class="flex-shrink-0">
+          <%= icon combobox_category.lucide_icon, size: "sm", color: "current" %>
+        </span>
+      <% end %>
+      <span class="truncate"><%= combobox_category.combobox_display %></span>
+    </span>
+    <% if combobox_category.combobox_details.present? %>
+      <span class="text-xs whitespace-normal line-clamp-1 w-full <%= 'pl-5' if combobox_category.lucide_icon.present? %>"
+            style="color: color-mix(in oklab, <%= combobox_category.color %> 55%, transparent);"
+            title="<%= combobox_category.combobox_details %>"><%= combobox_category.combobox_details %></span>
+    <% end %>
+  </div>
+</div>
