@@ -31,7 +31,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     created_entry = Entry.order(:created_at).last
 
     assert_redirected_to account_url(created_entry.account)
-    assert_equal "Transaction created", flash[:notice]
+    assert_equal I18n.t("transactions.create.created"), flash[:notice]
     assert_enqueued_with(job: SyncJob)
   end
 
@@ -69,7 +69,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "test notes", @entry.notes
     assert_equal false, @entry.excluded
 
-    assert_equal "Transaction updated", flash[:notice]
+    assert_equal I18n.t("transactions.update.updated"), flash[:notice]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
   end
@@ -204,7 +204,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "Transaction marked as recurring", flash[:notice]
+    assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
 
     recurring = family.recurring_transactions.last
     assert_equal true, recurring.manual, "Expected recurring transaction to be manual"
@@ -239,7 +239,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_exists"), flash[:alert]
   end
 
   test "mark_as_recurring handles validation errors gracefully" do
@@ -262,7 +262,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "Failed to create recurring transaction. Please check the transaction details and try again.", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.creation_failed"), flash[:alert]
   end
 
   test "mark_as_recurring handles unexpected errors gracefully" do
@@ -281,7 +281,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "An unexpected error occurred while creating the recurring transaction", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.unexpected_error"), flash[:alert]
   end
 
   test "unlock clears protection flags on user-modified entry" do
@@ -300,7 +300,7 @@ end
     post unlock_transaction_path(transaction)
 
     assert_redirected_to transactions_path
-    assert_equal "Entry unlocked. It may be updated on next sync.", flash[:notice]
+    assert_equal I18n.t("entries.unlock.success"), flash[:notice]
 
     entry.reload
     assert_not entry.user_modified?
