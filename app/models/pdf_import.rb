@@ -169,7 +169,9 @@ class PdfImport < Import
   end
 
   def mapping_steps
-    base = [ Import::CategoryMapping ]
+    base = []
+    # Only include CategoryMapping if rows have non-empty categories
+    base << Import::CategoryMapping if rows.where.not(category: [ nil, "" ]).exists?
     base << Import::AccountMapping if account.nil?
     base
   end
