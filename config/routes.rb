@@ -261,6 +261,10 @@ Rails.application.routes.draw do
       post :mark_as_recurring
       post :merge_duplicate
       post :dismiss_duplicate
+      # Reimbursement
+      get :reimbursement_match
+      post :link_reimbursement
+      delete :unlink_reimbursement
       post :unlock
     end
   end
