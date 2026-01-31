@@ -840,6 +840,11 @@ class Account::ProviderImportAdapter
     # Don't overwrite if already has a suggestion (keep first one found)
     return if existing_extra["potential_posted_match"].present?
 
+    # Don't suggest if the posted entry is also still pending (pending→pending match)
+    # Suggestions are only for pending→posted reconciliation
+    posted_transaction = posted_entry.entryable
+    return if posted_transaction.is_a?(Transaction) && posted_transaction.pending?
+
     pending_transaction.update!(
       extra: existing_extra.merge(
         "potential_posted_match" => {
