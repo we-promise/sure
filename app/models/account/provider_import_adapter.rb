@@ -77,11 +77,14 @@ class Account::ProviderImportAdapter
       end
 
       # If still a new entry and this is a POSTED transaction, check for matching pending transactions
-      incoming_pending = extra.is_a?(Hash) && (
-        ActiveModel::Type::Boolean.new.cast(extra.dig("simplefin", "pending")) ||
-        ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending")) ||
-        ActiveModel::Type::Boolean.new.cast(extra.dig("lunchflow", "pending"))
-      )
+      incoming_pending = false
+      if extra.is_a?(Hash)
+        pending_extra = extra.with_indifferent_access
+        incoming_pending =
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending"))
+      end
 
       if entry.new_record? && !incoming_pending
         pending_match = nil
