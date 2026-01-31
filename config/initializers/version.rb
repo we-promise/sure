@@ -10,6 +10,8 @@ module Sure
       else
         `git rev-parse HEAD`.chomp
       end
+    rescue Errno::ENOENT
+      nil
     end
 
     private
