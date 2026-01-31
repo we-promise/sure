@@ -101,11 +101,15 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                       return TextButton(
                         onPressed: _isSyncing
                             ? null
-                            : () => _handleSync(
+                            : () async {
+                                final accessToken = await authProvider.getValidAccessToken();
+                                if (!context.mounted) return;
+                                _handleSync(
                                   context,
-                                  authProvider.tokens?.accessToken,
+                                  accessToken,
                                   transactionsProvider,
-                                ),
+                                );
+                              },
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.blue.shade900,
                         ),
