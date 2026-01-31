@@ -11,12 +11,12 @@ class IncomeStatement
     @family = family
   end
 
-  def totals(transactions_scope: nil, date_range:)
+  def totals(transactions_scope: nil)
     # Default to excluding pending transactions from budget/analytics calculations
     # Pending transactions shouldn't affect budget totals until they post
     transactions_scope ||= family.transactions.visible.excluding_pending
 
-    result = totals_query(transactions_scope: transactions_scope, date_range: date_range)
+    result = totals_query(transactions_scope: transactions_scope)
 
     total_income = result.select { |t| t.classification == "income" }.sum(&:total)
     total_expense = result.select { |t| t.classification == "expense" }.sum(&:total)
@@ -75,7 +75,7 @@ class IncomeStatement
         base_scope.in_period(period)
       end
 
-      totals = totals_query(transactions_scope: scoped_transactions, date_range: period.date_range).select { |t| t.classification == classification }
+      totals = totals_query(transactions_scope: scoped_transactions).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -134,12 +134,12 @@ class IncomeStatement
       ]) { CategoryStats.new(family, interval:).call }
     end
 
-    def totals_query(transactions_scope:, date_range:)
+    def totals_query(transactions_scope:)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
         "income_statement", "totals_query", "v2", family.id, sql_hash, family.entries_cache_version
-      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range).call }
+      ]) { Totals.new(family, transactions_scope: transactions_scope).call }
     end
 
     def monetizable_currency

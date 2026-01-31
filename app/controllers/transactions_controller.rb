@@ -381,6 +381,10 @@ class TransactionsController < ApplicationController
       @entry = transaction.entry
     end
 
+    def set_entry
+      @entry = Current.family.entries.includes(entryable: { reimbursements: [ :merchant, :entry ] }).find(params[:id])
+    end
+
     def needs_rule_notification?(transaction)
       return false if Current.user.rule_prompts_disabled
 

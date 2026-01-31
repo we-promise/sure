@@ -272,8 +272,8 @@
           <!-- This is a linked reimbursement (Child) -->
           <div class="p-3 border-t border-gray-100">
             <div class="text-sm space-y-1 mb-3">
-              <h4 class="text-primary">Reimburses Expense</h4>
-              <p class="text-secondary">This transaction is marked as a reimbursement for:</p>
+              <h4 class="text-primary"><%= t("transactions.show.reimbursement.title") %></h4>
+              <p class="text-secondary"><%= t("transactions.show.reimbursement.description") %></p>
             </div>
 
             <div class="flex items-center justify-between p-3 rounded-lg bg-surface-inset">
@@ -305,7 +305,7 @@
               <%= button_to unlink_reimbursement_transaction_path(@entry.transaction, reimbursement_id: @entry.transaction.id), 
                     method: :delete, 
                     class: "btn btn--sm btn--ghost text-secondary hover:text-destructive shrink-0 ml-2",
-                    title: "Unlink",
+                    title: t("transactions.show.unlink_reimbursement"),
                     data: { turbo_frame: "_top" } do %>
                 <%= icon "link-2-off", size: "sm" %>
               <% end %>
@@ -316,11 +316,11 @@
             <!-- Unlinked Inflow: Can link to a parent expense -->
             <div class="flex items-center justify-between gap-2 p-3">
               <div class="text-sm space-y-1">
-                <h4 class="text-primary">Link Expense</h4>
-                <p class="text-secondary">Is this a reimbursement? Link it to the original expense.</p>
+                <h4 class="text-primary"><%= t("transactions.show.link_expense.title") %></h4>
+                <p class="text-secondary"><%= t("transactions.show.link_expense.description") %></p>
               </div>
               <%= render DS::Link.new(
-                text: "Link Expense",
+                text: t("transactions.show.link_expense.text"),
                 icon: "link",
                 variant: "outline",
                 href: reimbursement_match_transaction_path(@entry.transaction),
@@ -332,8 +332,8 @@
             <% if @entry.transaction.reimbursements.any? %>
               <div class="p-3 border-t border-gray-100">
                 <div class="text-sm space-y-1 mb-2">
-                  <h4 class="text-primary">Reimbursements</h4>
-                  <p class="text-secondary">Inflows linked to this expense.</p>
+                  <h4 class="text-primary"><%= t("transactions.show.reimbursements_list.title") %></h4>
+                  <p class="text-secondary"><%= t("transactions.show.reimbursements_list.description") %></p>
                 </div>
                 <div class="space-y-2 mt-2">
                   <% @entry.transaction.reimbursements.each do |reimbursement| %>
@@ -365,7 +365,7 @@
                       <%= button_to unlink_reimbursement_transaction_path(@entry.transaction, reimbursement_id: reimbursement.id), 
                             method: :delete, 
                             class: "btn btn--sm btn--ghost text-secondary hover:text-destructive shrink-0 ml-2",
-                            title: "Unlink",
+                            title: t("transactions.show.unlink_reimbursement"),
                             data: { turbo_frame: "_top" } do %>
                         <%= icon "link-2-off", size: "sm" %>
                       <% end %>

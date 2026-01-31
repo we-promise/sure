@@ -175,12 +175,12 @@ class Transaction < ApplicationRecord
     def validate_reimbursement_logic
       if original_expense_id.present?
         # Child (reimbursement) must be an inflow (negative amount)
-        if entry&.amount&.positive?
+        if entry&.amount&.negative?
           errors.add(:base, "Reimbursement must be an inflow (income/refund)")
         end
 
         # Parent (original expense) must be an expense (positive amount)
-        if original_expense && original_expense.entry&.amount&.negative?
+        if original_expense && original_expense.entry&.amount&.positive?
           errors.add(:base, "Original transaction must be an expense")
         end
       end
