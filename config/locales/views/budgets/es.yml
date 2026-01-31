@@ -1,0 +1,27 @@
+---
+es:
+  budgets:
+    show:
+      savings_goals:
+        title: "Objetivos de ahorro"
+        manage: "Gestionar objetivos"
+        surplus: "Superávit mensual"
+        allocated: "Asignado"
+        available: "Disponible"
+        allocate: "Asignar"
+        add_more: "Añadir más"
+        auto_funded: "Financiado auto."
+        no_contribution: "No financiado este mes"
+        empty: "Sin objetivos activos"
+        create_first: "Crea tu primer objetivo"
+      savings:
+        title: "Ahorro"
+        category_name: "Objetivos de ahorro"
+        funded: "Financiado"
+        commitment: "Objetivo"
+        remaining: "Restante"
+        to_fund: "por financiar"
+        fully_funded: "Totalmente financiado"
+        partial: "Parcialmente financiado"
+        pending: "Pendiente"
+        manage_goals: "Gestionar objetivos"

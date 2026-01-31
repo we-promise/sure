@@ -68,7 +68,7 @@ ca:
       target_date_hint: "Opcional. Establiu una data límit per fer un seguiment del ritme."
       initial_amount_label: "Ja estalviat (opcional)"
       initial_amount_hint: "Si ja heu començat a estalviar per a aquest objectiu"
-      priority_label: "Prioritat"
+
       notes_label: "Notes"
       notes_placeholder: "Afegiu qualsevol nota sobre aquest objectiu..."
       save: "Desar objectiu"
@@ -90,5 +90,4 @@ ca:
       completed: "Completat"
       archived: "Arxivat"
     goal_card:
-      target_date: "Objectiu: %{date}"
-
+      target_date: "Data: %{date}"

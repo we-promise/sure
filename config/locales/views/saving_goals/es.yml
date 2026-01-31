@@ -67,7 +67,7 @@ es:
       target_date_hint: "Opcional. Establezca una fecha límite para hacer un seguimiento del ritmo."
       initial_amount_label: "Ya ahorrado (opcional)"
       initial_amount_hint: "Si ya ha comenzado a ahorrar para este objetivo"
-      priority_label: "Prioridad"
+
       notes_label: "Notas"
       notes_placeholder: "Añada cualquier nota sobre este objetivo..."
       save: "Guardar objetivo"
@@ -89,5 +89,4 @@ es:
       completed: "Completado"
       archived: "Archivado"
     goal_card:
-      target_date: "Objetivo: %{date}"
-
+      target_date: "Meta: %{date}"

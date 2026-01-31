@@ -29,14 +29,14 @@ fr:
         archived: "Archivés"
     show:
       progress: "%{percent}% épargné"
-      target: "Cible : %{amount}"
+      target: "Objectif : %{amount}"
       deadline: "Échéance : %{date}"
       behind: "En retard"
       contributions: "Contributions au projet"
       actions: "Actions"
       edit: "Modifier l'objectif"
       delete: "Supprimer l'objectif"
-      target_date: "Date cible : %{date}"
+      target_date: "Échéance : %{date}"
       current_balance: "Solde actuel"
       of_target: "sur un objectif de %{amount}"
       on_track: "Sur la bonne voie"
@@ -67,7 +67,7 @@ fr:
       target_date_hint: "Facultatif. Fixez une échéance pour suivre votre rythme."
       initial_amount_label: "Déjà épargné (facultatif)"
       initial_amount_hint: "Si vous avez déjà commencé à épargner pour cet objectif"
-      priority_label: "Priorité"
+
       notes_label: "Notes"
       notes_placeholder: "Ajoutez des notes sur cet objectif..."
       save: "Enregistrer l'objectif"
@@ -89,4 +89,4 @@ fr:
       completed: "Terminé"
       archived: "Archivé"
     goal_card:
-      target_date: "Cible : %{date}"
+      target_date: "Échéance : %{date}"

@@ -67,7 +67,7 @@ zh-CN:
       target_date_hint: "可选。设定截止日期以追踪进度。"
       initial_amount_label: "已存金额（可选）"
       initial_amount_hint: "如果您已经开始为该目标储蓄"
-      priority_label: "优先级"
+
       notes_label: "备注"
       notes_placeholder: "添加关于此目标的备注..."
       save: "保存目标"
@@ -90,4 +90,3 @@ zh-CN:
       archived: "已归档"
     goal_card:
       target_date: "目标：%{date}"
-

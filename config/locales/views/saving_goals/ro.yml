@@ -67,7 +67,7 @@ ro:
       target_date_hint: "Opțional. Stabilește un termen limită pentru a urmări ritmul."
       initial_amount_label: "Deja economisit (opțional)"
       initial_amount_hint: "Dacă ai început deja să economisești pentru acest obiectiv"
-      priority_label: "Prioritate"
+
       notes_label: "Note"
       notes_placeholder: "Adaugă note despre acest obiectiv..."
       save: "Salvează Obiectiv"
@@ -90,4 +90,3 @@ ro:
       archived: "Arhivat"
     goal_card:
       target_date: "Țintă: %{date}"
-

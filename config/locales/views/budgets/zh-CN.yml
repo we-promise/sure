@@ -5,3 +5,26 @@ zh-CN:
       tabs:
         actual: 实际
         budgeted: 预算
+      savings_goals:
+        title: "储蓄目标"
+        manage: "管理目标"
+        surplus: "每月盈余"
+        allocated: "已分配"
+        available: "剩余可用"
+        allocate: "分配"
+        add_more: "添加更多"
+        auto_funded: "自动注资"
+        no_contribution: "本月未注资"
+        empty: "暂无活跃储蓄目标"
+        create_first: "创建您的第一个目标"
+      savings:
+        title: "储蓄"
+        category_name: "储蓄目标"
+        funded: "已注资"
+        commitment: "目标"
+        remaining: "剩余"
+        to_fund: "需注资"
+        fully_funded: "全额注资"
+        partial: "部分注资"
+        pending: "待处理"
+        manage_goals: "管理目标"

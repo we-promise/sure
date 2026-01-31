@@ -67,7 +67,7 @@ en:
       target_date_hint: "Optional. Set a deadline to track whether you're on pace."
       initial_amount_label: "Already saved (optional)"
       initial_amount_hint: "If you've already started saving toward this goal"
-      priority_label: "Priority"
+
       notes_label: "Notes"
       notes_placeholder: "Add any notes about this goal..."
       save: "Save Goal"
@@ -90,4 +90,3 @@ en:
       archived: "Archived"
     goal_card:
       target_date: "Target: %{date}"
-

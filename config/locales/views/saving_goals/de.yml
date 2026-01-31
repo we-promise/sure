@@ -67,7 +67,7 @@ de:
       target_date_hint: "Optional. Setzen Sie eine Frist, um das Tempo zu verfolgen."
       initial_amount_label: "Bereits gespart (optional)"
       initial_amount_hint: "Falls Sie bereits begonnen haben, für dieses Ziel zu sparen"
-      priority_label: "Priorität"
+
       notes_label: "Notizen"
       notes_placeholder: "Fügen Sie Notizen zu diesem Ziel hinzu..."
       save: "Ziel speichern"
@@ -90,4 +90,3 @@ de:
       archived: "Archiviert"
     goal_card:
       target_date: "Ziel: %{date}"
-

@@ -67,7 +67,7 @@ nb:
       target_date_hint: "Valgfritt. Sett en frist for å følge tempoet."
       initial_amount_label: "Allerede spart (valgfritt)"
       initial_amount_hint: "Hvis du allerede har begynt å spare til dette målet"
-      priority_label: "Prioritet"
+
       notes_label: "Notater"
       notes_placeholder: "Legg til notater om dette målet..."
       save: "Lagre mål"
@@ -90,4 +90,3 @@ nb:
       archived: "Arkivert"
     goal_card:
       target_date: "Mål: %{date}"
-

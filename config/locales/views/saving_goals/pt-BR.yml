@@ -67,7 +67,7 @@ pt-BR:
       target_date_hint: "Opcional. Defina um prazo para acompanhar o ritmo."
       initial_amount_label: "Já economizado (opcional)"
       initial_amount_hint: "Se você já começou a economizar para esta meta"
-      priority_label: "Prioridade"
+
       notes_label: "Notas"
       notes_placeholder: "Adicione notas sobre esta meta..."
       save: "Salvar Meta"
@@ -90,4 +90,3 @@ pt-BR:
       archived: "Arquivada"
     goal_card:
       target_date: "Meta: %{date}"
-

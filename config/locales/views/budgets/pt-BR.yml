@@ -1,0 +1,27 @@
+---
+pt-BR:
+  budgets:
+    show:
+      savings_goals:
+        title: "Metas de Economia"
+        manage: "Gerenciar Metas"
+        surplus: "Excedente mensal"
+        allocated: "Alocado"
+        available: "Disponível"
+        allocate: "Alocar"
+        add_more: "Adicionar mais"
+        auto_funded: "Autofinanciado"
+        no_contribution: "Não financiada este mês"
+        empty: "Nenhuma meta ativa"
+        create_first: "Crie sua primeira meta"
+      savings:
+        title: "Economias"
+        category_name: "Metas de Economia"
+        funded: "Financiado"
+        commitment: "Meta"
+        remaining: "Restante"
+        to_fund: "para financiar"
+        fully_funded: "Totalmente financiado"
+        partial: "Parcialmente financiado"
+        pending: "Pendente"
+        manage_goals: "Gerenciar metas"

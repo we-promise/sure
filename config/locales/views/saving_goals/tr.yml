@@ -67,7 +67,7 @@ tr:
       target_date_hint: "İsteğe bağlı. Hızı takip etmek için bir son tarih belirleyin."
       initial_amount_label: "Zaten birikmiş (isteğe bağlı)"
       initial_amount_hint: "Bu hedef için zaten biriktirmeye başladıysanız"
-      priority_label: "Öncelik"
+
       notes_label: "Notlar"
       notes_placeholder: "Bu hedef hakkında notlar ekleyin..."
       save: "Hedefi Kaydet"
@@ -90,4 +90,3 @@ tr:
       archived: "Arşivlendi"
     goal_card:
       target_date: "Hedef: %{date}"
-

@@ -162,6 +162,8 @@ module ApplicationHelper
     fallback
   end
 
+  # Maps backend color names (e.g. "success", "green") to their corresponding
+  # design token classes (e.g. "text-success"). Safe-lists allowed colors.
   def progress_ring_color_class(color)
     case color.to_s
     when "success", "green" then "text-success"

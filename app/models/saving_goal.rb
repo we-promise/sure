@@ -20,6 +20,7 @@ class SavingGoal < ApplicationRecord
 
   scope :active, -> { where(status: :active) }
 
+  # Calculates the percentage of the goal completed (0-100).
   def progress_percent
     return 0 if target_amount.nil? || target_amount.zero?
     return 100 if current_amount >= target_amount
@@ -27,11 +28,15 @@ class SavingGoal < ApplicationRecord
     (current_amount / target_amount * 100).round(2)
   end
 
+  # Returns the remaining amount needed to reach the target.
+  # Returns 0 if current_amount >= target_amount.
   def remaining_amount
     return 0 if target_amount.nil?
     [ target_amount - current_amount, 0 ].max
   end
 
+  # Checks if the saving goal is on track based on expected progress over time.
+  # Allows for a 5% tolerance.
   def on_track?
     return true if target_date.nil?
     return true if current_amount >= target_amount
@@ -44,6 +49,7 @@ class SavingGoal < ApplicationRecord
     actual >= (expected - 5)
   end
 
+  # Calculates the monthly amount needed to reach the goal by the target date.
   def monthly_target
     return nil if target_date.nil?
 
@@ -53,8 +59,8 @@ class SavingGoal < ApplicationRecord
     (remaining_amount_for_month / months).round(2)
   end
 
-  # Remaining amount excluding current month's contribution (if any)
-  # This gives the "effort" needed for the current month
+  # Remaining amount for this month excluding current monthly contributions.
+  # This represents the "effort" still needed for the current month.
   def remaining_amount_for_month
     this_month_contribution = saving_contributions
       .where(month: Date.current.beginning_of_month)
@@ -64,26 +70,31 @@ class SavingGoal < ApplicationRecord
     [ target_amount - (current_amount - this_month_contribution), 0 ].max
   end
 
+  # Calculates the number of months remaining until the target date.
   def months_remaining
     return nil if target_date.nil?
     (target_date.year * 12 + target_date.month) - (Date.current.year * 12 + Date.current.month) + 1
   end
 
+  # Transitions the goal status to paused.
   def pause!
     raise InvalidTransitionError, "Can only pause active goals" unless active?
     update!(status: :paused)
   end
 
+  # Transitions the goal status back to active.
   def resume!
     raise InvalidTransitionError, "Can only resume paused goals" unless paused?
     update!(status: :active)
   end
 
+  # Marks the goal as completed.
   def complete!
     raise InvalidTransitionError, "Can not complete archived goals" if archived?
     update!(status: :completed)
   end
 
+  # hives the goal, removing it from active lists.
   def archive!
     raise InvalidTransitionError, "Already archived" if archived?
     update!(status: :archived)

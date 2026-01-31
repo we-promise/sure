@@ -353,6 +353,7 @@ class Budget < ApplicationRecord
 
   monetize :adjusted_surplus
 
+  # Returns active saving goals for the family, sorted by urgency and creation.
   def family_active_saving_goals
     family.saving_goals.active.order(Arel.sql("target_date IS NULL, target_date ASC, created_at ASC"))
   end
@@ -389,10 +390,12 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Checks if a specific goal has already received an auto-contribution this month.
   def goal_already_funded_this_month?(goal)
     goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance).exists?
   end
 
+  # Returns all non-initial contributions for a specific goal in this budget month.
   def goal_contributions_for_month(goal)
     goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance)
   end
