@@ -111,7 +111,12 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_not @import.has_extracted_transactions?
   end
 
-  test "mapping_steps returns CategoryMapping" do
+  test "mapping_steps includes CategoryMapping and AccountMapping when no account" do
+    assert_equal [ Import::CategoryMapping, Import::AccountMapping ], @import.mapping_steps
+  end
+
+  test "mapping_steps only includes CategoryMapping when account is set" do
+    @import.account = accounts(:depository)
     assert_equal [ Import::CategoryMapping ], @import.mapping_steps
   end
 end

@@ -169,7 +169,9 @@ class PdfImport < Import
   end
 
   def mapping_steps
-    [ Import::CategoryMapping ]
+    base = [ Import::CategoryMapping ]
+    base << Import::AccountMapping if account.nil?
+    base
   end
 
   private
