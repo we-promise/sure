@@ -73,10 +73,20 @@ class LunchflowEntry::Processor
         base_temp_id = content_hash_for_transaction(data)
         temp_id_with_prefix = "lunchflow_pending_#{base_temp_id}"
 
-        # Handle collisions: if this external_id already exists for this account,
-        # append a counter to make it unique. This prevents multiple pending transactions
-        # with identical attributes (e.g., two same-day Uber rides) from colliding.
-        # We check both the account's entries and the current raw payload being processed.
+        # Check if entry with this external_id already exists
+        # If it does AND it's a pending transaction with matching attributes (re-sync case),
+        # reuse the same ID so find_or_initialize_by can find and update it.
+        # Only increment counter for true collisions (different transactions, same hash).
+        if entry_exists_with_external_id?(temp_id_with_prefix)
+          existing_entry = account.entries.find_by(external_id: temp_id_with_prefix, source: "lunchflow")
+          if existing_entry && is_same_pending_transaction?(existing_entry)
+            Rails.logger.debug "Lunchflow: Reusing ID #{temp_id_with_prefix} for re-synced pending transaction"
+            return temp_id_with_prefix
+          end
+        end
+
+        # Handle true collisions: multiple different transactions with same attributes
+        # (e.g., two Uber rides on the same day for the same amount)
         final_id = temp_id_with_prefix
         counter = 1
 
@@ -102,6 +112,19 @@ class LunchflowEntry::Processor
 
       # Check if an entry with this external_id already exists in the account
       account.entries.exists?(external_id: external_id, source: "lunchflow")
+    end
+
+    # Check if an existing entry represents the same pending transaction
+    # Used to detect re-syncs of the same pending transaction vs true collisions
+    def is_same_pending_transaction?(entry)
+      return false unless entry.entryable.is_a?(Transaction)
+      return false unless entry.entryable.pending?
+
+      # Compare key attributes to determine if it's the same transaction
+      entry.amount == amount &&
+        entry.currency == currency &&
+        entry.date == date &&
+        entry.name == name
     end
 
     def name
