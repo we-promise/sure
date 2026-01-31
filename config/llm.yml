@@ -1,4 +1,5 @@
 active_provider: <%= ENV.fetch("LLM_ACTIVE_PROVIDER") { "openai" } %>
+debug: <%= ENV.fetch("AI_DEBUG_MODE") { "false" } %>
 providers:
   openai:
     access_token: <%= ENV.fetch("OPENAI_ACCESS_TOKEN") { nil } %>
@@ -13,5 +14,9 @@ providers:
     # - "json_object": Middle ground, broader compatibility than strict
     json_mode:  <%= ENV.fetch("OPENAI_LLM_JSON_MODE") { ENV.fetch("LLM_JSON_MODE") { nil } } %>
     # custom / native
-    custom_provider: <%= ENV.fetch("OPENAI_CUSTOM_PROVIDER") { false } %>
+    custom_provider: <%= ENV.fetch("OPENAI_CUSTOM_PROVIDER") { nil } %>
     supports_responses_endpoint: <%= ENV.fetch("OPENAI_SUPPORTS_RESPONSES_ENDPOINT") { nil } %>
+    pricing:
+      "<%= ENV.fetch("OPENAI_MODEL") { ENV.fetch("OPENAI_DEFAULT_MODEL") { "gpt-4.1" } } %>":
+        prompt: <%= ENV.fetch("OPENAI_MODEL_PROMPT_PRICE") { 2.00 }.to_f  %>
+        completion: <%= ENV.fetch("OPENAI_MODEL_COMPLETION_PRICE") { 8.00 }.to_f  %>

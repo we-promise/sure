@@ -6,6 +6,20 @@ class Provider::Openai < Provider
 
   LLM_FILE_PATH = Rails.root.join("config", "llm.yml")
 
+  def self.llm_config
+    @llm_config ||= (YAML.safe_load(
+      ERB.new(File.read(LLM_FILE_PATH)).result,
+      permitted_classes: [],
+      permitted_symbols: [],
+      aliases: true
+    ) || {}).with_indifferent_access
+  end
+
+  def self.active_provider
+    provider = llm_config.fetch(:active_provider, "openai")
+    @active_provider ||= (llm_config.dig("providers", provider) || {}).with_indifferent_access
+  end
+
   # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
@@ -16,21 +30,14 @@ class Provider::Openai < Provider
     configured_model.presence || active_provider[:default_model]
   end
 
-  def llm_config
-    @llm_config ||= (YAML.safe_load(
-      File.read(LLM_FILE_PATH),
-      permitted_classes: [],
-      permitted_symbols: [],
-      aliases: true
-    ) || {}).deep_symbolize_keys!
-  end
+  DEFAULT_MODEL = self.active_provider[:default_model]
 
   def active_provider
-    @active_provider ||= @llm_config.dig("providers", @llm_config.fetch("active_provider", "openai"))
+    self.class.active_provider
   end
 
   def initialize(access_token, uri_base: nil, model: nil)
-    client_options = { access_token: access_token }
+    client_options = { access_token: access_token || active_provider[:access_token] }
     llm_uri_base = uri_base.presence || active_provider[:uri_base]
     llm_model = model.presence || active_provider[:model]
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
@@ -53,7 +60,14 @@ class Provider::Openai < Provider
   end
 
   def supports_responses_endpoint?
-    @supports_responses_endpoint ||= ActiveModel::Type::Boolean.new.cast(active_provider[:supports_responses_endpoint])
+    return @supports_responses_endpoint if defined?(@supports_responses_endpoint)
+
+    supports_responses = active_provider[:supports_responses_endpoint]
+    if supports_responses.to_s.present?
+      return @supports_responses_endpoint = ActiveModel::Type::Boolean.new.cast(supports_responses)
+    end
+
+    @supports_responses_endpoint = !custom_provider?
   end
 
   def provider_name
@@ -64,11 +78,13 @@ class Provider::Openai < Provider
     if custom_provider?
       @default_model.present? ? "configured model: #{@default_model}" : "any model"
     else
-      "models starting with: #{DEFAULT_OPENAI_MODEL_PREFIXES.join(', ')}"
+      "models starting with: #{self.active_provider[:supported_models]}"
     end
   end
 
   def custom_provider?
+    value = active_provider[:custom_provider]
+    return ActiveModel::Type::Boolean.new.cast(value)  unless value.to_s.blank?
     @uri_base.present?
   end
 
@@ -212,7 +228,6 @@ class Provider::Openai < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
-        messages: messages,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: session_id,
@@ -420,7 +435,7 @@ class Provider::Openai < Provider
 
       # Add conversation history or user prompt
       if messages.present?
-        payload.concat(messages.map { |msg| { role: msg[:role], content: msg[:content] } })
+        payload.concat(messages)
       elsif prompt.present?
         payload << { role: "user", content: prompt }
       end

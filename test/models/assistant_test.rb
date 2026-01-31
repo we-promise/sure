@@ -14,6 +14,10 @@ class AssistantTest < ActiveSupport::TestCase
     @provider = mock
     @expected_session_id = @chat.id.to_s
     @expected_user_identifier = ::Digest::SHA256.hexdigest(@chat.user_id.to_s)
+    @expected_conversation_history = [
+      {role: "user", content: "Can you help me understand my spending habits?"},
+      {role: "user", content: "What is my net worth?"}
+    ]
   end
 
   test "errors get added to chat" do
@@ -100,7 +104,7 @@ class AssistantTest < ActiveSupport::TestCase
     @provider.expects(:chat_response).with do |message, **options|
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal expected_history, options[:messages]
+      assert_equal @expected_conversation_history, options[:messages]
       text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -155,7 +159,7 @@ class AssistantTest < ActiveSupport::TestCase
     @provider.expects(:chat_response).with do |message, **options|
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal expected_history, options[:messages]
+      assert_equal @expected_conversation_history, options[:messages]
       call2_text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -167,7 +171,7 @@ class AssistantTest < ActiveSupport::TestCase
     @provider.expects(:chat_response).with do |message, **options|
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal expected_history, options[:messages]
+      assert_equal @expected_conversation_history, options[:messages]
       options[:streamer].call(call1_response_chunk)
       true
     end.returns(call1_response).once.in_sequence(sequence)
@@ -208,13 +212,5 @@ class AssistantTest < ActiveSupport::TestCase
         ),
         usage: usage
       )
-    end
-
-    def expected_history
-      @chat.conversation_messages.ordered.map do |chat_message|
-        next if chat_message.content.blank?
-
-        { role: chat_message.role, content: chat_message.content }
-      end.compact
     end
 end
