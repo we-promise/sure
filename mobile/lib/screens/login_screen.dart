@@ -29,13 +29,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showApiKeyDialog() {
     final apiKeyController = TextEditingController();
+    final outerContext = context;
     bool isLoading = false;
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (_, setDialogState) {
             return AlertDialog(
               title: const Text('API Key Login'),
               content: Column(
@@ -43,8 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Text(
                     'Enter your API key to sign in.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    style: Theme.of(outerContext).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(outerContext).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -62,7 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          apiKeyController.dispose();
+                          Navigator.of(dialogContext).pop();
+                        },
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
@@ -77,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
 
                           final authProvider = Provider.of<AuthProvider>(
-                            context,
+                            outerContext,
                             listen: false,
                           );
                           final success = await authProvider.loginWithApiKey(
@@ -86,23 +92,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           if (!dialogContext.mounted) return;
 
-                          if (success) {
-                            Navigator.of(dialogContext).pop();
-                          } else {
-                            setDialogState(() {
-                              isLoading = false;
-                            });
-                            if (dialogContext.mounted) {
-                              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    authProvider.errorMessage ?? 'Invalid API key',
-                                  ),
-                                  backgroundColor:
-                                      Theme.of(dialogContext).colorScheme.error,
+                          final errorMsg = authProvider.errorMessage;
+                          apiKeyController.dispose();
+                          Navigator.of(dialogContext).pop();
+
+                          if (!success && mounted) {
+                            ScaffoldMessenger.of(outerContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  errorMsg ?? 'Invalid API key',
                                 ),
-                              );
-                            }
+                                backgroundColor:
+                                    Theme.of(outerContext).colorScheme.error,
+                              ),
+                            );
                           }
                         },
                   child: isLoading
