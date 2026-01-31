@@ -1,0 +1,84 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "Link Expense") %>
+  <% dialog.with_body do %>
+    <p class="text-sm text-secondary mb-4">
+      Select the original expense transaction that this inflow reimburses.
+    </p>
+
+    <div class="mb-4">
+      <%= form_with url: reimbursement_match_transaction_path(@transaction), method: :get, data: { turbo_frame: "reimbursement_candidates", controller: "auto-submit-form" } do |f| %>
+        <%= f.label :filter_date, "Filter by Date", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.date_field :filter_date, 
+              value: @filter_date, 
+              max: Date.current,
+              class: "w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              data: { auto_submit_form_target: "auto" }
+        %>
+      <% end %>
+    </div>
+
+    <%= turbo_frame_tag "reimbursement_candidates" do %>
+      <%= styled_form_with url: link_reimbursement_transaction_path(@transaction), method: :post, data: { turbo_frame: "_top" } do |f| %>
+        <div class="space-y-4">
+          <% if @candidates.any? %>
+            <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-200">
+              <% @candidates.each do |candidate| %>
+                <label class="block cursor-pointer hover:bg-gray-50 transition-colors p-3 group relative">
+                  <div class="flex items-center gap-3">
+                    <div class="flex items-center h-5">
+                      <%= f.radio_button :reimbursement_id, candidate.id, class: "h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" %>
+                    </div>
+                    
+                    <div class="flex-shrink-0">
+                      <% if candidate.merchant&.logo_url.present? %>
+                        <%= image_tag Setting.transform_brand_fetch_url(candidate.merchant.logo_url),
+                            alt: candidate.merchant.name.presence || "Merchant logo",
+                            class: "w-9 h-9 rounded-full border border-secondary",
+                            loading: "lazy" %>
+                      <% else %>
+                        <%= render DS::FilledIcon.new(
+                          variant: :text,
+                          text: candidate.entry.name,
+                          size: "lg",
+                          rounded: true
+                        ) %>
+                      <% end %>
+                    </div>
+
+                    <div class="min-w-0 flex-1 flex items-center justify-between">
+                      <div class="flex flex-col min-w-0 pr-2">
+                        <span class="text-sm font-medium text-gray-900 truncate block">
+                          <%= candidate.entry.name %>
+                        </span>
+                        <span class="text-xs text-gray-500 truncate block">
+                          <%= candidate.entry.date.to_formatted_s(:long) %> • <%= candidate.entry.account.name %>
+                        </span>
+                      </div>
+                      
+                      <div class="flex flex-col items-end flex-shrink-0">
+                        <span class="text-sm font-medium <%= candidate.entry.amount < 0 ? 'text-green-600' : 'text-gray-900' %>">
+                          <%= candidate.entry.amount_money.format %>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+            
+            <%= f.submit "Link Expense", class: "btn btn--primary w-full" %>
+          <% else %>
+            <div class="text-center py-4 text-secondary">
+              <p>No suitable expense transactions found.</p>
+              <% if @filter_date.present? %>
+                <p class="text-xs mt-1">Showing expenses on <strong><%= @filter_date %></strong>.</p>
+              <% else %>
+                 <p class="text-xs mt-1">Showing latest 50 expenses.</p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

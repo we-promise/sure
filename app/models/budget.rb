@@ -91,7 +91,7 @@ class Budget < ApplicationRecord
   end
 
   def transactions
-    family.transactions.visible.in_period(period)
+    family.transactions.visible.for_budget_period(period)
   end
 
   def name

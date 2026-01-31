@@ -274,7 +274,7 @@ class TransactionsController < ApplicationController
     end
 
     begin
-      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+      RecurringTransaction.create_from_transaction(transaction)
 
       respond_to do |format|
         format.html do
@@ -282,14 +282,14 @@ class TransactionsController < ApplicationController
           redirect_back_or_to transactions_path
         end
       end
-    rescue ActiveRecord::RecordInvalid => e
+    rescue ActiveRecord::RecordInvalid
       respond_to do |format|
         format.html do
           flash[:alert] = t("recurring_transactions.creation_failed")
           redirect_back_or_to transactions_path
         end
       end
-    rescue StandardError => e
+    rescue StandardError
       respond_to do |format|
         format.html do
           flash[:alert] = t("recurring_transactions.unexpected_error")
@@ -304,6 +304,75 @@ class TransactionsController < ApplicationController
     head :ok
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
     head :unprocessable_entity
+  end
+
+  def reimbursement_match
+    @transaction = Current.family.transactions.find(params[:id])
+
+    # Candidate expenses: posted (not pending), outflow (positive amount)
+    # We are looking for EXPENSES to link to this INFLOW.
+    scope = Current.family.transactions
+                          .joins(:entry)
+                          .includes(entry: :account)
+                          .where("entries.amount > 0")
+                          .excluding_pending
+                          .reverse_chronological
+
+    # Filter by same category for budgeting alignment (if category exists)
+    if @transaction.category_id.present?
+      scope = scope.where(category_id: @transaction.category_id)
+    end
+
+
+    if params[:filter_date].present?
+      begin
+        @filter_date = params[:filter_date].to_date
+      rescue ArgumentError, Date::Error
+        @filter_date = nil
+      end
+
+      if @filter_date
+        scope = scope.where("entries.date = ?", @filter_date)
+      end
+    else
+      @filter_date = nil
+      # No default date filter
+    end
+
+    @candidates = scope.limit(50)
+
+    render :reimbursement_match
+  end
+
+  def link_reimbursement
+    @transaction = Current.family.transactions.find(params[:id]) # The Inflow
+    @expense = Current.family.transactions.find(params[:reimbursement_id]) # The Parent Expense
+
+    if @transaction.update(original_expense_id: @expense.id)
+      flash[:notice] = "Reimbursement linked"
+    else
+      flash[:alert] = "Failed to link reimbursement: #{@transaction.errors.full_messages.join(', ')}"
+    end
+
+    redirect_back_or_to transactions_path
+  end
+
+  def unlink_reimbursement
+    if params[:reimbursement_id].present?
+      # Called from Expense view to unlink a specific child
+      @inflow = Current.family.transactions.find(params[:reimbursement_id])
+    else
+      # Called from Inflow view to unlink self
+      @inflow = Current.family.transactions.find(params[:id])
+    end
+
+    if @inflow.update(original_expense_id: nil)
+      flash[:notice] = "Reimbursement unlinked"
+    else
+      flash[:alert] = "Failed to unlink reimbursement"
+    end
+
+    redirect_back_or_to transactions_path
   end
 
   private

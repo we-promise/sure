@@ -4,6 +4,14 @@ class Transaction < ApplicationRecord
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
 
+  # Reimbursement associations
+  belongs_to :original_expense, class_name: "Transaction", optional: true
+  has_many :reimbursements, class_name: "Transaction", foreign_key: :original_expense_id, dependent: :nullify
+  delegate :name, :date, :amount, :amount_money, :currency, to: :entry
+
+  validate :validate_reimbursement_logic
+
+
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
@@ -45,6 +53,16 @@ class Transaction < ApplicationRecord
       AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
       AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
     SQL
+  }
+
+  scope :for_budget_period, ->(period) {
+    joins(:entry)
+    .joins("LEFT JOIN transactions as parent_trans ON parent_trans.id = transactions.original_expense_id")
+    .joins("LEFT JOIN entries as parent_entries ON parent_entries.entryable_id = parent_trans.id AND parent_entries.entryable_type = 'Transaction'")
+    .where(
+      "COALESCE(parent_entries.date, entries.date) BETWEEN ? AND ?",
+      period.start_date, period.end_date
+    )
   }
 
   # Family-scoped query for Enrichable#clear_ai_cache
@@ -149,6 +167,21 @@ class Transaction < ApplicationRecord
   end
 
   private
+
+    def validate_reimbursement_logic
+      if original_expense_id.present?
+        # Child (reimbursement) must be an inflow (negative amount)
+        if entry&.amount&.positive?
+          errors.add(:base, "Reimbursement must be an inflow (income/refund)")
+        end
+
+        # Parent (original expense) must be an expense (positive amount)
+        if original_expense && original_expense.entry&.amount&.negative?
+          errors.add(:base, "Original transaction must be an expense")
+        end
+      end
+    end
+
 
     def potential_posted_match_data
       return nil unless extra.is_a?(Hash)

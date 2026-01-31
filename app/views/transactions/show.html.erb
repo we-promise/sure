@@ -267,6 +267,117 @@
           ) %>
         </div>
 
+        <!-- Reimbursement Section -->
+        <% if @entry.transaction.original_expense_id.present? %>
+          <!-- This is a linked reimbursement (Child) -->
+          <div class="p-3 border-t border-gray-100">
+            <div class="text-sm space-y-1 mb-3">
+              <h4 class="text-primary">Reimburses Expense</h4>
+              <p class="text-secondary">This transaction is marked as a reimbursement for:</p>
+            </div>
+
+            <div class="flex items-center justify-between p-3 rounded-lg bg-surface-inset">
+              <div class="flex items-center gap-3 min-w-0">
+                <% parent = @entry.transaction.original_expense %>
+                <div class="flex-shrink-0">
+                  <% if parent.merchant&.logo_url.present? %>
+                    <%= image_tag Setting.transform_brand_fetch_url(parent.merchant.logo_url),
+                        class: "w-8 h-8 rounded-full border border-secondary",
+                        loading: "lazy" %>
+                  <% else %>
+                    <%= render DS::FilledIcon.new(
+                      variant: :text,
+                      text: parent.entry.name,
+                      size: "md",
+                      rounded: true
+                    ) %>
+                  <% end %>
+                </div>
+
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-primary truncate"><%= parent.entry.name %></p>
+                  <p class="text-xs text-secondary truncate">
+                    <%= parent.entry.date.to_formatted_s(:short) %> • <%= parent.entry.amount_money.format %>
+                  </p>
+                </div>
+              </div>
+
+              <%= button_to unlink_reimbursement_transaction_path(@entry.transaction, reimbursement_id: @entry.transaction.id), 
+                    method: :delete, 
+                    class: "btn btn--sm btn--ghost text-secondary hover:text-destructive shrink-0 ml-2",
+                    title: "Unlink",
+                    data: { turbo_frame: "_top" } do %>
+                <%= icon "link-2-off", size: "sm" %>
+              <% end %>
+            </div>
+          </div>
+        <% else %>
+          <% if @entry.amount.negative? %>
+            <!-- Unlinked Inflow: Can link to a parent expense -->
+            <div class="flex items-center justify-between gap-2 p-3">
+              <div class="text-sm space-y-1">
+                <h4 class="text-primary">Link Expense</h4>
+                <p class="text-secondary">Is this a reimbursement? Link it to the original expense.</p>
+              </div>
+              <%= render DS::Link.new(
+                text: "Link Expense",
+                icon: "link",
+                variant: "outline",
+                href: reimbursement_match_transaction_path(@entry.transaction),
+                frame: :modal
+              ) %>
+            </div>
+          <% else %>
+            <!-- Outflow (Expense): Show linked reimbursements if any -->
+            <% if @entry.transaction.reimbursements.any? %>
+              <div class="p-3 border-t border-gray-100">
+                <div class="text-sm space-y-1 mb-2">
+                  <h4 class="text-primary">Reimbursements</h4>
+                  <p class="text-secondary">Inflows linked to this expense.</p>
+                </div>
+                <div class="space-y-2 mt-2">
+                  <% @entry.transaction.reimbursements.each do |reimbursement| %>
+                    <div class="flex items-center justify-between p-3 rounded-lg bg-surface-inset">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div class="flex-shrink-0">
+                          <% if reimbursement.merchant&.logo_url.present? %>
+                            <%= image_tag Setting.transform_brand_fetch_url(reimbursement.merchant.logo_url),
+                                class: "w-8 h-8 rounded-full border border-secondary",
+                                loading: "lazy" %>
+                          <% else %>
+                            <%= render DS::FilledIcon.new(
+                              variant: :text,
+                              text: reimbursement.name,
+                              size: "md",
+                              rounded: true
+                            ) %>
+                          <% end %>
+                        </div>
+
+                        <div class="min-w-0">
+                          <p class="text-sm font-medium text-primary truncate"><%= reimbursement.name %></p>
+                          <p class="text-xs text-secondary truncate">
+                            <%= reimbursement.date.to_formatted_s(:short) %> • <span class="text-green-600 font-medium"><%= reimbursement.amount_money.format %></span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <%= button_to unlink_reimbursement_transaction_path(@entry.transaction, reimbursement_id: reimbursement.id), 
+                            method: :delete, 
+                            class: "btn btn--sm btn--ghost text-secondary hover:text-destructive shrink-0 ml-2",
+                            title: "Unlink",
+                            data: { turbo_frame: "_top" } do %>
+                        <%= icon "link-2-off", size: "sm" %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+
+
         <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
         <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
           <div class="flex items-center justify-between gap-2 p-3">

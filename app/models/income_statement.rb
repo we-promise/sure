@@ -67,7 +67,7 @@ class IncomeStatement
 
     def build_period_total(classification:, period:)
       # Exclude pending transactions from budget calculations
-      totals = totals_query(transactions_scope: family.transactions.visible.excluding_pending.in_period(period), date_range: period.date_range).select { |t| t.classification == classification }
+      totals = totals_query(transactions_scope: family.transactions.visible.excluding_pending.for_budget_period(period), date_range: period.date_range).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
