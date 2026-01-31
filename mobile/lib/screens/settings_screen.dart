@@ -3,9 +3,32 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
+import '../services/preferences_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _groupByType = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final value = await PreferencesService.instance.getGroupByType();
+    if (mounted) {
+      setState(() {
+        _groupByType = value;
+      });
+    }
+  }
 
   Future<void> _handleClearLocalData(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -161,6 +184,34 @@ class SettingsScreen extends StatelessWidget {
             leading: Icon(Icons.info_outline),
             title: Text('App Version'),
             subtitle: Text('1.0.0'),
+          ),
+
+          const Divider(),
+
+          // Display Settings Section
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Display',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+
+          SwitchListTile(
+            secondary: const Icon(Icons.view_list),
+            title: const Text('Group by Account Type'),
+            subtitle: const Text('Group accounts by type (Crypto, Bank, etc.)'),
+            value: _groupByType,
+            onChanged: (value) async {
+              await PreferencesService.instance.setGroupByType(value);
+              setState(() {
+                _groupByType = value;
+              });
+            },
           ),
 
           const Divider(),
