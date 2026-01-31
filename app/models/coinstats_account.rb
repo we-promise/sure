@@ -1,7 +1,13 @@
 # Represents a single crypto token/coin within a CoinStats wallet.
 # Each wallet address may have multiple CoinstatsAccounts (one per token).
 class CoinstatsAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
 
   belongs_to :coinstats_item
 

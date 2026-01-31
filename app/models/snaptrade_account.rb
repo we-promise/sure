@@ -1,6 +1,14 @@
 class SnaptradeAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
   include SnaptradeAccount::DataHelpers
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+    encrypts :raw_holdings_payload
+    encrypts :raw_activities_payload
+  end
 
   belongs_to :snaptrade_item
 
