@@ -111,12 +111,8 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_not @import.has_extracted_transactions?
   end
 
-  test "mapping_steps includes only AccountMapping when no account and no categories" do
-    assert_equal [ Import::AccountMapping ], @import.mapping_steps
-  end
-
-  test "mapping_steps is empty when account is set and no categories" do
-    @import.account = accounts(:depository)
+  test "mapping_steps is empty when no categories in rows" do
+    # PDF imports use direct account selection in UI, not AccountMapping
     assert_equal [], @import.mapping_steps
   end
 
@@ -128,6 +124,12 @@ class PdfImportTest < ActiveSupport::TestCase
       name: "Test Transaction",
       category: "Groceries"
     )
-    assert_includes @import_with_rows.mapping_steps, Import::CategoryMapping
+    assert_equal [ Import::CategoryMapping ], @import_with_rows.mapping_steps
+  end
+
+  test "mapping_steps does not include AccountMapping even when account is nil" do
+    # PDF imports handle account selection via direct UI, not mapping system
+    assert_nil @import.account
+    assert_not_includes @import.mapping_steps, Import::AccountMapping
   end
 end

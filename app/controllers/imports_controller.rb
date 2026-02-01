@@ -1,7 +1,15 @@
 class ImportsController < ApplicationController
   include SettingsHelper
 
-  before_action :set_import, only: %i[show publish destroy revert apply_template]
+  before_action :set_import, only: %i[show update publish destroy revert apply_template]
+
+  def update
+    # Handle both pdf_import[account_id] and import[account_id] param formats
+    account_id = params.dig(:pdf_import, :account_id) || params.dig(:import, :account_id)
+    account = Current.family.accounts.find_by(id: account_id)
+    @import.update!(account: account)
+    redirect_to import_path(@import), notice: t("imports.update.account_saved", default: "Account saved.")
+  end
 
   def publish
     @import.publish_later

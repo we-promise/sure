@@ -172,7 +172,8 @@ class PdfImport < Import
     base = []
     # Only include CategoryMapping if rows have non-empty categories
     base << Import::CategoryMapping if rows.where.not(category: [ nil, "" ]).exists?
-    base << Import::AccountMapping if account.nil?
+    # Note: PDF imports use direct account selection in the UI, not AccountMapping
+    # AccountMapping is designed for CSV imports where rows have different account values
     base
   end
 
