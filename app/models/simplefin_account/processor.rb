@@ -64,7 +64,12 @@ class SimplefinAccount::Processor
         institution: org[:name]
       ) rescue nil
       is_mapper_liability = inferred && [ "CreditCard", "Loan" ].include?(inferred.accountable_type)
-      is_liability = is_linked_liability || is_mapper_liability
+      is_liability = 
+        if account.accountable_type.present?
+          is_linked_liability
+        else
+          is_mapper_liability
+        end
 
       if is_mapper_liability && !is_linked_liability
         Rails.logger.warn(
