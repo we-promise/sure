@@ -170,12 +170,17 @@ class _AppWrapperState extends State<AppWrapper> {
     // Handle deep link that launched the app (cold start)
     _appLinks.getInitialLink().then((uri) {
       if (uri != null) _handleDeepLink(uri);
+    }).catchError((e, stackTrace) {
+      LogService.instance.error('DeepLinks', 'Initial link error: $e\n$stackTrace');
     });
 
     // Listen for deep links while app is running
-    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-      _handleDeepLink(uri);
-    });
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (uri) => _handleDeepLink(uri),
+      onError: (e, stackTrace) {
+        LogService.instance.error('DeepLinks', 'Link stream error: $e\n$stackTrace');
+      },
+    );
   }
 
   void _handleDeepLink(Uri uri) {

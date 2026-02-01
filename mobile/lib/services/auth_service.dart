@@ -367,7 +367,9 @@ class AuthService {
       };
     }
 
-    if (params['access_token'] == null || params['refresh_token'] == null) {
+    final accessToken = params['access_token'];
+    final refreshToken = params['refresh_token'];
+    if (accessToken == null || accessToken.isEmpty || refreshToken == null || refreshToken.isEmpty) {
       return {
         'success': false,
         'error': 'Invalid SSO callback response',
@@ -375,8 +377,8 @@ class AuthService {
     }
 
     final tokenData = {
-      'access_token': params['access_token'],
-      'refresh_token': params['refresh_token'],
+      'access_token': accessToken,
+      'refresh_token': refreshToken,
       'token_type': params['token_type'] ?? 'Bearer',
       'expires_in': int.tryParse(params['expires_in'] ?? '') ?? 0,
       'created_at': int.tryParse(params['created_at'] ?? '') ?? 0,

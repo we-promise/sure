@@ -114,18 +114,19 @@ class SessionsController < ApplicationController
       return
     end
 
-    unless params[:device_id].present? && params[:device_name].present? && params[:device_type].present?
+    device_params = params.permit(:device_id, :device_name, :device_type, :os_version, :app_version)
+    unless device_params[:device_id].present? && device_params[:device_name].present? && device_params[:device_type].present?
       redirect_to "sureapp://oauth/callback?error=missing_device_info&message=#{CGI.escape('Device information is required')}",
         allow_other_host: true
       return
     end
 
     session[:mobile_sso] = {
-      device_id: params[:device_id],
-      device_name: params[:device_name],
-      device_type: params[:device_type],
-      os_version: params[:os_version],
-      app_version: params[:app_version]
+      device_id: device_params[:device_id],
+      device_name: device_params[:device_name],
+      device_type: device_params[:device_type],
+      os_version: device_params[:os_version],
+      app_version: device_params[:app_version]
     }
 
     # Render auto-submitting form to POST to OmniAuth (required by omniauth-rails_csrf_protection)
@@ -244,6 +245,12 @@ class SessionsController < ApplicationController
   private
     def handle_mobile_sso_callback(user)
       device_info = session.delete(:mobile_sso)
+
+      unless device_info.present?
+        redirect_to "sureapp://oauth/callback?error=missing_session&message=#{CGI.escape('Mobile SSO session expired')}",
+          allow_other_host: true
+        return
+      end
 
       device = user.mobile_devices.find_or_initialize_by(device_id: device_info[:device_id])
       device.assign_attributes(

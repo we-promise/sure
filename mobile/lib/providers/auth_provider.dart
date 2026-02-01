@@ -228,9 +228,13 @@ class AuthProvider with ChangeNotifier {
         deviceInfo: deviceInfo,
       );
 
-      await launchUrl(Uri.parse(ssoUrl), mode: LaunchMode.externalApplication);
-    } catch (e) {
-      _errorMessage = 'Failed to start sign-in: ${e.toString()}';
+      final launched = await launchUrl(Uri.parse(ssoUrl), mode: LaunchMode.externalApplication);
+      if (!launched) {
+        _errorMessage = 'Unable to open browser for sign-in.';
+      }
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'SSO launch error: $e\n$stackTrace');
+      _errorMessage = 'Unable to start sign-in. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -257,8 +261,9 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e) {
-      _errorMessage = 'Sign-in failed: ${e.toString()}';
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'SSO callback error: $e\n$stackTrace');
+      _errorMessage = 'Sign-in failed. Please try again.';
       _isLoading = false;
       notifyListeners();
       return false;
