@@ -38,17 +38,10 @@ class BalanceSheet::AccountTotals
     end
 
     def cache_key
-      # Build a cache key that ONLY includes visible accounts' updated_at timestamps.
-      # This prevents disabled accounts from affecting the cache key while the cached
-      # data only contains visible accounts, which could cause stale data issues.
-      visible_max_updated_at = family.accounts.visible.maximum(:updated_at)
-
-      [
-        family.id,
+      family.build_cache_key(
         "balance_sheet_account_rows",
-        family.latest_sync_completed_at,
-        visible_max_updated_at
-      ].compact.join("_")
+        invalidate_on_data_updates: true
+      )
     end
 
     def query
