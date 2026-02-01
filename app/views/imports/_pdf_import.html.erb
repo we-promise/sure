@@ -41,10 +41,10 @@
               <p class="text-sm text-secondary px-3 py-2 bg-yellow-500/10 rounded-lg">
                 <%= t("imports.pdf_import.no_accounts", default: "No accounts available. Please create an account first.") %>
               </p>
-              <%= render DS::Link.new(text: t("imports.pdf_import.create_account", default: "Create Account"), href: new_account_path(return_to: import_path(import)), variant: "secondary", full_width: true, frame: :modal) %>
+              <%= render DS::Link.new(text: t("imports.pdf_import.create_account", default: "Create Account"), href: new_account_path(return_to: import_path(import)), variant: "primary", full_width: true, frame: :modal) %>
             <% end %>
             <% if accounts.any? %>
-              <%= f.submit t("imports.pdf_import.save_account", default: "Save"), class: "btn btn--secondary w-full" %>
+              <%= f.submit t("imports.pdf_import.save_account", default: "Save"), class: "btn btn--primary w-full" %>
             <% end %>
           <% end %>
         </div>
