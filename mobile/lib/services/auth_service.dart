@@ -341,6 +341,67 @@ class AuthService {
     }
   }
 
+  String buildSsoUrl({
+    required String provider,
+    required Map<String, String> deviceInfo,
+  }) {
+    final params = {
+      'device_id': deviceInfo['device_id']!,
+      'device_name': deviceInfo['device_name']!,
+      'device_type': deviceInfo['device_type']!,
+      'os_version': deviceInfo['os_version']!,
+      'app_version': deviceInfo['app_version']!,
+    };
+    final uri = Uri.parse('${ApiConfig.baseUrl}/auth/mobile/$provider')
+        .replace(queryParameters: params);
+    return uri.toString();
+  }
+
+  Future<Map<String, dynamic>> handleSsoCallback(Uri uri) async {
+    final params = uri.queryParameters;
+
+    if (params.containsKey('error')) {
+      return {
+        'success': false,
+        'error': params['message'] ?? params['error'] ?? 'SSO login failed',
+      };
+    }
+
+    final accessToken = params['access_token'];
+    final refreshToken = params['refresh_token'];
+    if (accessToken == null || accessToken.isEmpty || refreshToken == null || refreshToken.isEmpty) {
+      return {
+        'success': false,
+        'error': 'Invalid SSO callback response',
+      };
+    }
+
+    final tokenData = {
+      'access_token': accessToken,
+      'refresh_token': refreshToken,
+      'token_type': params['token_type'] ?? 'Bearer',
+      'expires_in': int.tryParse(params['expires_in'] ?? '') ?? 0,
+      'created_at': int.tryParse(params['created_at'] ?? '') ?? 0,
+    };
+
+    final tokens = AuthTokens.fromJson(tokenData);
+    await _saveTokens(tokens);
+
+    final user = User.fromJson({
+      'id': params['user_id'] ?? '',
+      'email': params['user_email'] ?? '',
+      'first_name': params['user_first_name'] ?? '',
+      'last_name': params['user_last_name'] ?? '',
+    });
+    await _saveUser(user);
+
+    return {
+      'success': true,
+      'tokens': tokens,
+      'user': user,
+    };
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userKey);

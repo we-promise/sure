@@ -371,6 +371,44 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 16),
 
+                // Divider with "or"
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'or',
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Google Sign-In button
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, _) {
+                    return OutlinedButton.icon(
+                      onPressed: authProvider.isLoading
+                          ? null
+                          : () => authProvider.startSsoLogin('google_oauth2'),
+                      icon: const Icon(Icons.g_mobiledata, size: 24),
+                      label: const Text('Sign in with Google'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
                 // Backend URL info
                 Container(
                   padding: const EdgeInsets.all(12),

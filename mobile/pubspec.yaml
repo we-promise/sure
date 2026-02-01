@@ -20,6 +20,8 @@ dependencies:
   path: ^1.9.1
   connectivity_plus: ^7.0.0
   uuid: ^4.5.2
+  app_links: ^6.4.0
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:
