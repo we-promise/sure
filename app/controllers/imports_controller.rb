@@ -6,8 +6,16 @@ class ImportsController < ApplicationController
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
     account_id = params.dig(:pdf_import, :account_id) || params.dig(:import, :account_id)
-    account = Current.family.accounts.find_by(id: account_id)
-    @import.update!(account: account)
+
+    if account_id.present?
+      account = Current.family.accounts.find_by(id: account_id)
+      unless account
+        redirect_back_or_to import_path(@import), alert: t("imports.update.invalid_account", default: "Account not found.")
+        return
+      end
+      @import.update!(account: account)
+    end
+
     redirect_to import_path(@import), notice: t("imports.update.account_saved", default: "Account saved.")
   end
 
