@@ -102,10 +102,10 @@ class Transaction::Search
     def apply_category_filter(query, categories)
       return query unless categories.present?
 
-      # Remove "Uncategorized" from category names to query the database
-      uncategorized_name = Category.uncategorized.name
-      include_uncategorized = categories.include?(uncategorized_name)
-      real_categories = categories - [ uncategorized_name ]
+      # Check for "Uncategorized" in any supported locale (handles URL params in different languages)
+      all_uncategorized_names = Category.all_uncategorized_names
+      include_uncategorized = (categories & all_uncategorized_names).any?
+      real_categories = categories - all_uncategorized_names
 
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
