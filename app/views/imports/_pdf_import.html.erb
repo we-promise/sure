@@ -17,7 +17,7 @@
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
           <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
-            <%= t("imports.document_types.#{import.document_type}") %>
+            <%= t("imports.document_types.#{import.document_type}", default: import.document_type&.humanize || t("imports.pdf_import.unknown_document_type", default: "Unknown")) %>
           </p>
         </div>
 
@@ -108,7 +108,7 @@
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
           <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
-            <%= t("imports.document_types.#{import.document_type}") %>
+            <%= t("imports.document_types.#{import.document_type}", default: import.document_type&.humanize || t("imports.pdf_import.unknown_document_type", default: "Unknown")) %>
           </p>
         </div>
 
