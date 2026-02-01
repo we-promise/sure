@@ -46,6 +46,52 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 1000, BalanceSheet.new(@family).liabilities.total
   end
 
+  test "cache key only considers visible accounts" do
+    # Create active and disabled accounts
+    active_account = create_account(balance: 1000, accountable: Depository.new)
+    disabled_account = create_account(balance: 5000, accountable: Depository.new)
+    disabled_account.disable!
+
+    # Get initial cache key
+    initial_totals = BalanceSheet::AccountTotals.new(@family, sync_status_monitor: BalanceSheet::SyncStatusMonitor.new(@family))
+    initial_cache_key = initial_totals.send(:cache_key)
+
+    # Travel forward in time and update disabled account - cache key should NOT change
+    travel 1.minute do
+      disabled_account.touch
+      same_cache_key = BalanceSheet::AccountTotals.new(@family, sync_status_monitor: BalanceSheet::SyncStatusMonitor.new(@family)).send(:cache_key)
+
+      assert_equal initial_cache_key, same_cache_key, "Cache key should not change when only disabled account is updated"
+    end
+
+    # Travel further forward and update active account - cache key SHOULD change
+    travel 2.minutes do
+      active_account.touch
+      new_cache_key = BalanceSheet::AccountTotals.new(@family, sync_status_monitor: BalanceSheet::SyncStatusMonitor.new(@family)).send(:cache_key)
+
+      assert_not_equal initial_cache_key, new_cache_key, "Cache key should change when visible account is updated"
+    end
+  end
+
+  test "disabled account updates do not invalidate balance sheet cache" do
+    # Create accounts
+    active_account = create_account(balance: 1000, accountable: Depository.new)
+    disabled_account = create_account(balance: 5000, accountable: Depository.new)
+    disabled_account.disable!
+
+    # Access balance sheet to populate cache
+    balance_sheet = BalanceSheet.new(@family)
+    initial_total = balance_sheet.assets.total
+    assert_equal 1000, initial_total
+
+    # Update disabled account's balance in the database directly
+    disabled_account.update_column(:balance, 10000)
+
+    # Create new balance sheet - should still use cached data since cache key didn't change
+    balance_sheet2 = BalanceSheet.new(@family)
+    assert_equal 1000, balance_sheet2.assets.total, "Total should not include disabled account even after direct balance update"
+  end
+
   test "calculates asset group totals" do
     create_account(balance: 1000, accountable: Depository.new)
     create_account(balance: 2000, accountable: Depository.new)

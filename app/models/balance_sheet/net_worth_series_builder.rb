@@ -24,15 +24,18 @@ class BalanceSheet::NetWorthSeriesBuilder
     end
 
     def cache_key(period)
-      key = [
+      # Build a cache key that ONLY includes visible accounts' updated_at timestamps.
+      # This prevents disabled accounts from affecting the cache key while the cached
+      # data only contains visible accounts, which could cause stale data issues.
+      visible_max_updated_at = family.accounts.visible.maximum(:updated_at)
+
+      [
+        family.id,
         "balance_sheet_net_worth_series",
         period.start_date,
-        period.end_date
+        period.end_date,
+        family.latest_sync_completed_at,
+        visible_max_updated_at
       ].compact.join("_")
-
-      family.build_cache_key(
-        key,
-        invalidate_on_data_updates: true
-      )
     end
 end
