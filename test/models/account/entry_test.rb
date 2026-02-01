@@ -84,4 +84,68 @@ class EntryTest < ActiveSupport::TestCase
     # Should not include entry from disabled account
     assert_not_includes visible_entries, invisible_transaction
   end
+
+  test "bulk update preserves existing tags when tag_ids is blank and tags are untouched" do
+    entry_with_fixture_tags = entries(:transaction)
+    entry_with_custom_tags = create_transaction(
+      category: categories(:food_and_drink),
+      tags: [ tags(:one) ]
+    )
+
+    updated = Entry.where(id: [ entry_with_fixture_tags.id, entry_with_custom_tags.id ]).bulk_update!(
+      category_id: categories(:subcategory).id,
+      tags_touched: "0",
+      tag_ids: [ "" ] # matches Rails multi-select hidden field behavior
+    )
+
+    assert_equal 2, updated
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, entry_with_fixture_tags.reload.transaction.tag_ids.sort
+    assert_equal [ tags(:one).id ], entry_with_custom_tags.reload.transaction.tag_ids
+    assert_equal categories(:subcategory), entry_with_fixture_tags.transaction.category
+    assert_equal categories(:subcategory), entry_with_custom_tags.transaction.category
+  end
+
+  test "bulk update clears tags when tag_ids is blank and tags are touched" do
+    entry_with_fixture_tags = entries(:transaction)
+    entry_with_custom_tags = create_transaction(
+      category: categories(:food_and_drink),
+      tags: [ tags(:one) ]
+    )
+
+    updated = Entry.where(id: [ entry_with_fixture_tags.id, entry_with_custom_tags.id ]).bulk_update!(
+      category_id: categories(:subcategory).id,
+      tags_touched: "1",
+      tag_ids: [ "" ] # selecting "None" yields blank ids
+    )
+
+    assert_equal 2, updated
+    assert_equal [], entry_with_fixture_tags.reload.transaction.tag_ids
+    assert_equal [], entry_with_custom_tags.reload.transaction.tag_ids
+    assert_equal categories(:subcategory), entry_with_fixture_tags.transaction.category
+    assert_equal categories(:subcategory), entry_with_custom_tags.transaction.category
+  end
+
+  test "bulk update applies tag changes even if tags_touched is 0 when tag_ids are present" do
+    entry = entries(:transaction)
+
+    updated = Entry.where(id: entry.id).bulk_update!(
+      tags_touched: "0",
+      tag_ids: [ "", tags(:one).id.to_s ]
+    )
+
+    assert_equal 1, updated
+    assert_equal [ tags(:one).id ], entry.reload.transaction.tag_ids
+  end
+
+  test "bulk update clears tags when tag_ids is an explicit empty array even if tags_touched is 0" do
+    entry = entries(:transaction)
+
+    updated = Entry.where(id: entry.id).bulk_update!(
+      tags_touched: "0",
+      tag_ids: []
+    )
+
+    assert_equal 1, updated
+    assert_equal [], entry.reload.transaction.tag_ids
+  end
 end

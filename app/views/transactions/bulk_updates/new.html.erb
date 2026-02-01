@@ -14,7 +14,10 @@
           <div class="space-y-2">
             <%= form.collection_select :category_id, Current.family.categories.alphabetically, :id, :name, { prompt: "Select a category", label: "Category", class: "text-subdued" } %>
             <%= form.collection_select :merchant_id, Current.family.available_merchants.alphabetically, :id, :name, { prompt: "Select a merchant", label: "Merchant", class: "text-subdued" } %>
-            <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: "None", multiple: true, label: "Tags" } %>
+            <div data-controller="bulk-update-tags">
+              <%= form.hidden_field :tags_touched, value: "0", data: { bulk_update_tags_target: "touched" } %>
+              <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: "None", multiple: true, label: "Tags" }, data: { action: "change->bulk-update-tags#touch" } %>
+            </div>
             <%= form.text_area :notes, label: "Notes", placeholder: "Enter a note that will be applied to selected transactions", rows: 5 %>
           </div>
         <% end %>

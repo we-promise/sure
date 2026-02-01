@@ -320,14 +320,28 @@ class Entry < ApplicationRecord
     end
 
     def bulk_update!(bulk_update_params)
+      tag_ids_param = bulk_update_params[:tag_ids]
+      normalized_tag_ids = Array.wrap(tag_ids_param).reject(&:blank?)
+
+      tags_touched = bulk_update_params[:tags_touched].to_s == "1"
+      should_apply_tags =
+        tags_touched ||
+        (tag_ids_param.is_a?(Array) && tag_ids_param.empty?) || # explicit empty array => clear tags
+        normalized_tag_ids.any?
+
+      entryable_attributes = {
+        category_id: bulk_update_params[:category_id],
+        merchant_id: bulk_update_params[:merchant_id]
+      }.compact_blank
+
+      if should_apply_tags
+        entryable_attributes[:tag_ids] = normalized_tag_ids
+      end
+
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
-        entryable_attributes: {
-          category_id: bulk_update_params[:category_id],
-          merchant_id: bulk_update_params[:merchant_id],
-          tag_ids: bulk_update_params[:tag_ids]
-        }.compact_blank
+        entryable_attributes: entryable_attributes
       }.compact_blank
 
       return 0 if bulk_attributes.blank?
