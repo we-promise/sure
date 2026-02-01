@@ -13,7 +13,6 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
-  int _previousIndex = 0;
   final _dashboardKey = GlobalKey<DashboardScreenState>();
 
   late final List<Widget> _screens;
@@ -39,12 +38,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
-          _previousIndex = _currentIndex;
           setState(() {
             _currentIndex = index;
           });
-          // Reload preferences when switching back to dashboard from settings
-          if (index == 0 && _previousIndex == 3) {
+          // Reload preferences whenever switching back to dashboard
+          if (index == 0) {
             _dashboardKey.currentState?.reloadPreferences();
           }
         },
