@@ -118,21 +118,20 @@ class Provider::Openai < Provider
 
   # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
   # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
-  def supports_pdf_processing?
+  def supports_pdf_processing?(model: @default_model)
     return false unless ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
 
     # Custom providers manage their own model capabilities
     return true if custom_provider?
 
-    # Check if the configured model supports vision/PDF input
-    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| @default_model.start_with?(prefix) }
+    # Check if the specified model supports vision/PDF input
+    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
   end
 
   def process_pdf(pdf_content:, model: "", family: nil)
-    raise "Model does not support PDF/vision processing" unless supports_pdf_processing?
-
     with_provider_response do
       effective_model = model.presence || @default_model
+      raise Error, "Model does not support PDF/vision processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)
 
       trace = create_langfuse_trace(
         name: "openai.process_pdf",

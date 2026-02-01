@@ -5,18 +5,22 @@ class ProcessPdfJob < ApplicationJob
     return unless pdf_import.is_a?(PdfImport)
     return unless pdf_import.pdf_uploaded?
     return if pdf_import.status == "complete"
-    return if pdf_import.ai_processed? && (!pdf_import.bank_statement? || pdf_import.has_extracted_transactions?)
+    return if pdf_import.ai_processed? && (!pdf_import.bank_statement? || pdf_import.rows_count > 0)
 
     pdf_import.update!(status: :importing)
 
     begin
       pdf_import.process_with_ai
 
-      # For bank statements, extract transactions
+      # For bank statements, extract transactions and generate import rows
       if pdf_import.bank_statement?
         Rails.logger.info("ProcessPdfJob: Extracting transactions for bank statement import #{pdf_import.id}")
         pdf_import.extract_transactions
         Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_transactions.size} transactions")
+
+        pdf_import.generate_rows_from_extracted_data
+        pdf_import.sync_mappings
+        Rails.logger.info("ProcessPdfJob: Generated #{pdf_import.rows_count} import rows")
       end
 
       # Find the user who created this import (first admin or any user in the family)
@@ -26,7 +30,10 @@ class ProcessPdfJob < ApplicationJob
         pdf_import.send_next_steps_email(user)
       end
 
-      pdf_import.update!(status: :complete)
+      # Bank statements with rows go to pending for user review/publish
+      # Non-bank statements are marked complete (no further action needed)
+      final_status = pdf_import.bank_statement? && pdf_import.rows_count > 0 ? :pending : :complete
+      pdf_import.update!(status: final_status)
     rescue StandardError => e
       sanitized_error = sanitize_error_message(e)
       Rails.logger.error("PDF processing failed for import #{pdf_import.id}: #{e.class.name} - #{sanitized_error}")

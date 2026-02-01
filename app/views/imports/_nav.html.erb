@@ -1,12 +1,23 @@
 <%# locals: (import:) %>
 
-<% steps = [
-  { name: "Upload", path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
-  { name: "Configure", path: import_configuration_path(import), is_complete: import.configured?, step_number: 2 },
-  { name: "Clean", path: import_clean_path(import), is_complete: import.cleaned?, step_number: 3 },
-  { name: "Map", path: import_confirm_path(import), is_complete: import.publishable?, step_number: 4 },
-  { name: "Confirm", path: import_path(import), is_complete: import.complete?, step_number: 5 }
-].reject { |step| step[:name] == "Map" && import.mapping_steps.empty? } %>
+<% steps = if import.is_a?(PdfImport)
+  # PDF imports have a simplified flow: Upload -> Confirm
+  # Upload/Configure/Clean are always complete for processed PDF imports
+  [
+    { name: "Upload", path: nil, is_complete: import.pdf_uploaded?, step_number: 1 },
+    { name: "Configure", path: nil, is_complete: import.configured?, step_number: 2 },
+    { name: "Clean", path: nil, is_complete: import.cleaned?, step_number: 3 },
+    { name: "Confirm", path: import_path(import), is_complete: import.complete?, step_number: 4 }
+  ]
+else
+  [
+    { name: "Upload", path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
+    { name: "Configure", path: import_configuration_path(import), is_complete: import.configured?, step_number: 2 },
+    { name: "Clean", path: import_clean_path(import), is_complete: import.cleaned?, step_number: 3 },
+    { name: "Map", path: import_confirm_path(import), is_complete: import.publishable?, step_number: 4 },
+    { name: "Confirm", path: import_path(import), is_complete: import.complete?, step_number: 5 }
+  ].reject { |step| step[:name] == "Map" && import.mapping_steps.empty? }
+end %>
 
 <% content_for :mobile_import_progress do %>
   <% active_step = steps.detect { |s| request.path.eql?(s[:path]) } %>
@@ -33,7 +44,7 @@
                   step[:is_complete] ? "bg-green-600/10 border-alpha-black-25" : "bg-container-inset"
                 end %>
 
-      <%= link_to step[:path], class: "flex items-center gap-3" do %>
+      <% step_content = capture do %>
         <div class="flex items-center gap-2 text-sm font-medium <%= text_class %>">
           <span class="<%= step_class %> w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center border border-transparent">
             <%= step[:is_complete] && !is_current ? icon("check", size: "sm", color: "current") : idx + 1 %>
@@ -41,6 +52,11 @@
 
           <span><%= step[:name] %></span>
         </div>
+      <% end %>
+      <% if step[:path].present? %>
+        <%= link_to step[:path], class: "flex items-center gap-3" do %><%= step_content %><% end %>
+      <% else %>
+        <div class="flex items-center gap-3"><%= step_content %></div>
       <% end %>
 
       <hr class="border border-secondary w-12 group-last:hidden">

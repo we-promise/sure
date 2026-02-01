@@ -208,7 +208,7 @@ Rails.application.routes.draw do
 
   resources :transfers, only: %i[new create destroy show update]
 
-  resources :imports, only: %i[index new show create destroy] do
+  resources :imports, only: %i[index new show create update destroy] do
     member do
       post :publish
       put :revert
