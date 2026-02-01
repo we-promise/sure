@@ -95,7 +95,11 @@ class SimplefinItem < ApplicationRecord
     linked = all_accounts.select { |sfa| sfa.current_account.present? }
     unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
 
-    Rails.logger.info "SimplefinItem#process_accounts - After repair: #{linked.count} linked, #{unlinked.count} unlinked"
+    # Filter to only process visible accounts (active or draft status)
+    # This prevents updating disabled accounts during sync, consistent with other providers
+    visible_linked = linked.select { |sfa| sfa.current_account.visible? }
+
+    Rails.logger.info "SimplefinItem#process_accounts - After repair: #{linked.count} linked (#{visible_linked.count} visible), #{unlinked.count} unlinked"
 
     # Log unlinked accounts with transactions for debugging
     unlinked_with_txns = unlinked.select { |sfa| sfa.raw_transactions_payload.to_a.any? }
@@ -108,7 +112,8 @@ class SimplefinItem < ApplicationRecord
 
     all_skipped_entries = []
 
-    linked.each do |simplefin_account|
+    # Only process visible (active/draft) accounts - skip disabled accounts
+    visible_linked.each do |simplefin_account|
       acct = simplefin_account.current_account
       Rails.logger.info "SimplefinItem#process_accounts - Processing: SimplefinAccount id=#{simplefin_account.id} name='#{simplefin_account.name}' -> Account id=#{acct.id} name='#{acct.name}' type=#{acct.accountable_type}"
       processor = SimplefinAccount::Processor.new(simplefin_account)
@@ -237,7 +242,9 @@ class SimplefinItem < ApplicationRecord
   end
 
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    accounts.each do |account|
+    # Only schedule syncs for visible accounts (active or draft status)
+    # This is consistent with other providers (Lunchflow, EnableBanking, Coinstats)
+    accounts.select(&:visible?).each do |account|
       account.sync_later(
         parent_sync: parent_sync,
         window_start_date: window_start_date,

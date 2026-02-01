@@ -145,4 +145,103 @@ class SimplefinItemTest < ActiveSupport::TestCase
     )
     assert_equal "2 institutions", @simplefin_item.institution_summary
   end
+
+  test "process_accounts skips disabled accounts" do
+    # Create a SimpleFin account with linked Account
+    simplefin_account = @simplefin_item.simplefin_accounts.create!(
+      name: "Test Checking",
+      account_id: "test_checking_123",
+      currency: "USD",
+      account_type: "checking",
+      current_balance: 5000
+    )
+
+    # Create a linked Account via AccountProvider
+    account = @family.accounts.create!(
+      name: "Test Checking Account",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    # Link via AccountProvider
+    AccountProvider.create!(
+      account: account,
+      provider: simplefin_account
+    )
+
+    # Verify the account is visible and linked
+    assert account.visible?
+    assert_equal account, simplefin_account.current_account
+
+    # Mock the processor to track if it was called
+    processor_called = false
+    SimplefinAccount::Processor.any_instance.stubs(:process).with do
+      processor_called = true
+    end
+
+    # Process accounts - should call processor for active account
+    @simplefin_item.process_accounts
+    assert processor_called, "Processor should be called for visible account"
+
+    # Reset flag
+    processor_called = false
+
+    # Disable the account
+    account.disable!
+    refute account.visible?
+
+    # Process accounts again - should NOT call processor for disabled account
+    @simplefin_item.process_accounts
+    refute processor_called, "Processor should NOT be called for disabled account"
+  end
+
+  test "schedule_account_syncs skips disabled accounts" do
+    # Create a SimpleFin account with linked Account
+    simplefin_account = @simplefin_item.simplefin_accounts.create!(
+      name: "Test Savings",
+      account_id: "test_savings_123",
+      currency: "USD",
+      account_type: "savings",
+      current_balance: 10000
+    )
+
+    # Create a linked Account via AccountProvider
+    account = @family.accounts.create!(
+      name: "Test Savings Account",
+      balance: 2000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    # Link via AccountProvider
+    AccountProvider.create!(
+      account: account,
+      provider: simplefin_account
+    )
+
+    # Verify the account is visible
+    assert account.visible?
+
+    # Mock sync_later to track if it was called
+    sync_later_called = false
+    Account.any_instance.stubs(:sync_later).with do
+      sync_later_called = true
+    end
+
+    # Schedule syncs - should call sync_later for active account
+    @simplefin_item.schedule_account_syncs
+    assert sync_later_called, "sync_later should be called for visible account"
+
+    # Reset flag
+    sync_later_called = false
+
+    # Disable the account
+    account.disable!
+    refute account.visible?
+
+    # Schedule syncs again - should NOT call sync_later for disabled account
+    @simplefin_item.schedule_account_syncs
+    refute sync_later_called, "sync_later should NOT be called for disabled account"
+  end
 end

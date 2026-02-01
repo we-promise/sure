@@ -19,6 +19,12 @@ class Account < ApplicationRecord
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
   scope :visible, -> { where(status: [ "draft", "active" ]) }
+
+  # Instance method matching the visible scope
+  def visible?
+    %w[draft active].include?(status)
+  end
+
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
