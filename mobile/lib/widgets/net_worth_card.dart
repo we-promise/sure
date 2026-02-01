@@ -36,23 +36,11 @@ class NetWorthCard extends StatelessWidget {
           // Net Worth Section (Placeholder)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: Column(
-              children: [
-                Text(
-                  'Net Worth',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '--',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                ),
-              ],
+            child: Text(
+              'Net Worth — coming soon',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
             ),
           ),
 
