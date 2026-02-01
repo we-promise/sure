@@ -138,6 +138,8 @@ class NetWorthCard extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -180,10 +182,18 @@ class NetWorthCard extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Currency list
-              ...sortedEntries.map((entry) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
+              // Currency list (scrollable when many entries)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: sortedEntries.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final entry = sortedEntries[index];
+                    return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
@@ -200,8 +210,10 @@ class NetWorthCard extends StatelessWidget {
                               ),
                         ),
                       ],
-                    ),
-                  )),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         );
