@@ -4,9 +4,9 @@
   # PDF imports have a simplified flow: Upload -> Confirm
   # Upload/Configure/Clean are always complete for processed PDF imports
   [
-    { name: t("imports.steps.upload", default: "Upload"), path: nil, is_complete: import.pdf_uploaded?, step_number: 1 },
-    { name: t("imports.steps.configure", default: "Configure"), path: nil, is_complete: import.configured?, step_number: 2 },
-    { name: t("imports.steps.clean", default: "Clean"), path: nil, is_complete: import.cleaned?, step_number: 3 },
+    { name: t("imports.steps.upload", default: "Upload"), path: nil, match_path: import_path(import), is_complete: import.pdf_uploaded?, step_number: 1 },
+    { name: t("imports.steps.configure", default: "Configure"), path: nil, match_path: import_path(import), is_complete: import.configured?, step_number: 2 },
+    { name: t("imports.steps.clean", default: "Clean"), path: nil, match_path: import_path(import), is_complete: import.cleaned?, step_number: 3 },
     { name: t("imports.steps.confirm", default: "Confirm"), path: import_path(import), is_complete: import.complete?, step_number: 4 }
   ]
 else
@@ -20,7 +20,7 @@ else
 end %>
 
 <% content_for :mobile_import_progress do %>
-  <% active_step = steps.detect { |s| request.path.eql?(s[:path]) } %>
+  <% active_step = steps.detect { |s| request.path.eql?(s[:match_path] || s[:path]) } %>
   <% if active_step.present? %>
     <div class="md:hidden text-center text-secondary text-md my-2">
       <span class="text-gray-500">Step <%= active_step[:step_number] %> of <%= steps.size %></span>
@@ -31,7 +31,7 @@ end %>
 <ul class="hidden md:flex items-center gap-2">
   <% steps.each_with_index do |step, idx| %>
     <li class="flex items-center gap-2 group">
-      <% is_current = request.path == step[:path] %>
+      <% is_current = request.path == (step[:match_path] || step[:path]) %>
 
       <% text_class = if is_current
                   "text-primary"
