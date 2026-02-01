@@ -36,6 +36,24 @@ export default class extends Controller {
         }
       }
     });
+
+    // Apply cascade for any parents already checked on page load
+    // (e.g., from URL params or saved search)
+    this.applyInitialCascade();
+  }
+
+  applyInitialCascade() {
+    this.childrenMap.forEach((children, parentId) => {
+      const parentCheckbox = this.checkboxTargets.find(
+        (cb) => cb.dataset.categoryId === parentId
+      );
+
+      if (parentCheckbox && parentCheckbox.checked) {
+        children.forEach((childCheckbox) => {
+          childCheckbox.checked = true;
+        });
+      }
+    });
   }
 
   toggle(event) {
