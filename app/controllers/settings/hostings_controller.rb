@@ -25,6 +25,7 @@ class Settings::HostingsController < ApplicationController
     if @show_twelve_data_settings
       twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
       @twelve_data_usage = twelve_data_provider&.usage
+      @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
     end
 
     if @show_yahoo_finance_settings

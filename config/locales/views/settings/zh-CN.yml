@@ -38,6 +38,7 @@ zh-CN:
         general_subtitle: 配置个人偏好设置
         general_title: 通用设置
         language: 语言
+        language_auto: 浏览器语言
         page_title: 偏好设置
         theme_dark: 深色模式
         theme_light: 浅色模式

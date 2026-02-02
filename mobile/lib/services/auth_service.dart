@@ -12,6 +12,8 @@ class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   static const String _tokenKey = 'auth_tokens';
   static const String _userKey = 'user_data';
+  static const String _apiKeyKey = 'api_key';
+  static const String _authModeKey = 'auth_mode';
 
   Future<Map<String, dynamic>> login({
     required String email,
@@ -286,9 +288,64 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> loginWithApiKey({
+    required String apiKey,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/accounts');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'X-Api-Key': apiKey,
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      LogService.instance.debug('AuthService', 'API key login response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        await _saveApiKey(apiKey);
+        return {
+          'success': true,
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Invalid API key',
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Login failed (status ${response.statusCode})',
+        };
+      }
+    } on SocketException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'API key login SocketException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'API key login TimeoutException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Request timed out',
+      };
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'API key login unexpected error: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'An unexpected error occurred',
+      };
+    }
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userKey);
+    await _storage.delete(key: _apiKeyKey);
+    await _storage.delete(key: _authModeKey);
   }
 
   Future<AuthTokens?> getStoredTokens() async {
@@ -330,5 +387,18 @@ class AuthService {
         'last_name': user.lastName,
       }),
     );
+  }
+
+  Future<void> _saveApiKey(String apiKey) async {
+    await _storage.write(key: _apiKeyKey, value: apiKey);
+    await _storage.write(key: _authModeKey, value: 'api_key');
+  }
+
+  Future<String?> getStoredApiKey() async {
+    return await _storage.read(key: _apiKeyKey);
+  }
+
+  Future<String?> getStoredAuthMode() async {
+    return await _storage.read(key: _authModeKey);
   }
 }

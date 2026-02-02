@@ -3,6 +3,7 @@ import '../models/user.dart';
 import '../models/auth_tokens.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
+import '../services/api_config.dart';
 import '../services/log_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -11,6 +12,8 @@ class AuthProvider with ChangeNotifier {
 
   User? _user;
   AuthTokens? _tokens;
+  String? _apiKey;
+  bool _isApiKeyAuth = false;
   bool _isLoading = true;
   bool _isInitializing = true; // Track initial auth check separately
   String? _errorMessage;
@@ -21,7 +24,10 @@ class AuthProvider with ChangeNotifier {
   AuthTokens? get tokens => _tokens;
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing; // Expose initialization state
-  bool get isAuthenticated => _tokens != null && !_tokens!.isExpired;
+  bool get isApiKeyAuth => _isApiKeyAuth;
+  bool get isAuthenticated =>
+      (_isApiKeyAuth && _apiKey != null) ||
+      (_tokens != null && !_tokens!.isExpired);
   String? get errorMessage => _errorMessage;
   bool get mfaRequired => _mfaRequired;
   bool get showMfaInput => _showMfaInput; // Expose MFA input state
@@ -36,16 +42,28 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _tokens = await _authService.getStoredTokens();
-      _user = await _authService.getStoredUser();
+      final authMode = await _authService.getStoredAuthMode();
 
-      // If tokens exist but are expired, try to refresh
-      if (_tokens != null && _tokens!.isExpired) {
-        await _refreshToken();
+      if (authMode == 'api_key') {
+        _apiKey = await _authService.getStoredApiKey();
+        if (_apiKey != null) {
+          _isApiKeyAuth = true;
+          ApiConfig.setApiKeyAuth(_apiKey!);
+        }
+      } else {
+        _tokens = await _authService.getStoredTokens();
+        _user = await _authService.getStoredUser();
+
+        // If tokens exist but are expired, try to refresh
+        if (_tokens != null && _tokens!.isExpired) {
+          await _refreshToken();
+        }
       }
     } catch (e) {
       _tokens = null;
       _user = null;
+      _apiKey = null;
+      _isApiKeyAuth = false;
     }
 
     _isLoading = false;
@@ -121,6 +139,40 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> loginWithApiKey({
+    required String apiKey,
+  }) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _authService.loginWithApiKey(apiKey: apiKey);
+
+      LogService.instance.debug('AuthProvider', 'API key login result: $result');
+
+      if (result['success'] == true) {
+        _apiKey = apiKey;
+        _isApiKeyAuth = true;
+        ApiConfig.setApiKeyAuth(apiKey);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'] as String?;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'API key login error: $e\n$stackTrace');
+      _errorMessage = 'Unable to connect. Please check your network and try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> signup({
     required String email,
     required String password,
@@ -167,8 +219,11 @@ class AuthProvider with ChangeNotifier {
     await _authService.logout();
     _tokens = null;
     _user = null;
+    _apiKey = null;
+    _isApiKeyAuth = false;
     _errorMessage = null;
     _mfaRequired = false;
+    ApiConfig.clearApiKeyAuth();
     notifyListeners();
   }
 
@@ -197,6 +252,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<String?> getValidAccessToken() async {
+    if (_isApiKeyAuth && _apiKey != null) {
+      return _apiKey;
+    }
+
     if (_tokens == null) return null;
 
     if (_tokens!.isExpired) {

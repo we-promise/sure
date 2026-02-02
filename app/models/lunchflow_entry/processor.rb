@@ -73,10 +73,20 @@ class LunchflowEntry::Processor
         base_temp_id = content_hash_for_transaction(data)
         temp_id_with_prefix = "lunchflow_pending_#{base_temp_id}"
 
-        # Handle collisions: if this external_id already exists for this account,
-        # append a counter to make it unique. This prevents multiple pending transactions
-        # with identical attributes (e.g., two same-day Uber rides) from colliding.
-        # We check both the account's entries and the current raw payload being processed.
+        # Check if entry with this external_id already exists
+        # If it does AND it's still pending, reuse the same ID for re-sync.
+        # The import adapter's skip logic will handle user edits correctly.
+        # We DON'T check if attributes match - user edits should not cause duplicates.
+        if entry_exists_with_external_id?(temp_id_with_prefix)
+          existing_entry = account.entries.find_by(external_id: temp_id_with_prefix, source: "lunchflow")
+          if existing_entry && existing_entry.entryable.is_a?(Transaction) && existing_entry.entryable.pending?
+            Rails.logger.debug "Lunchflow: Reusing ID #{temp_id_with_prefix} for re-synced pending transaction"
+            return temp_id_with_prefix
+          end
+        end
+
+        # Handle true collisions: multiple different transactions with same attributes
+        # (e.g., two Uber rides on the same day for the same amount within the same sync)
         final_id = temp_id_with_prefix
         counter = 1
 
