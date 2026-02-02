@@ -1,6 +1,10 @@
 require "securerandom"
 
 class Demo::Generator
+  # Deterministic API key for uptime monitoring
+  # This key is always the same so it can be hardcoded in monitoring tools
+  MONITORING_API_KEY = "demo_monitoring_key_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
   #
@@ -93,6 +97,9 @@ class Demo::Generator
       puts "👥 Creating demo family..."
       family = create_family_and_users!("Demo Family", email, onboarded: true, subscribed: true)
 
+      puts "🔑 Creating monitoring API key..."
+      create_monitoring_api_key!(family)
+
       puts "📊 Creating realistic financial data..."
       create_realistic_categories!(family)
       create_realistic_accounts!(family)
@@ -179,6 +186,32 @@ class Demo::Generator
       )
 
       family
+    end
+
+    def create_monitoring_api_key!(family)
+      admin_user = family.users.find_by(role: "admin")
+      return unless admin_user
+
+      # Find existing key scoped to this admin user by the deterministic display_key value
+      existing_key = admin_user.api_keys.find_by(display_key: MONITORING_API_KEY)
+
+      if existing_key
+        puts "  → Use existing monitoring API key"
+        return existing_key
+      end
+
+      # Revoke any existing web API keys for this user to avoid one-per-source validation error
+      admin_user.api_keys.active.where(source: "web").find_each(&:revoke!)
+
+      api_key = admin_user.api_keys.create!(
+        name: "monitoring",
+        key: MONITORING_API_KEY,
+        scopes: [ "read" ],
+        source: "web"
+      )
+
+      puts "  → Created monitoring API key: #{MONITORING_API_KEY}"
+      api_key
     end
 
     def create_realistic_categories!(family)
