@@ -3,6 +3,10 @@ es:
   onboardings:
     header:
       sign_out: Cerrar sesión
+      setup: Configuración
+      preferences: Preferencias
+      goals: Objetivos
+      start: Inicio
     preferences:
       currency: Moneda
       date_format: Formato de fecha
@@ -12,6 +16,18 @@ es:
       submit: Completar
       subtitle: Vamos a configurar tus preferencias.
       title: Configura tus preferencias
+    goals:
+      title: ¿Cuáles son tus objetivos?
+      subtitle: Selecciona uno o más objetivos que tienes con %{product_name} como tu herramienta de finanzas personales.
+      unified_accounts: Ver todas mis cuentas en un solo lugar
+      cashflow: Entender el flujo de caja y los gastos
+      budgeting: Gestionar planes financieros y presupuestos
+      partner: Gestionar las finanzas con mi pareja
+      investments: Seguir mis inversiones
+      ai_insights: Dejar que la IA me ayude a entender mis finanzas
+      optimization: Analizar y optimizar cuentas
+      reduce_stress: Reducir el estrés financiero
+      submit: Siguiente
     profile:
       country: País
       first_name: Nombre

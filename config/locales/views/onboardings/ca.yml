@@ -3,6 +3,10 @@ ca:
   onboardings:
     header:
       sign_out: Tanca la sessió
+      setup: Configuració
+      preferences: Preferències
+      goals: Objectius
+      start: Inici
     preferences:
       currency: Moneda
       date_format: Format de data
@@ -12,6 +16,18 @@ ca:
       submit: Completa
       subtitle: Configurem les teves preferències.
       title: Configura les teves preferències
+    goals:
+      title: Quins són els teus objectius?
+      subtitle: Selecciona un o més objectius que tens amb %{product_name} com a eina de finances personals.
+      unified_accounts: Veure tots els meus comptes en un sol lloc
+      cashflow: Entendre el flux de caixa i les despeses
+      budgeting: Gestionar plans financers i pressupostos
+      partner: Gestionar les finances amb la parella
+      investments: Fer seguiment de les inversions
+      ai_insights: Deixar que la IA m'ajudi a entendre les meves finances
+      optimization: Analitzar i optimitzar comptes
+      reduce_stress: Reduir l'estrès financer
+      submit: Següent
     profile:
       country: País
       first_name: Nom

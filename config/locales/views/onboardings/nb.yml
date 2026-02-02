@@ -3,6 +3,10 @@ nb:
   onboardings:
     header:
       sign_out: Logg ut
+      setup: Oppsett
+      preferences: Preferanser
+      goals: Mål
+      start: Start
     preferences:
       currency: Valuta
       date_format: Datoformat
@@ -12,6 +16,18 @@ nb:
       submit: Fullfør
       subtitle: La oss konfigurere preferansene dine.
       title: Konfigurer preferansene dine
+    goals:
+      title: Hva er målene dine?
+      subtitle: Velg ett eller flere mål du har med %{product_name} som ditt personlige økonomiverktøy.
+      unified_accounts: Se alle kontoene mine på ett sted
+      cashflow: Forstå kontantstrøm og utgifter
+      budgeting: Administrere økonomiske planer og budsjetter
+      partner: Administrere økonomi med partner
+      investments: Følge med på investeringer
+      ai_insights: La AI hjelpe meg å forstå økonomien min
+      optimization: Analysere og optimalisere kontoer
+      reduce_stress: Redusere økonomisk stress
+      submit: Neste
     profile:
       country: Land
       first_name: Fornavn

@@ -3,6 +3,10 @@ nl:
   onboardings:
     header:
       sign_out: Uitloggen
+      setup: Instellen
+      preferences: Voorkeuren
+      goals: Doelen
+      start: Start
     preferences:
       currency: Valuta
       date_format: Datumformaat
@@ -12,6 +16,18 @@ nl:
       submit: Voltooien
       subtitle: Laten we uw voorkeuren configureren.
       title: Configureer uw voorkeuren
+    goals:
+      title: Wat zijn uw doelen?
+      subtitle: Selecteer een of meer doelen die u hebt met %{product_name} als uw persoonlijke financiële tool.
+      unified_accounts: Al mijn rekeningen op één plek zien
+      cashflow: Cashflow en uitgaven begrijpen
+      budgeting: Financiële plannen en budgetten beheren
+      partner: Financiën beheren met mijn partner
+      investments: Investeringen volgen
+      ai_insights: AI laten helpen om mijn financiën te begrijpen
+      optimization: Rekeningen analyseren en optimaliseren
+      reduce_stress: Financiële stress verminderen
+      submit: Volgende
     profile:
       country: Land
       first_name: Voornaam

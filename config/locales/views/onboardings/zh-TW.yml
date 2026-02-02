@@ -3,6 +3,10 @@ zh-TW:
   onboardings:
     header:
       sign_out: 登出
+      setup: 設定
+      preferences: 偏好設定
+      goals: 目標
+      start: 開始
     preferences:
       currency: 幣別
       date_format: 日期格式
@@ -12,6 +16,18 @@ zh-TW:
       submit: 完成
       subtitle: 讓我們來設定您的偏好設定。
       title: 設定您的偏好設定
+    goals:
+      title: 您的目標是什麼？
+      subtitle: 選擇一個或多個您使用 %{product_name} 作為個人理財工具的目標。
+      unified_accounts: 在一個地方查看所有帳戶
+      cashflow: 了解現金流和支出
+      budgeting: 管理財務計畫和預算
+      partner: 與伴侶共同管理財務
+      investments: 追蹤投資
+      ai_insights: 讓 AI 幫助我了解財務狀況
+      optimization: 分析和優化帳戶
+      reduce_stress: 減輕財務壓力
+      submit: 下一步
     profile:
       country: 國家
       first_name: 名字

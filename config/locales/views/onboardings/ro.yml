@@ -3,6 +3,10 @@ ro:
   onboardings:
     header:
       sign_out: Deconectare
+      setup: Configurare
+      preferences: Preferințe
+      goals: Obiective
+      start: Start
     preferences:
       currency: Monedă
       date_format: Format dată
@@ -12,6 +16,18 @@ ro:
       submit: Finalizează
       subtitle: Să configurăm preferințele tale.
       title: Configurează-ți preferințele
+    goals:
+      title: Care sunt obiectivele tale?
+      subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name} ca instrument de finanțe personale.
+      unified_accounts: Să văd toate conturile într-un singur loc
+      cashflow: Să înțeleg fluxul de numerar și cheltuielile
+      budgeting: Să gestionez planuri financiare și bugete
+      partner: Să gestionez finanțele cu partenerul
+      investments: Să urmăresc investițiile
+      ai_insights: Să las AI să mă ajute să înțeleg finanțele
+      optimization: Să analizez și să optimizez conturile
+      reduce_stress: Să reduc stresul financiar
+      submit: Următorul
     profile:
       country: Țară
       first_name: Prenume

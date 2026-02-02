@@ -3,6 +3,10 @@ de:
   onboardings:
     header:
       sign_out: Abmelden
+      setup: Setup
+      preferences: Einstellungen
+      goals: Ziele
+      start: Start
     preferences:
       currency: Währung
       date_format: Datumsformat
@@ -12,6 +16,18 @@ de:
       submit: Abschließen
       subtitle: Lass uns deine Einstellungen konfigurieren
       title: Einstellungen konfigurieren
+    goals:
+      title: Was sind deine Ziele?
+      subtitle: Wähle ein oder mehrere Ziele aus, die du mit %{product_name} als dein persönliches Finanztool erreichen möchtest.
+      unified_accounts: Alle meine Konten an einem Ort sehen
+      cashflow: Cashflow und Ausgaben verstehen
+      budgeting: Finanzpläne und Budgets verwalten
+      partner: Finanzen gemeinsam mit Partner verwalten
+      investments: Investments verfolgen
+      ai_insights: KI nutzen um Einblicke zu erhalten
+      optimization: Konten analysieren und optimieren
+      reduce_stress: Finanziellen Stress reduzieren
+      submit: Weiter
     profile:
       country: Land
       first_name: Vorname

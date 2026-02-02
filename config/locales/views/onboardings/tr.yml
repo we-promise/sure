@@ -3,6 +3,10 @@ tr:
   onboardings:
     header:
       sign_out: Çıkış yap
+      setup: Kurulum
+      preferences: Tercihler
+      goals: Hedefler
+      start: Başla
     preferences:
       currency: Para birimi
       date_format: Tarih formatı
@@ -12,6 +16,18 @@ tr:
       submit: Tamamla
       subtitle: Tercihlerinizi yapılandıralım.
       title: Tercihlerinizi yapılandırın
+    goals:
+      title: Hedefleriniz neler?
+      subtitle: "%{product_name}'i kişisel finans aracınız olarak kullanırken sahip olduğunuz bir veya daha fazla hedefi seçin."
+      unified_accounts: Tüm hesaplarımı tek bir yerde görmek
+      cashflow: Nakit akışını ve harcamaları anlamak
+      budgeting: Finansal planları ve bütçeleri yönetmek
+      partner: Eşimle birlikte finansları yönetmek
+      investments: Yatırımları takip etmek
+      ai_insights: Yapay zekanın finanslarımı anlamama yardımcı olmasını sağlamak
+      optimization: Hesapları analiz etmek ve optimize etmek
+      reduce_stress: Finansal stresi azaltmak
+      submit: İleri
     profile:
       country: Ülke
       first_name: Ad
@@ -24,4 +40,4 @@ tr:
     show:
       message: Burada olduğunuz için çok heyecanlıyız. Sonraki adımda profilinizi tamamlamak için size birkaç soru soracağız ve ardından her şeyi ayarlayacağız.
       setup: Hesabı ayarla
-      title: Maybe ile Tanışın
+      title: "%{product_name} ile Tanışın"

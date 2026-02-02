@@ -3,6 +3,10 @@ en:
   onboardings:
     header:
       sign_out: Log out
+      setup: Setup
+      preferences: Preferences
+      goals: Goals
+      start: Start
     preferences:
       currency: Currency
       date_format: Date format
@@ -12,6 +16,18 @@ en:
       submit: Complete
       subtitle: Let's configure your preferences.
       title: Configure your preferences
+    goals:
+      title: What brings you here?
+      subtitle: Select one or more goals that you have with using %{product_name} as your personal finance tool.
+      unified_accounts: See all my accounts in one place
+      cashflow: Understand cashflow and expenses
+      budgeting: Manage financial plans and budgeting
+      partner: Manage finances with a partner
+      investments: Track investments
+      ai_insights: Let AI help me understand my finances
+      optimization: Analyze and optimize accounts
+      reduce_stress: Reduce financial stress or anxiety
+      submit: Next
     profile:
       country: Country
       first_name: First Name
