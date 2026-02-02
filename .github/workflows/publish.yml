@@ -340,10 +340,34 @@ jobs:
       contents: write
 
     steps:
-      - name: Check out main branch
+      - name: Determine source branch for tag
+        id: source_branch
+        run: |
+          # Fetch all branches to find which one contains this tag's commit
+          git init --quiet
+          git remote add origin "https://github.com/${{ github.repository }}.git"
+          git fetch origin --quiet
+
+          # Find branches containing the tagged commit
+          BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -v HEAD | sed 's/origin\///' | xargs)
+          echo "Branches containing commit: $BRANCHES"
+
+          # Prefer non-main branches (release branches) over main
+          SOURCE_BRANCH="main"
+          for branch in $BRANCHES; do
+            if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
+              SOURCE_BRANCH="$branch"
+              break
+            fi
+          done
+
+          echo "Selected source branch: $SOURCE_BRANCH"
+          echo "branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Check out source branch
         uses: actions/checkout@v4.2.0
         with:
-          ref: main
+          ref: ${{ steps.source_branch.outputs.branch }}
           token: ${{ secrets.GH_PAT }}
 
       - name: Bump pre-release version
@@ -410,6 +434,8 @@ jobs:
            grep -E "^(version|appVersion):" "$CHART_FILE"
 
       - name: Commit and push version bump
+        env:
+          SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -425,9 +451,11 @@ jobs:
 
           git commit -m "Bump version to next iteration after ${{ github.ref_name }} release"
 
+          echo "Pushing to branch: $SOURCE_BRANCH"
+
           # Push with retry logic
           attempts=0
-          until git push origin main; do
+          until git push origin HEAD:$SOURCE_BRANCH; do
             attempts=$((attempts + 1))
             if [[ $attempts -ge 4 ]]; then
               echo "ERROR: Failed to push after 4 attempts." >&2
@@ -436,5 +464,5 @@ jobs:
             delay=$((2 ** attempts))
             echo "Push failed (attempt $attempts). Retrying in ${delay} seconds..."
             sleep ${delay}
-            git pull --rebase origin main
+            git pull --rebase origin $SOURCE_BRANCH
           done
