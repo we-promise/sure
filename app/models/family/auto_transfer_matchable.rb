@@ -69,8 +69,12 @@ module Family::AutoTransferMatchable
           # Another concurrent job created the transfer; safe to ignore
         end
 
-        Transaction.find(match.inflow_transaction_id).update!(kind: "funds_movement")
-        Transaction.find(match.outflow_transaction_id).update!(kind: Transfer.kind_for_account(Transaction.find(match.outflow_transaction_id).entry.account))
+        inflow_transaction = Transaction.find(match.inflow_transaction_id)
+        outflow_transaction = Transaction.find(match.outflow_transaction_id)
+
+        # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
+        inflow_transaction.update!(kind: "funds_movement")
+        outflow_transaction.update!(kind: Transfer.kind_for_account(inflow_transaction.entry.account))
 
         used_transaction_ids << match.inflow_transaction_id
         used_transaction_ids << match.outflow_transaction_id
