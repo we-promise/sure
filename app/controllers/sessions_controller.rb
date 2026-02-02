@@ -109,14 +109,14 @@ class SessionsController < ApplicationController
     configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
-      redirect_to "sureapp://oauth/callback?error=invalid_provider&message=#{CGI.escape('SSO provider not configured')}",
+      redirect_to MobileDevice.error_callback_url(error: "invalid_provider", message: "SSO provider not configured"),
         allow_other_host: true
       return
     end
 
     device_params = params.permit(:device_id, :device_name, :device_type, :os_version, :app_version)
     unless device_params[:device_id].present? && device_params[:device_name].present? && device_params[:device_type].present?
-      redirect_to "sureapp://oauth/callback?error=missing_device_info&message=#{CGI.escape('Device information is required')}",
+      redirect_to MobileDevice.error_callback_url(error: "missing_device_info", message: "Device information is required"),
         allow_other_host: true
       return
     end
@@ -167,7 +167,7 @@ class SessionsController < ApplicationController
       if session[:mobile_sso].present?
         if user.otp_required?
           session.delete(:mobile_sso)
-          redirect_to "sureapp://oauth/callback?error=mfa_not_supported&message=#{CGI.escape('MFA users should sign in with email and password')}",
+          redirect_to MobileDevice.error_callback_url(error: "mfa_not_supported", message: "MFA users should sign in with email and password"),
             allow_other_host: true
         else
           handle_mobile_sso_callback(user)
@@ -191,7 +191,7 @@ class SessionsController < ApplicationController
       # Mobile SSO with no linked identity - redirect back with error
       if session[:mobile_sso].present?
         session.delete(:mobile_sso)
-        redirect_to "sureapp://oauth/callback?error=account_not_linked&message=#{CGI.escape('Please link your Google account from the web app first')}",
+        redirect_to MobileDevice.error_callback_url(error: "account_not_linked", message: "Please link your Google account from the web app first"),
           allow_other_host: true
         return
       end
@@ -225,7 +225,7 @@ class SessionsController < ApplicationController
     # Mobile SSO: redirect back to the app with error instead of web login page
     if session[:mobile_sso].present?
       session.delete(:mobile_sso)
-      redirect_to "sureapp://oauth/callback?error=#{sanitized_reason}&message=#{CGI.escape('SSO authentication failed')}",
+      redirect_to MobileDevice.error_callback_url(error: sanitized_reason, message: "SSO authentication failed"),
         allow_other_host: true
       return
     end
@@ -247,50 +247,25 @@ class SessionsController < ApplicationController
       device_info = session.delete(:mobile_sso)
 
       unless device_info.present?
-        redirect_to "sureapp://oauth/callback?error=missing_session&message=#{CGI.escape('Mobile SSO session expired')}",
+        redirect_to MobileDevice.error_callback_url(error: "missing_session", message: "Mobile SSO session expired"),
           allow_other_host: true
         return
       end
 
-      device = user.mobile_devices.find_or_initialize_by(device_id: device_info[:device_id])
-      device.assign_attributes(
-        device_name: device_info[:device_name],
-        device_type: device_info[:device_type],
-        os_version: device_info[:os_version],
-        app_version: device_info[:app_version],
-        last_seen_at: Time.current
-      )
+      device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
+      token_response = device.issue_token!
 
-      unless device.save
-        redirect_to "sureapp://oauth/callback?error=device_error&message=#{CGI.escape(device.errors.full_messages.join(', '))}",
-          allow_other_host: true
-        return
-      end
-
-      oauth_app = device.create_oauth_application!
-      device.revoke_all_tokens!
-
-      access_token = Doorkeeper::AccessToken.create!(
-        application: oauth_app,
-        resource_owner_id: user.id,
-        expires_in: 30.days.to_i,
-        scopes: "read_write",
-        use_refresh_token: true
-      )
-
-      callback_params = {
-        access_token: access_token.plaintext_token,
-        refresh_token: access_token.plaintext_refresh_token,
-        token_type: "Bearer",
-        expires_in: access_token.expires_in,
-        created_at: access_token.created_at.to_i,
+      callback_params = token_response.merge(
         user_id: user.id,
         user_email: user.email,
         user_first_name: user.first_name,
         user_last_name: user.last_name
-      }
+      )
 
-      redirect_to "sureapp://oauth/callback?#{callback_params.to_query}", allow_other_host: true
+      redirect_to MobileDevice.callback_url_with(callback_params), allow_other_host: true
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to MobileDevice.error_callback_url(error: "device_error", message: e.record.errors.full_messages.join(", ")),
+        allow_other_host: true
     end
 
     def set_session

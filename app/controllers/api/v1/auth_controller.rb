@@ -46,8 +46,8 @@ module Api
           InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
 
           # Create device and OAuth token
-          device = create_or_update_device(user)
-          token_response = create_oauth_token_for_device(user, device)
+          device = MobileDevice.upsert_device!(user, device_params)
+          token_response = device.issue_token!
 
           render json: token_response.merge(
             user: {
@@ -84,8 +84,8 @@ module Api
           end
 
           # Create device and OAuth token
-          device = create_or_update_device(user)
-          token_response = create_oauth_token_for_device(user, device)
+          device = MobileDevice.upsert_device!(user, device_params)
+          token_response = device.issue_token!
 
           render json: token_response.merge(
             user: {
@@ -173,39 +173,10 @@ module Api
           required_fields.all? { |field| device[field].present? }
         end
 
-        def create_or_update_device(user)
-          # Handle both string and symbol keys
-          device_data = params[:device].permit(:device_id, :device_name, :device_type, :os_version, :app_version)
-
-          device = user.mobile_devices.find_or_initialize_by(device_id: device_data[:device_id])
-          device.update!(device_data.merge(last_seen_at: Time.current))
-          device
+        def device_params
+          params.require(:device).permit(:device_id, :device_name, :device_type, :os_version, :app_version)
         end
 
-        def create_oauth_token_for_device(user, device)
-          # Create OAuth application for this device if needed
-          oauth_app = device.create_oauth_application!
-
-          # Revoke any existing tokens for this device
-          device.revoke_all_tokens!
-
-          # Create new access token with 30-day expiration
-          access_token = Doorkeeper::AccessToken.create!(
-            application: oauth_app,
-            resource_owner_id: user.id,
-            expires_in: 30.days.to_i,
-            scopes: "read_write",
-            use_refresh_token: true
-          )
-
-          {
-            access_token: access_token.plaintext_token,
-            refresh_token: access_token.plaintext_refresh_token,
-            token_type: "Bearer",
-            expires_in: access_token.expires_in,
-            created_at: access_token.created_at.to_i
-          }
-        end
     end
   end
 end
