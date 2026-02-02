@@ -89,8 +89,13 @@ module Api
           end
 
           # Create device and OAuth token
-          device = MobileDevice.upsert_device!(user, device_params)
-          token_response = device.issue_token!
+          begin
+            device = MobileDevice.upsert_device!(user, device_params)
+            token_response = device.issue_token!
+          rescue ActiveRecord::RecordInvalid => e
+            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            return
+          end
 
           render json: token_response.merge(
             user: {
@@ -107,6 +112,12 @@ module Api
 
       def sso_exchange
         code = params[:code].to_s
+
+        if code.blank?
+          render json: { error: "invalid_or_expired_code", message: "Authorization code is required" }, status: :unauthorized
+          return
+        end
+
         cached = Rails.cache.read("mobile_sso:#{code}")
 
         unless cached.present?
