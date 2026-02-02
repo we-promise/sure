@@ -44,7 +44,7 @@
               <%= render DS::Link.new(text: t("imports.pdf_import.create_account", default: "Create Account"), href: new_account_path(return_to: import_path(import)), variant: "primary", full_width: true, frame: :modal) %>
             <% end %>
             <% if accounts.any? %>
-              <%= f.submit t("imports.pdf_import.save_account", default: "Save"), class: "btn btn--primary w-full" %>
+              <%= f.submit t("imports.pdf_import.save_account", default: "Save"), class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
             <% end %>
           <% end %>
         </div>
@@ -52,7 +52,7 @@
 
       <div class="space-y-2 flex flex-col">
         <% if import.publishable? %>
-          <%= button_to t("imports.pdf_import.publish_transactions", default: "Publish %{count} Transactions", count: import.rows_count), publish_import_path(import), method: :post, class: "btn btn--primary w-full" %>
+          <%= button_to t("imports.pdf_import.publish_transactions", default: "Publish %{count} Transactions", count: import.rows_count), publish_import_path(import), method: :post, class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
         <% elsif import.account.present? %>
           <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions", default: "Review Transactions"), href: import_confirm_path(import), variant: "primary", full_width: true) %>
         <% else %>
@@ -91,7 +91,7 @@
 
       <div class="space-y-2 flex flex-col">
         <%= render DS::Link.new(text: t("imports.pdf_import.try_again"), href: new_import_path, variant: "primary", full_width: true) %>
-        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "btn btn--secondary w-full" %>
+        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-primary bg-gray-200 hover:bg-gray-300" %>
       </div>
 
     <% elsif import.complete? && import.ai_processed? %>
@@ -126,7 +126,7 @@
 
       <div class="space-y-2 flex flex-col">
         <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "primary", full_width: true) %>
-        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "btn btn--secondary w-full" %>
+        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-primary bg-gray-200 hover:bg-gray-300" %>
       </div>
 
     <% else %>
