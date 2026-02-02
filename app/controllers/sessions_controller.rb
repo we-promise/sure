@@ -109,15 +109,13 @@ class SessionsController < ApplicationController
     configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
-      redirect_to MobileDevice.error_callback_url(error: "invalid_provider", message: "SSO provider not configured"),
-        allow_other_host: true
+      mobile_sso_redirect(error: "invalid_provider", message: "SSO provider not configured")
       return
     end
 
     device_params = params.permit(:device_id, :device_name, :device_type, :os_version, :app_version)
     unless device_params[:device_id].present? && device_params[:device_name].present? && device_params[:device_type].present?
-      redirect_to MobileDevice.error_callback_url(error: "missing_device_info", message: "Device information is required"),
-        allow_other_host: true
+      mobile_sso_redirect(error: "missing_device_info", message: "Device information is required")
       return
     end
 
@@ -167,8 +165,7 @@ class SessionsController < ApplicationController
       if session[:mobile_sso].present?
         if user.otp_required?
           session.delete(:mobile_sso)
-          redirect_to MobileDevice.error_callback_url(error: "mfa_not_supported", message: "MFA users should sign in with email and password"),
-            allow_other_host: true
+          mobile_sso_redirect(error: "mfa_not_supported", message: "MFA users should sign in with email and password")
         else
           handle_mobile_sso_callback(user)
         end
@@ -191,8 +188,7 @@ class SessionsController < ApplicationController
       # Mobile SSO with no linked identity - redirect back with error
       if session[:mobile_sso].present?
         session.delete(:mobile_sso)
-        redirect_to MobileDevice.error_callback_url(error: "account_not_linked", message: "Please link your Google account from the web app first"),
-          allow_other_host: true
+        mobile_sso_redirect(error: "account_not_linked", message: "Please link your Google account from the web app first")
         return
       end
 
@@ -225,8 +221,7 @@ class SessionsController < ApplicationController
     # Mobile SSO: redirect back to the app with error instead of web login page
     if session[:mobile_sso].present?
       session.delete(:mobile_sso)
-      redirect_to MobileDevice.error_callback_url(error: sanitized_reason, message: "SSO authentication failed"),
-        allow_other_host: true
+      mobile_sso_redirect(error: sanitized_reason, message: "SSO authentication failed")
       return
     end
 
@@ -247,8 +242,7 @@ class SessionsController < ApplicationController
       device_info = session.delete(:mobile_sso)
 
       unless device_info.present?
-        redirect_to MobileDevice.error_callback_url(error: "missing_session", message: "Mobile SSO session expired"),
-          allow_other_host: true
+        mobile_sso_redirect(error: "missing_session", message: "Mobile SSO session expired")
         return
       end
 
@@ -262,10 +256,13 @@ class SessionsController < ApplicationController
         user_last_name: user.last_name
       )
 
-      redirect_to MobileDevice.callback_url_with(callback_params), allow_other_host: true
+      mobile_sso_redirect(callback_params)
     rescue ActiveRecord::RecordInvalid => e
-      redirect_to MobileDevice.error_callback_url(error: "device_error", message: e.record.errors.full_messages.join(", ")),
-        allow_other_host: true
+      mobile_sso_redirect(error: "device_error", message: e.record.errors.full_messages.join(", "))
+    end
+
+    def mobile_sso_redirect(params = {})
+      redirect_to "sureapp://oauth/callback?#{params.to_query}", allow_other_host: true
     end
 
     def set_session

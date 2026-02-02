@@ -176,7 +176,6 @@ module Api
         def device_params
           params.require(:device).permit(:device_id, :device_name, :device_type, :os_version, :app_version)
         end
-
     end
   end
 end

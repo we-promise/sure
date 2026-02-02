@@ -32,14 +32,6 @@ class MobileDevice < ApplicationRecord
     device
   end
 
-  def self.callback_url_with(params)
-    "#{CALLBACK_URL}?#{params.to_query}"
-  end
-
-  def self.error_callback_url(error:, message:)
-    callback_url_with(error: error, message: message)
-  end
-
   def active?
     last_seen_at > 90.days.ago
   end
