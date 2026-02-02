@@ -46,8 +46,13 @@ module Api
           InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
 
           # Create device and OAuth token
-          device = MobileDevice.upsert_device!(user, device_params)
-          token_response = device.issue_token!
+          begin
+            device = MobileDevice.upsert_device!(user, device_params)
+            token_response = device.issue_token!
+          rescue ActiveRecord::RecordInvalid => e
+            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            return
+          end
 
           render json: token_response.merge(
             user: {
@@ -98,6 +103,33 @@ module Api
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
         end
+      end
+
+      def sso_exchange
+        code = params[:code].to_s
+        cached = Rails.cache.read("mobile_sso:#{code}")
+
+        unless cached.present?
+          render json: { error: "invalid_or_expired_code", message: "Authorization code is invalid or expired" }, status: :unauthorized
+          return
+        end
+
+        # Delete immediately — one-time use
+        Rails.cache.delete("mobile_sso:#{code}")
+
+        render json: {
+          access_token: cached[:access_token],
+          refresh_token: cached[:refresh_token],
+          token_type: cached[:token_type],
+          expires_in: cached[:expires_in],
+          created_at: cached[:created_at],
+          user: {
+            id: cached[:user_id],
+            email: cached[:user_email],
+            first_name: cached[:user_first_name],
+            last_name: cached[:user_last_name]
+          }
+        }
       end
 
       def refresh

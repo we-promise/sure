@@ -249,16 +249,23 @@ class SessionsController < ApplicationController
       device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
       token_response = device.issue_token!
 
-      callback_params = token_response.merge(
-        user_id: user.id,
-        user_email: user.email,
-        user_first_name: user.first_name,
-        user_last_name: user.last_name
+      # Store tokens behind a one-time authorization code instead of passing in URL
+      authorization_code = SecureRandom.urlsafe_base64(32)
+      Rails.cache.write(
+        "mobile_sso:#{authorization_code}",
+        token_response.merge(
+          user_id: user.id,
+          user_email: user.email,
+          user_first_name: user.first_name,
+          user_last_name: user.last_name
+        ),
+        expires_in: 5.minutes
       )
 
-      mobile_sso_redirect(callback_params)
+      mobile_sso_redirect(code: authorization_code)
     rescue ActiveRecord::RecordInvalid => e
-      mobile_sso_redirect(error: "device_error", message: e.record.errors.full_messages.join(", "))
+      Rails.logger.warn("[Mobile SSO] Device save failed: #{e.record.errors.full_messages.join(', ')}")
+      mobile_sso_redirect(error: "device_error", message: "Unable to register device")
     end
 
     def mobile_sso_redirect(params = {})

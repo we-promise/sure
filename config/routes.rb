@@ -356,6 +356,7 @@ Rails.application.routes.draw do
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
+      post "auth/sso_exchange", to: "auth#sso_exchange"
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
