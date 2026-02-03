@@ -10,6 +10,9 @@ class SessionsController < ApplicationController
   end
 
   def new
+    # Clear any stale mobile SSO session flag from an abandoned mobile flow
+    session.delete(:mobile_sso)
+
     begin
       demo = Rails.application.config_for(:demo)
       @prefill_demo_credentials = demo_host_match?(demo)
@@ -29,6 +32,9 @@ class SessionsController < ApplicationController
   end
 
   def create
+    # Clear any stale mobile SSO session flag from an abandoned mobile flow
+    session.delete(:mobile_sso)
+
     user = nil
 
     if AuthConfig.local_login_enabled?
@@ -128,16 +134,8 @@ class SessionsController < ApplicationController
     }
 
     # Render auto-submitting form to POST to OmniAuth (required by omniauth-rails_csrf_protection)
-    render inline: <<~HTML, layout: false, content_type: "text/html"
-      <!DOCTYPE html>
-      <html><body>
-        <form id="sso_form" action="/auth/#{ERB::Util.html_escape(provider)}" method="post">
-          <input type="hidden" name="authenticity_token" value="#{form_authenticity_token}">
-        </form>
-        <script>document.getElementById('sso_form').submit();</script>
-        <noscript><p>Redirecting to sign in... <a href="/auth/#{ERB::Util.html_escape(provider)}">Click here</a> if not redirected.</p></noscript>
-      </body></html>
-    HTML
+    @provider = provider
+    render layout: false
   end
 
   def openid_connect

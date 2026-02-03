@@ -111,22 +111,27 @@ module Api
       end
 
       def sso_exchange
-        code = params[:code].to_s
+        code = sso_exchange_params
 
         if code.blank?
           render json: { error: "invalid_or_expired_code", message: "Authorization code is required" }, status: :unauthorized
           return
         end
 
-        cached = Rails.cache.read("mobile_sso:#{code}")
+        cache_key = "mobile_sso:#{code}"
+        cached = Rails.cache.read(cache_key)
 
         unless cached.present?
           render json: { error: "invalid_or_expired_code", message: "Authorization code is invalid or expired" }, status: :unauthorized
           return
         end
 
-        # Delete immediately — one-time use
-        Rails.cache.delete("mobile_sso:#{code}")
+        # Atomic delete — only the request that successfully deletes the key may proceed.
+        # This prevents a race where two concurrent requests both read the same code.
+        unless Rails.cache.delete(cache_key)
+          render json: { error: "invalid_or_expired_code", message: "Authorization code is invalid or expired" }, status: :unauthorized
+          return
+        end
 
         render json: {
           access_token: cached[:access_token],
@@ -218,6 +223,10 @@ module Api
 
         def device_params
           params.require(:device).permit(:device_id, :device_name, :device_type, :os_version, :app_version)
+        end
+
+        def sso_exchange_params
+          params.require(:code)
         end
     end
   end
