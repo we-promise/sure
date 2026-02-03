@@ -106,9 +106,16 @@ end
 
   def update
     if @entry.update(entry_params_for_update)
+      # Handle tags separately - only when explicitly provided in the request
+      # This allows clearing tags with tag_ids: [] while preserving tags when not specified
+      if tags_provided?
+        @entry.transaction.tag_ids = transaction_params[:tag_ids] || []
+        @entry.transaction.save!
+        @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      end
+
       @entry.sync_account_later
       @entry.lock_saved_attributes!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       @transaction = @entry.transaction
       render :show
@@ -283,8 +290,9 @@ end
         entryable_attributes: {
           id: @entry.entryable_id,
           category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id],
-          tag_ids: transaction_params[:tag_ids]
+          merchant_id: transaction_params[:merchant_id]
+          # Note: tag_ids handled separately in update action to distinguish
+          # "not provided" from "explicitly set to empty"
         }.compact_blank
       }
 
@@ -294,6 +302,12 @@ end
       end
 
       entry_params.compact
+    end
+
+    # Check if tag_ids was explicitly provided in the request.
+    # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
+    def tags_provided?
+      params[:transaction].key?(:tag_ids)
     end
 
     def calculate_signed_amount
