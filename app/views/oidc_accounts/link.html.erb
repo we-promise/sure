@@ -1,61 +1,60 @@
 <%
-  header_title @user_exists ? "Link OIDC Account" : "Create Account"
+  header_title @user_exists ? t("oidc_accounts.link.title_link") : t("oidc_accounts.link.title_create")
 %>
 
 <% if @user_exists %>
   <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-    <h3 class="text-sm font-medium text-yellow-800 mb-2">Verify Your Identity</h3>
+    <h3 class="text-sm font-medium text-yellow-800 mb-2"><%= t("oidc_accounts.link.verify_heading") %></h3>
     <p class="text-sm text-yellow-700">
-      To link your <%= @pending_auth["provider"] %> account<% if @pending_auth["email"].present? %> (<%= @pending_auth["email"] %>)<% end %>,
-      please verify your identity by entering your password.
+      <% email_suffix = @pending_auth["email"].present? ? t("oidc_accounts.link.email_suffix_html", email: @pending_auth["email"]) : "" %>
+      <%= t("oidc_accounts.link.verify_description_html", provider: @pending_auth["provider"], email_suffix: email_suffix).html_safe %>
     </p>
   </div>
 
   <%= styled_form_with url: create_link_oidc_account_path, class: "space-y-4", data: { turbo: false } do |form| %>
     <%= form.email_field :email,
-      label: "Email",
-      autofocus: false,
-      autocomplete: "email",
-      required: "required",
-      placeholder: "Enter your email",
-      value: @email %>
+                         label: t("oidc_accounts.link.email_label"),
+                         autofocus: false,
+                         autocomplete: "email",
+                         required: "required",
+                         placeholder: t("oidc_accounts.link.email_placeholder"),
+                         value: @email %>
 
     <%= form.password_field :password,
-      label: "Password",
-      required: "required",
-      placeholder: "Enter your password",
-      autocomplete: "current-password" %>
+                            label: t("oidc_accounts.link.password_label"),
+                            required: "required",
+                            placeholder: t("oidc_accounts.link.password_placeholder"),
+                            autocomplete: "current-password" %>
 
     <div class="text-sm text-gray-600 mt-2">
-      <p>This helps ensure that only you can link external accounts to your profile.</p>
+      <p><%= t("oidc_accounts.link.verify_hint") %></p>
     </div>
 
-    <%= form.submit "Link Account" %>
+    <%= form.submit t("oidc_accounts.link.submit_link") %>
   <% end %>
 <% else %>
   <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-    <h3 class="text-sm font-medium text-blue-800 mb-2">Create New Account</h3>
+    <h3 class="text-sm font-medium text-blue-800 mb-2"><%= t("oidc_accounts.link.create_heading") %></h3>
     <p class="text-sm text-blue-700">
-      No account found with the email <strong><%= @pending_auth["email"] %></strong>.
-      Click below to create a new account using your <%= @pending_auth["provider"] %> identity.
+      <%= t("oidc_accounts.link.create_description_html", email: @pending_auth["email"], provider: @pending_auth["provider"]).html_safe %>
     </p>
   </div>
 
   <div class="space-y-4">
     <div class="p-4 bg-container border border-secondary rounded-md">
       <p class="text-sm text-primary">
-        <strong>Email:</strong> <%= @pending_auth["email"] %>
+        <strong><%= t("oidc_accounts.link.info_email") %></strong> <%= @pending_auth["email"] %>
       </p>
       <% if @pending_auth["name"].present? %>
         <p class="text-sm text-primary mt-2">
-          <strong>Name:</strong> <%= @pending_auth["name"] %>
+          <strong><%= t("oidc_accounts.link.info_name") %></strong> <%= @pending_auth["name"] %>
         </p>
       <% end %>
     </div>
 
     <% if @allow_account_creation %>
       <%= render DS::Button.new(
-        text: "Create Account",
+        text: t("oidc_accounts.link.submit_create"),
         href: create_user_oidc_account_path,
         full_width: true,
         variant: :primary,
@@ -72,7 +71,7 @@
 
 <div class="mt-6 text-center">
   <%= render DS::Link.new(
-    text: "Cancel",
+    text: t("oidc_accounts.link.cancel"),
     href: new_session_path,
     variant: :default,
     class: "font-medium text-sm text-primary hover:underline transition"
