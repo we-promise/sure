@@ -1,6 +1,6 @@
 # Jobs to Be Done (JTBD) Framework
 
-This document outlines the critical Jobs to Be Done for Maybe, a self-hosted personal finance and wealth management platform.
+This document outlines the critical Jobs to Be Done for `Sure`, a self-hosted personal finance and wealth management platform.
 
 ---
 
