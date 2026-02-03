@@ -17,6 +17,10 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+  deployments: write
+
 jobs:
   cleanup-on-close:
     name: Cleanup closed PR preview
