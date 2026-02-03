@@ -20,6 +20,10 @@ class Transactions::BulkUpdatesController < ApplicationController
     # Check if tag_ids was explicitly provided in the request.
     # This distinguishes between "user wants to update tags" vs "user didn't touch tags field".
     def tags_provided?
-      params[:bulk_update].key?(:tag_ids)
+      tag_ids = params.dig(:bulk_update, :tag_ids)
+      return false if tag_ids.nil?
+      return true if tag_ids.is_a?(Array) && tag_ids.empty?
+
+      Array.wrap(tag_ids).reject(&:blank?).any?
     end
 end

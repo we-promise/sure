@@ -55,6 +55,28 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_tags.map(&:id).sort, transaction_entry.transaction.tag_ids.sort
   end
 
+  test "bulk update preserves tags when tag_ids is blank string array (web multi-select default)" do
+    transaction_entry = @user.family.entries.transactions.first
+    original_tags = [ Tag.first, Tag.second ]
+    transaction_entry.transaction.tags = original_tags
+    transaction_entry.transaction.save!
+
+    # The web bulk edit multi-select can submit tag_ids with only a blank string
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ transaction_entry.id ],
+        category_id: Category.second.id,
+        tag_ids: [ "" ]
+      }
+    }
+
+    assert_redirected_to transactions_url
+
+    transaction_entry.reload
+    assert_equal Category.second, transaction_entry.transaction.category
+    assert_equal original_tags.map(&:id).sort, transaction_entry.transaction.tag_ids.sort
+  end
+
   test "bulk update clears tags when empty tag_ids explicitly provided" do
     transaction_entry = @user.family.entries.transactions.first
     transaction_entry.transaction.tags = [ Tag.first, Tag.second ]

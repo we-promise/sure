@@ -345,7 +345,7 @@ class Entry < ApplicationRecord
         }.compact_blank
       }.compact_blank
 
-      tag_ids = bulk_update_params[:tag_ids]
+      tag_ids = Array.wrap(bulk_update_params[:tag_ids]).reject(&:blank?)
       has_updates = bulk_attributes.present? || update_tags
 
       return 0 unless has_updates
@@ -360,7 +360,7 @@ class Entry < ApplicationRecord
 
           # Handle tags separately - only when explicitly requested
           if update_tags && entry.transaction?
-            entry.transaction.tag_ids = tag_ids || []
+            entry.transaction.tag_ids = tag_ids
             entry.transaction.save!
             entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
           end
