@@ -307,6 +307,11 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   # ── Mobile SSO: openid_connect callback with mobile_sso session ──
 
   test "mobile SSO issues Doorkeeper tokens for linked user" do
+    # Test environment uses null_store; swap in a memory store so the
+    # authorization code round-trip (write in controller, read in sso_exchange) works.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
     oidc_identity = oidc_identities(:bob_google)
 
     setup_omniauth_mock(
@@ -347,16 +352,26 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert redirect_url.start_with?("sureapp://oauth/callback?"), "Expected redirect to sureapp:// but got #{redirect_url}"
 
     uri = URI.parse(redirect_url)
-    params = Rack::Utils.parse_query(uri.query)
+    callback_params = Rack::Utils.parse_query(uri.query)
 
-    assert params["access_token"].present?, "Expected access_token in callback"
-    assert params["refresh_token"].present?, "Expected refresh_token in callback"
-    assert_equal "Bearer", params["token_type"]
-    assert_equal 30.days.to_i.to_s, params["expires_in"]
-    assert_equal @user.id.to_s, params["user_id"]
-    assert_equal @user.email, params["user_email"]
-    assert_equal @user.first_name, params["user_first_name"]
-    assert_equal @user.last_name, params["user_last_name"]
+    assert callback_params["code"].present?, "Expected authorization code in callback"
+
+    # Exchange the authorization code for tokens via the API (as the mobile app would)
+    post "/api/v1/auth/sso_exchange", params: { code: callback_params["code"] }, as: :json
+
+    assert_response :success
+    token_data = JSON.parse(@response.body)
+
+    assert token_data["access_token"].present?, "Expected access_token in response"
+    assert token_data["refresh_token"].present?, "Expected refresh_token in response"
+    assert_equal "Bearer", token_data["token_type"]
+    assert_equal 30.days.to_i, token_data["expires_in"]
+    assert_equal @user.id, token_data["user"]["id"]
+    assert_equal @user.email, token_data["user"]["email"]
+    assert_equal @user.first_name, token_data["user"]["first_name"]
+    assert_equal @user.last_name, token_data["user"]["last_name"]
+  ensure
+    Rails.cache = original_cache
   end
 
   test "mobile SSO creates a MobileDevice record" do
