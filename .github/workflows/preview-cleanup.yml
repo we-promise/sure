@@ -103,9 +103,24 @@ jobs:
         run: |
           # If specific PR number provided, only cleanup that one
           if [ -n "${{ inputs.pr_number }}" ]; then
-            WORKER_NAME="sure-preview-${{ inputs.pr_number }}"
+            PR_NUM="${{ inputs.pr_number }}"
+            WORKER_NAME="sure-preview-$PR_NUM"
             echo "Manually deleting Worker: $WORKER_NAME"
             wrangler delete --name "$WORKER_NAME" --force || echo "Worker may not exist"
+
+            # Cleanup GitHub deployment for this PR
+            echo "Cleaning up GitHub deployment for PR #$PR_NUM"
+            gh api \
+              -X GET "/repos/${{ github.repository }}/deployments?environment=preview-pr-$PR_NUM" \
+              --jq '.[].id' 2>/dev/null | while read -r DEPLOY_ID; do
+                if [ -n "$DEPLOY_ID" ]; then
+                  gh api \
+                    -X POST "/repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses" \
+                    -f state=inactive \
+                    -f description="Preview manually deleted" || true
+                fi
+              done || echo "No deployments to cleanup or error occurred"
+
             exit 0
           fi
 
