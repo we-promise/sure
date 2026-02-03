@@ -346,7 +346,7 @@ class Entry < ApplicationRecord
       }.compact_blank
 
       tag_ids = bulk_update_params[:tag_ids]
-      has_updates = bulk_attributes.present? || (update_tags && tag_ids.present?)
+      has_updates = bulk_attributes.present? || update_tags
 
       return 0 unless has_updates
 
