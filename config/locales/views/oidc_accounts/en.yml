@@ -2,7 +2,24 @@
 en:
   oidc_accounts:
     link:
+      title_link: Link OIDC Account
+      title_create: Create Account
+      verify_heading: Verify Your Identity
+      verify_description_html: "To link your %{provider} account%{email_suffix}, please verify your identity by entering your password."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Email
+      email_placeholder: Enter your email
+      password_label: Password
+      password_placeholder: Enter your password
+      verify_hint: This helps ensure that only you can link external accounts to your profile.
+      submit_link: Link Account
+      create_heading: Create New Account
+      create_description_html: "No account found with the email <strong>%{email}</strong>. Click below to create a new account using your %{provider} identity."
+      info_email: "Email:"
+      info_name: "Name:"
+      submit_create: Create Account
       account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.
+      cancel: Cancel
     new_user:
       title: Complete Your Account
       heading: Create Your Account

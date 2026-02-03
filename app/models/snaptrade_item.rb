@@ -29,7 +29,7 @@ class SnaptradeItem < ApplicationRecord
   # via ensure_user_registered!, so we don't validate them on create
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :snaptrade_accounts, dependent: :destroy
   has_many :linked_accounts, through: :snaptrade_accounts

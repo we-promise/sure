@@ -8,6 +8,9 @@ class Provider::Openai < Provider
   DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
   DEFAULT_MODEL = "gpt-4.1"
 
+  # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
+  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
+
   # Returns the effective model that would be used by the provider
   # Uses the same logic as Provider::Registry and the initializer
   def self.effective_model
@@ -18,6 +21,7 @@ class Provider::Openai < Provider
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
+    client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = uri_base
@@ -107,6 +111,64 @@ class Provider::Openai < Provider
       ).auto_detect_merchants
 
       trace&.update(output: result.map(&:to_h))
+
+      result
+    end
+  end
+
+  # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
+  # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
+  def supports_pdf_processing?(model: @default_model)
+    return false unless ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
+
+    # Custom providers manage their own model capabilities
+    return true if custom_provider?
+
+    # Check if the specified model supports vision/PDF input
+    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
+  end
+
+  def process_pdf(pdf_content:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+      raise Error, "Model does not support PDF/vision processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)
+
+      trace = create_langfuse_trace(
+        name: "openai.process_pdf",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = PdfProcessor.new(
+        client,
+        model: effective_model,
+        pdf_content: pdf_content,
+        custom_provider: custom_provider?,
+        langfuse_trace: trace,
+        family: family
+      ).process
+
+      trace&.update(output: result.to_h)
+
+      result
+    end
+  end
+
+  def extract_bank_statement(pdf_content:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.extract_bank_statement",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = BankStatementExtractor.new(
+        client: client,
+        pdf_content: pdf_content,
+        model: effective_model
+      ).extract
+
+      trace&.update(output: { transaction_count: result[:transactions].size })
 
       result
     end

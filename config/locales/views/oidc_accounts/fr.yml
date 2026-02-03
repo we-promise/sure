@@ -2,4 +2,32 @@
 fr:
   oidc_accounts:
     link:
-      account_creation_disabled: La création de nouveaux comptes via l'authentification unique est désactivée. Veuillez contacter un administrateur pour créer votre compte.
+      title_link: Associer un compte OIDC
+      title_create: Créer un compte
+      verify_heading: Vérifier votre identité
+      verify_description_html: "Pour associer votre compte %{provider}%{email_suffix}, veuillez vérifier votre identité en saisissant votre mot de passe."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Adresse e-mail
+      email_placeholder: Saisissez votre adresse e-mail
+      password_label: Mot de passe
+      password_placeholder: Saisissez votre mot de passe
+      verify_hint: Cela garantit que vous seul pouvez associer des comptes externes à votre profil.
+      submit_link: Associer le compte
+      create_heading: Créer un nouveau compte
+      create_description_html: "Aucun compte trouvé avec l'adresse e-mail <strong>%{email}</strong>. Cliquez ci-dessous pour créer un nouveau compte avec votre identité %{provider}."
+      info_email: "E-mail :"
+      info_name: "Nom :"
+      submit_create: Créer un compte
+      account_creation_disabled: La création de compte via l'authentification unique est désactivée. Veuillez contacter un administrateur.
+      cancel: Annuler
+    new_user:
+      title: Compléter votre compte
+      heading: Créer votre compte
+      description: Veuillez confirmer vos informations pour finaliser la création de compte avec votre identité %{provider}.
+      email_label: E-mail (du fournisseur SSO)
+      first_name_label: Prénom
+      first_name_placeholder: Saisissez votre prénom
+      last_name_label: Nom de famille
+      last_name_placeholder: Saisissez votre nom de famille
+      submit: Créer un compte
+      cancel: Annuler

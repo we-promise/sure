@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_27_213817) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_29_200129) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -499,8 +499,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_27_213817) do
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
-    t.integer "month_start_day", default: 1, null: false
-    t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
   create_table "family_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -662,6 +660,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_27_213817) do
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
     t.string "amount_type_identifier_value"
+    t.text "ai_summary"
+    t.string "document_type"
+    t.jsonb "extracted_data"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 

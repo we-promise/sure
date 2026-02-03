@@ -24,6 +24,7 @@ en:
       title: Sure
       password_placeholder: Enter your password
       openid_connect: Sign in with OpenID Connect
+      oidc: Sign in with OpenID Connect
       google_auth_connect: Sign in with Google
       local_login_admin_only: Local login is restricted to administrators.
       no_auth_methods_enabled: No authentication methods are currently enabled. Please contact an administrator.

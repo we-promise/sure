@@ -83,9 +83,9 @@
           <%= t(".period_activity", period: period.label) %>
         </div>
         <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
-          <div class="p-4 flex items-center justify-between gap-4">
+            <div class="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                <div class="w-8 h-8 p-1.5 rounded-full bg-green-500/10 flex items-center justify-center">
                 <%= icon "trending-up", size: "sm", color: "green" %>
               </div>
               <div>
@@ -94,7 +94,7 @@
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <div class="w-8 h-8 p-1.5 rounded-full bg-orange-500/10 flex items-center justify-center">
                 <%= icon "trending-down", size: "sm", color: "orange" %>
               </div>
               <div>
@@ -103,7 +103,7 @@
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <div class="w-8 h-8 p-1.5 rounded-full bg-blue-500/10 flex items-center justify-center">
                 <%= icon "arrow-left-right", size: "sm", color: "blue" %>
               </div>
               <div>
