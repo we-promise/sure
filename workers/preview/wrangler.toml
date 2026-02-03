@@ -8,7 +8,7 @@ compatibility_date = "2025-01-01"
 # Container configuration - uses preview Dockerfile with embedded PostgreSQL
 [[containers]]
 class_name = "RailsContainer"
-image = "./Dockerfile"
+image = { dockerfile = "./Dockerfile", context = "../.." }
 max_instances = 1
 
 # Durable Object binding for the container
