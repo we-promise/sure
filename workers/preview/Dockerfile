@@ -61,8 +61,65 @@ RUN mkdir -p /var/run/postgresql && \
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
-# Copy preview entrypoint
-COPY --chown=rails:rails --chmod=755 workers/preview/docker-entrypoint.sh /rails/bin/preview-entrypoint
+# Create preview entrypoint script inline
+RUN cat > /rails/bin/preview-entrypoint << 'ENTRYPOINT_EOF'
+#!/bin/bash
+set -e
+
+# Start Redis
+echo "Starting Redis..."
+sudo redis-server --daemonize yes --bind 127.0.0.1
+
+# Wait for Redis to be ready
+echo "Waiting for Redis to be ready..."
+for i in {1..10}; do
+  if redis-cli ping > /dev/null 2>&1; then
+    echo "Redis is ready"
+    break
+  fi
+  sleep 1
+done
+
+# Start PostgreSQL
+echo "Starting PostgreSQL..."
+sudo pg_ctlcluster 15 main start || sudo pg_ctlcluster 16 main start || sudo pg_ctlcluster 17 main start
+
+# Wait for PostgreSQL to be ready
+echo "Waiting for PostgreSQL to be ready..."
+for i in {1..30}; do
+  if pg_isready -h localhost -U postgres > /dev/null 2>&1; then
+    echo "PostgreSQL is ready"
+    break
+  fi
+  sleep 1
+done
+
+# Create database user and database if they don't exist
+echo "Setting up database..."
+psql -h localhost -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='rails'" | grep -q 1 || \
+  psql -h localhost -U postgres -c "CREATE USER rails WITH SUPERUSER PASSWORD 'rails';"
+
+psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure_development'" | grep -q 1 || \
+  psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
+
+# Set DATABASE_URL if not already set
+export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}"
+
+# Set REDIS_URL if not already set
+export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
+
+# Generate SECRET_KEY_BASE if not set
+export SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(openssl rand -hex 64)}"
+
+# Run database migrations
+echo "Running database migrations..."
+./bin/rails db:prepare
+
+# Execute the main command
+echo "Starting Rails server..."
+exec "$@"
+ENTRYPOINT_EOF
+RUN chmod 755 /rails/bin/preview-entrypoint && chown rails:rails /rails/bin/preview-entrypoint
 
 USER 1000:1000
 

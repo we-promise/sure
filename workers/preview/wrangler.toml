@@ -2,13 +2,14 @@
 # This file is used as a template - the GitHub workflow substitutes PR_NUMBER
 
 name = "sure-preview-${PR_NUMBER}"
-main = "src/index.ts"
+main = "workers/preview/src/index.ts"
 compatibility_date = "2025-01-01"
 
 # Container configuration - uses preview Dockerfile with embedded PostgreSQL
+# Note: image path is relative to repo root (where wrangler runs with --config)
 [[containers]]
 class_name = "RailsContainer"
-image = { dockerfile = "./Dockerfile", context = "../.." }
+image = "./workers/preview/Dockerfile"
 max_instances = 1
 
 # Durable Object binding for the container
