@@ -1,0 +1,32 @@
+# Cloudflare Containers configuration for PR preview deployments
+# This file is used as a template - the GitHub workflow substitutes PR_NUMBER
+
+name = "sure-preview-${PR_NUMBER}"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Container configuration
+[[containers]]
+class_name = "RailsContainer"
+image = "../../Dockerfile"
+max_instances = 1
+
+# Durable Object binding for the container
+[[durable_objects.bindings]]
+name = "RAILS_CONTAINER"
+class_name = "RailsContainer"
+
+# Required migration for Durable Objects with SQLite
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RailsContainer"]
+
+# Environment variables passed to the Rails container
+[vars]
+RAILS_ENV = "production"
+RAILS_LOG_TO_STDOUT = "true"
+RAILS_SERVE_STATIC_FILES = "true"
+
+# Note: Secrets like SECRET_KEY_BASE, DATABASE_URL should be set via:
+# wrangler secret put SECRET_KEY_BASE
+# or via the Cloudflare dashboard

@@ -1,0 +1,15 @@
+{
+  "name": "sure-preview-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "^0.1.0",
+    "@cloudflare/workers-types": "^4.20250124.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^4.0.0"
+  }
+}
