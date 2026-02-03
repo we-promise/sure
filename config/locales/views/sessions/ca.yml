@@ -25,6 +25,7 @@ ca:
       no_auth_methods_enabled: Actualment no hi ha cap mètode d'autenticació habilitat. Contacta
         amb un administrador.
       openid_connect: Inicia sessió amb OpenID Connect
+      oidc: Inicia sessió amb OpenID Connect
       password: Contrasenya
       password_placeholder: Introdueix la teva contrasenya
       submit: Inicia sessió
