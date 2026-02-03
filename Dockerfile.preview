@@ -48,9 +48,12 @@ RUN groupadd --system --gid 1000 rails && \
     echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster, /usr/bin/redis-server" >> /etc/sudoers.d/rails
 
 # Configure PostgreSQL to allow local connections
-RUN echo "local all all trust" > /etc/postgresql/*/main/pg_hba.conf && \
-    echo "host all all 127.0.0.1/32 trust" >> /etc/postgresql/*/main/pg_hba.conf && \
-    echo "host all all ::1/128 trust" >> /etc/postgresql/*/main/pg_hba.conf
+RUN PG_HBA=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1) && \
+    if [ -n "$PG_HBA" ]; then \
+      echo "local all all trust" > "$PG_HBA" && \
+      echo "host all all 127.0.0.1/32 trust" >> "$PG_HBA" && \
+      echo "host all all ::1/128 trust" >> "$PG_HBA"; \
+    fi
 
 # Create database directory with correct permissions
 RUN mkdir -p /var/run/postgresql && \
