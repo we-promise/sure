@@ -189,15 +189,15 @@ class OnboardingsTest < ApplicationSystemTestCase
 
   private
 
-  def sign_in(user)
-    visit new_session_path
-    within %(form[action='#{sessions_path}']) do
-      fill_in I18n.t("sessions.new.email"), with: user.email
-      fill_in I18n.t("sessions.new.password"), with: user_password_test
-      click_on I18n.t("sessions.new.submit")
-    end
+    def sign_in(user)
+      visit new_session_path
+      within %(form[action='#{sessions_path}']) do
+        fill_in I18n.t("sessions.new.email"), with: user.email
+        fill_in I18n.t("sessions.new.password"), with: user_password_test
+        click_on I18n.t("sessions.new.submit")
+      end
 
-    # Wait for successful login
-    assert_current_path root_path
-  end
+      # Wait for successful login
+      assert_current_path root_path
+    end
 end
