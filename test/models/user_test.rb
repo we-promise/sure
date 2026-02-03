@@ -1,8 +1,15 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   def setup
     @user = users(:family_admin)
+  end
+
+  def teardown
+    clear_enqueued_jobs
+    clear_performed_jobs
   end
 
   test "should be valid" do
