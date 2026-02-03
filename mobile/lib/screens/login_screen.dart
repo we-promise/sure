@@ -27,6 +27,103 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _showApiKeyDialog() {
+    final apiKeyController = TextEditingController();
+    final outerContext = context;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            return AlertDialog(
+              title: const Text('API Key Login'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enter your API key to sign in.',
+                    style: Theme.of(outerContext).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(outerContext).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: apiKeyController,
+                    decoration: const InputDecoration(
+                      labelText: 'API Key',
+                      prefixIcon: Icon(Icons.vpn_key_outlined),
+                    ),
+                    obscureText: true,
+                    maxLines: 1,
+                    enabled: !isLoading,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          apiKeyController.dispose();
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final apiKey = apiKeyController.text.trim();
+                          if (apiKey.isEmpty) return;
+
+                          setDialogState(() {
+                            isLoading = true;
+                          });
+
+                          final authProvider = Provider.of<AuthProvider>(
+                            outerContext,
+                            listen: false,
+                          );
+                          final success = await authProvider.loginWithApiKey(
+                            apiKey: apiKey,
+                          );
+
+                          if (!dialogContext.mounted) return;
+
+                          final errorMsg = authProvider.errorMessage;
+                          apiKeyController.dispose();
+                          Navigator.of(dialogContext).pop();
+
+                          if (!success && mounted) {
+                            ScaffoldMessenger.of(outerContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  errorMsg ?? 'Invalid API key',
+                                ),
+                                backgroundColor:
+                                    Theme.of(outerContext).colorScheme.error,
+                              ),
+                            );
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Sign In'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -263,7 +360,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
+
+                // API Key Login Button
+                TextButton.icon(
+                  onPressed: _showApiKeyDialog,
+                  icon: const Icon(Icons.vpn_key_outlined, size: 18),
+                  label: const Text('Via API Key Login'),
+                ),
+
+                const SizedBox(height: 16),
 
                 // Backend URL info
                 Container(

@@ -13,6 +13,38 @@ class ApiConfig {
     _baseUrl = url;
   }
 
+  // API key authentication mode
+  static bool _isApiKeyAuth = false;
+  static String? _apiKeyValue;
+
+  static bool get isApiKeyAuth => _isApiKeyAuth;
+
+  static void setApiKeyAuth(String apiKey) {
+    _isApiKeyAuth = true;
+    _apiKeyValue = apiKey;
+  }
+
+  static void clearApiKeyAuth() {
+    _isApiKeyAuth = false;
+    _apiKeyValue = null;
+  }
+
+  /// Returns the correct auth headers based on the current auth mode.
+  /// In API key mode, uses X-Api-Key header.
+  /// In token mode, uses Authorization: Bearer header.
+  static Map<String, String> getAuthHeaders(String token) {
+    if (_isApiKeyAuth && _apiKeyValue != null) {
+      return {
+        'X-Api-Key': _apiKeyValue!,
+        'Accept': 'application/json',
+      };
+    }
+    return {
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    };
+  }
+
   /// Initialize the API configuration by loading the backend URL from storage
   /// Returns true if a saved URL was loaded, false otherwise
   static Future<bool> initialize() async {
