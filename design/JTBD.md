@@ -152,19 +152,15 @@ This document outlines the critical Jobs to Be Done for `Sure`, a self-hosted pe
 
 ---
 
-## Pain Points and Solutions
+## The "Why" Behind These Jobs
 
 | Pain Point | JTBD That Solves It |
 |------------|---------------------|
 | Accounts scattered across 10+ institutions | #1 - Aggregate all data |
-| No idea where money is leaking each month | #2 - Track spending |
+| No idea where $500/month is leaking | #2 - Track spending |
 | Manual entry takes hours weekly | #3 - Auto-sync |
 | Don't know if investments are up or down | #4 - Track performance |
 | Overspending discovered after the fact | #5 - Budget management |
-| Can't predict upcoming cash needs | #6 - Recurring transactions |
-| Historical data trapped in old apps | #7 - Import data |
-| Categorizing transactions is tedious | #8 - Automation rules |
-| Family finances are fragmented | #9 - Collaboration |
 | Don't trust cloud services with finances | #10 - Self-hosted security |
 
 ---
