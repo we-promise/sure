@@ -65,11 +65,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx wrangler deploy --var PR_NUMBER:${{ github.event.pull_request.number }}
+          npx wrangler deploy --var "PR_NUMBER:${{ github.event.pull_request.number }}"
 
           # Get the deployment URL
           PREVIEW_URL="https://sure-preview-${{ github.event.pull_request.number }}.${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev"
-          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Update Deployment Status
         if: always() && steps.deployment.outputs.result
