@@ -1,17 +1,17 @@
 # syntax = docker/dockerfile:1
 
 # Preview Dockerfile for Cloudflare Containers
-# Includes PostgreSQL for self-contained development testing
+# Includes PostgreSQL and Redis for self-contained development testing
 
 ARG RUBY_VERSION=3.4.7
 FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim AS base
 
 WORKDIR /rails
 
-# Install base packages including PostgreSQL server
+# Install base packages including PostgreSQL and Redis servers
 RUN apt-get update -qq \
     && apt-get install --no-install-recommends -y \
-       curl libvips postgresql postgresql-client libyaml-0-2 procps sudo \
+       curl libvips postgresql postgresql-client redis-server libyaml-0-2 procps sudo \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set development environment
@@ -42,10 +42,10 @@ RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 # Final stage
 FROM base
 
-# Create rails user and configure PostgreSQL
+# Create rails user and configure PostgreSQL/Redis permissions
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
-    echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster" >> /etc/sudoers.d/rails
+    echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster, /usr/bin/redis-server" >> /etc/sudoers.d/rails
 
 # Configure PostgreSQL to allow local connections
 RUN echo "local all all trust" > /etc/postgresql/*/main/pg_hba.conf && \

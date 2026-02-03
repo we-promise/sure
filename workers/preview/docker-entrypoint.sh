@@ -1,6 +1,20 @@
 #!/bin/bash
 set -e
 
+# Start Redis
+echo "Starting Redis..."
+sudo redis-server --daemonize yes --bind 127.0.0.1
+
+# Wait for Redis to be ready
+echo "Waiting for Redis to be ready..."
+for i in {1..10}; do
+  if redis-cli ping > /dev/null 2>&1; then
+    echo "Redis is ready"
+    break
+  fi
+  sleep 1
+done
+
 # Start PostgreSQL
 echo "Starting PostgreSQL..."
 sudo pg_ctlcluster 15 main start || sudo pg_ctlcluster 16 main start || sudo pg_ctlcluster 17 main start
@@ -25,6 +39,9 @@ psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure
 
 # Set DATABASE_URL if not already set
 export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}"
+
+# Set REDIS_URL if not already set
+export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
 
 # Generate SECRET_KEY_BASE if not set
 export SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(openssl rand -hex 64)}"
