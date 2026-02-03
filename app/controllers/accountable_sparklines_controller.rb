@@ -5,21 +5,22 @@ class AccountableSparklinesController < ApplicationController
     etag_key = cache_key
 
     # Use HTTP conditional GET so the client receives 304 Not Modified when possible.
-    if stale?(etag: etag_key, last_modified: family.latest_sync_completed_at)
-      @series = Rails.cache.fetch(etag_key, expires_in: 24.hours) do
-        builder = Balance::ChartSeriesBuilder.new(
-          account_ids: account_ids,
-          currency: family.currency,
-          period: Period.last_30_days,
-          favorable_direction: @accountable.favorable_direction,
-          interval: "1 day"
-        )
+    # When the resource is fresh, stale? returns false and we return early to avoid unnecessary work.
+    return unless stale?(etag: etag_key, last_modified: family.latest_sync_completed_at)
 
-        builder.balance_series
-      end
+    @series = Rails.cache.fetch(etag_key, expires_in: 24.hours) do
+      builder = Balance::ChartSeriesBuilder.new(
+        account_ids: account_ids,
+        currency: family.currency,
+        period: Period.last_30_days,
+        favorable_direction: @accountable.favorable_direction,
+        interval: "1 day"
+      )
 
-      render layout: false
+      builder.balance_series
     end
+
+    render layout: false
   end
 
   private
