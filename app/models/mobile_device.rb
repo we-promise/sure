@@ -7,7 +7,6 @@ class MobileDevice < ApplicationRecord
   end
 
   belongs_to :user
-  belongs_to :oauth_application, class_name: "Doorkeeper::Application", optional: true
 
   validates :device_id, presence: true, uniqueness: { scope: :user_id }
   validates :device_name, presence: true
@@ -18,6 +17,10 @@ class MobileDevice < ApplicationRecord
   CALLBACK_URL = "sureapp://oauth/callback"
 
   scope :active, -> { where("last_seen_at > ?", 90.days.ago) }
+
+  def self.shared_oauth_application
+    @shared_oauth_application ||= Doorkeeper::Application.find_by!(name: "Sure Mobile")
+  end
 
   def self.upsert_device!(user, attrs)
     device = user.mobile_devices.find_or_initialize_by(device_id: attrs[:device_id])
@@ -40,26 +43,9 @@ class MobileDevice < ApplicationRecord
     update_column(:last_seen_at, Time.current)
   end
 
-  def create_oauth_application!
-    return oauth_application if oauth_application.present?
-
-    app = Doorkeeper::Application.create!(
-      name: "Mobile App - #{device_id}",
-      redirect_uri: CALLBACK_URL,
-      scopes: "read_write", # Use the configured scope
-      confidential: false # Public client for mobile
-    )
-
-    # Store the association
-    update!(oauth_application: app)
-    app
-  end
-
   def active_tokens
-    return Doorkeeper::AccessToken.none unless oauth_application
-
     Doorkeeper::AccessToken
-      .where(application: oauth_application)
+      .where(mobile_device_id: id)
       .where(resource_owner_id: user_id)
       .where(revoked_at: nil)
       .where("expires_in IS NULL OR created_at + expires_in * interval '1 second' > ?", Time.current)
@@ -73,12 +59,12 @@ class MobileDevice < ApplicationRecord
   # previous tokens. Returns a hash with token details ready for an API
   # response or deep-link callback.
   def issue_token!
-    oauth_app = create_oauth_application!
     revoke_all_tokens!
 
     access_token = Doorkeeper::AccessToken.create!(
-      application: oauth_app,
+      application: self.class.shared_oauth_application,
       resource_owner_id: user_id,
+      mobile_device_id: id,
       expires_in: 30.days.to_i,
       scopes: "read_write",
       use_refresh_token: true

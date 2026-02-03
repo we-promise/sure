@@ -11,12 +11,22 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       os_version: "17.0",
       app_version: "1.0.0"
     }
+
+    # Ensure the shared OAuth application exists
+    @shared_app = Doorkeeper::Application.find_or_create_by!(name: "Sure Mobile") do |app|
+      app.redirect_uri = "sureapp://oauth/callback"
+      app.scopes = "read_write"
+      app.confidential = false
+    end
+
+    # Clear the memoized class variable so it picks up the test record
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
   end
 
   test "should signup new user and return OAuth tokens" do
     assert_difference("User.count", 1) do
       assert_difference("MobileDevice.count", 1) do
-        assert_difference("Doorkeeper::Application.count", 1) do
+        assert_no_difference("Doorkeeper::Application.count") do
           assert_difference("Doorkeeper::AccessToken.count", 1) do
             post "/api/v1/auth/signup", params: {
               user: {
@@ -279,10 +289,10 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Create an existing device and token
     device = user.mobile_devices.create!(@device_info)
-    oauth_app = device.create_oauth_application!
     existing_token = Doorkeeper::AccessToken.create!(
-      application: oauth_app,
+      application: @shared_app,
       resource_owner_id: user.id,
+      mobile_device_id: device.id,
       expires_in: 30.days.to_i,
       scopes: "read_write"
     )
@@ -350,12 +360,12 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
   test "should refresh access token with valid refresh token" do
     user = users(:family_admin)
     device = user.mobile_devices.create!(@device_info)
-    oauth_app = device.create_oauth_application!
 
     # Create initial token
     initial_token = Doorkeeper::AccessToken.create!(
-      application: oauth_app,
+      application: @shared_app,
       resource_owner_id: user.id,
+      mobile_device_id: device.id,
       expires_in: 30.days.to_i,
       scopes: "read_write",
       use_refresh_token: true

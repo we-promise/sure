@@ -3,6 +3,16 @@ require "test_helper"
 class SessionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
+
+    # Ensure the shared OAuth application exists
+    Doorkeeper::Application.find_or_create_by!(name: "Sure Mobile") do |app|
+      app.redirect_uri = "sureapp://oauth/callback"
+      app.scopes = "read_write"
+      app.confidential = false
+    end
+
+    # Clear the memoized class variable so it picks up the test record
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
   end
 
   teardown do
@@ -408,7 +418,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "1.0.0", device.app_version
   end
 
-  test "mobile SSO creates a Doorkeeper application for the device" do
+  test "mobile SSO uses the shared OAuth application" do
     oidc_identity = oidc_identities(:bob_google)
 
     setup_omniauth_mock(
@@ -428,12 +438,12 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       device_type: "android"
     }
 
-    assert_difference "Doorkeeper::Application.count", 1 do
+    assert_no_difference "Doorkeeper::Application.count" do
       get "/auth/openid_connect/callback"
     end
 
     device = @user.mobile_devices.find_by(device_id: "flutter-device-003")
-    assert device.oauth_application.present?, "Expected Doorkeeper::Application linked to device"
+    assert device.active_tokens.any?, "Expected device to have active tokens via shared app"
   end
 
   test "mobile SSO revokes previous tokens for existing device" do
@@ -460,7 +470,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     device = @user.mobile_devices.find_by(device_id: "flutter-device-004")
     first_token = Doorkeeper::AccessToken.where(
-      application: device.oauth_application,
+      mobile_device_id: device.id,
       resource_owner_id: @user.id,
       revoked_at: nil
     ).last

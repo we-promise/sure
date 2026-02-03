@@ -169,6 +169,7 @@ module Api
         new_token = Doorkeeper::AccessToken.create!(
           application: access_token.application,
           resource_owner_id: access_token.resource_owner_id,
+          mobile_device_id: access_token.mobile_device_id,
           expires_in: 30.days.to_i,
           scopes: access_token.scopes,
           use_refresh_token: true
