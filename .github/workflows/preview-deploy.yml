@@ -72,7 +72,7 @@ jobs:
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
 
       - name: Update Deployment Status
-        if: always()
+        if: always() && steps.deployment.outputs.result
         uses: actions/github-script@v7
         with:
           script: |
