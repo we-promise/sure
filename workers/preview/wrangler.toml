@@ -5,6 +5,9 @@ name = "sure-preview-${PR_NUMBER}"
 main = "./src/index.ts"
 compatibility_date = "2025-01-01"
 
+# Enable workers.dev subdomain for preview access
+workers_dev = true
+
 # Container configuration - uses preview Dockerfile with embedded PostgreSQL
 # Note: path is relative to this config file location
 [[containers]]
