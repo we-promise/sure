@@ -38,7 +38,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "English (en)", from: "user_family_attributes_locale"
     select "United States Dollar (USD)", from: "user_family_attributes_currency"
     select "MM/DD/YYYY", from: "user_family_attributes_date_format"
-    find("select[name='user[theme]']").select("light")
+    select_theme("light")
 
     # Submit preferences
     click_button I18n.t("onboardings.preferences.submit")
@@ -96,7 +96,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     visit preferences_onboarding_path
 
     # Change theme using value instead of label
-    find("select[name='user[theme]']").select("dark")
+    select_theme("dark")
 
     # Theme should be applied (this tests the JavaScript controller)
     assert_text I18n.t("onboardings.preferences.example")
@@ -120,7 +120,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "Spanish (es)", from: "user_family_attributes_locale"
     select "Euro (EUR)", from: "user_family_attributes_currency"
     select "DD/MM/YYYY", from: "user_family_attributes_date_format"
-    find("select[name='user[theme]']").select("dark")
+    select_theme("dark")
 
     # Button text is in Spanish due to locale preview
     click_button I18n.t("onboardings.preferences.submit", locale: :es)
@@ -188,6 +188,11 @@ class OnboardingsTest < ApplicationSystemTestCase
   end
 
   private
+    def select_theme(value)
+      find("#user_theme", visible: :all)
+        .find("option[value='#{value}']", visible: :all)
+        .select_option
+    end
 
     def sign_in(user)
       visit new_session_path
