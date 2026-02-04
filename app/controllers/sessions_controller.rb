@@ -10,6 +10,7 @@ class SessionsController < ApplicationController
   end
 
   def new
+    store_pending_invitation_if_valid
     begin
       demo = Rails.application.config_for(:demo)
       @prefill_demo_credentials = demo_host_match?(demo)
@@ -58,6 +59,7 @@ class SessionsController < ApplicationController
       else
         log_super_admin_override_login(user)
         @session = create_session_for(user)
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
       end
     else
@@ -135,6 +137,7 @@ class SessionsController < ApplicationController
         redirect_to verify_mfa_path
       else
         @session = create_session_for(user)
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
       end
     else
