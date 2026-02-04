@@ -106,7 +106,7 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     setup_token = Base64.encode64("https://example.com/claim")
     mock_response = OpenStruct.new(code: 200, body: "https://example.com/access")
 
-    HTTParty.expects(:post)
+    Provider::Simplefin.expects(:post)
       .times(2)
       .raises(Net::ReadTimeout.new("Connection timed out"))
       .then.returns(mock_response)
