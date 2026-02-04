@@ -55,13 +55,13 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_tags.map(&:id).sort, transaction_entry.transaction.tag_ids.sort
   end
 
-  test "bulk update preserves tags when tag_ids is blank string array (web multi-select default)" do
+  test "bulk update clears tags when tag_ids is blank string array (web multi-select None)" do
     transaction_entry = @user.family.entries.transactions.first
     original_tags = [ Tag.first, Tag.second ]
     transaction_entry.transaction.tags = original_tags
     transaction_entry.transaction.save!
 
-    # The web bulk edit multi-select can submit tag_ids with only a blank string
+    # For a multiple select, choosing the blank ("None") option submits a blank value.
     post transactions_bulk_update_url, params: {
       bulk_update: {
         entry_ids: [ transaction_entry.id ],
@@ -74,28 +74,28 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
 
     transaction_entry.reload
     assert_equal Category.second, transaction_entry.transaction.category
-    assert_equal original_tags.map(&:id).sort, transaction_entry.transaction.tag_ids.sort
+    assert_empty transaction_entry.transaction.tags
   end
 
-  test "bulk update clears tags when empty tag_ids explicitly provided" do
+  test "bulk update clears tags when empty tag_ids explicitly provided (JSON)" do
     transaction_entry = @user.family.entries.transactions.first
     transaction_entry.transaction.tags = [ Tag.first, Tag.second ]
     transaction_entry.transaction.save!
 
-    # Explicitly provide empty tag_ids to clear tags
-    post transactions_bulk_update_url, params: {
-      bulk_update: {
-        entry_ids: [ transaction_entry.id ],
-        category_id: Category.second.id,
-        tag_ids: []
-      }
-    }
+    post transactions_bulk_update_url,
+         params: {
+           bulk_update: {
+             entry_ids: [ transaction_entry.id ],
+             category_id: Category.second.id,
+             tag_ids: []
+           }
+         },
+         as: :json
 
     assert_redirected_to transactions_url
 
     transaction_entry.reload
     assert_equal Category.second, transaction_entry.transaction.category
-    # Tags should be cleared since tag_ids was explicitly provided as empty
     assert_empty transaction_entry.transaction.tags
   end
 
