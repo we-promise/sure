@@ -152,7 +152,7 @@ module SslConfigurable
   #
   # @return [Boolean] true if SSL verification is enabled
   def ssl_verify?
-    ssl_configuration.verify
+    ssl_configuration.verify != false
   end
 
   # Returns whether SSL debug logging is enabled
