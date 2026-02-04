@@ -12,7 +12,7 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create invitation for member" do
-    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
 
     assert_difference("Invitation.count") do
       assert_enqueued_with(job: ActionMailer::MailDeliveryJob) do

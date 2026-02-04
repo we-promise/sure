@@ -7,14 +7,14 @@ class InvitationTest < ActiveSupport::TestCase
     @inviter = @invitation.inviter
   end
 
-  test "accept_for! adds user to family when email matches" do
+  test "accept_for adds user to family when email matches" do
     user = users(:empty)
     user.update_columns(family_id: families(:empty).id, role: "admin")
     assert user.family_id != @family.id
 
     invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
     assert invitation.pending?
-    result = invitation.accept_for!(user)
+    result = invitation.accept_for(user)
 
     assert result
     user.reload
@@ -24,11 +24,11 @@ class InvitationTest < ActiveSupport::TestCase
     assert invitation.accepted_at.present?
   end
 
-  test "accept_for! returns false when user email does not match" do
+  test "accept_for returns false when user email does not match" do
     user = users(:family_member)
     assert user.email != @invitation.email
 
-    result = @invitation.accept_for!(user)
+    result = @invitation.accept_for(user)
 
     assert_not result
     user.reload
@@ -37,13 +37,13 @@ class InvitationTest < ActiveSupport::TestCase
     assert_nil @invitation.accepted_at
   end
 
-  test "accept_for! only marks accepted when user already in family" do
-    user = @family.users.where.not(id: @inviter.id).first
-    user.update!(role: "member")
+  test "accept_for updates role when user already in family" do
+    user = users(:family_member)
+    user.update!(family_id: @family.id, role: "member")
     invitation = @family.invitations.create!(email: user.email, role: "admin", inviter: @inviter)
     original_family_id = user.family_id
 
-    result = invitation.accept_for!(user)
+    result = invitation.accept_for(user)
 
     assert result
     user.reload
@@ -53,11 +53,11 @@ class InvitationTest < ActiveSupport::TestCase
     assert invitation.accepted_at.present?
   end
 
-  test "accept_for! returns false when invitation not pending" do
+  test "accept_for returns false when invitation not pending" do
     @invitation.update!(accepted_at: 1.hour.ago)
     user = users(:empty)
 
-    result = @invitation.accept_for!(user)
+    result = @invitation.accept_for(user)
 
     assert_not result
   end

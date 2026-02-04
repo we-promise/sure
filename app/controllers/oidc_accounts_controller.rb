@@ -55,7 +55,7 @@ class OidcAccountsController < ApplicationController
         notice = if accept_pending_invitation_for(user)
           t("invitations.accept_choice.joined_household")
         else
-          "Account successfully linked to #{@pending_auth['provider']}"
+          t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])
         end
         redirect_to root_path, notice: notice
       end

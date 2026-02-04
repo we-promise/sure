@@ -26,7 +26,7 @@ class ApplicationController < ActionController::Base
 
       invitation = Invitation.pending.find_by(token: token.to_s)
       return false unless invitation
-      return false unless invitation.accept_for!(user)
+      return false unless invitation.accept_for(user)
 
       session.delete(:pending_invitation_token)
       true

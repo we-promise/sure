@@ -17,7 +17,7 @@ class InvitationsController < ApplicationController
     if @invitation.save
       normalized_email = @invitation.email.to_s.strip.downcase
       existing_user = User.find_by(email: normalized_email)
-      if existing_user && @invitation.accept_for!(existing_user)
+      if existing_user && @invitation.accept_for(existing_user)
         flash[:notice] = t(".existing_user_added")
       elsif existing_user
         flash[:alert] = t(".failure")

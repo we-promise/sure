@@ -26,7 +26,7 @@ class Invitation < ApplicationRecord
     accepted_at.nil? && expires_at > Time.current
   end
 
-  def accept_for!(user)
+  def accept_for(user)
     return false if user.blank?
     return false unless pending?
     return false unless emails_match?(user)
