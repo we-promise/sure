@@ -11,6 +11,12 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       os_version: "17.0",
       app_version: "1.0.0"
     }
+
+    @web_device_info = @device_info.merge(
+      device_id: "test-device-web-123",
+      device_name: "Test Web",
+      device_type: "web"
+    )
   end
 
   test "should signup new user and return OAuth tokens" do
@@ -33,12 +39,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :created
+  end
+
+  test "should signup new web user and return OAuth tokens" do
+    assert_difference("User.count", 1) do
+      assert_difference("MobileDevice.count", 1) do
+        assert_difference("Doorkeeper::Application.count", 1) do
+          assert_difference("Doorkeeper::AccessToken.count", 1) do
+            post "/api/v1/auth/signup", params: {
+              user: {
+                email: "newwebuser@example.com",
+                password: "SecurePass123!",
+                first_name: "New",
+                last_name: "WebUser"
+              },
+              device: @web_device_info
+            }
+          end
+        end
+      end
+    end
+
+    assert_response :created
     response_data = JSON.parse(response.body)
 
     assert response_data["user"]["id"].present?
-    assert_equal "newuser@example.com", response_data["user"]["email"]
+    assert_equal "newwebuser@example.com", response_data["user"]["email"]
     assert_equal "New", response_data["user"]["first_name"]
-    assert_equal "User", response_data["user"]["last_name"]
+    assert_equal "WebUser", response_data["user"]["last_name"]
 
     # OAuth token assertions
     assert response_data["access_token"].present?
@@ -50,9 +78,9 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     # Verify the device was created
     new_user = User.find(response_data["user"]["id"])
     device = new_user.mobile_devices.first
-    assert_equal @device_info[:device_id], device.device_id
-    assert_equal @device_info[:device_name], device.device_name
-    assert_equal @device_info[:device_type], device.device_type
+    assert_equal @web_device_info[:device_id], device.device_id
+    assert_equal @web_device_info[:device_name], device.device_name
+    assert_equal @web_device_info[:device_type], device.device_type
   end
 
   test "should not signup without device info" do
