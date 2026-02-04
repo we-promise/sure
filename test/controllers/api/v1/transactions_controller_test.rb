@@ -41,6 +41,11 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert response_data.key?("transactions")
     assert response_data.key?("pagination")
+
+    # Agent-friendly numeric fields
+    first = response_data["transactions"].first
+    assert first.key?("amount_cents")
+    assert first.key?("signed_amount_cents")
     assert response_data["pagination"].key?("page")
     assert response_data["pagination"].key?("per_page")
     assert response_data["pagination"].key?("total_count")
@@ -130,6 +135,8 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @transaction.id, response_data["id"]
     assert response_data.key?("name")
     assert response_data.key?("amount")
+    assert response_data.key?("amount_cents")
+    assert response_data.key?("signed_amount_cents")
     assert response_data.key?("date")
     assert response_data.key?("account")
   end

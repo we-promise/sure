@@ -3,6 +3,15 @@
 json.id transaction.id
 json.date transaction.entry.date
 json.amount transaction.entry.amount_money.format
+
+# Agent/automation-friendly numeric fields (avoid localized parsing and clarify sign)
+# `amount` in v1 is a localized string and may follow an accounting sign convention.
+# Expose cents as integers to make the API agent-friendly.
+amount = transaction.entry.amount_money.amount # BigDecimal
+amount_cents = (amount * 100).round(0).to_i.abs
+json.amount_cents amount_cents
+json.signed_amount_cents(transaction.entry.classification == "income" ? amount_cents : -amount_cents)
+
 json.currency transaction.entry.currency
 json.name transaction.entry.name
 json.notes transaction.entry.notes
