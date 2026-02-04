@@ -7,8 +7,14 @@
                 class: "flex lg:flex-col gap-2 bg-container px-2 py-1.5 rounded-full lg:rounded-lg shadow-border-xs",
                 data: { chat_target: "form" } do |f| %>
 
-    <%# In the future, this will be a dropdown with different AI models %>
-    <%= f.hidden_field :ai_model, value: default_ai_model %>
+    <% if multiple_ai_models_available? %>
+      <%= f.select :ai_model,
+                   options_for_select(available_ai_models, default_ai_model),
+                   {},
+                   class: "text-xs border-0 bg-transparent focus:ring-0 cursor-pointer text-secondary" %>
+    <% else %>
+      <%= f.hidden_field :ai_model, value: default_ai_model %>
+    <% end %>
 
     <%= f.text_area :content, placeholder: "Ask anything ...", value: message_hint,
                   class: "w-full border-0 focus:ring-0 text-sm resize-none px-1 bg-transparent",

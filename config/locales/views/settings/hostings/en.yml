@@ -58,6 +58,18 @@ en:
         json_mode_json_object: JSON Object
         json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
         title: OpenAI
+      openclaw_settings:
+        title: OpenClaw (Local AI)
+        description: Connect to your local OpenClaw AI assistant gateway. OpenClaw must be installed and running on your machine.
+        env_configured_message: Successfully configured through environment variables.
+        enabled_label: Enable OpenClaw
+        enabled_description: When enabled, OpenClaw will be available as an AI provider option. Falls back to OpenAI if unavailable.
+        gateway_url_label: Gateway URL
+        gateway_url_placeholder: "ws://127.0.0.1:18789 (default)"
+        status_checking: Checking connection...
+        status_connected: Connected to OpenClaw gateway
+        status_disconnected: OpenClaw gateway not available
+        fallback_notice: Using OpenAI as fallback
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance provides free access to stock prices, exchange rates, and financial data without requiring an API key.

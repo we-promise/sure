@@ -102,6 +102,7 @@ gem "flipper-active_record"
 # AI
 gem "ruby-openai"
 gem "langfuse-ruby", "~> 0.1.4", require: "langfuse"
+gem "websocket-client-simple", "~> 0.8"
 
 group :development, :test do
   gem "debug", platforms: %i[mri windows]

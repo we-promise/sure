@@ -97,6 +97,26 @@ module ApplicationHelper
     Chat.default_model
   end
 
+  def available_ai_models
+    models = []
+
+    registry = Provider::Registry.for_concept(:llm)
+    registry.providers.each do |provider|
+      case provider
+      when Provider::Openclaw
+        models << [ I18n.t("helpers.ai_models.openclaw"), "openclaw" ] if provider.available?
+      when Provider::Openai
+        models << [ I18n.t("helpers.ai_models.openai", model: provider.class.effective_model), provider.class.effective_model ]
+      end
+    end
+
+    models.presence || [ [ I18n.t("helpers.ai_models.default"), Provider::Openai::DEFAULT_MODEL ] ]
+  end
+
+  def multiple_ai_models_available?
+    available_ai_models.size > 1
+  end
+
   # Renders Markdown text using Redcarpet
   def markdown(text)
     return "" if text.blank?

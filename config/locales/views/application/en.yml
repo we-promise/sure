@@ -1,5 +1,10 @@
 ---
 en:
+  helpers:
+    ai_models:
+      openclaw: OpenClaw (Local)
+      openai: "%{model}"
+      default: GPT-4.1
   number:
     currency:
       format:

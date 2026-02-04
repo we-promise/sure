@@ -81,6 +81,14 @@ class Provider::Registry
       def yahoo_finance
         Provider::YahooFinance.new
       end
+
+      def openclaw
+        return nil unless Rails.configuration.x.openclaw.enabled || Setting.openclaw_enabled
+
+        gateway_url = Setting.openclaw_gateway_url.presence || Rails.configuration.x.openclaw.gateway_url
+
+        Provider::Openclaw.new(gateway_url: gateway_url)
+      end
   end
 
   def initialize(concept)
@@ -110,7 +118,7 @@ class Provider::Registry
       when :securities
         %i[twelve_data yahoo_finance]
       when :llm
-        %i[openai]
+        %i[openclaw openai]
       else
         %i[plaid_us plaid_eu github openai]
       end

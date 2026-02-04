@@ -37,6 +37,10 @@ class LlmUsage < ApplicationRecord
     "google" => {
       "gemini-2.5-pro" => { prompt: 1.25, completion: 10.00 },
       "gemini-2.5-flash" => { prompt: 0.3, completion: 2.50 }
+    },
+    "openclaw" => {
+      # OpenClaw is a local gateway - no direct costs
+      "openclaw" => { prompt: 0.0, completion: 0.0 }
     }
   }.freeze
 
@@ -82,6 +86,9 @@ class LlmUsage < ApplicationRecord
   # Returns the provider name if found, or "openai" as default (for backward compatibility)
   def self.infer_provider(model)
     return "openai" if model.blank?
+
+    # Quick check for known prefixes
+    return "openclaw" if model.to_s.start_with?("openclaw")
 
     # Check each provider to see if they have pricing for this model
     PRICING.each do |provider_name, provider_pricing|

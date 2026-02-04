@@ -10,6 +10,11 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
+
+  # OpenClaw settings (local AI assistant)
+  field :openclaw_enabled, type: :boolean, default: ENV.fetch("OPENCLAW_ENABLED", "false").to_s.downcase.in?(%w[1 true yes on])
+  field :openclaw_gateway_url, type: :string, default: ENV.fetch("OPENCLAW_GATEWAY_URL", "ws://127.0.0.1:18789")
+
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 
