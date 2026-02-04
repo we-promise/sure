@@ -1,0 +1,27 @@
+---
+tr:
+  budgets:
+    show:
+      savings_goals:
+        title: "Tasarruf Hedefleri"
+        manage: "Hedefleri Yönet"
+        surplus: "Aylık Fazla"
+        allocated: "Tahsis Edilen"
+        available: "Mevcut"
+        allocate: "Tahsis Et"
+        add_more: "Daha Fazla Ekle"
+        auto_funded: "Otomatik Fonlanan"
+        no_contribution: "Bu ay fonlanmadı"
+        empty: "Aktif tasarruf hedefi yok"
+        create_first: "İlk hedefinizi oluşturun"
+      savings:
+        title: "Tasarruflar"
+        category_name: "Tasarruf Hedefleri"
+        funded: "Fonlanan"
+        commitment: "Hedef"
+        remaining: "Kalan"
+        to_fund: "fonlanacak"
+        fully_funded: "Tamamen fonlandı"
+        partial: "Kısmen fonlandı"
+        pending: "Bekleyen"
+        manage_goals: "Hedefleri yönet"
