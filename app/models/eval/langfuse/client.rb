@@ -1,4 +1,6 @@
 class Eval::Langfuse::Client
+  extend SslConfigurable
+
   BASE_URLS = {
     us: "https://us.cloud.langfuse.com/api/public",
     eu: "https://cloud.langfuse.com/api/public"
@@ -176,10 +178,13 @@ class Eval::Langfuse::Client
       http.read_timeout = 30
       http.open_timeout = 10
 
-      # Fix for OpenSSL 3.x CRL checking issues
+      # Apply SSL configuration from centralized config
+      http.verify_mode = self.class.net_http_verify_mode
+      http.ca_file = self.class.ssl_ca_file if self.class.ssl_ca_file.present?
+
+      # Fix for OpenSSL 3.x CRL checking issues (only when verification is enabled)
       # See: https://github.com/ruby/openssl/issues/619
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      if OpenSSL::OPENSSL_VERSION_NUMBER >= 0x30000000
+      if self.class.ssl_verify? && OpenSSL::OPENSSL_VERSION_NUMBER >= 0x30000000
         # Disable CRL checking which can fail on some certificates
         http.verify_callback = ->(_preverify_ok, _store_ctx) { true }
       end

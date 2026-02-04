@@ -1,5 +1,6 @@
 class Provider::TwelveData < Provider
   include ExchangeRateConcept, SecurityConcept
+  extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::TwelveData::Error
   Error = Class.new(Provider::Error)
@@ -234,7 +235,7 @@ class Provider::TwelveData < Provider
     end
 
     def client
-      @client ||= Faraday.new(url: base_url) do |faraday|
+      @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         faraday.request(:retry, {
           max: 2,
           interval: 0.05,

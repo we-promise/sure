@@ -209,7 +209,7 @@ class SessionsController < ApplicationController
       if provider_config[:strategy] == "openid_connect" && provider_config[:issuer].present?
         begin
           discovery_url = discovery_url_for(provider_config[:issuer])
-          response = Faraday.get(discovery_url) do |req|
+          response = Faraday.new(ssl: faraday_ssl_options).get(discovery_url) do |req|
             req.options.timeout = 5
             req.options.open_timeout = 3
           end
@@ -244,5 +244,15 @@ class SessionsController < ApplicationController
       else
         "#{issuer}/.well-known/openid-configuration"
       end
+    end
+
+    def faraday_ssl_options
+      ssl_config = Rails.configuration.x.ssl
+      options = {}
+
+      options[:ca_file] = ssl_config.ca_file if ssl_config&.ca_file.present?
+      options[:verify] = ssl_config.verify unless ssl_config&.verify != false
+
+      options
     end
 end

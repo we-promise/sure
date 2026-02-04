@@ -5,9 +5,10 @@ class Provider::Simplefin
   # These are centralized in `Rails.configuration.x.simplefin.*` via
   # `config/initializers/simplefin.rb`.
   include HTTParty
+  extend SslConfigurable
 
   headers "User-Agent" => "Sure Finance SimpleFin Client"
-  default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
+  default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
   # Retry configuration for transient network failures
   MAX_RETRIES = 3

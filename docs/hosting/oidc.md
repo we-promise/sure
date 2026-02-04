@@ -471,7 +471,68 @@ When adding an OIDC provider, Sure validates the `.well-known/openid-configurati
 - Ensure the issuer URL is correct and accessible
 - Check firewall rules allow outbound HTTPS to the issuer
 - Verify the issuer returns valid JSON with an `issuer` field
-- For self-signed certificates, you may need to configure SSL verification
+- For self-signed certificates, configure SSL verification (see below)
+
+### Self-signed certificate support
+
+If your identity provider uses self-signed certificates or certificates from an internal CA, configure the following environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SSL_CA_FILE` | Path to custom CA certificate (PEM format) | Not set |
+| `SSL_VERIFY` | Enable/disable SSL verification | `true` |
+| `SSL_DEBUG` | Enable verbose SSL logging | `false` |
+
+**Option 1: Custom CA certificate (recommended)**
+
+Mount your CA certificate into the container and set `SSL_CA_FILE`:
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    environment:
+      SSL_CA_FILE: /certs/my-ca.crt
+    volumes:
+      - ./my-ca.crt:/certs/my-ca.crt:ro
+```
+
+The certificate file must:
+- Be in PEM format (starts with `-----BEGIN CERTIFICATE-----`)
+- Be readable by the application
+- Be the CA certificate that signed your server's SSL certificate
+
+**Option 2: Disable SSL verification (NOT recommended for production)**
+
+For testing only, you can disable SSL verification:
+
+```bash
+SSL_VERIFY=false
+```
+
+**Warning:** Disabling SSL verification removes protection against man-in-the-middle attacks. Only use this for development or testing environments.
+
+**Troubleshooting SSL issues**
+
+Enable debug logging to diagnose SSL certificate problems:
+
+```bash
+SSL_DEBUG=true
+```
+
+This will log detailed information about SSL connections, including:
+- Which CA file is being used
+- SSL verification mode
+- Detailed error messages with resolution hints
+
+Common error messages and solutions:
+
+| Error | Solution |
+|-------|----------|
+| `self-signed certificate` | Set `SSL_CA_FILE` to your CA certificate |
+| `certificate verify failed` | Ensure `SSL_CA_FILE` points to the correct CA |
+| `certificate has expired` | Renew the server's SSL certificate |
+| `unknown CA` | Add the issuing CA to `SSL_CA_FILE` |
 
 ### Rate limiting errors (429)
 
