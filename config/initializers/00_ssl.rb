@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "openssl"
+
 # Centralized SSL/TLS configuration for outbound HTTPS connections.
 #
 # This enables support for self-signed certificates in self-hosted environments
@@ -45,6 +47,12 @@ module SslInitializerHelper
     unless File.readable?(path)
       result[:error] = "File not readable: #{path}"
       Rails.logger.warn("[SSL] SSL_CA_FILE specified but file not readable: #{path}")
+      return result
+    end
+
+    unless File.file?(path)
+      result[:error] = "Path is not a file: #{path}"
+      Rails.logger.warn("[SSL] SSL_CA_FILE specified but is not a file: #{path}")
       return result
     end
 
@@ -116,7 +124,7 @@ module SslInitializerHelper
   # This ensures both public services and self-signed internal services work
   #
   # @param custom_ca_path [String] Path to the custom CA certificate
-  # @return [String, nil] Path to combined bundle or nil on failure
+  # @return [Hash, nil] Hash with :file (Tempfile) and :path keys, or nil on failure
   def create_combined_ca_bundle(custom_ca_path)
     system_ca = find_system_ca_bundle
     unless system_ca
@@ -145,7 +153,9 @@ module SslInitializerHelper
       Rails.logger.info("[SSL] Created combined CA bundle: #{combined_path}")
       Rails.logger.info("[SSL]   - System CA source: #{system_ca}")
       Rails.logger.info("[SSL]   - Custom CA source: #{custom_ca_path}")
-      combined_path
+
+      # Return both file object (to prevent GC) and path
+      { file: combined_file, path: combined_path }
     rescue StandardError => e
       Rails.logger.error("[SSL] Failed to create combined CA bundle: #{e.message}")
       nil
@@ -217,11 +227,13 @@ Rails.application.configure do
     # This ensures all Ruby SSL connections (including HTTPClient used by openid_connect gem)
     # will trust both system CAs (for public services) and custom CA (for self-signed services)
     if ca_file_status[:valid]
-      combined_bundle = SslInitializerHelper.create_combined_ca_bundle(ca_file_status[:path])
-      if combined_bundle
-        ENV["SSL_CERT_FILE"] = combined_bundle
-        config.x.ssl.combined_ca_bundle = combined_bundle
-        Rails.logger.info("[SSL] Set SSL_CERT_FILE=#{combined_bundle} for global SSL configuration")
+      combined_result = SslInitializerHelper.create_combined_ca_bundle(ca_file_status[:path])
+      if combined_result
+        # Store the Tempfile object to prevent garbage collection
+        config.x.ssl.combined_ca_bundle_file = combined_result[:file]
+        config.x.ssl.combined_ca_bundle = combined_result[:path]
+        ENV["SSL_CERT_FILE"] = combined_result[:path]
+        Rails.logger.info("[SSL] Set SSL_CERT_FILE=#{combined_result[:path]} for global SSL configuration")
       else
         # Fallback: just use the custom CA (may break connections to public services)
         Rails.logger.warn("[SSL] Could not create combined CA bundle, using custom CA only. " \

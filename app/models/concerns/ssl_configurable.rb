@@ -48,9 +48,24 @@ module SslConfigurable
 
     def build_message(message)
       parts = [ message ]
-      parts << "URL: #{url}" if url.present?
+      parts << "URL: #{redact_url(url)}" if url.present?
       parts << "Original error: #{original_error.message}" if original_error.present?
       parts.join(" | ")
+    end
+
+    # Redacts sensitive information from URLs (userinfo, credentials in query params)
+    def redact_url(url_string)
+      return url_string if url_string.blank?
+
+      begin
+        uri = URI.parse(url_string)
+        # Redact userinfo (username:password@ in URL)
+        uri.userinfo = "[REDACTED]" if uri.userinfo.present?
+        # Return only scheme, host, port, and path (no query params)
+        "#{uri.scheme}://#{uri.userinfo ? "#{uri.userinfo}@" : ""}#{uri.host}#{uri.port != uri.default_port ? ":#{uri.port}" : ""}#{uri.path}"
+      rescue URI::InvalidURIError
+        "[invalid URL]"
+      end
     end
   end
 
@@ -94,11 +109,9 @@ module SslConfigurable
   def httparty_ssl_options
     ssl_config = ssl_configuration
     # Use explicit false check - nil or true both enable verification
+    # HTTParty only uses :verify boolean, not :ssl_verify_mode
     verify_enabled = ssl_config.verify != false
-    options = {
-      verify: verify_enabled,
-      ssl_verify_mode: verify_enabled ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
-    }
+    options = { verify: verify_enabled }
 
     if ssl_config.ca_file.present?
       options[:ssl_ca_file] = ssl_config.ca_file
@@ -106,7 +119,7 @@ module SslConfigurable
     end
 
     if ssl_config.verify == false
-      log_ssl_debug("HTTParty SSL: Verification disabled (VERIFY_NONE)")
+      log_ssl_debug("HTTParty SSL: Verification disabled")
     end
 
     options
@@ -223,9 +236,10 @@ module SslConfigurable
   # @raise [SslError] Always raises with enhanced message
   def handle_ssl_error(error, url)
     message = build_ssl_error_message(error)
+    redacted_url = redact_url_for_logging(url)
 
     Rails.logger.error("[SSL] Connection failed: #{message}")
-    Rails.logger.error("[SSL] URL: #{url}") if url.present?
+    Rails.logger.error("[SSL] URL: #{redacted_url}") if redacted_url.present?
     Rails.logger.error("[SSL] Original error: #{error.class}: #{error.message}")
 
     if ssl_debug?
@@ -283,6 +297,26 @@ module SslConfigurable
       if ssl_config.ca_file.present? && !ssl_config.ca_file_valid
         Rails.logger.warn("[SSL] Note: SSL_CA_FILE is configured but invalid: #{ssl_config.ca_file_error}")
       end
+    end
+  end
+
+  # Redacts sensitive information from URLs for logging
+  # Removes userinfo and query parameters to prevent credential leakage
+  #
+  # @param url_string [String] The URL to redact
+  # @return [String, nil] Redacted URL or nil if blank
+  def redact_url_for_logging(url_string)
+    return nil if url_string.blank?
+
+    begin
+      uri = URI.parse(url_string)
+      # Build redacted URL with only scheme, host, port, and path
+      redacted = "#{uri.scheme}://#{uri.host}"
+      redacted += ":#{uri.port}" if uri.port && uri.port != uri.default_port
+      redacted += uri.path if uri.path.present?
+      redacted
+    rescue URI::InvalidURIError
+      "[invalid URL]"
     end
   end
 
