@@ -66,13 +66,15 @@ module SslConfigurable
     options = {}
     ssl_config = ssl_configuration
 
+    # Set verify based on explicit false check (nil or true both enable verification)
+    options[:verify] = ssl_config.verify != false
+
     if ssl_config.ca_file.present?
       options[:ca_file] = ssl_config.ca_file
       log_ssl_debug("Faraday SSL: Using custom CA file: #{ssl_config.ca_file}")
     end
 
-    unless ssl_config.verify
-      options[:verify] = false
+    if ssl_config.verify == false
       log_ssl_debug("Faraday SSL: Verification disabled")
     end
 
@@ -91,9 +93,11 @@ module SslConfigurable
   #   end
   def httparty_ssl_options
     ssl_config = ssl_configuration
+    # Use explicit false check - nil or true both enable verification
+    verify_enabled = ssl_config.verify != false
     options = {
-      verify: ssl_config.verify,
-      ssl_verify_mode: ssl_config.verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
+      verify: verify_enabled,
+      ssl_verify_mode: verify_enabled ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
     }
 
     if ssl_config.ca_file.present?
@@ -101,7 +105,7 @@ module SslConfigurable
       log_ssl_debug("HTTParty SSL: Using custom CA file: #{ssl_config.ca_file}")
     end
 
-    unless ssl_config.verify
+    if ssl_config.verify == false
       log_ssl_debug("HTTParty SSL: Verification disabled (VERIFY_NONE)")
     end
 
@@ -118,7 +122,8 @@ module SslConfigurable
   #   http.ca_file = ssl_ca_file if ssl_ca_file.present?
   def net_http_verify_mode
     ssl_config = ssl_configuration
-    mode = ssl_config.verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
+    # Use explicit false check - nil or true both enable verification
+    mode = ssl_config.verify != false ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
     log_ssl_debug("Net::HTTP verify mode: #{mode == OpenSSL::SSL::VERIFY_PEER ? 'VERIFY_PEER' : 'VERIFY_NONE'}")
     mode
   end

@@ -25,6 +25,10 @@
 module SslInitializerHelper
   module_function
 
+  # PEM certificate format markers (X.509 standard)
+  PEM_CERT_BEGIN = "-----BEGIN CERTIFICATE-----"
+  PEM_CERT_END = "-----END CERTIFICATE-----"
+
   # Validates a CA certificate file
   #
   # @param path [String] Path to the CA certificate file
@@ -44,21 +48,21 @@ module SslInitializerHelper
       return result
     end
 
-    # Validate PEM format
+    # Validate PEM format using standard X.509 markers
     content = File.read(path)
-    unless content.include?("-----BEGIN CERTIFICATE-----")
+    unless content.include?(PEM_CERT_BEGIN)
       result[:error] = "Invalid PEM format - missing BEGIN CERTIFICATE marker"
       Rails.logger.warn("[SSL] SSL_CA_FILE does not appear to be a valid PEM certificate: #{path}")
       return result
     end
 
-    unless content.include?("-----END CERTIFICATE-----")
+    unless content.include?(PEM_CERT_END)
       result[:error] = "Invalid PEM format - missing END CERTIFICATE marker"
       Rails.logger.warn("[SSL] SSL_CA_FILE has incomplete PEM format: #{path}")
       return result
     end
 
-    # Try to parse the certificate
+    # Try to parse the certificate using OpenSSL
     begin
       OpenSSL::X509::Certificate.new(content)
       result[:path] = path
@@ -69,6 +73,74 @@ module SslInitializerHelper
     end
 
     result
+  end
+
+  # Finds the system CA certificate bundle path using OpenSSL's detection
+  #
+  # @return [String, nil] Path to system CA bundle or nil if not found
+  def find_system_ca_bundle
+    # First, check if SSL_CERT_FILE is already set (user may have their own bundle)
+    existing_cert_file = ENV["SSL_CERT_FILE"]
+    if existing_cert_file.present? && File.exist?(existing_cert_file) && File.readable?(existing_cert_file)
+      return existing_cert_file
+    end
+
+    # Use OpenSSL's built-in CA file detection
+    openssl_ca_file = OpenSSL::X509::DEFAULT_CERT_FILE
+    if openssl_ca_file.present? && File.exist?(openssl_ca_file) && File.readable?(openssl_ca_file)
+      return openssl_ca_file
+    end
+
+    # Use OpenSSL's default certificate directory as fallback
+    openssl_ca_dir = OpenSSL::X509::DEFAULT_CERT_DIR
+    if openssl_ca_dir.present? && Dir.exist?(openssl_ca_dir)
+      # Look for common bundle file names in the certificate directory
+      %w[ca-certificates.crt ca-bundle.crt cert.pem].each do |bundle_name|
+        bundle_path = File.join(openssl_ca_dir, bundle_name)
+        return bundle_path if File.exist?(bundle_path) && File.readable?(bundle_path)
+      end
+    end
+
+    nil
+  end
+
+  # Creates a combined CA bundle with system CAs and custom CA
+  # This ensures both public services and self-signed internal services work
+  #
+  # @param custom_ca_path [String] Path to the custom CA certificate
+  # @return [String, nil] Path to combined bundle or nil on failure
+  def create_combined_ca_bundle(custom_ca_path)
+    system_ca = find_system_ca_bundle
+    unless system_ca
+      Rails.logger.warn("[SSL] Could not find system CA bundle - using custom CA only")
+      return nil
+    end
+
+    begin
+      # Read system CAs and custom CA
+      system_content = File.read(system_ca)
+      custom_content = File.read(custom_ca_path)
+
+      # Create combined bundle using Tempfile for proper temp file management
+      require "tempfile"
+      combined_file = Tempfile.new([ "ssl_ca_bundle_", ".pem" ], Dir.tmpdir)
+      combined_file.write(system_content)
+      combined_file.write("\n# Custom CA Certificate\n")
+      combined_file.write(custom_content)
+      combined_file.close
+
+      # Prevent deletion - the file needs to persist for the application lifetime
+      combined_path = combined_file.path
+      ObjectSpace.define_finalizer(Rails.application, proc { File.unlink(combined_path) if File.exist?(combined_path) })
+
+      Rails.logger.info("[SSL] Created combined CA bundle: #{combined_path}")
+      Rails.logger.info("[SSL]   - System CA source: #{system_ca}")
+      Rails.logger.info("[SSL]   - Custom CA source: #{custom_ca_path}")
+      combined_path
+    rescue StandardError => e
+      Rails.logger.error("[SSL] Failed to create combined CA bundle: #{e.message}")
+      nil
+    end
   end
 
   # Logs SSL configuration summary
@@ -100,6 +172,8 @@ module SslInitializerHelper
       Rails.logger.info("[SSL]   - SSL verification: #{ssl_config.verify ? 'ENABLED' : 'DISABLED'}")
       Rails.logger.info("[SSL]   - Custom CA file: #{ssl_config.ca_file || 'not configured'}")
       Rails.logger.info("[SSL]   - CA file valid: #{ssl_config.ca_file_valid}")
+      Rails.logger.info("[SSL]   - Combined CA bundle: #{ssl_config.combined_ca_bundle || 'not created'}")
+      Rails.logger.info("[SSL]   - SSL_CERT_FILE: #{ENV['SSL_CERT_FILE'] || 'not set'}")
     end
   end
 end
@@ -124,11 +198,27 @@ Rails.application.configure do
   config.x.ssl.ca_file = nil
   config.x.ssl.ca_file_valid = false
 
-  if ca_file.present?
+  if ca_file
     ca_file_status = SslInitializerHelper.validate_ca_certificate_file(ca_file)
     config.x.ssl.ca_file = ca_file_status[:path]
     config.x.ssl.ca_file_valid = ca_file_status[:valid]
     config.x.ssl.ca_file_error = ca_file_status[:error]
+
+    # Create combined CA bundle and set SSL_CERT_FILE for global SSL configuration
+    # This ensures all Ruby SSL connections (including HTTPClient used by openid_connect gem)
+    # will trust both system CAs (for public services) and custom CA (for self-signed services)
+    if ca_file_status[:valid]
+      combined_bundle = SslInitializerHelper.create_combined_ca_bundle(ca_file_status[:path])
+      if combined_bundle
+        ENV["SSL_CERT_FILE"] = combined_bundle
+        config.x.ssl.combined_ca_bundle = combined_bundle
+        Rails.logger.info("[SSL] Set SSL_CERT_FILE=#{combined_bundle} for global SSL configuration")
+      else
+        # Fallback: just use the custom CA (may break connections to public services)
+        Rails.logger.warn("[SSL] Could not create combined CA bundle, using custom CA only")
+        ENV["SSL_CERT_FILE"] = ca_file_status[:path]
+      end
+    end
   end
 
   # Log configuration summary at startup

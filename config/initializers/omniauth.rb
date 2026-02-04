@@ -6,17 +6,18 @@ Rails.configuration.x.auth.oidc_enabled = false
 Rails.configuration.x.auth.sso_providers ||= []
 
 # Helper to build SSL options for OmniAuth providers
+# Returns a hash of SSL options based on Rails.configuration.x.ssl settings
 def omniauth_ssl_options
   ssl_config = Rails.configuration.x.ssl
+  return {} unless ssl_config
+
   options = {}
 
-  if ssl_config&.ca_file.present?
-    options[:ca_file] = ssl_config.ca_file
-  end
+  # Use custom CA file if configured
+  options[:ca_file] = ssl_config.ca_file if ssl_config.ca_file.present?
 
-  unless ssl_config&.verify != false
-    options[:verify] = ssl_config&.verify
-  end
+  # Only set verify: false if explicitly disabled (default is to verify)
+  options[:verify] = false if ssl_config.verify == false
 
   options
 end
