@@ -1,5 +1,5 @@
 class PdfImport < Import
-  has_one_attached :pdf_file
+  has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
 

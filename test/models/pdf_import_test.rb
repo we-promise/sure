@@ -132,4 +132,21 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_nil @import.account
     assert_not_includes @import.mapping_steps, Import::AccountMapping
   end
+
+  test "destroying import purges attached pdf_file" do
+    @import.pdf_file.attach(
+      io: StringIO.new("fake-pdf-content"),
+      filename: "statement.pdf",
+      content_type: "application/pdf"
+    )
+
+    attachment_id = @import.pdf_file.id
+    assert ActiveStorage::Attachment.exists?(attachment_id)
+
+    perform_enqueued_jobs do
+      @import.destroy!
+    end
+
+    assert_not ActiveStorage::Attachment.exists?(attachment_id)
+  end
 end
