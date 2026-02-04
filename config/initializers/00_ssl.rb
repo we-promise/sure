@@ -48,6 +48,14 @@ module SslInitializerHelper
       return result
     end
 
+    # Sanity check file size (CA certs should be < 1MB)
+    file_size = File.size(path)
+    if file_size > 1_000_000
+      result[:error] = "File too large (#{file_size} bytes) - expected a PEM certificate"
+      Rails.logger.warn("[SSL] SSL_CA_FILE is unexpectedly large: #{path} (#{file_size} bytes)")
+      return result
+    end
+
     # Validate PEM format using standard X.509 markers
     content = File.read(path)
     unless content.include?(PEM_CERT_BEGIN)
@@ -130,8 +138,9 @@ module SslInitializerHelper
       combined_file.close
 
       # Prevent deletion - the file needs to persist for the application lifetime
+      # Use at_exit for reliable cleanup when the process terminates
       combined_path = combined_file.path
-      ObjectSpace.define_finalizer(Rails.application, proc { File.unlink(combined_path) if File.exist?(combined_path) })
+      at_exit { File.unlink(combined_path) if File.exist?(combined_path) }
 
       Rails.logger.info("[SSL] Created combined CA bundle: #{combined_path}")
       Rails.logger.info("[SSL]   - System CA source: #{system_ca}")
@@ -215,7 +224,8 @@ Rails.application.configure do
         Rails.logger.info("[SSL] Set SSL_CERT_FILE=#{combined_bundle} for global SSL configuration")
       else
         # Fallback: just use the custom CA (may break connections to public services)
-        Rails.logger.warn("[SSL] Could not create combined CA bundle, using custom CA only")
+        Rails.logger.warn("[SSL] Could not create combined CA bundle, using custom CA only. " \
+          "Connections to public services (not using your custom CA) may fail.")
         ENV["SSL_CERT_FILE"] = ca_file_status[:path]
       end
     end

@@ -292,7 +292,10 @@ module SslConfigurable
   # @return [Boolean] true if the error is SSL-related
   def ssl_related_error?(error)
     message = error.message.to_s.downcase
-    ssl_keywords = %w[ssl certificate verify tls handshake]
-    ssl_keywords.any? { |keyword| message.include?(keyword) }
+    # Use specific keywords to avoid false positives (e.g., "verify" alone could match "verify your email")
+    ssl_keywords = %w[ssl certificate tls handshake]
+    ssl_phrases = [ "verify failed", "verification failed" ]
+    ssl_keywords.any? { |keyword| message.include?(keyword) } ||
+      ssl_phrases.any? { |phrase| message.include?(phrase) }
   end
 end
