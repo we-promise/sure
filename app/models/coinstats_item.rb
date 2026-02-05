@@ -22,7 +22,7 @@ class CoinstatsItem < ApplicationRecord
   validates :api_key, presence: true
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :coinstats_accounts, dependent: :destroy
   has_many :accounts, through: :coinstats_accounts

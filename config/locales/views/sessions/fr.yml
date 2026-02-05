@@ -13,3 +13,5 @@ fr:
       submit: Se connecter
       title: Connectez-vous à votre compte
       password_placeholder: Entrez votre mot de passe
+      openid_connect: Se connecter avec OpenID Connect
+      oidc: Se connecter avec OpenID Connect

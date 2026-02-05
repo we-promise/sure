@@ -208,7 +208,7 @@ Rails.application.routes.draw do
 
   resources :transfers, only: %i[new create destroy show update]
 
-  resources :imports, only: %i[index new show create destroy] do
+  resources :imports, only: %i[index new show create update destroy] do
     member do
       post :publish
       put :revert
@@ -363,6 +363,7 @@ Rails.application.routes.draw do
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
       post :sync, to: "sync#create"

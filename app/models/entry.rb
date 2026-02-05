@@ -42,6 +42,7 @@ class Entry < ApplicationRecord
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
   }
 
@@ -56,6 +57,7 @@ class Entry < ApplicationRecord
         AND (
           (t.extra -> 'simplefin' ->> 'pending')::boolean = true
           OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
+          OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
         )
       )
     SQL
@@ -118,6 +120,7 @@ class Entry < ApplicationRecord
         .where(<<~SQL.squish)
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
+          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
         SQL
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
         .to_a # Load limited records to avoid COUNT(*) on .size
@@ -164,6 +167,7 @@ class Entry < ApplicationRecord
         .where(<<~SQL.squish)
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
+          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
         SQL
 
       # Match by name similarity (first 3 words)

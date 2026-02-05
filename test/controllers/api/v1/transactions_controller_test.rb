@@ -41,6 +41,10 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert response_data.key?("transactions")
     assert response_data.key?("pagination")
+
+    # Agent-friendly numeric fields (validate type + sign invariants)
+    first = response_data["transactions"].first
+    assert_amount_cents_fields(first)
     assert response_data["pagination"].key?("page")
     assert response_data["pagination"].key?("per_page")
     assert response_data["pagination"].key?("total_count")
@@ -130,6 +134,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @transaction.id, response_data["id"]
     assert response_data.key?("name")
     assert response_data.key?("amount")
+    assert_amount_cents_fields(response_data)
     assert response_data.key?("date")
     assert response_data.key?("account")
   end
@@ -357,5 +362,23 @@ end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
+    end
+
+    # Validates agent-friendly numeric fields: type, sign invariants
+    def assert_amount_cents_fields(txn_json)
+      assert txn_json.key?("amount_cents"), "Expected amount_cents field"
+      assert txn_json.key?("signed_amount_cents"), "Expected signed_amount_cents field"
+      assert_kind_of Integer, txn_json["amount_cents"]
+      assert_kind_of Integer, txn_json["signed_amount_cents"]
+      assert_operator txn_json["amount_cents"], :>=, 0, "amount_cents must be non-negative"
+      assert_equal txn_json["amount_cents"].abs, txn_json["signed_amount_cents"].abs,
+                   "Absolute values of amount_cents and signed_amount_cents must match"
+      if txn_json["classification"] == "income"
+        assert_operator txn_json["signed_amount_cents"], :>=, 0,
+                        "income transactions should have non-negative signed_amount_cents"
+      else
+        assert_operator txn_json["signed_amount_cents"], :<=, 0,
+                        "non-income transactions should have non-positive signed_amount_cents"
+      end
     end
 end

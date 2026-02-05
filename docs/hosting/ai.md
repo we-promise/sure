@@ -91,6 +91,9 @@ Sure supports any OpenAI-compatible API endpoint. Here are tested providers:
 ```bash
 OPENAI_ACCESS_TOKEN=sk-proj-...
 # No other configuration needed
+
+# Optional: Request timeout in seconds (default: 60)
+# OPENAI_REQUEST_TIMEOUT=60
 ```
 
 **Recommended models:**

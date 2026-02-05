@@ -14,7 +14,7 @@ class LunchflowItem < ApplicationRecord
   validates :api_key, presence: true, on: :create
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :lunchflow_accounts, dependent: :destroy
   has_many :accounts, through: :lunchflow_accounts

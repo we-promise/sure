@@ -36,7 +36,7 @@ class Account < ApplicationRecord
     manual.where.not(status: :pending_deletion)
   }
 
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true

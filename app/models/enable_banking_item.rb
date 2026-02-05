@@ -17,7 +17,7 @@ class EnableBankingItem < ApplicationRecord
   validates :client_certificate, presence: true, on: :create
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :enable_banking_accounts, dependent: :destroy
   has_many :accounts, through: :enable_banking_accounts

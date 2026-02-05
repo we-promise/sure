@@ -23,3 +23,8 @@ ro:
       welcome_body: Pentru a începe, trebuie să îți creezi un cont nou. Apoi vei putea configura setări suplimentare în aplicație.
       welcome_title: Bine ai venit la Self Hosted Maybe!
       password_placeholder: Introdu parola
+      password_requirements:
+        length: Minim 8 caractere
+        case: Litere mari și mici
+        number: O cifră (0-9)
+        special: "Un caracter special (!, @, #, $, %, etc)"

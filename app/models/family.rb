@@ -40,6 +40,32 @@ class Family < ApplicationRecord
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
+  validates :month_start_day, inclusion: { in: 1..28 }
+
+  def uses_custom_month_start?
+    month_start_day != 1
+  end
+
+  def custom_month_start_for(date)
+    if date.day >= month_start_day
+      Date.new(date.year, date.month, month_start_day)
+    else
+      previous_month = date - 1.month
+      Date.new(previous_month.year, previous_month.month, month_start_day)
+    end
+  end
+
+  def custom_month_end_for(date)
+    start_date = custom_month_start_for(date)
+    next_month_start = start_date + 1.month
+    next_month_start - 1.day
+  end
+
+  def current_custom_month_period
+    start_date = custom_month_start_for(Date.current)
+    end_date = custom_month_end_for(Date.current)
+    Period.custom(start_date: start_date, end_date: end_date)
+  end
 
   def assigned_merchants
     merchant_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
@@ -139,6 +165,27 @@ class Family < ApplicationRecord
   def missing_data_provider?
     (requires_securities_data_provider? && Security.provider.nil?) ||
     (requires_exchange_rates_data_provider? && ExchangeRate.provider.nil?)
+  end
+
+  # Returns securities with plan restrictions for a specific provider
+  # @param provider [String] The provider name (e.g., "TwelveData")
+  # @return [Array<Hash>] Array of hashes with ticker, name, required_plan, provider
+  def securities_with_plan_restrictions(provider:)
+    security_ids = trades.joins(:security).pluck("securities.id").uniq
+    return [] if security_ids.empty?
+
+    restrictions = Security.plan_restrictions_for(security_ids, provider: provider)
+    return [] if restrictions.empty?
+
+    Security.where(id: restrictions.keys).map do |security|
+      restriction = restrictions[security.id]
+      {
+        ticker: security.ticker,
+        name: security.name,
+        required_plan: restriction[:required_plan],
+        provider: restriction[:provider]
+      }
+    end
   end
 
   def oldest_entry_date
