@@ -10,7 +10,7 @@ class PdfImportMailerTest < ActionMailer::TestCase
     mail = PdfImportMailer.with(user: @user, pdf_import: @pdf_import).next_steps
 
     assert_equal I18n.t(
-      "pdf_import_mailer.next_steps.subject", 
+      "pdf_import_mailer.next_steps.subject",
       product: Rails.configuration.x.product_name
     ), mail.subject
     assert_equal [ @user.email ], mail.to
