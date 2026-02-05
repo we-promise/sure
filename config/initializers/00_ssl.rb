@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "openssl"
+require "fileutils"
 
 # Centralized SSL/TLS configuration for outbound HTTPS connections.
 #

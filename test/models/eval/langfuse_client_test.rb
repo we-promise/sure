@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class Eval::LangfuseClientTest < ActiveSupport::TestCase
   # -- CRL error list --
