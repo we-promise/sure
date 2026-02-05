@@ -71,7 +71,11 @@
             <dd class="text-primary">
               <% begin %>
                 <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
-                <% rescue ActiveRecord::RecordInvalid, StandardError %>
+              <% rescue ActiveRecord::RecordInvalid %>
+                <%= t(".unknown") %>
+              <% rescue StandardError => e %>
+                <% logger.error "Error fetching current price for security #{@holding.security.id}: #{e.message}" %>
+                <% logger.error e.backtrace.first(5).join("\n") %>
                 <%= t(".unknown") %>
               <% end %>
             </dd>
