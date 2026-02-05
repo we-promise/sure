@@ -11,7 +11,7 @@ class PdfImportMailerTest < ActionMailer::TestCase
 
     assert_equal I18n.t(
       "pdf_import_mailer.next_steps.subject",
-      product: Rails.configuration.x.product_name
+      product_name: Rails.configuration.x.product_name
     ), mail.subject
     assert_equal [ @user.email ], mail.to
     assert_includes mail.subject, "analyzed"
