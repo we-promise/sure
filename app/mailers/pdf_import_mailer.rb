@@ -6,7 +6,7 @@ class PdfImportMailer < ApplicationMailer
 
     mail(
       to: @user.email,
-      subject: t(".subject", product: product_name)
+      subject: t(".subject", product_name: product_name)
     )
   end
 end
