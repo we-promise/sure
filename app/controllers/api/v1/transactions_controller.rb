@@ -105,26 +105,29 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 end
 
   def update
-    if @entry.update(entry_params_for_update)
-      # Handle tags separately - only when explicitly provided in the request
-      # This allows clearing tags with tag_ids: [] while preserving tags when not specified
-      if tags_provided?
-        @entry.transaction.tag_ids = transaction_params[:tag_ids] || []
-        @entry.transaction.save!
-        @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+    Entry.transaction do
+      if `@entry.update`(entry_params_for_update)
+        # Handle tags separately - only when explicitly provided in the request
+        # This allows clearing tags with tag_ids: [] while preserving tags when not specified
+        if tags_provided?
+          `@entry.transaction.tag_ids` = transaction_params[:tag_ids] || []
+          `@entry.transaction.save`!
+          `@entry.transaction.lock_attr`!(:tag_ids) if `@entry.transaction.tags.any`?
+        end
+
+        `@entry.sync_account_later`
+        `@entry.lock_saved_attributes`!
+
+        `@transaction` = `@entry.transaction`
+        render :show
+      else
+        render json: {
+          error: "validation_failed",
+          message: "Transaction could not be updated",
+          errors: `@entry.errors.full_messages`
+        }, status: :unprocessable_entity
+        raise ActiveRecord::Rollback
       end
-
-      @entry.sync_account_later
-      @entry.lock_saved_attributes!
-
-      @transaction = @entry.transaction
-      render :show
-    else
-      render json: {
-        error: "validation_failed",
-        message: "Transaction could not be updated",
-        errors: @entry.errors.full_messages
-      }, status: :unprocessable_entity
     end
 
   rescue => e
