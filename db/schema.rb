@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_29_200129) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_03_204605) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -499,6 +499,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_29_200129) do
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
+    t.integer "month_start_day", default: 1, null: false
+    t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
   create_table "family_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -853,8 +855,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_29_200129) do
     t.datetime "last_seen_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "oauth_application_id"
-    t.index ["oauth_application_id"], name: "index_mobile_devices_on_oauth_application_id"
     t.index ["user_id", "device_id"], name: "index_mobile_devices_on_user_id_and_device_id", unique: true
     t.index ["user_id"], name: "index_mobile_devices_on_user_id"
   end
@@ -883,7 +883,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_29_200129) do
     t.datetime "created_at", null: false
     t.datetime "revoked_at"
     t.string "previous_refresh_token", default: "", null: false
+    t.uuid "mobile_device_id"
     t.index ["application_id"], name: "index_oauth_access_tokens_on_application_id"
+    t.index ["mobile_device_id"], name: "index_oauth_access_tokens_on_mobile_device_id"
     t.index ["refresh_token"], name: "index_oauth_access_tokens_on_refresh_token", unique: true
     t.index ["resource_owner_id"], name: "index_oauth_access_tokens_on_resource_owner_id"
     t.index ["token"], name: "index_oauth_access_tokens_on_token", unique: true
