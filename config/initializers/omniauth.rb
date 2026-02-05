@@ -5,23 +5,6 @@ require "omniauth/rails_csrf_protection"
 Rails.configuration.x.auth.oidc_enabled = false
 Rails.configuration.x.auth.sso_providers ||= []
 
-# Helper to build SSL options for OmniAuth providers
-# Returns a hash of SSL options based on Rails.configuration.x.ssl settings
-def omniauth_ssl_options
-  ssl_config = Rails.configuration.x.ssl
-  return {} unless ssl_config
-
-  options = {}
-
-  # Use custom CA file if configured
-  options[:ca_file] = ssl_config.ca_file if ssl_config.ca_file.present?
-
-  # Only set verify: false if explicitly disabled (default is to verify)
-  options[:verify] = false if ssl_config.verify == false
-
-  options
-end
-
 # Configure OmniAuth to handle failures gracefully
 OmniAuth.config.on_failure = proc do |env|
   error = env["omniauth.error"]
@@ -95,7 +78,13 @@ Rails.application.config.middleware.use OmniAuth::Builder do
           identifier: client_id,
           secret: client_secret,
           redirect_uri: redirect_uri,
-          ssl: omniauth_ssl_options
+          ssl: begin
+                 ssl_config = Rails.configuration.x.ssl
+                 ssl_opts = {}
+                 ssl_opts[:ca_file] = ssl_config.ca_file if ssl_config&.ca_file.present?
+                 ssl_opts[:verify] = false if ssl_config&.verify == false
+                 ssl_opts
+               end
         }
       }
 
