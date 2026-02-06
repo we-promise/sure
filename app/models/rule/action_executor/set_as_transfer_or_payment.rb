@@ -9,6 +9,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
+    return 0 unless target_account
     scope = transaction_scope.with_entry
 
     count_modified_resources(scope) do |txn|
