@@ -2,7 +2,7 @@
 
 class Rack::Attack
   # Enable Rack::Attack
-  enabled = Rails.env.production? || Rails.env.staging?
+  self.enabled = Rails.env.production? || Rails.env.staging?
 
   # Throttle requests to the OAuth token endpoint
   throttle("oauth/token", limit: 10, period: 1.minute) do |request|
