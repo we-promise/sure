@@ -1,4 +1,6 @@
 class SessionsController < ApplicationController
+  extend SslConfigurable
+
   before_action :set_session, only: :destroy
   skip_authentication only: %i[index new create openid_connect failure post_logout mobile_sso_start]
 
@@ -10,6 +12,7 @@ class SessionsController < ApplicationController
   end
 
   def new
+    store_pending_invitation_if_valid
     # Clear any stale mobile SSO session flag from an abandoned mobile flow
     session.delete(:mobile_sso)
 
@@ -64,6 +67,7 @@ class SessionsController < ApplicationController
       else
         log_super_admin_override_login(user)
         @session = create_session_for(user)
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
       end
     else
@@ -180,6 +184,7 @@ class SessionsController < ApplicationController
         redirect_to verify_mfa_path
       else
         @session = create_session_for(user)
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
       end
     else
@@ -302,7 +307,7 @@ class SessionsController < ApplicationController
       if provider_config[:strategy] == "openid_connect" && provider_config[:issuer].present?
         begin
           discovery_url = discovery_url_for(provider_config[:issuer])
-          response = Faraday.get(discovery_url) do |req|
+          response = Faraday.new(ssl: self.class.faraday_ssl_options).get(discovery_url) do |req|
             req.options.timeout = 5
             req.options.open_timeout = 3
           end

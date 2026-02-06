@@ -19,7 +19,15 @@ class MobileDevice < ApplicationRecord
   scope :active, -> { where("last_seen_at > ?", 90.days.ago) }
 
   def self.shared_oauth_application
-    @shared_oauth_application ||= Doorkeeper::Application.find_by!(name: "Sure Mobile")
+    @shared_oauth_application ||= begin
+      Doorkeeper::Application.find_or_create_by!(name: "Sure Mobile") do |app|
+        app.redirect_uri = CALLBACK_URL
+        app.scopes = "read_write"
+        app.confidential = false
+      end
+    rescue ActiveRecord::RecordNotUnique
+      Doorkeeper::Application.find_by!(name: "Sure Mobile")
+    end
   end
 
   def self.upsert_device!(user, attrs)
