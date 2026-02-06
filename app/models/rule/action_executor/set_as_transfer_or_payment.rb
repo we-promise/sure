@@ -29,7 +29,6 @@ end
 
 private
   def build_transfer(target_account, entry)
-
     missing_transaction = Transaction.new(
       entry: target_account.entries.build(
         amount: entry.amount * -1,
