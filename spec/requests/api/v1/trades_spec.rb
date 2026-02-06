@@ -282,7 +282,7 @@ RSpec.describe 'API V1 Trades', type: :request do
   end
 
   path '/api/v1/trades/{id}' do
-    parameter name: :id, in: :path, type: :string, description: 'Trade ID'
+    parameter name: :id, in: :path, type: :string, required: true, description: 'Trade ID'
 
     get 'Retrieve trade' do
       tags 'Trades'
@@ -326,19 +326,18 @@ RSpec.describe 'API V1 Trades', type: :request do
         properties: {
           trade: {
             type: :object,
+            description: 'Top-level: name, date, amount, currency, notes, nature, type. Use entryable_attributes for qty, price, investment_activity_label, category_id.',
             properties: {
               date: { type: :string, format: :date },
-              qty: { type: :number },
-              price: { type: :number },
-              type: { type: :string, enum: %w[buy sell] },
-              nature: { type: :string, enum: %w[inflow outflow] },
               name: { type: :string },
-              notes: { type: :string },
+              amount: { type: :number },
               currency: { type: :string },
-              investment_activity_label: { type: :string },
-              category_id: { type: :string, format: :uuid },
+              notes: { type: :string },
+              nature: { type: :string, enum: %w[inflow outflow] },
+              type: { type: :string, enum: %w[buy sell], description: 'Determines sign when qty/price are updated via entryable_attributes' },
               entryable_attributes: {
                 type: :object,
+                description: 'Required for qty, price, investment_activity_label, category_id; id is set by the server.',
                 properties: {
                   qty: { type: :number },
                   price: { type: :number },
@@ -383,12 +382,11 @@ RSpec.describe 'API V1 Trades', type: :request do
       produces 'application/json'
 
       response '200', 'trade deleted' do
+        schema '$ref' => '#/components/schemas/DeleteResponse'
+
         let(:id) { trade.id }
 
-        run_test! do |response|
-          data = JSON.parse(response.body)
-          expect(data['message']).to be_present
-        end
+        run_test!
       end
 
       response '404', 'trade not found' do

@@ -21,26 +21,16 @@ class Api::V1::HoldingsController < Api::V1::BaseController
     @per_page = safe_per_page_param
 
     render :index
-  rescue ActionController::BadRequest => e
-    render json: { error: "bad_request", message: e.message }, status: :bad_request
+  rescue ArgumentError => e
+    render_validation_error(e.message, [ e.message ])
   rescue => e
-    Rails.logger.error "HoldingsController#index error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    render json: {
-      error: "internal_server_error",
-      message: "Error: #{e.message}"
-    }, status: :internal_server_error
+    log_and_render_error("index", e)
   end
 
   def show
     render :show
   rescue => e
-    Rails.logger.error "HoldingsController#show error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    render json: {
-      error: "internal_server_error",
-      message: "Error: #{e.message}"
-    }, status: :internal_server_error
+    log_and_render_error("show", e)
   end
 
   private
@@ -64,13 +54,13 @@ class Api::V1::HoldingsController < Api::V1::BaseController
         query = query.where(account_id: Array(params[:account_ids]))
       end
       if params[:date].present?
-        query = query.where(date: parse_date!(params[:date]))
+        query = query.where(date: parse_date!(params[:date], "date"))
       end
       if params[:start_date].present?
-        query = query.where("holdings.date >= ?", parse_date!(params[:start_date]))
+        query = query.where("holdings.date >= ?", parse_date!(params[:start_date], "start_date"))
       end
       if params[:end_date].present?
-        query = query.where("holdings.date <= ?", parse_date!(params[:end_date]))
+        query = query.where("holdings.date <= ?", parse_date!(params[:end_date], "end_date"))
       end
       if params[:security_id].present?
         query = query.where(security_id: params[:security_id])
@@ -88,9 +78,26 @@ class Api::V1::HoldingsController < Api::V1::BaseController
       (1..100).cover?(per_page) ? per_page : 25
     end
 
-    def parse_date!(value)
+    def parse_date!(value, param_name)
       Date.parse(value)
     rescue Date::Error, ArgumentError, TypeError
-      raise ActionController::BadRequest, "Invalid date: #{value}"
+      raise ArgumentError, "Invalid #{param_name} format"
+    end
+
+    def render_validation_error(message, errors)
+      render json: {
+        error: "validation_failed",
+        message: message,
+        errors: errors
+      }, status: :unprocessable_entity
+    end
+
+    def log_and_render_error(action, exception)
+      Rails.logger.error "HoldingsController##{action} error: #{exception.message}"
+      Rails.logger.error exception.backtrace.join("\n")
+      render json: {
+        error: "internal_server_error",
+        message: "Error: #{exception.message}"
+      }, status: :internal_server_error
     end
 end
