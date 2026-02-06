@@ -74,7 +74,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     @entry = @trade.entry
     render :show, status: :created
   rescue ActiveRecord::RecordNotFound => e
-    message = (e.model == Account) ? "Account not found" : "Security not found"
+    message = (e.model == "Account") ? "Account not found" : "Security not found"
     render json: { error: "not_found", message: message }, status: :not_found
   rescue => e
     log_and_render_error("create", e)

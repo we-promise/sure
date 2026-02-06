@@ -321,7 +321,6 @@ RSpec.describe 'API V1 Trades', type: :request do
       consumes 'application/json'
       produces 'application/json'
 
-      parameter name: :id, in: :path, type: :string, description: 'Trade ID'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {

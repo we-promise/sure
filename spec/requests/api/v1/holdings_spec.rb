@@ -174,7 +174,6 @@ RSpec.describe 'API V1 Holdings', type: :request do
 
       response '500', 'internal server error' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
-        description 'Returned when an unexpected server error occurs (documented for OpenAPI).'
         # No run_test! — cannot reliably trigger 500 in spec
       end
     end
