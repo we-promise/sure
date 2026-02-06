@@ -34,7 +34,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
           amount: entry.amount * -1,
           currency: entry.currency,
           date: entry.date,
-          name: "Transfer to #{entry.amount.negative? ? entry.account.name : target_account.name}",
+          name: "#{target_account.liability? ? "Payment" : "Transfer"} #{entry.amount.negative? ? "to #{target_account.name}" : "from #{entry.account.name}"}",
         )
       )
 
