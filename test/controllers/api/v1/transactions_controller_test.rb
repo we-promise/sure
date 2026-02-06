@@ -257,6 +257,75 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should preserve tags when tag_ids not provided in update" do
+    # Set up transaction with existing tags
+    original_tags = [ Tag.first, Tag.second ]
+    @transaction.tags = original_tags
+    @transaction.save!
+
+    # Update only the name, without providing tag_ids
+    update_params = {
+      transaction: {
+        name: "Updated Name Only"
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    @transaction.reload
+    assert_equal "Updated Name Only", @transaction.entry.name
+    # Tags should be preserved since tag_ids was not in the request
+    assert_equal original_tags.map(&:id).sort, @transaction.tag_ids.sort
+  end
+
+  test "should clear tags when empty tag_ids explicitly provided in update" do
+    # Set up transaction with existing tags
+    @transaction.tags = [ Tag.first, Tag.second ]
+    @transaction.save!
+
+    # Explicitly provide empty tag_ids to clear tags
+    update_params = {
+      transaction: {
+        name: "Updated Name",
+        tag_ids: []
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    @transaction.reload
+    # Tags should be cleared since tag_ids was explicitly provided as empty
+    assert_empty @transaction.tags
+  end
+
+  test "should update tags when tag_ids explicitly provided in update" do
+    # Set up transaction with one tag
+    @transaction.tags = [ Tag.first ]
+    @transaction.save!
+
+    new_tags = [ Tag.second ]
+
+    update_params = {
+      transaction: {
+        tag_ids: new_tags.map(&:id)
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    @transaction.reload
+    assert_equal new_tags.map(&:id), @transaction.tag_ids
+  end
+
   # DESTROY action tests
   test "should destroy transaction" do
   entry_to_delete = @account.entries.create!(

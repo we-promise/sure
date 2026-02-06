@@ -77,7 +77,14 @@ Rails.application.config.middleware.use OmniAuth::Builder do
         client_options: {
           identifier: client_id,
           secret: client_secret,
-          redirect_uri: redirect_uri
+          redirect_uri: redirect_uri,
+          ssl: begin
+                 ssl_config = Rails.configuration.x.ssl
+                 ssl_opts = {}
+                 ssl_opts[:ca_file] = ssl_config.ca_file if ssl_config&.ca_file.present?
+                 ssl_opts[:verify] = false if ssl_config&.verify == false
+                 ssl_opts
+               end
         }
       }
 
