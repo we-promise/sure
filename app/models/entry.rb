@@ -323,27 +323,50 @@ class Entry < ApplicationRecord
       30.years.ago.to_date
     end
 
-    def bulk_update!(bulk_update_params)
+    # Bulk update entries with the given parameters.
+    #
+    # Tags are handled separately from other entryable attributes because they use
+    # a join table (taggings) rather than a direct column. This means:
+    # - category_id: nil means "no category" (column value)
+    # - tag_ids: [] means "delete all taggings" (join table operation)
+    #
+    # To avoid accidentally clearing tags when only updating other fields,
+    # tags are only modified when explicitly requested via update_tags: true.
+    #
+    # @param bulk_update_params [Hash] The parameters to update
+    # @param update_tags [Boolean] Whether to update tags (default: false)
+    def bulk_update!(bulk_update_params, update_tags: false)
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
         entryable_attributes: {
           category_id: bulk_update_params[:category_id],
-          merchant_id: bulk_update_params[:merchant_id],
-          tag_ids: bulk_update_params[:tag_ids]
+          merchant_id: bulk_update_params[:merchant_id]
         }.compact_blank
       }.compact_blank
 
-      return 0 if bulk_attributes.blank?
+      tag_ids = Array.wrap(bulk_update_params[:tag_ids]).reject(&:blank?)
+      has_updates = bulk_attributes.present? || update_tags
+
+      return 0 unless has_updates
 
       transaction do
         all.each do |entry|
-          bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
-          entry.update! bulk_attributes
+          # Update standard attributes
+          if bulk_attributes.present?
+            bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
+            entry.update! bulk_attributes
+          end
+
+          # Handle tags separately - only when explicitly requested
+          if update_tags && entry.transaction?
+            entry.transaction.tag_ids = tag_ids
+            entry.transaction.save!
+            entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+          end
 
           entry.lock_saved_attributes!
           entry.mark_user_modified!
-          entry.entryable.lock_attr!(:tag_ids) if entry.transaction? && entry.transaction.tags.any?
         end
       end
 
