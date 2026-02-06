@@ -15,15 +15,14 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     count_modified_resources(scope) do |txn|
       entry = txn.entry
       unless txn.transfer?
-        @transfer = build_transfer(target_account, entry)
+        transfer = build_transfer(target_account, entry)
         Transfer.transaction do
-          @transfer.save!
-          @transfer.outflow_transaction.update!(kind: Transfer.kind_for_account(@transfer.outflow_transaction.entry.account))
-          @transfer.inflow_transaction.update!(kind: "funds_movement")
+          transfer.save!
+          transfer.outflow_transaction.update!(kind: Transfer.kind_for_account(transfer.outflow_transaction.entry.account))
+          transfer.inflow_transaction.update!(kind: "funds_movement")
         end
 
-        @transfer.sync_account_later
-        return true
+        transfer.sync_account_later
       end
     end
   end
