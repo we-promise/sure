@@ -39,4 +39,17 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal "Card Purchase", name
   end
+
+  test "uses descriptive remittance when description is a technical reference code" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "C18W26037W001080",
+      remittance_information: [
+        "VIR SEPA TRAVAUX AGRIS 26-01-0024",
+        "C18W26037W001080"
+      ]
+    )
+
+    assert_equal "VIR SEPA TRAVAUX AGRIS 26-01-0024", name
+  end
 end

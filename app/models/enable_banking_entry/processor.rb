@@ -4,8 +4,6 @@ class EnableBankingEntry::Processor
   include CurrencyNormalizable
   GENERIC_NAME_PATTERNS = [
     /\APAIEMENT\s+(CB|PSC)\b/i,
-    /\AVIR(?:EMENT)?\b/i,
-    /\APRLV\b/i,
     /\ACHEQUE\b/i,
     /\ARETRAIT\b/i,
     /\AFRAIS\b/i
@@ -133,7 +131,14 @@ class EnableBankingEntry::Processor
       return false if value.blank?
 
       normalized = value.to_s.strip
-      GENERIC_NAME_PATTERNS.any? { |pattern| normalized.match?(pattern) }
+      GENERIC_NAME_PATTERNS.any? { |pattern| normalized.match?(pattern) } || reference_like?(normalized)
+    end
+
+    def reference_like?(value)
+      normalized = value.to_s.strip
+      return false if normalized.blank?
+
+      normalized.match?(/\A[A-Z0-9]{10,}\z/)
     end
 
     def merchant
