@@ -2,6 +2,8 @@
 
 # Tests SSO provider configuration by validating discovery endpoints
 class SsoProviderTester
+  extend SslConfigurable
+
   attr_reader :provider, :result
 
   Result = Struct.new(:success?, :message, :details, keyword_init: true)
@@ -34,7 +36,7 @@ class SsoProviderTester
       discovery_url = build_discovery_url(provider.issuer)
 
       begin
-        response = Faraday.get(discovery_url) do |req|
+        response = faraday_client.get(discovery_url) do |req|
           req.options.timeout = 10
           req.options.open_timeout = 5
         end
@@ -146,7 +148,7 @@ class SsoProviderTester
       metadata_url = provider.settings&.dig("idp_metadata_url")
       if metadata_url.present?
         begin
-          response = Faraday.get(metadata_url) do |req|
+          response = faraday_client.get(metadata_url) do |req|
             req.options.timeout = 10
             req.options.open_timeout = 5
           end
@@ -197,5 +199,9 @@ class SsoProviderTester
       else
         "#{issuer}/.well-known/openid-configuration"
       end
+    end
+
+    def faraday_client
+      @faraday_client ||= Faraday.new(ssl: self.class.faraday_ssl_options)
     end
 end
