@@ -231,6 +231,19 @@ class ApiKeyTest < ActiveSupport::TestCase
     assert ApiKey.exists?(demo_key.id)
   end
 
+  test "should prevent revoking demo monitoring api key" do
+    demo_key = ApiKey.create!(
+      user: @user,
+      name: "Demo Monitoring Key",
+      display_key: ApiKey::DEMO_MONITORING_KEY,
+      scopes: [ "read" ]
+    )
+
+    assert_raises(ActiveRecord::RecordNotDestroyed) { demo_key.revoke! }
+    demo_key.reload
+    assert_nil demo_key.revoked_at
+  end
+
   test "should prevent deleting demo monitoring api key" do
     demo_key = ApiKey.create!(
       user: @user,
