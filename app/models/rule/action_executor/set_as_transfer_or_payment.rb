@@ -22,6 +22,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
         end
 
         @transfer.sync_account_later
+        return true
       end
     end
   end
