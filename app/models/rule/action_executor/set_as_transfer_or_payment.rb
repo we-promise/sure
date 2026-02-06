@@ -25,24 +25,23 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
       end
     end
   end
-end
 
   private
-  def build_transfer(target_account, entry)
-    missing_transaction = Transaction.new(
-      entry: target_account.entries.build(
-        amount: entry.amount * -1,
-        currency: entry.currency,
-        date: entry.date,
-        name: "Transfer to #{entry.amount.negative? ? entry.account.name : target_account.name}",
+    def build_transfer(target_account, entry)
+      missing_transaction = Transaction.new(
+        entry: target_account.entries.build(
+          amount: entry.amount * -1,
+          currency: entry.currency,
+          date: entry.date,
+          name: "Transfer to #{entry.amount.negative? ? entry.account.name : target_account.name}",
+        )
       )
-    )
 
-    transfer = Transfer.find_or_initialize_by(
-      inflow_transaction: entry.amount.positive? ? missing_transaction : entry.transaction,
-      outflow_transaction: entry.amount.positive? ? entry.transaction : missing_transaction
-    )
-    transfer.status = "confirmed"
-    transfer
-  end
+      transfer = Transfer.find_or_initialize_by(
+        inflow_transaction: entry.amount.positive? ? missing_transaction : entry.transaction,
+        outflow_transaction: entry.amount.positive? ? entry.transaction : missing_transaction
+      )
+      transfer.status = "confirmed"
+      transfer
+    end
 end
