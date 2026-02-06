@@ -1761,13 +1761,6 @@ paths:
       - Trades
       security:
       - apiKeyAuth: []
-      parameters:
-      - name: id
-        in: path
-        description: Trade ID
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           description: trade updated
@@ -1777,6 +1770,12 @@ paths:
                 "$ref": "#/components/schemas/Trade"
         '404':
           description: trade not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
           content:
             application/json:
               schema:
@@ -1836,6 +1835,10 @@ paths:
       responses:
         '200':
           description: trade deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
         '404':
           description: trade not found
           content:

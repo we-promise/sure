@@ -83,15 +83,17 @@ class Api::V1::TradesController < Api::V1::BaseController
   def update
     updatable = entry_update_params
     if updatable[:entryable_attributes].present?
-      qty = updatable[:entryable_attributes][:qty]
-      price = updatable[:entryable_attributes][:price]
+      original_qty = updatable[:entryable_attributes][:qty]
+      original_price = updatable[:entryable_attributes][:price]
       # Accept type (buy/sell) for consistency with create, or nature (inflow/outflow)
       type_or_nature = params.dig(:trade, :type).presence || params.dig(:trade, :nature)
-      # Fall back to existing values so sign normalisation and amount calc always run when either is supplied
-      qty = qty.present? ? qty : @trade.qty.abs
-      price = price.present? ? price : @trade.price
-      if qty.present? && price.present?
-        is_sell = trade_sell_from_type_or_nature?(type_or_nature)
+
+      # Only run sign normalisation / amount recalc when qty or price was actually supplied
+      if original_qty.present? || original_price.present?
+        qty = original_qty.present? ? original_qty : @trade.qty.abs
+        price = original_price.present? ? original_price : @trade.price
+        # When type/nature is omitted, preserve the existing trade direction
+        is_sell = type_or_nature.present? ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
         updatable[:entryable_attributes][:qty] = is_sell ? -qty.to_d.abs : qty.to_d.abs
         updatable[:amount] = updatable[:entryable_attributes][:qty] * price.to_d
         ticker = @trade.security&.ticker
