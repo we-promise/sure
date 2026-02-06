@@ -2,6 +2,14 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  GENERIC_NAME_PATTERNS = [
+    /\APAIEMENT\s+(CB|PSC)\b/i,
+    /\AVIR(?:EMENT)?\b/i,
+    /\APRLV\b/i,
+    /\ACHEQUE\b/i,
+    /\ARETRAIT\b/i,
+    /\AFRAIS\b/i
+  ].freeze
 
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
@@ -68,8 +76,16 @@ class EnableBankingEntry::Processor
     end
 
     def name
-      # Build name from available Enable Banking transaction fields
-      # Priority: counterparty name > bank_transaction_code description > remittance_information
+      # Build a user-friendly transaction title for the activity feed.
+      # If the provider description is generic (e.g. "PAIEMENT CB ..."),
+      # prefer a descriptive remittance line such as merchant name.
+      description = data[:description] || data[:transaction_description]
+      remittance_name = remittance_name_candidate
+
+      if description.present?
+        return remittance_name if generic_name?(description) && remittance_name.present?
+        return description
+      end
 
       # Determine counterparty based on transaction direction
       # For outgoing payments (DBIT), counterparty is the creditor (who we paid)
@@ -80,18 +96,44 @@ class EnableBankingEntry::Processor
         data.dig(:creditor, :name) || data[:creditor_name]
       end
 
-      return counterparty if counterparty.present?
+      if counterparty.present? && !counterparty.match?(/\ACARD-\d+\z/i)
+        return counterparty
+      end
 
       # Fall back to bank_transaction_code description
       bank_tx_description = data.dig(:bank_transaction_code, :description)
+      return remittance_name if bank_tx_description.present? && generic_name?(bank_tx_description) && remittance_name.present?
       return bank_tx_description if bank_tx_description.present?
 
-      # Fall back to remittance_information
-      remittance = data[:remittance_information]
-      return remittance.first.truncate(100) if remittance.is_a?(Array) && remittance.first.present?
+      return remittance_name if remittance_name.present?
 
       # Final fallback: use transaction type indicator
       credit_debit_indicator == "CRDT" ? "Incoming Transfer" : "Outgoing Transfer"
+    end
+
+    def remittance_name_candidate
+      remittance_lines.each do |line|
+        cleaned = cleanup_remittance_line(line)
+        return cleaned if cleaned.present? && !generic_name?(cleaned)
+      end
+
+      cleanup_remittance_line(remittance_lines.first)
+    end
+
+    def cleanup_remittance_line(line)
+      return nil if line.blank?
+
+      cleaned = line.to_s.strip
+      cleaned = cleaned.gsub(/\s+/, " ")
+      cleaned = cleaned.sub(/\s+CARTE\s+\d+\z/i, "")
+      cleaned.presence&.truncate(100)
+    end
+
+    def generic_name?(value)
+      return false if value.blank?
+
+      normalized = value.to_s.strip
+      GENERIC_NAME_PATTERNS.any? { |pattern| normalized.match?(pattern) }
     end
 
     def merchant
@@ -123,10 +165,16 @@ class EnableBankingEntry::Processor
     end
 
     def notes
-      remittance = data[:remittance_information]
-      return nil unless remittance.is_a?(Array) && remittance.any?
+      return nil if remittance_lines.empty?
 
-      remittance.join("\n")
+      remittance_lines.join("\n")
+    end
+
+    def remittance_lines
+      remittance = data[:remittance_information]
+      return [] unless remittance.is_a?(Array)
+
+      remittance.map(&:to_s).map(&:strip).reject(&:blank?)
     end
 
     def amount_value
