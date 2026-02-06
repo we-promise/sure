@@ -1,7 +1,6 @@
 require "securerandom"
 
 class Demo::Generator
-
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
   #
