@@ -342,6 +342,28 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid email or password", response_data["error"]
   end
 
+  test "should login even when OAuth application is missing" do
+    user = users(:family_admin)
+    password = user_password_test
+
+    # Simulate a fresh instance where seeds were never run
+    Doorkeeper::Application.where(name: "Sure Mobile").destroy_all
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+
+    assert_difference("Doorkeeper::Application.count", 1) do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: password,
+        device: @device_info
+      }
+    end
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert response_data["access_token"].present?
+    assert response_data["refresh_token"].present?
+  end
+
   test "should not login without device info" do
     user = users(:family_admin)
 
