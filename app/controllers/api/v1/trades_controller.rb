@@ -1,0 +1,239 @@
+# frozen_string_literal: true
+
+class Api::V1::TradesController < Api::V1::BaseController
+  include Pagy::Backend
+
+  before_action :ensure_read_scope, only: [ :index, :show ]
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  before_action :set_trade, only: [ :show, :update, :destroy ]
+
+  def index
+    family = current_resource_owner.family
+    trades_query = family.trades.visible
+
+    trades_query = apply_filters(trades_query)
+    trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
+
+    @pagy, @trades = pagy(
+      trades_query,
+      page: safe_page_param,
+      limit: safe_per_page_param
+    )
+    @per_page = safe_per_page_param
+
+    render :index
+  rescue => e
+    log_and_render_error("index", e)
+  end
+
+  def show
+    render :show
+  rescue => e
+    log_and_render_error("show", e)
+  end
+
+  def create
+    unless trade_params[:account_id].present?
+      return render_validation_error("Account ID is required", [ "Account ID is required" ])
+    end
+
+    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+
+    unless account.supports_trades?
+      return render json: {
+        error: "validation_failed",
+        message: "Account does not support trades (investment or crypto exchange only)",
+        errors: [ "Account must be an investment or crypto exchange account" ]
+      }, status: :unprocessable_entity
+    end
+
+    create_params = build_create_form_params(account)
+    return if performed? # build_create_form_params may have rendered validation errors
+
+    model = Trade::CreateForm.new(create_params).create
+
+    unless model.persisted?
+      errors = model.is_a?(Entry) ? model.errors.full_messages : [ "Trade could not be created" ]
+      return render_validation_error("Trade could not be created", errors)
+    end
+
+    if model.is_a?(Entry)
+      model.lock_saved_attributes!
+      model.mark_user_modified!
+      model.sync_account_later
+      @trade = model.trade
+    else
+      @trade = model
+    end
+
+    @entry = @trade.entry
+    render :show, status: :created
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "not_found", message: "Account not found" }, status: :not_found
+  rescue => e
+    log_and_render_error("create", e)
+  end
+
+  def update
+    updatable = entry_update_params
+    if updatable[:entryable_attributes].present?
+      qty = updatable[:entryable_attributes][:qty]
+      price = updatable[:entryable_attributes][:price]
+      nature = params.dig(:trade, :nature)
+      if qty.present? && price.present? && nature.present?
+        is_sell = nature.to_s.downcase == "inflow"
+        updatable[:entryable_attributes][:qty] = is_sell ? -qty.to_d.abs : qty.to_d.abs
+        updatable[:amount] = updatable[:entryable_attributes][:qty] * price.to_d
+        ticker = @trade.security&.ticker
+        updatable[:name] = Trade.build_name(is_sell ? "sell" : "buy", updatable[:entryable_attributes][:qty].abs, ticker) if ticker.present?
+        updatable[:entryable_attributes][:investment_activity_label] = is_sell ? "Sell" : "Buy" if updatable[:entryable_attributes][:investment_activity_label].blank?
+      end
+      updatable[:entryable_attributes][:id] = @trade.id
+      updatable[:entryable_type] = "Trade"
+    end
+
+    if @entry.update(updatable.except(:nature))
+      @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
+      @entry.sync_account_later
+      @trade = @entry.trade
+      render :show
+    else
+      render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+    end
+  rescue => e
+    log_and_render_error("update", e)
+  end
+
+  def destroy
+    @entry = @trade.entry
+    @entry.destroy!
+    @entry.sync_account_later
+
+    render json: { message: "Trade deleted successfully" }, status: :ok
+  rescue => e
+    log_and_render_error("destroy", e)
+  end
+
+  private
+
+    def set_trade
+      family = current_resource_owner.family
+      @trade = family.trades.find(params[:id])
+      @entry = @trade.entry
+    rescue ActiveRecord::RecordNotFound
+      render json: { error: "not_found", message: "Trade not found" }, status: :not_found
+    end
+
+    def ensure_read_scope
+      authorize_scope!(:read)
+    end
+
+    def ensure_write_scope
+      authorize_scope!(:write)
+    end
+
+    def apply_filters(query)
+      if params[:account_id].present?
+        query = query.joins(:entry).where(entries: { account_id: params[:account_id] })
+      end
+      if params[:account_ids].present?
+        account_ids = Array(params[:account_ids])
+        query = query.joins(:entry).where(entries: { account_id: account_ids })
+      end
+      if params[:start_date].present?
+        query = query.joins(:entry).where("entries.date >= ?", Date.parse(params[:start_date]))
+      end
+      if params[:end_date].present?
+        query = query.joins(:entry).where("entries.date <= ?", Date.parse(params[:end_date]))
+      end
+      query
+    end
+
+    def trade_params
+      params.require(:trade).permit(
+        :account_id, :date, :qty, :price, :currency, :type,
+        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id
+      )
+    end
+
+    def entry_update_params
+      params.require(:trade).permit(
+        :name, :date, :amount, :currency, :notes, :nature,
+        entryable_attributes: [ :id, :qty, :price, :investment_activity_label, :category_id ]
+      )
+    end
+
+    def build_create_form_params(account)
+      type = trade_params[:type].to_s.downcase
+      unless %w[buy sell].include?(type)
+        render json: {
+          error: "validation_failed",
+          message: "Type must be buy or sell",
+          errors: [ "type must be 'buy' or 'sell'" ]
+        }, status: :unprocessable_entity
+        return nil
+      end
+
+      ticker_value = nil
+      manual_ticker_value = nil
+
+      if trade_params[:security_id].present?
+        security = Security.find(trade_params[:security_id])
+        ticker_value = security.exchange_operating_mic.present? ? "#{security.ticker}|#{security.exchange_operating_mic}" : security.ticker
+      elsif trade_params[:ticker].present?
+        ticker_value = trade_params[:ticker]
+      elsif trade_params[:manual_ticker].present?
+        manual_ticker_value = trade_params[:manual_ticker]
+      else
+        render json: {
+          error: "validation_failed",
+          message: "Security identifier required",
+          errors: [ "Provide security_id, ticker, or manual_ticker" ]
+        }, status: :unprocessable_entity
+        return nil
+      end
+
+      qty = trade_params[:qty].to_d
+      price = trade_params[:price].to_d
+      return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty <= 0 || price <= 0
+
+      {
+        account: account,
+        date: trade_params[:date],
+        qty: qty,
+        price: price,
+        currency: trade_params[:currency].presence || account.currency,
+        type: type,
+        ticker: ticker_value,
+        manual_ticker: manual_ticker_value
+      }.compact
+    end
+
+    def render_validation_error(message, errors)
+      render json: {
+        error: "validation_failed",
+        message: message,
+        errors: errors
+      }, status: :unprocessable_entity
+    end
+
+    def log_and_render_error(action, exception)
+      Rails.logger.error "TradesController##{action} error: #{exception.message}"
+      Rails.logger.error exception.backtrace.join("\n")
+      render json: {
+        error: "internal_server_error",
+        message: "Error: #{exception.message}"
+      }, status: :internal_server_error
+    end
+
+    def safe_page_param
+      page = params[:page].to_i
+      page > 0 ? page : 1
+    end
+
+    def safe_per_page_param
+      per_page = params[:per_page].to_i
+      (1..100).cover?(per_page) ? per_page : 25
+    end
+end
