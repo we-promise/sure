@@ -196,15 +196,15 @@ class Demo::Generator
         return existing_key
       end
 
-      # Revoke any existing user-created web API keys for this user to avoid one-per-source validation error
-      # (excludes the monitoring key which cannot be revoked)
+      # Revoke any existing user-created web API keys to keep demo access predictable.
+      # (the monitoring key uses the dedicated "monitoring" source and cannot be revoked)
       admin_user.api_keys.active.visible.where(source: "web").find_each(&:revoke!)
 
       api_key = admin_user.api_keys.create!(
         name: "monitoring",
         key: ApiKey::DEMO_MONITORING_KEY,
         scopes: [ "read" ],
-        source: "web"
+        source: "monitoring"
       )
 
       puts "  → Created monitoring API key: #{ApiKey::DEMO_MONITORING_KEY}"

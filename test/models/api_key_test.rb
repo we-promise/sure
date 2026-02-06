@@ -163,6 +163,20 @@ class ApiKeyTest < ActiveSupport::TestCase
     assert second_key.valid?
   end
 
+  test "should allow active monitoring key alongside active web key" do
+    @api_key.save!
+
+    monitoring_key = ApiKey.new(
+      user: @user,
+      name: "Monitoring API Key",
+      key: "monitoring_key_123",
+      scopes: [ "read" ],
+      source: "monitoring"
+    )
+
+    assert monitoring_key.valid?
+  end
+
   test "should include active api keys in active scope" do
     @api_key.save!
     active_keys = ApiKey.active

@@ -9,7 +9,7 @@ class ApiKey < ApplicationRecord
   end
 
   # Constants
-  SOURCES = [ "web", "mobile" ].freeze
+  SOURCES = [ "web", "mobile", "monitoring" ].freeze
   DEMO_MONITORING_KEY = "demo_monitoring_key_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
 
   # Validations
