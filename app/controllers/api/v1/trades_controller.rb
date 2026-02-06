@@ -81,28 +81,7 @@ class Api::V1::TradesController < Api::V1::BaseController
   end
 
   def update
-    updatable = entry_update_params
-    if updatable[:entryable_attributes].present?
-      original_qty = updatable[:entryable_attributes][:qty]
-      original_price = updatable[:entryable_attributes][:price]
-      # Accept type (buy/sell) for consistency with create, or nature (inflow/outflow)
-      type_or_nature = params.dig(:trade, :type).presence || params.dig(:trade, :nature)
-
-      # Only run sign normalisation / amount recalc when qty or price was actually supplied
-      if original_qty.present? || original_price.present?
-        qty = original_qty.present? ? original_qty : @trade.qty.abs
-        price = original_price.present? ? original_price : @trade.price
-        # When type/nature is omitted, preserve the existing trade direction
-        is_sell = type_or_nature.present? ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
-        updatable[:entryable_attributes][:qty] = is_sell ? -qty.to_d.abs : qty.to_d.abs
-        updatable[:amount] = updatable[:entryable_attributes][:qty] * price.to_d
-        ticker = @trade.security&.ticker
-        updatable[:name] = Trade.build_name(is_sell ? "sell" : "buy", updatable[:entryable_attributes][:qty].abs, ticker) if ticker.present?
-        updatable[:entryable_attributes][:investment_activity_label] = is_sell ? "Sell" : "Buy" if updatable[:entryable_attributes][:investment_activity_label].blank?
-      end
-      updatable[:entryable_attributes][:id] = @trade.id
-      updatable[:entryable_type] = "Trade"
-    end
+    updatable = build_entry_params_for_update
 
     if @entry.update(updatable.except(:nature))
       @entry.lock_saved_attributes!
@@ -172,11 +151,46 @@ class Api::V1::TradesController < Api::V1::BaseController
       )
     end
 
-    def entry_update_params
+    def trade_update_params
       params.require(:trade).permit(
-        :name, :date, :amount, :currency, :notes, :nature,
-        entryable_attributes: [ :id, :qty, :price, :investment_activity_label, :category_id ]
+        :name, :date, :amount, :currency, :notes, :nature, :type,
+        :qty, :price, :investment_activity_label, :category_id
       )
+    end
+
+    def build_entry_params_for_update
+      flat = trade_update_params.to_h
+      entry_params = {
+        name: flat[:name],
+        date: flat[:date],
+        amount: flat[:amount],
+        currency: flat[:currency],
+        notes: flat[:notes],
+        entryable_type: "Trade",
+        entryable_attributes: {
+          id: @trade.id,
+          investment_activity_label: flat[:investment_activity_label],
+          category_id: flat[:category_id]
+        }.compact_blank
+      }.compact
+
+      original_qty = flat[:qty]
+      original_price = flat[:price]
+      type_or_nature = flat[:type].presence || flat[:nature]
+
+      if original_qty.present? || original_price.present?
+        qty = original_qty.present? ? original_qty : @trade.qty.abs
+        price = original_price.present? ? original_price : @trade.price
+        is_sell = type_or_nature.present? ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
+        signed_qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
+        entry_params[:entryable_attributes][:qty] = signed_qty
+        entry_params[:amount] = signed_qty * price.to_d
+        ticker = @trade.security&.ticker
+        entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
+        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || (is_sell ? "Sell" : "Buy")
+      end
+
+      entry_params
     end
 
     # True for sell: "sell" or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.

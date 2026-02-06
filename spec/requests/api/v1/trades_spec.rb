@@ -282,7 +282,7 @@ RSpec.describe 'API V1 Trades', type: :request do
   end
 
   path '/api/v1/trades/{id}' do
-    parameter name: :id, in: :path, type: :string, description: 'Trade ID'
+    parameter name: :id, in: :path, type: :string, required: true, description: 'Trade ID'
 
     get 'Retrieve trade' do
       tags 'Trades'
@@ -336,16 +336,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               notes: { type: :string },
               currency: { type: :string },
               investment_activity_label: { type: :string },
-              category_id: { type: :string, format: :uuid },
-              entryable_attributes: {
-                type: :object,
-                properties: {
-                  qty: { type: :number },
-                  price: { type: :number },
-                  investment_activity_label: { type: :string },
-                  category_id: { type: :string, format: :uuid }
-                }
-              }
+              category_id: { type: :string, format: :uuid }
             }
           }
         }
@@ -354,7 +345,8 @@ RSpec.describe 'API V1 Trades', type: :request do
       let(:body) do
         {
           trade: {
-            entryable_attributes: { qty: 75, price: 255.00 },
+            qty: 75,
+            price: 255.00,
             type: 'buy'
           }
         }
@@ -383,6 +375,8 @@ RSpec.describe 'API V1 Trades', type: :request do
       produces 'application/json'
 
       response '200', 'trade deleted' do
+        schema '$ref' => '#/components/schemas/DeleteResponse'
+
         let(:id) { trade.id }
 
         run_test! do |response|

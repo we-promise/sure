@@ -1788,7 +1788,7 @@ paths:
               properties:
                 trade:
                   type: object
-                  description: Top-level name, date, amount, currency, notes, nature, type. Qty, price, investment_activity_label, and category_id must be sent inside entryable_attributes.
+                  description: Flat params; controller builds internal structure. When qty/price are updated, type or nature controls sign; if omitted, existing trade direction is preserved.
                   properties:
                     date:
                       type: string
@@ -1811,20 +1811,16 @@ paths:
                       enum:
                       - buy
                       - sell
-                      description: Used with entryable_attributes to determine sign when qty/price are updated.
-                    entryable_attributes:
-                      type: object
-                      description: Required for qty, price, investment_activity_label, category_id; id is set by the server.
-                      properties:
-                        qty:
-                          type: number
-                        price:
-                          type: number
-                        investment_activity_label:
-                          type: string
-                        category_id:
-                          type: string
-                          format: uuid
+                      description: Determines sign when qty/price are updated.
+                    qty:
+                      type: number
+                    price:
+                      type: number
+                    investment_activity_label:
+                      type: string
+                    category_id:
+                      type: string
+                      format: uuid
         required: true
     delete:
       summary: Delete trade

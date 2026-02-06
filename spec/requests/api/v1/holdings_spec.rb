@@ -136,11 +136,19 @@ RSpec.describe 'API V1 Holdings', type: :request do
 
         run_test!
       end
+
+      response '422', 'invalid date filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:start_date) { 'not-a-date' }
+
+        run_test!
+      end
     end
   end
 
   path '/api/v1/holdings/{id}' do
-    parameter name: :id, in: :path, type: :string, description: 'Holding ID'
+    parameter name: :id, in: :path, type: :string, required: true, description: 'Holding ID'
 
     get 'Retrieve holding' do
       tags 'Holdings'
@@ -170,11 +178,6 @@ RSpec.describe 'API V1 Holdings', type: :request do
         let(:id) { SecureRandom.uuid }
 
         run_test!
-      end
-
-      response '500', 'internal server error' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
-        # No run_test! — cannot reliably trigger 500 in spec
       end
     end
   end
