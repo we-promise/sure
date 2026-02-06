@@ -15,8 +15,8 @@
 <div class="grow max-w-lg w-full mx-auto bg-surface flex flex-col justify-center md:py-0 py-6 px-4 md:px-0">
   <div>
     <div class="space-y-1 mb-6 text-center">
-      <h1 class="text-2xl font-medium md:text-2xl">What brings you here?</h1>
-      <p class="text-secondary text-sm">Select one or more goals that you have with using <%= product_name %> as your personal finance tool.</p>
+      <h1 class="text-2xl font-medium md:text-2xl"><%= t("onboardings.goals.title") %></h1>
+      <p class="text-secondary text-sm"><%= t("onboardings.goals.subtitle", product_name: product_name) %></p>
     </div>
 
     <%= form_with model: @user do |form| %>
@@ -26,15 +26,15 @@
 
       <div class="space-y-3">
         <% [
-          { icon: "layers", label: "See all my accounts in one place", value: "unified_accounts" },
-          { icon: "banknote", label: "Understand cashflow and expenses", value: "cashflow" },
-          { icon: "pie-chart", label: "Manage financial plans and budgeting", value: "budgeting" },
-          { icon: "users", label: "Manage finances with a partner", value: "partner" },
-          { icon: "area-chart", label: "Track investments", value: "investments" },
-          { icon: "bot", label: "Let AI help me understand my finances", value: "ai_insights" },
-          { icon: "settings-2", label: "Analyze and optimize accounts", value: "optimization" },
-          { icon: "frown", label: "Reduce financial stress or anxiety", value: "reduce_stress" }
-        ].each do |goal| %>
+             { icon: "layers", label: t("onboardings.goals.unified_accounts"), value: "unified_accounts" },
+             { icon: "banknote", label: t("onboardings.goals.cashflow"), value: "cashflow" },
+             { icon: "pie-chart", label: t("onboardings.goals.budgeting"), value: "budgeting" },
+             { icon: "users", label: t("onboardings.goals.partner"), value: "partner" },
+             { icon: "area-chart", label: t("onboardings.goals.investments"), value: "investments" },
+             { icon: "bot", label: t("onboardings.goals.ai_insights"), value: "ai_insights" },
+             { icon: "settings-2", label: t("onboardings.goals.optimization"), value: "optimization" },
+             { icon: "frown", label: t("onboardings.goals.reduce_stress"), value: "reduce_stress" }
+           ].each do |goal| %>
           <label class="flex items-center gap-2.5 p-4 rounded-lg border border-tertiary cursor-pointer hover:bg-container transition-colors [&:has(input:checked)]:border-solid [&:has(input:checked)]:bg-container">
             <%= form.check_box :goals, { multiple: true, class: "sr-only" }, goal[:value], nil %>
             <%= icon goal[:icon] %>
@@ -45,7 +45,7 @@
 
       <div class="mt-6">
         <%= render DS::Button.new(
-          text: "Next",
+          text: t("onboardings.goals.submit"),
           full_width: true
         ) %>
       </div>

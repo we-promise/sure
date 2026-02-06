@@ -1,5 +1,5 @@
 module Family::AutoTransferMatchable
-  def transfer_match_candidates(date_window: 4)
+  def transfer_match_candidates(date_window: 4, exchange_rate_tolerance: 0.1)
     Entry.select([
       "inflow_candidates.entryable_id as inflow_transaction_id",
       "outflow_candidates.entryable_id as outflow_transaction_id",
@@ -39,7 +39,7 @@ module Family::AutoTransferMatchable
           inflow_candidates.amount = -outflow_candidates.amount
         ) OR (
           inflow_candidates.currency <> outflow_candidates.currency AND
-          ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0)) BETWEEN 0.95 AND 1.05
+          ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0)) BETWEEN #{1 - exchange_rate_tolerance} AND #{1 + exchange_rate_tolerance}
         )
       ")
       .where(existing_transfers: { id: nil })
