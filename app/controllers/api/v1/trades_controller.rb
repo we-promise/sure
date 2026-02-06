@@ -87,6 +87,9 @@ class Api::V1::TradesController < Api::V1::BaseController
       price = updatable[:entryable_attributes][:price]
       # Accept type (buy/sell) for consistency with create, or nature (inflow/outflow)
       type_or_nature = params.dig(:trade, :type).presence || params.dig(:trade, :nature)
+      # Fall back to existing values so sign normalisation and amount calc always run when either is supplied
+      qty = qty.present? ? qty : @trade.qty.abs
+      price = price.present? ? price : @trade.price
       if qty.present? && price.present?
         is_sell = trade_sell_from_type_or_nature?(type_or_nature)
         updatable[:entryable_attributes][:qty] = is_sell ? -qty.to_d.abs : qty.to_d.abs

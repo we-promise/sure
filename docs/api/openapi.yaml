@@ -1789,37 +1789,33 @@ paths:
               properties:
                 trade:
                   type: object
+                  description: Top-level name, date, amount, currency, notes, nature, type. Qty, price, investment_activity_label, and category_id must be sent inside entryable_attributes.
                   properties:
                     date:
                       type: string
                       format: date
-                    qty:
-                      type: number
-                    price:
-                      type: number
-                    type:
+                    name:
                       type: string
-                      enum:
-                      - buy
-                      - sell
+                    amount:
+                      type: number
+                    currency:
+                      type: string
+                    notes:
+                      type: string
                     nature:
                       type: string
                       enum:
                       - inflow
                       - outflow
-                    name:
+                    type:
                       type: string
-                    notes:
-                      type: string
-                    currency:
-                      type: string
-                    investment_activity_label:
-                      type: string
-                    category_id:
-                      type: string
-                      format: uuid
+                      enum:
+                      - buy
+                      - sell
+                      description: Used with entryable_attributes to determine sign when qty/price are updated.
                     entryable_attributes:
                       type: object
+                      description: Required for qty, price, investment_activity_label, category_id; id is set by the server.
                       properties:
                         qty:
                           type: number
