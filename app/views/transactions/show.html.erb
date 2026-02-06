@@ -1,6 +1,9 @@
 <%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
-  <% dialog.with_header(hide_close_icon: true) do %>
-    <%= render "transactions/header", entry: @entry %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-start justify-between gap-4">
+      <%= render "transactions/header", entry: @entry %>
+      <%= dialog.close_button %>
+    </div>
   <% end %>
   <% dialog.with_body do %>
     <%# Potential duplicate alert %>

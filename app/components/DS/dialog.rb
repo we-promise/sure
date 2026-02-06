@@ -1,10 +1,9 @@
 class DS::Dialog < DesignSystemComponent
-  renders_one :header, ->(title: nil, subtitle: nil, hide_close_icon: false, **opts, &block) do
+  renders_one :header, ->(title: nil, subtitle: nil, custom_header: false, **opts, &block) do
     content_tag(:header, class: "px-4 flex flex-col gap-2", **opts) do
       title_div = content_tag(:div, class: "flex items-center justify-between gap-2") do
         title = content_tag(:h2, title, class: class_names("font-medium text-primary", drawer? ? "text-lg" : "")) if title
-        close_icon_classes = responsive? ? "ml-auto hidden lg:block" : "ml-auto"
-        close_icon = render DS::Button.new(variant: "icon", class: close_icon_classes, icon: "x", title: I18n.t("common.close"), aria_label: I18n.t("common.close"), data: { action: "DS--dialog#close" }) unless hide_close_icon
+        close_icon = close_button unless custom_header
         safe_join([ title, close_icon ].compact)
       end
 
@@ -125,5 +124,17 @@ class DS::Dialog < DesignSystemComponent
 
   def responsive?
     @responsive
+  end
+
+  def close_button
+    classes = responsive? ? "ml-auto hidden lg:flex" : "ml-auto"
+    render DS::Button.new(
+      variant: "icon",
+      class: classes,
+      icon: "x",
+      title: I18n.t("common.close"),
+      aria_label: I18n.t("common.close"),
+      data: { action: "DS--dialog#close" }
+    )
   end
 end

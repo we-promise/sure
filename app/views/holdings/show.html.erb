@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
-  <% dialog.with_header do %>
+  <% dialog.with_header(custom_header: true) do %>
     <div class="flex items-center justify-between">
       <div>
         <%= tag.h3 @holding.name, class: "text-2xl font-medium text-primary" %>
@@ -13,9 +13,7 @@
         <% else %>
           <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
         <% end %>
-        <div class="lg:hidden">
-          <%= render DS::Button.new(variant: "icon", icon: "x", data: { action: "DS--dialog#close" }) %>
-        </div>
+        <%= dialog.close_button %>
       </div>
     </div>
   <% end %>
@@ -71,9 +69,9 @@
             <dd class="text-primary">
               <% begin %>
                 <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
-              <% rescue ActiveRecord::RecordInvalid %>
+                <% rescue ActiveRecord::RecordInvalid %>
                 <%= t(".unknown") %>
-              <% rescue StandardError => e %>
+                <% rescue StandardError => e %>
                 <% logger.error "Error fetching current price for security #{@holding.security.id}: #{e.message}" %>
                 <% logger.error e.backtrace.first(5).join("\n") %>
                 <%= t(".unknown") %>

@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
-  <% dialog.with_header do %>
+  <% dialog.with_header(custom_header: true) do %>
     <div class="flex items-start justify-between gap-4">
       <div>
         <h3 class="font-medium flex items-center gap-2">
@@ -15,9 +15,7 @@
           <%= @transfer.name %>
         </span>
       </div>
-      <div class="lg:hidden">
-        <%= render DS::Button.new(variant: "icon", icon: "x", data: { action: "DS--dialog#close" }) %>
-      </div>
+      <%= dialog.close_button %>
     </div>
   <% end %>
   <% dialog.with_body do %>
