@@ -22,6 +22,7 @@ class ApiKey < ApplicationRecord
 
   # Callbacks
   before_validation :set_display_key
+  before_destroy :prevent_demo_monitoring_key_destroy!
 
   # Scopes
   scope :active, -> { where(revoked_at: nil).where("expires_at IS NULL OR expires_at > ?", Time.current) }
@@ -63,6 +64,11 @@ class ApiKey < ApplicationRecord
     update!(revoked_at: Time.current)
   end
 
+  def delete
+    raise ActiveRecord::RecordNotDestroyed, "Cannot destroy demo monitoring API key" if demo_monitoring_key?
+    super
+  end
+
   def demo_monitoring_key?
     display_key == DEMO_MONITORING_KEY
   end
@@ -101,5 +107,12 @@ class ApiKey < ApplicationRecord
       if user&.api_keys&.active&.where(source: source)&.where&.not(id: id)&.exists?
         errors.add(:user, "can only have one active API key per source (#{source})")
       end
+    end
+
+    def prevent_demo_monitoring_key_destroy!
+      return unless demo_monitoring_key?
+
+      errors.add(:base, "Cannot destroy demo monitoring API key")
+      throw(:abort)
     end
 end
