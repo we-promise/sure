@@ -27,7 +27,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   end
 end
 
-private
+  private
   def build_transfer(target_account, entry)
     missing_transaction = Transaction.new(
       entry: target_account.entries.build(
@@ -45,3 +45,4 @@ private
     transfer.status = "confirmed"
     transfer
   end
+end
