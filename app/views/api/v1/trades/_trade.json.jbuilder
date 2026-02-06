@@ -16,10 +16,14 @@ json.account do
   json.account_type trade.entry.account.accountable_type.underscore
 end
 
-json.security do
-  json.id trade.security.id
-  json.ticker trade.security.ticker
-  json.name trade.security.name
+if trade.security.present?
+  json.security do
+    json.id trade.security.id
+    json.ticker trade.security.ticker
+    json.name trade.security.name
+  end
+else
+  json.security nil
 end
 
 if trade.category.present?

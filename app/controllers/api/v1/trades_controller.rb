@@ -22,6 +22,8 @@ class Api::V1::TradesController < Api::V1::BaseController
     @per_page = safe_per_page_param
 
     render :index
+  rescue ArgumentError => e
+    render_validation_error(e.message, [ e.message ])
   rescue => e
     log_and_render_error("index", e)
   end
@@ -66,10 +68,14 @@ class Api::V1::TradesController < Api::V1::BaseController
       @trade = model
     end
 
+    apply_trade_create_options!
+    return if performed?
+
     @entry = @trade.entry
     render :show, status: :created
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "not_found", message: "Account not found" }, status: :not_found
+  rescue ActiveRecord::RecordNotFound => e
+    message = (e.model == Account) ? "Account not found" : "Security not found"
+    render json: { error: "not_found", message: message }, status: :not_found
   rescue => e
     log_and_render_error("create", e)
   end
@@ -79,9 +85,10 @@ class Api::V1::TradesController < Api::V1::BaseController
     if updatable[:entryable_attributes].present?
       qty = updatable[:entryable_attributes][:qty]
       price = updatable[:entryable_attributes][:price]
-      nature = params.dig(:trade, :nature)
-      if qty.present? && price.present? && nature.present?
-        is_sell = nature.to_s.downcase == "inflow"
+      # Accept type (buy/sell) for consistency with create, or nature (inflow/outflow)
+      type_or_nature = params.dig(:trade, :type).presence || params.dig(:trade, :nature)
+      if qty.present? && price.present?
+        is_sell = trade_sell_from_type_or_nature?(type_or_nature)
         updatable[:entryable_attributes][:qty] = is_sell ? -qty.to_d.abs : qty.to_d.abs
         updatable[:amount] = updatable[:entryable_attributes][:qty] * price.to_d
         ticker = @trade.security&.ticker
@@ -134,25 +141,28 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     def apply_filters(query)
+      need_entry_join = params[:account_id].present? || params[:account_ids].present? ||
+                        params[:start_date].present? || params[:end_date].present?
+      query = query.joins(:entry) if need_entry_join
+
       if params[:account_id].present?
-        query = query.joins(:entry).where(entries: { account_id: params[:account_id] })
+        query = query.where(entries: { account_id: params[:account_id] })
       end
       if params[:account_ids].present?
-        account_ids = Array(params[:account_ids])
-        query = query.joins(:entry).where(entries: { account_id: account_ids })
+        query = query.where(entries: { account_id: Array(params[:account_ids]) })
       end
       if params[:start_date].present?
-        query = query.joins(:entry).where("entries.date >= ?", Date.parse(params[:start_date]))
+        query = query.where("entries.date >= ?", parse_date!(params[:start_date], "start_date"))
       end
       if params[:end_date].present?
-        query = query.joins(:entry).where("entries.date <= ?", Date.parse(params[:end_date]))
+        query = query.where("entries.date <= ?", parse_date!(params[:end_date], "end_date"))
       end
       query
     end
 
     def trade_params
       params.require(:trade).permit(
-        :account_id, :date, :qty, :price, :currency, :type,
+        :account_id, :date, :qty, :price, :currency,
         :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id
       )
     end
@@ -164,8 +174,16 @@ class Api::V1::TradesController < Api::V1::BaseController
       )
     end
 
+    # True for sell: "sell" or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
+    def trade_sell_from_type_or_nature?(value)
+      return false if value.blank?
+
+      normalized = value.to_s.downcase.strip
+      %w[sell inflow].include?(normalized)
+    end
+
     def build_create_form_params(account)
-      type = trade_params[:type].to_s.downcase
+      type = params.dig(:trade, :type).to_s.downcase
       unless %w[buy sell].include?(type)
         render json: {
           error: "validation_failed",
@@ -177,6 +195,15 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       ticker_value = nil
       manual_ticker_value = nil
+
+      unless trade_params[:date].present?
+        render json: {
+          error: "validation_failed",
+          message: "Date is required",
+          errors: [ "date must be present" ]
+        }, status: :unprocessable_entity
+        return nil
+      end
 
       if trade_params[:security_id].present?
         security = Security.find(trade_params[:security_id])
@@ -210,12 +237,39 @@ class Api::V1::TradesController < Api::V1::BaseController
       }.compact
     end
 
+    def apply_trade_create_options!
+      attrs = {}
+      if trade_params[:investment_activity_label].present?
+        label = trade_params[:investment_activity_label]
+        unless Trade::ACTIVITY_LABELS.include?(label)
+          render_validation_error("Invalid investment_activity_label", [ "investment_activity_label must be one of: #{Trade::ACTIVITY_LABELS.join(', ')}" ])
+          return
+        end
+        attrs[:investment_activity_label] = label
+      end
+      if trade_params[:category_id].present?
+        category = current_resource_owner.family.categories.find_by(id: trade_params[:category_id])
+        unless category
+          render_validation_error("Category not found or does not belong to your family", [ "category_id is invalid" ])
+          return
+        end
+        attrs[:category_id] = category.id
+      end
+      @trade.update!(attrs) if attrs.any?
+    end
+
     def render_validation_error(message, errors)
       render json: {
         error: "validation_failed",
         message: message,
         errors: errors
       }, status: :unprocessable_entity
+    end
+
+    def parse_date!(value, param_name)
+      Date.parse(value)
+    rescue Date::Error, ArgumentError, TypeError
+      raise ArgumentError, "Invalid #{param_name} format"
     end
 
     def log_and_render_error(action, exception)
