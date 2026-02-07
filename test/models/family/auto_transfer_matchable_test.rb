@@ -108,6 +108,19 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto-matched cash to investment assigns investment contribution category" do
+    investment = accounts(:investment)
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500)
+
+    @family.auto_match_transfers!
+
+    outflow_entry.reload
+
+    category = @family.investment_contributions_category
+    assert_equal category, outflow_entry.entryable.category
+  end
+
   test "does not match multi-currency transfer with missing exchange rate" do
     create_transaction(date: Date.current, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "GBP")

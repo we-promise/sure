@@ -106,9 +106,15 @@ class Family < ApplicationRecord
     @income_statement ||= IncomeStatement.new(self)
   end
 
-  # Returns the Investment Contributions category for this family, or nil if not found.
-  # This is a bootstrapped category used for auto-categorizing transfers to investment accounts.
+  # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
+  # This is used for auto-categorizing transfers to investment accounts.
   def investment_contributions_category
+    categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
+      cat.color = "#0d9488"
+      cat.classification = "expense"
+      cat.lucide_icon = "trending-up"
+    end
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
     categories.find_by(name: Category.investment_contributions_name)
   end
 
