@@ -1,0 +1,4 @@
+<%= turbo_stream.replace "transaction_attachments_#{@transaction.id}", partial: "transactions/attachments", locals: { transaction: @transaction } %>
+<% flash_notification_stream_items.each do |item| %>
+  <%= item %>
+<% end %>
