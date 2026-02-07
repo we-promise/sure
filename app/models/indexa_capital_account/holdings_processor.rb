@@ -15,12 +15,6 @@ class IndexaCapitalAccount::HoldingsProcessor
 
     Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
 
-    # Log sample of first holding to understand structure
-    if holdings_data.first
-      sample = holdings_data.first
-      Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Sample holding keys: #{sample.keys.first(10).join(', ')}"
-    end
-
     holdings_data.each_with_index do |holding_data, idx|
       Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
       process_holding(holding_data.with_indifferent_access)
@@ -40,35 +34,35 @@ class IndexaCapitalAccount::HoldingsProcessor
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    # Indexa Capital fiscal-results field mapping:
+    #   instrument.identifier (ISIN) → ticker
+    #   instrument.name → security name
+    #   titles → quantity (number of shares/units)
+    #   price → current price per unit
+    #   amount → total market value
+    #   cost_price → average purchase price (cost basis per unit)
+    #   cost_amount → total cost basis
+    #   profit_loss → unrealized P&L
+    #   subscription_date → purchase date
     def process_holding(data)
-      # TODO: Customize ticker extraction based on your provider's format
-      # Example: ticker = data[:symbol] || data[:ticker]
       ticker = extract_ticker(data)
       return if ticker.blank?
 
       Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing holding for ticker: #{ticker}"
 
-      # Resolve or create the security
       security = resolve_security(ticker, data)
       return unless security
 
-      # TODO: Customize field names based on your provider's format
-      quantity = parse_decimal(data[:units] || data[:quantity])
+      quantity = parse_decimal(data[:titles]) || parse_decimal(data[:quantity]) || parse_decimal(data[:units])
       price = parse_decimal(data[:price])
       return if quantity.nil? || price.nil?
 
-      # Calculate amount
-      amount = quantity * price
-
-      # Get the holding date (use current date if not provided)
+      amount = parse_decimal(data[:amount]) || (quantity * price)
+      currency = "EUR" # Indexa Capital is EUR-only
       holding_date = Date.current
-
-      # Extract currency
-      currency = extract_currency(data, fallback: account.currency)
 
       Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Importing holding: #{ticker} qty=#{quantity} price=#{price} currency=#{currency}"
 
-      # Import the holding via the adapter
       import_adapter.import_holding(
         security: security,
         quantity: quantity,
@@ -81,31 +75,42 @@ class IndexaCapitalAccount::HoldingsProcessor
         delete_future_holdings: false
       )
 
-      # Store cost basis if available
-      # TODO: Customize cost basis field name
-      avg_price = data[:average_purchase_price] || data[:cost_basis] || data[:avg_cost]
-      if avg_price.present?
-        update_holding_cost_basis(security, avg_price)
-      end
+      # Store cost basis from cost_price (average purchase price per unit)
+      cost_price = parse_decimal(data[:cost_price])
+      update_holding_cost_basis(security, cost_price) if cost_price.present?
     end
 
+    # Extract ISIN from instrument data as ticker
     def extract_ticker(data)
-      # TODO: Customize based on your provider's format
-      # Some providers nest symbol data, others have it flat
-      #
-      # Example for flat structure:
-      #   data[:symbol] || data[:ticker]
-      #
-      # Example for nested structure:
-      #   symbol_data = data[:symbol] || {}
-      #   symbol_data = symbol_data[:symbol] if symbol_data.is_a?(Hash)
-      #   symbol_data.is_a?(String) ? symbol_data : symbol_data[:ticker]
+      # Indexa Capital uses ISIN codes nested under instrument
+      instrument = data[:instrument]
+      if instrument.is_a?(Hash)
+        instrument = instrument.with_indifferent_access
+        return instrument[:identifier] || instrument[:isin]
+      end
 
-      data[:symbol] || data[:ticker]
+      # Fallback to flat fields
+      data[:isin] || data[:identifier] || data[:symbol] || data[:ticker]
     end
 
-    def update_holding_cost_basis(security, avg_cost)
-      # Find the most recent holding and update cost basis if not locked
+    # Override security name extraction for Indexa Capital
+    def extract_security_name(symbol_data, fallback_ticker)
+      symbol_data = symbol_data.with_indifferent_access if symbol_data.respond_to?(:with_indifferent_access)
+
+      instrument = symbol_data[:instrument]
+      if instrument.is_a?(Hash)
+        instrument = instrument.with_indifferent_access
+        name = instrument[:name] || instrument[:description]
+        return name if name.present?
+      end
+
+      name = symbol_data[:name] || symbol_data[:description]
+      return fallback_ticker if name.blank? || name.is_a?(Hash)
+
+      name
+    end
+
+    def update_holding_cost_basis(security, cost_price)
       holding = account.holdings
         .where(security: security)
         .where("cost_basis_source != 'manual' OR cost_basis_source IS NULL")
@@ -114,8 +119,7 @@ class IndexaCapitalAccount::HoldingsProcessor
 
       return unless holding
 
-      # Store per-share cost, not total cost
-      cost_basis = parse_decimal(avg_cost)
+      cost_basis = parse_decimal(cost_price)
       return if cost_basis.nil?
 
       holding.update!(

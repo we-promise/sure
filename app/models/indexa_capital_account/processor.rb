@@ -102,10 +102,15 @@ class IndexaCapitalAccount::Processor
 
       holdings_data.sum do |holding|
         data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
-        # TODO: Customize field names based on your provider's format
-        units = parse_decimal(data[:units] || data[:quantity]) || 0
-        price = parse_decimal(data[:price]) || 0
-        units * price
+        # Indexa Capital: amount = total market value, or titles * price
+        amount = parse_decimal(data[:amount])
+        if amount
+          amount
+        else
+          titles = parse_decimal(data[:titles] || data[:quantity] || data[:units]) || 0
+          price = parse_decimal(data[:price]) || 0
+          titles * price
+        end
       end
     end
 end

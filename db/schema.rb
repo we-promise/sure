@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_05_110328) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_07_231945) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -714,6 +714,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_110328) do
     t.text "password"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "api_token"
     t.index ["family_id"], name: "index_indexa_capital_items_on_family_id"
     t.index ["status"], name: "index_indexa_capital_items_on_status"
   end

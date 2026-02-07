@@ -41,21 +41,27 @@ class IndexaCapitalAccount < ApplicationRecord
   end
 
   def upsert_from_indexa_capital!(account_data)
-    # Convert SDK object to hash if needed
     data = sdk_object_to_hash(account_data).with_indifferent_access
 
-    # TODO: Customize this mapping based on your provider's API response
-    update!(
-      indexa_capital_account_id: (data[:id] || data[:account_id])&.to_s,
-      name: data[:name] || data[:account_name],
-      current_balance: parse_decimal(data[:balance] || data[:current_balance]),
-      currency: extract_currency(data, fallback: "USD"),
-      account_status: data[:status] || data[:account_status],
-      account_type: data[:type] || data[:account_type],
-      provider: data[:provider] || data[:brokerage_name],
-      institution_metadata: extract_institution_metadata(data),
+    # Indexa Capital API field mapping:
+    # account_number → unique account identifier
+    # name → display name (constructed by provider)
+    # type → mutual / pension / epsv
+    # status → active / inactive
+    # currency → always EUR for Indexa Capital
+    attrs = {
+      indexa_capital_account_id: data[:account_number]&.to_s,
+      account_number: data[:account_number]&.to_s,
+      name: data[:name] || "Indexa Capital Account",
+      currency: data[:currency] || "EUR",
+      account_status: data[:status],
+      account_type: data[:type],
+      provider: "Indexa Capital",
       raw_payload: account_data
-    )
+    }
+    attrs[:current_balance] = data[:current_balance].to_d if data[:current_balance].present?
+
+    update!(attrs)
   end
 
   # Store holdings snapshot - return early if empty to avoid setting timestamps incorrectly
@@ -80,17 +86,8 @@ class IndexaCapitalAccount < ApplicationRecord
 
   private
 
-    def extract_institution_metadata(data)
-      {
-        name: data[:institution_name] || data.dig(:institution, :name),
-        logo: data[:institution_logo] || data.dig(:institution, :logo),
-        domain: data[:institution_domain] || data.dig(:institution, :domain)
-      }.compact
-    end
-
     def enqueue_connection_cleanup
       return unless indexa_capital_item
-
       return unless indexa_capital_authorization_id.present?
 
       IndexaCapitalConnectionCleanupJob.perform_later(
@@ -98,9 +95,5 @@ class IndexaCapitalAccount < ApplicationRecord
         authorization_id: indexa_capital_authorization_id,
         account_id: id
       )
-    end
-
-    def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency code '#{currency_value}' for IndexaCapital account #{id}, defaulting to USD")
     end
 end

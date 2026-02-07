@@ -20,58 +20,60 @@ class Provider::IndexaCapital
 
   BASE_URL = "https://api.indexacapital.com"
 
-  attr_reader :username, :document, :password
+  attr_reader :username, :document, :password, :api_token
 
-  def initialize(username:, document:, password:)
+  # Supports two auth modes:
+  # 1. Username/document/password credentials (authenticates via /auth/authenticate)
+  # 2. Pre-generated API token (from env or user dashboard)
+  def initialize(username: nil, document: nil, password: nil, api_token: nil)
     @username = username
     @document = document
     @password = password
+    @api_token = api_token
     validate_configuration!
   end
 
-  # TODO: Implement provider-specific API methods
-  # Example methods for investment providers:
+  # GET /users/me → list of accounts
+  def list_accounts
+    with_retries("list_accounts") do
+      response = self.class.get(
+        "#{base_url}/users/me",
+        headers: auth_headers
+      )
+      data = handle_response(response)
+      extract_accounts(data)
+    end
+  end
 
-  # def list_accounts
-  #   with_retries("list_accounts") do
-  #     response = self.class.get(
-  #       "#{base_url}/accounts",
-  #       headers: auth_headers
-  #     )
-  #     handle_response(response)
-  #   end
-  # end
+  # GET /accounts/{account_number}/fiscal-results → holdings (positions with cost basis)
+  def get_holdings(account_number:)
+    with_retries("get_holdings") do
+      response = self.class.get(
+        "#{base_url}/accounts/#{account_number}/fiscal-results",
+        headers: auth_headers
+      )
+      handle_response(response)
+    end
+  end
 
-  # def get_holdings(account_id:)
-  #   with_retries("get_holdings") do
-  #     response = self.class.get(
-  #       "#{base_url}/accounts/#{account_id}/holdings",
-  #       headers: auth_headers
-  #     )
-  #     handle_response(response)
-  #   end
-  # end
+  # GET /accounts/{account_number}/performance → latest portfolio total_amount
+  def get_account_balance(account_number:)
+    with_retries("get_account_balance") do
+      response = self.class.get(
+        "#{base_url}/accounts/#{account_number}/performance",
+        headers: auth_headers
+      )
+      data = handle_response(response)
+      extract_balance(data)
+    end
+  end
 
-  # def get_activities(account_id:, start_date:, end_date: Date.current)
-  #   with_retries("get_activities") do
-  #     response = self.class.get(
-  #       "#{base_url}/accounts/#{account_id}/activities",
-  #       headers: auth_headers,
-  #       query: { start_date: start_date.to_s, end_date: end_date.to_s }
-  #     )
-  #     handle_response(response)
-  #   end
-  # end
-
-  # def delete_connection(authorization_id:)
-  #   with_retries("delete_connection") do
-  #     response = self.class.delete(
-  #       "#{base_url}/authorizations/#{authorization_id}",
-  #       headers: auth_headers
-  #     )
-  #     handle_response(response)
-  #   end
-  # end
+  # No activities/transactions endpoint exists in the Indexa Capital API.
+  # Returns empty array to keep the interface consistent.
+  def get_activities(account_number:, start_date: nil, end_date: nil)
+    Rails.logger.info "Provider::IndexaCapital - No activities endpoint available for Indexa Capital API"
+    []
+  end
 
   private
 
@@ -84,9 +86,15 @@ class Provider::IndexaCapital
     INITIAL_RETRY_DELAY = 2 # seconds
 
     def validate_configuration!
-      raise ConfigurationError, "Username is required" if @username.blank?
-      raise ConfigurationError, "Document is required" if @document.blank?
-      raise ConfigurationError, "Password is required" if @password.blank?
+      return if @api_token.present?
+
+      if @username.blank? && @document.blank? && @password.blank?
+        raise ConfigurationError, "Either API token or username/document/password credentials are required"
+      end
+    end
+
+    def token_auth?
+      @api_token.present?
     end
 
     def with_retries(operation_name, max_retries: MAX_RETRIES)
@@ -133,11 +141,11 @@ class Provider::IndexaCapital
     end
 
     def auth_headers
-      base_headers.merge("Authorization" => "Bearer #{token}")
+      base_headers.merge("X-AUTH-TOKEN" => token)
     end
 
     def token
-      @token ||= authenticate!
+      @token ||= token_auth? ? @api_token : authenticate!
     end
 
     def authenticate!
@@ -151,10 +159,10 @@ class Provider::IndexaCapital
         }.to_json
       )
       payload = handle_response(response)
-      token = payload[:token]
-      raise AuthenticationError.new("Authentication token missing in response", :unauthorized) if token.blank?
+      jwt = payload[:token]
+      raise AuthenticationError.new("Authentication token missing in response", :unauthorized) if jwt.blank?
 
-      token
+      jwt
     end
 
     def handle_response(response)
@@ -178,5 +186,39 @@ class Provider::IndexaCapital
         Rails.logger.error "IndexaCapital API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
         raise Error.new("Unexpected error: #{response.code} - #{response.body}", :unknown)
       end
+    end
+
+    # Extract accounts array from /users/me response
+    # API returns: { accounts: [{ account_number: "ABC12345", type: "mutual", status: "active", ... }] }
+    def extract_accounts(user_data)
+      accounts = user_data[:accounts] || []
+      accounts.map do |acct|
+        {
+          account_number: acct[:account_number],
+          name: account_display_name(acct),
+          type: acct[:type],
+          status: acct[:status],
+          currency: "EUR",
+          raw: acct
+        }.with_indifferent_access
+      end
+    end
+
+    def account_display_name(acct)
+      type_label = case acct[:type]
+      when "mutual" then "Mutual Fund"
+      when "pension", "epsv" then "Pension Plan"
+      else acct[:type]&.titleize || "Account"
+      end
+      "Indexa Capital #{type_label} (#{acct[:account_number]})"
+    end
+
+    # Extract current balance from performance endpoint's portfolios array
+    def extract_balance(performance_data)
+      portfolios = performance_data[:portfolios]
+      return 0 unless portfolios.is_a?(Array) && portfolios.any?
+
+      latest = portfolios.max_by { |p| p[:date].to_s }
+      latest[:total_amount].to_d
     end
 end

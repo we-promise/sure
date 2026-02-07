@@ -17,10 +17,11 @@ class IndexaCapitalItem < ApplicationRecord
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :password, deterministic: true
+    encrypts :api_token, deterministic: true
   end
 
   validates :name, presence: true
-  validates :username, :document, :password, presence: true, on: :create
+  validate :credentials_present_on_create, on: :create
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -169,7 +170,11 @@ class IndexaCapitalItem < ApplicationRecord
     end
   end
 
-  def credentials_configured?
-    username.present? && document.present? && password.present?
-  end
+  private
+
+    def credentials_present_on_create
+      return if credentials_configured?
+
+      errors.add(:base, "Either INDEXA_API_TOKEN env var or username/document/password credentials are required")
+    end
 end
