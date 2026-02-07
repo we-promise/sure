@@ -22,7 +22,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
     assert_equal Money.new(1000, @family.currency), totals.income_money
     assert_equal Money.new(200 + 300 + 400, @family.currency), totals.expense_money
     assert_equal 4, totals.transactions_count
@@ -158,7 +158,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     inflow_transaction = create_transaction(account: @credit_card_account, amount: -500, kind: "funds_movement")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # NOW WORKING: Excludes transfers correctly after refactoring
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -171,7 +171,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     loan_payment = create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # CONTINUES TO WORK: Includes loan payments as expenses (loan_payment not in exclusion list)
     assert_equal 5, totals.transactions_count
@@ -184,7 +184,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     one_time_transaction = create_transaction(account: @checking_account, amount: 250, category: @groceries_category, kind: "one_time")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # NOW WORKING: Excludes one-time transactions correctly after refactoring
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -197,7 +197,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     payment_transaction = create_transaction(account: @checking_account, amount: 300, category: nil, kind: "cc_payment")
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # NOW WORKING: Excludes payment transactions correctly after refactoring
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -211,7 +211,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     excluded_transaction_entry.update!(excluded: true)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # Should exclude excluded transactions
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -279,7 +279,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: @checking_account, amount: 150, category: nil)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # Should still include uncategorized transaction in totals
     assert_equal 5, totals.transactions_count
@@ -296,7 +296,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     )
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # investment_contribution should be included as an expense (visible in cashflow)
     assert_equal 5, totals.transactions_count # Original 4 + investment_contribution
@@ -326,7 +326,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     )
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # The provider-imported contribution should appear as an expense
     assert_equal 5, totals.transactions_count # Original 4 + provider contribution
@@ -349,7 +349,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: roth_ira, amount: -200, category: @income_category)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # The Roth IRA dividend should be excluded
     assert_equal 4, totals.transactions_count # Only original 4 transactions
@@ -371,7 +371,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: account_401k, amount: -500, category: @income_category)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # The 401k dividend should be excluded
     assert_equal 4, totals.transactions_count
@@ -393,7 +393,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: brokerage, amount: -300, category: @income_category)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # The brokerage dividend SHOULD be included
     assert_equal 5, totals.transactions_count
@@ -414,7 +414,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: crypto_account, amount: 100, category: @groceries_category)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # Crypto transaction SHOULD be included (default is taxable)
     assert_equal 5, totals.transactions_count
@@ -434,7 +434,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: crypto_in_ira, amount: 250, category: @groceries_category)
 
     income_statement = IncomeStatement.new(@family)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # The tax-deferred crypto transaction should be excluded
     assert_equal 4, totals.transactions_count
@@ -550,7 +550,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     # Get income statement totals
     income_statement = IncomeStatement.new(family_only_retirement)
-    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+    totals = income_statement.totals(transactions_scope: income_statement.family.transactions.visible.excluding_pending.in_period(Period.last_30_days))
 
     # All transactions should be excluded, resulting in zero totals
     assert_equal 0, totals.transactions_count

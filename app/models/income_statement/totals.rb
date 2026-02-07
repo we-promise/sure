@@ -1,11 +1,8 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, date_range:, include_trades: true)
+  def initialize(family, transactions_scope:, include_trades: true)
     @family = family
     @transactions_scope = transactions_scope
-    @date_range = date_range
     @include_trades = include_trades
-
-    validate_date_range!
   end
 
   def call
@@ -124,9 +121,7 @@ class IncomeStatement::Totals
     def sql_params
       params = {
         target_currency: @family.currency,
-        family_id: @family.id,
-        start_date: @date_range.begin,
-        end_date: @date_range.end
+        family_id: @family.id
       }
 
       # Add tax-advantaged account IDs if any exist
@@ -142,15 +137,5 @@ class IncomeStatement::Totals
       ids = @family.tax_advantaged_account_ids
       return "" if ids.empty?
       "AND a.id NOT IN (:tax_advantaged_account_ids)"
-    end
-
-    def validate_date_range!
-      unless @date_range.is_a?(Range)
-        raise ArgumentError, "date_range must be a Range, got #{@date_range.class}"
-      end
-
-      unless @date_range.begin.respond_to?(:to_date) && @date_range.end.respond_to?(:to_date)
-        raise ArgumentError, "date_range must contain date-like objects"
-      end
     end
 end

@@ -52,6 +52,17 @@ en:
       tab_transactions: Transactions
       tab_upcoming: Upcoming
       uncategorized: "(uncategorized)"
+      reimbursement:
+        title: Reimburses Expense
+        description: "This transaction is marked as a reimbursement for:"
+      link_expense:
+        title: Link Expense
+        description: Is this a reimbursement? Link it to the original expense.
+        text: Link Expense
+      reimbursements_list:
+        title: Reimbursements
+        description: Inflows linked to this expense.
+      unlink_reimbursement: Unlink
     activity_labels:
       buy: Buy
       sell: Sell
