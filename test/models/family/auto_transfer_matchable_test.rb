@@ -7,6 +7,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @depository = accounts(:depository)
     @credit_card = accounts(:credit_card)
+    @loan = accounts(:loan)
   end
 
   test "auto-matches transfers" do
@@ -115,6 +116,54 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_no_difference -> { Transfer.count } do
       @family.auto_match_transfers!
     end
+  end
+
+  # Regression tests for loan transfer kind assignment bug
+  # The kind should be determined by the DESTINATION account (inflow), not the source (outflow)
+  test "loan payment (cash to loan) assigns loan_payment kind to outflow" do
+    # Cash → Loan: outflow from depository, inflow to loan
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    @family.auto_match_transfers!
+
+    outflow_entry.reload
+    inflow_entry.reload
+
+    # Destination is loan account, so outflow should be loan_payment
+    assert_equal "loan_payment", outflow_entry.entryable.kind
+    assert_equal "funds_movement", inflow_entry.entryable.kind
+  end
+
+  test "loan disbursement (loan to cash) assigns funds_movement kind to outflow" do
+    # Loan → Cash: outflow from loan, inflow to depository
+    outflow_entry = create_transaction(date: Date.current, account: @loan, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
+
+    @family.auto_match_transfers!
+
+    outflow_entry.reload
+    inflow_entry.reload
+
+    # Destination is depository (not loan), so outflow should be funds_movement
+    # This ensures loan disbursements don't incorrectly appear in cashflow
+    assert_equal "funds_movement", outflow_entry.entryable.kind
+    assert_equal "funds_movement", inflow_entry.entryable.kind
+  end
+
+  test "credit card payment (cash to credit card) assigns cc_payment kind to outflow" do
+    # Cash → Credit Card: outflow from depository, inflow to credit card
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    outflow_entry.reload
+    inflow_entry.reload
+
+    # Destination is credit card, so outflow should be cc_payment
+    assert_equal "cc_payment", outflow_entry.entryable.kind
+    assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
   private
