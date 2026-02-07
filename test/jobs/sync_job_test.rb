@@ -16,7 +16,7 @@ class SyncJobTest < ActiveJob::TestCase
     # retry_on adds a rescue handler as [exception_class_name_string, proc]
     handler_found = SyncJob.rescue_handlers.any? do |handler|
       handler.is_a?(Array) &&
-      handler[0] == "Provider::TwelveData::RateLimitError"
+      handler[0] == Provider::TwelveData::RateLimitError.name
     end
 
     assert handler_found, "SyncJob should have retry_on configured for Provider::TwelveData::RateLimitError"
