@@ -186,8 +186,8 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       Rails.configuration.x.auth.sso_providers << cfg.merge(name: name, strategy: "saml")
     end
   end
-end
 
-if Rails.configuration.x.auth.sso_providers.empty?
-  Rails.logger.warn("No SSO providers enabled; check auth.yml / ENV configuration or database providers")
+  if Rails.configuration.x.auth.sso_providers.empty?
+    Rails.logger.warn("No SSO providers enabled; check auth.yml / ENV configuration or database providers")
+  end
 end
