@@ -42,11 +42,10 @@ class Api::V1::TradesController < Api::V1::BaseController
     account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
 
     unless account.supports_trades?
-      return render json: {
-        error: "validation_failed",
-        message: "Account does not support trades (investment or crypto exchange only)",
-        errors: [ "Account must be an investment or crypto exchange account" ]
-      }, status: :unprocessable_entity
+      return render_validation_error(
+        "Account does not support trades (investment or crypto exchange only)",
+        [ "Account must be an investment or crypto exchange account" ]
+      )
     end
 
     create_params = build_create_form_params(account)
@@ -204,11 +203,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def build_create_form_params(account)
       type = params.dig(:trade, :type).to_s.downcase
       unless %w[buy sell].include?(type)
-        render json: {
-          error: "validation_failed",
-          message: "Type must be buy or sell",
-          errors: [ "type must be 'buy' or 'sell'" ]
-        }, status: :unprocessable_entity
+        render_validation_error("Type must be buy or sell", [ "type must be 'buy' or 'sell'" ])
         return nil
       end
 
@@ -216,11 +211,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       manual_ticker_value = nil
 
       unless trade_params[:date].present?
-        render json: {
-          error: "validation_failed",
-          message: "Date is required",
-          errors: [ "date must be present" ]
-        }, status: :unprocessable_entity
+        render_validation_error("Date is required", [ "date must be present" ])
         return nil
       end
 
@@ -232,11 +223,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       elsif trade_params[:manual_ticker].present?
         manual_ticker_value = trade_params[:manual_ticker]
       else
-        render json: {
-          error: "validation_failed",
-          message: "Security identifier required",
-          errors: [ "Provide security_id, ticker, or manual_ticker" ]
-        }, status: :unprocessable_entity
+        render_validation_error("Security identifier required", [ "Provide security_id, ticker, or manual_ticker" ])
         return nil
       end
 
@@ -307,6 +294,11 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     def safe_per_page_param
       per_page = params[:per_page].to_i
-      (1..100).cover?(per_page) ? per_page : 25
+      case per_page
+      when 1..100
+        per_page
+      else
+        25
+      end
     end
 end

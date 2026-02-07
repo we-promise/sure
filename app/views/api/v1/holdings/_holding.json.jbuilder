@@ -3,7 +3,7 @@
 json.id holding.id
 json.date holding.date
 json.qty holding.qty
-json.price holding.price
+json.price Money.new(holding.price, holding.currency).format
 json.amount holding.amount_money.format
 json.currency holding.currency
 json.cost_basis_source holding.cost_basis_source
