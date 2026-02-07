@@ -4,6 +4,10 @@ class PagesController < ApplicationController
   skip_authentication only: %i[redis_configuration_error privacy terms]
 
   def dashboard
+    if Current.user&.ui_layout_intro?
+      redirect_to chats_path and return
+    end
+
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
     @accounts = Current.family.accounts.visible.with_attached_logo
@@ -20,6 +24,10 @@ class PagesController < ApplicationController
     @dashboard_sections = build_dashboard_sections
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+  end
+
+  def intro
+    @breadcrumbs = [ [ "Home", chats_path ], [ "Intro", nil ] ]
   end
 
   def update_preferences
