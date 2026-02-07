@@ -2,27 +2,60 @@
 ca:
   onboardings:
     header:
-      sign_out: Tanca la sessió
+      sign_out: Tancar sessió
+      setup: Configuració
+      preferences: Preferències
+      goals: Objectius
+      start: Inici
+    logout:
+      sign_out: Tancar sessió
+    show:
+      title: Configurem el teu compte
+      subtitle: Primer de tot, completem el teu perfil.
+      first_name: Nom
+      first_name_placeholder: Nom
+      last_name: Cognom
+      last_name_placeholder: Cognom
+      household_name: Nom de la llar
+      household_name_placeholder: Nom de la llar
+      country: País
+      submit: Continuar
     preferences:
+      title: Configura les teves preferències
+      subtitle: Configurem les teves preferències.
+      example: Compte d'exemple
+      preview: Previsualitza com es mostren les dades segons les preferències.
+      color_theme: Tema de colors
+      theme_system: Sistema
+      theme_light: Clar
+      theme_dark: Fosc
+      locale: Idioma
       currency: Moneda
       date_format: Format de data
-      example: Compte d'exemple
-      locale: Idioma
-      preview: Previsualitza com es mostren les dades segons les preferències.
-      submit: Completa
-      subtitle: Configurem les teves preferències.
-      title: Configura les teves preferències
-    profile:
-      country: País
-      first_name: Nom
-      household_name: Nom de la llar
-      last_name: Cognom
-      profile_image: Imatge de perfil
-      submit: Continua
-      subtitle: Completem el teu perfil.
-      title: Configurem el més bàsic
-    show:
-      message: Estem molt contents que siguis aquí. Al següent pas et farem unes preguntes
-        per completar el teu perfil i deixar-ho tot a punt.
-      setup: Configura el compte
-      title: Benvingut/da a %{product_name}
+      submit: Completar
+    goals:
+      title: Què t'ha portat aquí?
+      subtitle: Selecciona un o més objectius que tens amb %{product_name} com a eina de finances personals.
+      unified_accounts: Veure tots els meus comptes en un sol lloc
+      cashflow: Entendre el flux de caixa i les despeses
+      budgeting: Gestionar plans financers i pressupostos
+      partner: Gestionar finances amb la parella
+      investments: Seguir les inversions
+      ai_insights: Deixar que la IA m'ajudi a entendre les meves finances
+      optimization: Analitzar i optimitzar comptes
+      reduce_stress: Reduir l'estrès financer o l'ansietat
+      submit: Següent
+    trial:
+      title: Prova Sure durant 45 dies
+      data_deletion: Les dades s'eliminaran després
+      description_html: A partir d'avui pots provar el producte a fons.<br/>Si t'agrada, allotja'l tu mateix o contribueix per continuar usant-lo aquí.
+      try_button: Provar Sure durant 45 dies
+      continue_trial: Continuar la prova
+      upgrade: Actualitzar
+      how_it_works: Com funciona
+      today: Avui
+      today_description: Tindràs accés gratuït a Sure durant 45 dies al nostre AWS.
+      in_40_days: En 40 dies (%{date})
+      in_40_days_description: Et notificarem per recordar-te d'exportar les teves dades.
+      in_45_days: En 45 dies (%{date})
+      in_45_days_description: Eliminarem les teves dades — contribueix per continuar usant Sure aquí!

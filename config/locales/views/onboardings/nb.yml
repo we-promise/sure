@@ -3,26 +3,59 @@ nb:
   onboardings:
     header:
       sign_out: Logg ut
+      setup: Oppsett
+      preferences: Innstillinger
+      goals: Mål
+      start: Start
+    logout:
+      sign_out: Logg ut
+    show:
+      title: La oss sette opp kontoen din
+      subtitle: Først, la oss fullføre profilen din.
+      first_name: Fornavn
+      first_name_placeholder: Fornavn
+      last_name: Etternavn
+      last_name_placeholder: Etternavn
+      household_name: Husholdningsnavn
+      household_name_placeholder: Husholdningsnavn
+      country: Land
+      submit: Fortsett
     preferences:
+      title: Konfigurer innstillingene dine
+      subtitle: La oss konfigurere innstillingene dine.
+      example: Eksempelkonto
+      preview: Forhåndsvisning av hvordan data vises basert på innstillinger.
+      color_theme: Fargetema
+      theme_system: System
+      theme_light: Lys
+      theme_dark: Mørk
+      locale: Språk
       currency: Valuta
       date_format: Datoformat
-      example: Eksempelkonto
-      locale: Språk
-      preview: Forhåndsvis hvordan data vises basert på preferanser.
       submit: Fullfør
-      subtitle: La oss konfigurere preferansene dine.
-      title: Konfigurer preferansene dine
-    profile:
-      country: Land
-      first_name: Fornavn
-      household_name: Husholdningsnavn
-      last_name: Etternavn
-      profile_image: Profilbilde
-      submit: Fortsett
-      subtitle: La oss fullføre profilen din.
-      title: La oss sette opp det grunnleggende
-    show:
-      message: Vi er veldig glade for at du er her. I neste trinn vil vi stille deg noen
-        spørsmål for å fullføre profilen din og deretter få deg i gang.
-      setup: Sett opp konto
-      title: Møt %{product_name}
+    goals:
+      title: Hva bringer deg hit?
+      subtitle: Velg ett eller flere mål du har med %{product_name} som ditt personlige økonomverktøy.
+      unified_accounts: Se alle kontoene mine på ett sted
+      cashflow: Forstå kontantstrøm og utgifter
+      budgeting: Administrere økonomiplaner og budsjetter
+      partner: Administrere økonomi med en partner
+      investments: Følge investeringer
+      ai_insights: La AI hjelpe meg å forstå økonomien min
+      optimization: Analysere og optimalisere kontoer
+      reduce_stress: Redusere økonomisk stress eller angst
+      submit: Neste
+    trial:
+      title: Prøv Sure i 45 dager
+      data_deletion: Data slettes deretter
+      description_html: Fra i dag kan du teste produktet grundig.<br/>Hvis du liker det, kan du hoste det selv eller bidra for å fortsette å bruke det her.
+      try_button: Prøv Sure i 45 dager
+      continue_trial: Fortsett prøveperioden
+      upgrade: Oppgrader
+      how_it_works: Slik fungerer det
+      today: I dag
+      today_description: Du får gratis tilgang til Sure i 45 dager på vår AWS.
+      in_40_days: Om 40 dager (%{date})
+      in_40_days_description: Vi varsler deg for å minne deg på å eksportere dataene dine.
+      in_45_days: Om 45 dager (%{date})
+      in_45_days_description: Vi sletter dataene dine — bidra for å fortsette å bruke Sure her!

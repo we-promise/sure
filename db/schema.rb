@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_03_204605) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -499,6 +499,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
+    t.integer "month_start_day", default: 1, null: false
+    t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
   create_table "family_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -660,6 +662,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
     t.string "amount_type_identifier_value"
+    t.text "ai_summary"
+    t.string "document_type"
+    t.jsonb "extracted_data"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -850,8 +855,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.datetime "last_seen_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "oauth_application_id"
-    t.index ["oauth_application_id"], name: "index_mobile_devices_on_oauth_application_id"
     t.index ["user_id", "device_id"], name: "index_mobile_devices_on_user_id_and_device_id", unique: true
     t.index ["user_id"], name: "index_mobile_devices_on_user_id"
   end
@@ -880,7 +883,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.datetime "created_at", null: false
     t.datetime "revoked_at"
     t.string "previous_refresh_token", default: "", null: false
+    t.uuid "mobile_device_id"
     t.index ["application_id"], name: "index_oauth_access_tokens_on_application_id"
+    t.index ["mobile_device_id"], name: "index_oauth_access_tokens_on_mobile_device_id"
     t.index ["refresh_token"], name: "index_oauth_access_tokens_on_refresh_token", unique: true
     t.index ["resource_owner_id"], name: "index_oauth_access_tokens_on_resource_owner_id"
     t.index ["token"], name: "index_oauth_access_tokens_on_token", unique: true
@@ -943,7 +948,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.datetime "updated_at", null: false
     t.jsonb "raw_payload", default: {}
     t.jsonb "raw_transactions_payload", default: {}
-    t.jsonb "raw_investments_payload", default: {}
+    t.jsonb "raw_holdings_payload", default: {}
     t.jsonb "raw_liabilities_payload", default: {}
     t.index ["plaid_id"], name: "index_plaid_accounts_on_plaid_id", unique: true
     t.index ["plaid_item_id"], name: "index_plaid_accounts_on_plaid_item_id"
@@ -1403,9 +1408,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_23_000000) do
     t.string "default_account_order", default: "name_asc"
     t.string "ui_layout"
     t.jsonb "preferences", default: {}, null: false
+    t.string "locale"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"
+    t.index ["locale"], name: "index_users_on_locale"
     t.index ["otp_secret"], name: "index_users_on_otp_secret", unique: true, where: "(otp_secret IS NOT NULL)"
     t.index ["preferences"], name: "index_users_on_preferences", using: :gin
   end

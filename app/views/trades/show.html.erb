@@ -1,11 +1,13 @@
-<%= render DS::Dialog.new(variant: "drawer") do |dialog| %>
-  <% dialog.with_header do %>
+<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
+  <% dialog.with_header(hide_close_icon: true) do %>
     <%= render "trades/header", entry: @entry %>
   <% end %>
 
   <% trade = @entry.trade %>
 
   <% dialog.with_body do %>
+    <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_trade_path(trade) %>
+
     <% dialog.with_section(title: t(".details"), open: true) do %>
       <div class="pb-4">
         <%= styled_form_with model: @entry,

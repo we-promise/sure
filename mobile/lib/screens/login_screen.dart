@@ -27,6 +27,103 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _showApiKeyDialog() {
+    final apiKeyController = TextEditingController();
+    final outerContext = context;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            return AlertDialog(
+              title: const Text('API Key Login'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enter your API key to sign in.',
+                    style: Theme.of(outerContext).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(outerContext).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: apiKeyController,
+                    decoration: const InputDecoration(
+                      labelText: 'API Key',
+                      prefixIcon: Icon(Icons.vpn_key_outlined),
+                    ),
+                    obscureText: true,
+                    maxLines: 1,
+                    enabled: !isLoading,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          apiKeyController.dispose();
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final apiKey = apiKeyController.text.trim();
+                          if (apiKey.isEmpty) return;
+
+                          setDialogState(() {
+                            isLoading = true;
+                          });
+
+                          final authProvider = Provider.of<AuthProvider>(
+                            outerContext,
+                            listen: false,
+                          );
+                          final success = await authProvider.loginWithApiKey(
+                            apiKey: apiKey,
+                          );
+
+                          if (!dialogContext.mounted) return;
+
+                          final errorMsg = authProvider.errorMessage;
+                          apiKeyController.dispose();
+                          Navigator.of(dialogContext).pop();
+
+                          if (!success && mounted) {
+                            ScaffoldMessenger.of(outerContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  errorMsg ?? 'Invalid API key',
+                                ),
+                                backgroundColor:
+                                    Theme.of(outerContext).colorScheme.error,
+                              ),
+                            );
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Sign In'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -259,6 +356,53 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Sign In'),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                // API Key Login Button
+                TextButton.icon(
+                  onPressed: _showApiKeyDialog,
+                  icon: const Icon(Icons.vpn_key_outlined, size: 18),
+                  label: const Text('Via API Key Login'),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Divider with "or"
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'or',
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Google Sign-In button
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, _) {
+                    return OutlinedButton.icon(
+                      onPressed: authProvider.isLoading
+                          ? null
+                          : () => authProvider.startSsoLogin('google_oauth2'),
+                      icon: const Icon(Icons.g_mobiledata, size: 24),
+                      label: const Text('Sign in with Google'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     );
                   },
                 ),

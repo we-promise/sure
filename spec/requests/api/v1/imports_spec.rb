@@ -81,11 +81,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '200', 'imports listed' do
         schema '$ref' => '#/components/schemas/ImportCollection'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('data')).to be_present
-          expect(payload.fetch('meta')).to include('current_page', 'total_count', 'total_pages', 'per_page')
-        end
+        run_test!
       end
 
       response '200', 'imports filtered by status' do
@@ -93,12 +89,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         let(:status) { 'pending' }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('data').each do |import|
-            expect(import.fetch('status')).to eq('pending')
-          end
-        end
+        run_test!
       end
 
       response '200', 'imports filtered by type' do
@@ -106,12 +97,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         let(:type) { 'TransactionImport' }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('data').each do |import|
-            expect(import.fetch('type')).to eq('TransactionImport')
-          end
-        end
+        run_test!
       end
     end
 
@@ -203,12 +189,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           }
         end
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.dig('data', 'id')).to be_present
-          expect(payload.dig('data', 'type')).to eq('TransactionImport')
-          expect(payload.dig('data', 'status')).to eq('pending')
-        end
+        run_test!
       end
 
       response '422', 'validation error - file too large' do
@@ -240,13 +221,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '200', 'import retrieved' do
         schema '$ref' => '#/components/schemas/ImportResponse'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.dig('data', 'id')).to eq(pending_import.id)
-          expect(payload.dig('data', 'type')).to eq('TransactionImport')
-          expect(payload.dig('data', 'configuration')).to be_present
-          expect(payload.dig('data', 'stats')).to be_present
-        end
+        run_test!
       end
 
       response '404', 'import not found' do

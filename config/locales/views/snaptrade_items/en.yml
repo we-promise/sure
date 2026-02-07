@@ -8,8 +8,8 @@ en:
     destroy:
       success: "Scheduled SnapTrade connection for deletion."
     connect:
-      registration_failed: "Failed to register with SnapTrade: %{message}"
-      portal_error: "Failed to connect to SnapTrade: %{message}"
+      decryption_failed: "Unable to read SnapTrade credentials. Please delete and recreate this connection."
+      connection_failed: "Failed to connect to SnapTrade: %{message}"
     callback:
       success: "Brokerage connected! Please select which accounts to link."
       no_item: "SnapTrade configuration not found."
@@ -94,6 +94,11 @@ en:
       setup_needed: "Accounts need setup"
       setup_description: "Some accounts from SnapTrade need to be linked to Sure accounts."
       setup_action: "Setup Accounts"
+      setup_accounts_menu: "Set Up Accounts"
+      manage_connections: "Manage Connections"
+      more_accounts_available:
+        one: "%{count} more account available to set up"
+        other: "%{count} more accounts available to set up"
       no_accounts_title: "No accounts discovered"
       no_accounts_description: "Connect a brokerage to import your investment accounts."
 

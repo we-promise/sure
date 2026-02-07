@@ -1,6 +1,21 @@
 <%# locals: (coinbase_item:) %>
 
 <%= tag.div id: dom_id(coinbase_item) do %>
+  <%# Compute unlinked count early so it's available for both menu and bottom section %>
+  <% unlinked_count = if defined?(@coinbase_unlinked_count_map) && @coinbase_unlinked_count_map
+       @coinbase_unlinked_count_map[coinbase_item.id] || 0
+     else
+       begin
+         coinbase_item.coinbase_accounts
+           .left_joins(:account_provider)
+           .where(account_providers: { id: nil })
+           .count
+       rescue => e
+         Rails.logger.warn("Coinbase card: unlinked_count fallback failed: #{e.class} - #{e.message}")
+         0
+       end
+     end %>
+
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
     <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
       <div class="flex items-center gap-2">
@@ -55,15 +70,25 @@
             href: settings_providers_path,
             frame: "_top"
           ) %>
-        <% elsif Rails.env.development? %>
+        <% else %>
           <%= icon(
             "refresh-cw",
             as_button: true,
-            href: sync_coinbase_item_path(coinbase_item)
+            href: sync_coinbase_item_path(coinbase_item),
+            disabled: coinbase_item.syncing?
           ) %>
         <% end %>
 
         <%= render DS::Menu.new do |menu| %>
+          <% if unlinked_count.to_i > 0 %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".import_wallets_menu"),
+              icon: "plus",
+              href: setup_accounts_coinbase_item_path(coinbase_item),
+              frame: :modal
+            ) %>
+          <% end %>
           <% menu.with_item(
             variant: "button",
             text: t(".delete"),
@@ -93,20 +118,6 @@
           provider_item: coinbase_item
         ) %>
 
-        <%# Compute unlinked Coinbase accounts (no AccountProvider link) %>
-        <% unlinked_count = if defined?(@coinbase_unlinked_count_map) && @coinbase_unlinked_count_map
-             @coinbase_unlinked_count_map[coinbase_item.id] || 0
-           else
-             begin
-               coinbase_item.coinbase_accounts
-                 .left_joins(:account_provider)
-                 .where(account_providers: { id: nil })
-                 .count
-             rescue => e
-               0
-             end
-           end %>
-
         <% if unlinked_count.to_i > 0 && coinbase_item.accounts.empty? %>
           <%# No accounts imported yet - show prominent setup prompt %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
@@ -119,16 +130,6 @@
               href: setup_accounts_coinbase_item_path(coinbase_item),
               frame: :modal
             ) %>
-          </div>
-        <% elsif unlinked_count.to_i > 0 %>
-          <%# Some accounts imported, more available - show subtle link %>
-          <div class="pt-2 border-t border-primary">
-            <%= link_to setup_accounts_coinbase_item_path(coinbase_item),
-                        data: { turbo_frame: :modal },
-                        class: "flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors" do %>
-              <%= icon "plus", size: "sm" %>
-              <span><%= t(".more_wallets_available", count: unlinked_count) %></span>
-            <% end %>
           </div>
         <% elsif coinbase_item.accounts.empty? && coinbase_item.coinbase_accounts.none? %>
           <%# No coinbase_accounts at all - waiting for sync %>

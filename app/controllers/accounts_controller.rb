@@ -116,14 +116,11 @@ class AccountsController < ApplicationController
         # Capture provider accounts before clearing links (so we can destroy them)
         simplefin_account_to_destroy = @account.simplefin_account
 
-        # Capture SnaptradeAccounts linked via AccountProvider
-        # Destroying them will trigger delete_snaptrade_connection callback to free connection slots
-        snaptrade_accounts_to_destroy = @account.account_providers
-          .where(provider_type: "SnaptradeAccount")
-          .map { |ap| SnaptradeAccount.find_by(id: ap.provider_id) }
-          .compact
-
         # Remove new system links (account_providers join table)
+        # SnaptradeAccount records are preserved (not destroyed) so users can relink later.
+        # This follows the Plaid pattern where the provider account survives as "unlinked".
+        # SnapTrade has limited connection slots (5 free), so preserving the record avoids
+        # wasting a slot on reconnect.
         @account.account_providers.destroy_all
 
         # Remove legacy system links (foreign keys)
@@ -135,11 +132,6 @@ class AccountsController < ApplicationController
         # - SimplefinAccount only caches API data which is regenerated on reconnect
         # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
         simplefin_account_to_destroy&.destroy!
-
-        # Destroy SnaptradeAccount records to free up SnapTrade connection slots
-        # The before_destroy callback will delete the connection from SnapTrade API
-        # if no other accounts share the same authorization
-        snaptrade_accounts_to_destroy.each(&:destroy!)
       end
 
       redirect_to accounts_path, notice: t("accounts.unlink.success")

@@ -35,6 +35,7 @@ ro:
         default_period: Perioadă implicită
         default_account_order: Ordine implicită conturi
         language: Limbă
+        language_auto: Limba browserului
         page_title: Preferințe
         theme_dark: Întunecat
         theme_light: Luminos
@@ -85,7 +86,7 @@ ro:
         last_name: Nume de familie
         page_title: Informații profil
         pending: În așteptare
-        profile_subtitle: Personalizează-ți aspectul pe %{product}
+        profile_subtitle: Personalizează-ți aspectul pe %{product_name}
         profile_title: Personal
         remove_invitation: Anulează invitația
         remove_member: Elimină membrul

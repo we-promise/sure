@@ -3,9 +3,13 @@ class Import < ApplicationRecord
   MappingError = Class.new(StandardError)
 
   MAX_CSV_SIZE = 10.megabytes
-  ALLOWED_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+  MAX_PDF_SIZE = 25.megabytes
+  ALLOWED_CSV_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+  ALLOWED_PDF_MIME_TYPES = %w[application/pdf].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport].freeze
+  DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
+
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -134,6 +138,14 @@ class Import < ApplicationRecord
     []
   end
 
+  # Returns false for import types that don't need CSV column mapping (e.g., PdfImport).
+  # Override in subclasses that handle data extraction differently.
+  def requires_csv_workflow?
+    true
+  end
+
+  # Subclasses that require CSV workflow must override this.
+  # Non-CSV imports (e.g., PdfImport) can return [].
   def column_keys
     raise NotImplementedError, "Subclass must implement column_keys"
   end

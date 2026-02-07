@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -146,11 +148,46 @@ class AppWrapper extends StatefulWidget {
 class _AppWrapperState extends State<AppWrapper> {
   bool _isCheckingConfig = true;
   bool _hasBackendUrl = false;
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkBackendConfig();
+    _initDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+
+    // Handle deep link that launched the app (cold start)
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handleDeepLink(uri);
+    }).catchError((e, stackTrace) {
+      LogService.instance.error('DeepLinks', 'Initial link error: $e\n$stackTrace');
+    });
+
+    // Listen for deep links while app is running
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (uri) => _handleDeepLink(uri),
+      onError: (e, stackTrace) {
+        LogService.instance.error('DeepLinks', 'Link stream error: $e\n$stackTrace');
+      },
+    );
+  }
+
+  void _handleDeepLink(Uri uri) {
+    if (uri.scheme == 'sureapp' && uri.host == 'oauth') {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.handleSsoCallback(uri);
+    }
   }
 
   Future<void> _checkBackendConfig() async {

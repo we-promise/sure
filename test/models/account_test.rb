@@ -1,7 +1,7 @@
 require "test_helper"
 
 class AccountTest < ActiveSupport::TestCase
-  include SyncableInterfaceTest, EntriesTestHelper
+  include SyncableInterfaceTest, EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @account = @syncable = accounts(:depository)
@@ -154,5 +154,22 @@ class AccountTest < ActiveSupport::TestCase
     # Depository accounts
     assert @account.taxable?
     assert_not @account.tax_advantaged?
+  end
+
+  test "destroying account purges attached logo" do
+    @account.logo.attach(
+      io: StringIO.new("fake-logo-content"),
+      filename: "logo.png",
+      content_type: "image/png"
+    )
+
+    attachment_id = @account.logo.id
+    assert ActiveStorage::Attachment.exists?(attachment_id)
+
+    perform_enqueued_jobs do
+      @account.destroy!
+    end
+
+    assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
 end

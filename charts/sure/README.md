@@ -533,9 +533,9 @@ ingress:
       secretName: finance-tls
 ```
 
-## Boot-required secrets (self-hosted)
+## Boot-required secrets
 
-In self-hosted mode the Rails initializer for Active Record Encryption loads on boot. To prevent boot crashes, ensure the following environment variables are present for ALL workloads (web, worker, migrate job/initContainer, CronJobs, and the SimpleFin backfill job):
+The Rails initializer for Active Record Encryption loads on boot. To prevent boot crashes, ensure the following environment variables are present for ALL workloads (web, worker, migrate job/initContainer, CronJobs, and the SimpleFin backfill job):
 
 - `SECRET_KEY_BASE`
 - `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`
@@ -552,7 +552,7 @@ rails:
     enabled: true  # set to false to skip injecting the three AR encryption env vars
 ```
 
-Note: Even if `simplefin.encryption.enabled=false`, the app initializer expects these env vars to exist in self-hosted mode.
+Note: In self-hosted mode, if these env vars are not provided, they will be automatically generated from `SECRET_KEY_BASE`. In managed mode, these env vars must be explicitly provided via environment variables or Rails credentials.
 
 ## Advanced environment variable injection
 
