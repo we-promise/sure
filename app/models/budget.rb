@@ -29,13 +29,14 @@ class Budget < ApplicationRecord
     end
 
     def budget_date_valid?(date, family:)
-      if family.uses_custom_month_start?
-        budget_start = family.custom_month_start_for(date)
-        budget_start >= oldest_valid_budget_date(family) && budget_start <= family.custom_month_end_for(Date.current)
+      budget_start = if family.uses_custom_month_start?
+        family.custom_month_start_for(date)
       else
-        beginning_of_month = date.beginning_of_month
-        beginning_of_month >= oldest_valid_budget_date(family) && beginning_of_month <= Date.current.end_of_month
+        date.beginning_of_month
       end
+
+      budget_start >= oldest_valid_budget_date(family) &&
+        budget_start <= latest_valid_budget_start_date(family)
     end
 
     def find_or_bootstrap(family, start_date:)
@@ -69,6 +70,14 @@ class Budget < ApplicationRecord
         two_years_ago = 2.years.ago.beginning_of_month
         oldest_entry_date = family.oldest_entry_date.beginning_of_month
         [ two_years_ago, oldest_entry_date ].min
+      end
+
+      def latest_valid_budget_start_date(family)
+        if family.uses_custom_month_start?
+          family.current_custom_month_period.start_date + 2.years
+        else
+          Date.current.beginning_of_month + 2.years
+        end
       end
   end
 
@@ -151,8 +160,6 @@ class Budget < ApplicationRecord
   end
 
   def next_budget_param
-    return nil if current?
-
     next_date = start_date + 1.month
     return nil unless self.class.budget_date_valid?(next_date, family: family)
 
