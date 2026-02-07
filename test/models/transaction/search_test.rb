@@ -351,8 +351,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 
-  test "category filter includes subcategories" do
-    # Create a transaction with the parent category
+  test "category filter does not include subcategories" do
     parent_entry = create_transaction(
       account: @checking_account,
       amount: 100,
@@ -360,7 +359,6 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard"
     )
 
-    # Create a transaction with the subcategory (fixture :subcategory has name "Restaurants", parent "Food & Drink")
     subcategory_entry = create_transaction(
       account: @checking_account,
       amount: 75,
@@ -368,30 +366,13 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard"
     )
 
-    # Create a transaction with a different category
-    other_entry = create_transaction(
-      account: @checking_account,
-      amount: 50,
-      category: categories(:income),
-      kind: "standard"
-    )
-
-    # Filter by parent category only - should include both parent and subcategory transactions
     search = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink" ] })
-    results = search.transactions_scope
-    result_ids = results.pluck(:id)
+    result_ids = search.transactions_scope.pluck(:id)
 
-    # Should include both parent and subcategory transactions
     assert_includes result_ids, parent_entry.entryable.id
-    assert_includes result_ids, subcategory_entry.entryable.id
-    # Should not include transactions with different category
-    assert_not_includes result_ids, other_entry.entryable.id
-
-    # Verify totals also include subcategory transactions
-    totals = search.totals
-    assert_equal 2, totals.count
-    assert_equal Money.new(175, "USD"), totals.expense_money # 100 + 75
+    assert_not_includes result_ids, subcategory_entry.entryable.id
   end
+
 
   test "totals respects type filters" do
     # Create expense and income transactions

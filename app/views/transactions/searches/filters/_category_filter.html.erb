@@ -1,21 +1,30 @@
 <%# locals: (form:) %>
-<div data-controller="list-filter">
+<div data-controller="list-filter cascading-category-filter">
   <div class="relative">
     <input type="search" autocomplete="off" placeholder="Filter category" data-list-filter-target="input" data-action="input->list-filter#filter" class="block w-full bg-container border border-secondary rounded-md py-2 pl-10 pr-3 focus:ring-gray-500 sm:text-sm">
     <%= icon("search", class: "absolute inset-y-0 left-2 top-1/2 transform -translate-y-1/2") %>
   </div>
   <div class="my-2" id="list" data-list-filter-target="list">
-    <% family_categories.each do |category| %>
-      <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= category.name %>">
+    <% family_categories_with_hierarchy.each do |category| %>
+      <div class="filterable-item flex items-center gap-2 p-2 <%= 'ml-4' if category.subcategory? %>" data-filter-name="<%= category.name %>">
         <%= form.check_box :categories,
                            {
                              multiple: true,
                              checked: @q[:categories]&.include?(category.name),
-                             class: "checkbox checkbox--light"
+                             class: "checkbox checkbox--light",
+                             data: {
+                               cascading_category_filter_target: "checkbox",
+                               category_id: category.id || "uncategorized",
+                               parent_id: category.parent_id,
+                               action: "change->cascading-category-filter#toggle"
+                             }
                            },
                            category.name,
                            nil %>
         <%= form.label :categories, category.name, value: category.name, class: "text-sm text-primary cursor-pointer" do %>
+          <% if category.subcategory? %>
+            <%= icon("corner-down-right", size: "sm", class: "inline-block mr-1 text-secondary") %>
+          <% end %>
           <%= render partial: "categories/badge", locals: { category: category } %>
         <% end %>
       </div>
