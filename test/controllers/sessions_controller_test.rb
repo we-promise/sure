@@ -3,6 +3,16 @@ require "test_helper"
 class SessionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
+
+    # Ensure the shared OAuth application exists
+    Doorkeeper::Application.find_or_create_by!(name: "Sure Mobile") do |app|
+      app.redirect_uri = "sureapp://oauth/callback"
+      app.scopes = "read_write"
+      app.confidential = false
+    end
+
+    # Clear the memoized class variable so it picks up the test record
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
   end
 
   teardown do
@@ -208,6 +218,421 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_session_path
     assert_equal "Could not authenticate via OpenID Connect.", flash[:alert]
+  end
+
+  # ── Mobile SSO: mobile_sso_start ──
+
+  test "mobile_sso_start renders auto-submit form for valid provider" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/google_oauth2", params: {
+      device_id: "test-device-123",
+      device_name: "Pixel 8",
+      device_type: "android",
+      os_version: "14",
+      app_version: "1.0.0"
+    }
+
+    assert_response :success
+    assert_match %r{action="/auth/google_oauth2"}, @response.body
+    assert_match %r{method="post"}, @response.body
+    assert_match /authenticity_token/, @response.body
+  end
+
+  test "mobile_sso_start stores device info in session" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/google_oauth2", params: {
+      device_id: "test-device-123",
+      device_name: "Pixel 8",
+      device_type: "android",
+      os_version: "14",
+      app_version: "1.0.0"
+    }
+
+    assert_equal "test-device-123", session[:mobile_sso][:device_id]
+    assert_equal "Pixel 8", session[:mobile_sso][:device_name]
+    assert_equal "android", session[:mobile_sso][:device_type]
+    assert_equal "14", session[:mobile_sso][:os_version]
+    assert_equal "1.0.0", session[:mobile_sso][:app_version]
+  end
+
+  test "mobile_sso_start redirects with error for invalid provider" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/unknown_provider", params: {
+      device_id: "test-device-123",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    assert_redirected_to %r{\Asureapp://oauth/callback\?error=invalid_provider}
+  end
+
+  test "mobile_sso_start redirects with error when device_id is missing" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/google_oauth2", params: {
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    assert_redirected_to %r{\Asureapp://oauth/callback\?error=missing_device_info}
+  end
+
+  test "mobile_sso_start redirects with error when device_name is missing" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/google_oauth2", params: {
+      device_id: "test-device-123",
+      device_type: "android"
+    }
+
+    assert_redirected_to %r{\Asureapp://oauth/callback\?error=missing_device_info}
+  end
+
+  test "mobile_sso_start redirects with error when device_type is missing" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/google_oauth2", params: {
+      device_id: "test-device-123",
+      device_name: "Pixel 8"
+    }
+
+    assert_redirected_to %r{\Asureapp://oauth/callback\?error=missing_device_info}
+  end
+
+  # ── Mobile SSO: openid_connect callback with mobile_sso session ──
+
+  test "mobile SSO issues Doorkeeper tokens for linked user" do
+    # Test environment uses null_store; swap in a memory store so the
+    # authorization code round-trip (write in controller, read in sso_exchange) works.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      first_name: "Bob",
+      last_name: "Dylan"
+    )
+
+    # Simulate mobile_sso session data (would be set by mobile_sso_start)
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    delete session_url(@user.sessions.last)
+
+    # We need to set the session directly via a custom approach:
+    # Hit mobile_sso_start first, then trigger the OIDC callback
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-001",
+      device_name: "Pixel 8",
+      device_type: "android",
+      os_version: "14",
+      app_version: "1.0.0"
+    }
+
+    assert_response :success
+
+    # Now trigger the OIDC callback — session[:mobile_sso] is set from the previous request
+    get "/auth/openid_connect/callback"
+
+    assert_response :redirect
+    redirect_url = @response.redirect_url
+
+    assert redirect_url.start_with?("sureapp://oauth/callback?"), "Expected redirect to sureapp:// but got #{redirect_url}"
+
+    uri = URI.parse(redirect_url)
+    callback_params = Rack::Utils.parse_query(uri.query)
+
+    assert callback_params["code"].present?, "Expected authorization code in callback"
+
+    # Exchange the authorization code for tokens via the API (as the mobile app would)
+    post "/api/v1/auth/sso_exchange", params: { code: callback_params["code"] }, as: :json
+
+    assert_response :success
+    token_data = JSON.parse(@response.body)
+
+    assert token_data["access_token"].present?, "Expected access_token in response"
+    assert token_data["refresh_token"].present?, "Expected refresh_token in response"
+    assert_equal "Bearer", token_data["token_type"]
+    assert_equal 30.days.to_i, token_data["expires_in"]
+    assert_equal @user.id, token_data["user"]["id"]
+    assert_equal @user.email, token_data["user"]["email"]
+    assert_equal @user.first_name, token_data["user"]["first_name"]
+    assert_equal @user.last_name, token_data["user"]["last_name"]
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "mobile SSO creates a MobileDevice record" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-002",
+      device_name: "iPhone 15",
+      device_type: "ios",
+      os_version: "17.2",
+      app_version: "1.0.0"
+    }
+
+    assert_difference "MobileDevice.count", 1 do
+      get "/auth/openid_connect/callback"
+    end
+
+    device = @user.mobile_devices.find_by(device_id: "flutter-device-002")
+    assert device.present?, "Expected MobileDevice to be created"
+    assert_equal "iPhone 15", device.device_name
+    assert_equal "ios", device.device_type
+    assert_equal "17.2", device.os_version
+    assert_equal "1.0.0", device.app_version
+  end
+
+  test "mobile SSO uses the shared OAuth application" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-003",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    assert_no_difference "Doorkeeper::Application.count" do
+      get "/auth/openid_connect/callback"
+    end
+
+    device = @user.mobile_devices.find_by(device_id: "flutter-device-003")
+    assert device.active_tokens.any?, "Expected device to have active tokens via shared app"
+  end
+
+  test "mobile SSO revokes previous tokens for existing device" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    # First login — creates device and token
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-004",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+    get "/auth/openid_connect/callback"
+
+    device = @user.mobile_devices.find_by(device_id: "flutter-device-004")
+    first_token = Doorkeeper::AccessToken.where(
+      mobile_device_id: device.id,
+      resource_owner_id: @user.id,
+      revoked_at: nil
+    ).last
+
+    assert first_token.present?, "Expected first access token"
+
+    # Second login with same device — should revoke old token
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-004",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+    get "/auth/openid_connect/callback"
+
+    first_token.reload
+    assert first_token.revoked_at.present?, "Expected first token to be revoked"
+  end
+
+  test "mobile SSO redirects MFA user with error" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-005",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+    get "/auth/openid_connect/callback"
+
+    assert_response :redirect
+    redirect_url = @response.redirect_url
+
+    assert redirect_url.start_with?("sureapp://oauth/callback?"), "Expected redirect to sureapp://"
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "mfa_not_supported", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
+  end
+
+  test "mobile SSO redirects with error when OIDC identity not linked" do
+    user_without_oidc = users(:new_email)
+
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "unlinked-uid-99999",
+      email: user_without_oidc.email,
+      name: "New User"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-006",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+    get "/auth/openid_connect/callback"
+
+    assert_response :redirect
+    redirect_url = @response.redirect_url
+
+    assert redirect_url.start_with?("sureapp://oauth/callback?"), "Expected redirect to sureapp://"
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "account_not_linked", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
+  end
+
+  test "mobile SSO does not create a web session" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    @user.sessions.destroy_all
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-007",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    assert_no_difference "Session.count" do
+      get "/auth/openid_connect/callback"
+    end
+  end
+
+  # ── Mobile SSO: failure action ──
+
+  test "failure redirects mobile SSO to app with error" do
+    # Simulate mobile_sso session being set
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/google_oauth2", params: {
+      device_id: "flutter-device-008",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    # Now simulate a failure callback
+    get "/auth/failure", params: { message: "sso_failed", strategy: "google_oauth2" }
+
+    assert_response :redirect
+    redirect_url = @response.redirect_url
+    assert redirect_url.start_with?("sureapp://oauth/callback?"), "Expected redirect to sureapp://"
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "sso_failed", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
+  end
+
+  test "failure without mobile SSO session redirects to web login" do
+    get "/auth/failure", params: { message: "sso_failed", strategy: "google_oauth2" }
+
+    assert_redirected_to new_session_path
+  end
+
+  test "failure sanitizes unknown error reasons" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", label: "Google" }
+    ])
+
+    get "/auth/mobile/google_oauth2", params: {
+      device_id: "flutter-device-009",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    get "/auth/failure", params: { message: "xss_attempt<script>", strategy: "google_oauth2" }
+
+    redirect_url = @response.redirect_url
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "sso_failed", params["error"], "Unknown reason should be sanitized to sso_failed"
   end
 
   test "prevents account takeover via email matching" do

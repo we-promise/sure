@@ -17,7 +17,7 @@ class PlaidItem < ApplicationRecord
   before_destroy :remove_plaid_item
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :plaid_accounts, dependent: :destroy
   has_many :legacy_accounts, through: :plaid_accounts, source: :account

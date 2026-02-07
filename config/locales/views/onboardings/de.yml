@@ -3,25 +3,59 @@ de:
   onboardings:
     header:
       sign_out: Abmelden
+      setup: Setup
+      preferences: Einstellungen
+      goals: Ziele
+      start: Start
+    logout:
+      sign_out: Abmelden
+    show:
+      title: Lass uns dein Konto einrichten
+      subtitle: Zuerst vervollständigen wir dein Profil.
+      first_name: Vorname
+      first_name_placeholder: Vorname
+      last_name: Nachname
+      last_name_placeholder: Nachname
+      household_name: Haushaltsname
+      household_name_placeholder: Haushaltsname
+      country: Land
+      submit: Weiter
     preferences:
+      title: Einstellungen konfigurieren
+      subtitle: Lass uns deine Einstellungen konfigurieren.
+      example: Beispielkonto
+      preview: Vorschau wie deine Daten basierend auf den Einstellungen angezeigt werden.
+      color_theme: Farbschema
+      theme_system: System
+      theme_light: Hell
+      theme_dark: Dunkel
+      locale: Sprache
       currency: Währung
       date_format: Datumsformat
-      example: Beispielkonto
-      locale: Sprache
-      preview: Vorschau wie deine Daten basierend auf den Einstellungen angezeigt werden
       submit: Abschließen
-      subtitle: Lass uns deine Einstellungen konfigurieren
-      title: Einstellungen konfigurieren
-    profile:
-      country: Land
-      first_name: Vorname
-      household_name: Haushaltsname
-      last_name: Nachname
-      profile_image: Profilbild
+    goals:
+      title: Was sind deine Ziele?
+      subtitle: Wähle ein oder mehrere Ziele aus, die du mit %{product_name} als dein persönliches Finanztool erreichen möchtest.
+      unified_accounts: Alle meine Konten an einem Ort sehen
+      cashflow: Cashflow und Ausgaben verstehen
+      budgeting: Finanzpläne und Budgets verwalten
+      partner: Finanzen gemeinsam mit Partner verwalten
+      investments: Investments verfolgen
+      ai_insights: KI nutzen um Einblicke zu erhalten
+      optimization: Konten analysieren und optimieren
+      reduce_stress: Finanziellen Stress reduzieren
       submit: Weiter
-      subtitle: Lass uns dein Profil vervollständigen
-      title: Lass uns die Grundlagen einrichten
-    show:
-      message: Wir freuen uns sehr dass du hier bist Im nächsten Schritt stellen wir dir ein paar Fragen um dein Profil zu vervollständigen und alles für dich einzurichten
-      setup: Konto einrichten
-      title: Willkommen bei %{product_name}
+    trial:
+      title: Sure 45 Tage kostenlos testen
+      data_deletion: Daten werden danach gelöscht
+      description_html: Ab heute kannst du das Produkt ausgiebig testen.<br/>Wenn es dir gefällt, hoste es selbst oder unterstütze uns, um es hier weiter zu nutzen.
+      try_button: Sure 45 Tage testen
+      continue_trial: Testversion fortsetzen
+      upgrade: Upgrade
+      how_it_works: So funktioniert es
+      today: Heute
+      today_description: Du erhältst 45 Tage kostenlos Zugang zu Sure auf unserer AWS.
+      in_40_days: In 40 Tagen (%{date})
+      in_40_days_description: Wir erinnern dich daran, deine Daten zu exportieren.
+      in_45_days: In 45 Tagen (%{date})
+      in_45_days_description: Wir löschen deine Daten — unterstütze uns, um Sure hier weiter zu nutzen!

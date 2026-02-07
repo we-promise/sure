@@ -21,7 +21,7 @@ class MercuryItem < ApplicationRecord
   validates :token, presence: true, on: :create
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :mercury_accounts, dependent: :destroy
   has_many :accounts, through: :mercury_accounts

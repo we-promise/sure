@@ -40,6 +40,15 @@ class Holding::CostBasisReconciler
     # Check priority - can the incoming source replace the existing?
     if existing_holding.cost_basis_replaceable_by?(incoming_source)
       if incoming_cost_basis.present?
+        # Avoid writes when nothing would change (common when re-materializing)
+        if existing_holding.cost_basis_source == incoming_source && existing_holding.cost_basis == incoming_cost_basis
+          return {
+            cost_basis: existing_holding.cost_basis,
+            cost_basis_source: existing_holding.cost_basis_source,
+            should_update: false
+          }
+        end
+
         return {
           cost_basis: incoming_cost_basis,
           cost_basis_source: incoming_source,

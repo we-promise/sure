@@ -3,25 +3,59 @@ zh-CN:
   onboardings:
     header:
       sign_out: 退出登录
+      setup: 设置
+      preferences: 偏好设置
+      goals: 目标
+      start: 开始
+    logout:
+      sign_out: 退出登录
+    show:
+      title: 让我们设置您的账户
+      subtitle: 首先，让我们完善您的个人资料。
+      first_name: 名
+      first_name_placeholder: 名
+      last_name: 姓
+      last_name_placeholder: 姓
+      household_name: 家庭名称
+      household_name_placeholder: 家庭名称
+      country: 国家
+      submit: 继续
     preferences:
+      title: 配置您的偏好设置
+      subtitle: 让我们配置您的偏好设置。
+      example: 示例账户
+      preview: 根据偏好设置预览数据显示方式。
+      color_theme: 颜色主题
+      theme_system: 跟随系统
+      theme_light: 浅色
+      theme_dark: 深色
+      locale: 语言
       currency: 货币
       date_format: 日期格式
-      example: 示例账户
-      locale: 语言
-      preview: 预览偏好设置下的数据展示效果。
-      submit: 完成设置
-      subtitle: 现在来配置您的偏好设置。
-      title: 配置偏好设置
-    profile:
-      country: 国家/地区
-      first_name: 名字
-      household_name: 家庭名称
-      last_name: 姓氏
-      profile_image: 个人头像
-      submit: 继续
-      subtitle: 现在来完成您的个人资料。
-      title: 基础信息设置
-    show:
-      message: 很高兴您的加入！接下来我们将引导您完成几个步骤：完善个人资料，然后进行初始设置。
-      setup: 开始设置
-      title: 欢迎使用 %{product_name}
+      submit: 完成
+    goals:
+      title: 是什么让您来到这里？
+      subtitle: 选择一个或多个您使用 %{product_name} 作为个人财务工具的目标。
+      unified_accounts: 在一个地方查看所有账户
+      cashflow: 了解现金流和支出
+      budgeting: 管理财务计划和预算
+      partner: 与伴侣共同管理财务
+      investments: 跟踪投资
+      ai_insights: 让 AI 帮助我了解我的财务状况
+      optimization: 分析和优化账户
+      reduce_stress: 减轻财务压力或焦虑
+      submit: 下一步
+    trial:
+      title: 免费试用 Sure 45 天
+      data_deletion: 届时数据将被删除
+      description_html: 从今天开始，您可以深入体验产品。<br/>如果您喜欢，可以自行托管或贡献以继续在这里使用。
+      try_button: 试用 Sure 45 天
+      continue_trial: 继续试用
+      upgrade: 升级
+      how_it_works: 运作方式
+      today: 今天
+      today_description: 您将在我们的 AWS 上获得 45 天免费访问 Sure 的权限。
+      in_40_days: 40 天后（%{date}）
+      in_40_days_description: 我们会通知您提醒导出数据。
+      in_45_days: 45 天后（%{date}）
+      in_45_days_description: 我们将删除您的数据 — 贡献以继续在这里使用 Sure！

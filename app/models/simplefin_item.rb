@@ -20,7 +20,7 @@ class SimplefinItem < ApplicationRecord
   before_destroy :remove_simplefin_item
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :simplefin_accounts, dependent: :destroy
   has_many :legacy_accounts, through: :simplefin_accounts, source: :account

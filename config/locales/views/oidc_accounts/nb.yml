@@ -1,0 +1,33 @@
+---
+nb:
+  oidc_accounts:
+    link:
+      title_link: Koble til OIDC-konto
+      title_create: Opprett konto
+      verify_heading: Bekreft identiteten din
+      verify_description_html: "For å koble til %{provider}-kontoen din%{email_suffix}, bekreft identiteten din ved å skrive inn passordet ditt."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-postadresse
+      email_placeholder: Skriv inn e-postadressen din
+      password_label: Passord
+      password_placeholder: Skriv inn passordet ditt
+      verify_hint: Dette sikrer at bare du kan koble eksterne kontoer til profilen din.
+      submit_link: Koble til konto
+      create_heading: Opprett ny konto
+      create_description_html: "Ingen konto funnet med e-postadressen <strong>%{email}</strong>. Klikk nedenfor for å opprette en ny konto med din %{provider}-identitet."
+      info_email: "E-post:"
+      info_name: "Navn:"
+      submit_create: Opprett konto
+      account_creation_disabled: Kontooppretting via enkel pålogging er deaktivert. Kontakt en administrator.
+      cancel: Avbryt
+    new_user:
+      title: Fullfør kontoen din
+      heading: Opprett kontoen din
+      description: Bekreft opplysningene dine for å fullføre kontoopprettingen med din %{provider}-identitet.
+      email_label: E-post (fra SSO-leverandør)
+      first_name_label: Fornavn
+      first_name_placeholder: Skriv inn fornavnet ditt
+      last_name_label: Etternavn
+      last_name_placeholder: Skriv inn etternavnet ditt
+      submit: Opprett konto
+      cancel: Avbryt

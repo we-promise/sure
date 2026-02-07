@@ -23,3 +23,8 @@ pt-BR:
         poderá configurar configurações adicionais dentro do aplicativo.
       welcome_title: Bem-vindo ao Self Hosted %{product_name}!
       password_placeholder: Digite sua senha
+      password_requirements:
+        length: Mínimo 8 caracteres
+        case: Letras maiúsculas e minúsculas
+        number: Um número (0-9)
+        special: "Um caractere especial (!, @, #, $, %, etc)"

@@ -41,6 +41,10 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert response_data.key?("transactions")
     assert response_data.key?("pagination")
+
+    # Agent-friendly numeric fields (validate type + sign invariants)
+    first = response_data["transactions"].first
+    assert_amount_cents_fields(first)
     assert response_data["pagination"].key?("page")
     assert response_data["pagination"].key?("per_page")
     assert response_data["pagination"].key?("total_count")
@@ -130,6 +134,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @transaction.id, response_data["id"]
     assert response_data.key?("name")
     assert response_data.key?("amount")
+    assert_amount_cents_fields(response_data)
     assert response_data.key?("date")
     assert response_data.key?("account")
   end
@@ -252,6 +257,75 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should preserve tags when tag_ids not provided in update" do
+    # Set up transaction with existing tags
+    original_tags = [ Tag.first, Tag.second ]
+    @transaction.tags = original_tags
+    @transaction.save!
+
+    # Update only the name, without providing tag_ids
+    update_params = {
+      transaction: {
+        name: "Updated Name Only"
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    @transaction.reload
+    assert_equal "Updated Name Only", @transaction.entry.name
+    # Tags should be preserved since tag_ids was not in the request
+    assert_equal original_tags.map(&:id).sort, @transaction.tag_ids.sort
+  end
+
+  test "should clear tags when empty tag_ids explicitly provided in update" do
+    # Set up transaction with existing tags
+    @transaction.tags = [ Tag.first, Tag.second ]
+    @transaction.save!
+
+    # Explicitly provide empty tag_ids to clear tags
+    update_params = {
+      transaction: {
+        name: "Updated Name",
+        tag_ids: []
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    @transaction.reload
+    # Tags should be cleared since tag_ids was explicitly provided as empty
+    assert_empty @transaction.tags
+  end
+
+  test "should update tags when tag_ids explicitly provided in update" do
+    # Set up transaction with one tag
+    @transaction.tags = [ Tag.first ]
+    @transaction.save!
+
+    new_tags = [ Tag.second ]
+
+    update_params = {
+      transaction: {
+        tag_ids: new_tags.map(&:id)
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    @transaction.reload
+    assert_equal new_tags.map(&:id), @transaction.tag_ids
+  end
+
   # DESTROY action tests
   test "should destroy transaction" do
   entry_to_delete = @account.entries.create!(
@@ -357,5 +431,23 @@ end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
+    end
+
+    # Validates agent-friendly numeric fields: type, sign invariants
+    def assert_amount_cents_fields(txn_json)
+      assert txn_json.key?("amount_cents"), "Expected amount_cents field"
+      assert txn_json.key?("signed_amount_cents"), "Expected signed_amount_cents field"
+      assert_kind_of Integer, txn_json["amount_cents"]
+      assert_kind_of Integer, txn_json["signed_amount_cents"]
+      assert_operator txn_json["amount_cents"], :>=, 0, "amount_cents must be non-negative"
+      assert_equal txn_json["amount_cents"].abs, txn_json["signed_amount_cents"].abs,
+                   "Absolute values of amount_cents and signed_amount_cents must match"
+      if txn_json["classification"] == "income"
+        assert_operator txn_json["signed_amount_cents"], :>=, 0,
+                        "income transactions should have non-negative signed_amount_cents"
+      else
+        assert_operator txn_json["signed_amount_cents"], :<=, 0,
+                        "non-income transactions should have non-positive signed_amount_cents"
+      end
     end
 end

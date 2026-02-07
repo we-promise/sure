@@ -77,7 +77,14 @@ Rails.application.config.middleware.use OmniAuth::Builder do
         client_options: {
           identifier: client_id,
           secret: client_secret,
-          redirect_uri: redirect_uri
+          redirect_uri: redirect_uri,
+          ssl: begin
+                 ssl_config = Rails.configuration.x.ssl
+                 ssl_opts = {}
+                 ssl_opts[:ca_file] = ssl_config.ca_file if ssl_config&.ca_file.present?
+                 ssl_opts[:verify] = false if ssl_config&.verify == false
+                 ssl_opts
+               end
         }
       }
 
@@ -179,8 +186,8 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       Rails.configuration.x.auth.sso_providers << cfg.merge(name: name, strategy: "saml")
     end
   end
-end
 
-if Rails.configuration.x.auth.sso_providers.empty?
-  Rails.logger.warn("No SSO providers enabled; check auth.yml / ENV configuration or database providers")
+  if Rails.configuration.x.auth.sso_providers.empty?
+    Rails.logger.warn("No SSO providers enabled; check auth.yml / ENV configuration or database providers")
+  end
 end
