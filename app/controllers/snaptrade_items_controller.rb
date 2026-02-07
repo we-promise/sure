@@ -106,27 +106,17 @@ class SnaptradeItemsController < ApplicationController
 
   # Redirect user to SnapTrade connection portal
   def connect
-    # Ensure user is registered first
-    unless @snaptrade_item.user_registered?
-      begin
-        @snaptrade_item.ensure_user_registered!
-      rescue => e
-        Rails.logger.error "SnapTrade registration error: #{e.class} - #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}"
-        redirect_to settings_providers_path, alert: t(".registration_failed", message: e.message)
-        return
-      end
-    end
+    @snaptrade_item.ensure_user_registered! unless @snaptrade_item.user_registered?
 
-    # Get the connection portal URL - include item ID in callback for proper routing
     redirect_url = callback_snaptrade_items_url(item_id: @snaptrade_item.id)
-
-    begin
-      portal_url = @snaptrade_item.connection_portal_url(redirect_url: redirect_url)
-      redirect_to portal_url, allow_other_host: true
-    rescue => e
-      Rails.logger.error "SnapTrade connection portal error: #{e.class} - #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}"
-      redirect_to settings_providers_path, alert: t(".portal_error", message: e.message)
-    end
+    portal_url = @snaptrade_item.connection_portal_url(redirect_url: redirect_url)
+    redirect_to portal_url, allow_other_host: true
+  rescue ActiveRecord::Encryption::Errors::Decryption => e
+    Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item.id}: #{e.class} - #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}"
+    redirect_to settings_providers_path, alert: t(".decryption_failed")
+  rescue => e
+    Rails.logger.error "SnapTrade connection error: #{e.class} - #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}"
+    redirect_to settings_providers_path, alert: t(".connection_failed", message: e.message)
   end
 
   # Handle callback from SnapTrade after user connects brokerage

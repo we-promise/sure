@@ -8,8 +8,8 @@ en:
     destroy:
       success: "Scheduled SnapTrade connection for deletion."
     connect:
-      registration_failed: "Failed to register with SnapTrade: %{message}"
-      portal_error: "Failed to connect to SnapTrade: %{message}"
+      decryption_failed: "Unable to read SnapTrade credentials. Please delete and recreate this connection."
+      connection_failed: "Failed to connect to SnapTrade: %{message}"
     callback:
       success: "Brokerage connected! Please select which accounts to link."
       no_item: "SnapTrade configuration not found."
