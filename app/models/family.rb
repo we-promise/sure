@@ -1,4 +1,5 @@
 class Family < ApplicationRecord
+  include IndexaCapitalConnectable
   include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable
 
