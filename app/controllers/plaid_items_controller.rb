@@ -58,7 +58,7 @@ class PlaidItemsController < ApplicationController
       .where(plaid_region: @region)
       .includes(:plaid_accounts)
       .flat_map(&:plaid_accounts)
-      .select { |pa| pa.account_provider.nil? && pa.account.nil? } # Not linked via new or legacy system
+      .select { |pa| pa.account_provider.nil? } # Not linked yet
 
     if @available_plaid_accounts.empty?
       redirect_to account_path(@account), alert: "No available Plaid accounts to link. Please connect a new Plaid account first."
@@ -76,7 +76,7 @@ class PlaidItemsController < ApplicationController
     end
 
     # Verify the Plaid account is not already linked
-    if plaid_account.account_provider.present? || plaid_account.account.present?
+    if plaid_account.account_provider.present?
       redirect_to account_path(@account), alert: "This Plaid account is already linked"
       return
     end

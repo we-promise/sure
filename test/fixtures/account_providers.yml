@@ -1,0 +1,6 @@
+# Account provider fixtures - links accounts to their provider sources
+# Note: plaid_accounts(:one) is pre-linked to accounts(:connected)
+# Tests that need to create custom links should create their own PlaidAccount
+plaid_connected:
+  account: connected
+  provider: one (PlaidAccount)
