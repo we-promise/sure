@@ -13,6 +13,11 @@ account:
   type: AccountImport
   status: pending
 
+bulk:
+  family: dylan_family
+  type: BulkImport
+  status: pending
+
 pdf:
   family: dylan_family
   type: PdfImport

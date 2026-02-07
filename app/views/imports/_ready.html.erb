@@ -13,9 +13,8 @@
     </div>
 
     <div class="bg-container shadow-border-xs rounded-lg text-sm">
-      <% import.dry_run.each do |key, count| %>
-        <% resource = dry_run_resource(key) %>
-
+      <% resources_with_counts = import.dry_run.select { |_, count| count > 0 }.filter_map { |key, count| [dry_run_resource(key), count] if dry_run_resource(key) } %>
+      <% resources_with_counts.each_with_index do |(resource, count), index| %>
         <div class="flex items-center justify-between gap-2 bg-container px-5 py-3 rounded-lg">
           <div class="flex items-center gap-3">
             <%= tag.div class: class_names(resource.bg_class, resource.text_class, "w-8 h-8 rounded-full flex justify-center items-center") do %>
@@ -28,7 +27,7 @@
           <p class="justify-self-end"><%= count %></p>
         </div>
 
-        <% if key != import.dry_run.keys.last %>
+        <% unless index == resources_with_counts.length - 1 %>
           <%= render "shared/ruler" %>
         <% end %>
       <% end %>
