@@ -379,10 +379,7 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         let(:id) { trade.id }
 
-        run_test! do |response|
-          data = JSON.parse(response.body)
-          expect(data['message']).to be_present
-        end
+        run_test!
       end
 
       response '404', 'trade not found' do

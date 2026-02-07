@@ -37,7 +37,7 @@ class Api::V1::HoldingsController < Api::V1::BaseController
 
     def set_holding
       family = current_resource_owner.family
-      @holding = family.holdings.joins(:account).where(accounts: { status: [ "draft", "active" ] }).find(params[:id])
+      @holding = family.holdings.find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Holding not found" }, status: :not_found
     end
@@ -75,7 +75,12 @@ class Api::V1::HoldingsController < Api::V1::BaseController
 
     def safe_per_page_param
       per_page = params[:per_page].to_i
-      (1..100).cover?(per_page) ? per_page : 25
+      case per_page
+      when 1..100
+        per_page
+      else
+        25
+      end
     end
 
     def parse_date!(value, param_name)

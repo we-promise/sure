@@ -476,8 +476,8 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               date: { type: :string, format: :date },
-              qty: { type: :string, description: 'Quantity as string (JSON number or string from API)' },
-              price: { type: :string, description: 'Price as string (JSON number or string from API)' },
+              qty: { type: :string, description: 'Quantity of shares held' },
+              price: { type: :string, description: 'Formatted price per share' },
               amount: { type: :string },
               currency: { type: :string },
               cost_basis_source: { type: :string, nullable: true },
