@@ -279,11 +279,11 @@ class AccountsController < ApplicationController
         @coinbase_unlinked_count_map[item.id] = count
       end
 
-# IndexaCapital sync stats
-@indexa_capital_sync_stats_map = {}
-@indexa_capital_items.each do |item|
-  latest_sync = item.syncs.ordered.first
-  @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
-end
+      # IndexaCapital sync stats
+      @indexa_capital_sync_stats_map = {}
+      @indexa_capital_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
     end
 end
