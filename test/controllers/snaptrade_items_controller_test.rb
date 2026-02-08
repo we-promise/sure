@@ -77,7 +77,8 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_difference "AccountProvider.count", 1 do
       post link_existing_account_snaptrade_items_url, params: {
         account_id: account.id,
-        snaptrade_account_id: snaptrade_account.id
+        snaptrade_account_id: snaptrade_account.id,
+        snaptrade_item_id: @snaptrade_item.id
       }
     end
 
@@ -94,7 +95,8 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference "AccountProvider.count" do
       post link_existing_account_snaptrade_items_url, params: {
         account_id: "nonexistent",
-        snaptrade_account_id: snaptrade_account.id
+        snaptrade_account_id: snaptrade_account.id,
+        snaptrade_item_id: @snaptrade_item.id
       }
     end
 

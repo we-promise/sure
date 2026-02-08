@@ -173,6 +173,7 @@
               <% @unlinked_accounts.each do |snaptrade_account| %>
                 <%= form_with url: link_existing_account_snaptrade_items_path, method: :post, data: { turbo_frame: "_top" } do |link_form| %>
                   <%= link_form.hidden_field :snaptrade_account_id, value: snaptrade_account.id %>
+                  <%= link_form.hidden_field :snaptrade_item_id, value: @snaptrade_item.id %>
                   <p class="text-xs text-primary mb-1"><%= snaptrade_account.name %></p>
                   <div class="flex items-center gap-2">
                     <%= link_form.select :account_id,
