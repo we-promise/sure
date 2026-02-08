@@ -65,6 +65,21 @@ class IndexaCapitalAccountTest < ActiveSupport::TestCase
     assert_equal 38905.2136, @account.current_balance.to_f
   end
 
+  test "upsert_from_indexa_capital! stores zero balance correctly" do
+    data = {
+      account_number: "LPYH3MCQ",
+      name: "Zero Balance Account",
+      type: "mutual",
+      status: "active",
+      currency: "EUR",
+      current_balance: 0
+    }
+    @account.upsert_from_indexa_capital!(data)
+    @account.reload
+
+    assert_equal 0, @account.current_balance.to_f
+  end
+
   test "upsert_holdings_snapshot! stores holdings data" do
     holdings = [ { instrument: { identifier: "IE00BFPM9V94" }, titles: 32, price: 506.32, amount: 16333.96 } ]
     @account.upsert_holdings_snapshot!(holdings)

@@ -59,7 +59,7 @@ class IndexaCapitalAccount < ApplicationRecord
       provider: "Indexa Capital",
       raw_payload: account_data
     }
-    attrs[:current_balance] = data[:current_balance].to_d if data[:current_balance].present?
+    attrs[:current_balance] = data[:current_balance].to_d unless data[:current_balance].nil?
 
     update!(attrs)
   end

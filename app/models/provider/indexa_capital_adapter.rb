@@ -45,15 +45,10 @@ class Provider::IndexaCapitalAdapter < Provider::Base
   def self.build_provider(family: nil)
     return nil unless family.present?
 
-    # Get family-specific credentials
-    indexa_capital_item = family.indexa_capital_items.where.not(username: nil, document: nil, password: nil).first
+    indexa_capital_item = family.indexa_capital_items.first
     return nil unless indexa_capital_item&.credentials_configured?
 
-    Provider::IndexaCapital.new(
-      username: indexa_capital_item.username,
-      document: indexa_capital_item.document,
-      password: indexa_capital_item.password
-    )
+    indexa_capital_item.indexa_capital_provider
   end
 
   def sync_path

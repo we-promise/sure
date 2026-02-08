@@ -47,6 +47,7 @@ class Provider::IndexaCapital
 
   # GET /accounts/{account_number}/fiscal-results → holdings (positions with cost basis)
   def get_holdings(account_number:)
+    sanitize_account_number!(account_number)
     with_retries("get_holdings") do
       response = self.class.get(
         "#{base_url}/accounts/#{account_number}/fiscal-results",
@@ -58,6 +59,7 @@ class Provider::IndexaCapital
 
   # GET /accounts/{account_number}/performance → latest portfolio total_amount
   def get_account_balance(account_number:)
+    sanitize_account_number!(account_number)
     with_retries("get_account_balance") do
       response = self.class.get(
         "#{base_url}/accounts/#{account_number}/performance",
@@ -84,6 +86,13 @@ class Provider::IndexaCapital
 
     MAX_RETRIES = 3
     INITIAL_RETRY_DELAY = 2 # seconds
+
+    # Indexa Capital account numbers are 8-char alphanumeric (e.g., "LPYH3MCQ")
+    def sanitize_account_number!(account_number)
+      unless account_number.present? && account_number.match?(/\A[A-Za-z0-9]+\z/)
+        raise Error.new("Invalid account number format: #{account_number}", :bad_request)
+      end
+    end
 
     def validate_configuration!
       return if @api_token.present?

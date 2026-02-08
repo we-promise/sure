@@ -123,6 +123,22 @@ class Provider::IndexaCapitalTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects invalid account_number with path traversal" do
+    provider = Provider::IndexaCapital.new(api_token: "test_token")
+
+    assert_raises Provider::IndexaCapital::Error do
+      provider.get_holdings(account_number: "../admin")
+    end
+  end
+
+  test "rejects blank account_number" do
+    provider = Provider::IndexaCapital.new(api_token: "test_token")
+
+    assert_raises Provider::IndexaCapital::Error do
+      provider.get_holdings(account_number: "")
+    end
+  end
+
   test "raises Error on server error" do
     provider = Provider::IndexaCapital.new(api_token: "test_token")
 
