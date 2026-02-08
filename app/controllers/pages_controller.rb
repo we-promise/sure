@@ -2,6 +2,7 @@ class PagesController < ApplicationController
   include Periodable
 
   skip_authentication only: %i[redis_configuration_error privacy terms]
+  before_action :ensure_intro_guest!, only: :intro
 
   def dashboard
     if Current.user&.ui_layout_intro?
@@ -275,5 +276,11 @@ class PagesController < ApplicationController
           end
         end
       end
+    end
+
+    def ensure_intro_guest!
+      return if Current.user&.guest?
+
+      redirect_to root_path, alert: t("pages.intro.not_authorized", default: "Intro is only available to guest users.")
     end
 end

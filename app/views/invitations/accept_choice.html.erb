@@ -6,7 +6,7 @@
   <p class="text-secondary">
     <%= t(".message",
           inviter: @invitation.inviter.display_name,
-          role: t("invitations.new.role_#{@invitation.role}")) %>
+          role: t("invitations.new.role_#{@invitation.role}", default: @invitation.role.to_s.humanize)) %>
   </p>
 </div>
 

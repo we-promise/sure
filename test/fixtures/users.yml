@@ -44,6 +44,7 @@ family_member:
   email: jakobdylan@yahoo.com
   password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   onboarded_at: <%= 3.days.ago %>
+  role: member
   ai_enabled: true
   show_sidebar: true
   show_ai_sidebar: true
@@ -57,6 +58,7 @@ new_email:
   unconfirmed_email: new@example.com
   password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   onboarded_at: <%= Time.current %>
+  role: member
   ai_enabled: true
   show_sidebar: true
   show_ai_sidebar: true
@@ -69,7 +71,7 @@ intro_user:
   email: intro@example.com
   password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   onboarded_at: <%= 1.day.ago %>
-  role: member
+  role: guest
   ai_enabled: true
   show_sidebar: false
   show_ai_sidebar: false

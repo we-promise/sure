@@ -9,6 +9,9 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
   test "should get new" do
     get new_invitation_url
     assert_response :success
+    assert_select "option[value=?]", "member"
+    assert_select "option[value=?]", "guest"
+    assert_select "option[value=?]", "admin"
   end
 
   test "should create invitation for member" do
@@ -87,6 +90,49 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "admin", invitation.role
     assert_equal @admin.family, invitation.family
     assert_equal @admin, invitation.inviter
+  end
+
+  test "admin can create guest invitation" do
+    assert_difference("Invitation.count") do
+      post invitations_url, params: {
+        invitation: {
+          email: "intro-invite@example.com",
+          role: "guest"
+        }
+      }
+    end
+
+    invitation = Invitation.order(created_at: :desc).first
+    assert_equal "guest", invitation.role
+    assert_equal @admin.family, invitation.family
+    assert_equal @admin, invitation.inviter
+  end
+
+  test "inviting an existing user as guest applies intro defaults" do
+    existing_user = users(:empty)
+    existing_user.update!(
+      role: :member,
+      ui_layout: :dashboard,
+      show_sidebar: true,
+      show_ai_sidebar: true,
+      ai_enabled: false
+    )
+
+    assert_difference("Invitation.count") do
+      post invitations_url, params: {
+        invitation: {
+          email: existing_user.email,
+          role: "guest"
+        }
+      }
+    end
+
+    existing_user.reload
+    assert_equal "guest", existing_user.role
+    assert existing_user.ui_layout_intro?
+    assert_not existing_user.show_sidebar?
+    assert_not existing_user.show_ai_sidebar?
+    assert existing_user.ai_enabled?
   end
 
   test "should handle invalid invitation creation" do

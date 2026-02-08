@@ -67,4 +67,24 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
       end
     end
   end
+
+  test "creating account from guest invitation assigns guest role and intro layout" do
+    invitation = invitations(:one)
+    invitation.update!(role: "guest", email: "guest-signup@example.com")
+
+    assert_difference "User.count", +1 do
+      post registration_url, params: { user: {
+        email: invitation.email,
+        password: "Password1!",
+        invitation: invitation.token
+      } }
+    end
+
+    created_user = User.find_by(email: invitation.email)
+    assert_equal "guest", created_user.role
+    assert created_user.ui_layout_intro?
+    assert_not created_user.show_sidebar?
+    assert_not created_user.show_ai_sidebar?
+    assert created_user.ai_enabled?
+  end
 end
