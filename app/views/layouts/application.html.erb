@@ -125,9 +125,9 @@ end %>
     <% end %>
 
     <%# SHARED - Main content %>
-    <%= tag.main class: class_names("grow overflow-y-auto px-3 lg:px-10 py-4 w-full mx-auto max-w-5xl"), data: { app_layout_target: "content" } do %>
+    <%= tag.main class: class_names("grow overflow-y-auto px-3 lg:px-10 pt-0 pb-4 w-full mx-auto max-w-5xl"), data: { app_layout_target: "content" } do %>
       <% unless intro_mode %>
-        <div class="hidden lg:flex gap-2 items-center justify-between mb-6">
+        <div class="hidden lg:flex gap-2 items-center justify-between mb-6 sticky top-0 z-10 -mx-3 lg:-mx-10 px-3 lg:px-10 py-4 bg-surface border-b border-tertiary">
           <div class="flex items-center gap-2">
             <%= icon("panel-left", as_button: true, data: { action: "app-layout#toggleLeftSidebar" }) %>
 
