@@ -20,25 +20,18 @@ RSpec.describe 'API V1 Valuations', type: :request do
     )
   end
 
-  let(:oauth_application) do
-    Doorkeeper::Application.create!(
-      name: 'API Docs',
-      redirect_uri: 'https://example.com/callback',
-      scopes: 'read read_write'
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'web'
     )
   end
 
-  let(:access_token) do
-    Doorkeeper::AccessToken.create!(
-      application: oauth_application,
-      resource_owner_id: user.id,
-      scopes: 'read_write',
-      expires_in: 2.hours,
-      token: SecureRandom.hex(32)
-    )
-  end
-
-  let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
     Account.create!(
@@ -71,8 +64,6 @@ RSpec.describe 'API V1 Valuations', type: :request do
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with write scope'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -170,8 +161,6 @@ RSpec.describe 'API V1 Valuations', type: :request do
   end
 
   path '/api/v1/valuations/{id}' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Valuation ID (entry ID)'
 
     get 'Retrieve a valuation' do
