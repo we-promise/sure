@@ -26,6 +26,14 @@ class Family::Syncer
 
   private
     def child_syncables
-      family.plaid_items + family.simplefin_items.active + family.lunchflow_items.active + family.enable_banking_items.active + family.accounts.manual
+      family.plaid_items +
+        family.simplefin_items.active +
+        family.lunchflow_items.active +
+        family.enable_banking_items.active +
+        family.coinbase_items.active +
+        family.coinstats_items.active +
+        family.mercury_items.active +
+        family.snaptrade_items.active +
+        family.accounts.manual
     end
 end
