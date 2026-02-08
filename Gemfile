@@ -140,6 +140,4 @@ group :test do
   gem "rswag-api"
   gem "rswag-specs"
   gem "rswag-ui"
-  gem "factory_bot_rails"
-
 end
