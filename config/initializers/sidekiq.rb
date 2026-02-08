@@ -59,13 +59,19 @@ end
 Sidekiq.configure_server do |config|
   config.redis = redis_config
 
-  # Initialize auto-sync scheduler on server startup
   config.on(:startup) do
-    Rails.application.reloader.to_run do
-      AutoSyncScheduler.sync!
-    rescue => e
-      Rails.logger.error("[AutoSyncScheduler] Failed to initialize on startup: #{e.message}")
+    # Load static cron jobs from schedule.yml
+    schedule_file = Rails.root.join("config", "schedule.yml")
+    if File.exist?(schedule_file)
+      schedule = YAML.load_file(schedule_file)
+      Sidekiq::Cron::Job.load_from_hash(schedule)
+      Rails.logger.info("[Sidekiq] Loaded #{schedule.keys.count} cron jobs from schedule.yml")
     end
+
+    # Initialize dynamic auto-sync scheduler
+    AutoSyncScheduler.sync!
+  rescue => e
+    Rails.logger.error("[Sidekiq] Failed to initialize on startup: #{e.message}")
   end
 end
 
