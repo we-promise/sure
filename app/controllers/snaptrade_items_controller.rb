@@ -154,6 +154,13 @@ class SnaptradeItemsController < ApplicationController
       @snaptrade_item.sync_later
     end
 
+    # Existing unlinked investment/crypto accounts that could be linked instead of creating duplicates
+    @linkable_accounts = Current.family.accounts
+      .where(accountable_type: %w[Investment Crypto])
+      .left_joins(:account_providers)
+      .where(account_providers: { id: nil })
+      .order(:name)
+
     # Determine view state
     @syncing = @snaptrade_item.syncing?
     @waiting_for_sync = no_accounts && @syncing
