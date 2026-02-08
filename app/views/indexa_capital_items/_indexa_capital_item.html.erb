@@ -1,0 +1,146 @@
+<%# locals: (indexa_capital_item:) %>
+
+<%= tag.div id: dom_id(indexa_capital_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 bg-primary/10 rounded-full">
+          <div class="flex items-center justify-center">
+            <%= tag.p indexa_capital_item.name.first.upcase, class: "text-primary text-xs font-medium" %>
+          </div>
+        </div>
+
+        <% unlinked_count = indexa_capital_item.unlinked_accounts_count %>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p indexa_capital_item.name, class: "font-medium text-primary" %>
+            <% if indexa_capital_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+          <% if indexa_capital_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif indexa_capital_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".requires_update") %>
+            </div>
+          <% elsif indexa_capital_item.sync_error.present? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= render DS::Tooltip.new(text: indexa_capital_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
+              <%= tag.span t(".error"), class: "text-destructive" %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if indexa_capital_item.last_synced_at %>
+                <%= t(".status", timestamp: time_ago_in_words(indexa_capital_item.last_synced_at), summary: indexa_capital_item.sync_status_summary) %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if indexa_capital_item.requires_update? %>
+          <%= render DS::Link.new(
+            text: t(".update_credentials"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        <% else %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_indexa_capital_item_path(indexa_capital_item),
+            disabled: indexa_capital_item.syncing?
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% if unlinked_count > 0 %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".setup_action"),
+              icon: "settings",
+              href: setup_accounts_indexa_capital_item_path(indexa_capital_item),
+              frame: :modal
+            ) %>
+          <% end %>
+          <% menu.with_item(
+            variant: "link",
+            text: t(".update_credentials"),
+            icon: "cable",
+            href: settings_providers_path(manage: "1")
+          ) %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: indexa_capital_item_path(indexa_capital_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(indexa_capital_item.name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+
+    <% unless indexa_capital_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if indexa_capital_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: indexa_capital_item.accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = indexa_capital_item.syncs.ordered.first&.sync_stats || {} %>
+        <% activities_pending = indexa_capital_item.indexa_capital_accounts.any?(&:activities_fetch_pending) %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: indexa_capital_item,
+          activities_pending: activities_pending
+        ) %>
+
+        <% if unlinked_count > 0 && indexa_capital_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: indexa_capital_item.linked_accounts_count, total: indexa_capital_item.total_accounts_count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_indexa_capital_item_path(indexa_capital_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif unlinked_count > 0 %>
+          <%# Some accounts imported, more available - show subtle link %>
+          <div class="pt-2 border-t border-primary">
+            <%= link_to setup_accounts_indexa_capital_item_path(indexa_capital_item),
+                        data: { turbo_frame: :modal },
+                        class: "flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors" do %>
+              <%= icon "plus", size: "sm" %>
+              <span><%= t(".more_accounts_available", count: unlinked_count) %></span>
+            <% end %>
+          </div>
+        <% elsif indexa_capital_item.accounts.empty? && indexa_capital_item.indexa_capital_accounts.none? %>
+          <%# No provider accounts at all - waiting for sync %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

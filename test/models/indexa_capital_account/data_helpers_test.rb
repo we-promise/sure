@@ -1,0 +1,180 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class IndexaCapitalAccount::DataHelpersTest < ActiveSupport::TestCase
+  # Create a test class that includes the concern
+  class TestHelper
+    include IndexaCapitalAccount::DataHelpers
+
+    # Make private methods public for testing
+    public :parse_decimal, :parse_date, :resolve_security, :extract_currency, :extract_security_name
+  end
+
+  setup do
+    @helper = TestHelper.new
+  end
+
+  # ==========================================================================
+  # parse_decimal tests
+  # ==========================================================================
+
+  test "parse_decimal returns nil for nil input" do
+    assert_nil @helper.parse_decimal(nil)
+  end
+
+  test "parse_decimal parses string to BigDecimal" do
+    result = @helper.parse_decimal("123.45")
+    assert_instance_of BigDecimal, result
+    assert_equal BigDecimal("123.45"), result
+  end
+
+  test "parse_decimal handles integer input" do
+    result = @helper.parse_decimal(100)
+    assert_instance_of BigDecimal, result
+    assert_equal BigDecimal("100"), result
+  end
+
+  test "parse_decimal handles float input" do
+    result = @helper.parse_decimal(99.99)
+    assert_instance_of BigDecimal, result
+    assert_in_delta 99.99, result.to_f, 0.001
+  end
+
+  test "parse_decimal returns BigDecimal unchanged" do
+    input = BigDecimal("50.25")
+    result = @helper.parse_decimal(input)
+    assert_equal input, result
+  end
+
+  test "parse_decimal returns nil for invalid string" do
+    assert_nil @helper.parse_decimal("not a number")
+  end
+
+  # ==========================================================================
+  # parse_date tests
+  # ==========================================================================
+
+  test "parse_date returns nil for nil input" do
+    assert_nil @helper.parse_date(nil)
+  end
+
+  test "parse_date returns Date unchanged" do
+    input = Date.new(2024, 6, 15)
+    result = @helper.parse_date(input)
+    assert_equal input, result
+  end
+
+  test "parse_date parses ISO date string" do
+    result = @helper.parse_date("2024-06-15")
+    assert_instance_of Date, result
+    assert_equal Date.new(2024, 6, 15), result
+  end
+
+  test "parse_date parses datetime string to date" do
+    result = @helper.parse_date("2024-06-15T10:30:00Z")
+    assert_instance_of Date, result
+    assert_equal Date.new(2024, 6, 15), result
+  end
+
+  test "parse_date converts Time to Date" do
+    input = Time.zone.parse("2024-06-15 10:30:00")
+    result = @helper.parse_date(input)
+    assert_instance_of Date, result
+    assert_equal Date.new(2024, 6, 15), result
+  end
+
+  test "parse_date returns nil for invalid string" do
+    assert_nil @helper.parse_date("not a date")
+  end
+
+  # ==========================================================================
+  # extract_currency tests
+  # ==========================================================================
+
+  test "extract_currency returns fallback for nil currency" do
+    result = @helper.extract_currency({}, fallback: "USD")
+    assert_equal "USD", result
+  end
+
+  test "extract_currency extracts string currency" do
+    result = @helper.extract_currency({ currency: "cad" })
+    assert_equal "CAD", result
+  end
+
+  test "extract_currency extracts currency from hash with code key" do
+    result = @helper.extract_currency({ currency: { code: "EUR" } })
+    assert_equal "EUR", result
+  end
+
+  test "extract_currency handles indifferent access" do
+    result = @helper.extract_currency({ "currency" => { "code" => "GBP" } })
+    assert_equal "GBP", result
+  end
+
+  # ==========================================================================
+  # resolve_security tests (investment providers only)
+  # ==========================================================================
+
+  test "resolve_security returns nil for blank ticker" do
+    assert_nil @helper.resolve_security("")
+    assert_nil @helper.resolve_security("   ")
+    assert_nil @helper.resolve_security(nil)
+  end
+
+  test "resolve_security finds existing security" do
+    existing = Security.create!(ticker: "XYZTEST", name: "Test Security Inc")
+
+    result = @helper.resolve_security("xyztest")
+    assert_equal existing, result
+  end
+
+  test "resolve_security creates new security when not found" do
+    symbol_data = { name: "Test Company Inc" }
+
+    result = @helper.resolve_security("TEST", symbol_data)
+
+    assert_not_nil result
+    assert_equal "TEST", result.ticker
+    assert_equal "Test Company Inc", result.name
+  end
+
+  test "resolve_security upcases ticker" do
+    symbol_data = { name: "Lowercase Test" }
+
+    result = @helper.resolve_security("lower", symbol_data)
+
+    assert_equal "LOWER", result.ticker
+  end
+
+  test "resolve_security uses ticker as fallback name" do
+    # Use short ticker (<=4 chars) to avoid titleize behavior
+    result = @helper.resolve_security("XYZ1", {})
+
+    assert_equal "XYZ1", result.name
+  end
+
+  # ==========================================================================
+  # extract_security_name tests (investment providers only)
+  # ==========================================================================
+
+  test "extract_security_name uses name field" do
+    result = @helper.extract_security_name({ name: "Apple Inc" }, "AAPL")
+    assert_equal "Apple Inc", result
+  end
+
+  test "extract_security_name falls back to description" do
+    result = @helper.extract_security_name({ description: "Microsoft Corp" }, "MSFT")
+    assert_equal "Microsoft Corp", result
+  end
+
+  test "extract_security_name uses ticker as fallback" do
+    result = @helper.extract_security_name({}, "GOOG")
+    assert_equal "GOOG", result
+  end
+
+  test "extract_security_name ignores generic type descriptions" do
+    result = @helper.extract_security_name({ name: "COMMON STOCK" }, "IBM")
+    assert_equal "IBM", result
+  end
+end

@@ -154,6 +154,14 @@ class SnaptradeItemsController < ApplicationController
       @snaptrade_item.sync_later
     end
 
+    # Existing unlinked, visible investment/crypto accounts that could be linked instead of creating duplicates
+    @linkable_accounts = Current.family.accounts
+      .visible
+      .where(accountable_type: %w[Investment Crypto])
+      .left_joins(:account_providers)
+      .where(account_providers: { id: nil })
+      .order(:name)
+
     # Determine view state
     @syncing = @snaptrade_item.syncing?
     @waiting_for_sync = no_accounts && @syncing
@@ -369,9 +377,10 @@ class SnaptradeItemsController < ApplicationController
   def link_existing_account
     account_id = params[:account_id]
     snaptrade_account_id = params[:snaptrade_account_id]
+    snaptrade_item_id = params[:snaptrade_item_id]
 
     account = Current.family.accounts.find_by(id: account_id)
-    snaptrade_item = Current.family.snaptrade_items.first
+    snaptrade_item = Current.family.snaptrade_items.find_by(id: snaptrade_item_id)
     snaptrade_account = snaptrade_item&.snaptrade_accounts&.find_by(id: snaptrade_account_id)
 
     if account && snaptrade_account
