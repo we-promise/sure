@@ -74,4 +74,14 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal "Monthly Membership", name
   end
+
+  test "keeps merchant description when remittance is a technical operation header" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "EMINZA",
+      remittance_information: [ "CARD PAYMENT 02/01 59100 ROUBAIX" ]
+    )
+
+    assert_equal "EMINZA", name
+  end
 end

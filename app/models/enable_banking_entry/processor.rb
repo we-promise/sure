@@ -128,7 +128,10 @@ class EnableBankingEntry::Processor
       return false if normalized_description.casecmp?(normalized_remittance)
 
       reference_like?(normalized_description) ||
-        significantly_more_informative?(normalized_remittance, normalized_description)
+        (
+          significantly_more_informative?(normalized_remittance, normalized_description) &&
+          !more_technical_than?(normalized_remittance, normalized_description)
+        )
     end
 
     def reference_like?(value)
@@ -142,6 +145,10 @@ class EnableBankingEntry::Processor
 
     def significantly_more_informative?(candidate, baseline)
       informativeness_score(candidate) >= informativeness_score(baseline) + 4
+    end
+
+    def more_technical_than?(candidate, baseline)
+      technicality_score(candidate) > technicality_score(baseline)
     end
 
     def informativeness_score(value)
@@ -159,6 +166,27 @@ class EnableBankingEntry::Processor
       mixed_case_bonus = text.match?(/[[:upper:]]/) && text.match?(/[[:lower:]]/) ? 2 : 0
 
       (alpha_word_count * 2) + unique_alpha_word_count + mixed_case_bonus - digit_count - (symbol_count / 2)
+    end
+
+    def technicality_score(value)
+      text = value.to_s.strip
+      return 0 if text.blank?
+
+      words = text.split(/\s+/)
+      uppercase_words = words.count { |word| word.match?(/\A[[:upper:]\d\W]+\z/) }
+      uppercase_ratio = words.empty? ? 0.0 : (uppercase_words.to_f / words.size)
+
+      digit_count = text.scan(/\d/).size
+      symbol_count = text.scan(/[^\p{Alnum}\s]/).size
+      date_token_count = text.scan(/\b\d{1,4}[\/-]\d{1,4}(?:[\/-]\d{1,4})?\b/).size
+
+      score = 0
+      score += 3 if reference_like?(text)
+      score += 2 if uppercase_ratio >= 0.8 && words.size >= 3
+      score += digit_count
+      score += (symbol_count / 2)
+      score += (date_token_count * 2)
+      score
     end
 
     def merchant
