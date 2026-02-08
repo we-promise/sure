@@ -196,7 +196,7 @@
           [t("admin.sso_providers.form.role_member"), "member"],
           [t("admin.sso_providers.form.role_admin"), "admin"],
           [t("admin.sso_providers.form.role_super_admin"), "super_admin"]
-        ], User.normalize_role(sso_provider.settings&.dig("default_role")).to_s.presence || "member"),
+        ], sso_provider.settings&.dig("default_role").to_s.presence || "member"),
         { label: t("admin.sso_providers.form.default_role_label"), include_blank: false } %>
     <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.default_role_help") %></p>
 

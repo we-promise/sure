@@ -107,7 +107,7 @@ class SsoProvider < ApplicationRecord
 
     def validate_default_role_setting
       default_role = settings&.dig("default_role") || settings&.dig(:default_role)
-      default_role = User.normalize_role(default_role).to_s
+      default_role = default_role.to_s
       return if default_role.blank?
 
       unless User.roles.key?(default_role)
@@ -121,7 +121,7 @@ class SsoProvider < ApplicationRecord
       normalized_settings = settings.deep_dup
 
       default_role = normalized_settings["default_role"] || normalized_settings[:default_role]
-      normalized_settings["default_role"] = User.normalize_role(default_role).to_s if default_role.present?
+      normalized_settings["default_role"] = default_role.to_s if default_role.present?
 
       role_mapping = normalized_settings["role_mapping"] || normalized_settings[:role_mapping]
       if role_mapping.is_a?(Hash)
@@ -131,8 +131,7 @@ class SsoProvider < ApplicationRecord
         role_mapping["member"] = merged_member_groups if merged_member_groups.present?
 
         guest_groups = Array(role_mapping["guest"])
-        legacy_intro_groups = Array(role_mapping.delete("intro"))
-        merged_guest_groups = (guest_groups + legacy_intro_groups).map(&:to_s).reject(&:blank?).uniq
+        merged_guest_groups = guest_groups.map(&:to_s).reject(&:blank?).uniq
         role_mapping["guest"] = merged_guest_groups if merged_guest_groups.present?
 
         normalized_settings["role_mapping"] = role_mapping

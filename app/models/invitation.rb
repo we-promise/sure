@@ -16,7 +16,6 @@ class Invitation < ApplicationRecord
   validates_uniqueness_of :email, scope: :family_id, message: "has already been invited to this family"
   validate :inviter_is_admin
 
-  before_validation :normalize_role
   before_validation :generate_token, on: :create
   before_create :set_expiration
 
@@ -33,8 +32,7 @@ class Invitation < ApplicationRecord
     return false unless emails_match?(user)
 
     transaction do
-      target_role = User.normalize_role(role).to_s
-      user.update!(family_id: family_id, role: target_role)
+      user.update!(family_id: family_id, role: role.to_s)
       update!(accepted_at: Time.current)
     end
     true
@@ -53,10 +51,6 @@ class Invitation < ApplicationRecord
         self.token = SecureRandom.hex(32)
         break unless self.class.exists?(token: token)
       end
-    end
-
-    def normalize_role
-      self.role = User.normalize_role(role).to_s if role.present?
     end
 
     def set_expiration
