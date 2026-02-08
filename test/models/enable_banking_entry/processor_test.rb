@@ -1,8 +1,9 @@
 require "test_helper"
+require "ostruct"
 
 class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
   def build_name(data)
-    processor = EnableBankingEntry::Processor.new(data, enable_banking_account: Object.new)
+    processor = EnableBankingEntry::Processor.new(data, enable_banking_account: OpenStruct.new)
     processor.send(:name)
   end
 
@@ -29,7 +30,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "EDF", name
   end
 
-  test "skips technical card counterparty and falls back to bank tx description" do
+  test "prefers remittance merchant when card reference counterparty is technical" do
     name = build_name(
       credit_debit_indicator: "CRDT",
       debtor_name: "CARD-1234",
@@ -37,7 +38,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       bank_transaction_code: { description: "Card Purchase" }
     )
 
-    assert_equal "Card Purchase", name
+    assert_equal "ACME SHOP", name
   end
 
   test "uses descriptive remittance when description is a technical reference code" do

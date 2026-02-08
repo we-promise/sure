@@ -2,8 +2,9 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  CARD_REFERENCE_PATTERN = /\ACARD-\d+\z/i
   REFERENCE_PATTERNS = [
-    /\ACARD-\d{6,}\z/i,
+    CARD_REFERENCE_PATTERN,
     /\A[A-Z0-9]{10,}\z/,
     /\A[A-Z0-9]+(?:[-_][A-Z0-9]+){2,}\z/
   ].freeze
@@ -104,14 +105,19 @@ class EnableBankingEntry::Processor
       else
         data.dig(:creditor, :name) || data[:creditor_name]
       end
+      counterparty_is_card_reference = counterparty.to_s.match?(CARD_REFERENCE_PATTERN)
 
-      if counterparty.present? && !counterparty.match?(/\ACARD-\d+\z/i)
+      if counterparty.present? && !counterparty_is_card_reference
         return counterparty
       end
 
       # Fall back to bank_transaction_code description
       bank_tx_description = data.dig(:bank_transaction_code, :description)
-      return remittance_name if prefer_remittance_name?(bank_tx_description, remittance_name)
+      if remittance_name.present? &&
+          (prefer_remittance_name?(bank_tx_description, remittance_name) ||
+          (counterparty_is_card_reference && !reference_like?(remittance_name)))
+        return remittance_name
+      end
       return bank_tx_description if bank_tx_description.present?
 
       return remittance_name if remittance_name.present?
@@ -256,11 +262,16 @@ class EnableBankingEntry::Processor
     end
 
     def remittance_lines
-      remittance = data[:remittance_information]
-      return [ remittance.to_s.strip ].reject(&:blank?) if remittance.is_a?(String)
-      return [] unless remittance.is_a?(Array)
-
-      remittance.map(&:to_s).map(&:strip).reject(&:blank?)
+      @remittance_lines ||= begin
+        remittance = data[:remittance_information]
+        if remittance.is_a?(String)
+          [ remittance.to_s.strip ].reject(&:blank?)
+        elsif remittance.is_a?(Array)
+          remittance.map(&:to_s).map(&:strip).reject(&:blank?)
+        else
+          []
+        end
+      end
     end
 
     def amount_value
