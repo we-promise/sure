@@ -5,6 +5,5 @@ one:
 
 townhouse:
   id: <%= SecureRandom.uuid %>
-  subtype: "Townhouse"
   created_at: <%= Time.current %>
   updated_at: <%= Time.current %>

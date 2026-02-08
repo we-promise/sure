@@ -3,6 +3,7 @@ require "test_helper"
 class PropertyTest < ActiveSupport::TestCase
   test "property subtype is persisted on update" do
     property = properties(:townhouse)
+    assert_nil property.subtype
 
     property.update!(subtype: "Townhouse")
 
