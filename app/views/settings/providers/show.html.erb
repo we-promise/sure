@@ -72,5 +72,11 @@
         <%= render "settings/providers/snaptrade_panel" %>
       </turbo-frame>
     <% end %>
+
+    <%= settings_section title: "Indexa Capital", collapsible: true, open: false do %>
+      <turbo-frame id="indexa_capital-providers-panel">
+        <%= render "settings/providers/indexa_capital_panel" %>
+      </turbo-frame>
+    <% end %>
   <% end %>
 </div>

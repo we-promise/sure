@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_03_204605) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_07_231945) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -666,6 +666,57 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_03_204605) do
     t.string "document_type"
     t.jsonb "extracted_data"
     t.index ["family_id"], name: "index_imports_on_family_id"
+  end
+
+  create_table "indexa_capital_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "indexa_capital_item_id", null: false
+    t.string "name"
+    t.string "indexa_capital_account_id"
+    t.string "account_number"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.string "indexa_capital_authorization_id"
+    t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
+    t.jsonb "raw_holdings_payload", default: []
+    t.jsonb "raw_activities_payload", default: []
+    t.datetime "last_holdings_sync"
+    t.datetime "last_activities_sync"
+    t.boolean "activities_fetch_pending", default: false
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["indexa_capital_account_id"], name: "index_indexa_capital_accounts_on_indexa_capital_account_id", unique: true
+    t.index ["indexa_capital_authorization_id"], name: "idx_on_indexa_capital_authorization_id_58db208d52"
+    t.index ["indexa_capital_item_id"], name: "index_indexa_capital_accounts_on_indexa_capital_item_id"
+  end
+
+  create_table "indexa_capital_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.string "username"
+    t.string "document"
+    t.text "password"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "api_token"
+    t.index ["family_id"], name: "index_indexa_capital_items_on_family_id"
+    t.index ["status"], name: "index_indexa_capital_items_on_status"
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1473,6 +1524,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_03_204605) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
   add_foreign_key "imports", "families"
+  add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
+  add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "llm_usages", "families"

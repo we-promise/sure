@@ -1,0 +1,118 @@
+<% content_for :title, t("indexa_capital_items.setup_accounts.title") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t("indexa_capital_items.setup_accounts.title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "trending-up", class: "text-primary" %>
+      <span class="text-primary"><%= t("indexa_capital_items.setup_accounts.subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <div class="bg-surface border border-primary p-4 rounded-lg">
+        <div class="flex items-start gap-3">
+          <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+          <div>
+            <p class="text-sm text-primary">
+              <%= t("indexa_capital_items.setup_accounts.instructions") %>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <%= form_with url: complete_account_setup_indexa_capital_item_path(@indexa_capital_item),
+                    method: :post,
+                    data: {
+                      controller: "loading-button",
+                      action: "submit->loading-button#showLoading",
+                      loading_button_loading_text_value: t("indexa_capital_items.setup_accounts.creating"),
+                      turbo_frame: "_top"
+                    } do |form| %>
+
+        <% if @unlinked_accounts.any? %>
+          <div class="space-y-4">
+            <h3 class="font-medium text-primary"><%= t("indexa_capital_items.setup_accounts.accounts_count", count: @unlinked_accounts.count) %></h3>
+
+            <% @unlinked_accounts.each do |indexa_capital_account| %>
+              <div class="border border-primary rounded-lg p-4 hover:bg-surface transition-colors">
+                <div class="flex items-center gap-3">
+                  <input type="checkbox"
+                         id="account_<%= indexa_capital_account.id %>"
+                         name="account_ids[]"
+                         value="<%= indexa_capital_account.id %>"
+                         checked
+                         class="cursor-pointer">
+                  <label for="account_<%= indexa_capital_account.id %>" class="flex-1 cursor-pointer">
+                    <h4 class="font-medium text-primary"><%= indexa_capital_account.name %></h4>
+                    <p class="text-sm text-secondary">
+                      <% if indexa_capital_account.account_type.present? %>
+                        <%= indexa_capital_account.account_type.titleize %> &middot;
+                      <% end %>
+                      <%= t("indexa_capital_items.setup_accounts.balance") %>:
+                      <%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %>
+                    </p>
+                    <% if indexa_capital_account.account_number.present? %>
+                      <p class="text-xs text-secondary"><%= indexa_capital_account.account_number %></p>
+                    <% end %>
+                  </label>
+                </div>
+                <div class="mt-3 pl-7" onclick="event.stopPropagation();">
+                  <label for="sync_start_<%= indexa_capital_account.id %>" class="block text-xs text-secondary mb-1">
+                    <%= t("indexa_capital_items.setup_accounts.sync_start_date_label") %>
+                  </label>
+                  <input type="date"
+                         id="sync_start_<%= indexa_capital_account.id %>"
+                         name="sync_start_dates[<%= indexa_capital_account.id %>]"
+                         value="<%= indexa_capital_account.sync_start_date %>"
+                         onclick="event.stopPropagation();"
+                         autocomplete="off"
+                         class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary">
+                  <p class="text-xs text-secondary mt-1">
+                    <%= t("indexa_capital_items.setup_accounts.sync_start_date_help") %>
+                  </p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <%= render DS::Button.new(
+              text: t("indexa_capital_items.setup_accounts.import_selected"),
+              variant: "primary",
+              icon: "plus",
+              type: "submit",
+              class: "flex-1",
+              data: { loading_button_target: "button" }
+            ) %>
+            <%= render DS::Link.new(
+              text: t("indexa_capital_items.setup_accounts.cancel"),
+              variant: "secondary",
+              href: accounts_path,
+              frame: "_top"
+            ) %>
+          </div>
+        <% else %>
+          <div class="flex flex-col items-center justify-center py-6 space-y-3">
+            <%= icon "alert-circle", size: "lg", class: "text-warning" %>
+            <p class="text-primary text-center font-medium">
+              <%= t("indexa_capital_items.setup_accounts.no_accounts_to_setup") %>
+            </p>
+            <p class="text-secondary text-center text-sm">
+              <%= t("indexa_capital_items.setup_accounts.no_accounts") %>
+            </p>
+          </div>
+          <div class="flex gap-3 justify-center">
+            <%= render DS::Link.new(
+              text: t("indexa_capital_items.setup_accounts.cancel"),
+              variant: "secondary",
+              href: accounts_path,
+              frame: "_top"
+            ) %>
+          </div>
+        <% end %>
+
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
