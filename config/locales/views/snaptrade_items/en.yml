@@ -75,6 +75,9 @@ en:
       cancel_button: "Cancel"
       creating: "Creating Accounts..."
       done_button: "Done"
+      or_link_existing: "Or link to an existing account instead of creating a new one:"
+      select_account: "Select an account..."
+      link_button: "Link"
       linked_accounts: "Already Linked"
       linked_to: "Linked to:"
     snaptrade_item:
