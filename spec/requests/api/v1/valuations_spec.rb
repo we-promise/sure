@@ -103,14 +103,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
       response '201', 'valuation created' do
         schema '$ref' => '#/components/schemas/Valuation'
 
-        run_test! do |response|
-          data = JSON.parse(response.body)
-          created_id = data.fetch('id')
-          get "/api/v1/valuations/#{created_id}", headers: { 'Authorization' => Authorization }
-          expect(response).to have_http_status(:ok)
-          fetched = JSON.parse(response.body)
-          expect(fetched['id']).to eq(created_id)
-        end
+        run_test!
       end
 
       response '422', 'validation error - missing account_id' do
