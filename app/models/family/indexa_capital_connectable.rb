@@ -24,8 +24,10 @@ module Family::IndexaCapitalConnectable
   end
 
   def has_indexa_capital_credentials?
-    indexa_capital_items.where.not(api_token: [nil, ""]).or(
-      indexa_capital_items.where.not(username: [nil, ""], document: [nil, ""], password: [nil, ""])
+    indexa_capital_items.where.not(api_token: [ nil, "" ]).or(
+      indexa_capital_items.where.not(username: [ nil, "" ])
+                          .where.not(document: [ nil, "" ])
+                          .where.not(password: [ nil, "" ])
     ).exists?
   end
 end

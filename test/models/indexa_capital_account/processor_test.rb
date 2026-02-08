@@ -81,10 +81,14 @@ class IndexaCapitalAccount::ProcessorTest < ActiveSupport::TestCase
     ])
 
     processor = IndexaCapitalAccount::HoldingsProcessor.new(@indexa_capital_account)
-    processor.process
 
-    # Should have created a holding via the account
-    assert @account.holdings.count >= 0 # Holdings may need securities to exist first
+    assert_difference "@account.holdings.count", 1 do
+      processor.process
+    end
+
+    holding = @account.holdings.order(created_at: :desc).first
+    assert_equal "IE00BFPM9V94", holding.security.ticker
+    assert_equal 32.26, holding.qty.to_f
   end
 
   test "holdings processor skips entries without instrument identifier" do

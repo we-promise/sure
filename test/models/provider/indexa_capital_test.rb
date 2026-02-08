@@ -23,10 +23,14 @@ class Provider::IndexaCapitalTest < ActiveSupport::TestCase
     end
   end
 
-  test "accepts partial credentials (auth fails at API call time)" do
-    # Validation only checks that at least one credential field is present
-    provider = Provider::IndexaCapital.new(username: "user@example.com")
-    assert_instance_of Provider::IndexaCapital, provider
+  test "raises ConfigurationError with partial credentials" do
+    assert_raises Provider::IndexaCapital::ConfigurationError do
+      Provider::IndexaCapital.new(username: "user@example.com")
+    end
+
+    assert_raises Provider::IndexaCapital::ConfigurationError do
+      Provider::IndexaCapital.new(username: "user@example.com", document: "12345678A")
+    end
   end
 
   test "list_accounts calls API and returns accounts" do

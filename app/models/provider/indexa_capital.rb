@@ -20,8 +20,6 @@ class Provider::IndexaCapital
 
   BASE_URL = "https://api.indexacapital.com"
 
-  attr_reader :username, :document, :password, :api_token
-
   # Supports two auth modes:
   # 1. Username/document/password credentials (authenticates via /auth/authenticate)
   # 2. Pre-generated API token (from env or user dashboard)
@@ -94,11 +92,13 @@ class Provider::IndexaCapital
       end
     end
 
+    attr_reader :username, :document, :password, :api_token
+
     def validate_configuration!
       return if @api_token.present?
 
-      if @username.blank? && @document.blank? && @password.blank?
-        raise ConfigurationError, "Either API token or username/document/password credentials are required"
+      if @username.blank? || @document.blank? || @password.blank?
+        raise ConfigurationError, "Either API token or all three username/document/password credentials are required"
       end
     end
 
@@ -227,7 +227,7 @@ class Provider::IndexaCapital
       portfolios = performance_data[:portfolios]
       return 0 unless portfolios.is_a?(Array) && portfolios.any?
 
-      latest = portfolios.max_by { |p| p[:date].to_s }
+      latest = portfolios.max_by { |p| Date.parse(p[:date].to_s) rescue Date.new }
       latest[:total_amount].to_d
     end
 end

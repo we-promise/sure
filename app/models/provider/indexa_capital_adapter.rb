@@ -5,11 +5,9 @@ class Provider::IndexaCapitalAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("IndexaCapitalAccount", self)
 
-  # Define which account types this provider supports
+  # Indexa Capital supports index fund and pension plan investments
   def self.supported_account_types
-    # Investment providers typically support these account types
-    # TODO: Adjust based on your provider's capabilities
-    %w[Investment Crypto]
+    %w[Investment]
   end
 
   # Returns connection configurations for this provider
@@ -45,7 +43,7 @@ class Provider::IndexaCapitalAdapter < Provider::Base
   def self.build_provider(family: nil)
     return nil unless family.present?
 
-    indexa_capital_item = family.indexa_capital_items.first
+    indexa_capital_item = family.indexa_capital_items.order(created_at: :desc).first
     return nil unless indexa_capital_item&.credentials_configured?
 
     indexa_capital_item.indexa_capital_provider
