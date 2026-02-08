@@ -70,7 +70,7 @@ class User < ApplicationRecord
     case role.to_s
     when "guest", "intro"
       :guest
-    when "member", "user"
+    when "member"
       :member
     else
       role
