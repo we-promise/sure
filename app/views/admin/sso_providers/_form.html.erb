@@ -227,7 +227,7 @@
         <div>
           <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.member_groups") %></label>
           <input type="text" name="sso_provider[settings][role_mapping][member]"
-                 value="<%= Array(sso_provider.settings&.dig("role_mapping", "member").presence || sso_provider.settings&.dig("role_mapping", "user")).join(", ") %>"
+                 value="<%= Array(sso_provider.settings&.dig("role_mapping", "member")).join(", ") %>"
                  class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
                  placeholder="* (all groups)"
                  autocomplete="off">

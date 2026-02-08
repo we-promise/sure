@@ -127,8 +127,7 @@ class SsoProvider < ApplicationRecord
       if role_mapping.is_a?(Hash)
         role_mapping = role_mapping.stringify_keys
         member_groups = Array(role_mapping["member"])
-        legacy_user_groups = Array(role_mapping.delete("user"))
-        merged_member_groups = (member_groups + legacy_user_groups).map(&:to_s).reject(&:blank?).uniq
+        merged_member_groups = member_groups.map(&:to_s).reject(&:blank?).uniq
         role_mapping["member"] = merged_member_groups if merged_member_groups.present?
 
         guest_groups = Array(role_mapping["guest"])
