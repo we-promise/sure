@@ -4,8 +4,6 @@ class SsoProvider < ApplicationRecord
   include Encryptable
   extend SslConfigurable
 
-  before_validation :normalize_role_settings
-
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :client_secret, deterministic: false
@@ -113,31 +111,6 @@ class SsoProvider < ApplicationRecord
       unless User.roles.key?(default_role)
         errors.add(:settings, "default_role must be guest, member, admin, or super_admin")
       end
-    end
-
-    def normalize_role_settings
-      return unless settings.is_a?(Hash)
-
-      normalized_settings = settings.deep_dup
-
-      default_role = normalized_settings["default_role"] || normalized_settings[:default_role]
-      normalized_settings["default_role"] = default_role.to_s if default_role.present?
-
-      role_mapping = normalized_settings["role_mapping"] || normalized_settings[:role_mapping]
-      if role_mapping.is_a?(Hash)
-        role_mapping = role_mapping.stringify_keys
-        member_groups = Array(role_mapping["member"])
-        merged_member_groups = member_groups.map(&:to_s).reject(&:blank?).uniq
-        role_mapping["member"] = merged_member_groups if merged_member_groups.present?
-
-        guest_groups = Array(role_mapping["guest"])
-        merged_guest_groups = guest_groups.map(&:to_s).reject(&:blank?).uniq
-        role_mapping["guest"] = merged_guest_groups if merged_guest_groups.present?
-
-        normalized_settings["role_mapping"] = role_mapping
-      end
-
-      self.settings = normalized_settings
     end
 
     def validate_oidc_discovery
