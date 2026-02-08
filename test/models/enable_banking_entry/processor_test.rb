@@ -78,6 +78,18 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Boulangerie Bric CROIX", name
   end
 
+  test "extracts merchant when remittance uses paid to wording" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "CARD-3403900155",
+      remittance_information: [
+        "Card transaction of EUR paid to Local Bakery"
+      ]
+    )
+
+    assert_equal "Local Bakery", name
+  end
+
   test "keeps specific description when remittance is less informative" do
     name = build_name(
       credit_debit_indicator: "DBIT",

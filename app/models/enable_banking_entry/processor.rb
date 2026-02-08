@@ -2,6 +2,26 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  REFERENCE_PATTERNS = [
+    /\ACARD-\d{6,}\z/i,
+    /\A[A-Z0-9]{10,}\z/,
+    /\A[A-Z0-9]+(?:[-_][A-Z0-9]+){2,}\z/
+  ].freeze
+  REMITTANCE_ENTITY_PATTERNS = [
+    /\bissued by\s+(.+)\z/i,
+    /\bpaid to\s+(.+)\z/i,
+    /\bpurchase at\s+(.+)\z/i
+  ].freeze
+  REMITTANCE_TRAILING_PATTERNS = [
+    /\s+CARTE\s+\d+\z/i,
+    /\s+CARD\s+\d+\z/i
+  ].freeze
+  INFORMATIVENESS_DELTA_THRESHOLD = 4
+  REMITTANCE_TECHNICALITY_THRESHOLD = 7
+  TECHNICAL_REFERENCE_BONUS = 3
+  TECHNICAL_UPPERCASE_RATIO_THRESHOLD = 0.8
+  TECHNICAL_UPPERCASE_RATIO_MIN_WORDS = 3
+  TECHNICAL_UPPERCASE_RATIO_BONUS = 2
 
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
@@ -105,7 +125,7 @@ class EnableBankingEntry::Processor
       return nil if candidates.empty?
 
       candidates.each do |cleaned|
-        return cleaned unless reference_like?(cleaned) || technicality_score(cleaned) >= 7
+        return cleaned unless reference_like?(cleaned) || technicality_score(cleaned) >= REMITTANCE_TECHNICALITY_THRESHOLD
       end
 
       candidates.first
@@ -114,11 +134,24 @@ class EnableBankingEntry::Processor
     def cleanup_remittance_line(line)
       return nil if line.blank?
 
-      issued_by_match = line.to_s.match(/issued by\s+(.+)\z/i)
-      cleaned = (issued_by_match ? issued_by_match[1] : line).to_s.strip
+      cleaned = extract_entity_from_remittance_line(line)
       cleaned = cleaned.gsub(/\s+/, " ")
-      cleaned = cleaned.sub(/\s+CARTE\s+\d+\z/i, "")
+      REMITTANCE_TRAILING_PATTERNS.each do |pattern|
+        cleaned = cleaned.sub(pattern, "")
+      end
       cleaned.presence&.truncate(100)
+    end
+
+    def extract_entity_from_remittance_line(line)
+      text = line.to_s.strip
+      return text if text.blank?
+
+      REMITTANCE_ENTITY_PATTERNS.each do |pattern|
+        match = text.match(pattern)
+        return match[1].to_s.strip if match && match[1].present?
+      end
+
+      text
     end
 
     def prefer_remittance_name?(description, remittance_name)
@@ -140,13 +173,11 @@ class EnableBankingEntry::Processor
       normalized = value.to_s.strip
       return false if normalized.blank?
 
-      normalized.match?(/\ACARD-\d{6,}\z/i) ||
-        normalized.match?(/\A[A-Z0-9]{10,}\z/) ||
-        normalized.match?(/\A[A-Z0-9]+(?:[-_][A-Z0-9]+){2,}\z/)
+      REFERENCE_PATTERNS.any? { |pattern| normalized.match?(pattern) }
     end
 
     def significantly_more_informative?(candidate, baseline)
-      informativeness_score(candidate) >= informativeness_score(baseline) + 4
+      informativeness_score(candidate) >= informativeness_score(baseline) + INFORMATIVENESS_DELTA_THRESHOLD
     end
 
     def more_technical_than?(candidate, baseline)
@@ -162,7 +193,6 @@ class EnableBankingEntry::Processor
       alpha_word_count = alpha_words.size
       unique_alpha_word_count = alpha_words.map { |word| word.downcase.gsub(/[^[:alpha:]]/, "") }.reject(&:blank?).uniq.size
 
-      alpha_count = text.scan(/[[:alpha:]]/).size
       digit_count = text.scan(/\d/).size
       symbol_count = text.scan(/[^\p{Alnum}\s]/).size
       mixed_case_bonus = text.match?(/[[:upper:]]/) && text.match?(/[[:lower:]]/) ? 2 : 0
@@ -183,8 +213,8 @@ class EnableBankingEntry::Processor
       date_token_count = text.scan(/\b\d{1,4}[\/-]\d{1,4}(?:[\/-]\d{1,4})?\b/).size
 
       score = 0
-      score += 3 if reference_like?(text)
-      score += 2 if uppercase_ratio >= 0.8 && words.size >= 3
+      score += TECHNICAL_REFERENCE_BONUS if reference_like?(text)
+      score += TECHNICAL_UPPERCASE_RATIO_BONUS if uppercase_ratio >= TECHNICAL_UPPERCASE_RATIO_THRESHOLD && words.size >= TECHNICAL_UPPERCASE_RATIO_MIN_WORDS
       score += digit_count
       score += (symbol_count / 2)
       score += (date_token_count * 2)
