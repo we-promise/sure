@@ -2,12 +2,6 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
-  GENERIC_NAME_PATTERNS = [
-    /\APAIEMENT\s+(CB|PSC)\b/i,
-    /\ACHEQUE\b/i,
-    /\ARETRAIT\b/i,
-    /\AFRAIS\b/i
-  ].freeze
 
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
@@ -74,14 +68,11 @@ class EnableBankingEntry::Processor
     end
 
     def name
-      # Build a user-friendly transaction title for the activity feed.
-      # If the provider description is generic (e.g. "PAIEMENT CB ..."),
-      # prefer a descriptive remittance line such as merchant name.
       description = data[:description] || data[:transaction_description]
       remittance_name = remittance_name_candidate
 
       if description.present?
-        return remittance_name if generic_name?(description) && remittance_name.present?
+        return remittance_name if prefer_remittance_name?(description, remittance_name)
         return description
       end
 
@@ -100,7 +91,7 @@ class EnableBankingEntry::Processor
 
       # Fall back to bank_transaction_code description
       bank_tx_description = data.dig(:bank_transaction_code, :description)
-      return remittance_name if bank_tx_description.present? && generic_name?(bank_tx_description) && remittance_name.present?
+      return remittance_name if prefer_remittance_name?(bank_tx_description, remittance_name)
       return bank_tx_description if bank_tx_description.present?
 
       return remittance_name if remittance_name.present?
@@ -112,7 +103,7 @@ class EnableBankingEntry::Processor
     def remittance_name_candidate
       remittance_lines.each do |line|
         cleaned = cleanup_remittance_line(line)
-        return cleaned if cleaned.present? && !generic_name?(cleaned)
+        return cleaned if cleaned.present?
       end
 
       cleanup_remittance_line(remittance_lines.first)
@@ -121,24 +112,53 @@ class EnableBankingEntry::Processor
     def cleanup_remittance_line(line)
       return nil if line.blank?
 
-      cleaned = line.to_s.strip
+      issued_by_match = line.to_s.match(/issued by\s+(.+)\z/i)
+      cleaned = (issued_by_match ? issued_by_match[1] : line).to_s.strip
       cleaned = cleaned.gsub(/\s+/, " ")
       cleaned = cleaned.sub(/\s+CARTE\s+\d+\z/i, "")
       cleaned.presence&.truncate(100)
     end
 
-    def generic_name?(value)
-      return false if value.blank?
+    def prefer_remittance_name?(description, remittance_name)
+      return false if description.blank? || remittance_name.blank?
 
-      normalized = value.to_s.strip
-      GENERIC_NAME_PATTERNS.any? { |pattern| normalized.match?(pattern) } || reference_like?(normalized)
+      normalized_description = description.to_s.strip
+      normalized_remittance = remittance_name.to_s.strip
+      return false if normalized_description.blank? || normalized_remittance.blank?
+      return false if normalized_description.casecmp?(normalized_remittance)
+
+      reference_like?(normalized_description) ||
+        significantly_more_informative?(normalized_remittance, normalized_description)
     end
 
     def reference_like?(value)
       normalized = value.to_s.strip
       return false if normalized.blank?
 
-      normalized.match?(/\A[A-Z0-9]{10,}\z/)
+      normalized.match?(/\ACARD-\d{6,}\z/i) ||
+        normalized.match?(/\A[A-Z0-9]{10,}\z/) ||
+        normalized.match?(/\A[A-Z0-9]+(?:[-_][A-Z0-9]+){2,}\z/)
+    end
+
+    def significantly_more_informative?(candidate, baseline)
+      informativeness_score(candidate) >= informativeness_score(baseline) + 4
+    end
+
+    def informativeness_score(value)
+      text = value.to_s.strip
+      return 0 if text.blank?
+
+      words = text.split(/\s+/)
+      alpha_words = words.select { |word| word.match?(/[[:alpha:]]/) }
+      alpha_word_count = alpha_words.size
+      unique_alpha_word_count = alpha_words.map { |word| word.downcase.gsub(/[^[:alpha:]]/, "") }.reject(&:blank?).uniq.size
+
+      alpha_count = text.scan(/[[:alpha:]]/).size
+      digit_count = text.scan(/\d/).size
+      symbol_count = text.scan(/[^\p{Alnum}\s]/).size
+      mixed_case_bonus = text.match?(/[[:upper:]]/) && text.match?(/[[:lower:]]/) ? 2 : 0
+
+      (alpha_word_count * 2) + unique_alpha_word_count + mixed_case_bonus - digit_count - (symbol_count / 2)
     end
 
     def merchant
@@ -177,6 +197,7 @@ class EnableBankingEntry::Processor
 
     def remittance_lines
       remittance = data[:remittance_information]
+      return [ remittance.to_s.strip ].reject(&:blank?) if remittance.is_a?(String)
       return [] unless remittance.is_a?(Array)
 
       remittance.map(&:to_s).map(&:strip).reject(&:blank?)

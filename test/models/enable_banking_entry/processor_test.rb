@@ -52,4 +52,26 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal "VIR SEPA TRAVAUX AGRIS 26-01-0024", name
   end
+
+  test "uses merchant segment from remittance when description is card reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "CARD-3419406613",
+      remittance_information: [
+        "Card transaction of EUR issued by Amzn Mktp Fr*Mkudamazonfr"
+      ]
+    )
+
+    assert_equal "Amzn Mktp Fr*Mkudamazonfr", name
+  end
+
+  test "keeps specific description when remittance is less informative" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "Monthly Membership",
+      remittance_information: [ "PAYMENT" ]
+    )
+
+    assert_equal "Monthly Membership", name
+  end
 end
