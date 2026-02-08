@@ -37,7 +37,7 @@ class Api::V1::HoldingsController < Api::V1::BaseController
 
     def set_holding
       family = current_resource_owner.family
-      @holding = family.holdings.find(params[:id])
+      @holding = family.holdings.joins(:account).where(accounts: { status: %w[draft active] }).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Holding not found" }, status: :not_found
     end

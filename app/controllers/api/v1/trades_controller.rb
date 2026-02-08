@@ -109,7 +109,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     def set_trade
       family = current_resource_owner.family
-      @trade = family.trades.find(params[:id])
+      @trade = family.trades.visible.find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
@@ -186,7 +186,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         entry_params[:amount] = signed_qty * price.to_d
         ticker = @trade.security&.ticker
         entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
-        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || (is_sell ? "Sell" : "Buy")
+        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || @trade.investment_activity_label.presence || (is_sell ? "Sell" : "Buy")
       end
 
       entry_params
