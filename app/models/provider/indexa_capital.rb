@@ -177,7 +177,11 @@ class Provider::IndexaCapital
     def handle_response(response)
       case response.code
       when 200, 201
-        JSON.parse(response.body, symbolize_names: true)
+        begin
+          JSON.parse(response.body, symbolize_names: true)
+        rescue JSON::ParserError => e
+          raise Error.new("Invalid JSON in response: #{e.message}", :bad_response)
+        end
       when 400
         Rails.logger.error "IndexaCapital API: Bad request - #{response.body}"
         raise Error.new("Bad request: #{response.body}", :bad_request)

@@ -54,11 +54,13 @@ class IndexaCapitalAccount::ProcessorTest < ActiveSupport::TestCase
       ]
     )
 
+    @account.update!(balance: 0)
+
     processor = IndexaCapitalAccount::Processor.new(@indexa_capital_account)
     processor.process
 
     @account.reload
-    assert @account.balance > 0
+    assert_in_delta 27093.01, @account.balance.to_f, 0.01
   end
 
   # ==========================================================================
