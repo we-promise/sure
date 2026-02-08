@@ -340,14 +340,14 @@ class User < ApplicationRecord
 
     def apply_role_based_ui_defaults
       if ui_layout_intro?
-        if role_guest?
+        if guest?
           self.show_sidebar = false
           self.show_ai_sidebar = false
           self.ai_enabled = true
         else
           self.ui_layout = "dashboard"
         end
-      elsif role_guest?
+      elsif guest?
         self.ui_layout = "intro"
         self.show_sidebar = false
         self.show_ai_sidebar = false
