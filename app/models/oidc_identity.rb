@@ -59,16 +59,9 @@ class OidcIdentity < ApplicationRecord
     return unless role_mapping.present?
 
     # Check roles in order of precedence (highest to lowest)
-    %w[super_admin admin member guest].each do |role|
-      mapping_keys = case role
-      when "member" then %w[member user]
-      when "guest" then %w[guest intro]
-      else [ role ]
-      end
-      mapped_groups = mapping_keys.flat_map do |key|
-        role_mapping[key] || role_mapping[key.to_sym] || []
-      end
-      mapped_groups = Array(mapped_groups).map(&:to_s).uniq
+    %w[super_admin admin member].each do |role|
+      mapped_groups = role_mapping[role] || role_mapping[role.to_sym] || []
+      mapped_groups = Array(mapped_groups)
 
       # Check if user is in any of the mapped groups
       if mapped_groups.include?("*") || (mapped_groups & groups).any?
