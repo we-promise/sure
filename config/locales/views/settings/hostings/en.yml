@@ -40,6 +40,8 @@ en:
         label: Client ID
         placeholder: Enter your Client ID here
         title: Brand Fetch Settings
+        high_res_label: Enable high-resolution logos
+        high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -70,6 +72,10 @@ en:
         label: API Key
         placeholder: Enter your API key here
         plan: "%{plan} plan"
+        plan_upgrade_warning_title: Some tickers require a paid plan
+        plan_upgrade_warning_description: The following tickers in your portfolio cannot sync prices with your current Twelve Data plan.
+        requires_plan: requires %{plan} plan
+        view_pricing: View Twelve Data pricing
         title: Twelve Data
       update:
         failure: Invalid setting value

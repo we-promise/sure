@@ -1,8 +1,29 @@
 class Eval::Langfuse::Client
+  extend SslConfigurable
+
   BASE_URLS = {
     us: "https://us.cloud.langfuse.com/api/public",
     eu: "https://cloud.langfuse.com/api/public"
   }.freeze
+
+  # OpenSSL 3.x version threshold for CRL workaround
+  # See: https://github.com/ruby/openssl/issues/619
+  OPENSSL_3_VERSION = 0x30000000
+
+  # CRL-related OpenSSL error codes that can be safely bypassed
+  # These errors occur when CRL (Certificate Revocation List) is unavailable
+  def self.crl_errors
+    @crl_errors ||= begin
+      errors = [
+        OpenSSL::X509::V_ERR_UNABLE_TO_GET_CRL,
+        OpenSSL::X509::V_ERR_CRL_HAS_EXPIRED,
+        OpenSSL::X509::V_ERR_CRL_NOT_YET_VALID
+      ]
+      # V_ERR_UNABLE_TO_GET_CRL_ISSUER may not exist in all OpenSSL versions
+      errors << OpenSSL::X509::V_ERR_UNABLE_TO_GET_CRL_ISSUER if defined?(OpenSSL::X509::V_ERR_UNABLE_TO_GET_CRL_ISSUER)
+      errors.freeze
+    end
+  end
 
   class Error < StandardError; end
   class ConfigurationError < Error; end
@@ -176,12 +197,24 @@ class Eval::Langfuse::Client
       http.read_timeout = 30
       http.open_timeout = 10
 
-      # Fix for OpenSSL 3.x CRL checking issues
+      # Apply SSL configuration from centralized config
+      http.verify_mode = self.class.net_http_verify_mode
+      http.ca_file = self.class.ssl_ca_file if self.class.ssl_ca_file.present?
+
+      # Fix for OpenSSL 3.x CRL checking issues (only when verification is enabled)
       # See: https://github.com/ruby/openssl/issues/619
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      if OpenSSL::OPENSSL_VERSION_NUMBER >= 0x30000000
-        # Disable CRL checking which can fail on some certificates
-        http.verify_callback = ->(_preverify_ok, _store_ctx) { true }
+      # Only bypass CRL-specific errors, not all certificate verification
+      if self.class.ssl_verify? && OpenSSL::OPENSSL_VERSION_NUMBER >= OPENSSL_3_VERSION
+        crl_error_codes = self.class.crl_errors
+        http.verify_callback = ->(preverify_ok, store_ctx) {
+          # Bypass only CRL-specific errors (these fail when CRL is unavailable)
+          # For all other errors, preserve the original verification result
+          if crl_error_codes.include?(store_ctx.error)
+            true
+          else
+            preverify_ok
+          end
+        }
       end
 
       response = http.request(request)

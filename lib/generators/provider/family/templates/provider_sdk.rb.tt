@@ -1,0 +1,205 @@
+# frozen_string_literal: true
+
+class Provider::<%= class_name %>
+  include HTTParty
+
+  headers "User-Agent" => "Sure Finance <%= class_name %> Client"
+  default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
+
+  class Error < StandardError
+    attr_reader :error_type
+
+    def initialize(message, error_type = :unknown)
+      super(message)
+      @error_type = error_type
+    end
+  end
+
+  class ConfigurationError < Error; end
+  class AuthenticationError < Error; end
+
+<% secret_fields = parsed_fields.select { |f| f[:secret] } -%>
+<% non_secret_fields = parsed_fields.reject { |f| f[:secret] } -%>
+<% all_attrs = parsed_fields.map { |f| f[:name] } -%>
+  attr_reader <%= all_attrs.map { |f| ":#{f}" }.join(", ") %>
+
+  def initialize(<%= all_attrs.map { |f| "#{f}:" }.join(", ") %>)
+<% all_attrs.each do |f| -%>
+    @<%= f %> = <%= f %>
+<% end -%>
+    validate_configuration!
+  end
+<% if investment_provider? -%>
+
+  # TODO: Implement provider-specific API methods
+  # Example methods for investment providers:
+
+  # def list_accounts
+  #   with_retries("list_accounts") do
+  #     response = self.class.get(
+  #       "#{base_url}/accounts",
+  #       headers: auth_headers
+  #     )
+  #     handle_response(response)
+  #   end
+  # end
+
+  # def get_holdings(account_id:)
+  #   with_retries("get_holdings") do
+  #     response = self.class.get(
+  #       "#{base_url}/accounts/#{account_id}/holdings",
+  #       headers: auth_headers
+  #     )
+  #     handle_response(response)
+  #   end
+  # end
+
+  # def get_activities(account_id:, start_date:, end_date: Date.current)
+  #   with_retries("get_activities") do
+  #     response = self.class.get(
+  #       "#{base_url}/accounts/#{account_id}/activities",
+  #       headers: auth_headers,
+  #       query: { start_date: start_date.to_s, end_date: end_date.to_s }
+  #     )
+  #     handle_response(response)
+  #   end
+  # end
+
+  # def delete_connection(authorization_id:)
+  #   with_retries("delete_connection") do
+  #     response = self.class.delete(
+  #       "#{base_url}/authorizations/#{authorization_id}",
+  #       headers: auth_headers
+  #     )
+  #     handle_response(response)
+  #   end
+  # end
+<% else -%>
+
+  # TODO: Implement provider-specific API methods
+  # Example methods for banking providers:
+
+  # def list_accounts
+  #   with_retries("list_accounts") do
+  #     response = self.class.get(
+  #       "#{base_url}/accounts",
+  #       headers: auth_headers
+  #     )
+  #     handle_response(response)
+  #   end
+  # end
+
+  # def get_transactions(account_id:, start_date:, end_date: Date.current, include_pending: true)
+  #   with_retries("get_transactions") do
+  #     response = self.class.get(
+  #       "#{base_url}/accounts/#{account_id}/transactions",
+  #       headers: auth_headers,
+  #       query: {
+  #         start_date: start_date.to_s,
+  #         end_date: end_date.to_s,
+  #         include_pending: include_pending
+  #       }
+  #     )
+  #     handle_response(response)
+  #   end
+  # end
+
+  # def get_balance(account_id:)
+  #   with_retries("get_balance") do
+  #     response = self.class.get(
+  #       "#{base_url}/accounts/#{account_id}/balance",
+  #       headers: auth_headers
+  #     )
+  #     handle_response(response)
+  #   end
+  # end
+<% end -%>
+
+  private
+
+    RETRYABLE_ERRORS = [
+      SocketError, Net::OpenTimeout, Net::ReadTimeout,
+      Errno::ECONNRESET, Errno::ECONNREFUSED, Errno::ETIMEDOUT, EOFError
+    ].freeze
+
+    MAX_RETRIES = 3
+    INITIAL_RETRY_DELAY = 2 # seconds
+
+    def validate_configuration!
+<% secret_fields.each do |field| -%>
+      raise ConfigurationError, "<%= field[:name].humanize %> is required" if @<%= field[:name] %>.blank?
+<% end -%>
+    end
+
+    def with_retries(operation_name, max_retries: MAX_RETRIES)
+      retries = 0
+
+      begin
+        yield
+      rescue *RETRYABLE_ERRORS => e
+        retries += 1
+
+        if retries <= max_retries
+          delay = calculate_retry_delay(retries)
+          Rails.logger.warn(
+            "<%= class_name %> API: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
+            "#{e.class}: #{e.message}. Retrying in #{delay}s..."
+          )
+          sleep(delay)
+          retry
+        else
+          Rails.logger.error(
+            "<%= class_name %> API: #{operation_name} failed after #{max_retries} retries: " \
+            "#{e.class}: #{e.message}"
+          )
+          raise Error.new("Network error after #{max_retries} retries: #{e.message}", :network_error)
+        end
+      end
+    end
+
+    def calculate_retry_delay(retry_count)
+      base_delay = INITIAL_RETRY_DELAY * (2 ** (retry_count - 1))
+      jitter = base_delay * rand * 0.25
+      [ base_delay + jitter, 30 ].min
+    end
+
+    def auth_headers
+      # TODO: Customize based on your provider's authentication method
+      {
+<% if secret_fields.any? -%>
+        "Authorization" => "Bearer #{@<%= secret_fields.first[:name] %>}",
+<% end -%>
+        "Content-Type" => "application/json",
+        "Accept" => "application/json"
+      }
+    end
+
+    def handle_response(response)
+      case response.code
+      when 200, 201
+        JSON.parse(response.body, symbolize_names: true)
+      when 400
+        Rails.logger.error "<%= class_name %> API: Bad request - #{response.body}"
+        raise Error.new("Bad request: #{response.body}", :bad_request)
+      when 401
+        raise AuthenticationError.new("Invalid credentials", :unauthorized)
+      when 403
+        raise AuthenticationError.new("Access forbidden - check your permissions", :access_forbidden)
+      when 404
+        raise Error.new("Resource not found", :not_found)
+      when 429
+        raise Error.new("Rate limit exceeded. Please try again later.", :rate_limited)
+      when 500..599
+        raise Error.new("<%= class_name %> server error (#{response.code}). Please try again later.", :server_error)
+      else
+        Rails.logger.error "<%= class_name %> API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
+        raise Error.new("Unexpected error: #{response.code} - #{response.body}", :unknown)
+      end
+    end
+<% if non_secret_fields.any? { |f| f[:name] == "base_url" } -%>
+
+    def base_url
+      @base_url.presence || "<%= "https://api.example.com/v1" %>"  # TODO: Set your provider's default base URL
+    end
+<% end -%>
+end

@@ -1,0 +1,187 @@
+en:
+  snaptrade_items:
+    default_name: "SnapTrade Connection"
+    create:
+      success: "Successfully configured SnapTrade."
+    update:
+      success: "Successfully updated SnapTrade configuration."
+    destroy:
+      success: "Scheduled SnapTrade connection for deletion."
+    connect:
+      decryption_failed: "Unable to read SnapTrade credentials. Please delete and recreate this connection."
+      connection_failed: "Failed to connect to SnapTrade: %{message}"
+    callback:
+      success: "Brokerage connected! Please select which accounts to link."
+      no_item: "SnapTrade configuration not found."
+    complete_account_setup:
+      success:
+        one: "Successfully linked %{count} account."
+        other: "Successfully linked %{count} accounts."
+      partial_success: "Linked %{linked} account(s). %{failed} failed to link."
+      link_failed: "Failed to link accounts: %{errors}"
+      no_accounts: "No accounts were selected for linking."
+    preload_accounts:
+      not_configured: "SnapTrade is not configured."
+    select_accounts:
+      not_configured: "SnapTrade is not configured."
+    select_existing_account:
+      not_found: "Account or SnapTrade configuration not found."
+      title: "Link to SnapTrade Account"
+      header: "Link Existing Account"
+      subtitle: "Select a SnapTrade account to link to"
+      no_accounts: "No unlinked SnapTrade accounts available."
+      connect_hint: "You may need to connect a brokerage first."
+      settings_link: "Go to Provider Settings"
+      linking_to: "Linking to account:"
+      balance_label: "Balance:"
+      link_button: "Link"
+      cancel_button: "Cancel"
+    link_existing_account:
+      success: "Successfully linked to SnapTrade account."
+      failed: "Failed to link account: %{message}"
+      not_found: "Account not found."
+    connections:
+      unknown_brokerage: "Unknown Brokerage"
+    delete_connection:
+      success: "Connection deleted successfully. One slot freed up."
+      failed: "Failed to delete connection: %{message}"
+      missing_authorization_id: "Missing authorization ID"
+      api_deletion_failed: "Could not delete connection from SnapTrade - missing credentials. The connection may still exist in your SnapTrade account."
+    delete_orphaned_user:
+      success: "Orphaned registration deleted successfully."
+      failed: "Failed to delete orphaned registration."
+    setup_accounts:
+      title: "Set Up SnapTrade Accounts"
+      header: "Set Up Your SnapTrade Accounts"
+      subtitle: "Select which brokerage accounts to link"
+      syncing: "Fetching your accounts..."
+      loading: "Fetching accounts from SnapTrade..."
+      loading_hint: "Click Refresh to check for accounts."
+      refresh: "Refresh"
+      info_title: "SnapTrade Investment Data"
+      info_holdings: "Holdings with current prices and quantities"
+      info_cost_basis: "Cost basis per position (when available)"
+      info_activities: "Trade history with activity labels (Buy, Sell, Dividend, etc.)"
+      info_history: "Up to 3 years of transaction history"
+      free_tier_note: "SnapTrade free tier allows 5 brokerage connections. Check your SnapTrade dashboard for current usage."
+      no_accounts_title: "No Accounts Found"
+      no_accounts_message: "No brokerage accounts were found. This can happen if you cancelled the connection or if your brokerage isn't supported."
+      try_again: "Connect Brokerage"
+      back_to_settings: "Back to Settings"
+      available_accounts: "Available Accounts"
+      balance_label: "Balance:"
+      account_number: "Account:"
+      create_button: "Create Selected Accounts"
+      cancel_button: "Cancel"
+      creating: "Creating Accounts..."
+      done_button: "Done"
+      or_link_existing: "Or link to an existing account instead of creating a new one:"
+      select_account: "Select an account..."
+      link_button: "Link"
+      linked_accounts: "Already Linked"
+      linked_to: "Linked to:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} account needs setup"
+        other: "%{count} accounts need setup"
+      deletion_in_progress: "Deletion in progress..."
+      syncing: "Syncing..."
+      requires_update: "Connection needs update"
+      error: "Sync error"
+      status: "Last synced %{timestamp} ago - %{summary}"
+      status_never: "Never synced"
+      reconnect: "Reconnect"
+      connect_brokerage: "Connect Brokerage"
+      add_another_brokerage: "Connect another brokerage"
+      delete: "Delete"
+      setup_needed: "Accounts need setup"
+      setup_description: "Some accounts from SnapTrade need to be linked to Sure accounts."
+      setup_action: "Setup Accounts"
+      setup_accounts_menu: "Set Up Accounts"
+      manage_connections: "Manage Connections"
+      more_accounts_available:
+        one: "%{count} more account available to set up"
+        other: "%{count} more accounts available to set up"
+      no_accounts_title: "No accounts discovered"
+      no_accounts_description: "Connect a brokerage to import your investment accounts."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Connect to your brokerage via SnapTrade (25+ brokers supported)"
+      description: "SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard, Schwab, Robinhood, etc.) and provides full trade history with activity labels and cost basis."
+      setup_title: "Setup instructions:"
+      step_1_html: "Create an account at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
+      step_2: "Copy your Client ID and Consumer Key from the dashboard"
+      step_3: "Enter your credentials below and click Save"
+      step_4: "Go to the Accounts page and use 'Connect another brokerage' to link your investment accounts"
+      free_tier_warning: "Free tier includes 5 brokerage connections. Additional connections require a paid SnapTrade plan."
+      client_id_label: "Client ID"
+      client_id_placeholder: "Enter your SnapTrade Client ID"
+      client_id_update_placeholder: "Enter new Client ID to update"
+      consumer_key_label: "Consumer Key"
+      consumer_key_placeholder: "Enter your SnapTrade Consumer Key"
+      consumer_key_update_placeholder: "Enter new Consumer Key to update"
+      save_button: "Save Configuration"
+      update_button: "Update Configuration"
+      status_connected:
+        one: "%{count} account from SnapTrade"
+        other: "%{count} accounts from SnapTrade"
+      needs_setup:
+        one: "%{count} needs setup"
+        other: "%{count} need setup"
+      status_ready: "Ready to connect brokerages"
+      status_needs_registration: "Credentials saved. Go to Accounts page to connect brokerages."
+      status_not_configured: "Not configured"
+      setup_accounts_button: "Setup Accounts"
+      connect_button: "Connect Brokerage"
+      connected_brokerages: "Connected:"
+      manage_connections: "Manage Connections"
+      connection_limit_info: "SnapTrade free tier allows 5 brokerage connections. Delete unused connections to free up slots."
+      loading_connections: "Loading connections..."
+      connections_error: "Failed to load connections: %{message}"
+      accounts_count:
+        one: "%{count} account"
+        other: "%{count} accounts"
+      orphaned_connection: "Orphaned connection (not synced locally)"
+      needs_linking: "needs linking"
+      no_connections: "No brokerage connections found."
+      delete_connection: "Delete"
+      delete_connection_title: "Delete Brokerage Connection?"
+      delete_connection_body: "This will permanently remove the %{brokerage} connection from SnapTrade. All accounts from this brokerage will be unlinked. You'll need to reconnect to sync these accounts again."
+      delete_connection_confirm: "Delete Connection"
+      orphaned_users_title:
+        one: "%{count} orphaned registration"
+        other: "%{count} orphaned registrations"
+      orphaned_users_description: "These are previous SnapTrade user registrations that are using your connection slots. Delete them to free up slots."
+      orphaned_user: "Orphaned Registration"
+      delete_orphaned_user: "Delete"
+      delete_orphaned_user_title: "Delete Orphaned Registration?"
+      delete_orphaned_user_body: "This will permanently delete this orphaned SnapTrade user and all their brokerage connections, freeing up connection slots."
+      delete_orphaned_user_confirm: "Delete Registration"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "No accounts found"
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: "No institutions connected"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    brokerage_summary:
+      none: "No brokerages connected"
+      count:
+        one: "%{count} brokerage"
+        other: "%{count} brokerages"
+    syncer:
+      discovering: "Discovering accounts..."
+      importing: "Importing accounts from SnapTrade..."
+      processing: "Processing holdings and activities..."
+      calculating: "Calculating balances..."
+      checking_config: "Checking account configuration..."
+      needs_setup: "%{count} accounts need setup..."
+      activities_fetching_async: "Activities are being fetched in the background. This may take up to a minute for fresh brokerage connections."

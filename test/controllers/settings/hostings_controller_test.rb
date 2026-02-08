@@ -89,10 +89,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
         patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
 
-        assert_response :unprocessable_entity
+assert_response :unprocessable_entity
         assert_match(/OpenAI model is required/, flash[:alert])
-        # Value should not have changed to the new value
-        assert_not_equal "https://api.example.com/v1", Setting.openai_uri_base
+        assert Setting.openai_uri_base.blank?, "Expected openai_uri_base to remain blank after failed validation"
       end
     end
   end

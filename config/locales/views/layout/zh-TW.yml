@@ -17,3 +17,7 @@ zh-TW:
       footer:
         privacy_policy: 隱私權政策
         terms_of_service: 服務條款
+    trial:
+      open_demo: 開放示範
+      data_deleted_in_days: 資料將在 %{days} 天後刪除
+      contribute: 貢獻

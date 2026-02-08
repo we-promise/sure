@@ -2,8 +2,10 @@ require "digest/md5"
 
 class LunchflowEntry::Processor
   include CurrencyNormalizable
+  include LunchflowTransactionHash
+
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
-  # Transaction structure: { id, accountId, amount, currency, date, merchant, description }
+  # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
   def initialize(lunchflow_transaction, lunchflow_account:)
     @lunchflow_transaction = lunchflow_transaction
     @lunchflow_account = lunchflow_account
@@ -26,7 +28,8 @@ class LunchflowEntry::Processor
         name: name,
         source: "lunchflow",
         merchant: merchant,
-        notes: notes
+        notes: notes,
+        extra: extra_metadata
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -61,8 +64,54 @@ class LunchflowEntry::Processor
 
     def external_id
       id = data[:id].presence
-      raise ArgumentError, "Lunchflow transaction missing required field 'id'" unless id
+
+      # For pending transactions, Lunchflow may return blank/nil IDs
+      # Generate a stable temporary ID based on transaction attributes
+      if id.blank?
+        # Create a deterministic hash from key transaction attributes
+        # This ensures the same pending transaction gets the same ID across syncs
+        base_temp_id = content_hash_for_transaction(data)
+        temp_id_with_prefix = "lunchflow_pending_#{base_temp_id}"
+
+        # Check if entry with this external_id already exists
+        # If it does AND it's still pending, reuse the same ID for re-sync.
+        # The import adapter's skip logic will handle user edits correctly.
+        # We DON'T check if attributes match - user edits should not cause duplicates.
+        if entry_exists_with_external_id?(temp_id_with_prefix)
+          existing_entry = account.entries.find_by(external_id: temp_id_with_prefix, source: "lunchflow")
+          if existing_entry && existing_entry.entryable.is_a?(Transaction) && existing_entry.entryable.pending?
+            Rails.logger.debug "Lunchflow: Reusing ID #{temp_id_with_prefix} for re-synced pending transaction"
+            return temp_id_with_prefix
+          end
+        end
+
+        # Handle true collisions: multiple different transactions with same attributes
+        # (e.g., two Uber rides on the same day for the same amount within the same sync)
+        final_id = temp_id_with_prefix
+        counter = 1
+
+        while entry_exists_with_external_id?(final_id)
+          final_id = "#{temp_id_with_prefix}_#{counter}"
+          counter += 1
+        end
+
+        if counter > 1
+          Rails.logger.debug "Lunchflow: Collision detected, using #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
+        else
+          Rails.logger.debug "Lunchflow: Generated temporary ID #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
+        end
+
+        return final_id
+      end
+
       "lunchflow_#{id}"
+    end
+
+    def entry_exists_with_external_id?(external_id)
+      return false unless account.present?
+
+      # Check if an entry with this external_id already exists in the account
+      account.entries.exists?(external_id: external_id, source: "lunchflow")
     end
 
     def name
@@ -140,5 +189,18 @@ class LunchflowEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Lunchflow transaction date '#{data[:date]}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{data[:date].inspect}"
+    end
+
+    # Build extra metadata hash with pending status
+    # Lunchflow API field: isPending (boolean)
+    def extra_metadata
+      metadata = {}
+
+      # Store pending status from Lunchflow API when present
+      if data.key?(:isPending)
+        metadata[:lunchflow] = { pending: ActiveModel::Type::Boolean.new.cast(data[:isPending]) }
+      end
+
+      metadata
     end
 end

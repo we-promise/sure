@@ -1,5 +1,5 @@
 class Subscription < ApplicationRecord
-  TRIAL_DAYS = 14
+  TRIAL_DAYS = 45
 
   belongs_to :family
 
@@ -28,11 +28,15 @@ class Subscription < ApplicationRecord
   def name
     case interval
     when "month"
-      "Monthly Plan"
+      "Monthly Contribution"
     when "year"
-      "Annual Plan"
+      "Annual Contribution"
     else
-      "Free trial"
+      "Open demo"
     end
+  end
+
+  def pending_cancellation?
+    active? && cancel_at_period_end?
   end
 end

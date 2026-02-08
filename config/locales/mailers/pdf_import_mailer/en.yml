@@ -1,0 +1,5 @@
+---
+en:
+  pdf_import_mailer:
+    next_steps:
+      subject: "Your PDF document has been analyzed - %{product_name}"

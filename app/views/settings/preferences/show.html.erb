@@ -5,15 +5,15 @@
     <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
       <%= form.hidden_field :redirect_to, value: "preferences" %>
 
+      <%= form.select :locale,
+          language_options,
+          { label: t(".language"), include_blank: t(".language_auto") },
+          { data: { auto_submit_form_target: "auto" } } %>
+
       <%= form.fields_for :family do |family_form| %>
         <%= family_form.select :currency,
             Money::Currency.as_options.map { |currency| [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ] },
             { label: t(".currency") }, disabled: true %>
-
-        <%= family_form.select :locale,
-            language_options,
-            { label: t(".language") },
-            { data: { auto_submit_form_target: "auto" } } %>
 
         <%= family_form.select :timezone,
             timezone_options,
@@ -39,6 +39,17 @@
             country_options,
             { label: t(".country") },
             { data: { auto_submit_form_target: "auto" } } %>
+
+        <%= family_form.select :month_start_day,
+            (1..28).map { |day| [day.ordinalize, day] },
+            { label: t(".month_start_day"), hint: t(".month_start_day_hint") },
+            { data: { auto_submit_form_target: "auto" } } %>
+
+        <% if @user.family.uses_custom_month_start? %>
+          <div class="text-sm text-warning bg-warning/10 p-3 rounded-lg">
+            <%= t(".month_start_day_warning") %>
+          </div>
+        <% end %>
 
         <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.</p>
       <% end %>

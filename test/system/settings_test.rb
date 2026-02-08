@@ -63,10 +63,10 @@ class SettingsTest < ApplicationSystemTestCase
     assert_selector 'span[data-clipboard-target="iconSuccess"]', visible: true, count: 1 # text copied and icon changed to checkmark
   end
 
-  test "does not show billing link if self hosting" do
+  test "does not show payment link if self hosting" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     open_settings_from_sidebar
-    assert_no_selector "li", text: I18n.t("settings.settings_nav.billing_label")
+    assert_no_selector "li", text: I18n.t("settings.settings_nav.payment_label")
   end
 
   test "does not show admin settings to non-admin users" do

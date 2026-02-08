@@ -4,6 +4,8 @@ class Import::ConfigurationsController < ApplicationController
   before_action :set_import
 
   def show
+    # PDF imports are auto-configured from AI extraction, skip to clean step
+    redirect_to import_clean_path(@import) if @import.is_a?(PdfImport)
   end
 
   def update
@@ -46,6 +48,7 @@ class Import::ConfigurationsController < ApplicationController
         :number_format,
         :signage_convention,
         :amount_type_strategy,
+        :amount_type_identifier_value,
         :amount_type_inflow_value,
         :rows_to_skip
       )

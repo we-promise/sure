@@ -3,9 +3,13 @@ class Import < ApplicationRecord
   MappingError = Class.new(StandardError)
 
   MAX_CSV_SIZE = 10.megabytes
-  ALLOWED_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+  MAX_PDF_SIZE = 25.megabytes
+  ALLOWED_CSV_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
+  ALLOWED_PDF_MIME_TYPES = %w[application/pdf].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport].freeze
+  DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
+
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -40,6 +44,7 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validate :custom_column_import_requires_identifier
   validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family
   validate :rows_to_skip_within_file_bounds
@@ -133,6 +138,14 @@ class Import < ApplicationRecord
     []
   end
 
+  # Returns false for import types that don't need CSV column mapping (e.g., PdfImport).
+  # Override in subclasses that handle data extraction differently.
+  def requires_csv_workflow?
+    true
+  end
+
+  # Subclasses that require CSV workflow must override this.
+  # Non-CSV imports (e.g., PdfImport) can return [].
   def column_keys
     raise NotImplementedError, "Subclass must implement column_keys"
   end
@@ -303,6 +316,14 @@ class Import < ApplicationRecord
 
     def set_default_number_format
       self.number_format ||= "1,234.56" # Default to US/UK format
+    end
+
+    def custom_column_import_requires_identifier
+      return unless amount_type_strategy == "custom_column"
+
+      if amount_type_inflow_value.blank?
+        errors.add(:base, I18n.t("imports.errors.custom_column_requires_inflow"))
+      end
     end
 
     # Common encodings to try when UTF-8 detection fails

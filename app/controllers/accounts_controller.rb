@@ -11,6 +11,9 @@ class AccountsController < ApplicationController
     @lunchflow_items = family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts)
     @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
+    @mercury_items = family.mercury_items.ordered.includes(:syncs, :mercury_accounts)
+    @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
+    @snaptrade_items = family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts)
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -110,10 +113,14 @@ class AccountsController < ApplicationController
           Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
         end
 
-        # Capture SimplefinAccount before clearing FK (so we can destroy it)
+        # Capture provider accounts before clearing links (so we can destroy them)
         simplefin_account_to_destroy = @account.simplefin_account
 
         # Remove new system links (account_providers join table)
+        # SnaptradeAccount records are preserved (not destroyed) so users can relink later.
+        # This follows the Plaid pattern where the provider account survives as "unlinked".
+        # SnapTrade has limited connection slots (5 free), so preserving the record avoids
+        # wasting a slot on reconnect.
         @account.account_providers.destroy_all
 
         # Remove legacy system links (foreign keys)
@@ -151,7 +158,9 @@ class AccountsController < ApplicationController
     )
 
     # Build available providers list with paths resolved for this specific account
-    @available_providers = provider_configs.map do |config|
+    # Filter out providers that don't support linking to existing accounts
+    @available_providers = provider_configs.filter_map do |config|
+      next unless config[:existing_account_path].present?
       {
         name: config[:name],
         key: config[:key],
@@ -237,6 +246,28 @@ class AccountsController < ApplicationController
       @coinstats_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Mercury sync stats
+      @mercury_sync_stats_map = {}
+      @mercury_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Coinbase sync stats
+      @coinbase_sync_stats_map = {}
+      @coinbase_unlinked_count_map = {}
+      @coinbase_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @coinbase_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+
+        # Count unlinked accounts
+        count = item.coinbase_accounts
+          .left_joins(:account_provider)
+          .where(account_providers: { id: nil })
+          .count
+        @coinbase_unlinked_count_map[item.id] = count
       end
     end
 end

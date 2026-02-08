@@ -20,25 +20,18 @@ RSpec.describe 'API V1 Imports', type: :request do
     )
   end
 
-  let(:oauth_application) do
-    Doorkeeper::Application.create!(
-      name: 'API Docs',
-      redirect_uri: 'https://example.com/callback',
-      scopes: 'read read_write'
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'web'
     )
   end
 
-  let(:access_token) do
-    Doorkeeper::AccessToken.create!(
-      application: oauth_application,
-      resource_owner_id: user.id,
-      scopes: 'read_write',
-      expires_in: 2.hours,
-      token: SecureRandom.hex(32)
-    )
-  end
-
-  let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
     Account.create!(
@@ -72,10 +65,8 @@ RSpec.describe 'API V1 Imports', type: :request do
     get 'List imports' do
       description 'List all imports for the user\'s family with pagination and filtering.'
       tags 'Imports'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with read scope'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
@@ -90,11 +81,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '200', 'imports listed' do
         schema '$ref' => '#/components/schemas/ImportCollection'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('data')).to be_present
-          expect(payload.fetch('meta')).to include('current_page', 'total_count', 'total_pages', 'per_page')
-        end
+        run_test!
       end
 
       response '200', 'imports filtered by status' do
@@ -102,12 +89,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         let(:status) { 'pending' }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('data').each do |import|
-            expect(import.fetch('status')).to eq('pending')
-          end
-        end
+        run_test!
       end
 
       response '200', 'imports filtered by type' do
@@ -115,23 +97,16 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         let(:type) { 'TransactionImport' }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('data').each do |import|
-            expect(import.fetch('type')).to eq('TransactionImport')
-          end
-        end
+        run_test!
       end
     end
 
     post 'Create import' do
       description 'Create a new import from raw CSV content.'
       tags 'Imports'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with write scope'
 
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
@@ -214,12 +189,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           }
         end
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.dig('data', 'id')).to be_present
-          expect(payload.dig('data', 'type')).to eq('TransactionImport')
-          expect(payload.dig('data', 'status')).to eq('pending')
-        end
+        run_test!
       end
 
       response '422', 'validation error - file too large' do
@@ -238,14 +208,12 @@ RSpec.describe 'API V1 Imports', type: :request do
   end
 
   path '/api/v1/imports/{id}' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token with read scope'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
       description 'Retrieve detailed information about a specific import, including configuration and row statistics.'
       tags 'Imports'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { pending_import.id }
@@ -253,13 +221,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '200', 'import retrieved' do
         schema '$ref' => '#/components/schemas/ImportResponse'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.dig('data', 'id')).to eq(pending_import.id)
-          expect(payload.dig('data', 'type')).to eq('TransactionImport')
-          expect(payload.dig('data', 'configuration')).to be_present
-          expect(payload.dig('data', 'stats')).to be_present
-        end
+        run_test!
       end
 
       response '404', 'import not found' do

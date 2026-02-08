@@ -1,0 +1,22 @@
+<%# locals: (color: nil, pulse: false) %>
+
+<%
+  def badge_classes(c, p)
+    classes = case c
+              when "success"
+                "bg-green-500/5 text-green-500"
+              when "error"
+                "bg-red-500/5 text-red-500"
+              when "warning"
+                "bg-orange-500/5 text-orange-500"
+              else
+                "bg-gray-500/5 text-secondary"
+              end
+
+    p ? "#{classes} animate-pulse" : classes
+  end
+%>
+
+<span class="inline-flex items-center px-2 py-0.5 rounded-full ring ring-alpha-black-50 text-xs <%= badge_classes(color, pulse) %>">
+  <%= yield %>
+</span>

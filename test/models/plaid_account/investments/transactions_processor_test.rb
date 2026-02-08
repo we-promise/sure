@@ -23,7 +23,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.stubs(:resolve).returns(OpenStruct.new(
       security: securities(:aapl)
@@ -58,7 +58,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).never # Cash transactions don't have a security
 
@@ -91,7 +91,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).never # Cash transactions don't have a security
 
@@ -127,7 +127,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).returns(OpenStruct.new(
       security: securities(:aapl)
@@ -149,6 +149,70 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal -1, entry.trade.qty
   end
 
+  test "creates contribution transactions as cash transactions" do
+    test_investments_payload = {
+      transactions: [
+        {
+          "investment_transaction_id" => "contrib_123",
+          "type" => "contribution",
+          "amount" => -500.0,
+          "iso_currency_code" => "USD",
+          "date" => Date.current,
+          "name" => "401k Contribution"
+        }
+      ]
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
+
+    @security_resolver.expects(:resolve).never
+
+    processor = PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      processor.process
+    end
+
+    entry = Entry.order(created_at: :desc).first
+
+    assert_equal(-500.0, entry.amount)
+    assert_equal "USD", entry.currency
+    assert_equal "401k Contribution", entry.name
+    assert_instance_of Transaction, entry.entryable
+  end
+
+  test "creates withdrawal transactions as cash transactions" do
+    test_investments_payload = {
+      transactions: [
+        {
+          "investment_transaction_id" => "withdraw_123",
+          "type" => "withdrawal",
+          "amount" => 1000.0,
+          "iso_currency_code" => "USD",
+          "date" => Date.current,
+          "name" => "IRA Withdrawal"
+        }
+      ]
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
+
+    @security_resolver.expects(:resolve).never
+
+    processor = PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      processor.process
+    end
+
+    entry = Entry.order(created_at: :desc).first
+
+    assert_equal 1000.0, entry.amount
+    assert_equal "USD", entry.currency
+    assert_equal "IRA Withdrawal", entry.name
+    assert_instance_of Transaction, entry.entryable
+  end
+
   test "creates transfer transactions as cash transactions" do
     test_investments_payload = {
       transactions: [
@@ -163,7 +227,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
       ]
     }
 
-    @plaid_account.update!(raw_investments_payload: test_investments_payload)
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
 
     @security_resolver.expects(:resolve).never
 

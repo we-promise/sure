@@ -59,7 +59,7 @@ end
 Sidekiq.configure_server do |config|
   config.redis = redis_config
 
-  config.on(:startup) do
+config.on(:startup) do
     # Load static cron jobs from schedule.yml
     schedule_file = Rails.root.join("config", "schedule.yml")
     if File.exist?(schedule_file)

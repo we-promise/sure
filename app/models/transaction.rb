@@ -35,6 +35,7 @@ class Transaction < ApplicationRecord
     where(<<~SQL.squish)
       (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
       OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+      OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
     SQL
   }
 
@@ -42,8 +43,14 @@ class Transaction < ApplicationRecord
     where(<<~SQL.squish)
       (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
       AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
+      AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
     SQL
   }
+
+  # Family-scoped query for Enrichable#clear_ai_cache
+  def self.family_scope(family)
+    joins(entry: :account).where(accounts: { family_id: family.id })
+  end
 
   # Overarching grouping method for all transfer-type transactions
   def transfer?
@@ -63,7 +70,8 @@ class Transaction < ApplicationRecord
   def pending?
     extra_data = extra.is_a?(Hash) ? extra : {}
     ActiveModel::Type::Boolean.new.cast(extra_data.dig("simplefin", "pending")) ||
-      ActiveModel::Type::Boolean.new.cast(extra_data.dig("plaid", "pending"))
+      ActiveModel::Type::Boolean.new.cast(extra_data.dig("plaid", "pending")) ||
+      ActiveModel::Type::Boolean.new.cast(extra_data.dig("lunchflow", "pending"))
   rescue
     false
   end

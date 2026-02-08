@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class <%= class_name %>Item < ApplicationRecord
   include Syncable, Provided, Unlinking
 
@@ -25,7 +27,7 @@ class <%= class_name %>Item < ApplicationRecord
 <% end -%>
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :<%= file_name %>_accounts, dependent: :destroy
   has_many :accounts, through: :<%= file_name %>_accounts
@@ -34,37 +36,42 @@ class <%= class_name %>Item < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  def syncer
+    <%= class_name %>Item::Syncer.new(self)
+  end
+
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
-  # TODO: Implement data import from provider API
-  # This method should fetch the latest data from the provider and import it.
-  # May need provider-specific validation (e.g., session validity checks).
-  # See LunchflowItem#import_latest_lunchflow_data or EnableBankingItem#import_latest_enable_banking_data for examples.
-  def import_latest_<%= file_name %>_data
+<% if investment_provider? -%>
+  # Override syncing? to include background activities fetch
+  def syncing?
+    super || <%= file_name %>_accounts.where(activities_fetch_pending: true).exists?
+  end
+<% end -%>
+
+  # Import data from provider API
+  def import_latest_<%= file_name %>_data(sync: nil)
     provider = <%= file_name %>_provider
     unless provider
       Rails.logger.error "<%= class_name %>Item #{id} - Cannot import: provider is not configured"
-      raise StandardError.new("<%= class_name %> provider is not configured")
+      raise StandardError, I18n.t("<%= file_name %>_items.errors.provider_not_configured")
     end
 
-    # TODO: Add any provider-specific validation here (e.g., session checks)
-    <%= class_name %>Item::Importer.new(self, <%= file_name %>_provider: provider).import
+    <%= class_name %>Item::Importer.new(self, <%= file_name %>_provider: provider, sync: sync).import
   rescue => e
     Rails.logger.error "<%= class_name %>Item #{id} - Failed to import data: #{e.message}"
     raise
   end
 
-  # TODO: Implement account processing logic
-  # This method processes linked accounts after data import.
-  # Customize based on your provider's data structure and processing needs.
+  # Process linked accounts after data import
   def process_accounts
     return [] if <%= file_name %>_accounts.empty?
 
     results = []
-    <%= file_name %>_accounts.joins(:account).merge(Account.visible).each do |<%= file_name %>_account|
+    linked_<%= file_name %>_accounts.includes(account_provider: :account).each do |<%= file_name %>_account|
       begin
         result = <%= class_name %>Account::Processor.new(<%= file_name %>_account).process
         results << { <%= file_name %>_account_id: <%= file_name %>_account.id, success: true, result: result }
@@ -77,8 +84,7 @@ class <%= class_name %>Item < ApplicationRecord
     results
   end
 
-  # TODO: Customize sync scheduling if needed
-  # This method schedules sync jobs for all linked accounts.
+  # Schedule sync jobs for all linked accounts
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
@@ -109,24 +115,30 @@ class <%= class_name %>Item < ApplicationRecord
   end
 
   def has_completed_initial_setup?
-    # Setup is complete if we have any linked accounts
     accounts.any?
   end
 
-  # TODO: Customize sync status summary if needed
-  # Some providers use latest_sync.sync_stats, others use count methods directly.
-  # See SimplefinItem#sync_status_summary or EnableBankingItem#sync_status_summary for examples.
+  # Linked accounts (have AccountProvider association)
+  def linked_<%= file_name %>_accounts
+    <%= file_name %>_accounts.joins(:account_provider)
+  end
+
+  # Unlinked accounts (no AccountProvider association)
+  def unlinked_<%= file_name %>_accounts
+    <%= file_name %>_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+  end
+
   def sync_status_summary
     total_accounts = total_accounts_count
     linked_count = linked_accounts_count
     unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
-      "No accounts found"
+      I18n.t("<%= file_name %>_items.sync_status.no_accounts")
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("<%= file_name %>_items.sync_status.synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t("<%= file_name %>_items.sync_status.synced_with_setup", linked: linked_count, unlinked: unlinked_count)
     end
   end
 
@@ -146,9 +158,6 @@ class <%= class_name %>Item < ApplicationRecord
     institution_name.presence || institution_domain.presence || name
   end
 
-  # TODO: Customize based on how your provider stores institution data
-  # SimpleFin uses org_data, others use institution_metadata.
-  # Adjust the field name and key lookups as needed.
   def connected_institutions
     <%= file_name %>_accounts.includes(:account)
                   .where.not(institution_metadata: nil)
@@ -156,17 +165,13 @@ class <%= class_name %>Item < ApplicationRecord
                   .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
 
-  # TODO: Customize institution summary if your provider has special fields
-  # EnableBanking uses aspsp_name as a fallback, for example.
   def institution_summary
     institutions = connected_institutions
     case institutions.count
     when 0
-      "No institutions connected"
-    when 1
-      institutions.first["name"] || institutions.first["institution_name"] || "1 institution"
+      I18n.t("<%= file_name %>_items.institution_summary.none")
     else
-      "#{institutions.count} institutions"
+      I18n.t("<%= file_name %>_items.institution_summary.count", count: institutions.count)
     end
   end
 
@@ -177,11 +182,9 @@ class <%= class_name %>Item < ApplicationRecord
     true
 <% end -%>
   end
-
-<% parsed_fields.select { |f| f[:default] }.each do |field| -%>
+<% parsed_fields.select { |f| f[:default] }.each do |field| %>
   def effective_<%= field[:name] %>
     <%= field[:name] %>.presence || "<%= field[:default] %>"
   end
-
 <% end -%>
 end

@@ -24,3 +24,8 @@ es:
         configurar ajustes adicionales dentro de la aplicación.
       welcome_title: ¡Bienvenido a Self Hosted %{product_name}!
       password_placeholder: Introduce tu contraseña
+      password_requirements:
+        length: Mínimo 8 caracteres
+        case: Mayúsculas y minúsculas
+        number: Un número (0-9)
+        special: "Un carácter especial (!, @, #, $, %, etc)"

@@ -1,0 +1,53 @@
+<%# locals: (transactions:, projected_recurring:, q:, pagy:) %>
+<div id="transactions"
+  data-controller="bulk-select checkbox-toggle drag-and-drop-import"
+  data-bulk-select-singular-label-value="<%= t(".transaction") %>"
+  data-bulk-select-plural-label-value="<%= t(".transactions") %>"
+  class="flex flex-col bg-container rounded-xl shadow-border-xs px-3 py-4 lg:p-4 relative group">
+
+  <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form", turbo: false } do |f| %>
+    <%= f.hidden_field "import[type]", value: "TransactionImport" %>
+    <%= f.file_field "import[import_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
+  <% end %>
+
+  <%= render "imports/drag_drop_overlay", title: t(".drag_drop_title"), subtitle: t(".drag_drop_subtitle") %>
+
+  <%= render "transactions/searches/search" %>
+
+  <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
+    <%= render "transactions/selection_bar" %>
+  </div>
+
+  <% if @pagy.count > 0 || (@projected_recurring.any? && @q.blank?) %>
+    <div class="grow overflow-y-auto">
+      <% if @transactions.any? %>
+        <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
+          <div class="pl-0.5 col-span-8 flex items-center gap-4">
+            <%= check_box_tag "selection_entry",
+                class: "checkbox checkbox--light hidden lg:block",
+                data: {
+                  action: "bulk-select#togglePageSelection",
+                  checkbox_toggle_target: "selectionEntry"
+                } %>
+            <p>transaction</p>
+          </div>
+
+          <p class="col-span-2 md:block hidden"><%= t("transactions.form.category_label") %></p>
+          <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t("transactions.show.amount") %></p>
+        </div>
+      <% end %>
+
+      <div class="space-y-6">
+        <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
+            <%= render entries %>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <%= render "entries/empty" %>
+  <% end %>
+
+  <div class="pt-4">
+    <%= render "shared/pagination", pagy: @pagy %>
+  </div>
+</div>

@@ -1,7 +1,26 @@
 class User < ApplicationRecord
+  include Encryptable
+
   # Allow nil password for SSO-only users (JIT provisioning).
   # Custom validation ensures password is present for non-SSO registration.
   has_secure_password validations: false
+
+  # Encrypt sensitive fields if ActiveRecord encryption is configured
+  if encryption_ready?
+    # MFA secrets
+    encrypts :otp_secret, deterministic: true
+    # Note: otp_backup_codes is a PostgreSQL array column which doesn't support
+    # AR encryption. To encrypt it, a migration would be needed to change the
+    # column type from array to text/jsonb.
+
+    # PII - emails (deterministic for lookups, downcase for case-insensitive)
+    encrypts :email, deterministic: true, downcase: true
+    encrypts :unconfirmed_email, deterministic: true, downcase: true
+
+    # PII - names (non-deterministic for maximum security)
+    encrypts :first_name
+    encrypts :last_name
+  end
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
@@ -22,6 +41,7 @@ class User < ApplicationRecord
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
   validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
+  validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }, allow_nil: true
 
   # Password is required on create unless the user is being created via SSO JIT.
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
@@ -42,7 +62,7 @@ class User < ApplicationRecord
     User.exists? ? fallback_role : :super_admin
   end
 
-  has_one_attached :profile_image do |attachable|
+  has_one_attached :profile_image, dependent: :purge_later do |attachable|
     attachable.variant :thumbnail, resize_to_fill: [ 300, 300 ], convert: :webp, saver: { quality: 80 }
     attachable.variant :small, resize_to_fill: [ 72, 72 ], convert: :webp, saver: { quality: 80 }, preprocessed: true
   end
@@ -335,7 +355,7 @@ class User < ApplicationRecord
       if (index = otp_backup_codes.index(code))
         remaining_codes = otp_backup_codes.dup
         remaining_codes.delete_at(index)
-        update_column(:otp_backup_codes, remaining_codes)
+        update!(otp_backup_codes: remaining_codes)
         true
       else
         false

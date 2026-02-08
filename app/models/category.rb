@@ -35,9 +35,10 @@ class Category < ApplicationRecord
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
 
-  # Synthetic category name keys for i18n
+  # Category name keys for i18n
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
+  INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
 
   class Group
     attr_reader :category, :subcategories
@@ -108,9 +109,22 @@ class Category < ApplicationRecord
       I18n.t(UNCATEGORIZED_NAME_KEY)
     end
 
+    # Returns all possible uncategorized names across all supported locales
+    # Used to detect uncategorized filter regardless of URL parameter language
+    def all_uncategorized_names
+      LanguagesHelper::SUPPORTED_LOCALES.map do |locale|
+        I18n.t(UNCATEGORIZED_NAME_KEY, locale: locale)
+      end.uniq
+    end
+
     # Helper to get the localized name for other investments
     def other_investments_name
       I18n.t(OTHER_INVESTMENTS_NAME_KEY)
+    end
+
+    # Helper to get the localized name for investment contributions
+    def investment_contributions_name
+      I18n.t(INVESTMENT_CONTRIBUTIONS_NAME_KEY)
     end
 
     private
@@ -137,7 +151,7 @@ class Category < ApplicationRecord
           [ "Services", "#7c3aed", "briefcase", "expense" ],
           [ "Fees", "#6b7280", "receipt", "expense" ],
           [ "Savings & Investments", "#059669", "piggy-bank", "expense" ],
-          [ "Investment Contributions", "#0d9488", "trending-up", "expense" ]
+          [ investment_contributions_name, "#0d9488", "trending-up", "expense" ]
         ]
       end
   end

@@ -1,0 +1,4 @@
+---
+pt-BR:
+  provider_warnings:
+    limited_investment_data: "Os dados de investimento deste provedor são limitados. Rótulos de atividade (Compra, Venda, Dividendo) não estão disponíveis, o que pode afetar a precisão do orçamento. Considere criar regras para excluir ou categorizar transações de investimento."

@@ -1,0 +1,114 @@
+<%# locals: (connections:, orphaned_users: [], snaptrade_item:, error: nil) %>
+
+<% if error.present? %>
+  <div class="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+    <%= t("providers.snaptrade.connections_error", message: error) %>
+  </div>
+<% elsif connections.empty? && orphaned_users.empty? %>
+  <p class="text-sm text-secondary py-2">
+    <%= t("providers.snaptrade.no_connections") %>
+  </p>
+<% else %>
+  <div class="space-y-3">
+    <%# Current user's connections %>
+    <% connections.each do |connection| %>
+      <div id="connection_<%= connection[:authorization_id] %>"
+           class="border rounded-lg p-3 <%= connection[:orphaned_connection] ? "border-warning/50 bg-warning/5" : "border-secondary" %>">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium <%= connection[:orphaned_connection] ? "text-warning" : "text-primary" %>">
+              <%= connection[:brokerage_name] %>
+            </p>
+            <p class="text-xs text-secondary">
+              <% if connection[:orphaned_connection] %>
+                <%= t("providers.snaptrade.orphaned_connection") %>
+              <% else %>
+                <%= t("providers.snaptrade.accounts_count", count: connection[:accounts].size) %>
+              <% end %>
+            </p>
+          </div>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: t("providers.snaptrade.delete_connection"),
+              icon: "trash-2",
+              href: delete_connection_snaptrade_item_path(snaptrade_item, authorization_id: connection[:authorization_id]),
+              method: :delete,
+              confirm: CustomConfirm.new(
+                title: t("providers.snaptrade.delete_connection_title"),
+                body: t("providers.snaptrade.delete_connection_body", brokerage: connection[:brokerage_name]),
+                btn_text: t("providers.snaptrade.delete_connection_confirm"),
+                destructive: true,
+                high_severity: true
+              )
+            ) %>
+          <% end %>
+        </div>
+
+        <% unless connection[:orphaned_connection] || connection[:accounts].empty? %>
+          <ul class="mt-2 text-xs text-secondary space-y-1">
+            <% connection[:accounts].each do |account| %>
+              <li class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full <%= account[:linked] ? "bg-success" : "bg-warning" %>"></span>
+                <%= account[:name] %>
+                <% unless account[:linked] %>
+                  <%= link_to "(#{t('providers.snaptrade.needs_linking')})",
+                        setup_accounts_snaptrade_item_path(snaptrade_item),
+                        class: "text-warning hover:text-primary underline",
+                        data: { turbo_frame: :modal } %>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Orphaned users (from previous registrations) %>
+    <% if orphaned_users.any? %>
+      <div class="border-t border-secondary pt-3 mt-3">
+        <p class="text-xs text-warning font-medium mb-2">
+          <%= icon "alert-triangle", size: "xs", class: "inline-block mr-1" %>
+          <%= t("providers.snaptrade.orphaned_users_title", count: orphaned_users.size) %>
+        </p>
+        <p class="text-xs text-secondary mb-3">
+          <%= t("providers.snaptrade.orphaned_users_description") %>
+        </p>
+
+        <% orphaned_users.each do |orphan| %>
+          <div id="orphaned_user_<%= orphan[:user_id].parameterize %>"
+               class="border rounded-lg p-3 border-warning/50 bg-warning/5 mb-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-warning">
+                  <%= t("providers.snaptrade.orphaned_user") %>
+                </p>
+                <p class="text-xs text-secondary font-mono truncate" title="<%= orphan[:user_id] %>">
+                  <%= orphan[:display_name] %>
+                </p>
+              </div>
+
+              <%= render DS::Menu.new do |menu| %>
+                <% menu.with_item(
+                  variant: "button",
+                  text: t("providers.snaptrade.delete_orphaned_user"),
+                  icon: "trash-2",
+                  href: delete_orphaned_user_snaptrade_item_path(snaptrade_item, user_id: orphan[:user_id]),
+                  method: :delete,
+                  confirm: CustomConfirm.new(
+                    title: t("providers.snaptrade.delete_orphaned_user_title"),
+                    body: t("providers.snaptrade.delete_orphaned_user_body"),
+                    btn_text: t("providers.snaptrade.delete_orphaned_user_confirm"),
+                    destructive: true,
+                    high_severity: true
+                  )
+                ) %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

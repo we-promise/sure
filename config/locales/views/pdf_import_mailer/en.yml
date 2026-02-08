@@ -1,0 +1,17 @@
+---
+en:
+  pdf_import_mailer:
+    next_steps:
+      greeting: "Hi %{name},"
+      intro: "We've finished analyzing the PDF document you uploaded to %{product}."
+      document_type_label: Document Type
+      summary_label: AI Summary
+      transactions_note: This document appears to contain transactions. You can extract and review them now.
+      document_stored_note: This document has been stored for your reference. It can be used to provide context in future AI conversations.
+      next_steps_label: What's Next?
+      next_steps_intro: "You have several options:"
+      option_extract_transactions: Extract transactions from this statement
+      option_keep_reference: Keep this document for reference in future AI conversations
+      option_delete: Delete this import if you no longer need it
+      view_import_button: View Import Details
+      footer_note: This is an automated message. Please do not reply directly to this email.

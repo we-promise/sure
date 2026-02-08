@@ -12,17 +12,18 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create invitation for member" do
-    with_managed_hosting do
-      assert_difference("Invitation.count") do
-        assert_enqueued_with(job: ActionMailer::MailDeliveryJob) do
-          post invitations_url, params: {
-            invitation: {
-              email: "new@example.com",
-              role: "member"
-            }
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_difference("Invitation.count") do
+      assert_enqueued_with(job: ActionMailer::MailDeliveryJob) do
+        post invitations_url, params: {
+          invitation: {
+            email: "new@example.com",
+            role: "member"
           }
-        end
+        }
       end
+    end
 
       invitation = Invitation.order(created_at: :desc).first
       assert_equal "member", invitation.role
@@ -31,6 +32,30 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
       assert_redirected_to settings_profile_path
       assert_equal I18n.t("invitations.create.success"), flash[:notice]
     end
+  end
+
+  test "should add existing user to household when inviting their email" do
+    existing_user = users(:empty)
+    assert existing_user.family_id != @admin.family_id
+
+    assert_difference("Invitation.count") do
+      assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
+        post invitations_url, params: {
+          invitation: {
+            email: existing_user.email,
+            role: "member"
+          }
+        }
+      end
+    end
+
+    invitation = Invitation.order(created_at: :desc).first
+    assert invitation.accepted_at.present?, "Invitation should be accepted"
+    existing_user.reload
+    assert_equal @admin.family_id, existing_user.family_id
+    assert_equal "member", existing_user.role
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
   end
 
   test "non-admin cannot create invitations" do
@@ -79,9 +104,11 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.failure"), flash[:alert]
   end
 
-  test "should accept invitation and redirect to registration" do
+  test "should accept invitation and show choice between sign in and create account" do
     get accept_invitation_url(@invitation.token)
-    assert_redirected_to new_registration_path(invitation: @invitation.token)
+    assert_response :success
+    assert_select "a[href=?]", new_registration_path(invitation: @invitation.token), text: /Create new account/i
+    assert_select "a[href=?]", new_session_path(invitation: @invitation.token), text: /already have an account/i
   end
 
   test "should not accept invalid invitation token" do

@@ -126,7 +126,8 @@ class Family::AutoMerchantDetector
 
     def build_logo_url(business_url)
       return nil unless Setting.brand_fetch_client_id.present? && business_url.present?
-      "#{default_logo_provider_url}/#{business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+      size = Setting.brand_fetch_logo_size
+      "#{default_logo_provider_url}/#{business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
     end
 
     def enhance_provider_merchant(merchant, auto_detection)
@@ -138,7 +139,8 @@ class Family::AutoMerchantDetector
 
         # Add logo if BrandFetch is configured
         if Setting.brand_fetch_client_id.present?
-          updates[:logo_url] = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+          size = Setting.brand_fetch_logo_size
+          updates[:logo_url] = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
         end
       end
 
