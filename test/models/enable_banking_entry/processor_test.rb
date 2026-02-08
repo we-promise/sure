@@ -65,6 +65,19 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Amzn Mktp Fr*Mkudamazonfr", name
   end
 
+  test "skips technical remittance line and keeps issued by merchant line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "CARD-3403900155",
+      remittance_information: [
+        "CARD-3403900155",
+        "Card transaction of EUR issued by Boulangerie Bric CROIX"
+      ]
+    )
+
+    assert_equal "Boulangerie Bric CROIX", name
+  end
+
   test "keeps specific description when remittance is less informative" do
     name = build_name(
       credit_debit_indicator: "DBIT",

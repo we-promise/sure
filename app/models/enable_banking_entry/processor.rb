@@ -101,12 +101,14 @@ class EnableBankingEntry::Processor
     end
 
     def remittance_name_candidate
-      remittance_lines.each do |line|
-        cleaned = cleanup_remittance_line(line)
-        return cleaned if cleaned.present?
+      candidates = remittance_lines.map { |line| cleanup_remittance_line(line) }.compact
+      return nil if candidates.empty?
+
+      candidates.each do |cleaned|
+        return cleaned unless reference_like?(cleaned) || technicality_score(cleaned) >= 7
       end
 
-      cleanup_remittance_line(remittance_lines.first)
+      candidates.first
     end
 
     def cleanup_remittance_line(line)
