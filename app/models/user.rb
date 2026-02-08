@@ -53,7 +53,6 @@ class User < ApplicationRecord
   enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
 
-  before_validation :normalize_role_value
   before_validation :apply_ui_layout_defaults
   before_validation :apply_role_based_ui_defaults
 
@@ -61,20 +60,7 @@ class User < ApplicationRecord
   # The very first user of an instance becomes super_admin; subsequent users
   # get the specified fallback role (typically :admin for family creators).
   def self.role_for_new_family_creator(fallback_role: :admin)
-    normalized_fallback_role = normalize_role(fallback_role)
-    User.exists? ? normalized_fallback_role : :super_admin
-  end
-
-  # Supports legacy role names while we migrate persisted data/configuration.
-  def self.normalize_role(role)
-    case role.to_s
-    when "guest", "intro"
-      :guest
-    when "member"
-      :member
-    else
-      role
-    end
+    User.exists? ? fallback_role : :super_admin
   end
 
   has_one_attached :profile_image, dependent: :purge_later do |attachable|
@@ -330,10 +316,6 @@ class User < ApplicationRecord
   end
 
   private
-    def normalize_role_value
-      self.role = self.class.normalize_role(role) if role.present?
-    end
-
     def apply_ui_layout_defaults
       self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
     end
