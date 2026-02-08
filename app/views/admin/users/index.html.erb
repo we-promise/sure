@@ -26,8 +26,8 @@
               <%= form_with model: [:admin, user], method: :patch, class: "flex items-center gap-2" do |form| %>
                 <%= form.select :role,
                     options_for_select([
-                      [t(".roles.guest", default: "Guest"), "guest"],
-                      [t(".roles.member"), "member"],
+                      [t(".roles.guest"), "guest"],
+                      [t(".roles.member", default: "Member"), "member"],
                       [t(".roles.admin"), "admin"],
                       [t(".roles.super_admin"), "super_admin"]
                     ], user.role),
@@ -53,15 +53,15 @@
     <div class="space-y-3 text-sm">
       <div class="flex items-start gap-3">
         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.guest", default: "Guest") %>
+          <%= t(".roles.guest" %>
         </span>
-        <p class="text-secondary"><%= t(".role_descriptions.guest", default: "Assistant-first experience with access scoped for intro workflows.") %></p>
+        <p class="text-secondary"><%= t(".role_descriptions.guest") %></p>
       </div>
       <div class="flex items-start gap-3">
         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.member") %>
+          <%= t(".roles.member", default: "Member") %>
         </span>
-        <p class="text-secondary"><%= t(".role_descriptions.member") %></p>
+        <p class="text-secondary"><%= t(".role_descriptions.member", default: "Basic user access. Can manage their own accounts, transactions, and settings.") %></p>
       </div>
       <div class="flex items-start gap-3">
         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
