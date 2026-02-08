@@ -14,6 +14,7 @@ class AccountsController < ApplicationController
     @mercury_items = family.mercury_items.ordered.includes(:syncs, :mercury_accounts)
     @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
     @snaptrade_items = family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts)
+    @indexa_capital_items = family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts)
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -268,6 +269,13 @@ class AccountsController < ApplicationController
           .where(account_providers: { id: nil })
           .count
         @coinbase_unlinked_count_map[item.id] = count
+      end
+
+      # IndexaCapital sync stats
+      @indexa_capital_sync_stats_map = {}
+      @indexa_capital_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end
