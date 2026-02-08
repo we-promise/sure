@@ -227,9 +227,18 @@ class Api::V1::TradesController < Api::V1::BaseController
         return nil
       end
 
-      qty = trade_params[:qty].to_d
-      price = trade_params[:price].to_d
-      return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty <= 0 || price <= 0
+      qty_raw = trade_params[:qty].to_s.strip
+      price_raw = trade_params[:price].to_s.strip
+      return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty_raw.blank? || price_raw.blank?
+
+      qty = qty_raw.to_d
+      price = price_raw.to_d
+      if qty <= 0 || price <= 0
+        # Non-numeric input (e.g. "abc") becomes 0 with to_d; give a clearer message than "must be present"
+        non_numeric = (qty.zero? && qty_raw !~ /\A0(\.0*)?\z/) || (price.zero? && price_raw !~ /\A0(\.0*)?\z/)
+        return render_validation_error("Quantity and price must be valid numbers", [ "qty and price must be valid positive numbers" ]) if non_numeric
+        return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ])
+      end
 
       {
         account: account,
