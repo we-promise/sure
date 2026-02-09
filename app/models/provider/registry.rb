@@ -18,6 +18,20 @@ class Provider::Registry
       raise Error.new("Provider '#{name}' not found in registry")
     end
 
+    def openai_for_family(family)
+      return nil unless family&.custom_openai_endpoint?
+      return nil unless family.preferred_ai_model.present?
+
+      access_token = ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
+      return nil unless access_token.present?
+
+      Provider::Openai.new(
+        access_token,
+        uri_base: family.openai_uri_base,
+        model: family.preferred_ai_model
+      )
+    end
+
     def plaid_provider_for_region(region)
       region.to_sym == :us ? plaid_us : plaid_eu
     end

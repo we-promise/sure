@@ -26,6 +26,6 @@ class Settings::AiPromptsController < ApplicationController
     end
 
     def ai_prompt_params
-      params.require(:family).permit(:custom_system_prompt, :custom_intro_prompt, :preferred_ai_model)
+      params.require(:family).permit(:custom_system_prompt, :custom_intro_prompt, :preferred_ai_model, :openai_uri_base)
     end
 end

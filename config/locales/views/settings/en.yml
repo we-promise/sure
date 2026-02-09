@@ -14,9 +14,12 @@ en:
         prompt_instructions: Prompt Instructions
         edit_section_title: Customize prompts and model
         edit_section_subtitle: Override the default AI behavior for this household. Leave blank to use built-in defaults.
+        openai_uri_base_label: OpenAI endpoint (optional)
+        openai_uri_base_placeholder: e.g. https://api.openai.com/v1
+        openai_uri_base_hint: When set, chat uses this endpoint for this household. Preferred model is required.
         preferred_ai_model_label: Preferred AI model
         preferred_ai_model_placeholder: e.g. gpt-4.1
-        preferred_ai_model_hint: Optional. When set, new chats use this model by default.
+        preferred_ai_model_hint: Optional. When set, new chats use this model by default. Required if endpoint is set.
         custom_system_prompt_label: Custom main system prompt
         custom_system_prompt_placeholder: Leave blank to use the default assistant instructions.
         custom_intro_prompt_label: Custom intro prompt

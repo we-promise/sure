@@ -24,6 +24,12 @@
     <h2 class="text-sm font-medium text-primary mb-1"><%= t(".edit_section_title") %></h2>
     <p class="text-xs text-secondary mb-4"><%= t(".edit_section_subtitle") %></p>
     <div class="space-y-4">
+      <%= form.text_field :openai_uri_base,
+                          label: t(".openai_uri_base_label"),
+                          placeholder: t(".openai_uri_base_placeholder"),
+                          value: @family.openai_uri_base,
+                          class: "font-mono text-sm" %>
+      <p class="text-xs text-secondary -mt-2"><%= t(".openai_uri_base_hint") %></p>
       <%= form.text_field :preferred_ai_model,
                           label: t(".preferred_ai_model_label"),
                           placeholder: t(".preferred_ai_model_placeholder"),

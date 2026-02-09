@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_09_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_09_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -501,6 +501,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_09_120000) do
     t.text "custom_system_prompt"
     t.text "custom_intro_prompt"
     t.string "preferred_ai_model"
+    t.string "openai_uri_base"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
