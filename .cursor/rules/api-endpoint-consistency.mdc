@@ -15,7 +15,7 @@ When adding or modifying API v1 endpoints, ensure the following so behavior, doc
 - **Pattern**:
   - Use `ApiKey.create!` (read and read_write scopes) and `api_headers(api_key)` → `{ "X-Api-Key" => api_key.display_key }`. Do not use OAuth/Bearer in these tests.
   - Cover: index/show (and create/update/destroy for write endpoints), read-only key blocking writes (403), invalid params (422), invalid date (422), not found (404), missing auth (401).
-  - Follow existing API v1 test style: see [valuations_controller_test.rb](test/controllers/api/v1/valuations_controller_test.rb) and [transactions_controller_test.rb](test/controllers/api/v1/transactions_controller_test.rb).
+  - Follow existing API v1 test style: see [valuations_controller_test.rb](mdc:test/controllers/api/v1/valuations_controller_test.rb) and [transactions_controller_test.rb](mdc:test/controllers/api/v1/transactions_controller_test.rb).
 
 ## 2. rswag is docs-only
 
@@ -43,4 +43,4 @@ When adding or modifying API v1 endpoints, ensure the following so behavior, doc
   let(:'X-Api-Key') { api_key.plain_key }
   ```
 
-- Do not use Doorkeeper/OAuth in these specs (no `Doorkeeper::Application`, `Doorkeeper::AccessToken`, or `Authorization: "Bearer ..."`). Use API key only.
+- Do not use Doorkeeper/OAuth in these specs (no `Doorkeeper::Application`, `Doorkeeper::AccessToken`, or `Authorization: "Bearer ..."`). Use API key only. Note: [valuations_spec.rb](mdc:spec/requests/api/v1/valuations_spec.rb) currently uses OAuth; update it to the API key pattern above when editing that file.
