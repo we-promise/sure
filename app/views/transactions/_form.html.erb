@@ -40,10 +40,9 @@
                     Current.family.tags.alphabetically.pluck(:name, :id),
                     {
                       include_blank: t(".none"),
-                      multiple: true,
-                      label:    t(".tags_label")
+                      label: t(".tags_label")
                     },
-                    { "data-controller": "multi-select" } %>
+                    { multiple: true, "data-controller": "multi-select" } %>
     <% end %>
     <%= f.text_area :notes,
                     label: t(".note_label"),

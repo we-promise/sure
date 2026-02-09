@@ -18,8 +18,16 @@
                     label: t(".category"),
                     placeholder: t(".category_prompt") %>
             </div>
-            <%= form.collection_select :merchant_id, Current.family.available_merchants.alphabetically, :id, :name, { prompt: t(".merchant_prompt"), label: t(".merchant"), class: "text-subdued" } %>
-            <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: t(".none"), multiple: true, label: t(".tags"), include_hidden: false } %>
+            <%= form.collection_select :merchant_id,
+                  Current.family.available_merchants.alphabetically,
+                  :id,
+                  :name,
+                  { prompt: t(".merchant_prompt"), label: t(".merchant") },
+                  { class: "text-subdued" } %>
+            <%= form.select :tag_ids,
+                  Current.family.tags.alphabetically.pluck(:name, :id),
+                  { include_blank: t(".none"), label: t(".tags"), include_hidden: false },
+                  { multiple: true } %>
             <%= form.text_area :notes, label: t(".notes"), placeholder: t(".notes_placeholder"), rows: 5 %>
           </div>
         <% end %>
