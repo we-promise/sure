@@ -36,6 +36,7 @@ en:
           subtitle: AI identifies and enriches transaction data with merchant information
       update:
         success: AI prompts and model preferences saved.
+      not_authorized: You are not authorized to change AI prompts for this household.
     payments:
       show:
         page_title: Payments

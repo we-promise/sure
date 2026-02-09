@@ -1,5 +1,6 @@
 class Settings::AiPromptsController < ApplicationController
   layout "settings"
+  before_action :ensure_admin, only: [ :show, :update ]
   before_action :set_family
 
   def show
@@ -20,6 +21,10 @@ class Settings::AiPromptsController < ApplicationController
   end
 
   private
+
+    def ensure_admin
+      redirect_to root_path, alert: t("settings.ai_prompts.not_authorized") unless Current.user&.admin?
+    end
 
     def set_family
       @family = Current.family

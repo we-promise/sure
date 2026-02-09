@@ -10,6 +10,20 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     @family = @user.family
   end
 
+  test "show requires admin" do
+    sign_in users(:family_member)
+    get settings_ai_prompts_url
+    assert_redirected_to root_path
+    assert_match(/not authorized/i, flash[:alert].to_s)
+  end
+
+  test "update requires admin" do
+    sign_in users(:family_member)
+    patch settings_ai_prompts_url, params: { family: { preferred_ai_model: "gpt-4" } }
+    assert_redirected_to root_path
+    assert_match(/not authorized/i, flash[:alert].to_s)
+  end
+
   test "show renders and includes assistant prompt content" do
     get settings_ai_prompts_url
     assert_response :success
