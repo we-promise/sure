@@ -48,7 +48,7 @@ export default class extends Controller {
         (cb) => cb.dataset.categoryId === parentId
       );
 
-      if (parentCheckbox && parentCheckbox.checked) {
+      if (parentCheckbox?.checked) {
         children.forEach((childCheckbox) => {
           childCheckbox.checked = true;
         });
