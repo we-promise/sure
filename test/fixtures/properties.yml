@@ -3,7 +3,3 @@ one:
   area_value: 1000
   area_unit: "sqft"
 
-townhouse:
-  id: <%= SecureRandom.uuid %>
-  created_at: <%= Time.current %>
-  updated_at: <%= Time.current %>
