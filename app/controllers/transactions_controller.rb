@@ -80,6 +80,8 @@ class TransactionsController < ApplicationController
         if defined?(Sentry)
           Sentry.capture_exception(e, extra: { entry_id: @entry.id, family_id: Current.family.id })
         end
+        # Reload entry even if rules failed to ensure we have fresh state before locking
+        @entry.reload
         # Continue execution - don't fail the transaction creation
       end
 
