@@ -68,12 +68,24 @@ class TransactionsController < ApplicationController
 
     if @entry.save
       @entry.sync_account_later
+
+      # Apply rules to the newly created transaction (before locking attributes)
+      begin
+        ApplyRulesToTransactionService.new(@entry, execution_type: "manual").call
+        @entry.reload
+      rescue StandardError => e
+        Rails.logger.error("ApplyRulesToTransactionService failed in TransactionsController#create: #{e.class}: #{e.message}")
+        Rails.logger.error(e.backtrace.join("\n"))
+        # Report to error tracker if available (e.g., Sentry)
+        if defined?(Sentry)
+          Sentry.capture_exception(e, extra: { entry_id: @entry.id, family_id: Current.family.id })
+        end
+        # Continue execution - don't fail the transaction creation
+      end
+
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-
-      # Apply rules to the newly created transaction
-      ApplyRulesToTransactionService.new(@entry, execution_type: "manual").call
 
       flash[:notice] = "Transaction created"
 
@@ -98,16 +110,28 @@ class TransactionsController < ApplicationController
         }
       end
 
+      @entry.sync_account_later
+
+      # Apply rules to the updated transaction (before locking attributes)
+      begin
+        ApplyRulesToTransactionService.new(@entry, execution_type: "manual").call
+        # Reload to ensure fresh state for turbo stream rendering (rules may have modified the transaction)
+        @entry.reload
+      rescue StandardError => e
+        Rails.logger.error("ApplyRulesToTransactionService failed in TransactionsController#update: #{e.class}: #{e.message}")
+        Rails.logger.error(e.backtrace.join("\n"))
+        # Report to error tracker if available (e.g., Sentry)
+        if defined?(Sentry)
+          Sentry.capture_exception(e, extra: { entry_id: @entry.id, family_id: Current.family.id })
+        end
+        # Reload entry even if rules failed to ensure we have fresh state
+        @entry.reload
+        # Continue execution - don't fail the transaction update
+      end
+
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later
-
-      # Apply rules to the updated transaction
-      ApplyRulesToTransactionService.new(@entry, execution_type: "manual").call
-
-      # Reload to ensure fresh state for turbo stream rendering (rules may have modified the transaction)
-      @entry.reload
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }

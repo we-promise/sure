@@ -12,7 +12,23 @@ class Transactions::BulkUpdatesController < ApplicationController
     # Apply rules to all updated transactions
     if updated > 0
       updated_entries = Current.family.entries.where(id: entry_ids).includes(:entryable)
-      ApplyRulesToTransactionService.new(updated_entries.to_a, execution_type: "manual").call
+      begin
+        ApplyRulesToTransactionService.new(updated_entries.to_a, execution_type: "manual").call
+      rescue StandardError => e
+        Rails.logger.error("ApplyRulesToTransactionService failed in BulkUpdatesController#create: #{e.class}: #{e.message}")
+        Rails.logger.error(e.backtrace.join("\n"))
+        Rails.logger.error("Context: updated=#{updated}, entry_ids=#{entry_ids.inspect}, entry_count=#{updated_entries.count}")
+        # Report to error tracker if available (e.g., Sentry)
+        if defined?(Sentry)
+          Sentry.capture_exception(e, extra: { 
+            updated: updated, 
+            entry_ids: entry_ids, 
+            entry_count: updated_entries.count,
+            family_id: Current.family.id 
+          })
+        end
+        # Continue execution - don't fail the bulk update response
+      end
     end
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
