@@ -50,7 +50,11 @@ class User < ApplicationRecord
 
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
-  enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+  enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+  enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
+
+  before_validation :apply_ui_layout_defaults
+  before_validation :apply_role_based_ui_defaults
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
@@ -137,6 +141,11 @@ class User < ApplicationRecord
 
   def ai_enabled?
     ai_enabled && ai_available?
+  end
+
+  def self.default_ui_layout
+    layout = Rails.application.config.x.ui&.default_layout || "dashboard"
+    layout.in?(%w[intro dashboard]) ? layout : "dashboard"
   end
 
   # SSO-only users have OIDC identities but no local password.
@@ -307,6 +316,39 @@ class User < ApplicationRecord
   end
 
   private
+    def apply_ui_layout_defaults
+      self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
+    end
+
+    def apply_role_based_ui_defaults
+      if ui_layout_intro?
+        if guest?
+          self.show_sidebar = false
+          self.show_ai_sidebar = false
+          self.ai_enabled = true
+        else
+          self.ui_layout = "dashboard"
+        end
+      elsif guest?
+        self.ui_layout = "intro"
+        self.show_sidebar = false
+        self.show_ai_sidebar = false
+        self.ai_enabled = true
+      end
+
+      if leaving_guest_role?
+        self.show_sidebar = true unless show_sidebar
+        self.show_ai_sidebar = true unless show_ai_sidebar
+      end
+    end
+
+    def leaving_guest_role?
+      return false unless will_save_change_to_role?
+
+      previous_role, new_role = role_change_to_be_saved
+      previous_role == "guest" && new_role != "guest"
+    end
+
     def skip_password_validation?
       skip_password_validation == true
     end

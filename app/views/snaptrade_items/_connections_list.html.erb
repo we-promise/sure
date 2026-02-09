@@ -53,7 +53,10 @@
                 <span class="w-1.5 h-1.5 rounded-full <%= account[:linked] ? "bg-success" : "bg-warning" %>"></span>
                 <%= account[:name] %>
                 <% unless account[:linked] %>
-                  <span class="text-warning">(<%= t("providers.snaptrade.needs_linking") %>)</span>
+                  <%= link_to "(#{t('providers.snaptrade.needs_linking')})",
+                        setup_accounts_snaptrade_item_path(snaptrade_item),
+                        class: "text-warning hover:text-primary underline",
+                        data: { turbo_frame: :modal } %>
                 <% end %>
               </li>
             <% end %>

@@ -27,14 +27,22 @@ unless Rails.env.test?
     auth_source = ENV.fetch("AUTH_PROVIDERS_SOURCE") do
       Rails.configuration.app_mode.self_hosted? ? "db" : "yaml"
     end.downcase
+    default_ui_layout = ENV.fetch("DEFAULT_UI_LAYOUT", "").downcase
 
     # Ensure feature exists before enabling/disabling
     Flipper.add(:db_sso_providers) unless Flipper.exist?(:db_sso_providers)
+    if default_ui_layout.in?(%w[intro])
+      Flipper.add(:intro_ui, tags: [ :intro_ui ]) unless Flipper.exist?(:intro_ui)
+    end
 
     if auth_source == "db"
       Flipper.enable(:db_sso_providers)
     else
       Flipper.disable(:db_sso_providers)
+    end
+
+    if default_ui_layout.in?(%w[intro])
+      default_ui_layout == "intro" ? Flipper.enable(:intro_ui) : Flipper.disable(:intro_ui)
     end
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
     # Database not ready yet (e.g., during initial setup or migrations)

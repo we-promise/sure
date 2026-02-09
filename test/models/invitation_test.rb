@@ -61,4 +61,27 @@ class InvitationTest < ActiveSupport::TestCase
 
     assert_not result
   end
+
+  test "accept_for applies guest role defaults" do
+    user = users(:family_member)
+    user.update!(
+      family_id: @family.id,
+      role: "member",
+      ui_layout: "dashboard",
+      show_sidebar: true,
+      show_ai_sidebar: true,
+      ai_enabled: false
+    )
+    invitation = @family.invitations.create!(email: user.email, role: "guest", inviter: @inviter)
+
+    result = invitation.accept_for(user)
+
+    assert result
+    user.reload
+    assert_equal "guest", user.role
+    assert user.ui_layout_intro?
+    assert_not user.show_sidebar?
+    assert_not user.show_ai_sidebar?
+    assert user.ai_enabled?
+  end
 end

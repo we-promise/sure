@@ -11,7 +11,7 @@ class Invitation < ApplicationRecord
   end
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :role, presence: true, inclusion: { in: %w[admin member] }
+  validates :role, presence: true, inclusion: { in: %w[admin member guest] }
   validates :token, presence: true, uniqueness: true
   validates_uniqueness_of :email, scope: :family_id, message: "has already been invited to this family"
   validate :inviter_is_admin
@@ -32,7 +32,7 @@ class Invitation < ApplicationRecord
     return false unless emails_match?(user)
 
     transaction do
-      user.update!(family_id: family_id, role: role)
+      user.update!(family_id: family_id, role: role.to_s)
       update!(accepted_at: Time.current)
     end
     true

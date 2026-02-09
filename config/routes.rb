@@ -2,6 +2,21 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
   resources :mercury_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
@@ -365,6 +380,8 @@ Rails.application.routes.draw do
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :trades, only: [ :index, :show, :create, :update, :destroy ]
+      resources :holdings, only: [ :index, :show ]
       resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
@@ -465,6 +482,7 @@ Rails.application.routes.draw do
   terms_url = ENV["LEGAL_TERMS_URL"].presence
   get "privacy", to: privacy_url ? redirect(privacy_url) : "pages#privacy"
   get "terms", to: terms_url ? redirect(terms_url) : "pages#terms"
+  get "intro", to: "pages#intro"
 
   # Admin namespace for super admin functionality
   namespace :admin do
