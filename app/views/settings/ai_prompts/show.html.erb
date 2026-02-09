@@ -13,6 +13,45 @@
   </div>
 <% end %>
 
+<% effective_model = Chat.default_model(@family) %>
+
+<%= styled_form_with model: @family,
+                     url: settings_ai_prompts_path,
+                     method: :patch,
+                     scope: :family,
+                     class: "mb-6 space-y-4" do |form| %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h2 class="text-sm font-medium text-primary mb-1"><%= t(".edit_section_title") %></h2>
+    <p class="text-xs text-secondary mb-4"><%= t(".edit_section_subtitle") %></p>
+    <div class="space-y-4">
+      <%= form.text_field :preferred_ai_model,
+                          label: t(".preferred_ai_model_label"),
+                          placeholder: t(".preferred_ai_model_placeholder"),
+                          value: @family.preferred_ai_model,
+                          class: "font-mono text-sm" %>
+      <p class="text-xs text-secondary -mt-2"><%= t(".preferred_ai_model_hint") %></p>
+      <%= form.text_area :custom_system_prompt,
+                         label: t(".custom_system_prompt_label"),
+                         placeholder: t(".custom_system_prompt_placeholder"),
+                         value: @family.custom_system_prompt,
+                         rows: 8,
+                         class: "font-mono text-xs" %>
+      <%= form.text_area :custom_intro_prompt,
+                         label: t(".custom_intro_prompt_label"),
+                         placeholder: t(".custom_intro_prompt_placeholder"),
+                         value: @family.custom_intro_prompt,
+                         rows: 6,
+                         class: "font-mono text-xs" %>
+      <%= form.submit t(".save"), class: "cursor-pointer" %>
+    </div>
+  </div>
+  <% if @family.errors.any? %>
+    <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+      <%= @family.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+<% end %>
+
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <div class="rounded-xl bg-container-inset space-y-1 p-1">
     <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary">
@@ -39,7 +78,7 @@
                 <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
+              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= effective_model %>]</pre>
               <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:instructions] %></pre>
               </div>
@@ -67,7 +106,7 @@
                 <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
+              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= effective_model %>]</pre>
               <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_categorizer]&.instructions || Provider::Openai::AutoCategorizer.new(nil).instructions %></pre>
               </div>
@@ -95,7 +134,7 @@
                 <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
+              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= effective_model %>]</pre>
               <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_merchant]&.instructions || Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions %></pre>
               </div>

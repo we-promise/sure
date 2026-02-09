@@ -39,9 +39,15 @@ class Family < ApplicationRecord
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
 
+  CUSTOM_PROMPT_MAX_LENGTH = 32_000
+  PREFERRED_AI_MODEL_MAX_LENGTH = 128
+
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
+  validates :custom_system_prompt, length: { maximum: CUSTOM_PROMPT_MAX_LENGTH }, allow_blank: true
+  validates :custom_intro_prompt, length: { maximum: CUSTOM_PROMPT_MAX_LENGTH }, allow_blank: true
+  validates :preferred_ai_model, length: { maximum: PREFERRED_AI_MODEL_MAX_LENGTH }, allow_blank: true
 
   def uses_custom_month_start?
     month_start_day != 1

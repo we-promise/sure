@@ -12,6 +12,16 @@ en:
         openai_label: OpenAI
         disable_ai: Disable AI Assistant
         prompt_instructions: Prompt Instructions
+        edit_section_title: Customize prompts and model
+        edit_section_subtitle: Override the default AI behavior for this household. Leave blank to use built-in defaults.
+        preferred_ai_model_label: Preferred AI model
+        preferred_ai_model_placeholder: e.g. gpt-4.1
+        preferred_ai_model_hint: Optional. When set, new chats use this model by default.
+        custom_system_prompt_label: Custom main system prompt
+        custom_system_prompt_placeholder: Leave blank to use the default assistant instructions.
+        custom_intro_prompt_label: Custom intro prompt
+        custom_intro_prompt_placeholder: Leave blank to use the default welcome flow instructions.
+        save: Save changes
         main_system_prompt:
           title: Main System Prompt
           subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
@@ -21,6 +31,8 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+      update:
+        success: AI prompts and model preferences saved.
     payments:
       show:
         page_title: Payments
