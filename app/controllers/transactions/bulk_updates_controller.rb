@@ -36,10 +36,23 @@ class Transactions::BulkUpdatesController < ApplicationController
       end
       
       # Now lock attributes and mark as user modified after rules have been applied
+      # Explicitly lock only the attributes that were part of the bulk update params
+      # (lock_saved_attributes! is a no-op on freshly-loaded records)
+      params_to_lock = bulk_update_params.except(:entry_ids)
       entries_scope.find_each do |entry|
-        entry.lock_saved_attributes!
+        # Lock entry-level attributes
+        entry.lock_attr!(:date) if params_to_lock.key?(:date)
+        entry.lock_attr!(:notes) if params_to_lock.key?(:notes)
+        
+        # Lock transaction-level attributes (category_id, merchant_id)
+        if entry.transaction?
+          entry.transaction.lock_attr!(:category_id) if params_to_lock.key?(:category_id)
+          entry.transaction.lock_attr!(:merchant_id) if params_to_lock.key?(:merchant_id)
+          # Only lock tags if they were explicitly provided in the update
+          entry.transaction.lock_attr!(:tag_ids) if tags_provided?
+        end
+        
         entry.mark_user_modified!
-        entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
       end
     end
 
