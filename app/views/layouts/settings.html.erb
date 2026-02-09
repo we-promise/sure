@@ -14,11 +14,20 @@
               <%= render "layouts/shared/breadcrumbs", breadcrumbs: @breadcrumbs %>
             <% end %>
 
-            <% if content_for?(:page_title) %>
-              <h1 class="text-primary text-3xl md:text-xl font-medium mt-2">
-                <%= content_for :page_title %>
-              </h1>
-            <% end %>
+            <div class="flex items-center justify-between gap-4 mt-2">
+              <% if content_for?(:page_title) %>
+                <h1 class="text-primary text-3xl md:text-xl font-medium">
+                  <%= content_for :page_title %>
+                </h1>
+              <% else %>
+                <div></div>
+              <% end %>
+              <% if content_for?(:page_actions) %>
+                <div class="flex items-center gap-2 shrink-0">
+                  <%= yield :page_actions %>
+                </div>
+              <% end %>
+            </div>
           </div>
 
           <div class="grow space-y-4 px-3 md:px-10 pb-20 pt-4">
