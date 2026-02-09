@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class IndexaCapitalActivitiesFetchJob < ApplicationJob
-  include Sidekiq::Throttled::Job
-
   queue_as :default
 
   sidekiq_options lock: :until_executed,
